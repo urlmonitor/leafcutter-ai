@@ -1,0 +1,176 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "agent_registry.schema.json",
+  "title": "Agent Registry",
+  "description": "Schema for agent_registry.json — the single source of truth for which agents exist, their spawn relationships, ticket-phase roles, selection criteria, and skills used.",
+  "type": "object",
+  "required": ["agents"],
+  "properties": {
+    "agents": {
+      "type": "array",
+      "description": "List of all agents in the leafcutter ecosystem.",
+      "items": {
+        "$ref": "#/definitions/agent"
+      },
+      "minItems": 1
+    }
+  },
+  "definitions": {
+    "agent": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "tier",
+        "role",
+        "portable",
+        "spawn_allowlist",
+        "spawned_by",
+        "is_ticket_phase",
+        "template_path",
+        "skills_used"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique agent identifier — matches the key used in ticket frontmatter agents: maps and the template filename (without .md).",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable display name."
+        },
+        "tier": {
+          "type": "string",
+          "enum": ["supervisor", "phase", "utility"],
+          "description": "supervisor = orchestration layer; phase = appears in ticket agents: maps; utility = helper spawned by other agents."
+        },
+        "role": {
+          "type": "string",
+          "description": "Functional role — e.g. orchestration, coding, review, commit, documentation, analysis."
+        },
+        "portable": {
+          "type": "boolean",
+          "description": "True if the agent is domain-agnostic and belongs in the portable package. False for domain-specific agents (domain field non-null)."
+        },
+        "domain": {
+          "type": ["string", "null"],
+          "description": "Domain tag (e.g. 'bybit-trader') for domain-specific agents. Null for portable agents."
+        },
+        "spawn_allowlist": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Agent IDs this agent is allowed to spawn. Special token '__ticket_phase_agents__' means any agent with is_ticket_phase: true."
+        },
+        "spawned_by": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Agent IDs (or 'user') that legitimately invoke this agent. Inverse of spawn_allowlist — must be consistent."
+        },
+        "is_ticket_phase": {
+          "type": "boolean",
+          "description": "True if this agent appears in ticket agents: maps and is driven by ticket-supervisor."
+        },
+        "selection_criteria": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/selection_criteria"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Machine-readable conditions for when business-analyst assigns this agent. Null for non-phase agents."
+        },
+        "template_path": {
+          "type": ["string", "null"],
+          "description": "Relative path (from leafcutter root) to the agent's template file. Null for agents that do not have a standalone template (e.g. utility sub-agents spawned only by a parent). For domain agents this may be a path outside templates/agents/."
+        },
+        "model": {
+          "type": "string",
+          "description": "Preferred model tier: 'sonnet' or 'opus'. Used by build.py when compiling templates."
+        },
+        "skills_used": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 0,
+          "description": "Skills this agent loads at runtime. Used to generate agent-to-skill mapping diagrams and per-agent injection (ticket 29). Required field; use [] when the agent loads no skills."
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Execution-order priority for ticket-phase agents. Lower numbers run first. ticket-supervisor uses this to determine canonical phase ordering. Non-ticket-phase agents may omit this field."
+        },
+        "priority_rationale": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable explanation of why this agent has its assigned priority value. Required when priority is set."
+        },
+        "requires_ticket_section": {
+          "type": "boolean",
+          "description": "When true, every ticket that marks this agent 'needed' must include a '### <agent-id>' subheading under '## Implementation Tasks'. The parity guard (check_ticket_signoff_parity.py) enforces this at commit time. Agents that sign off on substantive artifacts (coders, test-writer, doc-authors) set this true; agents that only produce sign-off output (reviewer, commit, pull-request) set this false."
+        },
+        "deprecated": {
+          "type": "boolean",
+          "description": "When true, this agent is deprecated and should not be assigned to new tickets. Existing references are retained for audit trail purposes. The agent will not be selected by business-analyst for new tickets."
+        },
+        "owns_file_extensions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "File extensions (with leading dot) this agent is the primary implementer for. Consumed by commit-guardian hooks (e.g. check_complexity.py) to emit AUTOFIX_AGENT hints that route hook failures to the correct coder. Empty or absent means the agent does not own any file type by extension. Multiple agents may share an extension only if their scopes are mutually exclusive (e.g. tests vs production)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "selection_criteria": {
+      "type": "object",
+      "required": ["description", "trigger_conditions", "default_status"],
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "One-sentence summary of when to assign this agent."
+        },
+        "trigger_conditions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/trigger_condition"
+          },
+          "description": "List of typed conditions evaluated by selection_criteria_evaluator. Each condition is either a deterministic DSL expression (type: dsl) or a natural-language LLM-judgment rule (type: llm). See ADR-018 for the DSL grammar and migration guide.",
+          "minItems": 1
+        },
+        "default_status": {
+          "type": "string",
+          "enum": ["needed", "not_needed"],
+          "description": "Fallback assignment when no condition matches (or all matching conditions are LLM-type and the LLM path is not wired)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "trigger_condition": {
+      "type": "object",
+      "required": ["type", "expression"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["dsl", "llm"],
+          "description": "dsl: evaluated deterministically by selection_criteria_evaluator using the v1 grammar (contains/equals/matches over files_touched, title, description, components; AND/OR combinators). llm: natural-language rule evaluated by an LLM call (currently stubbed; falls back to default_status until wired in a follow-up ticket)."
+        },
+        "expression": {
+          "type": "string",
+          "minLength": 1,
+          "description": "For type=dsl: a grammar-v1 expression string (e.g. 'files_touched contains *.py' or 'files_touched contains sql_functions/ OR files_touched contains alembic/versions/'). For type=llm: a natural-language description of the condition."
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

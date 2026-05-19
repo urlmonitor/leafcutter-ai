@@ -2,9 +2,9 @@
 
 This file provides guidance to Claude Code when working in this repository.
 
-<!-- roadmap-phase:start — AUTO-GENERATED from leafcutter-ai/docs/roadmap.json; edits between these markers are overwritten on next render -->
+<!-- roadmap-phase:start — AUTO-GENERATED from docs/roadmap.json; edits between these markers are overwritten on next render -->
 
-| Roadmap | [leafcutter-ai/docs/roadmap.json](leafcutter-ai/docs/roadmap.json) | Current phase, exit criteria, and tickets advancing the outcome. Use `python portable-dev-workflow/scripts/roadmap_query.py --current-outcome` to list actionable tickets. |
+| Roadmap | [docs/roadmap.json](docs/roadmap.json) | Current phase, exit criteria, and tickets advancing the outcome. Use `python portable-dev-workflow/scripts/roadmap_query.py --current-outcome` to list actionable tickets. |
 
 Current phase: `phase_1`
 Current outcome: Stable MVP that installs into any project and helps the user build good software — portable, self-onboarding, and reliable enough to use across multiple repos.
@@ -18,7 +18,7 @@ Current outcome: Stable MVP that installs into any project and helps the user bu
 <!-- glossary-section: leafcutter -->
 ## Glossary
 
-Project jargon and terminology is tracked at [leafcutter-ai/docs/glossary.md](leafcutter-ai/docs/glossary.md).
+Project jargon and terminology is tracked at [docs/glossary.md](docs/glossary.md).
 
 Consult it for project-specific terms when reading code or docs.
 

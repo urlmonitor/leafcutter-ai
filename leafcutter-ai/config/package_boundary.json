@@ -1,0 +1,82 @@
+{
+    "_comment": "Package boundary classification for leafcutter audit. Each entry maps a filename (or glob pattern) within a directory pair to its classification. 'portable' = should be in the package template; 'project-specific' = belongs in the consumer project only. Used by package_audit.py. Edit this file to reclassify items; the audit script reads it on every run.",
+
+    "sections": {
+        "commit-guardian": {
+            "_comment": "Maps scripts/commit_guardian/ (live) vs leafcutter/templates/commit-guardian/ (template)",
+            "live_dir": "scripts/commit_guardian",
+            "template_dir": "leafcutter/templates/commit-guardian",
+            "items": {
+                "check_build_drift.py":          "portable",
+                "check_secrets.py":              "portable",
+                "check_doc_length.py":           "portable",
+                "check_structural_change.py":    "portable",
+                "check_components_integrity.py": "portable",
+                "check_adr_coverage.py":         "portable",
+                "check_adr_cross_reference.py":  "portable",
+                "check_infra_docs.py":           "portable",
+                "check_agent_diagrams.py":       "portable",
+                "check_agent_registry.py":       "portable",
+                "post_checkout_drift_check.py":  "project-specific",
+                "check_test_requirements_refs.py": "portable",
+                "check_alembic_chain.py":        "project-specific",
+                "alembic_drift_helpers.py":      "project-specific",
+                "apply_sql_changes.py":          "project-specific",
+                "check_index_drift.py":          "project-specific",
+                "index_drift_helpers.py":        "project-specific",
+                "check_sql_test_results.py":     "project-specific",
+                "run_sql_tests_worker.py":       "project-specific",
+                "trigger_sql_tests.py":          "project-specific",
+                "check_epic_plan_parity.py":     "project-specific"
+            }
+        },
+        "agents": {
+            "_comment": "Maps .claude/agents/ (live) vs leafcutter/templates/agents/ (template). Agents with portable: false in agent_registry.json are project-specific.",
+            "live_dir": ".claude/agents",
+            "template_dir": "leafcutter/templates/agents",
+            "items": {
+                "adr-author.md":                 "portable",
+                "architect-review-deep.md":      "portable",
+                "architecture-author.md":        "portable",
+                "architecture-diagram-author.md":"portable",
+                "conflict-resolver-deep.md":     "portable",
+                "database-agent.md":             "project-specific",
+                "explanation-author.md":         "portable",
+                "how-to-author.md":              "portable",
+                "onboarding-agent.md":           "portable",
+                "prod-deploy.md":                "project-specific",
+                "reference-author.md":           "portable",
+                "reporting-agent.md":            "project-specific",
+                "rollback-agent.md":             "portable",
+                "sql-coder.md":                  "project-specific",
+                "sql-function-creator.md":       "project-specific",
+                "sql-index-creator.md":          "project-specific",
+                "sql-procedure-creator.md":      "project-specific",
+                "sql-table-creator.md":          "project-specific",
+                "sql-view-creator.md":           "project-specific"
+            }
+        },
+        "skills": {
+            "_comment": "Maps .claude/skills/ (live) vs leafcutter/templates/skills/ (template). Skills without a template are candidates for promotion.",
+            "live_dir": ".claude/skills",
+            "template_dir": "leafcutter/templates/skills",
+            "items": {
+                "agent-telemetry":     "project-specific",
+                "build-feature":       "portable",
+                "create-ticket":       "portable",
+                "fix-file-output":     "portable",
+                "hypertable-build":    "project-specific",
+                "impact-analysis":     "portable",
+                "postgres":            "project-specific",
+                "schema-check":        "project-specific",
+                "script":              "portable",
+                "security-scanner":    "portable",
+                "sql-test":            "project-specific",
+                "strategy-builder":    "project-specific",
+                "strategy-check":      "project-specific",
+                "trade-analysis":      "project-specific",
+                "write-c4-diagram":    "portable"
+            }
+        }
+    }
+}

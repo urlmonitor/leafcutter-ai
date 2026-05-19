@@ -1,0 +1,210 @@
+# feedback_categories.yaml
+#
+# Closed vocabulary for the Central Feedback Collection System.
+# Categories are PR-gated — to add or modify a category, open a PR
+# that updates this file and the relevant SKILL.md / documentation.
+#
+# Schema per entry:
+#   id:               string  — kebab-case identifier (stable, never rename)
+#   description:      string  — one sentence; explains what this category captures
+#   allowed_writers:  list    — agent ids from agent_registry.json that may write
+#                               this category. Use [all_agents] as a sentinel
+#                               (resolved by submit_feedback.py to the full list
+#                               of is_ticket_phase agents). The special value
+#                               [hook] means only commit_guardian hooks may write.
+#   default_severity: string  — low | medium | high; used by aggregate.py when
+#                               the caller omits --severity.
+#
+# Cross-reference: leafcutter/config/agent_registry.json
+# for the authoritative list of agent ids.
+#
+# Reviewer-class agents (for allowed_writers restrictions):
+#   pr-reviewer, architect-review
+
+categories:
+
+  - id: complete
+    description: >
+      Phase completed cleanly with no issues found, no gaps, and nothing
+      worth flagging for trend tracking.
+    allowed_writers:
+      - architect-review
+      - python-coder
+      - test-writer
+      - documentation-expert
+      - pr-reviewer
+      - commit
+      - pull-request
+      - sql-coder
+      - test-runner
+      - status-checker
+      - adr-author
+      - architecture-diagram-author
+      - explanation-author
+      - how-to-author
+      - reference-author
+    default_severity: low
+
+  - id: knowledge-gap
+    description: >
+      The agent lacked context or documentation needed to complete the task
+      autonomously and had to look things up or make assumptions mid-task.
+    allowed_writers:
+      - architect-review
+      - python-coder
+      - test-writer
+      - documentation-expert
+      - pr-reviewer
+      - commit
+      - pull-request
+      - sql-coder
+      - test-runner
+      - status-checker
+      - adr-author
+      - architecture-diagram-author
+      - explanation-author
+      - how-to-author
+      - reference-author
+    default_severity: medium
+
+  - id: quality-concern
+    description: >
+      A reviewer-class agent observed a quality issue in upstream work
+      (e.g. missing tests, incorrect logic, contract violation).
+    allowed_writers:
+      - pr-reviewer
+      - architect-review
+    default_severity: high
+
+  - id: tooling-issue
+    description: >
+      A hook, script, or harness behaviour blocked or meaningfully hindered
+      the work; the tooling itself was the problem, not the agent's approach.
+    allowed_writers:
+      - architect-review
+      - python-coder
+      - test-writer
+      - documentation-expert
+      - pr-reviewer
+      - commit
+      - pull-request
+      - sql-coder
+      - test-runner
+      - status-checker
+      - adr-author
+      - architecture-diagram-author
+      - explanation-author
+      - how-to-author
+      - reference-author
+      - epic-supervisor
+      - ticket-supervisor
+    default_severity: medium
+
+  - id: convention-ambiguity
+    description: >
+      A project rule, naming convention, or workflow instruction was unclear
+      or contradictory, causing the agent to guess or spend time resolving it.
+    allowed_writers:
+      - architect-review
+      - python-coder
+      - test-writer
+      - documentation-expert
+      - pr-reviewer
+      - commit
+      - pull-request
+      - sql-coder
+      - test-runner
+      - status-checker
+      - adr-author
+      - architecture-diagram-author
+      - explanation-author
+      - how-to-author
+      - reference-author
+      - epic-supervisor
+      - ticket-supervisor
+    default_severity: medium
+
+  - id: blocker
+    description: >
+      Work cannot proceed without user input or an external dependency being
+      resolved; this signoff represents the point where the agent halted.
+    allowed_writers:
+      - architect-review
+      - python-coder
+      - test-writer
+      - documentation-expert
+      - pr-reviewer
+      - commit
+      - pull-request
+      - sql-coder
+      - test-runner
+      - status-checker
+      - adr-author
+      - architecture-diagram-author
+      - explanation-author
+      - how-to-author
+      - reference-author
+      - epic-supervisor
+      - ticket-supervisor
+    default_severity: high
+
+  - id: subagent-quality
+    description: >
+      Supervisor observation about a phase-agent's output quality, retry
+      behaviour, or escalation pattern — used to drive trust ladder and
+      SOP revision.
+    allowed_writers:
+      - epic-supervisor
+      - ticket-supervisor
+    default_severity: medium
+
+  - id: success-pattern
+    description: >
+      An approach worked unusually well and is worth codifying as a reusable
+      pattern or convention for future agents.
+    allowed_writers:
+      - architect-review
+      - python-coder
+      - test-writer
+      - documentation-expert
+      - pr-reviewer
+      - commit
+      - pull-request
+      - sql-coder
+      - test-runner
+      - status-checker
+      - adr-author
+      - architecture-diagram-author
+      - explanation-author
+      - how-to-author
+      - reference-author
+    default_severity: low
+
+  - id: process-finding
+    description: >
+      A pre-commit hook detected an automated process violation during a commit
+      (e.g. orphan workers, secret leaks, complexity violations). Source must
+      be 'hook'; severity is driven by outcome: warn -> low, block -> high.
+    allowed_writers:
+      - hook
+    default_severity: low
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-05-15 10:00 [EPIC-FeedbackCollection/ticket-01]: Initial creation.
+#   Seven starter categories defined: complete, knowledge-gap, quality-concern,
+#   tooling-issue, convention-ambiguity, blocker, success-pattern. quality-concern
+#   restricted to reviewer-class agents (pr-reviewer, architect-review) only, per
+#   Master_Plan Key Design Decision #2 (two-tier vocabulary, closed categories).
+#   process-finding category deferred to ticket 09.
+# - 2026-05-15 15:30 [EPIC-FeedbackCollection/ticket-09]: Added process-finding category.
+#   allowed_writers: [hook] introduces the hook writer type from ticket 09.
+#   Severity driven by outcome at submit time (warn -> low, block -> high).
+# - 2026-05-15 10:05 [EPIC-SupervisorFeedback/01_category_vocab]: Added subagent-quality category.
+#   New category for supervisor observations about phase-agent output quality, retry behaviour,
+#   and escalation patterns. allowed_writers restricted to [epic-supervisor, ticket-supervisor]
+#   only. Added epic-supervisor and ticket-supervisor to allowed_writers for tooling-issue,
+#   convention-ambiguity, and blocker (supervisors observe and classify these failure modes).
+#   Category id subagent-quality is stable — never rename (CFCS vocab rules).
+# ====================================================================
