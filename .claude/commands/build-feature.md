@@ -171,7 +171,7 @@ Per the project convention (codified in user-memory `feedback_epic_worktree.md` 
       Action: push local main to origin/main, then re-run /build-feature.
       ```
 
-   See `.claude/skills/build-feature/SKILL.md` §KI-1 for the root-cause explanation and background.
+   See `.claude/skills/build-feature-ops-notes/SKILL.md` §KI-1 for the root-cause explanation and background.
 
 #### Step B — Dispatch the epic-supervisor
 
