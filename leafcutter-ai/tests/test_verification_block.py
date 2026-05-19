@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-_SCRIPTS_DIR = _REPO_ROOT / "leafcutter" / "scripts"
+_SCRIPTS_DIR = _REPO_ROOT / "leafcutter-ai" / "scripts"
 
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
