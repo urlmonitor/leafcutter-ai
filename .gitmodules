@@ -1,0 +1,3 @@
+[submodule "leafcutter-ai"]
+	path = leafcutter-ai
+	url = git@github.com-urlmonitor:urlmonitor/leafcutter-ai.git
