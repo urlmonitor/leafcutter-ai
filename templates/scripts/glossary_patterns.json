@@ -1,0 +1,35 @@
+{
+  "_comment": "Default pattern set for glossary_detector.py. Edit this file to tune per-project.",
+  "patterns": [
+    {
+      "name": "complete_suffix",
+      "description": "snake_case identifiers ending with _complete (e.g. backfill_complete, setup_complete)",
+      "regex": "\\b([a-z][a-z0-9]*(?:_[a-z0-9]+)*_complete)\\b"
+    },
+    {
+      "name": "sql_flag_assignment",
+      "description": "SQL flag-style assignments: identifier='value'",
+      "regex": "\\b([a-z][a-z0-9_]+)\\s*=\\s*'[^']*'"
+    },
+    {
+      "name": "phase_number",
+      "description": "phase followed by a digit, optionally with underscore (e.g. phase1, phase_2)",
+      "regex": "\\b(phase_?\\d+)\\b"
+    },
+    {
+      "name": "snake_case_multi_underscore",
+      "description": "snake_case identifiers with 2+ underscores (e.g. candle_context_window)",
+      "regex": "\\b([a-z][a-z0-9]*(?:_[a-z0-9]+){2,})\\b"
+    },
+    {
+      "name": "all_caps_flag",
+      "description": "ALL_CAPS_FLAGS (e.g. ENABLE_BACKFILL, MAX_RETRIES)",
+      "regex": "\\b([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)\\b"
+    },
+    {
+      "name": "camel_case_prose",
+      "description": "camelCase identifiers in prose (e.g. candleHorizon in a comment)",
+      "regex": "\\b([a-z][a-z0-9]*(?:[A-Z][a-z0-9]+)+)\\b"
+    }
+  ]
+}

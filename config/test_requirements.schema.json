@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://leafcutter/config/test_requirements.schema.json",
+  "version": "1.1.0",
+  "title": "test_requirements",
+  "description": "Schema for the test_requirements block produced by the test-planner agent and embedded in ticket bodies. Used by test-writer to author tests and by check_test_requirements_refs.py to verify schema version consistency across all consumers. Version 1.1.0 adds live_dispatch type and surface_invoked field.",
+  "type": "object",
+  "required": ["test_requirements"],
+  "properties": {
+    "test_requirements": {
+      "type": "object",
+      "required": ["rationale", "tests"],
+      "additionalProperties": false,
+      "properties": {
+        "rationale": {
+          "type": "string",
+          "minLength": 1,
+          "description": "One-sentence explanation of why tests are needed, or why the tests array is empty."
+        },
+        "tests": {
+          "type": "array",
+          "description": "Ordered list of test specifications. May be empty for docs-only or config-only tickets.",
+          "items": {
+            "$ref": "#/$defs/test_entry"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "test_entry": {
+      "type": "object",
+      "required": ["name", "description", "type", "target_dir", "covers"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^test_",
+          "description": "Test file or function name. Must start with 'test_' per naming_pattern convention."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "description": "One sentence describing the observable behavior this test verifies."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["unit", "integration", "manual", "live_dispatch"],
+          "description": "Test type: unit (in-memory, no DB), integration (requires DB), manual (slow/external), or live_dispatch (exercises production entrypoint without dispatch_fn override)."
+        },
+        "surface_invoked": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Required when type == live_dispatch. Names the slash command, hook script, or agent entrypoint being invoked in production wiring (e.g. 'glossary_bootstrap.py' or '/glossary-bootstrap')."
+        },
+        "target_dir": {
+          "type": "string",
+          "description": "Relative path to the test directory where the test file should live (e.g. unit_tests/live_trader/). Use 'new directory needed' if no matching directory exists in testing_context.directories."
+        },
+        "covers": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The specific function, class, or behavior under test."
+        }
+      },
+      "if": {
+        "properties": { "type": { "const": "live_dispatch" } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": ["surface_invoked"]
+      }
+    }
+  }
+}

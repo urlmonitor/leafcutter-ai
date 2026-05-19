@@ -1,0 +1,61 @@
+{
+  "_comment": "Portable configuration for the .claude/ agent/skill stack. All values are Bybit-Trader defaults. An adopter copies this file into their project and edits the values that differ. Skills and agents read from this file via a _get(key, default) lookup pattern; if the key or file is absent, the Bybit-Trader default is used, preserving current behaviour.",
+
+  "project_description": "",
+  "common_commands": "",
+  "architecture_overview": "",
+  "test_commands": "",
+
+  "tickets_inbox_path": "tickets/00_inbox",
+  "tickets_inbox_epics_path": "tickets/00_inbox/epics",
+  "tickets_todo_path": "tickets/01_todo",
+  "tickets_done_path": "tickets/99_done",
+  "tickets_rejected_path": "tickets/99_rejected",
+  "ticket_lifecycle_path": "tickets/ticket_lifecycle.json",
+
+  "test_command_live_trader": "poetry run python -m unittest discover -s unit_tests/live_trader -t . -p \"test_*.py\"",
+  "test_command_sql": "poetry run python -m pytest unit_tests/sql_functions -v",
+  "test_command_single_file_pattern": "python unit_tests/live_trader/<file>.py",
+
+  "precommit_autofix_config_path": ".claude/precommit-autofix.json",
+  "default_branch": "main",
+
+  "collector_enforcer_paths": ["collector/"],
+  "top_level_packages": [
+    "live_trader",
+    "collector",
+    "dashboards",
+    "api",
+    "model_trainer",
+    "trades_aggregator",
+    "sql_functions",
+    "models",
+    "scripts"
+  ],
+  "test_output_dir": "%TEMP%/bybit-trader-tests/",
+  "worktree_base_path": "../",
+  "settings_module": "settings",
+  "changelog_folder": "changelogs/",
+  "changelog_categories_path": ".claude/changelog_categories.md",
+
+  "worktree_cleanup": {
+    "kill_residual_processes": true,
+    "log_globs": ["*.log", "precommit-autofix*.log", ".sql_test_results.json"],
+    "protected_paths": []
+  },
+
+  "testing_context": {
+    "test_root": "unit_tests/",
+    "readme_path": "unit_tests/README.md",
+    "directories": {
+      "live_trader": { "framework": "unittest", "db_required": false },
+      "sql_functions": { "framework": "pytest", "db_required": true },
+      "model_retriever": { "framework": "unittest", "db_required": false }
+    },
+    "max_test_duration_seconds": 5,
+    "manual_test_suffix": "_MANUAL",
+    "db_connection_test": "postgresql://trader:trader@localhost:5403/LIVE",
+    "naming_pattern": "test_*.py",
+    "test_output_rules": "Never write to project dirs; use tmp_path or %TEMP%"
+  }
+}

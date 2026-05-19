@@ -1,0 +1,8 @@
+.claude/.cache/
+.claude/agents/
+.claude/skills/
+.agents/workflows/
+.agents/rules/
+__pycache__/
+*.pyc
+.build_manifest.json

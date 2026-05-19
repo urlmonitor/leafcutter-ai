@@ -1,0 +1,234 @@
+{
+  "$schema": "./skill_registry.schema.json",
+  "_comment": "Single source of truth for all skills in the leafcutter ecosystem. Portability decisions made during the agent-skill audit (2026-05-14). Portable skills have a template_path in leafcutter/templates/skills/. Domain-specific skills have portable: false and domain: 'bybit-trader'. The 'dependencies' field captures skill-to-skill invocation relationships; left [] for the initial pass where dependency mapping is non-trivial.",
+  "skills": [
+    {
+      "id": "add-agent-to-package",
+      "name": "Add Agent to Package",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/add-agent-to-package/",
+      "dependencies": []
+    },
+    {
+      "id": "add-skill-to-package",
+      "name": "Add Skill to Package",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/add-skill-to-package/",
+      "dependencies": []
+    },
+    {
+      "id": "agent-telemetry",
+      "name": "Agent Telemetry",
+      "portable": true,
+      "domain": null,
+      "dependencies": []
+    },
+    {
+      "id": "build-feature",
+      "name": "Build Feature",
+      "portable": false,
+      "domain": "bybit-trader",
+      "dependencies": [
+        "build-single-ticket",
+        "building-epics",
+        "signoff"
+      ]
+    },
+    {
+      "id": "build-single-ticket",
+      "name": "Build Single Ticket",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/build-single-ticket/",
+      "dependencies": [
+        "building-epics",
+        "signoff"
+      ]
+    },
+    {
+      "id": "building-epics",
+      "name": "Building Epics",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/building-epics/",
+      "dependencies": [
+        "signoff"
+      ]
+    },
+    {
+      "id": "create-hook",
+      "name": "Create Hook",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/create-hook/",
+      "dependencies": []
+    },
+    {
+      "id": "create-ticket",
+      "name": "Create Ticket",
+      "portable": false,
+      "domain": "bybit-trader",
+      "dependencies": [
+        "ticket-authoring"
+      ]
+    },
+    {
+      "id": "feature",
+      "name": "Feature",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/feature/",
+      "dependencies": []
+    },
+    {
+      "id": "fix-file-output",
+      "name": "Fix File Output",
+      "portable": true,
+      "domain": null,
+      "dependencies": []
+    },
+    {
+      "id": "hypertable-build",
+      "name": "Hypertable Build",
+      "portable": false,
+      "domain": "bybit-trader",
+      "dependencies": []
+    },
+    {
+      "id": "impact-analysis",
+      "name": "Impact Analysis",
+      "portable": true,
+      "domain": null,
+      "dependencies": []
+    },
+    {
+      "id": "package-audit",
+      "name": "Package Audit",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/package-audit/",
+      "dependencies": []
+    },
+    {
+      "id": "postgres",
+      "name": "Postgres",
+      "portable": false,
+      "domain": "bybit-trader",
+      "dependencies": []
+    },
+    {
+      "id": "precommit-autofix",
+      "name": "Precommit Autofix",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/precommit-autofix/",
+      "dependencies": []
+    },
+    {
+      "id": "roadmap-query",
+      "name": "Roadmap Query",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/roadmap-query/",
+      "dependencies": []
+    },
+    {
+      "id": "schema-check",
+      "name": "Schema Check",
+      "portable": false,
+      "domain": "bybit-trader",
+      "dependencies": []
+    },
+    {
+      "id": "script",
+      "name": "Script",
+      "portable": false,
+      "domain": "bybit-trader",
+      "dependencies": []
+    },
+    {
+      "id": "security-scanner",
+      "name": "Security Scanner",
+      "portable": true,
+      "domain": null,
+      "dependencies": []
+    },
+    {
+      "id": "ship",
+      "name": "Ship",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/ship/",
+      "dependencies": []
+    },
+    {
+      "id": "signoff",
+      "name": "Signoff",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/signoff/",
+      "dependencies": []
+    },
+    {
+      "id": "sql-test",
+      "name": "SQL Test",
+      "portable": false,
+      "domain": "bybit-trader",
+      "dependencies": []
+    },
+    {
+      "id": "strategy-builder",
+      "name": "Strategy Builder",
+      "portable": false,
+      "domain": "bybit-trader",
+      "dependencies": []
+    },
+    {
+      "id": "strategy-check",
+      "name": "Strategy Check",
+      "portable": false,
+      "domain": "bybit-trader",
+      "dependencies": []
+    },
+    {
+      "id": "ticket-authoring",
+      "name": "Ticket Authoring",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/ticket-authoring/",
+      "dependencies": []
+    },
+    {
+      "id": "ticket-prioritizer",
+      "name": "Ticket Prioritizer",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/ticket-prioritizer/",
+      "dependencies": []
+    },
+    {
+      "id": "ticket-wiring",
+      "name": "Ticket Wiring",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/ticket-wiring/",
+      "dependencies": []
+    },
+    {
+      "id": "trade-analysis",
+      "name": "Trade Analysis",
+      "portable": false,
+      "domain": "bybit-trader",
+      "dependencies": []
+    },
+    {
+      "id": "write-c4-diagram",
+      "name": "Write C4 Diagram",
+      "portable": true,
+      "domain": null,
+      "dependencies": []
+    }
+  ]
+}
