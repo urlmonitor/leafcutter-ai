@@ -1,0 +1,147 @@
+fail_fast: true
+repos:
+  - repo: local
+    hooks:
+
+      # --- package-managed hooks (do not edit below) ---
+
+      - id: check-build-drift
+        name: Check Build Drift (leafcutter)  # @package-managed
+        entry: python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_build_drift.py
+        language: system
+        files: ^leafcutter/templates/
+        stages: [pre-commit]
+        pass_filenames: false
+
+      - id: check-secrets
+        name: Check Secrets  # @package-managed
+        entry: python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_secrets.py
+        language: system
+        stages: [pre-commit]
+        pass_filenames: false
+
+      - id: check-doc-length
+        name: Check Documentation Length  # @package-managed
+        entry: python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_doc_length.py
+        language: system
+        types: [markdown]
+        files: ^docs/.*\.md$
+        stages: [pre-commit]
+        pass_filenames: false
+
+      - id: check-structural-change
+        name: Check Structural Change — Architecture Docs Required  # @package-managed
+        entry: python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_structural_change.py
+        language: system
+        stages: [pre-commit]
+        pass_filenames: false
+
+      - id: check-components-integrity
+        name: Check Components Registry Integrity  # @package-managed
+        entry: python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_components_integrity.py
+        language: system
+        files: ^docs/components\.json$
+        stages: [pre-commit]
+        pass_filenames: false
+
+      - id: check-adr-coverage
+        name: Check ADR Coverage  # @package-managed
+        entry: python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_adr_coverage.py
+        language: system
+        stages: [pre-commit]
+        pass_filenames: false
+
+      - id: check-adr-cross-reference
+        name: Check ADR Cross-References  # @package-managed
+        entry: python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_adr_cross_reference.py
+        language: system
+        files: ^docs/.*\.md$
+        stages: [pre-commit]
+        pass_filenames: false
+
+      - id: check-infra-docs
+        name: Check Infrastructure Documentation  # @package-managed
+        entry: python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_infra_docs.py
+        language: system
+        files: (docker-compose.*\.ya?ml|docker/Dockerfile\.|init-db\.sh|\.env\.(example|template))
+        stages: [pre-commit]
+        pass_filenames: false
+
+      - id: check-agent-diagrams
+        name: Check Agent Diagrams  # @package-managed
+        entry: python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_agent_diagrams.py
+        language: system
+        stages: [pre-commit]
+        pass_filenames: false
+
+      - id: check-agent-registry
+        name: Check Agent Registry  # @package-managed
+        entry: python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_agent_registry.py
+        language: system
+        stages: [pre-commit]
+        pass_filenames: false
+
+      - id: check-mermaid-drift
+        name: Check Mermaid Diagram Drift  # @package-managed
+        entry: python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_mermaid_drift.py
+        language: system
+        files: ^docs/architecture/.*\.md$
+        stages: [pre-commit]
+        pass_filenames: false
+
+      - id: check-mermaid-parent-link
+        name: Check Mermaid Parent-Link Bidirectionality  # @package-managed
+        entry: python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_mermaid_parent_link.py
+        language: system
+        files: ^docs/architecture/.*\.md$
+        stages: [pre-commit]
+        pass_filenames: false
+
+      - id: check-diagram-naming
+        name: Check Architecture Diagram Filename Convention  # @package-managed
+        entry: python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_diagram_naming.py
+        language: system
+        files: ^docs/architecture/.*\.md$
+        stages: [pre-commit]
+        pass_filenames: false
+
+      - id: check-paths-integrity
+        name: Check Paths JSON Integrity  # @package-managed
+        entry: python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_paths_integrity.py
+        language: system
+        files: ^leafcutter/config/paths\.json$
+        stages: [pre-commit]
+        pass_filenames: false
+
+      - id: check-architecture-scaffolds
+        name: Check Architecture Scaffold Integrity  # @package-managed
+        entry: python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_architecture_scaffolds.py
+        language: system
+        files: ^leafcutter/templates/docs/architecture/
+        stages: [pre-commit]
+        pass_filenames: false
+
+      - id: check-feedback-id
+        name: Check Feedback ID in Signoff Comments  # @package-managed
+        entry: python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_feedback_id.py
+        language: system
+        files: ^tickets/.*\.md$
+        stages: [pre-commit]
+        pass_filenames: false
+
+      - id: check-output-drift
+        name: Check Output Drift (leafcutter Direction B)  # @package-managed
+        entry: python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_output_drift.py
+        language: system
+        files: ^(\.claude/agents/|\.claude/skills/|\.agents/workflows/|\.agents/rules/)
+        stages: [pre-commit]
+        pass_filenames: false
+
+      - id: check-glossary-coverage
+        name: Check Glossary Coverage (GlossaryAutomation)  # @package-managed
+        entry: python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_glossary_coverage.py
+        language: system
+        files: .*\.(md|py|sql)$
+        stages: [pre-commit]
+        pass_filenames: false
+
