@@ -5,6 +5,7 @@ description: Drive a single standalone ticket (not part of an epic) through its 
   by /build-feature when its argument resolves to a `.md` file outside an `EPIC-*/`
   folder.
 name: build-single-ticket
+internal: true
 ---
 
 # build-single-ticket

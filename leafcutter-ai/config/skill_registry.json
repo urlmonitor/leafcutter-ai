@@ -26,10 +26,12 @@
       "dependencies": []
     },
     {
-      "id": "build-feature",
-      "name": "Build Feature",
-      "portable": false,
-      "domain": "bybit-trader",
+      "id": "build-feature-ops-notes",
+      "name": "Build Feature Ops Notes",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/build-feature-ops-notes/",
+      "internal": true,
       "dependencies": [
         "build-single-ticket",
         "building-epics",
@@ -42,6 +44,7 @@
       "portable": true,
       "domain": null,
       "template_path": "leafcutter/templates/skills/build-single-ticket/",
+      "internal": true,
       "dependencies": [
         "building-epics",
         "signoff"

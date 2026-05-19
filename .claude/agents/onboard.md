@@ -25,6 +25,7 @@ silently on failure — halt and surface the error.
 
 ```
 1. Detect git repo state (git status, default branch)                    [ ]
+1a. Detect WSL2 + NTFS mount; auto-set core.autocrlf if needed          [ ]
 2. Check if .claude/skills_config.json exists; classify keys as
    confirmed (present) vs unconfirmed (absent)                          [ ]
 3. Scan folder structure: docs/, tests/, src/, sql/, packages            [ ]
@@ -55,6 +56,30 @@ silently on failure — halt and surface the error.
 Run: `git status` and `git symbolic-ref --short HEAD` (or `git branch --show-current`).
 Record the default branch. If not a git repo, halt with: "This wizard requires a git
 repository. Run `git init` first."
+
+## Step 1a — WSL2 + NTFS Detection
+
+Run two checks:
+
+```bash
+uname -r | grep -qi microsoft
+pwd | grep -q '^/mnt/'
+```
+
+If **both** succeed (WSL2 kernel AND working directory on an NTFS mount):
+
+1. Run `git config core.autocrlf input` in the local repo config.
+2. Log: "WSL2/NTFS detected — set core.autocrlf=input to prevent phantom modifications."
+
+If only one condition matches (e.g. WSL2 but repo lives on ext4 at `~/`), skip silently —
+no CRLF issue exists on native Linux filesystems.
+
+If the auto-set fails for any reason, surface a PREREQUISITE warning:
+
+> **PREREQUISITE**: WSL2 + NTFS mount detected. Run `git config core.autocrlf input`
+> before proceeding to avoid phantom git modifications from CRLF line endings.
+
+Then continue — do not halt the wizard.
 
 ## Step 2 — skills_config.json Classification
 

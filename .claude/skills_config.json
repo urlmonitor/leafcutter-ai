@@ -1,21 +1,21 @@
 {
   "project_description": "leafcutter — a domain-agnostic agent/skill/workflow package that installs the full AI-assisted dev workflow (agents, skills, hooks, ticket lifecycle) into any project. Edit one JSON config file, run build.py, and the complete system is generated.",
   "common_commands": "python leafcutter-ai/scripts/build.py --target-dir . | python -m pytest leafcutter-ai/tests/ -v | python leafcutter-ai/scripts/package_audit.py | python leafcutter-ai/scripts/roadmap_query.py --current-outcome | python leafcutter-ai/scripts/build.py --validate-only | python leafcutter-ai/scripts/build.py --target-dir . --seed-docs",
-  "architecture_overview": "leafcutter-ai/ is the portable package. scripts/commit_guardian/ and scripts/doc_compliance/ are quality-gate hook suites. tickets/ holds the ticket lifecycle. .claude/ contains generated agents, skills, hooks, and commands.",
+  "architecture_overview": "leafcutter-ai/ is the portable package. scripts/commit_guardian/ and scripts/doc_compliance/ are quality-gate hook suites. leafcutter-ai/tickets/ holds the ticket lifecycle. .claude/ contains generated agents, skills, hooks, and commands.",
   "test_commands": "python -m pytest leafcutter-ai/tests/ -v",
 
-  "tickets_inbox_path": "tickets/00_inbox",
-  "tickets_inbox_epics_path": "tickets/00_inbox/epics",
-  "tickets_todo_path": "tickets/01_todo",
-  "tickets_done_path": "tickets/99_done",
-  "tickets_rejected_path": "tickets/99_rejected",
-  "ticket_lifecycle_path": "tickets/ticket_lifecycle.json",
+  "tickets_inbox_path": "leafcutter-ai/tickets/00_inbox",
+  "tickets_inbox_epics_path": "leafcutter-ai/tickets/00_inbox/epics",
+  "tickets_todo_path": "leafcutter-ai/tickets/01_todo",
+  "tickets_done_path": "leafcutter-ai/tickets/99_done",
+  "tickets_rejected_path": "leafcutter-ai/tickets/99_rejected",
+  "ticket_lifecycle_path": "leafcutter-ai/tickets/ticket_lifecycle.json",
 
   "test_command_live_trader": "python -m pytest leafcutter-ai/tests/ -v",
   "test_command_sql": "",
   "test_command_single_file_pattern": "python -m pytest leafcutter-ai/tests/<file>.py -v",
 
-  "docs_root": "docs/",
+  "docs_root": "leafcutter-ai/docs/",
   "precommit_autofix_config_path": ".claude/precommit-autofix.json",
   "default_branch": "main",
 
@@ -24,8 +24,10 @@
   "test_output_dir": "/tmp/leafcutter-tests/",
   "worktree_base_path": "../",
   "settings_module": "",
-  "changelog_folder": "docs/changelog/",
+  "changelog_folder": "leafcutter-ai/docs/changelog/",
   "changelog_categories_path": "",
+  "scripts_commit_guardian_path": "scripts/commit_guardian",
+  "scripts_doc_compliance_path": "scripts/doc_compliance",
 
   "worktree_cleanup": {
     "kill_residual_processes": true,

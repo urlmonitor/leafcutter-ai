@@ -49,6 +49,8 @@ in downstream agents (changelog, test-planner, precommit-autofix, glossary).
 | 05 | [05_precommit_install.md](./05_precommit_install.md) | Check pre-commit tool availability and run pre-commit install after build | `[ ]` |
 | 06 | [06_glossary_bootstrap_prompt.md](./06_glossary_bootstrap_prompt.md) | Prompt user to run /glossary-bootstrap when glossary file is empty | `[ ]` |
 | 07 | [07_post_onboard_checklist.md](./07_post_onboard_checklist.md) | Generate and display a post-onboard checklist of remaining manual steps | `[ ]` |
+| 08 | [08_glossary_submodule_exclusion.md](./08_glossary_submodule_exclusion.md) | Exclude submodule paths from glossary bootstrap scan (.gitmodules-aware + configurable exclude_paths) | `[ ]` |
+| 09 | [09_lifecycle_folder_scaffolding.md](./09_lifecycle_folder_scaffolding.md) | Scaffold all ticket lifecycle folders from ticket_lifecycle.json manifest | `[ ]` |
 
 ## Risk & Safety
 

@@ -331,6 +331,19 @@ def main(argv: list[str] | None = None) -> int:
     target_root = Path(args.target_dir).resolve() if args.target_dir else Path.cwd()
     config_path = Path(args.config_path).resolve() if args.config_path else None
 
+    # Gate: require skills_config.json (produced by /onboard)
+    project_config_file = (
+        Path(args.config_path).resolve() if args.config_path
+        else target_root / ".claude" / "skills_config.json"
+    )
+    if not project_config_file.exists():
+        print(
+            "ERROR: .claude/skills_config.json not found.\n"
+            "Run /onboard to configure this project before building.",
+            file=sys.stderr,
+        )
+        return 1
+
     print(f"Loading config for target: {target_root}")
     config = load_config(config_path, target_root)
 

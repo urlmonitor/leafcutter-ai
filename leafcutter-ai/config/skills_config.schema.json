@@ -115,6 +115,16 @@
       "description": "Path to a Markdown file containing project-specific commit categorization rules. Read at runtime by changelog-agent Step 3. If the file does not exist, changelog-agent falls back to conventional-commit prefix heuristics only.",
       "default": ".claude/changelog_categories.md"
     },
+    "scripts_commit_guardian_path": {
+      "type": "string",
+      "description": "Output directory for commit guardian hook scripts (relative to project root).",
+      "default": "scripts/commit_guardian"
+    },
+    "scripts_doc_compliance_path": {
+      "type": "string",
+      "description": "Output directory for doc compliance scripts (relative to project root).",
+      "default": "scripts/doc_compliance"
+    },
     "worktree_cleanup": {
       "type": "object",
       "description": "Controls pre-removal process and log cleanup in the close-worktree flow.",

@@ -1,5 +1,5 @@
 {
-  "_comment": "Portable configuration for the .claude/ agent/skill stack. All values are Bybit-Trader defaults. An adopter copies this file into their project and edits the values that differ. Skills and agents read from this file via a _get(key, default) lookup pattern; if the key or file is absent, the Bybit-Trader default is used, preserving current behaviour.",
+  "_comment": "Portable configuration for the .claude/ agent/skill stack. All values are sensible defaults for a generic project. An adopter runs /onboard to generate their project-specific .claude/skills_config.json; build.py merges these defaults with the project config.",
 
   "project_description": "",
   "common_commands": "",
@@ -38,6 +38,8 @@
   "settings_module": "settings",
   "changelog_folder": "changelogs/",
   "changelog_categories_path": ".claude/changelog_categories.md",
+  "scripts_commit_guardian_path": "scripts/commit_guardian",
+  "scripts_doc_compliance_path": "scripts/doc_compliance",
 
   "worktree_cleanup": {
     "kill_residual_processes": true,

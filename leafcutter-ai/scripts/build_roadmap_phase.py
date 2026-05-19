@@ -29,34 +29,39 @@ TEMPLATES_DIR = _PACKAGE_ROOT / "templates"
 # Sentinel constants (KDD-02)
 # ---------------------------------------------------------------------------
 
-_SENTINEL_START = (
-    "<!-- roadmap-phase:start"
-    " — AUTO-GENERATED from docs/roadmap.json;"
-    " edits between these markers are overwritten on next render -->"
-)
+_SENTINEL_START_PREFIX = "<!-- roadmap-phase:start"
 _SENTINEL_END = "<!-- roadmap-phase:end -->"
 
 # Default location hint: inserted after the first H2 heading in CLAUDE.md,
 # or at the end of the file when no H2 heading is found.
 _DEFAULT_INSERT_AFTER = "## Project Knowledge Map"
 
-_ROADMAP_BLOCK_CONTENT = """| Roadmap | [docs/roadmap.json](docs/roadmap.json) | Current phase, exit criteria, and tickets advancing the outcome. Use `python portable-dev-workflow/scripts/roadmap_query.py --current-outcome` to list actionable tickets. |"""
+
+def _make_sentinel_start(docs_root: str = "docs/") -> str:
+    docs_dir = docs_root.rstrip("/") if docs_root else "docs"
+    return f"{_SENTINEL_START_PREFIX} — AUTO-GENERATED from {docs_dir}/roadmap.json; edits between these markers are overwritten on next render -->"
 
 
-def _build_sentinel_block(current_phase: str = "", current_outcome: str = "") -> str:
+def _make_roadmap_block_content(docs_root: str = "docs/") -> str:
+    docs_dir = docs_root.rstrip("/") if docs_root else "docs"
+    return f'| Roadmap | [{docs_dir}/roadmap.json]({docs_dir}/roadmap.json) | Current phase, exit criteria, and tickets advancing the outcome. Use `python portable-dev-workflow/scripts/roadmap_query.py --current-outcome` to list actionable tickets. |'
+
+
+def _build_sentinel_block(current_phase: str = "", current_outcome: str = "", docs_root: str = "docs/") -> str:
     """Build the full sentinel block for insertion into CLAUDE.md.
 
     Args:
         current_phase: The current roadmap phase ID (optional, used for richer
             inline context). When empty, a generic row is rendered.
         current_outcome: The current outcome description (optional).
+        docs_root: Docs directory from config.
 
     Returns:
         str: The complete sentinel block (start sentinel, content, end sentinel).
     """
-    lines = [_SENTINEL_START]
+    lines = [_make_sentinel_start(docs_root)]
     lines.append("")
-    lines.append(_ROADMAP_BLOCK_CONTENT)
+    lines.append(_make_roadmap_block_content(docs_root))
     if current_phase or current_outcome:
         lines.append("")
         if current_phase:
@@ -114,7 +119,7 @@ def wire_roadmap_phase_claude_md(target_root: Path, dry_run: bool, docs_root: st
     """
     claude_md = target_root / "CLAUDE.md"
     current_phase, current_outcome = _load_roadmap_metadata(target_root, docs_root=docs_root)
-    block = _build_sentinel_block(current_phase, current_outcome)
+    block = _build_sentinel_block(current_phase, current_outcome, docs_root=docs_root)
 
     if not claude_md.exists():
         # First-time bootstrap: CLAUDE.md does not exist yet.
@@ -131,12 +136,12 @@ def wire_roadmap_phase_claude_md(target_root: Path, dry_run: bool, docs_root: st
         return 1
 
     existing = claude_md.read_text(encoding="utf-8")
-    has_start = _SENTINEL_START in existing
+    has_start = _SENTINEL_START_PREFIX in existing
     has_end = _SENTINEL_END in existing
 
     if has_start and has_end:
         # Subsequent run: rewrite content between sentinels only.
-        start_idx = existing.index(_SENTINEL_START)
+        start_idx = existing.index(_SENTINEL_START_PREFIX)
         end_idx = existing.index(_SENTINEL_END) + len(_SENTINEL_END)
         new_content = existing[:start_idx] + block + existing[end_idx:]
         if new_content == existing:
@@ -151,10 +156,11 @@ def wire_roadmap_phase_claude_md(target_root: Path, dry_run: bool, docs_root: st
 
     if has_start or has_end:
         # Partial sentinel: malformed state — error loudly, do not auto-repair.
+        sentinel_start = _make_sentinel_start(docs_root)
         print(
             "ERROR: roadmap-phase: CLAUDE.md contains only one of the two roadmap "
             "sentinel markers. The file is in a malformed state. Please restore both "
-            f"'{_SENTINEL_START}' and '{_SENTINEL_END}' markers, then re-run build.py.",
+            f"'{sentinel_start}' and '{_SENTINEL_END}' markers, then re-run build.py.",
             flush=True,
         )
         return 0

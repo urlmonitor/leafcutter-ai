@@ -1,5 +1,6 @@
 ---
 name: build-single-ticket
+internal: true
 description: Drive a single standalone ticket (not part of an epic) through its phase agents. Moves the ticket file from 00_inbox → 01_todo, creates an isolated worktree, dispatches ticket-supervisor, and on success moves the ticket to 99_done. Invoked by /build-feature when its argument resolves to a `.md` file outside an `EPIC-*/` folder.
 ---
 

@@ -375,20 +375,23 @@ def build_ticket_lifecycle(target_root: Path, config: dict[str, Any],
         return 0
 
     manifest_path = PACKAGE_ROOT / "config" / "ticket_lifecycle.json"
-    tickets_root = target_root / "tickets"
+    inbox_path = config.get("tickets_inbox_path", "tickets/00_inbox")
+    tickets_root = target_root / Path(inbox_path).parent
     written = 0
 
     # Copy ticket_lifecycle.json to the target project
     if manifest_path.exists():
-        target_manifest = tickets_root / "ticket_lifecycle.json"
+        lifecycle_dest = config.get("ticket_lifecycle_path", "tickets/ticket_lifecycle.json")
+        target_manifest = target_root / lifecycle_dest
         if _write(target_manifest,
                   manifest_path.read_text(encoding="utf-8"),
                   dry_run, force):
             written += 1
             if not dry_run:
-                print("  tickets/ticket_lifecycle.json")
+                print(f"  {lifecycle_dest}")
 
     # Copy all template files (READMEs, .gitkeeps)
+    tickets_rel = tickets_root.relative_to(target_root)
     for template_file in sorted(lifecycle_dir.rglob("*")):
         if not template_file.is_file():
             continue
@@ -398,7 +401,7 @@ def build_ticket_lifecycle(target_root: Path, config: dict[str, Any],
         if _write(output_path, text, dry_run, force):
             written += 1
             if not dry_run:
-                print(f"  tickets/{rel}")
+                print(f"  {tickets_rel}/{rel}")
 
     return written
 
@@ -424,7 +427,8 @@ def build_commit_guardian(target_root: Path, config: dict[str, Any],
     if not cg_dir.exists():
         return 0
 
-    output_dir = target_root / "scripts" / "commit_guardian"
+    cg_path = config.get("scripts_commit_guardian_path", "scripts/commit_guardian")
+    output_dir = target_root / cg_path
     written = 0
 
     for template_file in sorted(cg_dir.rglob("*")):
@@ -438,7 +442,7 @@ def build_commit_guardian(target_root: Path, config: dict[str, Any],
             if _write(output_path, text, dry_run, force):
                 written += 1
                 if not dry_run:
-                    print(f"  scripts/commit_guardian/{rel}")
+                    print(f"  {cg_path}/{rel}")
         else:
             # SHA-256 compare-before-copy skips identical binary files.
             if not _should_overwrite(output_path, force):
@@ -448,12 +452,12 @@ def build_commit_guardian(target_root: Path, config: dict[str, Any],
                 _uptodate_count += 1
                 continue
             if dry_run:
-                print(f"  [DRY-RUN] would copy scripts/commit_guardian/{rel}")
+                print(f"  [DRY-RUN] would copy {cg_path}/{rel}")
                 written += 1
             else:
                 output_path.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(template_file, output_path)
-                print(f"  scripts/commit_guardian/{rel}")
+                print(f"  {cg_path}/{rel}")
                 written += 1
 
     return written
@@ -478,7 +482,8 @@ def build_doc_compliance(target_root: Path, config: dict[str, Any],
     if not dc_dir.exists():
         return 0
 
-    output_dir = target_root / "scripts" / "doc_compliance"
+    dc_path = config.get("scripts_doc_compliance_path", "scripts/doc_compliance")
+    output_dir = target_root / dc_path
     written = 0
 
     for template_file in sorted(dc_dir.rglob("*")):
@@ -491,7 +496,7 @@ def build_doc_compliance(target_root: Path, config: dict[str, Any],
         if _write(output_path, text, dry_run, force):
             written += 1
             if not dry_run:
-                print(f"  scripts/doc_compliance/{rel}")
+                print(f"  {dc_path}/{rel}")
 
     return written
 
