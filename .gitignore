@@ -1,1 +1,4 @@
 .vscode/PythonImportHelper-v2-Completion.json
+.claude/.cache/
+.claude/worktrees/
+__pycache__/

@@ -27,13 +27,13 @@ Changelog and release notes workflow.
 2. Collects all commits in the range with file-change stats
 3. Categorizes commits using rules from `` (if the file exists); falls back to conventional-commit prefix heuristics when absent
 4. Reads `docs/components.json` to select relevant registered component IDs
-5. Writes a new per-file entry to `docs/changelog/` via `emit_entry.py`
+5. Writes a new per-file entry to `leafcutter-ai/docs/changelog/` via `emit_entry.py`
 6. Does NOT create a deployment tag (that is the job of `/prod-deploy`)
 7. Does NOT write to or modify the legacy `CHANGELOG.md`
 
 ## Output Format
 
-Each entry is a Markdown file at `docs/changelog/YYYY-MM-DD-HHMM-<slug>.md`:
+Each entry is a Markdown file at `leafcutter-ai/docs/changelog/YYYY-MM-DD-HHMM-<slug>.md`:
 
 ```yaml
 ---
