@@ -1,6 +1,6 @@
 ---
 title: "Disambiguate build-feature skill name collision and mark internal sub-skills"
-status: todo
+status: done
 components:
   - build_system
 created: 2026-05-19
@@ -15,7 +15,7 @@ agents:
   documentation-expert: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # Disambiguate build-feature skill name collision and mark internal sub-skills
@@ -72,7 +72,7 @@ Then entries with internal: true pass validation without error
 - [x] documentation-expert — 2026-05-19 16:10
 - [x] pr-reviewer — 2026-05-19 16:20
 - [x] commit — 2026-05-19 16:30
-- [ ] pull-request
+- [x] pull-request — 2026-05-19 16:35
 
 ## Comments
 
@@ -136,6 +136,12 @@ All acceptance criteria verified:
 feedback-id: (submit-failed)
 
 Staged and committed all in-scope files: `.claude/skills/build-feature/` → `.claude/skills/build-feature-ops-notes/` rename, `.claude/skills/build-single-ticket/SKILL.md` with `internal: true`, `leafcutter-ai/tests/test_skill_registry.py` (6 tests, all pass), and ticket file. Note: the `leafcutter-ai/config/` and `leafcutter-ai/templates/` directories are subject to a pre-existing repository restructuring commit (staged for deletion); those changes were applied to the new in-scope path `.claude/skills/` which is the deployed output that matters for the user-facing fix.
+
+### 2026-05-19 16:35 — pull-request (status: ok)
+
+feedback-id: (submit-failed)
+
+No remote configured for this repository (no `git remote` output). No separate feature branch (`ticket/disambiguate-build-feature-skills` was not created; commit landed on `main`). Since there is no remote to push to and no base branch to PR against, the pull-request phase is a no-op for this ticket. The implementation is committed to `main` locally at commit `77d725b`. When a remote is configured, the user can push `main` and open a PR manually if desired.
 
 ## Implementation Tasks
 
