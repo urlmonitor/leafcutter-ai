@@ -7,9 +7,13 @@ This file provides guidance to Claude Code when working in this repository.
 | Roadmap | [docs/roadmap.json](docs/roadmap.json) | Current phase, exit criteria, and tickets advancing the outcome. Use `python portable-dev-workflow/scripts/roadmap_query.py --current-outcome` to list actionable tickets. |
 
 Current phase: `phase_1`
-Current outcome: TODO: Replace with the single must-achieve outcome for Phase 1 in plain business language.
+Current outcome: Stable MVP that installs into any project and helps the user build good software — portable, self-onboarding, and reliable enough to use across multiple repos.
 
 <!-- roadmap-phase:end -->
+
+## Worktrees
+
+`scripts/setup_ticket_worktree.py` does not exist yet. When you need to create a worktree (for `/build-feature`, `/worktree create`, or any ticket-driven workflow), use the built-in `EnterWorktree` tool directly instead of calling the missing script.
 
 <!-- glossary-section: leafcutter -->
 ## Glossary

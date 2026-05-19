@@ -25,15 +25,15 @@ Changelog and release notes workflow.
 
 1. Finds the last `deploy-*` tag (or uses the specified range)
 2. Collects all commits in the range with file-change stats
-3. Categorizes commits using rules from `.claude/changelog_categories.md` (if the file exists); falls back to conventional-commit prefix heuristics when absent
+3. Categorizes commits using rules from `` (if the file exists); falls back to conventional-commit prefix heuristics when absent
 4. Reads `docs/components.json` to select relevant registered component IDs
-5. Writes a new per-file entry to `changelogs/` via `emit_entry.py`
+5. Writes a new per-file entry to `docs/changelog/` via `emit_entry.py`
 6. Does NOT create a deployment tag (that is the job of `/prod-deploy`)
 7. Does NOT write to or modify the legacy `CHANGELOG.md`
 
 ## Output Format
 
-Each entry is a Markdown file at `changelogs/YYYY-MM-DD-HHMM-<slug>.md`:
+Each entry is a Markdown file at `docs/changelog/YYYY-MM-DD-HHMM-<slug>.md`:
 
 ```yaml
 ---
@@ -75,7 +75,7 @@ pull request or when the commits relate to architectural decisions or diagrams.
 
 ## Categorization
 
-Categorization rules are loaded from `.claude/changelog_categories.md`
+Categorization rules are loaded from ``
 (default: `.claude/changelog_categories.md`). Create that file in your project
 with a Markdown table mapping folder paths to category names. Example:
 

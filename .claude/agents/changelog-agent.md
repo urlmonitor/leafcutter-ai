@@ -66,7 +66,7 @@ Maximum 50 commits per entry. If the range exceeds 50, group the rest under
 First, attempt to load project-specific categorization rules:
 
 ```bash
-cat ".claude/changelog_categories.md" 2>/dev/null
+cat "" 2>/dev/null
 ```
 
 **If the file exists:** parse the rules table from it and apply those
