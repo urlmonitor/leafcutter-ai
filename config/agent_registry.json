@@ -64,7 +64,8 @@
             ],
             "spawned_by": [
                 "user",
-                "create-epic"
+                "create-epic",
+                "product-owner-agent"
             ],
             "is_ticket_phase": false,
             "selection_criteria": null,
@@ -179,7 +180,8 @@
                 "sql-view-creator",
                 "strategy-builder",
                 "test-planner",
-                "test-writer"
+                "test-writer",
+                "product-owner-agent"
             ],
             "is_ticket_phase": false,
             "selection_criteria": null,
@@ -1393,6 +1395,32 @@
             "selection_criteria": null,
             "template_path": "templates/agents/onboard-config-section.md",
             "model": "haiku"
+        },
+        {
+            "id": "product-owner-agent",
+            "name": "Product Owner Agent",
+            "tier": "utility",
+            "role": "orchestration",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "create-ticket",
+                "research-agent"
+            ],
+            "spawned_by": [
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/product-owner-agent.md",
+            "model": "opus",
+            "skills_used": [
+                "roadmap-steward"
+            ],
+            "description": "Periodic product-owner audit agent. Reads vision.md and roadmap.json, invokes roadmap-steward skill, holds interactive PO dialogue, and proposes confirmation-gated actions. Model: opus (ADR-039).",
+            "invocation_surface": [
+                "/po-review"
+            ]
         }
     ]
 

@@ -6,12 +6,14 @@ BUSINESS CONTEXT: After tickets have roadmap_phase and advances_current_outcome
     fields, this script is the read layer — agents and humans can quickly answer
     "which open tickets advance the current phase outcome?" and "which tickets
     have no phase assigned?"
-ARCHITECTURE: Three output modes driven by --rollup, --current-outcome, and
-    --unassigned flags. Reads docs/roadmap.json for phase metadata then globs
-    tickets/00_inbox/**/*.md and tickets/01_todo/**/*.md, parses YAML
-    frontmatter, and aggregates results. Output is human-readable (default) or
-    JSON (--format json). Exits with a clean error message (not traceback) when
-    docs/roadmap.json is absent.
+ARCHITECTURE: Six output modes driven by --rollup, --current-outcome,
+    --unassigned, --starved, --off-roadmap, and --audit flags. Reads
+    docs/roadmap.json for phase metadata then globs tickets/00_inbox/**/*.md
+    and tickets/01_todo/**/*.md, parses YAML frontmatter, and aggregates
+    results. Output is human-readable (default) or JSON (--format json).
+    Exits with a clean error message (not traceback) when docs/roadmap.json
+    is absent. --audit produces the full audit_result JSON for the
+    product-owner-agent (ADR-039).
 """
 from __future__ import annotations
 
@@ -21,6 +23,14 @@ import re
 import sys
 from pathlib import Path
 from typing import Any
+
+# Audit modes live in a sibling module to keep this file under 400 lines.
+import importlib.util as _ilu
+_aud = _ilu.module_from_spec(_s := _ilu.spec_from_file_location("roadmap_query_audit", Path(__file__).resolve().parent / "roadmap_query_audit.py"))  # type: ignore[arg-type]
+_s.loader.exec_module(_aud)  # type: ignore[union-attr]
+_starved = _aud._starved
+_off_roadmap = _aud._off_roadmap
+_audit = _aud._audit
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -415,6 +425,9 @@ def main(argv: list[str] | None = None) -> int:
             "  roadmap_query.py --rollup\n"
             "  roadmap_query.py --current-outcome\n"
             "  roadmap_query.py --unassigned\n"
+            "  roadmap_query.py --starved\n"
+            "  roadmap_query.py --off-roadmap\n"
+            "  roadmap_query.py --audit\n"
             "  roadmap_query.py --rollup --format json\n"
         ),
     )
@@ -437,6 +450,25 @@ def main(argv: list[str] | None = None) -> int:
         "--unassigned",
         action="store_true",
         help="List tickets with no roadmap_phase (warning list).",
+    )
+    mode_group.add_argument(
+        "--starved",
+        action="store_true",
+        help="List roadmap phases with no open tickets advancing them.",
+    )
+    mode_group.add_argument(
+        "--off-roadmap",
+        action="store_true",
+        dest="off_roadmap",
+        help="List open tickets with no valid roadmap_phase (off-roadmap).",
+    )
+    mode_group.add_argument(
+        "--audit",
+        action="store_true",
+        help=(
+            "Produce full audit_result JSON for the product-owner-agent: "
+            "all_items, starved_items, off_roadmap_tickets."
+        ),
     )
     parser.add_argument(
         "--format",
@@ -466,6 +498,12 @@ def main(argv: list[str] | None = None) -> int:
         return _current_outcome(tickets, roadmap, args.format)
     if args.unassigned:
         return _unassigned(tickets, args.format)
+    if args.starved:
+        return _starved(tickets, roadmap, args.format)
+    if args.off_roadmap:
+        return _off_roadmap(tickets, roadmap, args.format)
+    if args.audit:
+        return _audit(tickets, roadmap, args.format)
     return 0
 
 
@@ -477,6 +515,11 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-05-19 12:45 [EPIC-RoadmapStewardship/05]: Added --starved, --off-roadmap, --audit flags. (#EPIC-RoadmapStewardship/05)
+  _starved() lists roadmap phases with no open tickets. _off_roadmap() lists
+  open tickets with no valid roadmap_phase. _audit() produces the full
+  audit_result JSON (all_items, starved_items, off_roadmap_tickets) for the
+  product-owner-agent (ADR-039). roadmap-steward SKILL.md documents invocation.
 - 2026-05-18 00:00 [EPIC-ProjectRoadmap/ticket 05]: Initial implementation. (#EPIC-ProjectRoadmap/05)
   Three output modes: --rollup, --current-outcome, --unassigned.
   Minimal YAML frontmatter parser (no PyYAML dependency) handles the subset

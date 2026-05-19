@@ -47,6 +47,7 @@ import glob
 import json
 import subprocess
 import sys
+from datetime import date
 from pathlib import Path
 
 # Fix import path when running from root
@@ -281,6 +282,90 @@ def configure_stdout() -> None:
 # ---------------------------------------------------------------------------
 
 
+def _load_roadmap_staleness_threshold(project_root: Path) -> int:
+    """Load the roadmap staleness threshold from commit_guardian.json.
+
+    Args:
+        project_root: Absolute path to the project root.
+
+    Returns:
+        int: Threshold in days. Defaults to 30 when the key is absent or the
+        file cannot be read.
+    """
+    config_path = (
+        project_root
+        / "portable-dev-workflow"
+        / "scripts"
+        / "commit_guardian"
+        / "commit_guardian.json"
+    )
+    if not config_path.exists():
+        return 30
+    try:
+        with open(config_path, encoding="utf-8") as fh:
+            cfg = json.load(fh)
+        return int(cfg.get("roadmap_staleness_threshold_days", 30))
+    except Exception:  # noqa: BLE001
+        return 30
+
+
+def check_roadmap_staleness(project_root: Path) -> None:
+    """Warn when docs/roadmap.json has not been updated recently.
+
+    Reads the ``last_updated`` field from ``docs/roadmap.json`` and computes
+    the age in days relative to today. Prints a warning to stderr when the age
+    exceeds the configured threshold. Always exits 0 (warn-only; never blocks
+    a commit).
+
+    A missing ``docs/roadmap.json`` or a missing / unparseable ``last_updated``
+    field is treated as a soft-warning (printed to stderr) rather than an error.
+
+    Args:
+        project_root: Absolute path to the project root.
+    """
+    roadmap_path = project_root / "docs" / "roadmap.json"
+    threshold = _load_roadmap_staleness_threshold(project_root)
+
+    if not roadmap_path.exists():
+        return  # No roadmap.json — nothing to check.
+
+    try:
+        data = json.loads(roadmap_path.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        print(
+            "WARNING: roadmap.json — could not parse docs/roadmap.json; skipping staleness check.",
+            file=sys.stderr,
+        )
+        return
+
+    last_updated_raw = data.get("last_updated")
+    if not last_updated_raw:
+        print(
+            "WARNING: roadmap.json — last_updated field is missing; "
+            "consider running /po-review to update the roadmap.",
+            file=sys.stderr,
+        )
+        return
+
+    try:
+        last_updated_date = date.fromisoformat(str(last_updated_raw)[:10])
+    except ValueError:
+        print(
+            f"WARNING: roadmap.json — last_updated value '{last_updated_raw}' is not a "
+            "recognised date; skipping staleness check.",
+            file=sys.stderr,
+        )
+        return
+
+    age_days = (date.today() - last_updated_date).days
+    if age_days > threshold:
+        print(
+            f"WARNING: roadmap.json has not been updated in {age_days} days "
+            f"(threshold: {threshold} days) — consider running /po-review",
+            file=sys.stderr,
+        )
+
+
 def get_files_to_check(args: argparse.Namespace, project_root: Path) -> dict[str, str]:
     """Determine which files to check based on CLI arguments.
 
@@ -407,6 +492,7 @@ def main() -> int:
     args = parser.parse_args()
 
     configure_stdout()
+    check_roadmap_staleness(project_root)
 
     valid_components = load_components_registry(project_root)
     files_to_check = get_files_to_check(args, project_root)
@@ -446,6 +532,13 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-05-19 11:30 [EPIC-RoadmapStewardship/03]: Added roadmap_staleness check. (#EPIC-RoadmapStewardship/03)
+  Adds check_roadmap_staleness() and _load_roadmap_staleness_threshold() to
+  fire a warn-only stderr warning when docs/roadmap.json.last_updated exceeds
+  the configured threshold (default 30 days, key roadmap_staleness_threshold_days
+  in commit_guardian.json). Always exits 0. Missing or unparseable last_updated
+  prints a soft warning and skips the age check. Warning text suggests /po-review.
+  Implements ADR-038 Option A (pre-commit nag).
 - 2026-05-17 00:00 [python-coder]: Added is_terminal_or_done_subfolder() helper
   that returns True for tickets/99_done/**, tickets/99_rejected/**,
   tickets/01_todo/EPIC-*/done/**, and tickets/00_inbox/epics/EPIC-*/done/**.

@@ -33,7 +33,6 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
-import json
 import subprocess
 import sys
 from pathlib import Path
@@ -49,6 +48,9 @@ try:
         _load_existing_glossary_terms,
         _print_summary,
         apply_decisions,
+        apply_decisions_from_file,
+        collect_candidates,
+        write_candidates_json,
     )
 except ImportError:
     _helpers_spec = importlib.util.spec_from_file_location(
@@ -64,6 +66,9 @@ except ImportError:
     _load_existing_glossary_terms = _helpers_mod._load_existing_glossary_terms
     _print_summary = _helpers_mod._print_summary
     apply_decisions = _helpers_mod.apply_decisions
+    apply_decisions_from_file = _helpers_mod.apply_decisions_from_file
+    collect_candidates = _helpers_mod.collect_candidates
+    write_candidates_json = _helpers_mod.write_candidates_json
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -105,10 +110,15 @@ def _dispatch_triage(
     existing_glossary_terms: set[str],
     existing_blacklist_terms: set[str],
 ) -> TriageResult:
-    """Standalone-mode triage stub. Prints a prompt JSON and returns a placeholder.
+    """Placeholder triage function — raises immediately to prevent silent blacklisting.
 
-    In production (Claude agent context), the caller provides a real dispatch_fn.
-    This stub is used when running the script directly from the command line.
+    This function is the default ``dispatch_fn`` when no override is supplied.
+    It exists to make standalone invocations fail loudly rather than silently
+    blacklisting every term, which was the previous (broken) behaviour.
+
+    In Claude-agent context, pass a real ``dispatch_fn`` to ``run_bootstrap()``
+    or use the ``--list-candidates`` / ``--apply-decisions`` two-mode CLI so
+    that Claude can orchestrate the glossary-triage agent.
 
     Args:
         term: The jargon candidate term.
@@ -116,30 +126,14 @@ def _dispatch_triage(
         existing_glossary_terms: Already-known terms from glossary.md.
         existing_blacklist_terms: Already-known terms from blacklist.md.
 
-    Returns:
-        Conservative TriageResult with action "add_to_blacklist" (placeholder).
+    Raises:
+        RuntimeError: Always — there is no built-in triage dispatch.
     """
-    prompt = json.dumps(
-        {
-            "term": term,
-            "occurrences": occurrences,
-            "existing_glossary_terms": sorted(existing_glossary_terms),
-            "existing_blacklist_terms": sorted(existing_blacklist_terms),
-        },
-        indent=2,
-    )
-    print(
-        f"[glossary-bootstrap] TRIAGE NEEDED for term: {term!r}\n"
-        f"  occurrences: {len(occurrences)} context window(s)\n"
-        f"  prompt_json:\n{prompt}",
-        file=sys.stderr,
-    )
-    return TriageResult(
-        term=term,
-        action="add_to_blacklist",
-        reason="standalone-mode placeholder — re-run via /glossary-bootstrap in Claude",
-        draft_entry="",
-        canonical_link="",
+    raise RuntimeError(
+        "glossary_bootstrap.py has no built-in triage dispatch. "
+        "Invoke via /glossary-bootstrap so Claude can orchestrate the "
+        "glossary-triage agent, or pass dispatch_fn= explicitly when "
+        "calling run_bootstrap() from a test."
     )
 
 
@@ -286,8 +280,30 @@ def run_bootstrap(
 # ---------------------------------------------------------------------------
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     """Entry point for standalone invocation.
+
+    Two modes are supported:
+
+    **--list-candidates mode** (read-only, no mutations):
+        Scans all .md/.py/.sql files, detects novel jargon candidates, and
+        writes them as a JSON array to ``--output <path.json>``.  No changes
+        are made to docs/glossary.md or docs/glossary_blacklist.md and no
+        git commit is made.  Claude reads the JSON file, dispatches the
+        glossary-triage agent in batches, and then invokes
+        ``--apply-decisions`` with the results.
+
+    **--apply-decisions mode** (mutates glossary files):
+        Reads a decisions JSON file (produced by Claude after running the
+        glossary-triage agent) and applies each decision to docs/glossary.md
+        or docs/glossary_blacklist.md.  Idempotent: existing entries are
+        skipped.  Stages and commits automatically unless ``--no-commit`` is
+        passed.
+
+    **No subcommand** (legacy / safeguard):
+        Calls ``_dispatch_triage()`` which raises ``RuntimeError`` immediately.
+        This ensures that running the script directly without a subcommand
+        fails loudly instead of silently blacklisting every term.
 
     Returns:
         0 on success, 1 on unrecoverable error.
@@ -303,8 +319,38 @@ def main() -> int:
         "--batch-size", type=int, default=_DEFAULT_BATCH_SIZE,
         help=f"Number of terms per triage batch (default {_DEFAULT_BATCH_SIZE}).",
     )
-    args = parser.parse_args()
 
+    # Mode 1: list candidates (read-only)
+    parser.add_argument(
+        "--list-candidates", action="store_true", default=False,
+        help=(
+            "Enumerate novel jargon candidates and write them to --output as JSON. "
+            "Does NOT modify glossary.md or glossary_blacklist.md. "
+            "Does NOT commit anything."
+        ),
+    )
+    parser.add_argument(
+        "--output", type=Path, default=None,
+        help="Path to write candidates JSON (required with --list-candidates).",
+    )
+
+    # Mode 2: apply decisions
+    parser.add_argument(
+        "--apply-decisions", type=Path, default=None, metavar="DECISIONS_JSON",
+        help=(
+            "Path to a decisions JSON file produced by Claude after running the "
+            "glossary-triage agent.  Applies decisions to glossary.md and "
+            "glossary_blacklist.md.  Idempotent."
+        ),
+    )
+    parser.add_argument(
+        "--no-commit", action="store_true", default=False,
+        help="With --apply-decisions: write files but do not stage or commit.",
+    )
+
+    args = parser.parse_args(argv)
+
+    # Resolve repo root
     repo_root = args.repo_root
     if repo_root is None:
         try:
@@ -317,12 +363,78 @@ def main() -> int:
             print("glossary-bootstrap: ERROR — not inside a git repository.", file=sys.stderr)
             return 1
 
-    try:
-        run_bootstrap(repo_root=repo_root, batch_size=args.batch_size)
-    except Exception as exc:  # noqa: BLE001
-        print(f"glossary-bootstrap: FATAL — {exc}", file=sys.stderr)
-        return 1
+    # ----------------------------------------------------------------
+    # Mode 1: --list-candidates
+    # ----------------------------------------------------------------
+    if args.list_candidates:
+        if args.output is None:
+            print(
+                "glossary-bootstrap: ERROR — --list-candidates requires --output <path.json>.",
+                file=sys.stderr,
+            )
+            return 1
 
+        detect_candidates = _load_detector()
+        if detect_candidates is None:
+            print(
+                "glossary-bootstrap: ERROR — glossary_detector.py not found.",
+                file=sys.stderr,
+            )
+            return 1
+
+        try:
+            candidates = collect_candidates(repo_root, detect_candidates)
+            write_candidates_json(candidates, args.output)
+            print(
+                f"glossary-bootstrap: {len(candidates)} novel candidates written to {args.output}."
+            )
+        except Exception as exc:  # noqa: BLE001
+            print(f"glossary-bootstrap: FATAL — {exc}", file=sys.stderr)
+            return 1
+
+        return 0
+
+    # ----------------------------------------------------------------
+    # Mode 2: --apply-decisions
+    # ----------------------------------------------------------------
+    if args.apply_decisions is not None:
+        if not args.apply_decisions.exists():
+            print(
+                f"glossary-bootstrap: ERROR — decisions file not found: {args.apply_decisions}",
+                file=sys.stderr,
+            )
+            return 1
+
+        glossary_path = repo_root / "docs" / "glossary.md"
+        blacklist_path = repo_root / "docs" / "glossary_blacklist.md"
+
+        try:
+            applied_g, applied_b, skipped = apply_decisions_from_file(
+                decisions_path=args.apply_decisions,
+                glossary_path=glossary_path,
+                blacklist_path=blacklist_path,
+                no_commit=args.no_commit,
+                repo_root=repo_root,
+            )
+        except Exception as exc:  # noqa: BLE001
+            print(f"glossary-bootstrap: FATAL — {exc}", file=sys.stderr)
+            return 1
+
+        print(
+            f"glossary-bootstrap: summary — "
+            f"{len(applied_g)} glossary, {len(applied_b)} blacklist, "
+            f"{len(skipped)} skipped."
+        )
+        return 0
+
+    # ----------------------------------------------------------------
+    # No subcommand: fail loud (the old silent-blacklist path is gone)
+    # ----------------------------------------------------------------
+    try:
+        _dispatch_triage("", [], set(), set())  # always raises
+    except RuntimeError as exc:
+        print(f"glossary-bootstrap: ERROR — {exc}", file=sys.stderr)
+        return 1
     return 0
 
 
@@ -333,6 +445,12 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-05-19 [python-coder/TICKET-20260518-GlossaryBootstrap_OrchestrationFix]: Replaced
+#   _dispatch_triage() body with fail-loud RuntimeError (no more silent blacklisting).
+#   Added --list-candidates / --apply-decisions two-mode CLI to main().
+#   No-subcommand path now calls _dispatch_triage() which raises.
+#   New imports: apply_decisions_from_file, collect_candidates, write_candidates_json.
+#   main() accepts optional argv list for testability.
 # - 2026-05-18 19:45 [python-coder/EPIC-GlossaryAutomation/ticket-03]: Split (#EPIC-GlossaryAutomation/03)
 #   I/O helpers into glossary_bootstrap_helpers.py to satisfy 400-line limit.
 #   Main file now contains only TriageResult, _dispatch_triage, _load_detector,

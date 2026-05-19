@@ -229,6 +229,14 @@
       "portable": true,
       "domain": null,
       "dependencies": []
+    },
+    {
+      "id": "roadmap-steward",
+      "name": "Roadmap Steward",
+      "portable": true,
+      "domain": null,
+      "dependencies": [],
+      "description": "Wraps roadmap_query.py --audit to produce audit_result JSON (all_items, starved_items, off_roadmap_tickets) for the product-owner-agent."
     }
   ]
 }
