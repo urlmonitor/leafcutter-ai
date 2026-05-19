@@ -4,6 +4,7 @@ description: Drive a single standalone ticket (not part of an epic) through its 
   dispatches ticket-supervisor, and on success moves the ticket to 99_done. Invoked
   by /build-feature when its argument resolves to a `.md` file outside an `EPIC-*/`
   folder.
+internal: true
 name: build-single-ticket
 ---
 
