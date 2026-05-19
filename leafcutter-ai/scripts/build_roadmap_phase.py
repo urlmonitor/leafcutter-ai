@@ -68,17 +68,19 @@ def _build_sentinel_block(current_phase: str = "", current_outcome: str = "") ->
     return "\n".join(lines)
 
 
-def _load_roadmap_metadata(target_root: Path) -> tuple[str, str]:
-    """Load current_phase and current_outcome from docs/roadmap.json.
+def _load_roadmap_metadata(target_root: Path, docs_root: str = "docs/") -> tuple[str, str]:
+    """Load current_phase and current_outcome from roadmap.json.
 
     Args:
         target_root: Absolute path to the target project root.
+        docs_root: Docs directory (from config), with optional trailing slash.
 
     Returns:
         Tuple of (current_phase, current_outcome) strings. Both empty when
         docs/roadmap.json is absent or unreadable.
     """
-    roadmap_path = target_root / "docs" / "roadmap.json"
+    docs_dir = docs_root.rstrip("/") if docs_root else "docs"
+    roadmap_path = target_root / docs_dir / "roadmap.json"
     if not roadmap_path.exists():
         return "", ""
     try:
@@ -88,7 +90,7 @@ def _load_roadmap_metadata(target_root: Path) -> tuple[str, str]:
         return "", ""
 
 
-def wire_roadmap_phase_claude_md(target_root: Path, dry_run: bool) -> int:
+def wire_roadmap_phase_claude_md(target_root: Path, dry_run: bool, docs_root: str = "docs/") -> int:
     """Inject a roadmap sentinel block into the target project's CLAUDE.md.
 
     Behaviour (KDD-02 spec):
@@ -111,7 +113,7 @@ def wire_roadmap_phase_claude_md(target_root: Path, dry_run: bool) -> int:
         error-loudly aborted.
     """
     claude_md = target_root / "CLAUDE.md"
-    current_phase, current_outcome = _load_roadmap_metadata(target_root)
+    current_phase, current_outcome = _load_roadmap_metadata(target_root, docs_root=docs_root)
     block = _build_sentinel_block(current_phase, current_outcome)
 
     if not claude_md.exists():
@@ -210,27 +212,29 @@ def build_roadmap(target_root: Path, config: dict[str, Any],
     """
     written = 0
 
-    # Sub-step 1: materialise docs/roadmap.json
+    docs_dir = config.get("docs_root", "docs/").rstrip("/")
+
+    # Sub-step 1: materialise roadmap.json
     template_path = TEMPLATES_DIR / "roadmap" / "ROADMAP.template.json"
     if template_path.exists():
-        target_path = target_root / "docs" / "roadmap.json"
+        target_path = target_root / docs_dir / "roadmap.json"
         if target_path.exists():
-            print("  roadmap: docs/roadmap.json exists (skipped)")
+            print(f"  roadmap: {docs_dir}/roadmap.json exists (skipped)")
         else:
             if dry_run:
-                print("  roadmap: would create docs/roadmap.json from template (dry-run)")
+                print(f"  roadmap: would create {docs_dir}/roadmap.json from template (dry-run)")
                 written += 1
             else:
                 target_path.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(template_path, target_path)
                 print(
-                    "  roadmap: created docs/roadmap.json "
+                    f"  roadmap: created {docs_dir}/roadmap.json "
                     "(PLEASE FILL — replace all TODO placeholders)"
                 )
                 written += 1
 
     # Sub-step 2: inject roadmap sentinel into CLAUDE.md
-    written += wire_roadmap_phase_claude_md(target_root, dry_run)
+    written += wire_roadmap_phase_claude_md(target_root, dry_run, docs_root=config.get("docs_root", "docs/"))
 
     return written
 

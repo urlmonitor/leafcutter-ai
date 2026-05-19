@@ -17,6 +17,7 @@
   "test_command_sql": "poetry run python -m pytest unit_tests/sql_functions -v",
   "test_command_single_file_pattern": "python unit_tests/live_trader/<file>.py",
 
+  "docs_root": "docs/",
   "precommit_autofix_config_path": ".claude/precommit-autofix.json",
   "default_branch": "main",
 

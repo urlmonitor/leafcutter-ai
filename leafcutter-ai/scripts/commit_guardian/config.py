@@ -142,23 +142,27 @@ INFRA_HIGH_IMPACT_KEYWORDS: list[str] = _get("infra_docs", "high_impact_keywords
 
 # ---------------------------------------------------------------------------
 # check_doc_frontmatter
+# Docs root — configurable via commit_guardian.json → doc_frontmatter.docs_dir
+# or the top-level docs_root key. All doc-related globs and paths derive from this.
+DOC_FM_DOCS_DIR: str = _get("doc_frontmatter", "docs_dir", None) or load_config().get("docs_root", "docs").rstrip("/")
+
 # ---------------------------------------------------------------------------
 # required_fields is a per-glob dict:
-#   { "docs/architecture/**": [..., "flight_level"], "docs/**": [...] }
+#   { "<docs>/architecture/**": [..., "flight_level"], "<docs>/**": [...] }
 # Callers resolve the correct field list via fnmatch against the file path.
 DOC_FM_REQUIRED_FIELDS_BY_GLOB: dict[str, list[str]] = _get(
     "doc_frontmatter",
     "required_fields",
     {
-        "docs/architecture/adrs/**": ["title", "type", "status", "created", "last_updated", "components"],
-        "docs/architecture/**": ["title", "type", "status", "created", "last_updated", "components", "flight_level"],
-        "docs/**": ["title", "type", "status", "created", "last_updated", "components"],
+        f"{DOC_FM_DOCS_DIR}/architecture/adrs/**": ["title", "type", "status", "created", "last_updated", "components"],
+        f"{DOC_FM_DOCS_DIR}/architecture/**": ["title", "type", "status", "created", "last_updated", "components", "flight_level"],
+        f"{DOC_FM_DOCS_DIR}/**": ["title", "type", "status", "created", "last_updated", "components"],
     },
 )
 # Fallback flat list for callers that have not yet been updated to pass a file path.
-# Points to the broadest glob (docs/**) so existing tests keep working.
+# Points to the broadest glob (<docs>/**) so existing tests keep working.
 DOC_FM_REQUIRED_FIELDS: list[str] = DOC_FM_REQUIRED_FIELDS_BY_GLOB.get(
-    "docs/**", ["title", "type", "status", "created", "last_updated", "components"]
+    f"{DOC_FM_DOCS_DIR}/**", ["title", "type", "status", "created", "last_updated", "components"]
 )
 DOC_FM_ALLOWED_TYPES: list[str] = _get("doc_frontmatter", "allowed_types",
                                         ["tutorial", "how-to", "reference", "explanation", "adr", "cross-cutting"])
@@ -173,8 +177,7 @@ DOC_FM_FLIGHT_LEVEL_VALUES: list[str] = _get("doc_frontmatter", "flight_level_va
 DOC_FM_DIAGRAM_TYPE_VALUES: list[str] = _get("doc_frontmatter", "diagram_type_values",
                                               ["context", "container", "component", "sequence",
                                                "erd", "state", "dataflow", "none"])
-DOC_FM_COMPONENTS_REGISTRY: str = _get("doc_frontmatter", "components_registry", "docs/components.json")
-DOC_FM_DOCS_DIR: str = _get("doc_frontmatter", "docs_dir", "docs")
+DOC_FM_COMPONENTS_REGISTRY: str = _get("doc_frontmatter", "components_registry", f"{DOC_FM_DOCS_DIR}/components.json")
 
 # ---------------------------------------------------------------------------
 # check_doc_length
@@ -225,7 +228,7 @@ STRUCTURAL_SIGNALS: list[dict] = _get(
         {"name": "new top-level package", "pattern": r"^[^/]+/__init__\.py$"},
     ],
 )
-STRUCTURAL_REQUIRED_DOC: str = _get("structural_change", "required_doc", "docs/components.json")
+STRUCTURAL_REQUIRED_DOC: str = _get("structural_change", "required_doc", f"{DOC_FM_DOCS_DIR}/components.json")
 STRUCTURAL_BYPASS_TOKEN: str = _get("structural_change", "bypass_token", "[NO-ARCH-UPDATE]")
 
 # ---------------------------------------------------------------------------

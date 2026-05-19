@@ -21,7 +21,8 @@ def init_config(project_root: str = ".") -> None:
     Args:
         project_root: Root directory of the target project.
     """
-    docs_dir = Path(project_root) / "docs"
+    from scripts.commit_guardian.config import DOC_FM_DOCS_DIR
+    docs_dir = Path(project_root) / DOC_FM_DOCS_DIR
     docs_dir.mkdir(exist_ok=True)
     config_path = docs_dir / "doc_compliance.json"
 
@@ -85,7 +86,11 @@ def bootstrap() -> None:
         "ignore": _get("bootstrap_ignore", ["__pycache__", "alembic/", "unit_tests/", "debugging/", "legacy/", "venv/", ".venv/"])
     }
 
-    docs_dir = Path("docs")
+    try:
+        from scripts.commit_guardian.config import DOC_FM_DOCS_DIR
+    except ImportError:
+        DOC_FM_DOCS_DIR = "docs"
+    docs_dir = Path(DOC_FM_DOCS_DIR)
     docs_dir.mkdir(exist_ok=True)
 
     config_path = docs_dir / "doc_compliance.json"

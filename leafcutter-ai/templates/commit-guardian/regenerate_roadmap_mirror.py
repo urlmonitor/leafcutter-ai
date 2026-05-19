@@ -29,10 +29,14 @@ from pathlib import Path
 # Constants
 # ---------------------------------------------------------------------------
 
-ROADMAP_JSON_RELATIVE = "docs/roadmap.json"
-ROADMAP_MD_RELATIVE = "docs/roadmap.md"
+try:
+    from scripts.commit_guardian.config import DOC_FM_DOCS_DIR as _DOCS_DIR
+except ImportError:
+    _DOCS_DIR = "docs"
+ROADMAP_JSON_RELATIVE = f"{_DOCS_DIR}/roadmap.json"
+ROADMAP_MD_RELATIVE = f"{_DOCS_DIR}/roadmap.md"
 
-_BANNER_LINE_1 = "<!-- AUTO-GENERATED — do not edit by hand. Source: docs/roadmap.json -->"
+_BANNER_LINE_1 = f"<!-- AUTO-GENERATED — do not edit by hand. Source: {_DOCS_DIR}/roadmap.json -->"
 _BANNER_LINE_2 = "<!-- Regenerate manually: python portable-dev-workflow/scripts/commit_guardian/regenerate_roadmap_mirror.py --manual -->"
 
 

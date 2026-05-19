@@ -25,11 +25,15 @@ from pathlib import Path
 
 
 SCHEMA_RELATIVE = "leafcutter/config/roadmap.schema.json"
-ROADMAP_RELATIVE = "docs/roadmap.json"
+try:
+    from scripts.commit_guardian.config import DOC_FM_DOCS_DIR as _DOCS_DIR
+except ImportError:
+    _DOCS_DIR = "docs"
+ROADMAP_RELATIVE = f"{_DOCS_DIR}/roadmap.json"
 
 
 def _is_roadmap_staged() -> bool:
-    """Return True iff docs/roadmap.json is in the staged diff."""
+    """Return True iff roadmap.json is in the staged diff."""
     try:
         result = subprocess.run(
             ["git", "diff", "--cached", "--name-only"],
@@ -38,7 +42,7 @@ def _is_roadmap_staged() -> bool:
             timeout=10,
         )
         staged = result.stdout.splitlines()
-        return any(p.endswith("docs/roadmap.json") or p == ROADMAP_RELATIVE for p in staged)
+        return any(p.endswith("/roadmap.json") or p == ROADMAP_RELATIVE for p in staged)
     except Exception:
         return False
 

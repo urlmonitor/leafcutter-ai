@@ -517,9 +517,10 @@ def build_vision(target_root: Path, config: dict[str, Any],
     template_path = TEMPLATES_DIR / "vision" / "VISION.template.md"
     if not template_path.exists():
         return 0
-    target_path = target_root / "docs" / "vision.md"
+    docs_dir = config.get("docs_root", "docs/").rstrip("/")
+    target_path = target_root / docs_dir / "vision.md"
     if target_path.exists():
-        print("  vision: docs/vision.md exists (skipped)")
+        print(f"  vision: {docs_dir}/vision.md exists (skipped)")
         return 0
     content = inject_config(template_path.read_text(encoding="utf-8"), config)
     # Always force=False regardless of the caller's effective_force —

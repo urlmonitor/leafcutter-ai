@@ -100,6 +100,11 @@
       "description": "Python module to verify after worktree bootstrap. Set to a module that exists in your project.",
       "default": "settings"
     },
+    "docs_root": {
+      "type": "string",
+      "description": "Root directory for project documentation (relative to project root, with trailing slash). All docs-related paths in paths.json, commit guardian, and doc compliance derive from this value.",
+      "default": "docs/"
+    },
     "changelog_folder": {
       "type": "string",
       "description": "Folder where per-entry changelog Markdown files are written.",

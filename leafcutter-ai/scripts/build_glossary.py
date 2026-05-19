@@ -61,8 +61,9 @@ def build_glossary_seed_files(
     target_root: Path,
     package_root: Path,
     dry_run: bool,
+    docs_root: str = "docs/",
 ) -> int:
-    """Materialise seed docs/glossary.md and docs/glossary_blacklist.md — write-if-absent.
+    """Materialise seed glossary.md and glossary_blacklist.md — write-if-absent.
 
     Copies the templates from
     ``leafcutter/templates/docs/glossary.md`` and
@@ -81,16 +82,17 @@ def build_glossary_seed_files(
     templates_docs = package_root / "templates" / "docs"
     written = 0
 
+    docs_dir = docs_root.rstrip("/")
     for filename in ("glossary.md", "glossary_blacklist.md"):
         src = templates_docs / filename
-        dst = target_root / "docs" / filename
+        dst = target_root / docs_dir / filename
 
         if not src.exists():
             print(f"  glossary: template {src.name} not found — skipping.", file=sys.stderr)
             continue
 
         if dst.exists():
-            print(f"  glossary: docs/{filename} exists (skipped)")
+            print(f"  glossary: {docs_dir}/{filename} exists (skipped)")
             continue
 
         if dry_run:
@@ -326,7 +328,7 @@ def build_glossary(
     """
     package_root = Path(__file__).resolve().parent.parent
     total = 0
-    total += build_glossary_seed_files(target_root, package_root, dry_run)
+    total += build_glossary_seed_files(target_root, package_root, dry_run, docs_root=config.get("docs_root", "docs/"))
     total += build_glossary_hook_registration(target_root, package_root, dry_run)
     total += wire_glossary_claude_md(target_root, dry_run, config)
     return total

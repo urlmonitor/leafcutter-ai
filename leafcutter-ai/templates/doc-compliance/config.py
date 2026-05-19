@@ -54,11 +54,14 @@ def _get(key: str, default: object) -> object:
     return _load_pkg_config().get(key, default)
 
 
+# Docs root — derived from doc_compliance.json or commit_guardian config.
+_DOCS_ROOT: str = _get("docs_root", None) or "docs"
+
 # Default relative paths — resolved against project_root at runtime.
-# These are read from doc_compliance.json when present; Bybit-Trader defaults
-# are the fallback so existing behaviour is fully preserved.
-DEFAULT_CONFIG_FILE: str = _get("config_file", "docs/doc_compliance.json")
-DEFAULT_COMPONENTS_FILE: str = _get("components_file", "docs/components.json")
+# These are read from doc_compliance.json when present; defaults are
+# derived from _DOCS_ROOT so projects with custom docs dirs work out of the box.
+DEFAULT_CONFIG_FILE: str = _get("config_file", f"{_DOCS_ROOT}/doc_compliance.json")
+DEFAULT_COMPONENTS_FILE: str = _get("components_file", f"{_DOCS_ROOT}/components.json")
 
 
 def _load_config_and_registry(project_root: str) -> tuple[dict | None, dict | None]:
