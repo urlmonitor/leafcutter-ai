@@ -140,7 +140,7 @@ of `.build_manifest.json`:
 At commit time, `check_output_drift.py`:
 
 1. Reads `.build_manifest.json`.
-2. Scans all files under `.claude/agents/`, `.claude/skills/`, `.agents/workflows/`,
+2. Scans all files under `.claude/agents/`, `.claude/skills/`, `.claude/commands/`,
    and `.agents/rules/`.
 3. For each file, looks up its `expected_output_hash` in `output_mappings`.
 4. Computes the SHA-256 of the on-disk content.
@@ -154,7 +154,7 @@ At commit time, `check_output_drift.py`:
 |---|---|
 | `.claude/agents/` | `leafcutter/templates/agents/` |
 | `.claude/skills/` | `leafcutter/templates/skills/` |
-| `.agents/workflows/` | `leafcutter/templates/workflows/` |
+| `.claude/commands/` | `leafcutter/templates/workflows/` |
 | `.agents/rules/` | `leafcutter/templates/rules/` |
 
 ### Edge cases — safe exits (no false-blocks)

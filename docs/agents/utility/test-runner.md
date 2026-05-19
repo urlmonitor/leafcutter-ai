@@ -14,7 +14,7 @@ related_docs:
   - "CLAUDE.md"
 related_code:
   - ".claude/agents/test-runner.md"
-  - ".agents/workflows/test.md"
+  - ".claude/commands/test.md"
   - ".claude/skills/sql-test/SKILL.md"
 ---
 

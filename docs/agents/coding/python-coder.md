@@ -13,7 +13,7 @@ related_docs:
   - "tickets/09_done/EPIC-CodingAgents/06_python_coder_agent.md"
 related_code:
   - ".claude/agents/python-coder.md"
-  - ".agents/workflows/python-coder.md"
+  - ".claude/commands/python-coder.md"
 ---
 
 # Agent Reference: `python-coder`

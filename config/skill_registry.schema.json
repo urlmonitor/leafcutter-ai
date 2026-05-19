@@ -55,6 +55,14 @@
             "pattern": "^[a-z][a-z0-9-]*$"
           },
           "description": "Skill IDs that this skill invokes at runtime (skill-to-skill dependency graph). May be left [] for the initial pass when dependency mapping is non-trivial."
+        },
+        "internal": {
+          "type": "boolean",
+          "description": "When true, this skill is for internal/runtime use only and should be excluded from user-facing skill listings and summary tables. The skill is still copied to .claude/skills/ so runtime agents can invoke it."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional human-readable description of the skill's purpose. Used in summaries and documentation."
         }
       },
       "additionalProperties": false

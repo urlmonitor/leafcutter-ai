@@ -17,7 +17,7 @@ related_code:
   - ".claude/agents/brainstorm-worker.md"
   - ".claude/agents/ticket-supervisor.md"
   - ".claude/skills/building-epics/SKILL.md"
-  - ".agents/workflows/build-feature.md"
+  - ".claude/commands/build-feature.md"
 ---
 
 # Agent Reference: `brainstorm-lead` (and `brainstorm-worker`)
@@ -247,7 +247,7 @@ sub-agent and is documented in this same file (§5 above).
 - [`.claude/skills/signoff/SKILL.md`](../../../.claude/skills/signoff/SKILL.md) —
   comment heading schema (§3); the supervisor uses this to write the
   `(status: question)` comment that carries the brainstorm output.
-- [`.agents/workflows/build-feature.md`](../../../.agents/workflows/build-feature.md) —
+- [`.claude/commands/build-feature.md`](../../../.claude/commands/build-feature.md) —
   user-facing entry point that ultimately leads here through the
   failure-adjudication ladder.
 - [`docs/agents/coding/epic-supervisor.md`](epic-supervisor.md) —

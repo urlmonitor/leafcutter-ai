@@ -12,7 +12,7 @@ file, run `build.py`, and get the complete system generated.
 
 - **Agent prompts** (`.claude/agents/`): supervisor stack, phase agents, utility agents
 - **Skills** (`.claude/skills/`): signoff, building-epics, create-ticket, feature, precommit-autofix, and more
-- **Workflows** (`.agents/workflows/`): `/build-feature`, `/commit`, `/pull-request`, etc.
+- **Workflows** (`.claude/commands/`): `/build-feature`, `/commit`, `/pull-request`, etc.
 - **Rules** (`.agents/rules/`): documentation, debug-scripts, git-commits
 - **Pre-commit hooks** (`scripts/commit_guardian/`): quality gates on every commit
 - **Doc compliance** (`scripts/doc_compliance/`): architecture doc freshness enforcement

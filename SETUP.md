@@ -171,7 +171,7 @@ What this installs:
 |----------------|--------|
 | `.claude/agents/` | `leafcutter/templates/agents/` |
 | `.claude/skills/` | `leafcutter/templates/skills/` |
-| `.agents/workflows/` | `leafcutter/templates/workflows/` |
+| `.claude/commands/` | `leafcutter/templates/workflows/` |
 | `scripts/commit_guardian/` | `leafcutter/templates/commit-guardian/` |
 | `scripts/doc_compliance/` | `leafcutter/templates/doc-compliance/` |
 | `tickets/` | `leafcutter/templates/ticket-lifecycle/` |

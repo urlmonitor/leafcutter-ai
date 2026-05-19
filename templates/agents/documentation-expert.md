@@ -204,7 +204,7 @@ the soft cap.
   this genre is out of scope for the current specialist set. Surface to the user
   as: "Tutorial authoring is not yet supported -- ticket a `tutorial-author`
   specialist or draft the content directly."
-- Do not modify workflow files at `.agents/workflows/`.
+- Do not modify workflow files at `.claude/commands/`.
 - Do not spawn sub-agents for reasons other than specialist dispatch.
 ## Sign-off (when ticket_path is provided)
 

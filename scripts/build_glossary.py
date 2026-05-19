@@ -36,11 +36,13 @@ _GLOSSARY_SECTION_MARKER = "<!-- glossary-section: leafcutter -->"
 
 _GLOSSARY_HOOK_ID = "check-glossary-coverage"
 
-_GLOSSARY_SECTION_TEMPLATE = """\
-{marker}
+def _glossary_section_template(docs_root: str = "docs/") -> str:
+    docs_dir = docs_root.rstrip("/") if docs_root else "docs"
+    return f"""\
+{_GLOSSARY_SECTION_MARKER}
 ## Glossary
 
-Project jargon and terminology is tracked at [docs/glossary.md](docs/glossary.md).
+Project jargon and terminology is tracked at [{docs_dir}/glossary.md]({docs_dir}/glossary.md).
 
 Consult it for project-specific terms when reading code or docs.
 
@@ -50,7 +52,7 @@ Consult it for project-specific terms when reading code or docs.
   terms in staged files and dispatches the `glossary-triage` agent automatically.
 - **Do NOT hand-edit to add entries** — always use the triage flow so the blacklist
   stays consistent. Manual edits are only for correcting existing entries.
-""".format(marker=_GLOSSARY_SECTION_MARKER)
+"""
 
 # ---------------------------------------------------------------------------
 # Seed file materialization (copy-if-not-exists)
@@ -61,8 +63,9 @@ def build_glossary_seed_files(
     target_root: Path,
     package_root: Path,
     dry_run: bool,
+    docs_root: str = "docs/",
 ) -> int:
-    """Materialise seed docs/glossary.md and docs/glossary_blacklist.md — write-if-absent.
+    """Materialise seed glossary.md and glossary_blacklist.md — write-if-absent.
 
     Copies the templates from
     ``leafcutter/templates/docs/glossary.md`` and
@@ -81,16 +84,17 @@ def build_glossary_seed_files(
     templates_docs = package_root / "templates" / "docs"
     written = 0
 
+    docs_dir = docs_root.rstrip("/")
     for filename in ("glossary.md", "glossary_blacklist.md"):
         src = templates_docs / filename
-        dst = target_root / "docs" / filename
+        dst = target_root / docs_dir / filename
 
         if not src.exists():
             print(f"  glossary: template {src.name} not found — skipping.", file=sys.stderr)
             continue
 
         if dst.exists():
-            print(f"  glossary: docs/{filename} exists (skipped)")
+            print(f"  glossary: {docs_dir}/{filename} exists (skipped)")
             continue
 
         if dry_run:
@@ -265,7 +269,8 @@ def wire_glossary_claude_md(target_root: Path, dry_run: bool, config: dict | Non
         if dry_run:
             print("  [DRY-RUN] would append glossary section to CLAUDE.md")
             return 1
-        new_content = existing.rstrip() + "\n\n" + _GLOSSARY_SECTION_TEMPLATE
+        docs_root = cfg.get("docs_root", "docs/")
+        new_content = existing.rstrip() + "\n\n" + _glossary_section_template(docs_root)
         claude_md.write_text(new_content, encoding="utf-8")
         print("  glossary: appended glossary section to CLAUDE.md")
         return 1
@@ -289,7 +294,8 @@ def wire_glossary_claude_md(target_root: Path, dry_run: bool, config: dict | Non
             "This file provides guidance to Claude Code when working in this repository.\n\n"
         )
 
-    full_content = base_content.rstrip() + "\n\n" + _GLOSSARY_SECTION_TEMPLATE
+    docs_root = cfg.get("docs_root", "docs/")
+    full_content = base_content.rstrip() + "\n\n" + _glossary_section_template(docs_root)
     if dry_run:
         print("  [DRY-RUN] would create CLAUDE.md from template with glossary section")
         return 1
@@ -326,7 +332,7 @@ def build_glossary(
     """
     package_root = Path(__file__).resolve().parent.parent
     total = 0
-    total += build_glossary_seed_files(target_root, package_root, dry_run)
+    total += build_glossary_seed_files(target_root, package_root, dry_run, docs_root=config.get("docs_root", "docs/"))
     total += build_glossary_hook_registration(target_root, package_root, dry_run)
     total += wire_glossary_claude_md(target_root, dry_run, config)
     return total

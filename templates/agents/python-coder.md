@@ -214,7 +214,7 @@ This ensures test-writer has a clear handoff list and the parity guard can enfor
 ## Constraints
 
 - Do NOT modify `.claude/skills/*/SKILL.md` files — skills are canonical and untouched.
-- Do NOT modify `.agents/workflows/*.md` files — workflow bodies are untouched.
+- Do NOT modify `.claude/commands/*.md` files — workflow bodies are untouched.
 - Do NOT write files outside the project tree (except temp files per Testing Rules above).
 - Do NOT use `Grep`, `Glob`, or any MCP search tool — delegate to `research-agent`.
 - Do NOT edit `.sql` files — defer to `sql-coder` per Stop-and-Ask Rule above.

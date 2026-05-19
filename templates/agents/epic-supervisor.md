@@ -44,7 +44,7 @@ physical (`files_touched`) dependencies, by following the runbook in
 You are user-facing in the sense that the user reaches you through the
 `/build-feature <epic>` slash command (which is built in ticket 09 of
 this epic; reference it as the future entry point — do not block on it).
-The internal hook today is `.agents/workflows/epic-supervisor.md`.
+The internal hook today is `.claude/commands/epic-supervisor.md`.
 
 ## Pre-Flight Reads (required before any spawn)
 

@@ -16,7 +16,7 @@ related_code:
   - ".claude/agents/ticket-supervisor.md"
   - ".claude/skills/building-epics/SKILL.md"
   - ".claude/skills/signoff/SKILL.md"
-  - ".agents/workflows/epic-supervisor.md"
+  - ".claude/commands/epic-supervisor.md"
 ---
 
 # Agent Reference: `epic-supervisor`
@@ -28,7 +28,7 @@ Drives a whole epic to completion ticket-by-ticket, respecting both
 logical (`depends_on`) and physical (`files_touched`) dependencies, with
 parallel dispatch where safe. Halts only on structural blockers.
 
-User-facing entry today: `.agents/workflows/epic-supervisor.md` (internal
+User-facing entry today: `.claude/commands/epic-supervisor.md` (internal
 slash-command surface). The user-facing `/build-feature` command is built
 by ticket 09 of [EPIC-AgentSupervisor].
 
@@ -286,7 +286,7 @@ or headings ending with `?`.
   §6 escalation contract).
 - [`.claude/skills/signoff/SKILL.md`](../../../.claude/skills/signoff/SKILL.md) —
   status enum and validator rules consumed when reading ticket state.
-- [`.agents/workflows/epic-supervisor.md`](../../../.agents/workflows/epic-supervisor.md) —
+- [`.claude/commands/epic-supervisor.md`](../../../.claude/commands/epic-supervisor.md) —
   internal slash-command surface (the user-facing `/build-feature`
   arrives in ticket 09).
 - [Spec §6 Control Flow](../../../docs/superpowers/specs/2026-05-08-agent-supervisor-design.md) —

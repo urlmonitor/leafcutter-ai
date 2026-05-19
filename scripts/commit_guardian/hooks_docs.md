@@ -22,7 +22,7 @@ and the escape hatch for bypassing or suppressing the hook when legitimate.
 | `check-paths-integrity` | `leafcutter/config/paths.json` staged | Blocking | Fix the JSON schema error. |
 | `check-architecture-scaffolds` | `leafcutter/templates/docs/architecture/` staged | Blocking | Fix the scaffold integrity error. |
 | `check-feedback-id` | `tickets/**/*.md` staged | Blocking | Ensure every signoff comment contains `feedback-id:`. |
-| `check-output-drift` | `.claude/agents/`, `.claude/skills/`, `.agents/workflows/` staged | Blocking | Edit the template source, not the built copy. Run `build.py` to propagate. |
+| `check-output-drift` | `.claude/agents/`, `.claude/skills/`, `.claude/commands/` staged | Blocking | Edit the template source, not the built copy. Run `build.py` to propagate. |
 | `check-glossary-coverage` | `*.md`, `*.py`, `*.sql` staged | **Fail-open (advisory)** | Always exits 0; unexpected errors print a warning. |
 | `check-placeholder-defaults` | `*.py` staged | Blocking | (A) Add `# default-path-smoke: <module_stem>` in a test file under `unit_tests/` that exercises the default dispatch path without overriding the parameter. (B) Add `# noqa: default-path-smoke <reason>` in the first 5 lines of the module (requires human review of justification). See ADR-035. |
 

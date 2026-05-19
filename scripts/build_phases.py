@@ -40,6 +40,7 @@ from template_compiler import (
     compile_agent_template,
     compile_skill_template,
     inject_config,
+    parse_frontmatter,
 )
 
 PACKAGE_ROOT = Path(__file__).resolve().parent.parent
@@ -251,10 +252,24 @@ def build_skills(target_root: Path, config: dict[str, Any],
 
     skills_output_dir = target_root / ".claude" / "skills"
     written = 0
+    internal_skills: list[str] = []
 
     for skill_dir in sorted(skills_template_dir.iterdir()):
         if not skill_dir.is_dir():
             continue
+
+        # Detect internal skills by reading the SKILL.md frontmatter.
+        # Internal skills (internal: true) are still copied to .claude/skills/
+        # so runtime agents can invoke them, but they are excluded from
+        # user-facing skill listings and summary tables.
+        skill_md = skill_dir / "SKILL.md"
+        is_internal = False
+        if skill_md.is_file():
+            fm, _ = parse_frontmatter(skill_md.read_text(encoding="utf-8"))
+            is_internal = bool(fm.get("internal", False))
+            if is_internal:
+                internal_skills.append(skill_dir.name)
+
         for template_file in sorted(skill_dir.rglob("*")):
             if not template_file.is_file():
                 continue
@@ -266,7 +281,8 @@ def build_skills(target_root: Path, config: dict[str, Any],
                 if _write(output_path, compiled, dry_run, force):
                     written += 1
                     if not dry_run:
-                        print(f"  skills/{rel}")
+                        suffix = " [internal]" if is_internal else ""
+                        print(f"  skills/{rel}{suffix}")
             else:
                 # Non-markdown files (scripts, etc.) are copied verbatim.
                 # SHA-256 compare-before-copy skips identical binary files.
@@ -285,12 +301,18 @@ def build_skills(target_root: Path, config: dict[str, Any],
                     print(f"  skills/{rel}")
                     written += 1
 
+    if internal_skills and not dry_run:
+        _log.info(
+            "Internal skills (excluded from user-facing listings): %s",
+            ", ".join(internal_skills),
+        )
+
     return written
 
 
 def build_workflows(target_root: Path, config: dict[str, Any],
                     dry_run: bool, force: bool) -> int:
-    """Copy workflow templates to ``<target_root>/.agents/workflows/``.
+    """Copy workflow templates to ``<target_root>/.claude/commands/``.
 
     Args:
         target_root: Absolute path to the target project root directory.
@@ -305,7 +327,7 @@ def build_workflows(target_root: Path, config: dict[str, Any],
     if not workflows_dir.exists():
         return 0
 
-    output_dir = target_root / ".agents" / "workflows"
+    output_dir = target_root / ".claude" / "commands"
     written = 0
 
     for template_file in sorted(workflows_dir.glob("*.md")):
@@ -459,70 +481,6 @@ def build_commit_guardian(target_root: Path, config: dict[str, Any],
     return written
 
 
-def build_root_scripts(target_root: Path, config: dict[str, Any],
-                       dry_run: bool, force: bool) -> int:
-    """Copy loose top-level files from ``templates/scripts/`` to ``<target>/scripts/``.
-
-    Sibling-directory phases (``build_commit_guardian``, ``build_doc_compliance``)
-    materialise their own subtrees under ``templates/scripts/<subdir>/``. This
-    phase covers the remaining surface: project-root scripts that ship as
-    individual files (e.g. ``setup_ticket_worktree.py``), referenced by agent
-    and skill templates as ``python scripts/<name>.py`` and therefore expected
-    at ``<target_root>/scripts/<name>.py``.
-
-    Only files directly inside ``templates/scripts/`` are copied — subdirectories
-    are skipped so other phases retain ownership of their subtree. Text files
-    (``.py``, ``.json``, ``.yaml``, ``.yml``, ``.md``) get config-placeholder
-    injection; other extensions are copied verbatim with a SHA-256 compare-before-
-    write guard, matching the ``build_commit_guardian`` policy.
-
-    Args:
-        target_root: Absolute path to the target project root directory.
-        config: Merged config dictionary used for placeholder injection.
-        dry_run: When True, logs intent but writes nothing.
-        force: When True, overwrites existing files.
-
-    Returns:
-        Count of files written (or that would be written in dry-run mode).
-    """
-    scripts_dir = TEMPLATES_DIR / "scripts"
-    if not scripts_dir.exists():
-        return 0
-
-    output_dir = target_root / "scripts"
-    written = 0
-
-    for template_file in sorted(scripts_dir.iterdir()):
-        if not template_file.is_file():
-            continue  # subdirectories handled by sibling phases
-        rel = template_file.name
-        output_path = output_dir / rel
-
-        if template_file.suffix in (".json", ".py", ".yaml", ".yml", ".md"):
-            text = inject_config(template_file.read_text(encoding="utf-8"), config)
-            if _write(output_path, text, dry_run, force):
-                written += 1
-                if not dry_run:
-                    print(f"  scripts/{rel}")
-        else:
-            if not _should_overwrite(output_path, force):
-                continue
-            if _files_content_identical(template_file, output_path):
-                global _uptodate_count  # noqa: PLW0603
-                _uptodate_count += 1
-                continue
-            if dry_run:
-                print(f"  [DRY-RUN] would copy scripts/{rel}")
-                written += 1
-            else:
-                output_path.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(template_file, output_path)
-                print(f"  scripts/{rel}")
-                written += 1
-
-    return written
-
-
 def build_doc_compliance(target_root: Path, config: dict[str, Any],
                          dry_run: bool, force: bool) -> int:
     """Copy doc compliance files to ``<target_root>/scripts/doc_compliance/``.
@@ -581,9 +539,10 @@ def build_vision(target_root: Path, config: dict[str, Any],
     template_path = TEMPLATES_DIR / "vision" / "VISION.template.md"
     if not template_path.exists():
         return 0
-    target_path = target_root / "docs" / "vision.md"
+    docs_dir = config.get("docs_root", "docs/").rstrip("/")
+    target_path = target_root / docs_dir / "vision.md"
     if target_path.exists():
-        print("  vision: docs/vision.md exists (skipped)")
+        print(f"  vision: {docs_dir}/vision.md exists (skipped)")
         return 0
     content = inject_config(template_path.read_text(encoding="utf-8"), config)
     # Always force=False regardless of the caller's effective_force —
@@ -640,13 +599,4 @@ def build_vision(target_root: Path, config: dict[str, Any],
 #   This makes vision.md a human-curated living document that is never
 #   clobbered by subsequent build runs.
 # - 2026-05-18 11:15 [EPIC-PortableInstallHardening/T03]: Changed build_commit_guardian cg_dir from TEMPLATES_DIR/"commit-guardian" to TEMPLATES_DIR/"scripts"/"commit_guardian" with legacy fallback for backward compatibility. (#EPIC-PortableInstallHardening/T03)
-# - 2026-05-19 [Agent/workflow-architect]: Added build_root_scripts() phase. (#TICKETLESS reason=worktree-script-onboarding-gap)
-#   Copies loose top-level files from templates/scripts/ (currently
-#   setup_ticket_worktree.py) to <target>/scripts/, mirroring the
-#   build_commit_guardian text/binary policy. Subdirectories under
-#   templates/scripts/ are skipped so sibling phases retain ownership of
-#   their subtree (commit_guardian/, doc-compliance/, etc.). Fixes the
-#   gap surfaced on a fresh-clone install where worktree-agent.md
-#   references python scripts/setup_ticket_worktree.py but the script
-#   was never shipped by the build.
 # ====================================================================

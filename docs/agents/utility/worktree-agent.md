@@ -11,9 +11,9 @@ related_docs:
   - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
 related_code:
   - ".claude/agents/worktree-agent.md"
-  - ".agents/workflows/worktree.md"
+  - ".claude/commands/worktree.md"
   - ".claude/skills/feature/SKILL.md"
-  - ".agents/workflows/close-worktree.md"
+  - ".claude/commands/close-worktree.md"
 ---
 
 # Agent Reference: `worktree-agent`
@@ -59,7 +59,7 @@ Creation is non-destructive — no confirmation required.
 
 ### `remove`
 
-Delegates to `.agents/workflows/close-worktree.md` with a confirmation gate
+Delegates to `.claude/commands/close-worktree.md` with a confirmation gate
 applied **before Phase 4 (Remove the Worktree)**:
 
 1. Phases 1–3 of the workflow run automatically (identify, check uncommitted
@@ -110,7 +110,7 @@ is needed for any worktree operation.
 ## 6. Underlying Skills (Do Not Modify)
 
 - [`.claude/skills/feature/SKILL.md`](../../../.claude/skills/feature/SKILL.md) — worktree creation logic, epic-reuse detection, environment bootstrap.
-- [`.agents/workflows/close-worktree.md`](../../../.agents/workflows/close-worktree.md) — safety-check sequence, merge check, worktree removal, branch cleanup.
+- [`.claude/commands/close-worktree.md`](../../../.claude/commands/close-worktree.md) — safety-check sequence, merge check, worktree removal, branch cleanup.
 
 `worktree-agent` wraps these; it does not duplicate their logic.
 

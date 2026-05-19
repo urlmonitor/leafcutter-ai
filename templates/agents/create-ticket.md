@@ -179,7 +179,7 @@ default: tickets/00_inbox/epics)
 
 - Do not modify `.claude/skills/ticket-authoring/SKILL.md` — it is the canonical
   skill and must remain untouched by this agent.
-- Do not modify `.agents/workflows/create-ticket.md` — that file is the
+- Do not modify `.claude/commands/create-ticket.md` — that file is the
   slash-command body and is not this agent's responsibility to update.
 - Do not write files outside `tickets/` except when updating a Master_Plan
   cross-link that already exists in the same epic folder.

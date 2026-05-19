@@ -81,7 +81,7 @@ AHEAD=$(git rev-list --count origin/main..main)
 
   If the epic folder or any required files are in those commits, push main to
   origin/main first (or cherry-pick the missing commits per the reachability
-  check in .agents/workflows/build-feature.md Step A) before continuing.
+  check in .claude/commands/build-feature.md Step A) before continuing.
   ```
 
 This warning is informational — it does NOT abort the worktree creation.
@@ -90,7 +90,7 @@ This warning is informational — it does NOT abort the worktree creation.
 
 ## Action: remove
 
-Load `.agents/workflows/close-worktree.md` and execute it with the following confirmation gate applied **before Phase 4 (Remove the Worktree)**:
+Load `.claude/commands/close-worktree.md` and execute it with the following confirmation gate applied **before Phase 4 (Remove the Worktree)**:
 
 1. Run Phases 1–3 of the close-worktree workflow (identify worktree, check uncommitted changes, check merge status).
 2. If Phase 2 finds uncommitted changes: stop immediately, show the dirty state, and refuse. Do not proceed to Phase 4.

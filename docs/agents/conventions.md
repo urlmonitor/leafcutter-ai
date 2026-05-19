@@ -14,7 +14,7 @@ related_docs:
 related_code:
   - ".claude/agents/"
   - ".claude/skills/"
-  - ".agents/workflows/"
+  - ".claude/commands/"
 ---
 
 # Agent Authoring Conventions
@@ -85,17 +85,17 @@ An agent is up to **three** files, in three folders:
 | Path | Status | Purpose |
 |---|---|---|
 | `.claude/agents/<agent>.md` | always | The agent itself: frontmatter + system prompt. The only file that pins `model:` and `tools:`. |
-| `.agents/workflows/<command>.md` | user-facing only | The canonical workflow body that runs when `/<command>` is typed. **Surfaced as a slash command via the `.claude/commands/` Windows junction → `.agents/workflows/`** (see "Slash command surface" below). Also loaded by Skill-Wrapper and Multi-Skill Dispatcher agents end-to-end. |
+| `.claude/commands/<command>.md` | user-facing only | The canonical workflow body that runs when `/<command>` is typed. Surfaced as a slash command directly by Claude Code. Also loaded by Skill-Wrapper and Multi-Skill Dispatcher agents end-to-end. |
 | `docs/agents/<family>/<agent>.md` | always | Reference doc: when-to-use, inputs, outputs, escalation behaviour. The discoverable entry point a new contributor opens to learn what the agent does. |
 
-**Slash command surface (project-specific).** This project does **not** put real files in `.claude/commands/`. The directory is a Windows junction to `.agents/workflows/` (declared in `.gitignore` with the comment `# .claude/commands is a junction to .agents/workflows (canonical source)`). Each user-facing slash command corresponds to a workflow file at `.agents/workflows/<command>.md`; the workflow body **is** the slash-command body. This lets Antigravity consume the same workflows directly.
+**Slash command surface.** Workflow files are built directly to `.claude/commands/` where Claude Code discovers them as slash commands. Each user-facing slash command corresponds to a workflow file at `.claude/commands/<command>.md`; the workflow body **is** the slash-command body.
 
 Two consequences for agent authors:
 
-1. **Do NOT create real files in `.claude/commands/`.** They will be gitignored and may shadow the junction in worktrees. Add the slash-command surface by creating a workflow at `.agents/workflows/<command>.md`.
-2. **Auto-trigger via agent description, explicit invocation via slash command.** Prose intent matching ("how are trades doing?") routes to the agent via its `description` field and runs the agent's pinned model. Explicit `/<command>` resolves to the workflow body via the junction and runs on the user's current session model. The two surfaces are separate; the agent and the workflow are co-canonical and load each other where appropriate (the agent loads the workflow by path; the workflow stays untouched).
+1. **Do NOT hand-edit files in `.claude/commands/`.** They are build outputs (gitignored) and will be overwritten by `build.py`. Add the slash-command surface by creating a workflow template at `leafcutter/templates/workflows/<command>.md`.
+2. **Auto-trigger via agent description, explicit invocation via slash command.** Prose intent matching ("how are trades doing?") routes to the agent via its `description` field and runs the agent's pinned model. Explicit `/<command>` resolves to the workflow body and runs on the user's current session model. The two surfaces are separate; the agent and the workflow are co-canonical and load each other where appropriate (the agent loads the workflow by path; the workflow stays untouched).
 
-The wrapped skill or workflow stays at `.claude/skills/<skill>/SKILL.md` or `.agents/workflows/<workflow>.md` and is **not modified** by the wrapper agent's body. The workflow's frontmatter `description:` may be neutered to avoid duplicate auto-trigger surface (see `.agents/workflows/trade-report.md` for the canonical example: description names the agent that owns the workflow). See [ADR-006 Operational consequences](../architecture/ADR-006-agent-model-tiers.md#4-consequences) ("Skill-Wrapper agents do not modify the wrapped skill").
+The wrapped skill or workflow stays at `.claude/skills/<skill>/SKILL.md` or `.claude/commands/<workflow>.md` and is **not modified** by the wrapper agent's body. The workflow's frontmatter `description:` may be neutered to avoid duplicate auto-trigger surface (see `.claude/commands/trade-report.md` for the canonical example: description names the agent that owns the workflow). See [ADR-006 Operational consequences](../architecture/ADR-006-agent-model-tiers.md#4-consequences) ("Skill-Wrapper agents do not modify the wrapped skill").
 
 ### 2.1 Canonical family directories
 
@@ -271,7 +271,7 @@ model: haiku
 tools: Bash, Read
 ---
 
-Load and execute `.agents/workflows/fetch-prod-logs.md` end-to-end.
+Load and execute `.claude/commands/fetch-prod-logs.md` end-to-end.
 
 After completing your primary task, append an `## Anomalies` section. Flag anything unusual that warrants deeper interpretation: unexpected values, unfamiliar patterns, results that contradict prior runs, or signals suggesting a different agent should pick up the trace. The section is empty when nothing is unusual — do not invent anomalies. Phrase findings so an Opus session can pick them up for follow-up without re-running your work.
 ```
@@ -322,9 +322,9 @@ tools: Bash, Read, Agent
 
 | Command | Workflow |
 |---|---|
-| `/trade-report` | `.agents/workflows/trade-report.md` |
-| `/pipeline-health` | `.agents/workflows/pipeline-health.md` *(planned — EPIC-SkillRunnerAgents)* |
-| `/project-report` | `.agents/workflows/project-report.md` *(planned — EPIC-SkillRunnerAgents)* |
+| `/trade-report` | `.claude/commands/trade-report.md` |
+| `/pipeline-health` | `.claude/commands/pipeline-health.md` *(planned — EPIC-SkillRunnerAgents)* |
+| `/project-report` | `.claude/commands/project-report.md` *(planned — EPIC-SkillRunnerAgents)* |
 
 <!-- To extend: add a row when EPIC-SkillRunnerAgents introduces a new report skill. -->
 
@@ -344,7 +344,7 @@ When a run produces **≥3 distinct anomaly classes**, OR **any single anomaly t
 - Query 1A–1J failures that are not a "fresh deploy / no data" case — distinguish "no data" (empty `pnl_trades_v2` on a fresh deploy: legitimate, not anomalous) from "data missing unexpectedly".
 - Strong long-only or short-only skew that contradicts the strategy mix.
 
-Do not modify `.agents/workflows/trade-report.md` or any other workflow file.
+Do not modify `.claude/commands/trade-report.md` or any other workflow file.
 Do not spawn sub-agents for reasons other than anomaly-density escalation.
 ```
 

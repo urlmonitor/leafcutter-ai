@@ -1,7 +1,7 @@
 .claude/.cache/
 .claude/agents/
 .claude/skills/
-.agents/workflows/
+.claude/commands/
 .agents/rules/
 __pycache__/
 *.pyc

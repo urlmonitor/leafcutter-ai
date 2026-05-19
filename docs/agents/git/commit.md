@@ -11,7 +11,7 @@ related_docs:
   - "docs/agents/coding/precommit-autofix-routing.md"
 related_code:
   - ".claude/agents/commit.md"
-  - ".agents/workflows/commit.md"
+  - ".claude/commands/commit.md"
   - ".claude/precommit-autofix.json"
 ---
 

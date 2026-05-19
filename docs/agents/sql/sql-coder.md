@@ -12,7 +12,7 @@ related_docs:
   - "docs/database-domain.md"
 related_code:
   - ".claude/agents/sql-coder.md"
-  - ".agents/workflows/sql-coder.md"
+  - ".claude/commands/sql-coder.md"
 ---
 
 # Agent Reference: `sql-coder`

@@ -271,7 +271,7 @@ Return the PR URL to the user.
 ## Constraints
 
 - Do not spawn sub-agents other than `conflict-resolver` (and only on conflict).
-- Do not modify `.agents/workflows/commit-push-pr.md` or any workflow file.
+- Do not modify `.claude/commands/commit-push-pr.md` or any workflow file.
 - All search (if needed) must be delegated to `research-agent` -- do not use
   Grep, Glob, or MCP search tools directly.
 - This agent runs at depth 2 in the full chain (user session -> commit agent ->

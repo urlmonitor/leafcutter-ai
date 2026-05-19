@@ -14,7 +14,7 @@ related_docs:
   - "tickets/09_done/EPIC-CodingAgents/05_create_ticket_agent.md"
 related_code:
   - ".claude/agents/create-ticket.md"
-  - ".agents/workflows/create-ticket.md"
+  - ".claude/commands/create-ticket.md"
   - ".claude/skills/create-ticket/SKILL.md"
 ---
 
@@ -89,7 +89,7 @@ Three surfaces work together; each has a single responsibility:
 
 | Surface | File | Responsibility |
 |---|---|---|
-| Slash command | `.agents/workflows/create-ticket.md` (junction at `.claude/commands/create-ticket.md`) | One-liner forwarding `$ARGUMENTS` to the agent. Does nothing else. |
+| Slash command | `.claude/commands/create-ticket.md` (junction at `.claude/commands/create-ticket.md`) | One-liner forwarding `$ARGUMENTS` to the agent. Does nothing else. |
 | Agent | `.claude/agents/create-ticket.md` | Pins the model (Sonnet), pins the tool allowlist, and runs the orchestration sequence (BA → branch → finalise). |
 | Skill | `.claude/skills/create-ticket/SKILL.md` | Canonical file-writing rules: frontmatter schema, folder routing, naming conventions, body structure, hook requirements. The agent defers to this skill for all write-side work. |
 
@@ -165,7 +165,7 @@ surface; any improvements to behaviour go in the agent file.
   the agent file itself.
 - [`.claude/skills/create-ticket/SKILL.md`](../../../.claude/skills/create-ticket/SKILL.md) —
   canonical skill for file-writing rules. Not modified by this agent.
-- [`.agents/workflows/create-ticket.md`](../../../.agents/workflows/create-ticket.md) —
+- [`.claude/commands/create-ticket.md`](../../../.claude/commands/create-ticket.md) —
   the slash-command body (one-liner forwarder). Surfaced at
   `.claude/commands/create-ticket.md` via the Windows junction.
 - [Ticket 05](../../../tickets/09_done/EPIC-CodingAgents/05_create_ticket_agent.md) —

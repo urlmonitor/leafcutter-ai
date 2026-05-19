@@ -20,7 +20,7 @@ This file is the front door for everything agent-related. Read it first; follow 
 
 ## §1 What is an agent?
 
-Agents are spawned execution units that pin a model tier and a tool allowlist, isolating each task from the parent Opus session's full context. They wrap canonical skills or workflows — or implement standalone behaviour — so that mechanical work runs on Haiku, structured work on Sonnet, and novel synthesis is reserved for Opus reached only via gatekeeper escalation. The key distinction from skills is that **skills cannot pin a model** in their frontmatter — only agents can; the key distinction from slash commands is that slash commands surface workflow bodies directly (via the `.claude/commands/` → `.agents/workflows/` junction in this project), while agents auto-trigger from prose intent matching their `description` field and run on the pinned tier.
+Agents are spawned execution units that pin a model tier and a tool allowlist, isolating each task from the parent Opus session's full context. They wrap canonical skills or workflows — or implement standalone behaviour — so that mechanical work runs on Haiku, structured work on Sonnet, and novel synthesis is reserved for Opus reached only via gatekeeper escalation. The key distinction from skills is that **skills cannot pin a model** in their frontmatter — only agents can; the key distinction from slash commands is that slash commands surface workflow bodies directly from `.claude/commands/`, while agents auto-trigger from prose intent matching their `description` field and run on the pinned tier.
 
 ---
 
@@ -30,7 +30,7 @@ Agents are spawned execution units that pin a model tier and a tool allowlist, i
 |---|---|
 | **Agent** | Pinned-tier execution unit at `.claude/agents/<agent>.md`; the only surface that can set `model:` and `tools:`. |
 | **Skill** | Canonical procedure at `.claude/skills/<name>/SKILL.md`; provider-side, model-agnostic — cannot pin a tier. |
-| **Slash command** | User-facing trigger. In this project, `.claude/commands/` is a Windows junction → `.agents/workflows/`; each `/<command>` resolves to its workflow file at `.agents/workflows/<command>.md`. Auto-trigger from prose routes to the matching agent via its `description` field. See [conventions.md §2](conventions.md#2-file-layout). |
+| **Slash command** | User-facing trigger. Each `/<command>` resolves to its workflow file at `.claude/commands/<command>.md` (built from `leafcutter/templates/workflows/`). Auto-trigger from prose routes to the matching agent via its `description` field. See [conventions.md §2](conventions.md#2-file-layout). |
 
 For the three-file layout that pairs these surfaces (agent + command + reference doc), see [conventions.md §2](conventions.md#2-file-layout).
 

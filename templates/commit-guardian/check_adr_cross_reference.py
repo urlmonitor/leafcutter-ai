@@ -62,9 +62,13 @@ import yaml
 # ---------------------------------------------------------------------------
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-COMPONENTS_JSON_PATH = REPO_ROOT / "docs" / "components.json"
-ADR_DIR_REL = "docs/architecture/adrs"
-ADR_PATTERN = re.compile(r"^docs/architecture/adrs/ADR-\d+.*\.md$", re.IGNORECASE)
+try:
+    from scripts.commit_guardian.config import DOC_FM_DOCS_DIR as _DOCS_DIR
+except ImportError:
+    _DOCS_DIR = "docs"
+COMPONENTS_JSON_PATH = REPO_ROOT / _DOCS_DIR / "components.json"
+ADR_DIR_REL = f"{_DOCS_DIR}/architecture/adrs"
+ADR_PATTERN = re.compile(rf"^{re.escape(_DOCS_DIR)}/architecture/adrs/ADR-\d+.*\.md$", re.IGNORECASE)
 
 # ---------------------------------------------------------------------------
 # Git helpers

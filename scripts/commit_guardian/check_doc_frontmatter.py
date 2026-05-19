@@ -323,7 +323,8 @@ def check_roadmap_staleness(project_root: Path) -> None:
     Args:
         project_root: Absolute path to the project root.
     """
-    roadmap_path = project_root / "docs" / "roadmap.json"
+    from scripts.commit_guardian.config import DOC_FM_DOCS_DIR
+    roadmap_path = project_root / DOC_FM_DOCS_DIR / "roadmap.json"
     threshold = _load_roadmap_staleness_threshold(project_root)
 
     if not roadmap_path.exists():

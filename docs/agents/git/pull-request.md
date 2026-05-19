@@ -12,8 +12,8 @@ related_docs:
   - "tickets/09_done/EPIC-CodingAgents/12_pull_request_agent.md"
 related_code:
   - ".claude/agents/pull-request.md"
-  - ".agents/workflows/pull-request.md"
-  - ".agents/workflows/commit-push-pr.md"
+  - ".claude/commands/pull-request.md"
+  - ".claude/commands/commit-push-pr.md"
 ---
 
 # pull-request agent

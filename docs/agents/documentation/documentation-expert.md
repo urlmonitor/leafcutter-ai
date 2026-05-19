@@ -14,7 +14,7 @@ related_docs:
   - "tickets/09_done/EPIC-CodingAgents/20_documentation_expert.md"
 related_code:
   - ".claude/agents/documentation-expert.md"
-  - ".agents/workflows/documentation.md"
+  - ".claude/commands/documentation.md"
 ---
 
 # Agent Reference: `documentation-expert`
@@ -145,7 +145,7 @@ sub-agents beyond `research-agent`.
 ## 7. Slash Command
 
 The `/documentation` slash command is the explicit invocation surface for this
-agent. The command resolves to `.agents/workflows/documentation.md` via the
+agent. The command resolves to `.claude/commands/documentation.md` via the
 `.claude/commands/` Windows junction. Prose intent matching ("document this
 feature") also auto-triggers the agent via its `description` field.
 
@@ -172,7 +172,7 @@ feature") also auto-triggers the agent via its `description` field.
   on every run.
 - [`.claude/agents/documentation-expert.md`](../../../.claude/agents/documentation-expert.md) —
   the agent file itself: frontmatter + system prompt.
-- [`.agents/workflows/documentation.md`](../../../.agents/workflows/documentation.md) —
+- [`.claude/commands/documentation.md`](../../../.claude/commands/documentation.md) —
   the slash-command workflow body for `/documentation`.
 - [`docs/agents/coding/adr-author.md`](./adr-author.md) — specialist reference.
 - [`docs/agents/coding/architecture-author.md`](./architecture-author.md) — specialist reference.

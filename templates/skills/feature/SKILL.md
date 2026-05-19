@@ -105,7 +105,7 @@ git rev-list --count origin/main..main   # run in the host repo
 **What to do if you see this warning:**
 
 1. **Preferred:** Push local `main` to `origin/main` before creating the worktree, then retry. This ensures the worktree starts from the correct base.
-2. **Alternative (after creation):** Cherry-pick the missing commit(s) onto the epic branch per the reachability check procedure in `.agents/workflows/build-feature.md` Step A step 6 (R-1).
+2. **Alternative (after creation):** Cherry-pick the missing commit(s) onto the epic branch per the reachability check procedure in `.claude/commands/build-feature.md` Step A step 6 (R-1).
 
 If the epic folder is in the missing commits and you skip this step, `/build-feature` will fail its reachability check and prevent the supervisor from being dispatched until the epic folder is present.
 

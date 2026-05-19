@@ -1,7 +1,7 @@
 """
 MODULE: check_output_drift
 GOAL: Pre-commit hook — blocks the commit when a built output file in
-    .claude/agents/, .claude/skills/, .agents/workflows/, or .agents/rules/
+    .claude/agents/, .claude/skills/, .claude/commands/, or .agents/rules/
     has been directly edited without editing its source-of-truth template.
 BUSINESS CONTEXT: The leafcutter package compiles templates into
     output files. If a developer (or agent) edits a built output directly

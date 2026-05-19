@@ -15,7 +15,7 @@ graph TD
 
     B -->|compile agents| E[.claude/agents/\n*.md — runtime prompts]
     B -->|copy skills| F[.claude/skills/\n*/SKILL.md]
-    B -->|copy workflows| G[.agents/workflows/\n*.md]
+    B -->|copy workflows| G[.claude/commands/\n*.md]
     B -->|copy rules| H[.agents/rules/\n*.md]
     B -->|scaffold| I[tickets/\n00_inbox/ 01_todo/ 99_done/]
     B -->|copy commit guardian| J[scripts/commit_guardian/\n*.py *.json]

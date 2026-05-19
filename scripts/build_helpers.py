@@ -38,7 +38,7 @@ def _compute_output_mappings(
     Covers the same template directories that build_phases.py writes:
     - agents:    templates/agents/*.md  to  .claude/agents/
     - skills:    templates/skills/**/* to  .claude/skills/
-    - workflows: templates/workflows/*.md to .agents/workflows/
+    - workflows: templates/workflows/*.md to .claude/commands/
     - rules:     templates/rules/*.md  to  .agents/rules/
 
     commit-guardian, doc-compliance, and ticket-lifecycle templates are
@@ -120,7 +120,7 @@ def _compute_output_mappings(
     if workflows_tpl_dir.is_dir():
         for tpl in sorted(workflows_tpl_dir.glob("*.md")):
             text = inject_config(tpl.read_text(encoding="utf-8"), config)
-            output = target_root / ".agents" / "workflows" / tpl.name
+            output = target_root / ".claude" / "commands" / tpl.name
             _add(tpl, output, text)
 
     # --- rules ---

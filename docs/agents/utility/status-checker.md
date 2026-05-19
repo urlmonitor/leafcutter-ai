@@ -11,7 +11,7 @@ related_docs:
   - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
 related_code:
   - ".claude/agents/status-checker.md"
-  - ".agents/workflows/status.md"
+  - ".claude/commands/status.md"
 ---
 
 # Agent Reference: `status-checker`
