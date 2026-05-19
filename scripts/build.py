@@ -32,6 +32,7 @@ from build_phases import (
     build_rules,
     build_ticket_lifecycle,
     build_commit_guardian,
+    build_root_scripts,
     build_precommit_config,
     build_doc_compliance,
     build_vision,
@@ -268,6 +269,7 @@ def _run_phases(
         ("Rules", build_rules),
         ("Ticket lifecycle", build_ticket_lifecycle),
         ("Commit guardian", build_commit_guardian),
+        ("Root scripts", build_root_scripts),
         ("Propagation audit", propagation_audit),
         ("Pre-commit config", build_precommit_config),
         ("Doc compliance", build_doc_compliance),
@@ -464,4 +466,10 @@ if __name__ == "__main__":
 #   hardcoding the limit. Fallback chain: line_limits[".py"] -> default_limit -> 400.
 # - 2026-05-18 11:30 [EPIC-PortableInstallHardening/T04]: Imported propagation_audit from build_propagation_audit.py and added ("Propagation audit", propagation_audit) entry to _run_phases() immediately after ("Commit guardian", build_commit_guardian). (#EPIC-PortableInstallHardening/T04)
 # - 2026-05-18 12:30 [EPIC-PortableInstallHardening/T06]: Imported build_claude_settings from build_claude_settings.py and added ("Claude settings", build_claude_settings) entry to _run_phases() after ("Skills", build_skills). (#EPIC-PortableInstallHardening/T06)
+# - 2026-05-19 [Agent/workflow-architect]: Imported build_root_scripts from build_phases (#TICKETLESS reason=worktree-script-onboarding-gap)
+#   and added ("Root scripts", build_root_scripts) entry to _run_phases()
+#   immediately after ("Commit guardian", build_commit_guardian). Ships
+#   templates/scripts/setup_ticket_worktree.py to <target>/scripts/ so
+#   worktree-agent.md's `python scripts/setup_ticket_worktree.py` call
+#   resolves on every fresh leafcutter install.
 # ====================================================================
