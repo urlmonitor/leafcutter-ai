@@ -10,6 +10,30 @@ See the repo-root `BOOTSTRAP.md` for the full step-by-step guide.
 
 For AI-assisted setup (automated config detection + build), see `SETUP.md` in this directory.
 
+## Windows / WSL2 Prerequisites
+
+If you are running on **WSL2 with the repo on an NTFS mount** (`/mnt/c/`, `/mnt/d/`, etc.),
+Windows can inject CRLF line endings that make git see every file as modified — even
+though no code has changed. This surfaces as:
+
+```
+fatal: Cannot update submodule 'leafcutter-ai'
+error: Your local changes to the following files would be overwritten by checkout
+```
+
+**Diagnostic**: run `git diff --stat` — if every tracked file shows as modified with
+no meaningful content change, the issue is CRLF noise.
+
+**Fix** (run once per clone):
+
+```bash
+git config core.autocrlf input
+```
+
+The repo ships a `.gitattributes` that enforces LF on checkout, but setting
+`core.autocrlf=input` as a belt-and-suspenders measure ensures git never
+writes CRLF into the index on NTFS-mounted volumes.
+
 ## Quick Reference
 
 1. Prerequisites: Python ≥ 3.11, Poetry, pre-commit, git repo with ≥ 1 commit
