@@ -1,6 +1,8 @@
-# CLAUDE.md
+# CLAUDE.md — diagraph
 
-This file provides guidance to Claude Code when working in this repository.
+This is the **diagraph** project. `leafcutter-ai/` is a vendored upstream package (read-only from here — never modify its templates, scripts, or tickets in this repo).
+
+Work here is on diagraph features, ETL, trading, and data tasks only.
 
 <!-- roadmap-phase:start — AUTO-GENERATED from leafcutter-ai/docs/roadmap.json; edits between these markers are overwritten on next render -->
 
