@@ -1,6 +1,6 @@
 ---
 title: "Add finalize-feature workflow template so build.py generates the slash command"
-status: todo
+status: done
 components:
   - build_system
 created: 2026-05-19
