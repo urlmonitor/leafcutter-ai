@@ -2,6 +2,23 @@
 
 This file provides guidance to Claude Code when working in this repository.
 
+## Repository Structure
+
+This repo IS the leafcutter-ai package. Origin: `git@github.com-urlmonitor:urlmonitor/leafcutter-ai.git`
+
+When installed into a consumer project, this repo is cloned into a subdirectory (e.g. `my-project/leafcutter-ai/`). The consumer then runs `python leafcutter-ai/scripts/build.py --target-dir .` to deploy agents, skills, and hooks into their project root.
+
+For local development of the package itself, the workspace looks like:
+
+```
+leafcutter/              <- workspace directory (not tracked by this repo)
+  leafcutter-ai/         <- THIS repo (git root)
+  .claude/               <- build outputs deployed by build.py
+  scripts/               <- build outputs deployed by build.py
+```
+
+SSH auth uses host alias `github.com-urlmonitor` (key: `~/.ssh/id_urlmonitor`).
+
 <!-- glossary-section: leafcutter -->
 ## Glossary
 
