@@ -21,7 +21,18 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-_JSONL_DEFAULT = Path(__file__).resolve().parents[3] / "debugging" / "logs" / "feedback.jsonl"
+
+def _find_project_root() -> Path:
+    """Walk up from this file to find the project root (directory containing .claude/)."""
+    current = Path(__file__).resolve().parent
+    for _ in range(6):
+        if (current / ".claude").is_dir():
+            return current
+        current = current.parent
+    return Path(__file__).resolve().parents[2]
+
+
+_JSONL_DEFAULT = _find_project_root() / "debugging" / "logs" / "feedback.jsonl"
 
 
 # ---------------------------------------------------------------------------

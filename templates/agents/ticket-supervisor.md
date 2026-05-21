@@ -213,7 +213,7 @@ in `building-epics` §3 in order; pick the FIRST matching case:
 
    After determining this is a §3.1 case, emit CFCS feedback (non-blocking):
    ```bash
-   FB_ID=$(python leafcutter/scripts/feedback/submit_feedback.py \
+   FB_ID=$(python scripts/feedback/submit_feedback.py \
      --ticket "<ticket_path>" --phase ticket-supervisor \
      --category subagent-quality \
      --tags "agent-<failing_agent>,retry-<count>,mechanical-retry" \
@@ -228,7 +228,7 @@ in `building-epics` §3 in order; pick the FIRST matching case:
 
    After determining this is a §3.2 case, emit CFCS feedback (non-blocking):
    ```bash
-   FB_ID=$(python leafcutter/scripts/feedback/submit_feedback.py \
+   FB_ID=$(python scripts/feedback/submit_feedback.py \
      --ticket "<ticket_path>" --phase ticket-supervisor \
      --category subagent-quality \
      --tags "agent-<failing_agent>,retry-<count>,cross-agent-rework" \
@@ -244,7 +244,7 @@ in `building-epics` §3 in order; pick the FIRST matching case:
 
    After determining this is a §3.3 case, emit CFCS feedback (non-blocking):
    ```bash
-   FB_ID=$(python leafcutter/scripts/feedback/submit_feedback.py \
+   FB_ID=$(python scripts/feedback/submit_feedback.py \
      --ticket "<ticket_path>" --phase ticket-supervisor \
      --category subagent-quality \
      --tags "agent-<failing_agent>,brainstorm-escalation" \
@@ -258,7 +258,7 @@ in `building-epics` §3 in order; pick the FIRST matching case:
 
    After determining this is a §3.4 case, emit CFCS feedback (non-blocking):
    ```bash
-   FB_ID=$(python leafcutter/scripts/feedback/submit_feedback.py \
+   FB_ID=$(python scripts/feedback/submit_feedback.py \
      --ticket "<ticket_path>" --phase ticket-supervisor \
      --category subagent-quality \
      --tags "agent-<failing_agent>,halt,<cap_kind>" \

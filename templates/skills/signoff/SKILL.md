@@ -160,7 +160,7 @@ capture the returned `feedback_id`.
 
 3. **Shell out**:
    ```bash
-   python leafcutter/scripts/feedback/submit_feedback.py \
+   python scripts/feedback/submit_feedback.py \
      --ticket <ticket_path> \
      --phase <agent_name> \
      --category <category> \

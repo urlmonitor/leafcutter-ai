@@ -53,7 +53,7 @@ Run both data-gathering scripts and capture their JSON output:
 ### 2a — Feedback data (aggregate.py)
 
 ```bash
-python leafcutter/scripts/feedback/aggregate.py \
+python scripts/feedback/aggregate.py \
   --jsonl debugging/logs/feedback.jsonl \
   --format json
 ```
@@ -92,7 +92,7 @@ When `aggregate.py` returned empty results, read every ticket file in the epic f
 ### 2c — Subagent quality data (supervisor-emitted feedback)
 
 ```bash
-python leafcutter/scripts/feedback/aggregate.py   --jsonl debugging/logs/feedback.jsonl   --category subagent-quality   --format json
+python scripts/feedback/aggregate.py   --jsonl debugging/logs/feedback.jsonl   --category subagent-quality   --format json
 ```
 
 Capture output as `subagent_quality_data`. If the script exits non-zero or returns

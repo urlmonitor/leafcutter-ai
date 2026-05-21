@@ -26,18 +26,20 @@ and `list_tags.py` are read-only query tools over that file.
   line entirely (not written as null) when absent.
 - **Tag shape rule**: tags must match `^[a-z][a-z0-9-]{0,39}$`. The script rejects
   uppercase, spaces, or leading hyphens — it does NOT auto-lowercase before validation.
-- **Categories closed list**: live in `../config/feedback_categories.yaml`. PRs that
+- **Categories closed list**: live in `config/feedback_categories.yaml` (relative to the
+  project root). `build.py` deploys this file alongside the scripts. PRs that
   add or remove categories must be reviewed. Do not edit the YAML without a PR.
-- **JSONL path default**: `debugging/logs/feedback.jsonl` (relative to the repo root,
-  which is the working directory when phase agents run). The `--jsonl` flag overrides.
+- **JSONL path default**: `debugging/logs/feedback.jsonl` (relative to the project root,
+  discovered by walking up from the script to find the `.claude/` directory).
+  The `--jsonl` flag overrides.
 - **Backward compatibility**: existing JSONL entries without a `source` field are treated
   as `source=agent` by `aggregate.py`.
 
 ## Maintenance
 
 - To run tests: `poetry run python -m pytest unit_tests/feedback/ -v`
-- To query feedback: `python leafcutter/scripts/feedback/aggregate.py --format table`
-- To add a new category: edit `../config/feedback_categories.yaml` via PR, then update
+- To query feedback: `python scripts/feedback/aggregate.py --format table`
+- To add a new category: edit `config/feedback_categories.yaml` via PR, then update
   `docs/how-to/feedback-collection.md` and the allowed_writers list.
 - The `emit_hook_finding.py` helper is the preferred entry point for commit_guardian
   hooks (avoids subprocess overhead). Direct calls to `submit_feedback.py` via CLI
