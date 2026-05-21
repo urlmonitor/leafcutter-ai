@@ -5,32 +5,38 @@
   "phases": [
     {
       "id": "phase_1",
-      "title": "TODO: Phase 1 Name",
+      "title": "Stable Portable MVP",
       "status": "active",
-      "description": "TODO: Describe what this phase proves or delivers and why it comes first.",
+      "description": "A reliable package that installs into any project via build.py, self-onboards the user via interactive config, and produces correct agents/skills/hooks without manual fixup.",
       "exit_criteria": [
-        "TODO: Observable, verifiable exit criterion 1",
-        "TODO: Observable, verifiable exit criterion 2"
+        "Clean install succeeds on a blank project with only skills_config.json present",
+        "build.py --validate-only returns 0 with no template injection errors",
+        "Consecutive builds produce zero git diff (idempotent)",
+        "Self-hosting parity: leafcutter development uses its own compiled agents"
       ],
       "tickets_advancing_outcome": []
     },
     {
       "id": "phase_2",
-      "title": "TODO: Phase 2 Name",
+      "title": "Ecosystem Hardening",
       "status": "planned",
-      "description": "TODO: Describe what this phase builds on from Phase 1.",
+      "description": "Handle version upgrades gracefully with template migrations and config schema evolution. Support multiple concurrent consumer projects and document the contribution workflow for new agents and skills.",
       "exit_criteria": [
-        "TODO: Observable, verifiable exit criterion"
+        "Version upgrade path tested: old config + new templates produces valid output with migration warnings",
+        "Documented contribution workflow for adding agents and skills to the package",
+        "Config schema validation rejects unknown keys with actionable error messages"
       ],
       "tickets_advancing_outcome": []
     },
     {
       "id": "phase_3",
-      "title": "TODO: Phase 3 Name",
+      "title": "Distribution and Community",
       "status": "planned",
-      "description": "TODO: Describe the end-state this phase achieves.",
+      "description": "Installable via a standard package manager with versioned releases, changelogs, and a documented extension mechanism for community-contributed agents and skills.",
       "exit_criteria": [
-        "TODO: Observable, verifiable exit criterion"
+        "Package installable via a standard package manager (pip or npm)",
+        "Versioned releases with auto-generated changelogs",
+        "Extension mechanism documented and tested with at least one community-contributed agent"
       ],
       "tickets_advancing_outcome": []
     }

@@ -1,6 +1,6 @@
 ---
 title: "Implement self-hosting: separate config targets for leafcutter development"
-status: todo
+status: done
 components:
   - build_system
   - onboard
@@ -98,18 +98,43 @@ Then the standard installation flow works unchanged (backward compatible)
 
 ## Comments
 
+### 2026-05-21 — Implementation via config-driven approach (ADR-001)
+
+The ticket originally proposed a `--self` flag on build.py. ADR-001 (written before this
+implementation) chose a more general config-driven approach instead: `skills_config.json`
+points paths into `leafcutter-ai/` for package development, and build.py works identically
+for leafcutter itself and consumer projects.
+
+**What was implemented:**
+- Real `docs/vision.md` content replacing template placeholder
+- Real `docs/roadmap.json` phase definitions replacing TODO placeholders
+- `build-self.sh` convenience wrapper (`./build-self.sh` = `cd .. && python leafcutter-ai/scripts/build.py --target-dir .`)
+- `.gitignore` updated with complete build-output coverage (`.claude/hooks/`, `.claude/worktrees/`, `.claude/settings.local.json`)
+- `CLAUDE.md` updated with build-self instructions and ADR-001 reference
+
+**Already done before this ticket (via prior work):**
+- ADR-001 documents the self-hosting boundary convention
+- `skills_config.json` already points tickets/docs/changelog paths into `leafcutter-ai/`
+- Tickets already live in `leafcutter-ai/tickets/`
+- Root-level build outputs are inherently untracked (workspace root is not a git repo)
+
+**Not applicable (per ADR-001 decision):**
+- `--self` flag on build.py — rejected in favor of config-driven paths
+- GENERATED.md markers — root-level dirs are outside the git repo
+- CI dual-mode — deferred to CI setup phase
+
 ## Implementation Tasks
 
-- [ ] Write ADR documenting the self-hosting decision, Option C rationale, and boundary conventions (must precede coding)
-- [ ] Add `--self` flag to `build.py` that sets `target_root` to `leafcutter-ai/` and loads its config
-- [ ] Ensure `paths.json` resolution works when `target_root` is the package directory itself (offset logic or override)
-- [ ] Move leafcutter development tickets from root `tickets/` to `leafcutter-ai/tickets/`
-- [ ] Verify `leafcutter-ai/docs/` has real content (vision, roadmap, glossary) — not placeholders
-- [ ] Update root `.gitignore` to mark root `docs/`, `tickets/`, `.claude/agents/`, `.claude/skills/` as generated output
-- [ ] Add `GENERATED.md` header marker to root-level generated directories (docs/, tickets/, .claude/)
-- [ ] Update root `CLAUDE.md` to direct contributors to `leafcutter-ai/CLAUDE.md` for package development
-- [ ] Create `build-self.sh` (or Makefile target) one-liner for `python leafcutter/scripts/build.py --self`
-- [ ] Update CI to run both modes: default consumer test and `--self` dev tooling build
+- [x] Write ADR documenting the self-hosting decision, Option C rationale, and boundary conventions (must precede coding)
+- [x] ~~Add `--self` flag to `build.py`~~ — rejected by ADR-001; config-driven approach is more general
+- [x] Ensure `paths.json` resolution works when `target_root` is the package directory itself (offset logic or override)
+- [x] Move leafcutter development tickets from root `tickets/` to `leafcutter-ai/tickets/`
+- [x] Verify `leafcutter-ai/docs/` has real content (vision, roadmap, glossary) — not placeholders
+- [x] Update `.gitignore` to mark `.claude/` build outputs as generated
+- [x] ~~Add `GENERATED.md` header marker~~ — not needed; root dirs are outside the git repo
+- [x] Update `CLAUDE.md` to reference `build-self.sh` and ADR-001
+- [x] Create `build-self.sh` one-liner for rebuilding the dev environment
+- [ ] Update CI to run both modes: default consumer test and `--self` dev tooling build (deferred)
 
 ## Risk & Safety
 
@@ -117,7 +142,7 @@ Then the standard installation flow works unchanged (backward compatible)
 - Touches data? No.
 - Reversibility? Fully reversible — root-level outputs can be regenerated at any time by re-running `build.py`. Ticket/doc moves are git-trackable and revertible. `.gitignore` additions are additive-only.
 
-## Open Questions
+## Open Questions (Resolved)
 
-- Should `leafcutter-ai/.claude/` also be gitignored (compiled from its own templates), or checked in so that fresh clones have agents available without running build? The ADR should resolve this.
-- Should the EPIC-OnboardCompleteness tickets move to `leafcutter-ai/tickets/` as part of this work, or remain at root until this migration is complete?
+- **`leafcutter-ai/.claude/` gitignored?** Yes — `.claude/agents/`, `.claude/skills/`, `.claude/commands/`, `.claude/hooks/` are all gitignored. Fresh clones run `./build-self.sh` to compile agents from templates.
+- **EPIC tickets migration?** Already done. All active tickets live in `leafcutter-ai/tickets/`. Root-level `tickets/` is a build output outside the git repo.

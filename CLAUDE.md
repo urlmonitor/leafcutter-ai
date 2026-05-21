@@ -17,6 +17,8 @@ leafcutter/              <- workspace directory (not tracked by this repo)
   scripts/               <- build outputs deployed by build.py
 ```
 
+To rebuild the development environment: `./build-self.sh` (or equivalently, `cd .. && python leafcutter-ai/scripts/build.py --target-dir .`). See [ADR-001](docs/architecture/adrs/ADR-001-self-hosting-boundary.md) for the self-hosting boundary convention.
+
 SSH auth uses host alias `github.com-urlmonitor` (key: `~/.ssh/id_urlmonitor`).
 
 <!-- glossary-section: leafcutter -->

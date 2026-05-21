@@ -1,9 +1,9 @@
 ---
-title: "<Project Name> Vision"
+title: "leafcutter-ai Vision"
 type: cross-cutting
-status: draft
-created: YYYY-MM-DD
-last_updated: YYYY-MM-DD
+status: accepted
+created: 2026-05-19
+last_updated: 2026-05-21
 components: []
 tags:
   - vision
@@ -11,111 +11,83 @@ tags:
 build_behavior: write_if_absent
 ---
 
-# <Project Name> Vision
-
-<!-- QUESTION: What is the name of this project? Who are the primary users or
-     stakeholders? Replace all occurrences of "<Project Name>" above and below. -->
+# leafcutter-ai Vision
 
 ## Mission Statement
 
-<!-- QUESTION: What problem does this project solve? For whom? Why does it exist
-     and why now? Write 2–4 sentences that would make a new contributor immediately
-     understand why this project matters. -->
-
-_Describe the core problem this project solves, the target audience, and the
-primary value proposition._
+leafcutter-ai is a domain-agnostic agent/skill/workflow package that installs a full AI-assisted development workflow into any project. Edit one JSON config file, run `build.py`, and the complete system is generated: agents, skills, hooks, ticket lifecycle, documentation scaffolds, and quality gates. The goal is to make Claude Code productive and disciplined in any codebase without requiring project-specific prompt engineering.
 
 ## Current Phase
 
-<!-- QUESTION: Which numbered phase are we currently in (see ## Roadmap below)?
-     What is the single highest-priority outcome right now — the one thing that,
-     if not achieved, makes everything else irrelevant? -->
+**Current phase:** Phase 1 — Stable portable MVP
 
-**Current phase:** Phase N — _name_
-
-**Highest-priority outcome:** _One sentence stating the must-achieve goal for
-this phase._
+**Highest-priority outcome:** A reliable package that installs into any project, self-onboards the user via interactive config, and produces correct agents/skills/hooks without manual fixup.
 
 ## What We're NOT Doing (Yet)
 
-<!-- QUESTION: What reasonable ideas have been explicitly deferred? Listing these
-     prevents scope creep and gives future contributors a place to look before
-     proposing new work. What would you say "no" to right now even if it sounds
-     useful? -->
-
 The following are explicitly out of scope until a future phase decision:
 
-- _Deferred capability 1_
-- _Deferred capability 2_
-- _Deferred capability 3_
+- Multi-LLM support (non-Anthropic models)
+- Package registry / versioned releases (npm, pip, etc.)
+- GUI or web-based configuration interface
+- Runtime telemetry dashboard or analytics
+- Plugin marketplace for community-contributed agents/skills
 
 ## Strategic Assets / Differentiators
 
-<!-- QUESTION: What unique advantages does this project have — data, tooling,
-     ecosystem position, team knowledge, existing integrations? What would be
-     hard for a competitor to replicate quickly? -->
-
 | Asset | Description | Why it matters |
 |-------|-------------|----------------|
-| _Asset 1_ | _Description_ | _Strategic value_ |
-| _Asset 2_ | _Description_ | _Strategic value_ |
+| Config-driven templating | `{{config.*}}` injection compiles portable templates into project-specific agents | One template set serves all adopters; no fork-and-edit pattern |
+| Build-system architecture | `build.py` with phase-based dispatch, compare-before-write, manifest tracking | Deterministic, auditable builds; drift detection via pre-commit hooks |
+| Ticket lifecycle | Structured ticket frontmatter with agent maps, sign-offs, and dependency tracking | Enables fully automated epic-to-PR workflows via supervisor agents |
+| Self-hosting dogfood | leafcutter develops itself using its own agents and skills (ADR-001) | Every UX issue is discovered during development, not after release |
+| Quality gate suite | Pre-commit hooks for build drift, secrets, doc coverage, structural changes | Adopters get guardrails without writing their own hook infrastructure |
 
 ## Roadmap (Phases)
 
-<!-- QUESTION: What are the ordered phases of this project? When is each phase
-     considered "done" — what is the observable, verifiable exit criterion for
-     each phase? Avoid vague milestones; prefer quantified or demonstrated outcomes. -->
+### Phase 1 — Stable Portable MVP
 
-### Phase 1 — _Name_
+**Done when:** A fresh clone installs into a new project via `build.py --target-dir .`, the onboard wizard populates `skills_config.json`, and all generated agents/skills/hooks function correctly without manual intervention.
 
-**Done when:** _Exit criterion (observable, verifiable)_
+Establishes the core value proposition: one command to get a working AI dev workflow.
 
-_What this phase unlocks for subsequent phases._
+### Phase 2 — Ecosystem Hardening
 
-### Phase 2 — _Name_
+**Done when:** The package handles version upgrades gracefully (template migrations, config schema evolution), supports multiple concurrent consumer projects from a single package clone, and has a documented contribution workflow for adding new agents/skills.
 
-**Done when:** _Exit criterion_
+Unlocks adoption beyond the original author by making the package maintainable by others.
 
-_What this phase unlocks._
+### Phase 3 — Distribution and Community
 
-### Phase 3 — _Name_
+**Done when:** The package is installable via a standard package manager, has versioned releases with changelogs, and supports community-contributed agents/skills via a documented extension mechanism.
 
-**Done when:** _Exit criterion_
-
-_What this phase unlocks._
+Transitions from a personal tool to a shared open-source package.
 
 ## Success Criteria
 
-<!-- QUESTION: What does "this project achieved its goal" look like — quantitatively
-     if possible? These should be measurable. What numbers, user behaviours, or system
-     properties would tell you that the vision has been realised? -->
-
 | Criterion | Target | How to measure |
 |-----------|--------|----------------|
-| _Criterion 1_ | _Target value_ | _Measurement method_ |
-| _Criterion 2_ | _Target value_ | _Measurement method_ |
+| Clean install success rate | 100% on supported platforms (Linux, macOS, WSL2) | Run `build.py --target-dir .` on a blank project with only `skills_config.json` present |
+| Agent/skill compilation accuracy | Zero template injection errors | `build.py --validate-only` returns 0; no `{{config.*}}` placeholders survive in compiled output |
+| Build idempotency | Consecutive builds produce zero git diff | Run `build.py` twice; `git status` shows no changes |
+| Self-hosting parity | leafcutter's own workflow uses the same agents it ships | All leafcutter development tickets are driven by compiled agents from its own templates |
 
 ## Key Decisions Log
 
-<!-- QUESTION: What significant decisions have already been made that new contributors
-     should know about? Add a row each time a non-obvious architectural or strategic
-     choice is locked in. Initially this table may be empty — add rows as decisions
-     are made. -->
-
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| _YYYY-MM-DD_ | _Decision_ | _Rationale_ |
+| 2026-05-19 | Self-hosting via config-driven paths, not `--self` flag (ADR-001) | More general; avoids special code paths. `skills_config.json` points paths into `leafcutter-ai/` for package development. |
+| 2026-05-13 | YAML frontmatter stripping in template compilation | Keeps metadata in templates for tooling but out of compiled agent prompts |
+| 2026-05-13 | Default overwrite semantics in build.py | Old skip-existing caused silently stale outputs; overwrite + compare-before-write is safer |
+| 2026-05-14 | Compare-before-write guard | Eliminates mtime churn; `git status` stays clean for unchanged files |
 
 ## Epics Mapping
 
-<!-- QUESTION: Does every epic currently in tickets/01_todo/ and tickets/00_inbox/epics/
-     map to a phase in the roadmap above? If an epic does not map to any phase, it is
-     either infrastructure (acceptable), off-roadmap (needs justification), or evidence
-     that the roadmap is incomplete. Update this table whenever a new epic is created. -->
-
 | Epic | Phase | Status | Notes |
 |------|-------|--------|-------|
-| _EPIC-Name_ | _Phase N_ | _active / planned / blocked_ | _Notes_ |
+| EPIC-OnboardCompleteness | Phase 1 | active | Interactive onboard wizard and config validation |
+| EPIC-LeafcutterVersioning | Phase 2 | planned | Version tracking, upgrade paths, migration support |
+| EPIC-LeafcutterUpstreamChannels | Phase 3 | planned | Distribution, packaging, community extension points |
 
 ---
 
