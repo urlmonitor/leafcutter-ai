@@ -45,6 +45,10 @@
     "protected_paths": []
   },
 
+  "glossary": {
+    "exclude_paths": []
+  },
+
   "testing_context": {
     "test_root": "unit_tests/",
     "readme_path": "unit_tests/README.md",

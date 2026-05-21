@@ -53,6 +53,9 @@ from build_glossary import build_glossary
 from build_propagation_audit import propagation_audit
 from build_claude_settings import build_claude_settings
 from build_roadmap_phase import build_roadmap
+from build_placeholder_detection import scan_for_placeholders, format_placeholder_report
+from build_referential_integrity import check_referential_integrity, format_integrity_report
+from build_config_scaffolds import build_config_scaffolds
 # Re-export for backward compatibility with tests that access via _build.*
 from template_compiler import (  # noqa: F401
     parse_frontmatter,
@@ -274,6 +277,7 @@ def _run_phases(
         ("Vision", build_vision),
         ("Roadmap", build_roadmap),
         ("Glossary", build_glossary),
+        ("Config scaffolds", build_config_scaffolds),
     ]
     total = 0
     for label, fn in phases:
@@ -389,6 +393,18 @@ def main(argv: list[str] | None = None) -> int:
 
     if not args.dry_run and not args.no_shims:
         _install_shims(target_root)
+
+    # Post-build: scan for placeholder content and referential integrity
+    if not args.dry_run:
+        placeholder_hits = scan_for_placeholders(target_root)
+        if placeholder_hits:
+            print()
+            print(format_placeholder_report(placeholder_hits))
+
+        integrity_missing = check_referential_integrity(target_root, config)
+        if integrity_missing:
+            print()
+            print(format_integrity_report(integrity_missing))
 
     return 0
 
