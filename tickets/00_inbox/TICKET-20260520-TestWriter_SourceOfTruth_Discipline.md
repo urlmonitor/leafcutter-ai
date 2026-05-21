@@ -1,6 +1,6 @@
 ---
 title: "Harden test-writer (and python-coder) with Source-of-Truth Discipline to prevent silent production contract shrinkage"
-status: todo
+status: in_progress
 components:
   - agents
   - documentation_system
@@ -12,11 +12,11 @@ tags:
   - test-writer
   - guardrails
   - regression-prevention
-last_updated: 2026-05-20
+last_updated: 2026-05-21
 files_touched:
   - templates/agents/test-writer.md
   - templates/agents/python-coder.md
-  - docs/architecture/adrs/ADR-001-test-source-of-truth-discipline.md
+  - docs/architecture/adrs/ADR-002-test-source-of-truth-discipline.md
   - docs/architecture/adrs/README.md
 agents:
   architect-review: needed
