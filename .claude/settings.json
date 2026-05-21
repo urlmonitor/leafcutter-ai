@@ -6,12 +6,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/readme_read_guard.py",
+            "command": "bash -c 'd=\"$PWD\"; while [ ! -d \"$d/.claude/hooks\" ] && [ \"$d\" != \"/\" ]; do d=\"$(dirname \"$d\")\"; done; python \"$d/.claude/hooks/readme_read_guard.py\"'",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/documentation_guard.py",
+            "command": "bash -c 'd=\"$PWD\"; while [ ! -d \"$d/.claude/hooks\" ] && [ \"$d\" != \"/\" ]; do d=\"$(dirname \"$d\")\"; done; python \"$d/.claude/hooks/documentation_guard.py\"'",
             "timeout": 5
           }
         ]
@@ -23,7 +23,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/readme_marker_recorder.py",
+            "command": "bash -c 'd=\"$PWD\"; while [ ! -d \"$d/.claude/hooks\" ] && [ \"$d\" != \"/\" ]; do d=\"$(dirname \"$d\")\"; done; python \"$d/.claude/hooks/readme_marker_recorder.py\"'",
             "timeout": 5
           }
         ]
@@ -33,7 +33,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/ticket_frontmatter_guard.py",
+            "command": "bash -c 'd=\"$PWD\"; while [ ! -d \"$d/.claude/hooks\" ] && [ \"$d\" != \"/\" ]; do d=\"$(dirname \"$d\")\"; done; python \"$d/.claude/hooks/ticket_frontmatter_guard.py\"'",
             "timeout": 5
           }
         ]
