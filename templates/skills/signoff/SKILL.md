@@ -136,6 +136,19 @@ When you (the agent) have completed your phase successfully, perform a single `E
    and follow the §4 failed-path recipe so the supervisor can halt and report
    the named phase agent to the user.
 
+7. **Stage the ticket file immediately after the sign-off write.** After the
+   self-verify passes, run:
+   ```bash
+   git add <ticket_path>
+   ```
+   This ensures the sign-off edits (frontmatter status, Sign-offs checkbox, Comments
+   entry) are captured in the next commit. Skipping this step causes the ticket file
+   to appear as a working-tree residual in `git status --porcelain <ticket_path>`
+   after the commit, triggering the Step 5 parity check in `build-single-ticket` and
+   requiring a manual fixup. The `check_commit_ticket_staged.py` PreToolUse hook will
+   block any `git commit` call if the ticket file has unstaged modifications — staging
+   the file here ensures the agent never hits that block in normal operation.
+
 ---
 
 ## §2a Submit-Feedback Script Call (mandatory before comment append)

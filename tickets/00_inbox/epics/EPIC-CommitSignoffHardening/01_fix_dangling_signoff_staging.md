@@ -18,7 +18,7 @@ files_touched:
 agents:
   architect-review: not_needed
   python-coder: not_needed
-  documentation-expert: needed
+  documentation-expert: signed_off
   pr-reviewer: needed
   commit: needed
   pull-request: needed
@@ -74,12 +74,17 @@ And git status --porcelain on the ticket path returns empty
 
 ## Sign-offs
 
-- [ ] documentation-expert
+- [x] documentation-expert — 2026-05-22 10:00
 - [ ] pr-reviewer
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
+
+### 2026-05-22 10:00 — documentation-expert (status: ok)
+
+feedback-id: fb_2026-05-22_f0b3e61c
+Created `templates/hooks/check_commit_ticket_staged.py` PreToolUse hook that blocks git commit if the ticket file has unstaged modifications. Registered the hook in `templates/settings.json`. Updated `templates/skills/signoff/SKILL.md` §2 with explicit step 7 requiring `git add <ticket_path>` after sign-off write. Confirmed `commit.md` and `pull-request.md` already carry the staging instruction from previous PR #70 — no duplicate additions needed.
 
 ## Locked Approach
 
@@ -105,11 +110,11 @@ The documentation-expert task below ensures the agent instructions themselves ar
 ## Implementation Tasks
 
 ### documentation-expert
-- [ ] Audit `.claude/agents/commit.md` — locate where the agent writes to the ticket file (sign-off tick + Comments entry) and confirm there is no subsequent `git add <ticket_path>` call.
-- [ ] Add an explicit `git add <ticket_path>` instruction after every ticket-file write in the commit agent, immediately before the `git commit` call. Mirror the original PR #70 fix.
-- [ ] Audit `.claude/agents/pull-request.md` — locate where the agent writes to the ticket file after opening the PR. Add the same explicit `git add <ticket_path>` instruction.
-- [ ] Audit `.claude/skills/signoff/SKILL.md` — if the signoff skill itself describes staging, confirm it covers the ticket path (not just the code changes).
-- [ ] Add the PreToolUse `git commit` hook to `.claude/hooks/` (or the appropriate hook registration location): read `git status --porcelain <ticket_path>`; if `M` in working tree but absent from staged set, exit non-zero with the error message above.
+- [x] Audit `.claude/agents/commit.md` — locate where the agent writes to the ticket file (sign-off tick + Comments entry) and confirm there is no subsequent `git add <ticket_path>` call.
+- [x] Add an explicit `git add <ticket_path>` instruction after every ticket-file write in the commit agent, immediately before the `git commit` call. Mirror the original PR #70 fix.
+- [x] Audit `.claude/agents/pull-request.md` — locate where the agent writes to the ticket file after opening the PR. Add the same explicit `git add <ticket_path>` instruction.
+- [x] Audit `.claude/skills/signoff/SKILL.md` — if the signoff skill itself describes staging, confirm it covers the ticket path (not just the code changes).
+- [x] Add the PreToolUse `git commit` hook to `.claude/hooks/` (or the appropriate hook registration location): read `git status --porcelain <ticket_path>`; if `M` in working tree but absent from staged set, exit non-zero with the error message above.
 
 ## Risk & Safety
 

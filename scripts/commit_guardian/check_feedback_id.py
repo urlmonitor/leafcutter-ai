@@ -64,14 +64,22 @@ def _should_skip(commit_msg_file: str | None) -> bool:
     Checks (in order):
     1. ``--commit-msg-file`` argument
     2. ``GIT_COMMIT_MSG`` environment variable
-    3. ``COMMIT_EDITMSG`` environment variable (absolute path to the file set by git)
-    4. ``.git/COMMIT_EDITMSG`` resolved via ``git rev-parse --git-dir`` — the only
-       reliable path at the pre-commit stage when the user runs
+    3. ``COMMIT_EDITMSG`` environment variable (may hold an absolute path or
+       raw message string set by some git wrappers)
+    4. ``.git/COMMIT_EDITMSG`` resolved via ``git rev-parse --git-dir`` — the
+       only reliable path at the pre-commit stage when the user runs
        ``git commit -m "msg [NO-FEEDBACK-CHECK]"``.  Git writes the message to
        ``COMMIT_EDITMSG`` before running pre-commit hooks but does NOT set env
        vars.  In a git worktree, ``git rev-parse --git-dir`` resolves to the
        worktree-specific gitdir (e.g. ``.git/worktrees/<branch>/``), so
        ``COMMIT_EDITMSG`` is found correctly regardless of worktree nesting.
+       The path is resolved to an absolute form before calling ``.exists()`` so
+       that relative gitdir paths (common on Windows and in worktrees) resolve
+       correctly from the hook's working directory.
+    5. ``sys.argv`` positional args — the pre-commit framework passes the
+       commit-message file path as a positional argument to commit-msg hooks;
+       at the pre-commit stage this arg is absent, but checking it provides
+       forward-compatibility.
 
     Args:
         commit_msg_file: Path to the commit-message file supplied by
@@ -100,11 +108,8 @@ def _should_skip(commit_msg_file: str | None) -> bool:
             return True
 
     # Fourth source: read COMMIT_EDITMSG directly via git rev-parse --git-dir.
-    # This is the only reliable path at the pre-commit stage when the user runs
-    # git commit -m "msg [NO-FEEDBACK-CHECK]" — git writes the message to
-    # COMMIT_EDITMSG before running pre-commit hooks, but does NOT set env vars.
-    # In a worktree, git rev-parse --git-dir returns the worktree-specific gitdir
-    # (e.g. .git/worktrees/<branch>/), so COMMIT_EDITMSG is resolved correctly.
+    # Path is resolved to absolute so that relative gitdir strings (common on
+    # Windows and in linked worktrees) work correctly from the hook process cwd.
     try:
         git_dir_result = subprocess.run(
             ["git", "rev-parse", "--git-dir"],
@@ -115,13 +120,30 @@ def _should_skip(commit_msg_file: str | None) -> bool:
         )
         if git_dir_result.returncode == 0:
             git_dir = git_dir_result.stdout.strip()
-            commit_editmsg = Path(git_dir) / "COMMIT_EDITMSG"
+            # Resolve to absolute path before .exists() to handle relative gitdirs
+            # (e.g. ".git" or ".git/worktrees/<branch>") on Windows and in worktrees.
+            commit_editmsg = Path(git_dir).resolve() / "COMMIT_EDITMSG"
             if commit_editmsg.exists():
                 text = commit_editmsg.read_text(encoding="utf-8", errors="replace")
                 if _ESCAPE_TOKEN in text:
                     return True
     except OSError:
         pass  # fail-open: if git is unavailable, don't block
+
+    # Fifth source: positional sys.argv args — forward-compatible with pre-commit
+    # frameworks that pass the commit-msg file path as a positional argument.
+    for arg in sys.argv[1:]:
+        if arg.startswith("--"):
+            continue  # named flags, not positional paths
+        try:
+            candidate = Path(arg).resolve()
+            if candidate.exists() and candidate.suffix in ("", ".txt", ".md") or \
+                    candidate.name in ("COMMIT_EDITMSG", "COMMIT_MSG"):
+                text = candidate.read_text(encoding="utf-8", errors="replace")
+                if _ESCAPE_TOKEN in text:
+                    return True
+        except (OSError, ValueError):
+            continue
 
     return False
 
@@ -342,4 +364,12 @@ if __name__ == "__main__":
 #   worktree-specific gitdir (e.g. .git/worktrees/<branch>/), so COMMIT_EDITMSG
 #   is found at the correct location. Any OSError or non-zero git return is
 #   suppressed (fail-open) so the hook never blocks on git unavailability.
+# - 2026-05-22 00:00 [EPIC-CommitSignoffHardening/03]: Fixed the path resolution
+#   regression in the fourth source (git rev-parse --git-dir): added .resolve()
+#   before .exists() so that relative gitdir paths (e.g. ".git" or
+#   ".git/worktrees/<branch>") resolve correctly from the hook's working directory
+#   on Windows and in linked worktrees. Added a fifth source: positional sys.argv
+#   args — forward-compatible with pre-commit frameworks that pass the commit-msg
+#   file path as a positional argument to hooks. Updated docstring to document the
+#   .resolve() rationale and the fifth source.
 # ====================================================================

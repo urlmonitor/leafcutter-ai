@@ -611,6 +611,17 @@
                 ],
                 "pass_filenames": false,
                 "_comment": "EPIC-RoadmapStewardship/01: When docs/roadmap.json is staged, regenerates docs/roadmap.md with an AUTO-GENERATED banner and git-adds it so both files land in the same commit. No-op when roadmap.json is not staged. KDD-01: pre-commit stage (not post-commit --amend)."
+            },
+            {
+                "id": "run-tests-with-baseline",
+                "name": "Run Tests with Known-Failing Baseline",
+                "entry": "python scripts/commit_guardian/known_failing_tests.py",
+                "language": "system",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "EPIC-CommitSignoffHardening/06: Runs pytest and diffs current failures against scripts/commit_guardian/known_failing_tests.json. Blocks only on NEW failures (regressions). Pre-existing baseline failures are skipped. Fail-open when baseline is absent. Update baseline with: python scripts/commit_guardian/known_failing_tests.py --update"
             }
         ]
     }

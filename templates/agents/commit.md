@@ -119,6 +119,33 @@ After a successful commit:
 - <suggest /pull-request, /commit-push-pr, or further work>
 ```
 
+## When Tests Fail at Pre-Commit
+
+If the pre-commit test hook (`run-tests-with-baseline`) blocks the commit
+because tests fail:
+
+1. **Check whether the failures are new or pre-existing:**
+   ```bash
+   python scripts/commit_guardian/known_failing_tests.py
+   ```
+   If the output says "baseline-known failure(s) present — not blocking", the
+   test suite is already green for your purposes. Rerun the commit.
+
+2. **If new failures are detected:** Investigate whether they are caused by
+   your change. Fix the regression before committing.
+
+3. **If the failing tests pre-existed your change** (and you can confirm this
+   via `git stash && pytest && git stash pop`): update the baseline and commit
+   both changes together:
+   ```bash
+   python scripts/commit_guardian/known_failing_tests.py --update
+   git add scripts/commit_guardian/known_failing_tests.json
+   git commit -m "chore(tests): update known-failing baseline — <reason>"
+   ```
+
+**Never use `--no-verify` to skip test failures.** The baseline mechanism is
+the correct escape path. See `docs/how-to/known-failing-tests-baseline.md`.
+
 ## Refusal cases
 
 | User asks | Response |
