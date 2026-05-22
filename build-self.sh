@@ -15,4 +15,4 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_DIR="$(dirname "$REPO_DIR")"
 
-exec python "$REPO_DIR/scripts/build.py" --target-dir "$WORKSPACE_DIR" "$@"
+exec python3 "$REPO_DIR/scripts/build.py" --target-dir "$WORKSPACE_DIR" "$@"
