@@ -1,6 +1,6 @@
 ---
 title: "Resolve package audit gaps: undeployed hooks, uninstalled partials, stale domain entries, and orphan commands"
-status: todo
+status: done
 components:
   - commit_guardian
   - build_system
