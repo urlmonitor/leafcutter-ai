@@ -5,8 +5,12 @@
 .claude/commands/
 .claude/hooks/
 .claude/worktrees/
+.claude/projects/
+.claude/memory/
+.pre-commit-config.yaml
 
 # User-local settings (not shared across machines)
+.claude/settings.json
 .claude/settings.local.json
 
 # Legacy path convention
