@@ -382,8 +382,17 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 1
 
+        exclude_paths: list[str] = []
+        config_path = repo_root / ".claude" / "skills_config.json"
+        if config_path.exists():
+            try:
+                cfg = json.loads(config_path.read_text(encoding="utf-8"))
+                exclude_paths = cfg.get("glossary", {}).get("exclude_paths", [])
+            except (OSError, json.JSONDecodeError):
+                pass
+
         try:
-            candidates = collect_candidates(repo_root, detect_candidates)
+            candidates = collect_candidates(repo_root, detect_candidates, exclude_paths=exclude_paths)
             write_candidates_json(candidates, args.output)
             print(
                 f"glossary-bootstrap: {len(candidates)} novel candidates written to {args.output}."
