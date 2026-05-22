@@ -36,31 +36,22 @@ Work through these steps in order. Tick each box as it completes. Do NOT skip
 silently on failure — halt and surface the error.
 
 ```
-1. Detect git repo state (git status, default branch)                    [ ]
+1.  Detect git repo state (git status, default branch)                   [ ]
 1a. Detect WSL2 + NTFS mount; auto-set core.autocrlf if needed          [ ]
-2. Check if .claude/skills_config.json exists; classify keys as
-   confirmed (present) vs unconfirmed (absent)                          [ ]
-3. Scan folder structure: docs/, tests/, src/, sql/, packages            [ ]
-4. Read discovery whitelist:
-     README.md (first 50 lines)
-     pyproject.toml
-     package.json
-     Makefile
-     .env.example                                                        [ ]
-5. Fan out onboard-config-section sub-agents (parallel, Haiku tier):
-     - testing_context section agent
-     - top_level_packages section agent
-     - tickets_*_path section agent
-     - common_commands section agent
-     - project_description section agent                                 [ ]
-6. Collect sub-agent config fragments; merge into proposed
-   skills_config.json draft                                              [ ]
-7. Present diff (additions to .claude/skills_config.json + preview
-   of generated CLAUDE.md sections) — ask for sign-off                  [ ]
-8. On approval: write .claude/skills_config.json                        [ ]
-9. Run build.py --target-dir . — report output                          [ ]
-10. Confirm .claude/ outputs: agents/, skills/, hooks/,
-    settings.json, CLAUDE.md present                                    [ ]
+2.  Check if .claude/skills_config.json exists; classify keys            [ ]
+3.  Scan folder structure: docs/, tests/, src/, sql/, packages           [ ]
+4.  Read discovery whitelist (README.md, pyproject.toml, etc.)           [ ]
+5.  Fan out onboard-config-section sub-agents (parallel, Haiku tier)     [ ]
+6.  Collect sub-agent config fragments; merge into proposed config       [ ]
+7.  Present diff — ask for sign-off                                      [ ]
+8.  On approval: write .claude/skills_config.json                        [ ]
+9.  Run build.py --target-dir . — report output                          [ ]
+10. Confirm .claude/ outputs exist                                       [ ]
+11. Pre-commit: check availability, run pre-commit install               [ ]
+12. Detect placeholder content in vision.md and roadmap.json             [ ]
+13. If placeholders detected: walk user through interactive fill         [ ]
+14. Glossary: check if empty, prompt for /glossary-bootstrap             [ ]
+15. Generate and display post-onboard checklist                          [ ]
 ```
 
 ## Step 1 — Repo State Detection
@@ -193,4 +184,24 @@ Check that all expected outputs exist:
 
 For each missing output: print a warning but do not halt.
 
-Print final summary: "Install complete. CLAUDE.md is ready. Review any <!-- TODO: fill in --> sections."
+## Step 11 — Pre-commit Install
+
+Check if `pre-commit` is available:
+
+```bash
+command -v pre-commit
+```
+
+**If not found**: suggest installation and add to the checklist:
+> `pre-commit` is not installed. Install it with:
+> - `pip install pre-commit` or `uv tool install pre-commit`
+> Then run `pre-commit install` in this repo.
+
+**If found**: run `pre-commit install` to wire hooks into `.git/hooks/`:
+
+```bash
+pre-commit install
+```
+
+Verify `.git/hooks/pre-commit` exists and is executable. If `pre-commit install`
+fails, log the error and add it to the checklist — do not halt.
