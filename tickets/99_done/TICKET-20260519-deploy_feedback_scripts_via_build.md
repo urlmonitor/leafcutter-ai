@@ -1,6 +1,6 @@
 ---
 title: "Deploy feedback scripts to consumer projects via build.py"
-status: todo
+status: done
 components:
   - build_system
   - feedback
