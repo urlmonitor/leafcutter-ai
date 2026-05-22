@@ -26,8 +26,8 @@ from pathlib import Path
 # Bootstrap: resolve emit_entry module without relying on installed package
 # ---------------------------------------------------------------------------
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-_EMIT_ENTRY_PATH = _REPO_ROOT / "leafcutter" / "scripts" / "changelog" / "emit_entry.py"
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+_EMIT_ENTRY_PATH = _REPO_ROOT / "scripts" / "changelog" / "emit_entry.py"
 
 spec = importlib.util.spec_from_file_location("emit_entry", _EMIT_ENTRY_PATH)
 _mod = importlib.util.module_from_spec(spec)

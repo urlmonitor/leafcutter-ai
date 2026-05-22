@@ -66,19 +66,22 @@ REQUIRED_FIELDS: tuple[str, ...] = (
 def _resolve_repo_root() -> Path:
     """Compute the repository root from this script's own location.
 
-    The script lives at ``leafcutter/scripts/changelog/emit_entry.py``
-    relative to the repo root.  Counting ``parents``:
-
-    - ``parents[0]`` → ``leafcutter/scripts/changelog/``
-    - ``parents[1]`` → ``leafcutter/scripts/``
-    - ``parents[2]`` → ``leafcutter/``
-    - ``parents[3]`` → ``<repo_root>/``
+    Supports both:
+    1. Standalone package development workspace:
+       __file__ = <repo_root>/scripts/changelog/emit_entry.py
+       parents[2] = <repo_root> (contains .git/)
+    2. Consumer project environment:
+       __file__ = <repo_root>/leafcutter/scripts/changelog/emit_entry.py
+       parents[3] = <repo_root>
 
     Returns:
-        Absolute :class:`~pathlib.Path` of the repository root that contains
-        the ``leafcutter/`` package.
+        Absolute Path of the repository root.
     """
-    return Path(__file__).resolve().parents[3]
+    resolved_self = Path(__file__).resolve()
+    p2 = resolved_self.parents[2]
+    if (p2 / ".git").is_dir():
+        return p2
+    return resolved_self.parents[3]
 
 
 def _load_changelogs_dir(repo_root: Path) -> str:
