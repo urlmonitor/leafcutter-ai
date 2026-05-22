@@ -255,7 +255,7 @@ for (phase, summary_prefix), affected in groups.items():
         # Emit aggregating subagent-quality entry (non-blocking)
         count = len(affected)
         # Shell equivalent:
-        # FB_ID=$(python leafcutter/scripts/feedback/submit_feedback.py         #   --ticket "<any_affected_ticket_path>" --phase epic-supervisor         #   --category subagent-quality         #   --tags "agent-<phase>,cross-ticket-pattern,n-<count>"         #   --note "Cross-ticket pattern: <phase> failed with '<summary_prefix>' on <count> tickets."         #   --jsonl debugging/logs/feedback.jsonl 2>/dev/null) || FB_ID="(submit-failed)"
+        # FB_ID=$(python scripts/feedback/submit_feedback.py         #   --ticket "<any_affected_ticket_path>" --phase epic-supervisor         #   --category subagent-quality         #   --tags "agent-<phase>,cross-ticket-pattern,n-<count>"         #   --note "Cross-ticket pattern: <phase> failed with '<summary_prefix>' on <count> tickets."         #   --jsonl debugging/logs/feedback.jsonl 2>/dev/null) || FB_ID="(submit-failed)"
 ```
 
 **Non-blocking contract:** A failed `submit_feedback.py` call during pattern detection

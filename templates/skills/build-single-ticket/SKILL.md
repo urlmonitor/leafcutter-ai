@@ -206,7 +206,7 @@ When Step 5 preflight detects an in-scope uncommitted delta and commits it:
 
 2. Run (best-effort — log stderr and continue on any error):
    ```bash
-   python leafcutter/scripts/feedback/submit_feedback.py \
+   python scripts/feedback/submit_feedback.py \
      --ticket "<ticket_path>" \
      --phase ticket-supervisor \
      --category <category> \

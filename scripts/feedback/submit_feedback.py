@@ -52,12 +52,28 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
+# Project root discovery
+# ---------------------------------------------------------------------------
+
+
+def _find_project_root() -> Path:
+    """Walk up from this file to find the project root (directory containing .claude/)."""
+    current = Path(__file__).resolve().parent
+    for _ in range(6):
+        if (current / ".claude").is_dir():
+            return current
+        current = current.parent
+    return Path(__file__).resolve().parents[2]
+
+
+# ---------------------------------------------------------------------------
 # Config loading
 # ---------------------------------------------------------------------------
 
-_CONFIG_DIR = Path(__file__).parent.parent.parent / "config"
+_PROJECT_ROOT = _find_project_root()
+_CONFIG_DIR = _PROJECT_ROOT / "config"
 _CATEGORIES_FILE = _CONFIG_DIR / "feedback_categories.yaml"
-_JSONL_DEFAULT = Path(__file__).resolve().parents[3] / "debugging" / "logs" / "feedback.jsonl"
+_JSONL_DEFAULT = _PROJECT_ROOT / "debugging" / "logs" / "feedback.jsonl"
 
 VALID_SEVERITIES = ("low", "medium", "high")
 VALID_SOURCES = ("agent", "hook")
@@ -485,6 +501,12 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-05-21 [python-coder/TICKET-20260519-deploy_feedback_scripts_via_build]:
+#   Replaced hardcoded parents[3] JSONL path with _find_project_root() helper
+#   that walks up from __file__ looking for .claude/ directory. Also changed
+#   _CONFIG_DIR to use _PROJECT_ROOT / "config" instead of parent-chain.
+#   Works from both the source location (leafcutter-ai/scripts/feedback/) and
+#   the deployed location (target_root/scripts/feedback/).
 # - 2026-05-18 12:45 [EPIC-AgentSystemFrictionReduction/04]: Convert _JSONL_DEFAULT to __file__-relative path. (#EPIC-AgentSystemFrictionReduction/04)
 #   CWD-relative Path("debugging/logs/feedback.jsonl") resolves incorrectly when
 #   invoked from a worktree. Fix: Path(__file__).resolve().parents[3] / "debugging" / "logs" / "feedback.jsonl".

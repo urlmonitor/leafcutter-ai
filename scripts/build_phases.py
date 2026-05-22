@@ -553,6 +553,59 @@ def build_vision(target_root: Path, config: dict[str, Any],
     return 0
 
 
+def build_feedback(target_root: Path, config: dict[str, Any],
+                   dry_run: bool, force: bool) -> int:
+    """Deploy feedback scripts and config to ``<target_root>/scripts/feedback/`` and ``<target_root>/config/``.
+
+    Copies the write-path scripts (submit_feedback.py, emit_hook_finding.py,
+    list_tags.py) and feedback_categories.yaml so the signoff skill's feedback
+    emission actually works from a deployed consumer project.
+
+    Args:
+        target_root: Absolute path to the target project root directory.
+        config: Merged config dictionary used for placeholder injection.
+        dry_run: When True, logs intent but writes nothing.
+        force: When True, overwrites existing files.
+
+    Returns:
+        Count of files written (or that would be written in dry-run mode).
+    """
+    feedback_src = PACKAGE_ROOT / "scripts" / "feedback"
+    config_src = PACKAGE_ROOT / "config" / "feedback_categories.yaml"
+    if not feedback_src.exists():
+        return 0
+
+    output_dir = target_root / "scripts" / "feedback"
+    written = 0
+
+    deploy_scripts = ["submit_feedback.py", "emit_hook_finding.py", "list_tags.py"]
+    for script_name in deploy_scripts:
+        src_file = feedback_src / script_name
+        if not src_file.is_file():
+            continue
+        output_path = output_dir / script_name
+        text = inject_config(src_file.read_text(encoding="utf-8"), config)
+        if _write(output_path, text, dry_run, force):
+            written += 1
+            if not dry_run:
+                print(f"  scripts/feedback/{script_name}")
+
+    if config_src.is_file():
+        config_output = target_root / "config" / "feedback_categories.yaml"
+        text = config_src.read_text(encoding="utf-8")
+        if _write(config_output, text, dry_run, force):
+            written += 1
+            if not dry_run:
+                print("  config/feedback_categories.yaml")
+
+    logs_dir = target_root / "debugging" / "logs"
+    if not logs_dir.exists() and not dry_run:
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        print("  debugging/logs/ (created)")
+
+    return written
+
+
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
@@ -599,4 +652,9 @@ def build_vision(target_root: Path, config: dict[str, Any],
 #   This makes vision.md a human-curated living document that is never
 #   clobbered by subsequent build runs.
 # - 2026-05-18 11:15 [EPIC-PortableInstallHardening/T03]: Changed build_commit_guardian cg_dir from TEMPLATES_DIR/"commit-guardian" to TEMPLATES_DIR/"scripts"/"commit_guardian" with legacy fallback for backward compatibility. (#EPIC-PortableInstallHardening/T03)
+# - 2026-05-21 [python-coder/TICKET-20260519-deploy_feedback_scripts_via_build]: Added
+#   build_feedback() phase. Deploys submit_feedback.py, emit_hook_finding.py,
+#   list_tags.py to target_root/scripts/feedback/ and feedback_categories.yaml
+#   to target_root/config/. Creates debugging/logs/ directory on first build.
+#   Follows build_commit_guardian pattern (rglob + inject_config on .py files).
 # ====================================================================
