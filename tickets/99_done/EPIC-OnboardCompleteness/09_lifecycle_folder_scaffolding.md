@@ -1,6 +1,6 @@
 ---
 title: "Scaffold all ticket lifecycle folders from manifest"
-status: todo
+status: done
 components:
   - build_system
 created: 2026-05-19

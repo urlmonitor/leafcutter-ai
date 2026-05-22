@@ -29,17 +29,53 @@ _MAX_CONTEXT_WINDOWS = 5  # max occurrences stored per term
 # ---------------------------------------------------------------------------
 
 
-def _enumerate_files(repo_root: Path) -> list[Path]:
-    """Return all .md/.py/.sql files tracked by git in repo_root.
-
-    Uses ``git ls-files`` to respect .gitignore automatically.
+def _parse_submodule_paths(repo_root: Path) -> list[str]:
+    """Parse .gitmodules and return submodule directory paths.
 
     Args:
         repo_root: Absolute path to the repository root.
 
     Returns:
+        List of relative path strings (e.g. ["vendor/lib", "leafcutter"]).
+    """
+    gitmodules = repo_root / ".gitmodules"
+    if not gitmodules.exists():
+        return []
+    paths: list[str] = []
+    for line in gitmodules.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line.startswith("path"):
+            _, _, value = line.partition("=")
+            value = value.strip()
+            if value:
+                paths.append(value)
+    return paths
+
+
+def _enumerate_files(repo_root: Path, exclude_paths: list[str] | None = None) -> list[Path]:
+    """Return all .md/.py/.sql files tracked by git in repo_root.
+
+    Uses ``git ls-files`` to respect .gitignore automatically. Excludes
+    files under git submodule directories (parsed from .gitmodules) and
+    any additional paths specified in ``exclude_paths``.
+
+    Args:
+        repo_root: Absolute path to the repository root.
+        exclude_paths: Optional list of relative directory prefixes to exclude
+            (e.g. ["vendor/", "generated/"]).
+
+    Returns:
         Sorted list of absolute Path objects for .md/.py/.sql files.
     """
+    excluded_prefixes: list[str] = []
+    for sp in _parse_submodule_paths(repo_root):
+        prefix = sp.rstrip("/") + "/"
+        excluded_prefixes.append(prefix)
+    for ep in (exclude_paths or []):
+        prefix = ep.rstrip("/") + "/"
+        if prefix not in excluded_prefixes:
+            excluded_prefixes.append(prefix)
+
     try:
         result = subprocess.run(
             ["git", "ls-files", "--cached", "--others", "--exclude-standard",
@@ -58,12 +94,17 @@ def _enumerate_files(repo_root: Path) -> list[Path]:
         files: list[Path] = []
         for ext in ("*.md", "*.py", "*.sql"):
             files.extend(repo_root.rglob(ext))
-        return sorted(files)
+        return sorted(
+            f for f in files
+            if not any(str(f.relative_to(repo_root)).startswith(pfx) for pfx in excluded_prefixes)
+        )
 
     paths: list[Path] = []
     for line in result.stdout.splitlines():
         line = line.strip()
         if not line:
+            continue
+        if any(line.startswith(pfx) for pfx in excluded_prefixes):
             continue
         p = repo_root / line
         if p.suffix.lower() in (".md", ".py", ".sql") and p.is_file():
@@ -287,7 +328,11 @@ def _print_summary(results: list) -> None:
 # ---------------------------------------------------------------------------
 
 
-def collect_candidates(repo_root: Path, detect_candidates_fn) -> dict[str, list[list[str]]]:
+def collect_candidates(
+    repo_root: Path,
+    detect_candidates_fn,
+    exclude_paths: list[str] | None = None,
+) -> dict[str, list[list[str]]]:
     """Enumerate files, detect candidates, deduplicate, and filter known terms.
 
     This is the pure-read phase — no mutations to glossary.md or blacklist.md.
@@ -295,6 +340,7 @@ def collect_candidates(repo_root: Path, detect_candidates_fn) -> dict[str, list[
     Args:
         repo_root: Absolute path to repository root.
         detect_candidates_fn: Callable(file_path) -> list[Candidate].
+        exclude_paths: Optional list of directory prefixes to exclude from scan.
 
     Returns:
         Dict mapping term -> list of context_window lists for novel (unknown) terms.
@@ -302,7 +348,7 @@ def collect_candidates(repo_root: Path, detect_candidates_fn) -> dict[str, list[
     glossary_path = repo_root / "docs" / "glossary.md"
     blacklist_path = repo_root / "docs" / "glossary_blacklist.md"
 
-    files = _enumerate_files(repo_root)
+    files = _enumerate_files(repo_root, exclude_paths=exclude_paths)
     if not files:
         return {}
 

@@ -1,6 +1,6 @@
 ---
 title: "Post-build referential integrity check for skills_config.json"
-status: todo
+status: done
 components:
   - build_system
 created: 2026-05-19

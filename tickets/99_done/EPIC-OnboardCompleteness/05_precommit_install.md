@@ -1,6 +1,6 @@
 ---
 title: "Check pre-commit availability and run install during onboard"
-status: todo
+status: done
 components:
   - onboard
   - build_system

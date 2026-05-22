@@ -1,6 +1,6 @@
 ---
 title: "Exclude submodule paths from glossary bootstrap scan"
-status: todo
+status: done
 components:
   - glossary
   - build_system

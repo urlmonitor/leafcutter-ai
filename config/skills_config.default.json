@@ -39,6 +39,10 @@
   "changelog_folder": "changelogs/",
   "changelog_categories_path": ".claude/changelog_categories.md",
 
+  "glossary": {
+    "exclude_paths": []
+  },
+
   "worktree_cleanup": {
     "kill_residual_processes": true,
     "log_globs": ["*.log", "precommit-autofix*.log", ".sql_test_results.json"],

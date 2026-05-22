@@ -36,31 +36,22 @@ Work through these steps in order. Tick each box as it completes. Do NOT skip
 silently on failure — halt and surface the error.
 
 ```
-1. Detect git repo state (git status, default branch)                    [ ]
+1.  Detect git repo state (git status, default branch)                   [ ]
 1a. Detect WSL2 + NTFS mount; auto-set core.autocrlf if needed          [ ]
-2. Check if .claude/skills_config.json exists; classify keys as
-   confirmed (present) vs unconfirmed (absent)                          [ ]
-3. Scan folder structure: docs/, tests/, src/, sql/, packages            [ ]
-4. Read discovery whitelist:
-     README.md (first 50 lines)
-     pyproject.toml
-     package.json
-     Makefile
-     .env.example                                                        [ ]
-5. Fan out onboard-config-section sub-agents (parallel, Haiku tier):
-     - testing_context section agent
-     - top_level_packages section agent
-     - tickets_*_path section agent
-     - common_commands section agent
-     - project_description section agent                                 [ ]
-6. Collect sub-agent config fragments; merge into proposed
-   skills_config.json draft                                              [ ]
-7. Present diff (additions to .claude/skills_config.json + preview
-   of generated CLAUDE.md sections) — ask for sign-off                  [ ]
-8. On approval: write .claude/skills_config.json                        [ ]
-9. Run build.py --target-dir . — report output                          [ ]
-10. Confirm .claude/ outputs: agents/, skills/, hooks/,
-    settings.json, CLAUDE.md present                                    [ ]
+2.  Check if .claude/skills_config.json exists; classify keys            [ ]
+3.  Scan folder structure: docs/, tests/, src/, sql/, packages           [ ]
+4.  Read discovery whitelist (README.md, pyproject.toml, etc.)           [ ]
+5.  Fan out onboard-config-section sub-agents (parallel, Haiku tier)     [ ]
+6.  Collect sub-agent config fragments; merge into proposed config       [ ]
+7.  Present diff — ask for sign-off                                      [ ]
+8.  On approval: write .claude/skills_config.json                        [ ]
+9.  Run build.py --target-dir . — report output                          [ ]
+10. Confirm .claude/ outputs exist                                       [ ]
+11. Pre-commit: check availability, run pre-commit install               [ ]
+12. Detect placeholder content in vision.md and roadmap.json             [ ]
+13. If placeholders detected: walk user through interactive fill         [ ]
+14. Glossary: check if empty, prompt for /glossary-bootstrap             [ ]
+15. Generate and display post-onboard checklist                          [ ]
 ```
 
 ## Step 1 — Repo State Detection
@@ -193,4 +184,136 @@ Check that all expected outputs exist:
 
 For each missing output: print a warning but do not halt.
 
-Print final summary: "Install complete. CLAUDE.md is ready. Review any <!-- TODO: fill in --> sections."
+## Step 11 — Pre-commit Install
+
+Check if `pre-commit` is available:
+
+```bash
+command -v pre-commit
+```
+
+**If not found**: suggest installation and add to the checklist:
+> `pre-commit` is not installed. Install it with:
+> - `pip install pre-commit` or `uv tool install pre-commit`
+> Then run `pre-commit install` in this repo.
+
+**If found**: run `pre-commit install` to wire hooks into `.git/hooks/`:
+
+```bash
+pre-commit install
+```
+
+Verify `.git/hooks/pre-commit` exists and is executable. If `pre-commit install`
+fails, log the error and add it to the checklist — do not halt.
+
+## Step 12 — Placeholder Detection
+
+Check the build output for placeholder markers. Read `docs/vision.md` and
+`docs/roadmap.json` (or the paths from `docs_root` in config). Scan for lines
+containing:
+- `TODO:`
+- `PLACEHOLDER`
+- `Replace with`
+- `<!-- QUESTION`
+- `FIXME:`
+
+If any markers are found, report them to the user:
+
+> **Placeholder content detected** in the following files:
+> - `docs/vision.md` (N markers)
+> - `docs/roadmap.json` (N markers)
+
+Record which files have placeholders for Step 13.
+
+## Step 13 — Interactive Vision & Roadmap Completion
+
+**Only runs if Step 12 found placeholders in vision.md or roadmap.json.**
+
+### Vision (docs/vision.md)
+
+If vision.md contains placeholder markers, ask the user:
+
+> "Your project vision file contains placeholder content. Would you like to fill
+> it in now? (yes / skip)"
+
+On `yes`: ask these guided questions one at a time:
+1. "What is the primary goal of this project? (one sentence)"
+2. "Who is the target audience or user?"
+3. "What are the 2-3 key outcomes you want to achieve?"
+
+Write the user's answers into `docs/vision.md`, replacing the placeholder content.
+
+On `skip`: add "Fill in docs/vision.md" to the post-onboard checklist.
+
+### Roadmap (docs/roadmap.json)
+
+If roadmap.json contains placeholder markers, ask:
+
+> "Your roadmap file contains placeholder content. Would you like to define
+> your initial roadmap phases now? (yes / skip)"
+
+On `yes`: ask:
+1. "What is the name of your current phase? (e.g. 'MVP', 'Phase 1')"
+2. "What are the 2-3 exit criteria for this phase?"
+3. "Do you have a target date? (optional)"
+
+Write the user's answers into `docs/roadmap.json` following the roadmap schema.
+Update the CLAUDE.md roadmap sentinel if it still contains placeholder text.
+
+On `skip`: add "Fill in docs/roadmap.json" to the post-onboard checklist.
+
+## Step 14 — Glossary Bootstrap Prompt
+
+Check if `docs/glossary.md` exists and whether it has any `### <term>` entries:
+
+```bash
+grep -c '^### ' docs/glossary.md 2>/dev/null || echo "0"
+```
+
+**If the count is 0** (empty glossary):
+
+> "Your glossary is empty. Run `/glossary-bootstrap` now to populate it with
+> domain terms from your codebase? (yes / skip)"
+
+On `yes`: tell the user to run `/glossary-bootstrap` (this wizard cannot invoke
+slash commands directly — it must instruct the user).
+
+On `skip`: add "Run /glossary-bootstrap to populate the glossary" to the checklist.
+
+**If the count is > 0**: skip silently (glossary already has content).
+
+## Step 15 — Post-Onboard Checklist
+
+Generate a structured markdown checklist of everything that still needs attention.
+Group items by category. Mark items that were completed during onboard as done.
+
+```markdown
+## Post-Onboard Checklist
+
+### Completed
+- [x] skills_config.json written
+- [x] build.py ran successfully
+- [x] .claude/ outputs confirmed
+- [x] pre-commit hooks installed (if Step 11 succeeded)
+
+### Action Required
+- [ ] Fill in docs/vision.md (contains N placeholder markers)
+- [ ] Fill in docs/roadmap.json (contains N placeholder markers)
+- [ ] Run /glossary-bootstrap to populate the glossary
+- [ ] Install pre-commit: pip install pre-commit && pre-commit install
+- [ ] Create missing file: <path> (referenced by <config_key>)
+
+### How to Fix
+| Item | Command |
+|------|---------|
+| Vision | Edit docs/vision.md and replace TODO markers |
+| Roadmap | Edit docs/roadmap.json and fill in phases |
+| Glossary | Run /glossary-bootstrap |
+| Pre-commit | pip install pre-commit && pre-commit install |
+```
+
+Print this checklist at the end of the onboard run. Only include items that are
+actually incomplete — omit categories where everything is done.
+
+Print final summary:
+> "Install complete. CLAUDE.md is ready. See the checklist above for remaining steps."

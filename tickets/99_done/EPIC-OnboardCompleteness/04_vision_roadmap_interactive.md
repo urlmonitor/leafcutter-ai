@@ -1,6 +1,6 @@
 ---
 title: "Interactive vision.md and roadmap.json completion during onboard"
-status: todo
+status: done
 components:
   - onboard
 created: 2026-05-19
