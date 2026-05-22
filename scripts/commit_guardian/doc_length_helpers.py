@@ -81,7 +81,7 @@ def lookup_writer_agent(doc_type: str | None, doc_types_path: Path) -> str:
 ====================================================================
 DECISION HISTORY
 ====================================================================
-- 2026-05-14 09:45 [ticket-11]: Created as helper module extracted (#EPIC-LeafcutterMVP/01)
+- 2026-05-14 09:45 [ticket-11]: Created as helper module extracted
   from check_doc_length.py to stay under the 400-line code budget.
   Contains read_frontmatter_type() and lookup_writer_agent() for
   the AUTOFIX_AGENT hint dispatch mechanism.

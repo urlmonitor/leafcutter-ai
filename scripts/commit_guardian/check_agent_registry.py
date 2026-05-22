@@ -125,7 +125,7 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
-# - 2026-05-13 11:00 [epic-supervisor/ticket-20]: Initial implementation. (#EPIC-LeafcutterMVP/01)
+# - 2026-05-13 11:00 [epic-supervisor/ticket-20]: Initial implementation.
 #   Thin wrapper around registry_validator.validate_agent_registry().
 #   Only fires when agent-registry-related files are staged (prevents
 #   spurious failures on unrelated commits). Falls back gracefully when

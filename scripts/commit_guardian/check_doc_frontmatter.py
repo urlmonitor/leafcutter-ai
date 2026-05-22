@@ -323,8 +323,7 @@ def check_roadmap_staleness(project_root: Path) -> None:
     Args:
         project_root: Absolute path to the project root.
     """
-    from scripts.commit_guardian.config import DOC_FM_DOCS_DIR
-    roadmap_path = project_root / DOC_FM_DOCS_DIR / "roadmap.json"
+    roadmap_path = project_root / "docs" / "roadmap.json"
     threshold = _load_roadmap_staleness_threshold(project_root)
 
     if not roadmap_path.exists():
@@ -540,9 +539,13 @@ DECISION HISTORY
   in commit_guardian.json). Always exits 0. Missing or unparseable last_updated
   prints a soft warning and skips the age check. Warning text suggests /po-review.
   Implements ADR-038 Option A (pre-commit nag).
-- 2026-05-17 00:00 [python-coder]: Added is_terminal_or_done_subfolder() helper. (#TICKETLESS reason=legacy-scope-fix-pre-schema-violations)
-  Skips tickets/99_done/**, tickets/99_rejected/**, tickets/01_todo/EPIC-*/done/**,
-  and tickets/00_inbox/epics/EPIC-*/done/** before validate_ticket_file is called.
+- 2026-05-17 00:00 [python-coder]: Added is_terminal_or_done_subfolder() helper
+  that returns True for tickets/99_done/**, tickets/99_rejected/**,
+  tickets/01_todo/EPIC-*/done/**, and tickets/00_inbox/epics/EPIC-*/done/**.
+  Wired into main() so matched files are skipped before validate_ticket_file is
+  called (same pattern as is_ticket_readme). Eliminates ~118 pre-schema legacy
+  violations that blocked commits touching those paths. Mirror updated in
+  lockstep. (TICKET-20260515-Legacy_Tickets_Frontmatter_Backfill_Or_Validator_Scope)
 - 2026-05-12 10:45 [Agent]: Extended hook to validate adr/*.md files through
   the same validate_doc_file path as docs/ files. Added is_in_adr_dir() helper
   and updated main() dispatcher. Pre-commit files pattern also extended to

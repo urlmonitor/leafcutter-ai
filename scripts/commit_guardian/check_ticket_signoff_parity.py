@@ -251,31 +251,31 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
-- 2026-05-15 15:10 [python-coder/file-size-fix]: Extracted parsing and parity-check (#EPIC-LeafcutterMVP/01)
+- 2026-05-15 15:10 [python-coder/file-size-fix]: Extracted parsing and parity-check
   helpers into _signoff_parity_checks.py to stay under the 400-line budget.
   All names re-exported from this module via explicit imports so the existing
   importlib-based test shim (_signoff_parity_helpers.py) continues to work
   without modification. No logic changes.
-- 2026-05-15 12:00 [python-coder/T06]: Added check #6 — unchecked-tasks parity guard. New helpers: (#EPIC-LeafcutterMVP/01)
+- 2026-05-15 12:00 [python-coder/T06]: Added check #6 — unchecked-tasks parity guard. New helpers:
   load_agent_registry() (fail-open registry reader, mirrors load_components_registry()),
   _parse_impl_tasks_section() (counts - [ ] items per ### <agent> subheading in
   ## Implementation Tasks), _check_unchecked_tasks() (emits warn-only for absent sections,
   hard violation for present sections with unchecked items). AGENT_REGISTRY_PATH constant
   added to config.py. Integrates via _validate_ticket_content() violations.extend() —
   no changes to main() required.
-- 2026-05-12 12:48 [Hendrik/Claude]: Auto-enforce for done-folder paths added (#EPIC-LeafcutterMVP/01)
+- 2026-05-12 12:48 [Hendrik/Claude]: Auto-enforce for done-folder paths added
   (TICKET-20260512-Signoff_Write_Loss_Halt). The done-folder invariant is
   non-negotiable — warn-only mode on done/ paths was precisely the gap that
   hid the silent sign-off loss bug. Changed main() to compute a per-file
   file_enforce flag (True when path contains /done/ or --enforce is set),
   and to use file_enforce when deciding whether to exit 1. Unit tests added
   in unit_tests/commit_guardian/test_signoff_parity_auto_enforce.py.
-- 2026-05-12 00:00 [Hendrik/Claude]: Extended for TICKET-20260511 Deliverable 2 (Option A). (#EPIC-LeafcutterMVP/01)
+- 2026-05-12 00:00 [Hendrik/Claude]: Extended for TICKET-20260511 Deliverable 2 (Option A).
   Added _extract_agent_status() helper that accepts both the scalar form (``signed_off``)
   and the nested-map form (``{status: signed_off, grandfathered: true}``). Updated
   _check_enum_membership, _check_parity, and _check_done_folder to route through the
   helper so grandfathered entries are valid without breaking existing scalar-format tickets.
-- 2026-05-08 17:30 [Hendrik/Claude]: Created for EPIC-AgentSupervisor ticket 04. (#EPIC-LeafcutterMVP/01)
+- 2026-05-08 17:30 [Hendrik/Claude]: Created for EPIC-AgentSupervisor ticket 04.
   Warn-only by default; flip to --enforce after ticket 11's grandfathering
   migration runs. Five parity checks: enum membership, frontmatter↔Sign-offs
   representation agreement, orphan Sign-offs entries, done-folder invariant,

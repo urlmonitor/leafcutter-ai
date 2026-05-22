@@ -323,7 +323,7 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
-# - 2026-05-15 14:40 [EPIC-FeedbackCollection/ticket-05]: Initial implementation. (#EPIC-LeafcutterMVP/01)
+# - 2026-05-15 14:40 [EPIC-FeedbackCollection/ticket-05]: Initial implementation.
 #   Pre-commit guard for feedback-id enforcement. Inspects only added lines
 #   (git diff --cached) so pre-existing headings are never flagged. The two-line
 #   lookahead covers the signoff-skill body structure where feedback-id: is the
@@ -332,7 +332,7 @@ if __name__ == "__main__":
 #   Only ticket files (tickets/**/*.md) are inspected — non-ticket diffs pass
 #   through silently. Registered in both commit_guardian.json instances (scripts
 #   and templates directories).
-# - 2026-05-17 10:30 [TICKET-20260517-Surface_Step5_Residuals_Feedback_Fix_NoFeedbackCheck]: (#EPIC-LeafcutterMVP/01)
+# - 2026-05-17 10:30 [TICKET-20260517-Surface_Step5_Residuals_Feedback_Fix_NoFeedbackCheck]:
 #   Fixed _should_skip() to add a fourth fallback source: read COMMIT_EDITMSG from
 #   the gitdir resolved via `git rev-parse --git-dir`. This is the only reliable
 #   path at the pre-commit stage when the user runs `git commit -m "msg

@@ -211,7 +211,7 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
-# - 2026-05-14 11:00 [EPIC-ArchitectureDocsEnforcement/ticket 10 — D10.5]: (#EPIC-LeafcutterMVP/01)
+# - 2026-05-14 11:00 [EPIC-ArchitectureDocsEnforcement/ticket 10 — D10.5]:
 #   Created as the paths.json integrity commit-guardian hook. Checks:
 #   (1) all non-optional paths exist, (2) no two keys map to the same path.
 #   Bypass token [NO-ARCH-UPDATE] skips the hook. Optional sentinel pattern:

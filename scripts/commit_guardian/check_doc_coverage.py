@@ -354,7 +354,7 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
-- 2026-05-12 11:30 [Agent]: Initial implementation. Advisory hook with (#EPIC-LeafcutterMVP/01)
+- 2026-05-12 11:30 [Agent]: Initial implementation. Advisory hook with
   three signals: new Python module (MODULE: header), new SQL procedure
   (CREATE OR REPLACE in sql_functions/), large diff (>50 lines). All
   suppressed when a .md is staged or when the knowledge graph confirms

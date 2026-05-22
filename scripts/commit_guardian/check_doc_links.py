@@ -7,6 +7,7 @@ GOAL: Enforce bidirectional traceability between code files and documentation
 BUSINESS CONTEXT: Ensures code-to-doc and doc-to-code links stay in sync,
     reducing documentation drift and enabling automated traceability audits.
 ARCHITECTURE: Not needed.
+PARENT_DIAGRAM: docs/architecture/L2_data_pipeline_macro.md
 
 Checks:
     1. Referenced doc paths actually exist on disk.
@@ -404,6 +405,7 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-05-18 00:00 [epic-supervisor/merge]: Added PARENT_DIAGRAM declaration to module docstring to satisfy check-mermaid-parent-link hook. (#EPIC-UserSurfaceVerification/merge)
 - 2026-05-12 00:00 [Agent]: Updated example path in mermaid hint from data_flow.md
   to L3_database_phase_flows.md (EPIC-ArchitectureDocs ticket 07 rename).
 - 2026-05-04 19:00 [Antigravity]: Added file arguments to check_doc_links hook.

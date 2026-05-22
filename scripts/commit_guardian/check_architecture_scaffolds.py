@@ -286,7 +286,7 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
-# - 2026-05-14 13:00 [EPIC-ArchitectureDocsEnforcement/ticket 11 — D11.3]: (#EPIC-LeafcutterMVP/01)
+# - 2026-05-14 13:00 [EPIC-ArchitectureDocsEnforcement/ticket 11 — D11.3]:
 #   Created as the architecture-scaffold integrity commit-guardian hook. Three
 #   checks: (1) YAML frontmatter well-formedness, (2) cross-link existence
 #   within the scaffold tree, (3) {paths.X.Y} placeholder key validity against

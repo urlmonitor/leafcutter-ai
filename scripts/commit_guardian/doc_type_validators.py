@@ -116,7 +116,7 @@ def validate_requires_documentation(fm: dict[str, Any]) -> list[str]:
 ====================================================================
 DECISION HISTORY
 ====================================================================
-- 2026-05-14 00:00 [EPIC-ArchitectureDocsEnforcement/ticket 08]: (#EPIC-LeafcutterMVP/01)
+- 2026-05-14 00:00 [EPIC-ArchitectureDocsEnforcement/ticket 08]:
   Created. Extracted doc-type validation into this module to keep
   frontmatter_validators.py under 400 lines and make doc_types.json
   the SSOT for the type: enum on docs/ files. Added

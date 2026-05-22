@@ -15,14 +15,14 @@ ARCHITECTURE: Thin wrapper around the security-scanner skill's scan_secrets.py.
     per-line .security-allowlist entries.
 
 # DECISION HISTORY
-# - 2026-05-14 09:00 [TICKET-20260514-Fix_Tooling_Gaps]: Added _is_prose_exempt() (#EPIC-LeafcutterMVP/01)
+# - 2026-05-14 09:00 [TICKET-20260514-Fix_Tooling_Gaps]: Added _is_prose_exempt()
 #   helper and ENTROPY_HIGH post-filter to eliminate accreting .security-allowlist
 #   entries caused by ticket IDs and EPIC names in audit/retrospective documents.
 #   See Deliverable 3 in the ticket body.
-# - 2026-05-13 15:00 [epic-supervisor/ticket-23]: Initial implementation. (#EPIC-LeafcutterMVP/01)
+# - 2026-05-13 15:00 [epic-supervisor/ticket-23]: Initial implementation.
 #   Scope intentionally limited to staged files only — full-repo scan is the
 #   job of /security-audit, not the pre-commit hot path.
-# - 2026-05-13 02:00 [epic-supervisor]: Parameterised security_scanner.scripts_dir (#EPIC-LeafcutterMVP/01)
+# - 2026-05-13 02:00 [epic-supervisor]: Parameterised security_scanner.scripts_dir
 #   path via commit_guardian.json so the hook is portable across consumer projects.
 """
 

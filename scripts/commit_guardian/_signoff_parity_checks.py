@@ -564,7 +564,7 @@ def _check_unchecked_tasks(
 ====================================================================
 DECISION HISTORY
 ====================================================================
-- 2026-05-15 15:10 [python-coder/file-size-fix]: Extracted from check_ticket_signoff_parity.py (#EPIC-LeafcutterMVP/01)
+- 2026-05-15 15:10 [python-coder/file-size-fix]: Extracted from check_ticket_signoff_parity.py
   to keep each file under the 400-line budget. Contains all parsing helpers
   (load_components_registry, load_agent_registry, _parse_frontmatter,
   _parse_signoffs_section, _parse_impl_tasks_section, _build_signoffs_map,

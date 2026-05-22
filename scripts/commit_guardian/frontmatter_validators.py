@@ -407,11 +407,6 @@ def validate_depends_on(fm: dict[str, Any], ticket_path: Path) -> list[str]:
     return errors
 
 
-from scripts.commit_guardian.ticket_roadmap_validators import (
-    validate_roadmap_phase,
-    validate_advances_current_outcome,
-)
-
 # ---------------------------------------------------------------------------
 # Per-file orchestrators (used by check_doc_frontmatter.main)
 # ---------------------------------------------------------------------------
@@ -517,9 +512,6 @@ def validate_ticket_file(filepath: str, valid_components: set[str],
     errors.extend(validate_depends_on(fm, ticket_path))
     errors.extend(validate_requires_documentation(fm))
 
-    warnings.extend(validate_roadmap_phase(fm, project_root_path))
-    warnings.extend(validate_advances_current_outcome(fm))
-
     return errors, warnings
 
 
@@ -527,14 +519,12 @@ def validate_ticket_file(filepath: str, valid_components: set[str],
 ====================================================================
 DECISION HISTORY
 ====================================================================
-- 2026-05-18 00:00 [EPIC-ProjectRoadmap/ticket 04]: Added validate_roadmap_phase() (#EPIC-ProjectRoadmap/04)
-  and validate_advances_current_outcome() warn-only validators (imported from
-  ticket_roadmap_validators.py — extracted to keep this file under the 400-line
-  limit). Both functions return warnings (never errors) and are wired into
-  validate_ticket_file() warnings list. Removed inline json import (no longer
-  needed here; moved to ticket_roadmap_validators.py).
-- 2026-05-15 00:00 [EPIC-EmbeddedArchDiagramsHardening/ticket 07]: Replaced validate_diagram_type with import delegation to diagram_type_validators. (#EPIC-EmbeddedArchDiagramsHardening/07)
-  Removed DOC_FM_DIAGRAM_TYPE_VALUES import. Fixes silent rejection of user_flow, data_flow, agent_flow.
+- 2026-05-15 00:00 [EPIC-EmbeddedArchDiagramsHardening/ticket 07]: Replaced
+  inline validate_diagram_type implementation with an import delegation to
+  diagram_type_validators.validate_diagram_type (diagram_types.json SSOT).
+  Removed DOC_FM_DIAGRAM_TYPE_VALUES import from config (deprecated constant).
+  Fixes silent rejection of valid types like user_flow, data_flow, agent_flow
+  that were missing from the stale hardcoded list in config.py.
 - 2026-05-14 00:00 [EPIC-ArchitectureDocsEnforcement/ticket 08]: Replaced
   validate_type_enum inline logic with a delegation call to
   validate_doc_type from doc_type_validators (doc_types.json SSOT). Added

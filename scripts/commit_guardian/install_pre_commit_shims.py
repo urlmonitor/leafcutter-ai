@@ -260,7 +260,7 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
-# - 2026-05-13 09:00 [Agent/ticket-supervisor]: Initial implementation (#EPIC-LeafcutterMVP/01)
+# - 2026-05-13 09:00 [Agent/ticket-supervisor]: Initial implementation
 #   (TICKET-20260513-AutoInstall_PreCommit_Hook_Shims). Created to fix
 #   the silent async-SQL-pipeline failure caused by pre-commit refusing
 #   to install post-commit shim when core.hooksPath was set. Writes
@@ -268,7 +268,7 @@ if __name__ == "__main__":
 #   bundled fallback), bypassing pre-commit's overly-conservative guard.
 #   Idempotent: skips already-installed shims; preserves foreign hooks.
 #   Directly runnable: python scripts/commit_guardian/install_pre_commit_shims.py
-# - 2026-05-13 12:00 [epic-supervisor/ticket-13]: Changed ConfigParser() (#EPIC-LeafcutterMVP/01)
+# - 2026-05-13 12:00 [epic-supervisor/ticket-13]: Changed ConfigParser()
 #   to RawConfigParser(strict=False) in find_hooks_dir to tolerate
 #   duplicate option keys in .git/config (e.g. [core] on multi-worktree
 #   setups). ConfigParser strict=True raises DuplicateOptionError;

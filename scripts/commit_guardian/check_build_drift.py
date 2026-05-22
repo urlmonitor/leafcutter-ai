@@ -220,7 +220,7 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
-# - 2026-05-13 00:00 [python-coder/ticket-37]: Created module. (#EPIC-LeafcutterMVP/01)
+# - 2026-05-13 00:00 [python-coder/ticket-37]: Created module.
 #   Content-hash (SHA-256) chosen over mtime because git checkouts
 #   reset mtime, making mtime unreliable in multi-worktree setups.
 #   .build_manifest.json written by build.py's write_build_manifest()

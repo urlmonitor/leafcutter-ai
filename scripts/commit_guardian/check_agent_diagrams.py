@@ -12,7 +12,7 @@ ARCHITECTURE: Reads the staged version of agent_registry.json, computes an 8-cha
     when any doc is stale. Only fires when agent_registry.json is staged.
 
 # DECISION HISTORY
-# - 2026-05-13 19:00 [epic-supervisor/ticket-28]: Initial implementation. (#EPIC-LeafcutterMVP/01)
+# - 2026-05-13 19:00 [epic-supervisor/ticket-28]: Initial implementation.
 #   Warning (non-blocking) chosen over error — diagram staleness is a documentation
 #   hygiene issue, not a correctness issue. Stale diagrams never break functionality.
 """

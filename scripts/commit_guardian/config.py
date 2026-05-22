@@ -142,27 +142,23 @@ INFRA_HIGH_IMPACT_KEYWORDS: list[str] = _get("infra_docs", "high_impact_keywords
 
 # ---------------------------------------------------------------------------
 # check_doc_frontmatter
-# Docs root — configurable via commit_guardian.json → doc_frontmatter.docs_dir
-# or the top-level docs_root key. All doc-related globs and paths derive from this.
-DOC_FM_DOCS_DIR: str = _get("doc_frontmatter", "docs_dir", None) or load_config().get("docs_root", "docs").rstrip("/")
-
 # ---------------------------------------------------------------------------
 # required_fields is a per-glob dict:
-#   { "<docs>/architecture/**": [..., "flight_level"], "<docs>/**": [...] }
+#   { "docs/architecture/**": [..., "flight_level"], "docs/**": [...] }
 # Callers resolve the correct field list via fnmatch against the file path.
 DOC_FM_REQUIRED_FIELDS_BY_GLOB: dict[str, list[str]] = _get(
     "doc_frontmatter",
     "required_fields",
     {
-        f"{DOC_FM_DOCS_DIR}/architecture/adrs/**": ["title", "type", "status", "created", "last_updated", "components"],
-        f"{DOC_FM_DOCS_DIR}/architecture/**": ["title", "type", "status", "created", "last_updated", "components", "flight_level"],
-        f"{DOC_FM_DOCS_DIR}/**": ["title", "type", "status", "created", "last_updated", "components"],
+        "docs/architecture/adrs/**": ["title", "type", "status", "created", "last_updated", "components"],
+        "docs/architecture/**": ["title", "type", "status", "created", "last_updated", "components", "flight_level"],
+        "docs/**": ["title", "type", "status", "created", "last_updated", "components"],
     },
 )
 # Fallback flat list for callers that have not yet been updated to pass a file path.
-# Points to the broadest glob (<docs>/**) so existing tests keep working.
+# Points to the broadest glob (docs/**) so existing tests keep working.
 DOC_FM_REQUIRED_FIELDS: list[str] = DOC_FM_REQUIRED_FIELDS_BY_GLOB.get(
-    f"{DOC_FM_DOCS_DIR}/**", ["title", "type", "status", "created", "last_updated", "components"]
+    "docs/**", ["title", "type", "status", "created", "last_updated", "components"]
 )
 DOC_FM_ALLOWED_TYPES: list[str] = _get("doc_frontmatter", "allowed_types",
                                         ["tutorial", "how-to", "reference", "explanation", "adr", "cross-cutting"])
@@ -177,7 +173,8 @@ DOC_FM_FLIGHT_LEVEL_VALUES: list[str] = _get("doc_frontmatter", "flight_level_va
 DOC_FM_DIAGRAM_TYPE_VALUES: list[str] = _get("doc_frontmatter", "diagram_type_values",
                                               ["context", "container", "component", "sequence",
                                                "erd", "state", "dataflow", "none"])
-DOC_FM_COMPONENTS_REGISTRY: str = _get("doc_frontmatter", "components_registry", f"{DOC_FM_DOCS_DIR}/components.json")
+DOC_FM_COMPONENTS_REGISTRY: str = _get("doc_frontmatter", "components_registry", "docs/components.json")
+DOC_FM_DOCS_DIR: str = _get("doc_frontmatter", "docs_dir", "docs")
 
 # ---------------------------------------------------------------------------
 # check_doc_length
@@ -228,7 +225,7 @@ STRUCTURAL_SIGNALS: list[dict] = _get(
         {"name": "new top-level package", "pattern": r"^[^/]+/__init__\.py$"},
     ],
 )
-STRUCTURAL_REQUIRED_DOC: str = _get("structural_change", "required_doc", f"{DOC_FM_DOCS_DIR}/components.json")
+STRUCTURAL_REQUIRED_DOC: str = _get("structural_change", "required_doc", "docs/components.json")
 STRUCTURAL_BYPASS_TOKEN: str = _get("structural_change", "bypass_token", "[NO-ARCH-UPDATE]")
 
 # ---------------------------------------------------------------------------
@@ -240,39 +237,46 @@ SECURITY_SCANNER_SCRIPTS_DIR: str = _get(
     ".claude/skills/security-scanner/scripts",
 )
 
+# ---------------------------------------------------------------------------
+# apply_sql_changes
+# ---------------------------------------------------------------------------
+APPLY_SQL_ENABLED: bool = _get("apply_sql", "enabled", True)
+APPLY_SQL_DATABASE_URL_ENV: str = _get("apply_sql", "database_url_env", "")
+
+
 
 """
 ====================================================================
 DECISION HISTORY
 ====================================================================
-- 2026-05-15 12:00 [python-coder/T06]: Added AGENT_REGISTRY_PATH constant for check_ticket_signoff_parity (#EPIC-LeafcutterMVP/01)
+- 2026-05-15 12:00 [python-coder/T06]: Added AGENT_REGISTRY_PATH constant for check_ticket_signoff_parity
   check #6 (unchecked-tasks parity guard). Defaults to
   "leafcutter/config/agent_registry.json" relative to project root;
   overridable via ticket_signoff_parity.agent_registry_path in commit_guardian.json.
-- 2026-05-14 02:40 [epic-supervisor/merge]: Resolved merge conflict with main — adopted main's (#EPIC-LeafcutterMVP/01)
+- 2026-05-14 02:40 [epic-supervisor/merge]: Resolved merge conflict with main — adopted main's
   DOC_LENGTH defaults (max_lines 300, max_lines_adr 400, max_sections 25,
   excluded_files [README.md, CHANGELOG.md]) over epic's (500/600/20/[]).
-- 2026-05-14 02:15 [epic-supervisor/T09]: Added DOC_LENGTH_MAX_LINES/ADR/MAX_SECTIONS/SEVERITY/EXCLUDED_FILES (#EPIC-LeafcutterMVP/01)
+- 2026-05-14 02:15 [epic-supervisor/T09]: Added DOC_LENGTH_MAX_LINES/ADR/MAX_SECTIONS/SEVERITY/EXCLUDED_FILES
   constants for check_doc_length.py; added STRUCTURAL_SIGNALS/REQUIRED_DOC/BYPASS_TOKEN constants for
   check_structural_change.py. Both sets were missing from the template, causing ImportError on startup.
-- 2026-05-13 12:00 [epic-supervisor/T02]: Added SECURITY_SCANNER_SCRIPTS_DIR constant so (#EPIC-LeafcutterMVP/01)
+- 2026-05-13 12:00 [epic-supervisor/T02]: Added SECURITY_SCANNER_SCRIPTS_DIR constant so
   check_secrets.py resolves the scanner skill path via config rather than a hardcoded
   project-specific path. Consumer projects override via commit_guardian.json
   security_scanner.scripts_dir.
-- 2026-05-12 11:30 [Agent]: Added DOC_COVERAGE_* constants for check_doc_coverage advisory hook (ticket 12 EPIC-DocTraceability). (#EPIC-LeafcutterMVP/01)
-- 2026-05-11 00:00 [Agent]: Added DOC_FM_REQUIRED_FIELDS_BY_GLOB (per-glob dict), (#EPIC-LeafcutterMVP/01)
+- 2026-05-12 11:30 [Agent]: Added DOC_COVERAGE_* constants for check_doc_coverage advisory hook (ticket 12 EPIC-DocTraceability).
+- 2026-05-11 00:00 [Agent]: Added DOC_FM_REQUIRED_FIELDS_BY_GLOB (per-glob dict),
   DOC_FM_FLIGHT_LEVEL_VALUES and DOC_FM_DIAGRAM_TYPE_VALUES constants. Kept
   DOC_FM_REQUIRED_FIELDS as a flat-list fallback pointing to the broadest glob so
   existing call-sites remain compatible (ticket 02).
-- 2026-05-10 13:42 [AI/Antigravity]: Added TICKET_FM_* constants for check_ticket_signoff_parity (#EPIC-LeafcutterMVP/01)
+- 2026-05-10 13:42 [AI/Antigravity]: Added TICKET_FM_* constants for check_ticket_signoff_parity
   configurations to fix import errors during test collection.
-- 2026-05-05 12:00 [AI]: Added TICKET_FM_* constants for the ticket-side YAML (#EPIC-LeafcutterMVP/01)
+- 2026-05-05 12:00 [AI]: Added TICKET_FM_* constants for the ticket-side YAML
   frontmatter validation in check_doc_frontmatter (EPIC-DocTraceability #15).
-- 2026-05-03 18:00 [AI/Antigravity]: Added DOC_FM_* constants for check_doc_frontmatter (#EPIC-LeafcutterMVP/01)
+- 2026-05-03 18:00 [AI/Antigravity]: Added DOC_FM_* constants for check_doc_frontmatter
   and DOC_LINKS_* constants for check_doc_links configurations.
-- 2026-04-30 19:12 [AI/Antigravity]: Added ENFORCE_TYPE_ANNOTATIONS constant (#EPIC-LeafcutterMVP/01)
+- 2026-04-30 19:12 [AI/Antigravity]: Added ENFORCE_TYPE_ANNOTATIONS constant
   for the new type annotation enforcement in check_docstrings.py.
-- 2026-04-30 16:00 [AI/Antigravity]: Extracted all hardcoded settings from (#EPIC-LeafcutterMVP/01)
+- 2026-04-30 16:00 [AI/Antigravity]: Extracted all hardcoded settings from
   checker scripts into commit_guardian.json with this config loader module.
 ====================================================================
 """

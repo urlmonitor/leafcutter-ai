@@ -214,7 +214,7 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
-- 2026-05-12 00:00 [Hendrik/Claude]: Created for TICKET-20260511 (#EPIC-LeafcutterMVP/01)
+- 2026-05-12 00:00 [Hendrik/Claude]: Created for TICKET-20260511
   (EPIC-MarketStructure learning 1). Enforces unittest.TestCase style in
   unit_tests/live_trader/ so unittest discover in pre-commit does not
   silently skip pytest-style functions. AST-based; self-enumerates staged

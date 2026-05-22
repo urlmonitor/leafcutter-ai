@@ -13,7 +13,7 @@ ARCHITECTURE: Validates staged docs/architecture/*.md files: checks filename
 
 ====
 DECISION HISTORY
-- 2026-05-14 20:00 [EPIC-ArchitectureDocsEnforcement/ticket 09 — Hendrik/Claude]: (#EPIC-LeafcutterMVP/01)
+- 2026-05-14 20:00 [EPIC-ArchitectureDocsEnforcement/ticket 09 — Hendrik/Claude]:
   Created as a standalone hook (separate from check_doc_frontmatter.py) to
   keep each hook single-concern. Validates both the pattern AND the
   level/flight_level consistency in a single pass.

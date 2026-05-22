@@ -69,48 +69,28 @@ import re
 
 def count_lines(filepath: str) -> int:
     """
-    Count logical lines in a file (excluding docstrings, block comments, blank
-    lines, and standalone #-comment lines).
-
-    A *logical line* is any line that is not:
-    - Blank (zero non-whitespace characters), or
-    - A standalone #-comment line (first non-whitespace character is '#'), or
-    - Inside a Python triple-quoted docstring (removed before counting), or
-    - Inside a SQL/C block comment enclosed by /* ... */ (removed before counting).
-
-    Inline #-comments at the end of code lines (e.g. ``x = 1  # note``) are
-    intentionally *not* excluded — those lines contain real code.
+    Count all lines in a file (excluding docstrings and block comments).
 
     Args:
         filepath: Path to the file to count.
 
     Returns:
-        Number of logical lines in the file, or 0 if the file cannot be read.
+        Total number of lines in the file.
     """
     try:
         path = Path(filepath)
         if not path.exists():
             return 0
         content = path.read_text(encoding="utf-8")
-
-        # Strip Python triple-quoted docstrings
+        
+        # Strip python docstrings
         content = re.sub(r'""".*?"""', '', content, flags=re.DOTALL)
         content = re.sub(r"'''.*?'''", '', content, flags=re.DOTALL)
-
-        # Strip SQL/C block comments (/* ... */) — includes the DECISION HISTORY block
+        
+        # Strip SQL/C block comments (which also includes the DECISION HISTORY block)
         content = re.sub(r'/\*.*?\*/', '', content, flags=re.DOTALL)
-
-        # Count only logical lines: non-blank and not a standalone #-comment line
-        logical_count = 0
-        for line in content.splitlines():
-            stripped = line.strip()
-            if not stripped:
-                continue          # blank line
-            if stripped.startswith('#'):
-                continue          # standalone #-comment line (e.g. DECISION HISTORY entries)
-            logical_count += 1
-
-        return logical_count
+        
+        return len(content.splitlines())
     except Exception:
         return 0
 
@@ -201,7 +181,7 @@ def main() -> int:
         for filepath, lines, limit in failed_files:
             print("❌ FILE TOO LARGE:")
             print(f"   {filepath}")
-            print(f"   Logical lines (excluding blank and #-comment lines): {lines} / {limit}")
+            print(f"   Lines: {lines} (Limit: {limit})")
             print()
             print("   Please refactor and split this file before committing.")
             print("   DO NOT simply delete blank lines, comments, or docstrings to bypass this.")
@@ -235,6 +215,5 @@ DECISION HISTORY
 ====================================================================
 - 2026-05-01 17:31 [Antigravity]: Updated file size check to enforce limits on all changed files, not just new ones, to drive progressive refactoring.
 - 2026-03-01 10:00: Initial implementation.
-- 2026-05-19 09:30 [python-coder]: Changed count_lines() to count only logical lines (non-blank, non-standalone-#-comment). DECISION HISTORY blocks and banner comments no longer contribute to the 400-line cap. Updated error message to show logical-line count explicitly. (#EPIC-WorkflowGuardrailFixes/02)
 ====================================================================
 """

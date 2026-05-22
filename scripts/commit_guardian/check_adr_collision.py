@@ -157,6 +157,26 @@ def next_free_number(taken: set[int]) -> int:
     return candidate
 
 
+def _adr_num_to_path(num: int) -> "str | None":
+    """Return the staged path for an ADR integer, or None if not found.
+
+    Args:
+        num: ADR integer to look up.
+
+    Returns:
+        Path string of the staged file, or None.
+    """
+    rc, stdout, _ = _run_git("diff", "--cached", "--name-only", "--diff-filter=AR")
+    if rc != 0:
+        return None
+    for line in stdout.splitlines():
+        line = line.strip()
+        match = _ADR_INT_RE.search(Path(line).name)
+        if match and int(match.group(1)) == num and "docs/architecture/adrs/" in line:
+            return line
+    return None
+
+
 def main() -> None:
     """Run the ADR collision check.
 
@@ -164,16 +184,6 @@ def main() -> None:
     and exits 0 so legitimate commits are never blocked by script failures.
     """
     try:
-        # Skip during merge commits: ADR files brought in from the other branch
-        # appear as Added in the index but are not new ADR claims — they already
-        # exist on origin/main. Checking MERGE_HEAD is the canonical way to
-        # detect an in-progress merge commit.
-        rc_gd, git_dir_out, _ = _run_git("rev-parse", "--git-dir")
-        if rc_gd == 0:
-            merge_head = Path(git_dir_out.strip()) / "MERGE_HEAD"
-            if merge_head.exists():
-                sys.exit(0)
-
         staged_numbers = get_staged_adr_numbers()
         if not staged_numbers:
             # No ADR files staged — nothing to check.
@@ -182,6 +192,32 @@ def main() -> None:
         committed = get_committed_adr_numbers("origin/main")
         inflight = get_inflight_adr_numbers(committed)
         all_taken = committed | inflight
+
+        # Filter out merge-in ADRs: staged numbers that are already on
+        # origin/main AND did not exist in HEAD before staging. These come
+        # from merging origin/main into the branch, not from branch-authored
+        # work.
+        def _is_merge_in(num: int) -> bool:
+            """Return True when a staged ADR was merged in from origin/main, not authored here.
+
+            Args:
+                num: ADR integer to check.
+
+            Returns:
+                bool: True if the ADR exists on origin/main and was not in HEAD before staging.
+            """
+            if num not in committed:
+                return False
+            path = _adr_num_to_path(num)
+            if path is None:
+                return False
+            rc, _, _ = _run_git("cat-file", "-e", f"HEAD:{path}")
+            # rc != 0 means it was NOT in HEAD → it was brought in by staging
+            return rc != 0
+
+        staged_numbers = [n for n in staged_numbers if not _is_merge_in(n)]
+        if not staged_numbers:
+            sys.exit(0)
 
         collisions = [n for n in staged_numbers if n in all_taken]
         if not collisions:
@@ -224,11 +260,11 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
-- 2026-05-17 10:15 [python-coder]: Initial creation per ADR-029 (#EPIC-LeafcutterMVP/01)
+- 2026-05-17 10:15 [python-coder]: Initial creation per ADR-029. (#TICKETLESS reason=standalone-precommit-hook)
   (docs/architecture/adrs/ADR-029-adr-number-collision-prevention.md).
   Implements Option C: pre-commit collision detection against origin/main
   and remote in-flight branches. Fail-open on any unexpected error.
   Ticket: tickets/99_done/TICKET-20260515-Prevent_ADR_Number_Collisions.md
-- 2026-05-18 21:00 [python-coder]: Added MERGE_HEAD guard at start of main() to skip collision check during merge commits; ADR files brought in from the merged branch appear as Added but are not new claims. (#TICKETLESS reason=merge-commit-false-positive-fix)
+- 2026-05-18 00:00 [epic-supervisor/merge]: Added merge-commit detection to skip ADRs brought in from origin/main. (#EPIC-UserSurfaceVerification/merge)
 ====================================================================
 """

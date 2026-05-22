@@ -206,11 +206,11 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
-- 2026-05-12 10:45 [Agent]: Initial creation. Advisory pre-commit hook that detects (#EPIC-LeafcutterMVP/01)
+- 2026-05-12 10:45 [Agent]: Initial creation. Advisory pre-commit hook that detects
   major structural changes (new dependencies, migrations, models, docker services,
   core registry components) without an ADR in the same commit. Always exits 0
   (advisory only). Ticket 16 EPIC-DocTraceability.
-- 2026-05-13 08:50 [CC-42 autofix]: Replaced U+26A0 emoji in summary print with ASCII (#EPIC-LeafcutterMVP/01)
+- 2026-05-13 08:50 [CC-42 autofix]: Replaced U+26A0 emoji in summary print with ASCII
   [!] to avoid UnicodeEncodeError on Windows (cp1252 terminal). Hook was crashing
   with exit code 1 instead of advisory exit 0.
 ====================================================================
