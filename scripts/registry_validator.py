@@ -121,10 +121,11 @@ def _check_template_paths(
     """
     errors = []
     for agent in agents:
-        tpath = package_root / agent.get("template_path", "")
+        template_path = agent.get("template_path") or ""
+        tpath = package_root / template_path
         if not tpath.exists():
             errors.append(
-                f"Agent '{agent['id']}': template_path '{agent.get('template_path')}' "
+                f"Agent '{agent['id']}': template_path '{template_path}' "
                 f"does not exist at {tpath}."
             )
     return errors
