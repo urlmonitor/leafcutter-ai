@@ -281,3 +281,39 @@ slash commands directly — it must instruct the user).
 On `skip`: add "Run /glossary-bootstrap to populate the glossary" to the checklist.
 
 **If the count is > 0**: skip silently (glossary already has content).
+
+## Step 15 — Post-Onboard Checklist
+
+Generate a structured markdown checklist of everything that still needs attention.
+Group items by category. Mark items that were completed during onboard as done.
+
+```markdown
+## Post-Onboard Checklist
+
+### Completed
+- [x] skills_config.json written
+- [x] build.py ran successfully
+- [x] .claude/ outputs confirmed
+- [x] pre-commit hooks installed (if Step 11 succeeded)
+
+### Action Required
+- [ ] Fill in docs/vision.md (contains N placeholder markers)
+- [ ] Fill in docs/roadmap.json (contains N placeholder markers)
+- [ ] Run /glossary-bootstrap to populate the glossary
+- [ ] Install pre-commit: pip install pre-commit && pre-commit install
+- [ ] Create missing file: <path> (referenced by <config_key>)
+
+### How to Fix
+| Item | Command |
+|------|---------|
+| Vision | Edit docs/vision.md and replace TODO markers |
+| Roadmap | Edit docs/roadmap.json and fill in phases |
+| Glossary | Run /glossary-bootstrap |
+| Pre-commit | pip install pre-commit && pre-commit install |
+```
+
+Print this checklist at the end of the onboard run. Only include items that are
+actually incomplete — omit categories where everything is done.
+
+Print final summary:
+> "Install complete. CLAUDE.md is ready. See the checklist above for remaining steps."
