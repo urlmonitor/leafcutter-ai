@@ -53,6 +53,7 @@ from build_glossary import build_glossary
 from build_propagation_audit import propagation_audit
 from build_claude_settings import build_claude_settings
 from build_roadmap_phase import build_roadmap
+from build_placeholder_detection import scan_for_placeholders, format_placeholder_report
 # Re-export for backward compatibility with tests that access via _build.*
 from template_compiler import (  # noqa: F401
     parse_frontmatter,
@@ -389,6 +390,13 @@ def main(argv: list[str] | None = None) -> int:
 
     if not args.dry_run and not args.no_shims:
         _install_shims(target_root)
+
+    # Post-build: scan for placeholder content and report
+    if not args.dry_run:
+        placeholder_hits = scan_for_placeholders(target_root)
+        if placeholder_hits:
+            print()
+            print(format_placeholder_report(placeholder_hits))
 
     return 0
 
