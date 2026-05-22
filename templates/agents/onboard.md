@@ -205,3 +205,23 @@ pre-commit install
 
 Verify `.git/hooks/pre-commit` exists and is executable. If `pre-commit install`
 fails, log the error and add it to the checklist — do not halt.
+
+## Step 14 — Glossary Bootstrap Prompt
+
+Check if `docs/glossary.md` exists and whether it has any `### <term>` entries:
+
+```bash
+grep -c '^### ' docs/glossary.md 2>/dev/null || echo "0"
+```
+
+**If the count is 0** (empty glossary):
+
+> "Your glossary is empty. Run `/glossary-bootstrap` now to populate it with
+> domain terms from your codebase? (yes / skip)"
+
+On `yes`: tell the user to run `/glossary-bootstrap` (this wizard cannot invoke
+slash commands directly — it must instruct the user).
+
+On `skip`: add "Run /glossary-bootstrap to populate the glossary" to the checklist.
+
+**If the count is > 0**: skip silently (glossary already has content).
