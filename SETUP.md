@@ -193,7 +193,7 @@ After a successful build, verify:
 - [ ] Refine the IDE/Assistant instructions file depending on which environment you are using:
   - If using **Gemini / Antigravity**: open and refine `.gemini/instructions.md` by filling in the details of your project context.
   - If using **Claude**: open and refine `CLAUDE.md` by filling in the details of your project context.
-  - Follow the instructions in those files and make sure to review the `<!-- TODO: fill in ... -->` placeholders to ensure everything is properly documented.
+  - The AI should research the codebase and fill in as many of the `<!-- TODO: fill in ... -->` placeholders as it can confidently determine, and explicitly ask you for any remaining information it needs to ensure everything is properly documented.
 - [ ] `.pre-commit-config.yaml` exists and references `run_hook.py`
 - [ ] `pre-commit install` has been run
 - [ ] `pre-commit install --hook-type post-commit` has been run
@@ -298,7 +298,7 @@ Manual review recommended for:
 - test_command_sql: I could not detect a SQL test suite. Set this if you add one.
 
 Next steps:
-1. Open CLAUDE.md (Claude) or .gemini/instructions.md (Gemini) and fill in any `<!-- TODO: fill in ... -->` sections
+1. Open CLAUDE.md (Claude) or .gemini/instructions.md (Gemini) and fill in any `<!-- TODO: fill in ... -->` sections. (The AI should research and fill in what it knows, and ask you for any info it does not have).
 2. Run: pre-commit install && pre-commit install --hook-type post-commit
 3. Run: /build-feature <your-first-ticket>
 ```
