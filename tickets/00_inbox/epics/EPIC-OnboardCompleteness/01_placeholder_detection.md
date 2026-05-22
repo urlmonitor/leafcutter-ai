@@ -1,6 +1,6 @@
 ---
 title: "Add TODO/placeholder marker detection to build pipeline"
-status: todo
+status: done
 components:
   - build_system
   - onboard
