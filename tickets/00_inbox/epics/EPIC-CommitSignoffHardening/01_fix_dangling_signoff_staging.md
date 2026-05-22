@@ -81,6 +81,27 @@ And git status --porcelain on the ticket path returns empty
 
 ## Comments
 
+## Locked Approach
+
+**Hook candidate: PreToolUse on `git commit` from `commit` / `pull-request` agents.**
+
+Before any `git commit` call is allowed to proceed, a PreToolUse hook intercepts it and runs:
+
+```bash
+git status --porcelain <ticket_path>
+```
+
+If the ticket file appears in the output (i.e. it is `M` — modified — in the working tree) but is NOT present in the staged set (`git diff --cached --name-only`), the hook **blocks** the commit and returns an actionable error:
+
+```
+PreToolUse blocked: ticket file '<ticket_path>' has unstaged modifications.
+Stage it first with: git add <ticket_path>
+```
+
+This makes the failure structural (the commit cannot proceed) rather than detectable only in Step 5 after the fact. The agent must stage the ticket file before calling `git commit`.
+
+The documentation-expert task below ensures the agent instructions themselves are also corrected so agents never reach the hook block in normal operation.
+
 ## Implementation Tasks
 
 ### documentation-expert
@@ -88,6 +109,7 @@ And git status --porcelain on the ticket path returns empty
 - [ ] Add an explicit `git add <ticket_path>` instruction after every ticket-file write in the commit agent, immediately before the `git commit` call. Mirror the original PR #70 fix.
 - [ ] Audit `.claude/agents/pull-request.md` — locate where the agent writes to the ticket file after opening the PR. Add the same explicit `git add <ticket_path>` instruction.
 - [ ] Audit `.claude/skills/signoff/SKILL.md` — if the signoff skill itself describes staging, confirm it covers the ticket path (not just the code changes).
+- [ ] Add the PreToolUse `git commit` hook to `.claude/hooks/` (or the appropriate hook registration location): read `git status --porcelain <ticket_path>`; if `M` in working tree but absent from staged set, exit non-zero with the error message above.
 
 ## Risk & Safety
 

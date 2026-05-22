@@ -34,7 +34,7 @@ agents:
 
 ## Actor / Goal
 
-In order to stop the pre-commit autofix from firing on every agent commit, we need to ensure that agents emit the DECISION HISTORY timestamp format and the TICKETLESS tail-tag correctly the first time, eliminating the mechanical autofix cycle entirely.
+In order to stop the pre-commit autofix from firing on every agent commit, replace the "validate → autofix-on-fail → retry" loop with a **pre-stage transformer** that injects the correct `HH:MM` timestamp and `TICKETLESS` tail-tag **before** the validator ever runs, making the validator a structural no-op for these two fields.
 
 ## Context
 
@@ -44,7 +44,7 @@ Two pre-commit autofixes fire on nearly every commit that agents produce — 6+ 
 
 **TICKETLESS tail-tag**: Commits produced by the `commit` phase agent are missing the required `[TICKETLESS]` or `[TICKET-<id>]` tail-tag in their commit messages. The autofix appends `[TICKETLESS]` but the `commit` agent's instruction about commit message format does not enforce this.
 
-Root-cause approach: fix what the agent writes — not what the autofix patches.
+Root-cause approach: **transform on stage, not autofix on fail.** The pre-stage transformer runs before the validator; by the time `check_decision_history_format` (or equivalent) sees the staged content, the fields are already correct. The validator becomes a no-op for these two fields on agent-produced commits.
 
 ## Acceptance Criteria
 
@@ -75,23 +75,44 @@ Then zero autofix events are emitted for DECISION_HISTORY or TICKETLESS categori
 
 ## Comments
 
+## Locked Approach
+
+**Hook candidate: DECISION HISTORY pre-stage transformer.**
+
+Instead of the existing "validate → autofix-on-fail → retry" cycle, introduce a pre-stage transformer that runs **before** the commit guardian validator:
+
+1. **`HH:MM` injection**: when a staged file contains a `## Decision History` entry with a date-only timestamp (`YYYY-MM-DD` with no time component), the transformer rewrites it in-place to `YYYY-MM-DD HH:MM` (current UTC time, zero-padded) **before** the staged blob is handed to the validator. The transformer modifies the index entry directly — no write-then-re-stage round-trip.
+
+2. **`TICKETLESS` tail-tag injection**: when the commit message being staged lacks a `[TICKET-<id>]` or `[TICKETLESS]` tail-tag, the transformer appends `[TICKETLESS]` to the message before the validator's tail-tag check runs.
+
+The validator (`check_decision_history_format`, tail-tag rule) is left in place unchanged — it now acts as a final safety net for content that was not produced by the transformer. For agent commits, the transformer ensures it is always a no-op.
+
+This approach is **not** "suppress the autofix" — it is "eliminate the condition that triggers the autofix" by acting earlier in the pipeline.
+
 ## Implementation Tasks
 
 ### python-coder
-- [ ] Read `scripts/commit_guardian/commit_guardian.json` and locate the rules for DECISION HISTORY timestamp and TICKETLESS tail-tag autofix. Document the exact regex/pattern each autofix uses.
-- [ ] Trace which hook or autofix rule fires: identify the `hook_id` in `.pre-commit-config.yaml` or `commit_guardian.json` and confirm what the agent writes vs. what the rule expects.
+- [ ] Read `scripts/commit_guardian/commit_guardian.json` and locate the rules for DECISION HISTORY timestamp and TICKETLESS tail-tag. Document the exact regex/pattern each rule uses.
+- [ ] Trace which hook fires: identify the `hook_id` in `.pre-commit-config.yaml` or `commit_guardian.json` and confirm what the agent writes vs. what the rule expects.
+- [ ] Implement the pre-stage transformer (new script or added stage in the existing `commit_guardian` pipeline). The transformer must:
+  - Detect staged files containing `## Decision History` entries with date-only timestamps and rewrite them to `YYYY-MM-DD HH:MM` (UTC, zero-padded, current time at transform invocation).
+  - Detect a pending commit message (via `COMMIT_EDITMSG` or `-m` arg) that lacks a tail-tag and append `[TICKETLESS]`.
+  - Run as a pre-commit stage **before** the `check_decision_history_format` validator.
+- [ ] Register the transformer in `commit_guardian.json` and `.pre-commit-config.yaml` at the correct stage order.
 
 ### documentation-expert
-- [ ] Update `.claude/agents/commit.md` commit-message format instructions to explicitly require the tail-tag (`[TICKET-<basename>]` or `[TICKETLESS]`) as part of the canonical commit message template. Make the tail-tag impossible to miss — place it in the fill-in-the-blank template, not as a footnote.
-- [ ] Update `.claude/skills/signoff/SKILL.md` (or whichever skill describes `## Decision History` authoring) to specify `YYYY-MM-DD HH:MM` (24-hour clock, UTC, zero-padded) prominently, with a worked example. Remove any ambiguity about the format.
+- [ ] Update `.claude/agents/commit.md` commit-message format instructions to explicitly require the tail-tag (`[TICKET-<basename>]` or `[TICKETLESS]`) as part of the canonical commit message template. Make the tail-tag impossible to miss — place it in the fill-in-the-blank template, not as a footnote. (Belt-and-suspenders: even if the transformer covers it, the agent should emit it correctly.)
+- [ ] Update `.claude/skills/signoff/SKILL.md` (or whichever skill describes `## Decision History` authoring) to specify `YYYY-MM-DD HH:MM` (24-hour clock, UTC, zero-padded) prominently, with a worked example.
 - [ ] If the DECISION HISTORY format rule is in a different skill (e.g. `building-epics`), update it there instead.
 
 ### test-writer
-- [ ] Write a unit test in `unit_tests/commit_guardian/` that confirms a commit message without the tail-tag is flagged by the relevant hook rule (regression guard so the fix cannot silently revert).
+- [ ] Write a unit test in `unit_tests/commit_guardian/` that exercises the pre-stage transformer: given a staged `## Decision History` entry with a date-only timestamp, assert the transformer rewrites it to `YYYY-MM-DD HH:MM` format.
+- [ ] Write a unit test confirming a commit message without a tail-tag gets `[TICKETLESS]` appended by the transformer.
+- [ ] Write a regression guard: confirm a commit message that already has the tail-tag is not double-appended.
 
 ## Risk & Safety
 
 - Touches money? No.
 - Touches data? No.
-- Reversibility? Skill/agent prompt changes are reverted by editing the file. Unit test additions are low-risk.
-- Risk of over-suppression: the fix must NOT disable the autofix rules — it must make agents emit the correct format so the rules have nothing to fix. Verify by running a dry commit through `pre-commit run --all-files` after the change.
+- Reversibility? Transformer is a new script; removal reverts to prior behaviour. Skill/agent prompt changes are reverted by editing the file.
+- Risk of over-suppression: the transformer must NOT disable the validator — it only pre-populates what the validator checks. Verify by running a commit with deliberately wrong format through `pre-commit run --all-files` AFTER removing the transformer, confirming the validator still blocks.

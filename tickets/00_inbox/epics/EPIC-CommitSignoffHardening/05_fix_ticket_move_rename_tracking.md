@@ -69,16 +69,31 @@ Then the rename tracking is NOT broken (the deletion of the 00_inbox path is als
 
 ## Comments
 
+## Locked Approach
+
+**Hook candidate: PostToolUse on `git mv tickets/00_inbox/...`.**
+
+After any `git mv` call whose source path matches `tickets/00_inbox/**`, a PostToolUse hook fires and runs:
+
+```bash
+git diff --cached --name-status
+```
+
+The hook inspects the output and verifies that the moved ticket path appears as `R<similarity>` (e.g. `R100`) — not as separate `A` (add) and `D` (delete) entries, which indicate the rename was not detected. If the similarity index is absent or below threshold (confirm threshold during refinement, suggested: 80), the hook:
+
+1. Emits an actionable error describing the detected vs. expected status.
+2. Optionally attempts to re-stage the rename correctly by running `git rm --cached <old_path> && git add <new_path>` and re-checking — but only if the file already exists at `<new_path>` on disk (guard against double-move edge cases).
+
+The hook is scoped to `git mv` PostToolUse on paths matching `tickets/00_inbox/**` to avoid firing on unrelated `git mv` operations.
+
 ## Implementation Tasks
 
 ### documentation-expert
 - [ ] Audit `.claude/agents/commit.md` — find every `git add` call that touches ticket paths. Identify whether the agent ever calls `git add tickets/99_done/<basename>` without also staging the removal of `tickets/00_inbox/<basename>`.
-- [ ] Replace any bare `git add <done-path>` for ticket moves with one of:
-  - Option A: `git add tickets/99_done/<basename> && git rm --cached tickets/00_inbox/<basename>` (if the mv already happened on disk but wasn't staged).
-  - Option B: `git mv tickets/00_inbox/<basename> tickets/99_done/<basename>` (if the file hasn't moved yet — but check Step 3 of build-single-ticket first; it may have already done the move).
-  - Prefer Option A if Step 3 already used `git mv` (so the worktree already shows the rename — we just need to ensure the agent doesn't break it by calling plain `git add`).
-- [ ] Add an explicit note in the commit agent instructions: "When staging a ticket that was moved by build-single-ticket Step 3, do NOT call `git add <done-path>` alone — call `git add -A tickets/` or explicitly stage both the old path deletion and the new path addition, so git records a rename."
-- [ ] Verify the fix by checking `git diff --name-status --cached` before calling `git commit` in the agent instructions and asserting the ticket path shows `R`, not `A`.
+- [ ] Replace any bare `git add <done-path>` for ticket moves with the pattern: stage both paths so git records a rename. Preferred: use `git mv` directly; if the move already happened on disk via a prior Step 3 `git mv`, use `git add tickets/99_done/<basename> && git rm --cached tickets/00_inbox/<basename>`.
+- [ ] Add the PostToolUse hook to `.claude/hooks/` (or the appropriate hook registration location): after `git mv tickets/00_inbox/**`, inspect `git diff --cached --name-status` and assert `R` with similarity index; emit an error and attempt re-stage correction if not detected.
+- [ ] Add an explicit note in the commit agent instructions: "When staging a ticket that was moved by build-single-ticket Step 3, do NOT call `git add <done-path>` alone — also stage the deletion of the old path so git records a rename."
+- [ ] Verify the fix by checking `git diff --name-status --cached` in the agent instructions before calling `git commit` and asserting the ticket path shows `R`, not `A`.
 
 ## Risk & Safety
 
