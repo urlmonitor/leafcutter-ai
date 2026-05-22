@@ -1,6 +1,6 @@
 ---
 title: "Scaffold missing config-referenced files during onboard"
-status: todo
+status: done
 components:
   - onboard
   - build_system
