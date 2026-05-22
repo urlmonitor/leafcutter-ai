@@ -1,7 +1,7 @@
 ---
 title: "EPIC: Onboard Agent Completeness"
 type: epic
-status: todo
+status: done
 components:
   - onboard
   - build_system
