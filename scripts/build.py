@@ -55,6 +55,7 @@ from build_claude_settings import build_claude_settings
 from build_roadmap_phase import build_roadmap
 from build_placeholder_detection import scan_for_placeholders, format_placeholder_report
 from build_referential_integrity import check_referential_integrity, format_integrity_report
+from build_config_scaffolds import build_config_scaffolds
 # Re-export for backward compatibility with tests that access via _build.*
 from template_compiler import (  # noqa: F401
     parse_frontmatter,
@@ -276,6 +277,7 @@ def _run_phases(
         ("Vision", build_vision),
         ("Roadmap", build_roadmap),
         ("Glossary", build_glossary),
+        ("Config scaffolds", build_config_scaffolds),
     ]
     total = 0
     for label, fn in phases:
