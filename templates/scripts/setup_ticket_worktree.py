@@ -158,6 +158,13 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
         except FileNotFoundError:
             pass
 
+    # Populate submodules (like leafcutter) in the new worktree
+    subprocess.run(
+        ["git", "submodule", "update", "--init"],
+        cwd=worktree_path,
+        check=True,
+    )
+
     subprocess.run(
         ["poetry", "install", "--no-root"],
         cwd=worktree_path,
