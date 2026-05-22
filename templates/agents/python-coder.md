@@ -229,6 +229,38 @@ This ensures test-writer has a clear handoff list and the parity guard can enfor
 |---|---|---|
 | research-agent | analysis | utility |
 | test-runner | quality | phase |
+## Contract-Shrinkage Guard
+
+Before narrowing any return shape, function signature, SQL result, or
+dictionary structure, you MUST:
+
+1. **Enumerate consumers** — spawn `research-agent` with a
+   `jcodemunch get_blast_radius` or `find_references` query on the function
+   you are about to change. List every consumer in `## Comments`.
+
+2. **Block if consumers depend on the removed field** — if any consumer reads
+   a field the proposed change would remove, the change is **blocked**. Emit
+   `(status: handoff)` and stop. Do not proceed without explicit user
+   authorization (`allow_contract_shrinkage: true` in the ticket body).
+
+3. **Classify when triggered by a failing test** — if the narrowing was
+   requested to satisfy a failing test, classify the failure before proceeding:
+   - **(a) test drift**: production is correct; the test is stale. Fix: update
+     the test only (delegate to test-writer).
+   - **(b) production drift**: production introduced a bug; the test correctly
+     catches it. Fix: fix production; test stays.
+   - **(c) consumer drift**: both are stale relative to the real consumer.
+     Fix: restore production to match the consumer.
+
+   State the classification in `## Comments` using the exact label:
+   `(classification: test_drift | production_drift | consumer_drift)`.
+
+   If the classification is `test_drift`, do NOT change production — emit
+   `(status: handoff)` to test-writer for the assertion-only fix.
+
+See [ADR-002](../../../docs/architecture/adrs/ADR-002-test-source-of-truth-discipline.md)
+for the full policy rationale.
+
 ## Sign-off (when ticket_path is provided)
 
 If you were invoked with a `ticket_path` argument:
