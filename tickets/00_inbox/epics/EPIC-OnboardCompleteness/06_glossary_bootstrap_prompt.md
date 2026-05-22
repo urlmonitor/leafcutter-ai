@@ -1,6 +1,6 @@
 ---
 title: "Prompt user to bootstrap glossary during onboard"
-status: todo
+status: done
 components:
   - onboard
 created: 2026-05-19
