@@ -206,6 +206,62 @@ pre-commit install
 Verify `.git/hooks/pre-commit` exists and is executable. If `pre-commit install`
 fails, log the error and add it to the checklist — do not halt.
 
+## Step 12 — Placeholder Detection
+
+Check the build output for placeholder markers. Read `docs/vision.md` and
+`docs/roadmap.json` (or the paths from `docs_root` in config). Scan for lines
+containing:
+- `TODO:`
+- `PLACEHOLDER`
+- `Replace with`
+- `<!-- QUESTION`
+- `FIXME:`
+
+If any markers are found, report them to the user:
+
+> **Placeholder content detected** in the following files:
+> - `docs/vision.md` (N markers)
+> - `docs/roadmap.json` (N markers)
+
+Record which files have placeholders for Step 13.
+
+## Step 13 — Interactive Vision & Roadmap Completion
+
+**Only runs if Step 12 found placeholders in vision.md or roadmap.json.**
+
+### Vision (docs/vision.md)
+
+If vision.md contains placeholder markers, ask the user:
+
+> "Your project vision file contains placeholder content. Would you like to fill
+> it in now? (yes / skip)"
+
+On `yes`: ask these guided questions one at a time:
+1. "What is the primary goal of this project? (one sentence)"
+2. "Who is the target audience or user?"
+3. "What are the 2-3 key outcomes you want to achieve?"
+
+Write the user's answers into `docs/vision.md`, replacing the placeholder content.
+
+On `skip`: add "Fill in docs/vision.md" to the post-onboard checklist.
+
+### Roadmap (docs/roadmap.json)
+
+If roadmap.json contains placeholder markers, ask:
+
+> "Your roadmap file contains placeholder content. Would you like to define
+> your initial roadmap phases now? (yes / skip)"
+
+On `yes`: ask:
+1. "What is the name of your current phase? (e.g. 'MVP', 'Phase 1')"
+2. "What are the 2-3 exit criteria for this phase?"
+3. "Do you have a target date? (optional)"
+
+Write the user's answers into `docs/roadmap.json` following the roadmap schema.
+Update the CLAUDE.md roadmap sentinel if it still contains placeholder text.
+
+On `skip`: add "Fill in docs/roadmap.json" to the post-onboard checklist.
+
 ## Step 14 — Glossary Bootstrap Prompt
 
 Check if `docs/glossary.md` exists and whether it has any `### <term>` entries:
