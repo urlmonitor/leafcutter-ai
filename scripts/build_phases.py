@@ -422,6 +422,27 @@ def build_ticket_lifecycle(target_root: Path, config: dict[str, Any],
             if not dry_run:
                 print(f"  tickets/{rel}")
 
+    # Scaffold all folders declared in ticket_lifecycle.json (the manifest is
+    # the single source of truth — create any that templates didn't cover).
+    if manifest_path.exists():
+        try:
+            manifest = _json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, _json.JSONDecodeError):
+            manifest = {}
+        for folder in manifest.get("folders", []):
+            folder_path = target_root / folder["path"]
+            gitkeep = folder_path / ".gitkeep"
+            if _write(gitkeep, "", dry_run, force=False):
+                written += 1
+                if not dry_run:
+                    print(f"  {folder['path']}/.gitkeep")
+            if folder.get("has_epics_subfolder"):
+                epics_gitkeep = folder_path / "epics" / ".gitkeep"
+                if _write(epics_gitkeep, "", dry_run, force=False):
+                    written += 1
+                    if not dry_run:
+                        print(f"  {folder['path']}/epics/.gitkeep")
+
     return written
 
 
