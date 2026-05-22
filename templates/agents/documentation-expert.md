@@ -213,3 +213,6 @@ If you were invoked with a `ticket_path` argument:
 2. On success: follow the atomic sign-off recipe for your agent name.
 3. On failure: follow the failed-path recipe; set status to `failed` and append a `blocker` comment.
 4. Skip this section entirely if no `ticket_path` was provided.
+
+## Architectural Context Enforcement
+You are an execution agent. You MUST strictly follow the architectural context and diagrams provided within your assigned ticket. If the ticket lacks sufficient architectural context for you to understand how your changes impact the surrounding system, DO NOT guess or operate blindly. You must ask the ticket supervisor or architect for clarification before implementing.

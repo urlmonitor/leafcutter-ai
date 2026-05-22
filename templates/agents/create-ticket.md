@@ -198,3 +198,6 @@ default: tickets/00_inbox/epics)
 | refinement | analysis | utility |
 | architect-review | review | phase |
 | create-epic | orchestration | supervisor |
+
+## Grand Scheme & Architectural Context
+As an upstream planning/review agent, you MUST consult docs/vision.md and docs/components.json to understand the broader system architecture. When generating or reviewing tickets, you MUST extract the relevant architectural context (including mermaid diagrams and module dependencies) and embed them directly into the ticket description or gents: map. Do NOT force downstream execution agents to read global architecture documents; pass them the exact local context they need to succeed.

@@ -57,12 +57,15 @@ def load_config(config_path: Path | None, target_root: Path) -> dict[str, Any]:
             project_config = json.load(f)
         project_config.pop("_comment", None)
     elif config_path is None:
-        # Auto-detect in target root
-        candidate = target_root / ".claude" / "skills_config.json"
-        if candidate.exists():
-            with candidate.open("r", encoding="utf-8") as f:
-                project_config = json.load(f)
-            project_config.pop("_comment", None)
+        # Auto-detect in target root across known platform directories
+        platform_dirs = [".claude", ".gemini", ".cursor", ".github", ".cline"]
+        for p_dir in platform_dirs:
+            candidate = target_root / p_dir / "skills_config.json"
+            if candidate.exists():
+                with candidate.open("r", encoding="utf-8") as f:
+                    project_config = json.load(f)
+                project_config.pop("_comment", None)
+                break
 
     merged = {**defaults, **project_config}
     return merged

@@ -12,7 +12,14 @@ arguments:
 
 # /pr-review — Pre-PR Self-Review
 
+{% if platform == 'claude' %}
 Invokes the `pr-reviewer` agent against the working diff.
+{% elif platform == 'antigravity' %}
+Invokes the `pr-reviewer` agent against the working diff by running its script via the terminal tool:
+```bash
+python .agents/agents/pr-reviewer/scripts/run.py --args="$ARGUMENTS"
+```
+{% endif %}
 
 ## Usage
 

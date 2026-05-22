@@ -57,6 +57,16 @@ that any adopter project can include verbatim.
 - LLM-type conditions are stubbed (raise `LLMEvaluationRequired`); actual LLM wiring
   is deferred to a follow-up ticket.
 
+## Supported Platforms & IDEs
+
+leafcutter-ai adapts to the environment it runs in. The core workflows are built around the concept of "agents" and "skills", and we support multiple AI runners:
+
+| Platform | Support Level | Capabilities |
+|----------|---------------|--------------|
+| **Claude Code** | First-class | Full CLI workflow, slash commands, agent delegation, custom `Skill()` tool compilation. |
+| **Antigravity** | First-class | Native MCP tool invocation, automated subagent workflows, rich markdown/artifact support. |
+| **Cursor / Windsurf** | Secondary | Context ingestion (rules in `.cursorrules`), manual developer execution. Cannot auto-execute slash commands. |
+
 ## Quick Start
 
 ```bash

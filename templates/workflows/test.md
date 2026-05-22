@@ -36,4 +36,11 @@ from `git diff`).
   stacktrace excerpt, per-test rerun command. Grouped by failure type.
   Never dumps raw stdout.
 
+{% if platform == 'claude' %}
 Forward `$ARGUMENTS` verbatim to the `test-runner` agent.
+{% elif platform == 'antigravity' %}
+Invoke the `test-runner` agent by running its script via the terminal tool:
+```bash
+python .agents/agents/test-runner/scripts/run.py --args="$ARGUMENTS"
+```
+{% endif %}

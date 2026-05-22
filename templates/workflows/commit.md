@@ -12,4 +12,11 @@ issuing `git commit`. On pre-commit hook failure, it invokes the
 structural) and retries once. Refuses `--no-verify` and force-push
 without explicit user authorisation per the Git Safety Protocol.
 
+{% if platform == 'claude' %}
 Forward `$ARGUMENTS` verbatim to the `commit` agent.
+{% elif platform == 'antigravity' %}
+Invoke the `commit` agent by running its script via the terminal tool:
+```bash
+python .agents/agents/commit/scripts/run.py --args="$ARGUMENTS"
+```
+{% endif %}

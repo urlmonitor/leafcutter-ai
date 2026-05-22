@@ -230,6 +230,57 @@ def discover_config(repo_root: Path) -> dict[str, object]:
 
 
 # ---------------------------------------------------------------------------
+# Interactive prompts
+# ---------------------------------------------------------------------------
+
+def _prompt_for_platforms() -> dict[str, bool]:
+    """Interactively ask the user which IDEs/Platforms they use.
+
+    Returns:
+        Mapping of platform names to boolean selections.
+    """
+    platforms = {
+        "claude_code": False,
+        "antigravity": False,
+        "cursor": False,
+        "copilot": False,
+        "cline": False,
+    }
+    if not sys.stdin.isatty():
+        return platforms
+
+    print("\n--- Platform Selection ---", file=sys.stderr)
+    print("Which of the following IDEs/agent platforms will you be using?", file=sys.stderr)
+    for display_name, key in [
+        ("Claude Code", "claude_code"),
+        ("Antigravity", "antigravity"),
+        ("Cursor", "cursor"),
+        ("Copilot", "copilot"),
+        ("Cline", "cline"),
+    ]:
+        while True:
+            try:
+                resp = input(f"Do you use {display_name}? (y/n) [n]: ").strip().lower()
+            except (EOFError, KeyboardInterrupt):
+                print(file=sys.stderr)
+                return platforms
+
+            if not resp:
+                resp = "n"
+            
+            if resp in ("y", "yes"):
+                platforms[key] = True
+                break
+            elif resp in ("n", "no"):
+                platforms[key] = False
+                break
+            else:
+                print("Please answer 'y' or 'n'.", file=sys.stderr)
+                
+    return platforms
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -267,6 +318,18 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Discovering config for: {repo_root}", file=sys.stderr)
 
     config = discover_config(repo_root)
+    
+    if not args.dry_run:
+        config["platforms"] = _prompt_for_platforms()
+    else:
+        config["platforms"] = {
+            "claude_code": False,
+            "antigravity": False,
+            "cursor": False,
+            "copilot": False,
+            "cline": False,
+        }
+        
     draft = json.dumps(config, indent=2, ensure_ascii=False)
 
     if args.dry_run or not args.output:
@@ -300,5 +363,6 @@ if __name__ == "__main__":
 # ===========================================================================
 # DECISION HISTORY
 # ===========================================================================
+# - 2026-05-22 19:35 [EPIC-AntigravitySupport/T05]: Added interactive prompt for IDE/Platform selection to populate the `platforms` key in the config.
 # - 2026-05-18 13:00 [EPIC-PortableInstallHardening/T07]: Created module. Standalone stdlib-only terminal fallback for the portable onboard agent. Discovers docs root, test root, top-level packages, ticket paths, default branch, changelog folder, project description from README. Outputs skills_config.json draft to stdout or --output path. --dry-run flag. (#EPIC-PortableInstallHardening/T07)
 # ===========================================================================

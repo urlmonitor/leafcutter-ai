@@ -1,6 +1,6 @@
-# CLAUDE.md
+# instructions.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code
+This file provides guidance to the Gemini Antigravity system when working with code
 in this repository.
 
 ## What This Project Does
@@ -29,7 +29,7 @@ This project uses the leafcutter conventions:
 
 - **Ticket-driven development**: all work starts in `tickets/00_inbox/`. Use `/build-feature <epic>` to drive an epic to completion.
 - **Pre-commit hooks** via `commit_guardian`: run automatically on every `git commit`. Fix violations before committing — do not use `--no-verify`.
-- **Skill-based agent prompting**: Claude Code reads `.claude/skills/<skill>/SKILL.md` for specialist guidance. Use `/glossary-bootstrap` once after install.
+- **Skill-based agent prompting**: Agents read `.gemini/skills/<skill>/SKILL.md` for specialist guidance. Use `/glossary-bootstrap` once after install.
 - **DECISION HISTORY blocks** in every modified Python file: each changed `.py` file must append a dated entry in the `# DECISION HISTORY` block at the file's end.
 
 ## Critical Rules
@@ -39,8 +39,8 @@ This project uses the leafcutter conventions:
 - When `git commit` fails on pre-commit, invoke the `precommit-autofix` skill.
 
 ### Folder READMEs are load-bearing
-Before editing any file in a gated folder (`.claude/agents/`, `.claude/skills/`,
-`.claude/hooks/`, `alembic/versions/`), read the nearest-ancestor `README.md`.
+Before editing any file in a gated folder (`.gemini/agents/`, `.gemini/skills/`,
+`.gemini/hooks/`, `alembic/versions/`), read the nearest-ancestor `README.md`.
 The `readme_read_guard.py` hook will block edits if the README has not been read.
 
 ### STRICT WORKFLOW ENFORCEMENT
@@ -52,7 +52,7 @@ The `readme_read_guard.py` hook will block edits if the README has not been read
 ====================================================================
 DECISION HISTORY
 ====================================================================
-- 2026-05-22 [AI]: Added STRICT WORKFLOW ENFORCEMENT section to prevent untracked code changes and enforce ticket-driven development.
+- 2026-05-22 [AI]: Created ANTIGRAVITY.md.template with strict workflow enforcement and glossary integration for Gemini Antigravity system.
 ====================================================================
 -->
 

@@ -24,3 +24,6 @@ Run `/glossary-bootstrap` to populate it after initial install or after a
 significant codebase merge.
 
 <!-- Terms are added automatically. Each term uses a ### heading. -->
+
+### Antigravity
+An AI IDE/agent runner platform supported by leafcutter-ai, alongside Claude Code. Antigravity uses standard Model Context Protocol (MCP) tool declarations rather than bespoke CLI definitions.

@@ -30,6 +30,19 @@ dependency-aware ticket-prioritizer skill, which builds a dependency DAG from
 
 ### Step 1 — Run the Ticket Selector
 
+{% if platform == 'claude' %}
+Invoke the `ticket-prioritizer` via the `Skill` tool:
+
+```
+Skill(skill="ticket-prioritizer", args="--all --json")
+```
+
+If the `--epic <path>` flag was provided:
+
+```
+Skill(skill="ticket-prioritizer", args="--epic <path> --json")
+```
+{% elif platform == 'antigravity' %}
 ```bash
 python .agents/skills/ticket-prioritizer/scripts/prioritize.py --all --json
 ```
@@ -39,6 +52,7 @@ If the `--epic <path>` flag was provided:
 ```bash
 python .agents/skills/ticket-prioritizer/scripts/prioritize.py --epic <path> --json
 ```
+{% endif %}
 
 Parse the JSON output. If it exits non-zero, the dependency graph contains a cycle —
 surface the `CYCLE DETECTED` error to the user and stop.

@@ -255,3 +255,6 @@ If you were invoked with a `ticket_path` argument:
 2. On success: follow the atomic sign-off recipe for your agent name.
 3. On failure: follow the failed-path recipe; set status to `failed` and append a `blocker` comment.
 4. Skip this section entirely if no `ticket_path` was provided.
+
+## Grand Scheme & Architectural Context
+As an upstream planning/review agent, you MUST consult docs/vision.md and docs/components.json to understand the broader system architecture. When generating or reviewing tickets, you MUST extract the relevant architectural context (including mermaid diagrams and module dependencies) and embed them directly into the ticket description or gents: map. Do NOT force downstream execution agents to read global architecture documents; pass them the exact local context they need to succeed.

@@ -95,7 +95,7 @@ def format_integrity_report(missing: list[dict[str, str]]) -> str:
         "",
     ]
     for item in missing:
-        lines.append(f"  - `{item['config_key']}` → `{item['expected_path']}`")
+        lines.append(f"  - `{item['config_key']}` -> `{item['expected_path']}`")
     lines.append("")
     lines.append("These may cause downstream agents to fail. Run the onboard agent")
     lines.append("or create the missing files manually.")

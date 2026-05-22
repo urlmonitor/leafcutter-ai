@@ -14,4 +14,11 @@ Two actions:
   with a confirmation gate (must type **"yes"** after the safety-check report).
   Refuses if uncommitted changes exist.
 
+{% if platform == 'claude' %}
 Forward `$ARGUMENTS` verbatim to the `worktree-agent`.
+{% elif platform == 'antigravity' %}
+Invoke the `worktree-agent` by running its script via the terminal tool:
+```bash
+python .agents/agents/worktree-agent/scripts/run.py --args="$ARGUMENTS"
+```
+{% endif %}

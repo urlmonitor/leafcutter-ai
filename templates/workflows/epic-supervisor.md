@@ -17,6 +17,13 @@ Resolve `$ARGUMENTS` to an epic folder under `tickets/`:
   agent will search `tickets/01_todo/` first, then
   `tickets/00_inbox/epics/`.
 
-Invoke the `epic-supervisor` agent with the resolved input. The agent
-loads `.claude/skills/building-epics/SKILL.md` as its primary runbook and
+{% if platform == 'claude' %}
+Invoke the `epic-supervisor` agent with the resolved input via the `Agent` tool.
+{% elif platform == 'antigravity' %}
+Invoke the `epic-supervisor` agent by running its script via the terminal tool:
+```bash
+python .agents/agents/epic-supervisor/scripts/run.py --args="<resolved_input>"
+```
+{% endif %}
+The agent loads `.agents/skills/building-epics/SKILL.md` (or equivalent runbook) as its primary runbook and
 walks the epic per spec §6.1.

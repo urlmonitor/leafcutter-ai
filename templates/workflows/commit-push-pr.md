@@ -9,11 +9,22 @@ This workflow chains the `commit` agent (ticket 09) and the `pull-request` agent
 
 ## Chain
 
-1. Invoke the `commit` agent with the user's full request: $ARGUMENTS
+1. {% if platform == 'claude' %}
+   Invoke the `commit` agent with the user's full request: $ARGUMENTS
+   {% elif platform == 'antigravity' %}
+   Invoke the `commit` agent by running its script via the terminal tool:
+   ```bash
+   python .agents/agents/commit/scripts/run.py --args="$ARGUMENTS"
+   ```
+   {% endif %}
    - The commit agent stages changes, drafts a commit message, asks for
      confirmation, and runs `git commit` (auto-fixing pre-commit hook failures
      via precommit-autofix).
-2. After the commit agent returns successfully, invoke the `pull-request` agent.
+2. After the commit agent returns successfully, {% if platform == 'claude' %}invoke the `pull-request` agent.{% elif platform == 'antigravity' %}invoke the `pull-request` agent by running its script via the terminal tool:
+   ```bash
+   python .agents/agents/pull-request/scripts/run.py
+   ```
+   {% endif %}
    - The pull-request agent drafts the PR title and body, asks for confirmation,
      then pushes and runs `gh pr create` (spawning `conflict-resolver` if
      a merge conflict is detected).

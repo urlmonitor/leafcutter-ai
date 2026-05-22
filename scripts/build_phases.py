@@ -11,10 +11,10 @@ BUSINESS CONTEXT: Templates for agents, skills, workflows, rules, hooks, and
     compile_agent_template(), enabling {{my_spawn_allowlist}},
     {{my_skills_used}}, and {{registry_phase_agents_table}} placeholder
     resolution at build time.
-ARCHITECTURE: Eight public phase functions, one per output category:
+ARCHITECTURE: Nine public phase functions, one per output category:
     ``build_agents``, ``build_skills``, ``build_workflows``, ``build_rules``,
     ``build_ticket_lifecycle``, ``build_commit_guardian``, ``build_precommit_config``
-    (imported from build_precommit.py), ``build_doc_compliance``.
+    (imported from build_precommit.py), ``build_doc_compliance``, ``build_antigravity_instructions``.
     All functions share the same signature (target_root, config, dry_run, force)
     and return a file-written count. File-write helpers come from build.py's
     ``write_file`` and ``should_overwrite``. The ``force`` parameter defaults
@@ -204,17 +204,31 @@ def build_agents(target_root: Path, config: dict[str, Any],
     if not agents_template_dir.exists():
         return 0
 
-    agents_output_dir = target_root / ".claude" / "agents"
-
     # Load registry once for the whole phase (ticket 29)
     agents_list = _load_registry(REGISTRY_PATH)
     skills_root = SKILLS_TEMPLATE_DIR if SKILLS_TEMPLATE_DIR.exists() else None
+
+    platforms = config.get("platforms", {
+        "claude": True,
+        "antigravity": True,
+        "cursor": False,
+        "copilot": False,
+        "cline": False
+    })
+
+    platform_dirs = {
+        "claude": ".claude/agents",
+        "antigravity": ".gemini/agents",
+        "cursor": None,
+        "copilot": None,
+        "cline": None
+    }
 
     written = 0
     for template_file in sorted(agents_template_dir.glob("*.md")):
         if template_file.name.startswith("_"):
             continue  # Skip helper files like _signoff_block.md
-        output_path = agents_output_dir / template_file.name
+            
         compiled = compile_agent_template(
             template_file,
             config,
@@ -222,10 +236,22 @@ def build_agents(target_root: Path, config: dict[str, Any],
             agents=agents_list,
             skills_root=skills_root,
         )
-        if _write(output_path, compiled, dry_run, force):
-            written += 1
-            if not dry_run:
-                print(f"  agents/{template_file.name}")
+        
+        for platform, is_active in platforms.items():
+            if not is_active:
+                continue
+                
+            output_subpath = platform_dirs.get(platform)
+            if not output_subpath:
+                continue
+                
+            output_dir = target_root / output_subpath
+            output_path = output_dir / template_file.name
+            
+            if _write(output_path, compiled, dry_run, force):
+                written += 1
+                if not dry_run:
+                    print(f"  {output_subpath}/{template_file.name}")
 
     return written
 
@@ -250,7 +276,22 @@ def build_skills(target_root: Path, config: dict[str, Any],
     if not skills_template_dir.exists():
         return 0
 
-    skills_output_dir = target_root / ".claude" / "skills"
+    platforms = config.get("platforms", {
+        "claude": True,
+        "antigravity": True,
+        "cursor": False,
+        "copilot": False,
+        "cline": False
+    })
+
+    platform_dirs = {
+        "claude": ".claude/skills",
+        "antigravity": ".gemini/skills",
+        "cursor": None,
+        "copilot": None,
+        "cline": None
+    }
+
     written = 0
     internal_skills: list[str] = []
 
@@ -259,9 +300,6 @@ def build_skills(target_root: Path, config: dict[str, Any],
             continue
 
         # Detect internal skills by reading the SKILL.md frontmatter.
-        # Internal skills (internal: true) are still copied to .claude/skills/
-        # so runtime agents can invoke them, but they are excluded from
-        # user-facing skill listings and summary tables.
         skill_md = skill_dir / "SKILL.md"
         is_internal = False
         if skill_md.is_file():
@@ -274,32 +312,40 @@ def build_skills(target_root: Path, config: dict[str, Any],
             if not template_file.is_file():
                 continue
             rel = template_file.relative_to(skills_template_dir)
-            output_path = skills_output_dir / rel
+            
+            for platform, is_active in platforms.items():
+                if not is_active:
+                    continue
+                    
+                output_subpath = platform_dirs.get(platform)
+                if not output_subpath:
+                    continue
+                    
+                output_dir = target_root / output_subpath
+                output_path = output_dir / rel
 
-            if template_file.suffix == ".md":
-                compiled = compile_skill_template(template_file, config)
-                if _write(output_path, compiled, dry_run, force):
-                    written += 1
-                    if not dry_run:
-                        suffix = " [internal]" if is_internal else ""
-                        print(f"  skills/{rel}{suffix}")
-            else:
-                # Non-markdown files (scripts, etc.) are copied verbatim.
-                # SHA-256 compare-before-copy skips identical binary files.
-                if not _should_overwrite(output_path, force):
-                    continue
-                if _files_content_identical(template_file, output_path):
-                    global _uptodate_count  # noqa: PLW0603
-                    _uptodate_count += 1
-                    continue
-                if dry_run:
-                    print(f"  [DRY-RUN] would copy {output_path}")
-                    written += 1
+                if template_file.suffix == ".md":
+                    compiled = compile_skill_template(template_file, config)
+                    if _write(output_path, compiled, dry_run, force):
+                        written += 1
+                        if not dry_run:
+                            suffix = " [internal]" if is_internal else ""
+                            print(f"  {output_subpath}/{rel}{suffix}")
                 else:
-                    output_path.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(template_file, output_path)
-                    print(f"  skills/{rel}")
-                    written += 1
+                    if not _should_overwrite(output_path, force):
+                        continue
+                    if _files_content_identical(template_file, output_path):
+                        global _uptodate_count  # noqa: PLW0603
+                        _uptodate_count += 1
+                        continue
+                    if dry_run:
+                        print(f"  [DRY-RUN] would copy {output_path}")
+                        written += 1
+                    else:
+                        output_path.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(template_file, output_path)
+                        print(f"  {output_subpath}/{rel}")
+                        written += 1
 
     if internal_skills and not dry_run:
         _log.info(
@@ -312,7 +358,11 @@ def build_skills(target_root: Path, config: dict[str, Any],
 
 def build_workflows(target_root: Path, config: dict[str, Any],
                     dry_run: bool, force: bool) -> int:
-    """Copy workflow templates to ``<target_root>/.claude/commands/``.
+    """Copy workflow templates to platform-specific directories.
+
+    Iterates over the active platforms defined in config["platforms"] and
+    writes workflows to their respective output directories (e.g.
+    ``.claude/commands/``, ``.gemini/workflows/``).
 
     Args:
         target_root: Absolute path to the target project root directory.
@@ -327,16 +377,41 @@ def build_workflows(target_root: Path, config: dict[str, Any],
     if not workflows_dir.exists():
         return 0
 
-    output_dir = target_root / ".claude" / "commands"
+    platforms = config.get("platforms", {
+        "claude": True,
+        "antigravity": True,
+        "cursor": False,
+        "copilot": False,
+        "cline": False
+    })
+
+    platform_dirs = {
+        "claude": ".claude/commands",
+        "antigravity": ".gemini/workflows",
+        "cursor": ".cursor/rules",
+        "copilot": ".github/copilot-instructions",
+        "cline": ".cline/rules"
+    }
+
     written = 0
 
-    for template_file in sorted(workflows_dir.glob("*.md")):
-        output_path = output_dir / template_file.name
-        text = inject_config(template_file.read_text(encoding="utf-8"), config)
-        if _write(output_path, text, dry_run, force):
-            written += 1
-            if not dry_run:
-                print(f"  workflows/{template_file.name}")
+    for platform, is_active in platforms.items():
+        if not is_active:
+            continue
+            
+        output_subpath = platform_dirs.get(platform)
+        if not output_subpath:
+            continue
+            
+        output_dir = target_root / output_subpath
+        
+        for template_file in sorted(workflows_dir.glob("*.md")):
+            output_path = output_dir / template_file.name
+            text = inject_config(template_file.read_text(encoding="utf-8"), config)
+            if _write(output_path, text, dry_run, force):
+                written += 1
+                if not dry_run:
+                    print(f"  {output_subpath}/{template_file.name}")
 
     return written
 
@@ -627,6 +702,97 @@ def build_feedback(target_root: Path, config: dict[str, Any],
     return written
 
 
+def build_antigravity_instructions(target_root: Path, config: dict[str, Any],
+                                   dry_run: bool, force: bool) -> int:
+    """Compile ANTIGRAVITY.md.template to .gemini/instructions.md.
+
+    Args:
+        target_root: Absolute path to the target project root directory.
+        config: Merged config dictionary used for placeholder injection.
+        dry_run: When True, logs intent but writes nothing.
+        force: When True, overwrites existing files.
+
+    Returns:
+        1 if the file was (or would be in dry-run mode) written; 0 if skipped.
+    """
+    template_path = TEMPLATES_DIR / "ANTIGRAVITY.md.template"
+    if not template_path.exists():
+        return 0
+
+    platforms = config.get("platforms", {
+        "claude": True,
+        "antigravity": True,
+        "cursor": False,
+        "copilot": False,
+        "cline": False
+    })
+    
+    if not platforms.get("antigravity", True):
+        return 0
+
+    output_path = target_root / ".gemini" / "instructions.md"
+    
+    content = inject_config(template_path.read_text(encoding="utf-8"), config)
+    if _write(output_path, content, dry_run, force):
+        if not dry_run:
+            print("  .gemini/instructions.md")
+        return 1
+    return 0
+
+
+def build_sync_platforms(target_root: Path, config: dict[str, Any],
+                         dry_run: bool, force: bool) -> int:
+    """Copy sync_platforms files to ``<target_root>/scripts/sync_platforms/``.
+
+    All text files have config placeholders injected.
+
+    Args:
+        target_root: Absolute path to the target project root directory.
+        config: Merged config dictionary used for placeholder injection.
+        dry_run: When True, logs intent but writes nothing.
+        force: When True, overwrites existing files.
+
+    Returns:
+        Count of files written (or that would be written in dry-run mode).
+    """
+    sp_dir = TEMPLATES_DIR / "scripts" / "sync_platforms"
+    if not sp_dir.exists():
+        return 0
+
+    output_dir = target_root / "scripts" / "sync_platforms"
+    written = 0
+
+    for template_file in sorted(sp_dir.rglob("*")):
+        if not template_file.is_file():
+            continue
+        rel = template_file.relative_to(sp_dir)
+        output_path = output_dir / rel
+
+        if template_file.suffix in (".py", ".json", ".yaml", ".yml", ".md"):
+            text = inject_config(template_file.read_text(encoding="utf-8"), config)
+            if _write(output_path, text, dry_run, force):
+                written += 1
+                if not dry_run:
+                    print(f"  scripts/sync_platforms/{rel}")
+        else:
+            if not _should_overwrite(output_path, force):
+                continue
+            if _files_content_identical(template_file, output_path):
+                global _uptodate_count  # noqa: PLW0603
+                _uptodate_count += 1
+                continue
+            if dry_run:
+                print(f"  [DRY-RUN] would copy scripts/sync_platforms/{rel}")
+                written += 1
+            else:
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(template_file, output_path)
+                print(f"  scripts/sync_platforms/{rel}")
+                written += 1
+
+    return written
+
+
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
@@ -678,4 +844,13 @@ def build_feedback(target_root: Path, config: dict[str, Any],
 #   list_tags.py to target_root/scripts/feedback/ and feedback_categories.yaml
 #   to target_root/config/. Creates debugging/logs/ directory on first build.
 #   Follows build_commit_guardian pattern (rglob + inject_config on .py files).
+# - 2026-05-22 [python-coder/EPIC-AntigravitySupport/01]: Updated build_workflows
+#   to iterate over active platforms defined in config["platforms"] and emit 
+#   workflows to their respective target directories (e.g. .gemini/workflows/ 
+#   for antigravity, .claude/commands/ for claude). Defaults fall back to True
+#   for claude and antigravity.
+# - 2026-05-22 [python-coder/EPIC-AntigravitySupport/09]: Added build_antigravity_instructions
+#   phase to compile ANTIGRAVITY.md.template to .gemini/instructions.md.
+# - 2026-05-22 [python-coder/Ticket-10]: Added build_sync_platforms phase to
+#   deploy scripts/sync_platforms directory.
 # ====================================================================

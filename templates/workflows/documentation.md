@@ -9,7 +9,15 @@ description: |
      Do not modify this file to add system-prompt logic -- put that in
      .claude/agents/documentation-expert.md instead. -->
 
-Pass the user's request to the `documentation-expert` agent. The agent will:
+{% if platform == 'claude' %}
+Pass the user's request to the `documentation-expert` agent.
+{% elif platform == 'antigravity' %}
+Invoke the `documentation-expert` agent by running its script via the terminal tool:
+```bash
+python .agents/agents/documentation-expert/scripts/run.py --args="$ARGUMENTS"
+```
+{% endif %}
+The agent will:
 
 1. Read `docs/README.md` to anchor on the Diataxis genre-folder mapping.
 2. Classify the request by Diataxis intent (do / decide-record / design / look up / understand).

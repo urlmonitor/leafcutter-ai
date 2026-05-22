@@ -36,6 +36,8 @@ from build_phases import (
     build_doc_compliance,
     build_feedback,
     build_vision,
+    build_antigravity_instructions,
+    build_sync_platforms,
     reset_uptodate_count,
     get_uptodate_count,
 )
@@ -280,6 +282,8 @@ def _run_phases(
         ("Roadmap", build_roadmap),
         ("Glossary", build_glossary),
         ("Config scaffolds", build_config_scaffolds),
+        ("Antigravity instructions", build_antigravity_instructions),
+        ("Sync platforms", build_sync_platforms),
     ]
     total = 0
     for label, fn in phases:
@@ -482,4 +486,6 @@ if __name__ == "__main__":
 #   hardcoding the limit. Fallback chain: line_limits[".py"] -> default_limit -> 400.
 # - 2026-05-18 11:30 [EPIC-PortableInstallHardening/T04]: Imported propagation_audit from build_propagation_audit.py and added ("Propagation audit", propagation_audit) entry to _run_phases() immediately after ("Commit guardian", build_commit_guardian). (#EPIC-PortableInstallHardening/T04)
 # - 2026-05-18 12:30 [EPIC-PortableInstallHardening/T06]: Imported build_claude_settings from build_claude_settings.py and added ("Claude settings", build_claude_settings) entry to _run_phases() after ("Skills", build_skills). (#EPIC-PortableInstallHardening/T06)
+# - 2026-05-22 [python-coder/EPIC-AntigravitySupport/09]: Imported and registered build_antigravity_instructions phase in _run_phases.
+# - 2026-05-22 [python-coder/Ticket-10]: Imported and registered build_sync_platforms phase in _run_phases.
 # ====================================================================

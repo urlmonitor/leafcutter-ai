@@ -15,7 +15,7 @@ build_behavior: write_if_absent
 
 ## Mission Statement
 
-leafcutter-ai is a domain-agnostic agent/skill/workflow package that installs a full AI-assisted development workflow into any project. Edit one JSON config file, run `build.py`, and the complete system is generated: agents, skills, hooks, ticket lifecycle, documentation scaffolds, and quality gates. The goal is to make Claude Code productive and disciplined in any codebase without requiring project-specific prompt engineering.
+leafcutter-ai is a domain-agnostic agent/skill/workflow package that installs a full AI-assisted development workflow into any project. Edit one JSON config file, run `build.py`, and the complete system is generated: agents, skills, hooks, ticket lifecycle, documentation scaffolds, and quality gates. The goal is to make AI IDEs and agents (Claude Code, Antigravity, etc.) productive and disciplined in any codebase without requiring project-specific prompt engineering.
 
 ## Current Phase
 

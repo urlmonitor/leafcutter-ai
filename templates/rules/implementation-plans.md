@@ -15,3 +15,16 @@ When we create implementation plans, we HAVE to create a thorough checklist, whi
 
 **Pre-Check Requirement**:
 Before providing the plan to the user, we MUST check existing documentation and architecture diagrams to have a full picture of what we are building. DO NOT skip this research phase.
+
+**STRICT WORKFLOW ENFORCEMENT**:
+- **NEVER** change code without asking the user OR having an explicit ticket assigned.
+- If functionality is discovered missing during an epic, **DO NOT** spontaneously implement it. You must add new tickets for the missing features.
+- This ensures all changes properly trigger documentation updates, code splitting, architecture diagrams, and unit tests as mandated by the ticket lifecycle.
+
+<!--
+====================================================================
+DECISION HISTORY
+====================================================================
+- 2026-05-22 [AI]: Added STRICT WORKFLOW ENFORCEMENT section to prevent untracked code changes and enforce ticket-driven development.
+====================================================================
+-->

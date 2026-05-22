@@ -101,6 +101,20 @@ def build_config_scaffolds(
         gitkeep_path = changelog_folder.rstrip("/") + "/.gitkeep"
         scaffolds.append((gitkeep_path, ""))
 
+    # Auto-scaffold ticket directories
+    ticket_dir_keys = [
+        "tickets_inbox_path",
+        "tickets_inbox_epics_path",
+        "tickets_todo_path",
+        "tickets_done_path",
+        "tickets_rejected_path",
+    ]
+    for key in ticket_dir_keys:
+        dir_path = config.get(key)
+        if dir_path:
+            gitkeep_path = dir_path.rstrip("/") + "/.gitkeep"
+            scaffolds.append((gitkeep_path, ""))
+
     for rel_path, content in scaffolds:
         target_path = target_root / rel_path
         if target_path.exists():

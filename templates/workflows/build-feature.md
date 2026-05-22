@@ -126,7 +126,15 @@ Per the project convention (codified in user-memory `feedback_epic_worktree.md` 
 
    If `FIRST_TICKET` is empty, the epic has no executable sub-tickets — abort with a clear error and exit non-zero. Do **not** spawn `epic-supervisor`.
 
-2. Dispatch the `worktree-agent` via the `Agent` tool with action `create` and the ticket path as the argument. The agent delegates to `.claude/skills/feature/SKILL.md` "Epic Workflow", which:
+2. {% if platform == 'claude' %}
+   Dispatch the `worktree-agent` via the `Agent` tool with action `create` and the ticket path as the argument. The agent delegates to `.claude/skills/feature/SKILL.md` "Epic Workflow", which:
+   {% elif platform == 'antigravity' %}
+   Dispatch the `worktree-agent` by running its script via the terminal tool:
+   ```bash
+   python .agents/agents/worktree-agent/scripts/run.py --action="create" --args="<ticket path>"
+   ```
+   The agent delegates to `.agents/skills/feature/SKILL.md` "Epic Workflow", which:
+   {% endif %}
 
    - **Reuses** the existing `<REPO_PARENT>/EPIC-<Name>` worktree if one is already checked out on branch `EPIC-<Name>`, or
    - **Creates** a new worktree at `<REPO_PARENT>/EPIC-<Name>` on a fresh `EPIC-<Name>` branch from `origin/main`, then bootstraps (`.env`, `.mcp.json`, `poetry install`).
@@ -139,7 +147,7 @@ Per the project convention (codified in user-memory `feedback_epic_worktree.md` 
    cd "$WORKTREE_PATH"
    ```
 
-   The sub-agent (`worktree-agent`) `cd`s in its own Bash session — that does not propagate. This explicit `cd` in the slash-command body is what propagates to `epic-supervisor`.
+   The sub-agent (`worktree-agent`) `cd`s in its own session — that does not propagate. This explicit `cd` in the slash-command body is what propagates to `epic-supervisor`.
 
 5. If the worktree-agent reports failure (creation error, dirty parent, etc.), abort `/build-feature` with its error verbatim. **Do not fall through to dispatching `epic-supervisor` on `main`** — silent main-branch execution is the exact bug this step exists to prevent.
 
@@ -175,6 +183,7 @@ Per the project convention (codified in user-memory `feedback_epic_worktree.md` 
 
 #### Step B — Dispatch the epic-supervisor
 
+{% if platform == 'claude' %}
 Dispatch the `epic-supervisor` agent via the `Agent` tool with input:
 
 ```
@@ -184,6 +193,13 @@ Dispatch the `epic-supervisor` agent via the `Agent` tool with input:
   "epic_branch":   "<EPIC_NAME>"
 }
 ```
+{% elif platform == 'antigravity' %}
+Run the epic-supervisor script via the terminal tool:
+
+```bash
+python .agents/agents/epic-supervisor/scripts/run.py --epic_path="<EPIC_FOLDER>" --worktree_path="<WORKTREE_PATH>" --epic_branch="<EPIC_NAME>"
+```
+{% endif %}
 
 `epic-supervisor` performs its own worktree preflight check (see `.claude/agents/epic-supervisor.md` §Pre-Flight Reads step 4) and will halt without spawning any `ticket-supervisor` if it is not inside `worktree_path` on branch `epic_branch`. That is the safety net behind Step A.
 
@@ -196,11 +212,19 @@ file exists, and its parent is `tickets/00_inbox/` or `tickets/01_todo/`
 with no `EPIC-*` segment between — delegate the rest of the flow to the
 `build-single-ticket` sub-skill.
 
+{% if platform == 'claude' %}
 Invoke it via the `Skill` tool:
 
 ```
 Skill(skill="build-single-ticket", args="<absolute path to the .md file>")
 ```
+{% elif platform == 'antigravity' %}
+Run the skill script via the terminal tool:
+
+```bash
+python .agents/skills/build-single-ticket/scripts/run.py --args="<absolute path to the .md file>"
+```
+{% endif %}
 
 The sub-skill owns the standalone-ticket lifecycle end-to-end:
 

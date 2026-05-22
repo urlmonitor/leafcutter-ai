@@ -18,6 +18,40 @@
       "description": "Root folder for proposed epics.",
       "default": "tickets/00_inbox/epics"
     },
+    "platforms": {
+      "type": "object",
+      "description": "Platforms to generate workflows for.",
+      "properties": {
+        "claude": {
+          "type": "boolean",
+          "default": true
+        },
+        "antigravity": {
+          "type": "boolean",
+          "default": true
+        },
+        "cursor": {
+          "type": "boolean",
+          "default": false
+        },
+        "copilot": {
+          "type": "boolean",
+          "default": false
+        },
+        "cline": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": false,
+      "default": {
+        "claude": true,
+        "antigravity": true,
+        "cursor": false,
+        "copilot": false,
+        "cline": false
+      }
+    },
     "tickets_todo_path": {
       "type": "string",
       "description": "Root folder for in-flight tickets and epics.",

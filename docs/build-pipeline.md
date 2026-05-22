@@ -21,6 +21,7 @@ graph TD
     B -->|copy commit guardian| J[scripts/commit_guardian/\n*.py *.json]
     B -->|copy doc compliance| K[scripts/doc_compliance/\n*.py *.json]
     B -->|install shims| L[.git/hooks/\npre-commit shims]
+    B -->|compile antigravity instructions| M[.gemini/instructions.md]
 ```
 
 ## Agent Compilation Detail
