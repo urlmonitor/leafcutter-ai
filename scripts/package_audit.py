@@ -168,9 +168,9 @@ def _audit_section(
 
     template_files: set[str] = set()
     if template_dir.exists():
-        # For the agents/skills sections the template dir contains subdirs;
-        # for commit-guardian it contains flat files. Handle both.
         for entry in template_dir.iterdir():
+            if entry.name.startswith("_"):
+                continue
             template_files.add(entry.name)
 
     for entry in sorted(live_dir.iterdir(), key=lambda p: p.name):

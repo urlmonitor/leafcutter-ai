@@ -589,6 +589,18 @@
                 "_comment": "Option (c) hybrid guard: diffs staged files against the active ticket's files_touched frontmatter. Always exits 0 — non-blocking advisory only. Upgrade to blocking (option b) by editing check_commit_scope.py. EPIC-AgentSystemFrictionReduction/01."
             },
             {
+                "id": "check-doc-types-agents",
+                "name": "Check Doc Types Agent References",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_doc_types_agents.py",
+                "language": "system",
+                "files": "(config/doc_types\\.json|config/agent_registry\\.json)",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "Validates that every writer_agent in doc_types.json resolves to a non-deprecated entry in agent_registry.json."
+            },
+            {
                 "id": "check-roadmap-schema",
                 "name": "Check Roadmap JSON Schema Compliance",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_roadmap_schema.py",

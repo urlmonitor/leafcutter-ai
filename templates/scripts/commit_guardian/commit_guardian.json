@@ -1,5 +1,6 @@
 {
     "_comment": "Commit Guardian — Central Configuration. Edit this file to customize all pre-commit hook behavior.",
+    "roadmap_staleness_threshold_days": 30,
     "changelogs_dir": "changelogs",
     "excluded_dirs": [
         "unit_tests",
@@ -348,6 +349,16 @@
         "_comment": "check_secrets.py — Path to the security-scanner skill's scripts directory, relative to the project root. Override if the skill lives at a different location in your project.",
         "scripts_dir": ".claude/skills/security-scanner/scripts"
     },
+    "commit_scope": {
+        "_comment": "check_commit_scope.py — Warn-only guard that diffs staged files against the active ticket's files_touched frontmatter. Option (c) hybrid: always exits 0. Upgrade path to blocking (option b): change exit code in check_commit_scope.py.",
+        "hook_artefact_patterns": [
+            "^changelogs/",
+            "\\.md$",
+            "^tickets/",
+            "^\\.pre-commit-config\\.yaml$"
+        ],
+        "max_warn_lines": 20
+    },
     "hooks_manifest": {
         "_comment": "build_precommit_config() uses this to generate/update .pre-commit-config.yaml. Each entry describes one hook. Package-managed entries are identified by the '@package-managed' marker and are replaced on each build. Project-specific entries (no marker) are preserved.",
         "hooks": [
@@ -553,6 +564,65 @@
                 "pass_filenames": false,
                 "fail_open": true,
                 "_comment": "GlossaryAutomation incremental hook: scans staged .md/.py/.sql files for novel jargon, dispatches glossary-triage agent, and re-stages modified glossary files. Always exits 0 (fail-open)."
+            },
+            {
+                "id": "check-placeholder-defaults",
+                "name": "Check Placeholder-Default Pattern (UserSurfaceVerification)",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_placeholder_defaults.py",
+                "language": "system",
+                "files": "\\.py$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "AST-based hook (ADR-035): blocks commits when a staged .py file contains both a placeholder function (docstring/return token) AND a tainted-default rebinding to that function, unless a # default-path-smoke: <module_stem> marker exists in unit_tests/ or a # noqa: default-path-smoke line appears at the module top."
+            },
+            {
+                "id": "check-commit-scope",
+                "name": "Check Commit Scope (warn-only — staged vs files_touched)",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_commit_scope.py",
+                "language": "system",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "Option (c) hybrid guard: diffs staged files against the active ticket's files_touched frontmatter. Always exits 0 — non-blocking advisory only. Upgrade to blocking (option b) by editing check_commit_scope.py. EPIC-AgentSystemFrictionReduction/01."
+            },
+            {
+                "id": "check-doc-types-agents",
+                "name": "Check Doc Types Agent References",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_doc_types_agents.py",
+                "language": "system",
+                "files": "(config/doc_types\\.json|config/agent_registry\\.json)",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "Validates that every writer_agent in doc_types.json resolves to a non-deprecated entry in agent_registry.json."
+            },
+            {
+                "id": "check-roadmap-schema",
+                "name": "Check Roadmap JSON Schema Compliance",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_roadmap_schema.py",
+                "language": "system",
+                "files": "^docs/roadmap\\.json$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "ADR-034: Validates docs/roadmap.json against portable-dev-workflow/config/roadmap.schema.json on every commit touching that file. Exits non-zero on schema violations. Fail-open on script errors. See docs/architecture/adrs/ADR-034-roadmap-json-format-and-schema-design.md."
+            },
+            {
+                "id": "regenerate-roadmap-mirror",
+                "name": "Regenerate docs/roadmap.md mirror",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/regenerate_roadmap_mirror.py",
+                "language": "system",
+                "files": "^docs/roadmap\\.json$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "EPIC-RoadmapStewardship/01: When docs/roadmap.json is staged, regenerates docs/roadmap.md with an AUTO-GENERATED banner and git-adds it so both files land in the same commit. No-op when roadmap.json is not staged. KDD-01: pre-commit stage (not post-commit --amend)."
             }
         ]
     }

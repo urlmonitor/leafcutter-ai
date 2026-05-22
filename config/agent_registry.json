@@ -178,7 +178,6 @@
                 "sql-function-creator",
                 "sql-index-creator",
                 "sql-view-creator",
-                "strategy-builder",
                 "test-planner",
                 "test-writer",
                 "product-owner-agent"
@@ -921,86 +920,6 @@
             "skills_used": []
         },
         {
-            "id": "database-agent",
-            "name": "Database Agent",
-            "tier": "utility",
-            "role": "orchestration",
-            "portable": false,
-            "domain": "bybit-trader",
-            "spawn_allowlist": [],
-            "spawned_by": [
-                "user"
-            ],
-            "is_ticket_phase": false,
-            "selection_criteria": null,
-            "template_path": ".claude/agents/database-agent.md",
-            "model": "sonnet",
-            "skills_used": [
-                "db"
-            ]
-        },
-        {
-            "id": "prod-deploy",
-            "name": "Prod Deploy",
-            "tier": "utility",
-            "role": "orchestration",
-            "portable": false,
-            "domain": "bybit-trader",
-            "spawn_allowlist": [],
-            "spawned_by": [
-                "user"
-            ],
-            "is_ticket_phase": false,
-            "selection_criteria": null,
-            "template_path": ".claude/agents/prod-deploy.md",
-            "model": "sonnet",
-            "skills_used": [
-                "fetch-prod-logs"
-            ]
-        },
-        {
-            "id": "reporting-agent",
-            "name": "Reporting Agent",
-            "tier": "utility",
-            "role": "analysis",
-            "portable": false,
-            "domain": "bybit-trader",
-            "spawn_allowlist": [],
-            "spawned_by": [
-                "user"
-            ],
-            "is_ticket_phase": false,
-            "selection_criteria": null,
-            "template_path": ".claude/agents/reporting-agent.md",
-            "model": "sonnet",
-            "skills_used": [
-                "db",
-                "fetch-prod-logs"
-            ]
-        },
-        {
-            "id": "strategy-builder",
-            "name": "Strategy Builder",
-            "tier": "utility",
-            "role": "analysis",
-            "portable": false,
-            "domain": "bybit-trader",
-            "spawn_allowlist": [
-                "research-agent"
-            ],
-            "spawned_by": [
-                "user"
-            ],
-            "is_ticket_phase": false,
-            "selection_criteria": null,
-            "template_path": ".claude/agents/strategy-builder.md",
-            "model": "sonnet",
-            "skills_used": [
-                "db",
-                "find-context-candle"
-            ]
-        },
-        {
             "id": "workflow-architect",
             "name": "Workflow Architect",
             "tier": "supervisor",
@@ -1050,7 +969,7 @@
             "tier": "phase",
             "role": "documentation",
             "portable": true,
-            "domain": "bybit-trader",
+            "domain": null,
             "spawn_allowlist": [],
             "spawned_by": [
                 "ticket-supervisor",
@@ -1083,8 +1002,8 @@
             "name": "Architect Review Deep",
             "tier": "utility",
             "role": "review",
-            "portable": false,
-            "domain": "bybit-trader",
+            "portable": true,
+            "domain": null,
             "spawn_allowlist": [],
             "spawned_by": [
                 "architect-review"
@@ -1096,28 +1015,12 @@
             "skills_used": []
         },
         {
-            "id": "architecture-author",
-            "name": "Architecture Author",
-            "tier": "utility",
-            "role": "documentation",
-            "portable": false,
-            "domain": "bybit-trader",
-            "spawn_allowlist": [],
-            "spawned_by": [],
-            "is_ticket_phase": false,
-            "selection_criteria": null,
-            "template_path": null,
-            "model": "opus",
-            "skills_used": [],
-            "deprecated": true
-        },
-        {
             "id": "architecture-diagram-author",
             "name": "Architecture Diagram Author",
             "tier": "phase",
             "role": "documentation",
-            "portable": false,
-            "domain": "bybit-trader",
+            "portable": true,
+            "domain": null,
             "spawn_allowlist": [],
             "spawned_by": [
                 "ticket-supervisor",
@@ -1152,8 +1055,8 @@
             "name": "Conflict Resolver Deep",
             "tier": "utility",
             "role": "commit",
-            "portable": false,
-            "domain": "bybit-trader",
+            "portable": true,
+            "domain": null,
             "spawn_allowlist": [],
             "spawned_by": [
                 "conflict-resolver"
@@ -1170,7 +1073,7 @@
             "tier": "phase",
             "role": "documentation",
             "portable": true,
-            "domain": "bybit-trader",
+            "domain": null,
             "spawn_allowlist": [],
             "spawned_by": [
                 "ticket-supervisor",
@@ -1204,7 +1107,7 @@
             "tier": "phase",
             "role": "documentation",
             "portable": true,
-            "domain": "bybit-trader",
+            "domain": null,
             "spawn_allowlist": [],
             "spawned_by": [
                 "ticket-supervisor",
@@ -1231,23 +1134,6 @@
             "priority": 10,
             "priority_rationale": "Documentation specialist; runs in the documentation phase alongside documentation-expert",
             "requires_ticket_section": true
-        },
-        {
-            "id": "onboarding-agent",
-            "name": "Onboarding Agent",
-            "tier": "utility",
-            "role": "orchestration",
-            "portable": false,
-            "domain": "bybit-trader",
-            "spawn_allowlist": [],
-            "spawned_by": [
-                "user"
-            ],
-            "is_ticket_phase": false,
-            "selection_criteria": null,
-            "template_path": null,
-            "model": "sonnet",
-            "skills_used": []
         },
         {
             "id": "reference-author",
@@ -1286,23 +1172,6 @@
             "priority": 10,
             "priority_rationale": "Documentation specialist; runs in the documentation phase alongside documentation-expert",
             "requires_ticket_section": true
-        },
-        {
-            "id": "rollback-agent",
-            "name": "Rollback Agent",
-            "tier": "utility",
-            "role": "orchestration",
-            "portable": false,
-            "domain": "bybit-trader",
-            "spawn_allowlist": [],
-            "spawned_by": [
-                "user"
-            ],
-            "is_ticket_phase": false,
-            "selection_criteria": null,
-            "template_path": null,
-            "model": "sonnet",
-            "skills_used": []
         },
         {
             "id": "glossary-triage",
