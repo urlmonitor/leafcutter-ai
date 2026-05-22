@@ -33,12 +33,25 @@ class TestShouldSkipCommitMsgFile(unittest.TestCase):
         self.assertTrue(result)
 
     def test_no_escape_token_in_commit_msg_file(self) -> None:
-        """_should_skip returns False when token is absent from commit-msg file."""
+        """_should_skip returns False when token is absent from commit-msg file.
+
+        The git-based sources (source 4: git rev-parse --git-dir) are mocked out
+        so that a stale COMMIT_EDITMSG in the real repo does not bleed into this test.
+        """
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
             f.write("fix: something without the token\n")
             tmp_path = f.name
         try:
-            result = _should_skip(tmp_path)
+            # Suppress source 4 (git rev-parse) and source 2/3 (env vars) so
+            # only source 1 (the explicit commit_msg_file arg) is in play.
+            with patch(
+                "check_feedback_id.subprocess.run",
+                return_value=MagicMock(returncode=1, stdout=""),
+            ), patch.dict(os.environ, {}, clear=False):
+                # Ensure env-var sources are empty
+                for var in ("GIT_COMMIT_MSG", "COMMIT_EDITMSG"):
+                    os.environ.pop(var, None)
+                result = _should_skip(tmp_path)
         finally:
             os.unlink(tmp_path)
         self.assertFalse(result)
