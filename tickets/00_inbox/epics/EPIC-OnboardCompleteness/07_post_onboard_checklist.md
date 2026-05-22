@@ -1,6 +1,6 @@
 ---
 title: "Generate post-onboard checklist of remaining manual steps"
-status: todo
+status: done
 components:
   - onboard
 created: 2026-05-19
