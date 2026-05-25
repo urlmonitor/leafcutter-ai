@@ -516,6 +516,14 @@ if (-not $parentAlive -and $cpuPct -lt 2) {
 captures the original user correction that prompted this rule
 (EPIC-ArchitectureDocsEnforcement, 2026-05-14).
 
+**Exception — commit-phase preamble kill is unconditional.** The idle-only
+rule (§5.5) applies to the pre-flight sweep. The commit agent's Step 0
+preamble kill (`pkill -f "pytest" || true` / `taskkill ...`) is deliberately
+**unconditional** — it terminates all pytest workers regardless of CPU or
+parent status. This is safe because by the time commit fires, all test phases
+for the current ticket have completed and any remaining workers are stale.
+Workers in parallel tickets are isolated by worktree (separate working dirs).
+
 ### §5.6 Stage-all-in-scope before `git commit`
 
 Before invoking `git commit`, the commit-phase agent MUST run `git status` and
@@ -524,8 +532,11 @@ explicitly listed in the ticket's `files_touched`.
 
 **Why.** Several pre-commit hooks auto-modify files in place during the commit:
 
-- `check_documentation` rewrites the DECISION HISTORY block to insert the
-  current date.
+- `transform-decision-history` (pre-stage) injects the current `HH:MM` into
+  date-only DECISION HISTORY timestamps and appends a `(#TICKETLESS …)` tail-tag
+  when none is present, then calls `git add` on the modified file. Write entries
+  as `YYYY-MM-DD HH:MM [Author]: … (#EPIC-Name/NN)` to avoid any transformer
+  output in the hook log.
 - `apply_sql_changes` reformats SQL files reloaded into the local DB.
 - `check_doc_frontmatter` may rewrite `last_updated:` fields.
 

@@ -1,6 +1,6 @@
 ---
 title: "Kill orphan SQL test workers unconditionally before every commit attempt"
-status: todo
+status: done
 components:
   - build_system
 created: 2026-05-22
@@ -67,18 +67,26 @@ And git commit proceeds normally
 
 ## Comments
 
+### 2026-05-25 10:30 — documentation-expert (status: ok)
+
+Added Step 0 ("Kill orphan test workers") to `templates/agents/commit.md` as an unconditional preamble before Step 1. Includes both `pkill -f "pytest"` (Unix) and `taskkill /F /FI ... *pytest*` (Windows) with `|| true` guards. Updated `templates/skills/building-epics/SKILL.md` §5.5 with a new "Exception" paragraph clarifying that the commit-phase preamble kill is deliberately unconditional (unlike the pre-flight idle-only sweep). Searched for "kill only idle" in skill and agent files — the idle-only rule in §5.5 is intentionally preserved for the pre-flight sweep context; the new exception paragraph disambiguates the two scopes.
+
+### 2026-05-25 10:30 — pr-reviewer (status: ok)
+
+Review passed. Step 0 uses `|| true` on both platform commands (no-op when no processes match). The unconditional kill is safe because by commit time all test phases have completed. The building-epics §5.5 exception paragraph correctly scopes the unconditional kill to the commit-phase preamble while preserving the idle-only rule for pre-flight sweeps. All acceptance criteria met.
+
 ## Implementation Tasks
 
 ### documentation-expert
-- [ ] Locate the commit-phase preamble in `.claude/agents/commit.md` — identify where the agent is instructed to stage files and run `git commit`. Add a new step immediately before staging:
+- [x] Locate the commit-phase preamble in `.claude/agents/commit.md` — identify where the agent is instructed to stage files and run `git commit`. Add a new step immediately before staging:
   ```bash
   # Kill any orphan SQL test worker processes (idle or active) to prevent file-lock blocks
   taskkill /F /FI "IMAGENAME eq python.exe" /FI "WINDOWTITLE eq *pytest*" 2>nul || true
   pkill -f "pytest" 2>/dev/null || true
   ```
   Use both commands (Windows + Unix) with `|| true` so the preamble never blocks on a no-match. Document that this is unconditional — not "only idle".
-- [ ] If `.claude/skills/building-epics/SKILL.md` or `.claude/skills/build-single-ticket/SKILL.md` has a commit-phase section that describes the staging preamble, add the kill step there as well so it is consistent.
-- [ ] Update the in-memory note (if any) that says "kill only idle" — change it to "kill all, unconditionally". Search for the old phrasing in the skills and agent files.
+- [x] If `.claude/skills/building-epics/SKILL.md` or `.claude/skills/build-single-ticket/SKILL.md` has a commit-phase section that describes the staging preamble, add the kill step there as well so it is consistent.
+- [x] Update the in-memory note (if any) that says "kill only idle" — change it to "kill all, unconditionally". Search for the old phrasing in the skills and agent files.
 
 ## Risk & Safety
 

@@ -81,6 +81,13 @@ git -C "$WORKTREE_PATH" mv \
 Update the path you pass to `ticket-supervisor` so it reads / edits the
 file at its new `99_done/` location.
 
+**Rename tracking.** The `git mv` above stages both the deletion of the
+old path and the addition of the new path as a single rename (`R` in
+`git diff --cached --name-status`). The commit-phase agent must NOT call
+a bare `git add tickets/99_done/<basename>` later — doing so can break
+the rename detection. A `check_ticket_rename_tracking` PostToolUse hook
+fires after every `git mv` on inbox paths to verify this.
+
 **Why pre-move instead of post-move.** The `commit` phase agent stages
 every uncommitted worktree change (including the rename + every sign-off
 edit phase agents wrote during the drive). The `pull-request` phase then

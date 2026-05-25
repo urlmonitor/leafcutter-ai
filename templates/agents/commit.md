@@ -33,6 +33,23 @@ You are `commit`. You produce a single git commit on the current branch.
 You have no `Grep`, `Glob`, or MCP search tools. Cross-file lookups go through
 `research-agent` per `docs/agents/conventions.md §4.2`.
 
+## Step 0 — Kill orphan test workers (unconditional preamble)
+
+Before any staging or commit work, terminate all orphan SQL/pytest worker
+processes unconditionally (idle **or** active). These workers may hold file
+locks or open handles that cause `git commit` to hang or fail on Windows.
+
+```bash
+# Unix (no-op if no matching processes)
+pkill -f "pytest" 2>/dev/null || true
+# Windows (no-op if no matching processes)
+taskkill /F /FI "IMAGENAME eq python.exe" /FI "WINDOWTITLE eq *pytest*" 2>nul || true
+```
+
+This step is a no-op when no processes match. It must run **every** time —
+not "only when idle" — because workers waiting on a lock are NOT idle but
+still block git operations.
+
 ## Step 1 — Inspect the staged change
 
 Run in parallel:
@@ -54,6 +71,24 @@ Following the style of `git log -5`:
 - Optional body explaining *why* (not what — the diff shows what).
 - Footer: `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>`
   (the harness adds this; do not duplicate).
+
+### DECISION HISTORY entries in staged files (mandatory format)
+
+When you stage Python, SQL, or YAML files that contain a `DECISION HISTORY`
+block, every entry you write **must** include:
+
+1. **Timestamp with `HH:MM`**: `YYYY-MM-DD HH:MM` (24-hour, zero-padded).
+   Writing only `YYYY-MM-DD` (no time) triggers the pre-commit validator.
+   Example: `- 2026-05-22 14:30 [commit]: Updated X to Y.`
+
+2. **Tail-tag**: `(#EPIC-Name/NN)` or `(#TICKETLESS reason=<10+ char reason>)`.
+   Writing an entry without a tail-tag triggers the tail-tag validator.
+   Example: `(#EPIC-CommitSignoffHardening/02)` or `(#TICKETLESS reason=standalone-script)`.
+
+The `transform-decision-history` pre-commit hook runs **before** the validator
+and auto-corrects missing `HH:MM` and tail-tags, so most agent commits will
+not hit the validator. However, writing correct format from the start avoids
+any pre-stage transformer output in the hook log.
 
 ## Step 3 — Confirmation gate (mandatory)
 
@@ -118,6 +153,55 @@ After a successful commit:
 ## Next
 - <suggest /pull-request, /commit-push-pr, or further work>
 ```
+
+## When Tests Fail at Pre-Commit
+
+If the pre-commit test hook (`run-tests-with-baseline`) blocks the commit
+because tests fail:
+
+1. **Check whether the failures are new or pre-existing:**
+   ```bash
+   python scripts/commit_guardian/known_failing_tests.py
+   ```
+   If the output says "baseline-known failure(s) present — not blocking", the
+   test suite is already green for your purposes. Rerun the commit.
+
+2. **If new failures are detected:** Investigate whether they are caused by
+   your change. Fix the regression before committing.
+
+3. **If the failing tests pre-existed your change** (and you can confirm this
+   via `git stash && pytest && git stash pop`): update the baseline and commit
+   both changes together:
+   ```bash
+   python scripts/commit_guardian/known_failing_tests.py --update
+   git add scripts/commit_guardian/known_failing_tests.json
+   git commit -m "chore(tests): update known-failing baseline — <reason>"
+   ```
+
+**Never use `--no-verify` to skip test failures.** The baseline mechanism is
+the correct escape path. See `docs/how-to/known-failing-tests-baseline.md`.
+
+## Staging moved tickets (rename tracking)
+
+When a ticket has been moved from `tickets/00_inbox/` to `tickets/99_done/`
+by `build-single-ticket` Step 3 (via `git mv`), do NOT re-stage it with a
+bare `git add tickets/99_done/<basename>` — that can break git's rename
+detection and record the move as `A` (add) instead of `R` (rename).
+
+**Correct approach:** If the `git mv` was already done, both the deletion of
+the old path and the addition of the new path are already staged. Leave them
+alone. If you need to re-stage after modifying the file at the new location:
+
+```bash
+git add tickets/99_done/<basename>
+git rm --cached tickets/00_inbox/<basename>
+```
+
+Then verify: `git diff --cached --name-status -M` should show `R100` (or a
+high similarity index), not separate `A` + `D`.
+
+A `check_ticket_rename_tracking` PostToolUse hook runs after every `git mv`
+on inbox paths and will warn you if the rename is not detected.
 
 ## Refusal cases
 
