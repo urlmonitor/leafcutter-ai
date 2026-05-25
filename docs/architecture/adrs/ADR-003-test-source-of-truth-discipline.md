@@ -1,4 +1,4 @@
-# ADR-002: Tests Are Mirrors of Production Contracts — Contract Shrinkage During Test Repair Requires Explicit Authorization
+# ADR-003: Tests Are Mirrors of Production Contracts — Contract Shrinkage During Test Repair Requires Explicit Authorization
 
 ## Status
 

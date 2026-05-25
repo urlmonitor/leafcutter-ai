@@ -258,7 +258,7 @@ dictionary structure, you MUST:
    If the classification is `test_drift`, do NOT change production — emit
    `(status: handoff)` to test-writer for the assertion-only fix.
 
-See [ADR-002](../../../docs/architecture/adrs/ADR-002-test-source-of-truth-discipline.md)
+See [ADR-003](../../../docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md)
 for the full policy rationale.
 
 ## Sign-off (when ticket_path is provided)

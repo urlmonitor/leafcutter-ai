@@ -60,7 +60,7 @@ python-coder → test-writer → test-runner
 
 These rules fire whenever you are repairing, updating, or rewriting tests for
 existing production code. They prevent test-repair work from silently narrowing
-production contracts. See [ADR-002](../../../docs/architecture/adrs/ADR-002-test-source-of-truth-discipline.md).
+production contracts. See [ADR-003](../../../docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md).
 
 ### Rule 1 — A failing test is a question, not an answer.
 
