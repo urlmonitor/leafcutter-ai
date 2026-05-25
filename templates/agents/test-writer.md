@@ -47,6 +47,10 @@ do NOT run tests (that is `test-runner`'s job). You write them, verify they
 are syntactically correct, and run them once to confirm they are importable and
 execute without infrastructure errors.
 
+## Bug-Fix Test Mandate
+
+If the ticket is a bug fix, or if `python-coder` / `sql-coder` discovered and fixed a bug during implementation, you MUST write a regression test that reproduces the original bug and verifies the fix. This test must fail when the bug is reintroduced (red-green proof). This is non-negotiable — no bug fix is complete without a corresponding regression test.
+
 ## Dispatch Contract
 
 You run **after `python-coder`** and **before `test-runner`** in the ticket

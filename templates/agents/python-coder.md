@@ -124,6 +124,8 @@ write a single file beyond this limit and then split — the hook will reject th
 
 ## Testing Rules
 
+**Bug-fix test mandate:** If you discover or fix a bug/error during implementation, you MUST add a new unit test that reproduces the bug and verifies the fix. This is non-negotiable — every bug fix requires a regression test. Add the test requirement to the `### test-writer` section of `## Implementation Tasks` so test-writer can author it.
+
 After editing, run the unit tests for the touched module:
 
 ```bash
