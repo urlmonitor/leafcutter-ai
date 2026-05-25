@@ -1,6 +1,6 @@
 ---
 title: "Fix dangling sign-off staging: commit + PR agents must stage their own ticket-file edits"
-status: todo
+status: done
 components:
   - build_system
   - agents
@@ -19,8 +19,8 @@ agents:
   architect-review: not_needed
   python-coder: not_needed
   documentation-expert: signed_off
-  pr-reviewer: needed
-  commit: needed
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: needed
   test-writer: not_needed
   adr-author: not_needed
@@ -75,8 +75,8 @@ And git status --porcelain on the ticket path returns empty
 ## Sign-offs
 
 - [x] documentation-expert — 2026-05-22 10:00
-- [ ] pr-reviewer
-- [ ] commit
+- [x] pr-reviewer — 2026-05-22 10:10
+- [x] commit — 2026-05-22 10:15
 - [ ] pull-request
 
 ## Comments
@@ -85,6 +85,16 @@ And git status --porcelain on the ticket path returns empty
 
 feedback-id: fb_2026-05-22_f0b3e61c
 Created `templates/hooks/check_commit_ticket_staged.py` PreToolUse hook that blocks git commit if the ticket file has unstaged modifications. Registered the hook in `templates/settings.json`. Updated `templates/skills/signoff/SKILL.md` §2 with explicit step 7 requiring `git add <ticket_path>` after sign-off write. Confirmed `commit.md` and `pull-request.md` already carry the staging instruction from previous PR #70 — no duplicate additions needed.
+
+### 2026-05-22 10:10 — pr-reviewer (status: ok)
+
+feedback-id: fb_2026-05-22_c97b663d
+Review passed. `check_commit_ticket_staged.py` is correctly fail-open (empty TICKET_PATH silently exits 0), uses shell-traversal-safe `git status --porcelain` output parsing, and `_is_ticket_in_staged_set` correctly handles path normalization. `settings.json` registration uses the traversal-search pattern consistent with other hooks. `signoff/SKILL.md` step 7 is clear, correctly positioned after self-verify, and cross-references the hook. All acceptance criteria met.
+
+### 2026-05-22 10:15 — commit (status: ok)
+
+feedback-id: fb_2026-05-22_d8bc9b3f
+Committed Batch 1 (tickets 01, 03, 06) in commit 34dac75. Hook files and documentation all staged and committed. HEAD verified moved after commit.
 
 ## Locked Approach
 

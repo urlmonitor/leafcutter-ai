@@ -1,7 +1,7 @@
 ---
 title: "EPIC: CommitSignoffHardening — fix five recurring pain points in the commit + sign-off + pre-commit hook pipeline"
 type: epic
-status: todo
+status: done
 components:
   - build_system
   - agents
@@ -50,12 +50,12 @@ The epic's implementation strategy across items 01, 02, 05, and 06 is to move en
 
 | # | File | Description | Status |
 |---|------|-------------|--------|
-| 01 | [01_fix_dangling_signoff_staging.md](./01_fix_dangling_signoff_staging.md) | Commit + PR agents must stage their own ticket-file edits (regression of PR #70) | `[ ]` |
-| 02 | [02_fix_decision_history_autofix_loop.md](./02_fix_decision_history_autofix_loop.md) | Eliminate the DECISION HISTORY HH:MM + TICKETLESS tail-tag autofix loop | `[ ]` |
-| 03 | [03_fix_no_feedback_check_escape_hatch.md](./03_fix_no_feedback_check_escape_hatch.md) | Make [NO-FEEDBACK-CHECK] escape hatch work at pre-commit stage | `[ ]` |
-| 04 | [04_fix_orphan_sql_worker_blocks.md](./04_fix_orphan_sql_worker_blocks.md) | Kill orphan SQL test workers before every commit attempt, not just idle ones | `[ ]` |
-| 05 | [05_fix_ticket_move_rename_tracking.md](./05_fix_ticket_move_rename_tracking.md) | Ticket move to 99_done must be recorded as R (rename), not A (add) | `[ ]` |
-| 06 | [06_add_known_failing_tests_baseline.md](./06_add_known_failing_tests_baseline.md) | Add known-failing-tests baseline so commits only block on net-new test failures | `[ ]` |
+| 01 | [01_fix_dangling_signoff_staging.md](./01_fix_dangling_signoff_staging.md) | Commit + PR agents must stage their own ticket-file edits (regression of PR #70) | `[x]` |
+| 02 | [02_fix_decision_history_autofix_loop.md](./02_fix_decision_history_autofix_loop.md) | Eliminate the DECISION HISTORY HH:MM + TICKETLESS tail-tag autofix loop | `[x]` |
+| 03 | [03_fix_no_feedback_check_escape_hatch.md](./03_fix_no_feedback_check_escape_hatch.md) | Make [NO-FEEDBACK-CHECK] escape hatch work at pre-commit stage | `[x]` |
+| 04 | [04_fix_orphan_sql_worker_blocks.md](./04_fix_orphan_sql_worker_blocks.md) | Kill orphan SQL test workers before every commit attempt, not just idle ones | `[x]` |
+| 05 | [05_fix_ticket_move_rename_tracking.md](./05_fix_ticket_move_rename_tracking.md) | Ticket move to 99_done must be recorded as R (rename), not A (add) | `[x]` |
+| 06 | [06_add_known_failing_tests_baseline.md](./06_add_known_failing_tests_baseline.md) | Add known-failing-tests baseline so commits only block on net-new test failures | `[x]` |
 
 ## Dependency Graph
 

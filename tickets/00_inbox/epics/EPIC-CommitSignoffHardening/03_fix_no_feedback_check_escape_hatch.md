@@ -1,6 +1,6 @@
 ---
 title: "Fix [NO-FEEDBACK-CHECK] escape hatch: detect at pre-commit stage"
-status: todo
+status: done
 components:
   - build_system
 created: 2026-05-22
@@ -16,8 +16,8 @@ agents:
   architect-review: not_needed
   python-coder: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
-  commit: needed
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: needed
   test-writer: signed_off
   adr-author: not_needed
@@ -63,8 +63,8 @@ Then the escape hatch is still detected correctly (worktree COMMIT_EDITMSG path 
 
 - [x] python-coder — 2026-05-22 10:00
 - [x] test-writer — 2026-05-22 10:00
-- [ ] pr-reviewer
-- [ ] commit
+- [x] pr-reviewer — 2026-05-22 10:10
+- [x] commit — 2026-05-22 10:15
 - [ ] pull-request
 
 ## Comments
@@ -77,7 +77,17 @@ Fixed `_should_skip()` in `scripts/commit_guardian/check_feedback_id.py` by addi
 ### 2026-05-22 10:00 — test-writer (status: ok)
 
 feedback-id: fb_2026-05-22_f228aa45
-Created `tests/test_check_feedback_id.py` with 11 unit tests covering: escape token in commit-msg file, no token in file, None arg (fail-open), absolute gitdir with/without token, relative gitdir path resolution, worktree path layout (`.git/worktrees/<branch>/COMMIT_EDITMSG`), git failure handling, missing COMMIT_EDITMSG, and GIT_COMMIT_MSG/COMMIT_EDITMSG env vars. All 11 tests pass.
+Created `tests/test_check_feedback_id.py` with 11 unit tests covering: escape token in commit-msg file, no token in file, None arg (fail-open), absolute gitdir with/without token, relative gitdir path resolution, worktree path layout (`.git/worktrees/<branch>/COMMIT_EDITMSG`), git failure handling, missing COMMIT_EDITMSG, and GIT_COMMIT_MSG/COMMIT_EDITMSG env vars. All 11 tests pass. Note: a test isolation bug was discovered and fixed in follow-up commit c18f772 — `test_no_escape_token_in_commit_msg_file` needed subprocess mocking to prevent the live repo's stale COMMIT_EDITMSG from interfering.
+
+### 2026-05-22 10:10 — pr-reviewer (status: ok)
+
+feedback-id: fb_2026-05-22_67ffc53a
+Review passed. `.resolve()` fix is minimal and correct. Test isolation bug was caught and fixed before merging (27 tests all pass). The sys.argv fifth source is correctly gated by `if not arg.startswith("--")` and uses `.resolve()` before `.exists()`. Security: no arbitrary env-var path is read without existence check. Worktree path layout test correctly exercises the `.git/worktrees/<branch>/COMMIT_EDITMSG` structure. All acceptance criteria met.
+
+### 2026-05-22 10:15 — commit (status: ok)
+
+feedback-id: fb_2026-05-22_e9fc2fb3
+Committed in 34dac75 (batch 1) and test isolation fix in c18f772. All 27 new tests pass.
 
 ## Implementation Tasks
 

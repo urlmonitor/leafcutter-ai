@@ -1,6 +1,6 @@
 ---
 title: "Add known-failing-tests baseline so commits only block on net-new test failures"
-status: todo
+status: done
 components:
   - build_system
 created: 2026-05-22
@@ -18,8 +18,8 @@ agents:
   architect-review: not_needed
   python-coder: signed_off
   documentation-expert: signed_off
-  pr-reviewer: needed
-  commit: needed
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: needed
   test-writer: signed_off
   adr-author: not_needed
@@ -73,8 +73,8 @@ And exits 1 if any tests fail
 - [x] python-coder — 2026-05-22 10:00
 - [x] documentation-expert — 2026-05-22 10:00
 - [x] test-writer — 2026-05-22 10:00
-- [ ] pr-reviewer
-- [ ] commit
+- [x] pr-reviewer — 2026-05-22 10:10
+- [x] commit — 2026-05-22 10:15
 - [ ] pull-request
 
 ## Comments
@@ -93,6 +93,16 @@ Created `docs/how-to/known-failing-tests-baseline.md` explaining the baseline wo
 
 feedback-id: fb_2026-05-22_ae9f3b01
 Created `tests/test_known_failing_tests.py` with 16 unit tests covering `load_baseline` (5 tests: empty file, non-empty, absent, malformed JSON, missing key), `write_baseline` (3 tests: roundtrip, sorted output, empty set), `run_hook` (5 tests: all-baseline exits 0, new failure exits 1, no failures exits 0, absent baseline with failure exits 1, absent baseline no failures exits 0), and `run_update` (3 tests: writes failures, empty set, always exits 0). All 16 pass.
+
+### 2026-05-22 10:10 — pr-reviewer (status: ok)
+
+feedback-id: fb_2026-05-22_acccb24e
+Review passed. `known_failing_tests.py` correctly implements fail-open (absent/malformed baseline → empty frozenset), new-failures computation (`current - baseline`), and sorted JSON output for clean diffs. The `--update` CLI always exits 0. Hook registration in `commit_guardian.json` uses `pass_filenames: false` correctly. How-to doc covers the complete workflow including the 30-day policy against baseline accumulation. `commit.md` section correctly directs agents away from `--no-verify`. All 16 tests pass. All acceptance criteria met.
+
+### 2026-05-22 10:15 — commit (status: ok)
+
+feedback-id: fb_2026-05-22_5534db8b
+Committed in 34dac75 (batch 1). All 16 new tests pass. HEAD verified moved.
 
 ## Locked Approach
 

@@ -363,6 +363,17 @@
         "_comment": "build_precommit_config() uses this to generate/update .pre-commit-config.yaml. Each entry describes one hook. Package-managed entries are identified by the '@package-managed' marker and are replaced on each build. Project-specific entries (no marker) are preserved.",
         "hooks": [
             {
+                "id": "transform-decision-history",
+                "name": "Transform Decision History (pre-stage normaliser)",
+                "entry": "python scripts/commit_guardian/transform_decision_history.py",
+                "language": "system",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "EPIC-CommitSignoffHardening/02: Runs BEFORE all validators. Injects HH:MM into date-only DECISION HISTORY timestamps and appends (#TICKETLESS reason=agent-no-tag-autofix) to entries missing a tail-tag. Always exits 0 (fail-open). Eliminates the validate→autofix→retry loop for these two mechanical fixes."
+            },
+            {
                 "id": "check-build-drift",
                 "name": "Check Build Drift (leafcutter)",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_build_drift.py",
