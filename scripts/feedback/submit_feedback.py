@@ -501,7 +501,7 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
-# - 2026-05-21 [python-coder/TICKET-20260519-deploy_feedback_scripts_via_build]:
+# - 2026-05-21 12:00 [python-coder/TICKET-20260519-deploy_feedback_scripts_via_build]:
 #   Replaced hardcoded parents[3] JSONL path with _find_project_root() helper
 #   that walks up from __file__ looking for .claude/ directory. Also changed
 #   _CONFIG_DIR to use _PROJECT_ROOT / "config" instead of parent-chain.

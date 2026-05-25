@@ -524,7 +524,7 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
-- 2026-05-19 [Agent/workflow-architect]: Promoted to leafcutter package as
+- 2026-05-19 12:00 [Agent/workflow-architect]: Promoted to leafcutter package as
   templates/scripts/setup_ticket_worktree.py. Added portability guard in
   _install_drift_hook(): early-return when
   scripts/commit_guardian/post_checkout_drift_check.py is missing in the
