@@ -162,6 +162,14 @@ def validate_payload(payload: dict[str, Any]) -> None:
             "Field 'ticket' is required when type='ticket_completion' but was not provided."
         )
 
+    breaking = payload.get("breaking", False)
+    if breaking:
+        migration_steps = payload.get("migration_steps")
+        if not migration_steps or not isinstance(migration_steps, list) or len(migration_steps) == 0:
+            raise ValueError(
+                "Field 'migration_steps' must be a non-empty list when breaking=True"
+            )
+
 
 # ---------------------------------------------------------------------------
 # Slug generation
@@ -272,7 +280,7 @@ def build_frontmatter(payload: dict[str, Any]) -> str:
         Complete YAML frontmatter string, delimited by triple-dash markers and
         terminated with a newline. Ready to be written directly to a file.
     """
-    optional_order = ["epic", "pr", "adrs", "diagrams", "tickets", "commits"]
+    optional_order = ["epic", "pr", "adrs", "diagrams", "tickets", "commits", "breaking", "migration_steps"]
     lines = ["---"]
     for field in REQUIRED_FIELDS:
         val = _yaml_value(payload[field])
@@ -493,4 +501,13 @@ if __name__ == "__main__":
 #   build-single-ticket) supply --changelog-dir explicitly and continue to
 #   work unchanged. Fix addresses EPIC-GlossaryAutomation friction point where
 #   the script wrote into bybit-trader/changelogs/ instead of the worktree.
+# - 2026-05-26 [python-coder/EPIC-LeafcutterVersioning/01]: (#EPIC-LeafcutterVersioning/01)
+#   Added optional `breaking` (bool) and `migration_steps` (list[str]) fields
+#   to support automated SemVer bump decisions. Cross-validation rule: when
+#   `breaking=True`, `migration_steps` must be a non-empty list — otherwise
+#   validate_payload raises ValueError. When `breaking` is absent or False,
+#   no migration_steps requirement is enforced. Both fields added to
+#   optional_order in build_frontmatter() for stable serialisation position.
+#   Backwards-compatible: existing call sites that omit these fields continue
+#   to work without modification.
 # ====================================================================

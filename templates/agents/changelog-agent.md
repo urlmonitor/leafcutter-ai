@@ -162,7 +162,9 @@ Construct the emit_entry.py payload:
   "commits": ["<sha1>", "<sha2>", "..."],
   "pr": "<PR-number-or-URL or omit>",
   "adrs": ["<ADR-NNN>", "..."],
-  "diagrams": ["<docs/architecture/path.md>", "..."]
+  "diagrams": ["<docs/architecture/path.md>", "..."],
+  "breaking": false,
+  "migration_steps": ["<step1>", "..."]
 }
 ```
 
@@ -178,6 +180,14 @@ Construct the emit_entry.py payload:
 - `diagrams` is optional. Include paths to architecture diagrams only when
   the changes are architecturally significant. Omit the field entirely when
   not applicable.
+- `breaking` is optional (defaults to `false` when omitted). Set to `true`
+  when the change introduces a backwards-incompatible modification (removed
+  config key, changed API contract, schema narrowing). When `breaking` is
+  `true`, `migration_steps` **must** be a non-empty list describing what
+  consumers need to do to upgrade.
+- `migration_steps` is optional. Required non-empty when `breaking` is `true`.
+  Each entry is a plain-English step the consumer must follow (e.g.
+  `"Run python build.py --force-breaking to acknowledge the change"`).
 
 For `deploy_tag` entries, include the tag name in the title.
 For `manual` entries, use a title like `"Changelog <from>..<to> — <date>"`.
