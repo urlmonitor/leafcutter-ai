@@ -1,0 +1,17 @@
+title: "How do I...?"
+labels: ["question"]
+body:
+  - type: textarea
+    id: what-are-you-trying-to-do
+    attributes:
+      label: What are you trying to do?
+      description: Describe what you're trying to accomplish with leafcutter-ai.
+    validations:
+      required: true
+  - type: textarea
+    id: what-have-you-tried
+    attributes:
+      label: What have you tried?
+      description: Any approaches you've already attempted.
+    validations:
+      required: false

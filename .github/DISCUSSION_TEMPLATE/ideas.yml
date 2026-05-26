@@ -1,0 +1,24 @@
+title: "Ideas / Proposals"
+labels: ["idea"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe your idea or proposal.
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why would this be valuable? What problem does it solve?
+    validations:
+      required: true
+  - type: textarea
+    id: prior-art
+    attributes:
+      label: Prior art
+      description: Are there similar features in other tools or projects?
+    validations:
+      required: false

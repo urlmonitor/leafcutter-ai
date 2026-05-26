@@ -1,0 +1,33 @@
+name: Compatibility / Integration Issue
+description: Report a compatibility or integration issue when using leafcutter-ai in your project
+title: "[Compat] "
+labels: ["compatibility"]
+body:
+  - type: dropdown
+    id: consumer-project-type
+    attributes:
+      label: Consumer project type
+      description: What kind of project are you integrating leafcutter-ai into?
+      options:
+        - Poetry project
+        - pip / venv project
+        - Bare Python project
+        - CI/CD pipeline
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: leafcutter-version
+    attributes:
+      label: leafcutter-ai version
+      description: Git commit SHA or tag
+      placeholder: e.g. v0.1.0 or abc1234
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description of incompatibility
+      description: Describe what breaks or doesn't work when integrating leafcutter-ai.
+    validations:
+      required: true

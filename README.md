@@ -8,6 +8,14 @@ A self-contained package that installs the full Bybit-Trader-style AI agent
 development workflow into any project. Copy the package, edit one JSON config
 file, run `build.py`, and get the complete system generated.
 
+## Reporting feedback
+
+| Type | Where |
+|------|-------|
+| Bug | [Open a Bug Report](https://github.com/urlmonitor/leafcutter-ai/issues/new?template=bug.yml) |
+| Feature or question | [Start a Discussion](https://github.com/urlmonitor/leafcutter-ai/discussions) |
+| Compatibility issue | [Open a Compatibility Report](https://github.com/urlmonitor/leafcutter-ai/issues/new?template=compat.yml) |
+
 ## What You Get
 
 - **Agent prompts** (`.claude/agents/`): supervisor stack, phase agents, utility agents

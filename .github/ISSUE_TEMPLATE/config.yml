@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: General questions & ideas
+    url: https://github.com/urlmonitor/leafcutter-ai/discussions
+    about: Ask questions, share ideas, or start a discussion — please don't open an issue for general help.
