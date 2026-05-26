@@ -29,9 +29,9 @@ After a fresh `build.py` run in a downstream project the user received
 - **Tail-tag violations** (`#EPIC-Name/NN` or `#TICKETLESS reason=...` missing)
   in four security-scanner skill scripts and two entries in the ticket-prioritizer
   skill script.
-- **Missing HH:MM time** in three DECISION HISTORY entries across
-  `sync_platforms.py` (template + deployed copy) and the deployed
-  `scripts/feedback/submit_feedback.py`.
+- **Missing HH:MM time** in DECISION HISTORY entries across `sync_platforms.py`
+  (template + deployed copy), `check_glossary_coverage.py` (canonical template),
+  and the deployed `scripts/feedback/submit_feedback.py`.
 - **Missing directory README**: `scripts/sync_platforms/README.md` is absent
   despite the hook requiring a README for every directory with code.
 - **UnicodeDecodeError** crashing the hook on Windows: `check_documentation.py`
@@ -51,6 +51,7 @@ All fixes must land in the **leafcutter-ai/ source files** so that the next
 | 03 | [03_fix_sync_platforms_decision_history.md](./03_fix_sync_platforms_decision_history.md) | Fix missing HH:MM time in sync_platforms.py DECISION HISTORY (template + deployed) | `[ ]` |
 | 04 | [04_add_sync_platforms_readme.md](./04_add_sync_platforms_readme.md) | Add README.md to templates/scripts/sync_platforms/ and deployed scripts/sync_platforms/ | `[ ]` |
 | 05 | [05_fix_check_documentation_unicode.md](./05_fix_check_documentation_unicode.md) | Fix UnicodeDecodeError in check_documentation.py on Windows (subprocess encoding) | `[ ]` |
+| 06 | [06_fix_commit_guardian_and_feedback_decision_history.md](./06_fix_commit_guardian_and_feedback_decision_history.md) | Fix missing HH:MM in check_glossary_coverage.py template and deployed submit_feedback.py | `[ ]` |
 
 ## Locked Design Decisions
 
