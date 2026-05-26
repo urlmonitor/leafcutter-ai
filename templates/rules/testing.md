@@ -12,7 +12,14 @@ Before adding, modifying, or debugging any test:
 2. **Read the `README.md`** of the source module being tested (e.g., `live_trader/logic/README.md`).
 3. These READMEs contain **gotchas, mocking patterns, and known key mismatches** that will save you from repeating past mistakes.
 
-## 2. Test Design Principles
+## 2. Bug-Fix Test Mandate
+
+If you discover or fix a bug/error, you MUST ALWAYS add a new unit test that reproduces the bug and verifies the fix. No exceptions. Every bug fix requires a corresponding regression test before it can be considered complete. The test must:
+1. Fail when the bug is reintroduced (red-green proof).
+2. Be minimal — isolate the exact failure condition.
+3. Live alongside the existing tests for the affected module.
+
+## 3. Test Design Principles
 
 ### No Database Connections
 All unit tests in `unit_tests/live_trader/` run on every commit via pre-commit hooks. They must:
@@ -34,7 +41,7 @@ poetry run python debugging/scripts/generate_engine_fixture.py \
 ```
 If a test fails with `FileNotFoundError` for a fixture, **regenerate it** using the script above (requires a local DB connection).
 
-## 3. Common Gotchas
+## 4. Common Gotchas
 
 ### Mocking `pybit` and `sqlalchemy`
 When testing files that import `live_trader.main` (directly or indirectly), you must mock `pybit` and `sqlalchemy` in `sys.modules` **before** the import occurs. Always include:
@@ -63,7 +70,7 @@ Stop-loss is always calculated from the **entry price** (candle close), not from
 # SHORT: stop_loss = entry_price * (1 + stop_loss_pct)
 ```
 
-## 4. Running Tests
+## 5. Running Tests
 
 ```bash
 # All live trader tests (runs on commit)
@@ -76,7 +83,7 @@ poetry run pytest unit_tests/live_trader/ --maxfail=1
 poetry run pytest unit_tests/sql_functions/ -v
 ```
 
-## 5. When Changing Output Formats
+## 6. When Changing Output Formats
 If you rename a dictionary key or change a return format in any logic module:
 1. Update **all tests** that assert on that key.
 2. Check if there are **real-data tests** that compare against DB fixtures (the fixtures may still use the old key name).

@@ -92,6 +92,8 @@ Capture the output of the deploy command and include it in your final report.
 
 ## Step 4 — Run sql-test
 
+**Bug-fix test mandate:** If you discover or fix a bug/error during implementation, you MUST ensure a new test is added that reproduces the bug and verifies the fix. This is non-negotiable — every bug fix requires a regression test. Dispatch to the appropriate specialist sub-agent (e.g. `sql-function-creator` or `sql-test-writer`) to author the test.
+
 After local-deploy succeeds, invoke the `sql-test` skill to run the SQL test
 suite. Capture the results.
 
