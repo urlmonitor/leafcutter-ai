@@ -417,10 +417,39 @@ Move the epic folder to `tickets/99_done/EPIC-<Name>/`:
 #### Step 4 — PR Merge (user approval required)
 
 1. Find the open PR for the epic branch: `gh pr list --head <branch>`
-2. Show the user: branch name, commit count, files changed
-3. Ask: **"Merge epic PR to main? (yes / no)"**
-4. On `yes`: `gh pr merge --merge <PR-number>`
-5. On `no`: stop here with "PR left open for manual handling." Do NOT proceed to Step 5.
+2. **Mergeability gate (mandatory, blocking).** Before claiming the PR is
+   "ready to merge" or surfacing merge prose to the user, query GitHub for
+   the authoritative merge state:
+
+   ```bash
+   gh pr view <PR-number> --json mergeable,mergeStateStatus,statusCheckRollup
+   ```
+
+   Interpret the result:
+
+   - `mergeable == "MERGEABLE"` AND `mergeStateStatus == "CLEAN"` →
+     proceed to step 3.
+   - `mergeable == "CONFLICTING"` → halt the merge step. Surface the
+     conflict to the user with the offending files (from
+     `gh pr view --json files`) and stop. Do NOT call `gh pr merge`.
+   - `mergeStateStatus` in (`BLOCKED`, `BEHIND`, `DIRTY`, `UNSTABLE`,
+     `UNKNOWN`) → halt the merge step. Show the user the exact
+     `mergeStateStatus` value and the failing required checks (from
+     `statusCheckRollup`), and stop. Do NOT call `gh pr merge`.
+   - `mergeable == "UNKNOWN"` → GitHub has not finished computing
+     mergeability. Wait briefly and re-query once; if still `UNKNOWN`,
+     surface that to the user and stop.
+
+   **Never claim a PR is "ready to merge" without this check.** A clean
+   local working tree and a green local test run do not guarantee that
+   GitHub will accept the merge — required checks, branch protection
+   rules, and trunk drift are only visible from the GitHub side.
+
+3. Show the user: branch name, commit count, files changed, and the
+   confirmed `mergeable` / `mergeStateStatus` values from step 2.
+4. Ask: **"Merge epic PR to main? (yes / no)"**
+5. On `yes`: `gh pr merge --merge <PR-number>`
+6. On `no`: stop here with "PR left open for manual handling." Do NOT proceed to Step 5.
 
 **Never merge without explicit user approval.**
 
