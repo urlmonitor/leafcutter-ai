@@ -98,7 +98,7 @@ def propagation_audit(
     Returns:
         Count of scripts auto-copied (0 in dry_run mode).
     """
-    precommit_path = target_root / ".pre-commit-config.yaml"
+    precommit_path = target_root / "pre-commit-config.yaml"
     if not precommit_path.exists():
         _log.debug("No .pre-commit-config.yaml at %s — propagation audit skipped.", target_root)
         return 0

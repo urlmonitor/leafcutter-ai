@@ -289,7 +289,8 @@ def _run_phases(
         ("Antigravity instructions", build_antigravity_instructions),
     ]
 
-    # Phases that write internal-only outputs at target_root (our code reads them)
+    # Phases that write internal-only outputs into .leafcutter/ (no shim needed,
+    # but still consolidated so we don't pollute the user's scripts/, config/, etc.)
     internal_phases: list[tuple[str, Any]] = [
         ("Rules", build_rules),
         ("Commit guardian", build_commit_guardian),
@@ -314,7 +315,12 @@ def _run_phases(
         total += fn(output_root, config, dry_run, effective_force)
         print()
 
-    for label, fn in internal_phases + scaffold_phases:
+    for label, fn in internal_phases:
+        print(f"{label}:")
+        total += fn(output_root, config, dry_run, effective_force)
+        print()
+
+    for label, fn in scaffold_phases:
         print(f"{label}:")
         total += fn(target_root, config, dry_run, effective_force)
         print()
@@ -330,6 +336,10 @@ _PRE_CONSOLIDATION_PATHS = [
     ".claude/settings.json",
     ".pre-commit-config.yaml",
     ".gemini",
+    "scripts/commit_guardian",
+    "scripts/doc_compliance",
+    "scripts/feedback",
+    "scripts/sync_platforms",
 ]
 
 

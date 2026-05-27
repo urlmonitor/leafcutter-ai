@@ -556,7 +556,7 @@ def build_commit_guardian(target_root: Path, config: dict[str, Any],
             if _write(output_path, text, dry_run, force):
                 written += 1
                 if not dry_run:
-                    print(f"  scripts/commit_guardian/{rel}")
+                    print(f"  commit_guardian/{rel}")
         else:
             # SHA-256 compare-before-copy skips identical binary files.
             if not _should_overwrite(output_path, force):
@@ -609,7 +609,7 @@ def build_doc_compliance(target_root: Path, config: dict[str, Any],
         if _write(output_path, text, dry_run, force):
             written += 1
             if not dry_run:
-                print(f"  scripts/doc_compliance/{rel}")
+                print(f"  doc_compliance/{rel}")
 
     return written
 
@@ -684,7 +684,7 @@ def build_feedback(target_root: Path, config: dict[str, Any],
         if _write(output_path, text, dry_run, force):
             written += 1
             if not dry_run:
-                print(f"  scripts/feedback/{script_name}")
+                print(f"  feedback/{script_name}")
 
     if config_src.is_file():
         config_output = target_root / "config" / "feedback_categories.yaml"
@@ -773,7 +773,7 @@ def build_sync_platforms(target_root: Path, config: dict[str, Any],
             if _write(output_path, text, dry_run, force):
                 written += 1
                 if not dry_run:
-                    print(f"  scripts/sync_platforms/{rel}")
+                    print(f"  sync_platforms/{rel}")
         else:
             if not _should_overwrite(output_path, force):
                 continue
