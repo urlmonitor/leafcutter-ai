@@ -156,6 +156,51 @@ worktree root) if it exists:
 `adr-author` and `architecture-diagram-author` MUST complete before
 `python-coder` or `sql-coder` start — this enforces the epic's primary
 must-have: diagrams and ADRs before coding.
+
+### Docs-only / config-only test-writer skip rule
+
+Before dispatching `test-writer` (priority 5), read the ticket's `## Test Requirements` block.
+Parse the `tests:` YAML array inside that block.
+
+If `tests: []` (empty array) **or** the `## Test Requirements` block is absent entirely:
+- **Skip test-writer**: do NOT spawn it.
+- Mark `agents["test-writer"] = "signed_off"` in frontmatter (via Edit).
+- Append a note to `## Comments`:
+  ```
+  ### YYYY-MM-DD HH:MM — ticket-supervisor (status: ok)
+  test_requirements empty — test-writer phase skipped (docs-only or config-only ticket)
+  ```
+- Continue to the next pending agent (GOTO step 1 with updated map).
+
+If the `tests:` array has one or more entries, dispatch `test-writer` normally.
+
+This prevents docs PRs and config-only tickets from stalling at the test-writer phase
+indefinitely. Both the ticket's `agents: test-writer: not_needed` setting AND this runtime
+check are valid skip paths — whichever fires first takes precedence.
+
+### Post-coder contract-shrinking check (supervisor-side warn, not block)
+
+After `python-coder` or `sql-coder` signs off (status: ok), run this check:
+
+1. Compare test files before and after the coder's changes:
+   ```bash
+   git diff --name-only HEAD~1..HEAD -- "*.py" | grep -E "(test_|_test\.py$)"
+   git diff HEAD~1..HEAD | grep -E "^\+.*(pytest\.skip|pytest\.mark\.xfail|@unittest\.skip|@unittest\.expectedFailure)"
+   ```
+2. If any `test_*.py` file was deleted, or if lines matching the weakening patterns are found:
+   - Append a structured warning comment to the ticket — but do NOT block the coder's sign-off,
+     do NOT halt the pipeline, do NOT change any `agents:` status.
+   - Warning comment format:
+     ```
+     ### YYYY-MM-DD HH:MM — ticket-supervisor (status: ok)
+     contract-shrinking-warning: coder phase completed but potential test weakening detected.
+     Details: <specific files and patterns found>
+     Pre-commit hook (check_contract_shrinking.py) will block if this reaches commit phase.
+     ```
+
+This is the **diagnostic/audit layer**. The pre-commit hook (`check_contract_shrinking.py`,
+ticket 04) is the **blocking layer**. This warn is non-destructive and never halts the pipeline.
+
 3. **If the next agent is `commit` or `pull-request`**, acquire the
    worktree-root lock per `building-epics` §5.2 BEFORE spawning. Hold the
    lock for the agent's lifetime; release it per §5.3 on success AND on

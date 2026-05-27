@@ -1,6 +1,6 @@
 ---
 title: "Update building-epics SKILL.md + ticket-supervisor: phase-order, docs-only skip rule, supervisor contract-shrinking warn"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-26
@@ -16,13 +16,13 @@ files_touched:
   - .claude/skills/building-epics/SKILL.md
   - .claude/agents/ticket-supervisor.md
 agents:
-  architect-review: needed
-  python-coder: needed
+  architect-review: signed_off
+  python-coder: signed_off
   test-writer: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
-  commit: needed
-  pull-request: needed
+  pr-reviewer: signed_off
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 05: Update building-epics SKILL.md + ticket-supervisor: phase-order, docs-only skip rule, supervisor contract-shrinking warn
@@ -90,13 +90,33 @@ And the status in the comment is "ok" (pipeline continues)
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] python-coder
-- [ ] pr-reviewer
-- [ ] commit
-- [ ] pull-request
+- [x] architect-review — 2026-05-27 01:00
+- [x] python-coder — 2026-05-27 01:05
+- [x] pr-reviewer — 2026-05-27 01:06
+- [x] commit — 2026-05-27 01:07
+- [x] pull-request — 2026-05-27 01:08
 
 ## Comments
+
+### 2026-05-27 01:00 — architect-review (status: ok)
+feedback-id: fb_2026-05-27_05_arch
+Integration point confirmed: docs-only skip rule fires at §2.1 step 1 loop top, immediately before test-writer dispatch decision — consistent with requires_adr pre-flight override pattern. Post-coder contract-shrinking check reads test-file diffs (different from disk-diff guard which checks ticket-file modification — no conflict). SKILL.md §2.1 and §3 require no other updates beyond ordering table and new subsections. Impact: small (skill + template markdown changes, no code changes). No ADR required.
+
+### 2026-05-27 01:05 — python-coder (status: ok)
+feedback-id: fb_2026-05-27_05_coder
+Updated templates/skills/building-epics/SKILL.md §2.1: (a) canonical phase ordering line updated to show test-writer at priority 5, python-coder priority 6, sql-coder priority 7; (b) docs-only/config-only test-writer skip rule added immediately after requires_adr override; (c) post-coder contract-shrinking warn check added after SPAWN step description. Applied identical changes to .claude/worktrees/.claude/skills/building-epics/SKILL.md (deployed copy). Updated templates/agents/ticket-supervisor.md: added "Docs-only / config-only test-writer skip rule" and "Post-coder contract-shrinking check" sections after the agent_priority_table block. Applied identical changes to deployed copy at .claude/worktrees/.claude/agents/ticket-supervisor.md.
+
+### 2026-05-27 01:06 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-27_05_pr
+All three acceptance criteria verified: (1) building-epics SKILL.md §2.1 shows test-writer at priority 5 before python-coder priority 6 — confirmed. (2) Docs-only skip rule fires when tests:[] or block absent, appends comment, proceeds to next agent — confirmed in pseudocode. (3) Post-coder contract-shrinking check appends warning comment without blocking pipeline or changing status — confirmed as warn-only. Both template sources and deployed copies updated consistently. Approve for commit.
+
+### 2026-05-27 01:07 — commit (status: ok)
+feedback-id: fb_2026-05-27_05_commit
+Changes staged and committed with ticket 06 together (both are batch 2a). See combined commit below.
+
+### 2026-05-27 01:08 — pull-request (status: ok)
+feedback-id: fb_2026-05-27_05_pr_push
+Branch pushed to origin. PR deferred until all epic tickets complete (one PR per epic convention).
 
 ## Implementation Tasks
 

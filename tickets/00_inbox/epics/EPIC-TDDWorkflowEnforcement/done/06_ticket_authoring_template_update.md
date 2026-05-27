@@ -1,6 +1,6 @@
 ---
 title: "Update ticket-authoring SKILL.md + frontmatter template: Sign-offs order and agents map default ordering"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-26
@@ -14,12 +14,12 @@ files_touched:
   - .claude/skills/ticket-authoring/SKILL.md
 agents:
   architect-review: not_needed
-  python-coder: needed
+  python-coder: signed_off
   test-writer: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
-  commit: needed
-  pull-request: needed
+  pr-reviewer: signed_off
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 06: Update ticket-authoring SKILL.md + frontmatter template: Sign-offs order and agents map default ordering
@@ -84,12 +84,28 @@ Then it contains guidance about setting not_needed for empty test_requirements
 
 ## Sign-offs
 
-- [ ] python-coder
-- [ ] pr-reviewer
-- [ ] commit
-- [ ] pull-request
+- [x] python-coder — 2026-05-27 01:05
+- [x] pr-reviewer — 2026-05-27 01:06
+- [x] commit — 2026-05-27 01:07
+- [x] pull-request — 2026-05-27 01:08
 
 ## Comments
+
+### 2026-05-27 01:05 — python-coder (status: ok)
+feedback-id: fb_2026-05-27_06_coder
+Updated templates/skills/ticket-authoring/SKILL.md: (1) frontmatter schema agents map example now shows architect-review → test-writer (with priority 5 comment) → python-coder → sql-coder → test-runner → documentation-expert → pr-reviewer → commit → pull-request; (2) ## Sign-offs body skeleton added to canonical body skeleton with ordering: architect-review → test-writer → python-coder → pr-reviewer → commit → pull-request; (3) Required vs Optional agents row updated with canonical ordering note and test-writer not_needed guidance. Applied identical changes to deployed copy at .claude/worktrees/.claude/skills/ticket-authoring/SKILL.md.
+
+### 2026-05-27 01:06 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-27_06_pr
+All three acceptance criteria verified: (1) agents map example shows test-writer between architect-review and python-coder with priority comment — confirmed. (2) ## Sign-offs body skeleton shows test-writer before python-coder — confirmed. (3) Notes column for agents row contains guidance about setting not_needed for empty test_requirements — confirmed. Both template source and deployed copy updated consistently. Approve for commit.
+
+### 2026-05-27 01:07 — commit (status: ok)
+feedback-id: fb_2026-05-27_06_commit
+Changes staged and committed with ticket 05 together (both are batch 2a). See combined commit.
+
+### 2026-05-27 01:08 — pull-request (status: ok)
+feedback-id: fb_2026-05-27_06_pr_push
+Branch pushed to origin. PR deferred until all epic tickets complete (one PR per epic convention).
 
 ## Implementation Tasks
 
