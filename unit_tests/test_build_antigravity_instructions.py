@@ -33,13 +33,15 @@ def mock_templates_dir(tmp_path, monkeypatch):
 
 def test_build_antigravity_instructions_default(target_root, mock_templates_dir):
     config = {"docs_root": "docs/"}
-    
-    written = build_antigravity_instructions(target_root, config, dry_run=False, force=True)
-    
+
+    # Phase receives output_root in production (build.py passes .leafcutter/ path)
+    output_root = target_root / ".leafcutter"
+    written = build_antigravity_instructions(output_root, config, dry_run=False, force=True)
+
     assert written == 1
-    
-    # Check antigravity instructions
-    output_path = target_root / ".gemini" / "instructions.md"
+
+    # Output lands under output_root/gemini/ (no dot prefix inside .leafcutter)
+    output_path = output_root / "gemini" / "instructions.md"
     assert output_path.exists()
     assert output_path.read_text(encoding="utf-8") == "Test Antigravity Instructions docs/"
 
@@ -51,19 +53,20 @@ def test_build_antigravity_instructions_disabled(target_root, mock_templates_dir
             "antigravity": False
         }
     }
-    
-    written = build_antigravity_instructions(target_root, config, dry_run=False, force=True)
-    
+
+    output_root = target_root / ".leafcutter"
+    written = build_antigravity_instructions(output_root, config, dry_run=False, force=True)
+
     assert written == 0
-    assert not (target_root / ".gemini" / "instructions.md").exists()
+    assert not (output_root / "gemini" / "instructions.md").exists()
 
 def test_build_antigravity_instructions_no_template(target_root, mock_templates_dir):
     config = {"docs_root": "docs/"}
-    
-    # Remove the template
+
     (mock_templates_dir / "ANTIGRAVITY.md.template").unlink()
-    
-    written = build_antigravity_instructions(target_root, config, dry_run=False, force=True)
-    
+
+    output_root = target_root / ".leafcutter"
+    written = build_antigravity_instructions(output_root, config, dry_run=False, force=True)
+
     assert written == 0
-    assert not (target_root / ".gemini" / "instructions.md").exists()
+    assert not (output_root / "gemini" / "instructions.md").exists()

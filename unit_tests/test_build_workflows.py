@@ -35,23 +35,25 @@ def mock_templates_dir(tmp_path, monkeypatch):
 
 def test_build_workflows_default_platforms(target_root, mock_templates_dir):
     config = {"docs_root": "docs/"}
-    
-    written = build_workflows(target_root, config, dry_run=False, force=True)
-    
+
+    # Phase receives output_root in production
+    output_root = target_root / ".leafcutter"
+    written = build_workflows(output_root, config, dry_run=False, force=True)
+
     # default platforms is claude and antigravity
     # 2 files each * 2 platforms = 4 files
     assert written == 4
-    
-    # Check claude commands
-    assert (target_root / ".claude" / "commands" / "test_workflow_1.md").exists()
-    assert (target_root / ".claude" / "commands" / "test_workflow_2.md").exists()
-    
-    # Check antigravity workflows
-    assert (target_root / ".gemini" / "workflows" / "test_workflow_1.md").exists()
-    assert (target_root / ".gemini" / "workflows" / "test_workflow_2.md").exists()
-    
+
+    # Check claude commands (now at output_root/commands/, no .claude/ prefix)
+    assert (output_root / "commands" / "test_workflow_1.md").exists()
+    assert (output_root / "commands" / "test_workflow_2.md").exists()
+
+    # Check antigravity workflows (now at output_root/gemini/workflows/)
+    assert (output_root / "gemini" / "workflows" / "test_workflow_1.md").exists()
+    assert (output_root / "gemini" / "workflows" / "test_workflow_2.md").exists()
+
     # Verify content was injected
-    content1 = (target_root / ".claude" / "commands" / "test_workflow_1.md").read_text(encoding="utf-8")
+    content1 = (output_root / "commands" / "test_workflow_1.md").read_text(encoding="utf-8")
     assert "docs/" in content1
 
 def test_build_workflows_custom_platforms(target_root, mock_templates_dir):
@@ -64,19 +66,20 @@ def test_build_workflows_custom_platforms(target_root, mock_templates_dir):
             "cline": False
         }
     }
-    
-    written = build_workflows(target_root, config, dry_run=False, force=True)
-    
+
+    output_root = target_root / ".leafcutter"
+    written = build_workflows(output_root, config, dry_run=False, force=True)
+
     # antigravity and cursor are True -> 4 files
     assert written == 4
-    
-    assert not (target_root / ".claude").exists()
-    
+
+    assert not (output_root / "commands").exists()
+
     # Check antigravity workflows
-    assert (target_root / ".gemini" / "workflows" / "test_workflow_1.md").exists()
-    
+    assert (output_root / "gemini" / "workflows" / "test_workflow_1.md").exists()
+
     # Check cursor rules
-    assert (target_root / ".cursor" / "rules" / "test_workflow_1.md").exists()
+    assert (output_root / "cursor" / "rules" / "test_workflow_1.md").exists()
 
 def test_build_workflows_missing_templates_dir(target_root, tmp_path, monkeypatch):
     empty_templates = tmp_path / "empty"
@@ -87,12 +90,13 @@ def test_build_workflows_missing_templates_dir(target_root, tmp_path, monkeypatc
 
 def test_build_workflows_dry_run(target_root, mock_templates_dir):
     config = {}
-    
-    written = build_workflows(target_root, config, dry_run=True, force=True)
-    
+
+    output_root = target_root / ".leafcutter"
+    written = build_workflows(output_root, config, dry_run=True, force=True)
+
     # Should say it would write 4 files
     assert written == 4
-    
+
     # But files shouldn't exist
-    assert not (target_root / ".claude").exists()
-    assert not (target_root / ".gemini").exists()
+    assert not (output_root / "commands").exists()
+    assert not (output_root / "gemini").exists()
