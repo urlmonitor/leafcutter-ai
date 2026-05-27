@@ -59,6 +59,12 @@ from build_roadmap_phase import build_roadmap
 from build_placeholder_detection import scan_for_placeholders, format_placeholder_report
 from build_referential_integrity import check_referential_integrity, format_integrity_report
 from build_config_scaffolds import build_config_scaffolds
+from build_halt_guard import (
+    check_halt_guard,
+    format_migration_notice,
+    write_lock_file,
+    _resolve_package_sha,
+)
 # Re-export for backward compatibility with tests that access via _build.*
 from template_compiler import (  # noqa: F401
     parse_frontmatter,
@@ -324,6 +330,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="Overwrite existing files (default behaviour; accepted as a no-op alias).")
     parser.add_argument("--no-overwrite", action="store_true",
                         help="Skip files that already exist (restores legacy skip-existing behaviour).")
+    parser.add_argument("--force-breaking", action="store_true",
+                        help="Proceed despite breaking changes since last build (acknowledge migration steps).")
     parser.add_argument("--no-shims", action="store_true",
                         help="Skip the install_shims step at the end.")
     parser.add_argument("--update-diagrams", action="store_true",
@@ -352,6 +360,19 @@ def main(argv: list[str] | None = None) -> int:
     if args.validate_only:
         print("Config validation complete (no files written).")
         return 0
+
+    # Halt-guard: check for breaking changes since consumer's last build
+    changelogs_dir = package_root / "changelogs"
+    halt_result = check_halt_guard(target_root, package_root, changelogs_dir)
+    if halt_result.should_halt:
+        notice = format_migration_notice(halt_result)
+        print(notice, file=sys.stderr)
+        if args.dry_run:
+            print("\n  [DRY-RUN] Would halt here — continuing for dry-run inspection.")
+        elif not args.force_breaking:
+            return 1
+        else:
+            print("\n  [WARNING] --force-breaking: proceeding despite breaking changes.\n")
 
     if args.update_diagrams:
         _update_diagrams(package_root)
@@ -396,6 +417,12 @@ def main(argv: list[str] | None = None) -> int:
         target_root=target_root,
         config=config,
     )
+
+    # Write .leafcutter.lock so the halt-guard knows the build baseline
+    if not args.dry_run:
+        pkg_sha = _resolve_package_sha(package_root)
+        if pkg_sha:
+            write_lock_file(target_root, pkg_sha)
 
     if not args.dry_run and not args.no_shims:
         _install_shims(target_root)
@@ -488,4 +515,10 @@ if __name__ == "__main__":
 # - 2026-05-18 12:30 [EPIC-PortableInstallHardening/T06]: Imported build_claude_settings from build_claude_settings.py and added ("Claude settings", build_claude_settings) entry to _run_phases() after ("Skills", build_skills). (#EPIC-PortableInstallHardening/T06)
 # - 2026-05-22 [python-coder/EPIC-AntigravitySupport/09]: Imported and registered build_antigravity_instructions phase in _run_phases.
 # - 2026-05-22 [python-coder/Ticket-10]: Imported and registered build_sync_platforms phase in _run_phases.
+# - 2026-05-26 [python-coder/EPIC-LeafcutterVersioning/04]: (#EPIC-LeafcutterVersioning/04)
+#   Added halt-guard for breaking changes. Imports check_halt_guard and
+#   format_migration_notice from build_halt_guard.py. Runs after config
+#   validation but before phase dispatch. Writes .leafcutter.lock (JSON
+#   with package SHA) after successful builds. --force-breaking flag
+#   overrides the halt; --dry-run prints notice but continues.
 # ====================================================================

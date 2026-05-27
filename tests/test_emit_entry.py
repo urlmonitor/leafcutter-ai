@@ -386,5 +386,57 @@ class TestEmitEntryOptionalArrays(unittest.TestCase):
             self.assertNotIn("pr:", content)
 
 
+class TestEmitEntryBreakingField(unittest.TestCase):
+    """Validate breaking + migration_steps cross-validation."""
+
+    def test_breaking_true_with_migration_steps(self):
+        """breaking=true with non-empty migration_steps writes successfully."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            payload = _base_payload(
+                breaking=True,
+                migration_steps=["Run alembic upgrade head"],
+            )
+            written = emit_entry(payload, tmpdir)
+            content = written.read_text(encoding="utf-8")
+            self.assertIn("breaking: true", content)
+            self.assertIn("migration_steps:", content)
+            self.assertIn("  - Run alembic upgrade head", content)
+
+    def test_breaking_true_empty_migration_steps_raises(self):
+        """breaking=true with empty migration_steps raises ValueError."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            payload = _base_payload(breaking=True, migration_steps=[])
+            with self.assertRaises(ValueError) as ctx:
+                emit_entry(payload, tmpdir)
+            self.assertIn("migration_steps", str(ctx.exception))
+
+    def test_breaking_true_missing_migration_steps_raises(self):
+        """breaking=true with no migration_steps key raises ValueError."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            payload = _base_payload(breaking=True)
+            with self.assertRaises(ValueError) as ctx:
+                emit_entry(payload, tmpdir)
+            self.assertIn("migration_steps", str(ctx.exception))
+
+    def test_breaking_false_no_migration_steps_ok(self):
+        """breaking=false without migration_steps writes normally."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            payload = _base_payload(breaking=False)
+            written = emit_entry(payload, tmpdir)
+            self.assertTrue(written.exists())
+            content = written.read_text(encoding="utf-8")
+            self.assertIn("breaking: false", content)
+
+    def test_no_breaking_field_at_all_ok(self):
+        """Payload with no breaking field writes normally (defaults to false)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            payload = _base_payload()
+            self.assertNotIn("breaking", payload)
+            written = emit_entry(payload, tmpdir)
+            self.assertTrue(written.exists())
+            content = written.read_text(encoding="utf-8")
+            self.assertNotIn("breaking:", content)
+
+
 if __name__ == "__main__":
     unittest.main()
