@@ -1,7 +1,7 @@
 ---
 title: "EPIC: LeafcutterVersioning — SemVer, Breaking-Change Discipline, and Release Automation for leafcutter"
 type: epic
-status: todo
+status: done
 components:
   - documentation_system
   - infrastructure
