@@ -112,15 +112,65 @@ lines (enforced by the `check-file-size` pre-commit hook). Plan splits upfront u
 the module-split pattern (`build_phases.py` / `build_helpers.py` precedent). Do not
 write a single file beyond this limit and then split — the hook will reject the commit.
 
+## TDD Red-Baseline Success Gate (mandatory when test-writer ran before you)
+
+**Step 0 (pre-flight): Read the red_baseline from test-writer's sign-off comment.**
+
+Before writing any production code, search the ticket's `## Comments` section for
+the most recent `test-writer (status: ok)` entry. Locate the `red_baseline:` YAML block
+inside that comment. This block lists every test that was red when test-writer handed off.
+
+```
+red_baseline:
+  - test_name: test_foo_raises_on_empty_input
+    file: unit_tests/my_module/test_foo.py
+    error: "AssertionError: expected ValueError, got None"
+  - ...
+```
+
+**Your success criterion is: every test listed in `red_baseline` MUST be green,
+AND no test that was passing before test-writer ran may now be red.**
+
+If `red_baseline` is absent (test-writer did not run or was skipped for docs-only
+reason), proceed with the standard implementation sequence and run all touched tests.
+
+### Contract-shrinking prohibition (honor-system layer)
+
+You MUST NOT delete, comment out, add `pytest.skip`, `pytest.mark.xfail`,
+`@unittest.skip`, `@unittest.expectedFailure`, `if False:` wrappers, or any
+equivalent skip/xfail mechanism to any test in order to make the suite pass.
+
+**Weakening the test suite to achieve a green run is a critical violation.**
+The pre-commit hook (`check_contract_shrinking.py`) will block the commit if
+weakening is detected. The ticket-supervisor will log a contract-shrinking warning.
+
+If a test in `red_baseline` cannot be made to pass with correct implementation:
+1. Do NOT delete or skip the test.
+2. Append a `(status: blocker)` comment describing the conflict in detail.
+3. Halt — do not proceed to sign off. Let the ticket-supervisor and user decide.
+
+### Sign-off: document which red_baseline tests you turned green
+
+Your sign-off comment SHOULD document which tests moved from red to green:
+```
+### YYYY-MM-DD HH:MM — python-coder (status: ok)
+red_baseline_results:
+  - test_name: test_foo_raises_on_empty_input
+    result: green
+  - test_name: test_bar_returns_correct_shape
+    result: green
+```
+
 ## Implementation Sequence
 
-1. Read pre-flight docs (see Pre-Flight Reads above).
-2. Delegate any cross-file lookups to `research-agent`.
-3. Invoke `collector-enforcer` if paths are under `collector/`.
-4. Write or edit the Python files.
-5. Run the unit tests for the touched module (see Testing Rules below).
-6. Run pre-completion checks (see below).
-7. Emit the response payload (see below).
+1. **Read red_baseline** from test-writer's sign-off comment (see TDD gate above).
+2. Read pre-flight docs (see Pre-Flight Reads above).
+3. Delegate any cross-file lookups to `research-agent`.
+4. Invoke `collector-enforcer` if paths are under `collector/`.
+5. Write or edit the Python files to make the red_baseline tests green.
+6. Run the unit tests for the touched module (see Testing Rules below) — confirm red_baseline is green.
+7. Run pre-completion checks (see below).
+8. Emit the response payload (see below).
 
 ## Testing Rules
 
