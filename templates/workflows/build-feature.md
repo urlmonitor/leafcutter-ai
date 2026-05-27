@@ -2,6 +2,31 @@
 description: "User-facing entry point to the supervisor system. Resolve an epic name, an epic folder path, or a single standalone-ticket file path under tickets/, then dispatch the right supervisor (epic-supervisor for epics, build-single-ticket sub-skill for standalone tickets) to drive it to completion."
 ---
 
+> **STOP — PROHIBITION ON INLINE IMPLEMENTATION WORK**
+>
+> This command MUST dispatch a supervisor agent. It MUST NOT perform any
+> implementation work inline. If you find yourself doing any of the following
+> WITHOUT first dispatching `epic-supervisor` or the `build-single-ticket`
+> sub-skill, **stop immediately** and dispatch the correct supervisor first:
+>
+> - Reading ticket files to plan implementation
+> - Writing or editing source code, configuration, or documentation files
+> - Running tests or commit commands
+> - Searching the codebase for implementation details
+>
+> The `inline_work_guard.py` PreToolUse hook enforces this mechanically:
+> it blocks Edit/Write tool calls while `.build-feature.lock` exists (written
+> at the start of this command). The lock is deleted by the supervisor on
+> startup. Any Edit/Write that fires before deletion means a supervisor was
+> not dispatched — **dispatch the supervisor now**.
+>
+> **Lock lifecycle:**
+> 1. This command writes `.build-feature.lock` at argument-resolution start.
+> 2. `epic-supervisor` Pre-Flight step 4 deletes it before spawning any ticket-supervisor.
+> 3. `build-single-ticket` Step 1 deletes it before dispatching `ticket-supervisor`.
+> 4. On all exit paths (success, error, zero-match, multi-match), this command
+>    deletes any remaining lock file so it does not persist across invocations.
+
 # /build-feature — Drive an Epic or Single Ticket to Completion
 
 This is **the** user-facing entry point to the supervisor system shipped
@@ -45,6 +70,47 @@ Examples:
 ```
 
 …and exit non-zero. Do not spawn any supervisor.
+
+## Lock File Protocol
+
+**Write the lock file first, before any argument resolution.** This is the
+sentinel that `inline_work_guard.py` checks to block inline Edit/Write calls:
+
+```bash
+# Detect repo root (walk up from $PWD until .git is found)
+REPO_ROOT="$PWD"
+while [ ! -d "$REPO_ROOT/.git" ] && [ "$REPO_ROOT" != "/" ]; do
+  REPO_ROOT="$(dirname "$REPO_ROOT")"
+done
+LOCK_FILE="$REPO_ROOT/.build-feature.lock"
+
+# Write the lock (overwrite any stale lock from a crashed prior run)
+printf '%s %s\n' "$(date -Iseconds)" "$$" > "$LOCK_FILE"
+```
+
+**Clean up the lock on every exit path** — success, zero-match, multi-match,
+and error. The supervisors delete it when they start; this cleanup handles the
+case where `/build-feature` exits before a supervisor is dispatched:
+
+```bash
+# Run on every exit path (trap or explicit call)
+rm -f "$LOCK_FILE"
+```
+
+**Stale lock detection.** On startup, if `$LOCK_FILE` already exists, check
+its age before overwriting:
+
+```bash
+if [ -f "$LOCK_FILE" ]; then
+  LOCK_AGE=$(( $(date +%s) - $(stat -c %Y "$LOCK_FILE" 2>/dev/null || echo 0) ))
+  if [ "$LOCK_AGE" -lt 300 ]; then
+    echo "WARNING: .build-feature.lock is only ${LOCK_AGE}s old — a previous /build-feature may still be running."
+    echo "If this is a stale lock, delete it manually: rm '$LOCK_FILE'"
+  fi
+fi
+```
+
+Age check is advisory (warning only). Proceed regardless.
 
 ## Resolution rule
 

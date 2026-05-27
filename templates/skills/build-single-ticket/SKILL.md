@@ -38,6 +38,21 @@ If `$ARGUMENTS` is empty, print usage and exit non-zero. Do not spawn
    business-analyst + refinement populate the map before driving."`
    Exit non-zero. (This guards against the `feedback_use_create_ticket_agent.md`
    trap codified in user-memory.)
+6. **Delete `.build-feature.lock` (inline-work-guard handoff).** Before
+   dispatching `ticket-supervisor`, remove the sentinel lock written by
+   `/build-feature` so phase agents are not blocked by `inline_work_guard.py`:
+
+   ```bash
+   REPO_ROOT="$PWD"
+   while [ ! -d "$REPO_ROOT/.git" ] && [ "$REPO_ROOT" != "/" ]; do
+     REPO_ROOT="$(dirname "$REPO_ROOT")"
+   done
+   rm -f "$REPO_ROOT/.build-feature.lock"
+   ```
+
+   This deletion signals that a supervisor has taken ownership of the drive.
+   Phase agents that subsequently call Edit/Write will find no lock and be
+   allowed through. If the lock file does not exist, the `rm -f` is a no-op.
 
 ## Step 2 — Set up the worktree and promote the ticket (mandatory, blocking)
 

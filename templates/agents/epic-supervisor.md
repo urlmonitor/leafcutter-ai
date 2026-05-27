@@ -92,6 +92,19 @@ On every invocation, before reading any ticket or spawning any
    repo. **Do not auto-spawn `worktree-agent` to recover** — silent
    recovery would mask invocation bugs in the caller. Exit.
 
+   **Delete `.build-feature.lock` (inline-work-guard handoff).** After
+   all block conditions pass, remove the sentinel lock written by
+   `/build-feature` so subsequent ticket-supervisor spawns and phase
+   agents are not blocked by `inline_work_guard.py`:
+
+   ```bash
+   rm -f "$(git rev-parse --show-toplevel)/.build-feature.lock"
+   ```
+
+   If the lock file does not exist (e.g. epic-supervisor was invoked
+   directly without going through `/build-feature`), the `rm -f` is a
+   no-op. This deletion signals that a supervisor has taken ownership.
+
 5. **Master_Plan completeness check (two-level gating).**
 
    After the worktree preflight passes, read `Master_Plan.md` and apply
