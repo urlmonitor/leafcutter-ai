@@ -1,7 +1,7 @@
 ---
 title: "EPIC: Consolidated Output Root (.leafcutter/)"
 type: epic
-status: todo
+status: done
 components:
   - build_pipeline
   - config_loader
