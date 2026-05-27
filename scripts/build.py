@@ -343,6 +343,39 @@ _PRE_CONSOLIDATION_PATHS = [
 ]
 
 
+def _cleanup_stale_paths(target_root: Path, output_root: Path, dry_run: bool) -> int:
+    """Auto-remove stale pre-consolidation files that have moved into .leafcutter/.
+
+    Only removes paths that are real directories/files (not symlinks pointing
+    into the output root — those are shims we created).
+
+    Returns count of paths removed.
+    """
+    import shutil
+
+    removed = 0
+    for rel_path in _PRE_CONSOLIDATION_PATHS:
+        full = target_root / rel_path
+        if not full.exists() and not full.is_symlink():
+            continue
+        if full.is_symlink():
+            link_target = full.resolve()
+            if str(link_target).startswith(str(output_root.resolve())):
+                continue
+        if dry_run:
+            kind = "directory" if full.is_dir() else "file"
+            print(f"  [DRY-RUN] would remove stale {kind}: {rel_path}")
+            removed += 1
+            continue
+        if full.is_symlink() or full.is_file():
+            full.unlink()
+        elif full.is_dir():
+            shutil.rmtree(full)
+        print(f"  removed stale: {rel_path}")
+        removed += 1
+    return removed
+
+
 def _run_migration_report(target_root: Path, output_root: Path) -> int:
     """Scan for stale pre-consolidation files and print a migration report.
 
@@ -522,6 +555,12 @@ def main(argv: list[str] | None = None) -> int:
         pkg_sha = _resolve_package_sha(package_root)
         if pkg_sha:
             write_lock_file(target_root, pkg_sha)
+
+    # Auto-clean stale pre-consolidation files before installing shims
+    print("\nStale file cleanup:")
+    stale_count = _cleanup_stale_paths(target_root, output_root, args.dry_run)
+    if stale_count == 0:
+        print("  (no stale files found)")
 
     if not args.no_shims:
         print("\nShim install:")

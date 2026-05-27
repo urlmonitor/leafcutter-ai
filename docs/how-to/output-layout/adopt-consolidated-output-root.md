@@ -4,13 +4,25 @@
 
 - leafcutter-ai is cloned into your project (e.g. `my-project/leafcutter-ai/`)
 - `.claude/skills_config.json` exists (run `/onboard` if not)
-- You have previously run `build.py` with the old scattered-output layout
+
+## What happens on upgrade
+
+When you pull the latest leafcutter-ai and run `build.py`:
+
+1. All build outputs are written into `.leafcutter/`
+2. Old stale files at `scripts/commit_guardian/`, `.claude/agents/`, etc. are
+   **automatically removed**
+3. Symlinks are created at `.claude/agents/`, `.claude/skills/`, `.gemini/`, etc.
+   pointing into `.leafcutter/`
+4. Pre-commit hook entries reference `.leafcutter/scripts/commit_guardian/...`
+
+The upgrade is seamless — just run `build.py` and everything migrates.
 
 ## Steps
 
-### 1. Update skills_config.json
+### 1. Update skills_config.json (optional)
 
-Add the new fields to your `.claude/skills_config.json`:
+The defaults work out of the box. Only add these if you want non-default values:
 
 ```json
 {
@@ -19,64 +31,46 @@ Add the new fields to your `.claude/skills_config.json`:
 }
 ```
 
-- `output_root`: folder name where build.py writes all artifacts (default: `.leafcutter`)
-- `shim_strategy`: `"auto"` (symlink with copy fallback), `"symlink"`, or `"copy"`
-
-### 2. Run the migration report
-
-```bash
-python leafcutter-ai/scripts/build.py --migrate
-```
-
-This scans for stale files at old locations (`.claude/agents/`, `scripts/commit_guardian/`, etc.) and prints a removal guide. **No files are deleted automatically.**
-
-### 3. Remove stale files
-
-Follow the removal commands printed by `--migrate`. Example:
-
-```bash
-rm -rf .claude/agents/
-rm -rf .claude/skills/
-rm -rf .claude/commands/
-rm -rf .claude/hooks/
-rm -rf scripts/commit_guardian/
-rm -rf scripts/doc_compliance/
-rm -rf scripts/feedback/
-rm .pre-commit-config.yaml
-```
-
-Only remove paths listed as `STALE` in the report.
-
-### 4. Rebuild
+### 2. Run build.py
 
 ```bash
 python leafcutter-ai/scripts/build.py
 ```
 
+This will:
+- Write all artifacts to `.leafcutter/`
+- Auto-remove stale files at old locations (`scripts/commit_guardian/`, etc.)
+- Create symlinks at `.claude/agents/`, `.gemini/`, `.pre-commit-config.yaml`
+
 After this run:
-- All build artifacts live in `.leafcutter/`
-- Shims at `.claude/agents/`, `.claude/skills/`, etc. point into `.leafcutter/`
-- Claude Code, pre-commit, and Gemini continue working via the shims
+- `.leafcutter/` contains all leafcutter artifacts
+- Symlinks at `.claude/agents/`, `.gemini/`, `.pre-commit-config.yaml` point into `.leafcutter/`
+- `scripts/` and `config/` are clean (no leafcutter files)
+- Pre-commit hooks still work (entry paths updated to `.leafcutter/scripts/...`)
 
-### 5. Update .gitignore
-
-If you want to treat `.leafcutter/` as a build artifact (recommended):
+### 3. Update .gitignore
 
 ```gitignore
 # leafcutter build output — regenerate with: python leafcutter-ai/scripts/build.py
 .leafcutter/
 ```
 
-### 6. Verify
+### 4. Verify
 
-- Run Claude Code and confirm agents load (try `/help` or invoke any agent)
-- Run `git status` — only `.leafcutter/` should show (or nothing if git-ignored)
-- Run pre-commit hooks to confirm they still execute
+- Run Claude Code — agents should load normally
+- Run `git commit --allow-empty -m "test"` — pre-commit hooks should fire
+- Run `git status` — no leafcutter noise outside `.leafcutter/`
 
 ## Troubleshooting
 
-**Symlink creation fails on Windows:**
-Set `"shim_strategy": "copy"` in your skills_config.json, or enable Developer Mode in Windows Settings > Update & Security > For developers.
+**Symlinks fail on Windows:**
+Set `"shim_strategy": "copy"` in skills_config.json, or enable Developer Mode.
 
-**Claude Code can't find agents after migration:**
-Verify `.claude/agents/` exists (as a symlink or directory). Run `ls -la .claude/agents/` to confirm it points into `.leafcutter/agents/`.
+**Pre-commit hooks fail with "file not found":**
+The hook entries now reference `.leafcutter/scripts/commit_guardian/...`. If you
+see the old paths in `.pre-commit-config.yaml`, delete it and rebuild — the shim
+will recreate it with the correct paths.
+
+**Claude Code can't find agents:**
+Check that `.claude/agents/` exists as a symlink: `ls -la .claude/agents/`.
+If not, run `build.py` again — the shim step recreates it.

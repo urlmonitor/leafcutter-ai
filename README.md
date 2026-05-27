@@ -10,13 +10,31 @@ file, run `build.py`, and get the complete system generated.
 
 ## What You Get
 
-- **Agent prompts** (`.claude/agents/`): supervisor stack, phase agents, utility agents
-- **Skills** (`.claude/skills/`): signoff, building-epics, create-ticket, feature, precommit-autofix, and more
-- **Workflows** (`.claude/commands/`): `/build-feature`, `/commit`, `/pull-request`, etc.
-- **Rules** (`.agents/rules/`): documentation, debug-scripts, git-commits
-- **Pre-commit hooks** (`scripts/commit_guardian/`): quality gates on every commit
-- **Doc compliance** (`scripts/doc_compliance/`): architecture doc freshness enforcement
-- **Ticket lifecycle** (`tickets/`): inbox, todo, done, rejected folders with READMEs
+All build outputs live in a single `.leafcutter/` directory — nothing pollutes
+your project's `scripts/`, `config/`, or other folders.
+
+```
+.leafcutter/
+├── agents/                    Agent definitions (shimmed to .claude/agents/)
+├── skills/                    Skill definitions (shimmed to .claude/skills/)
+├── commands/                  Slash commands (shimmed to .claude/commands/)
+├── hooks/                     Hook scripts (shimmed to .claude/hooks/)
+├── settings.json              Claude settings (shimmed to .claude/settings.json)
+├── gemini/                    Gemini instructions (shimmed to .gemini/)
+├── pre-commit-config.yaml     Hook config (shimmed to .pre-commit-config.yaml)
+├── scripts/
+│   ├── commit_guardian/       Pre-commit hook implementations
+│   ├── doc_compliance/        Doc compliance checks
+│   ├── feedback/              Feedback pipeline
+│   └── sync_platforms/        Multi-platform sync
+├── config/                    Internal configs
+└── rules/                     Agent rules
+```
+
+**Shimmed** means a symlink is created at the canonical path (e.g. `.claude/agents/`)
+pointing into `.leafcutter/`, so Claude Code, Gemini, and pre-commit find their
+files where they expect them. On Windows without Developer Mode, file copies
+are used instead of symlinks.
 
 ## Purpose
 
@@ -70,23 +88,34 @@ leafcutter-ai adapts to the environment it runs in. The core workflows are built
 ## Quick Start
 
 ```bash
-# 1. Copy this directory into your project
-cp -r leafcutter/ your-project/
+# 1. Clone into your project
+git clone <leafcutter-ai-repo> your-project/leafcutter-ai/
 
 # 2. Create your config file
-cp leafcutter/config/skills_config.default.json your-project/.claude/skills_config.json
+cp leafcutter-ai/config/skills_config.default.json your-project/.claude/skills_config.json
 # Edit .claude/skills_config.json — update paths, test commands, branch name
 
 # 3. Run build
 cd your-project
-python leafcutter/scripts/build.py --target-dir .
+python leafcutter-ai/scripts/build.py --target-dir .
+# → writes everything to .leafcutter/, creates shims at .claude/, .gemini/, etc.
 
 # 4. (Optional) Validate config only
-python leafcutter/scripts/build.py --validate-only
+python leafcutter-ai/scripts/build.py --validate-only
 
 # 5. (Optional) Dry run
-python leafcutter/scripts/build.py --dry-run
+python leafcutter-ai/scripts/build.py --dry-run
+
+# 6. (Recommended) Add to .gitignore
+echo ".leafcutter/" >> .gitignore
 ```
+
+### Upgrading from pre-.leafcutter/ layout
+
+If you already have leafcutter installed with the old scattered layout, just
+pull the latest and run `build.py`. It auto-removes stale files at old locations
+(`scripts/commit_guardian/`, `.claude/agents/`, etc.) and writes everything
+into `.leafcutter/`.
 
 ## NEW_PROJECT_SETUP — Glossary Bootstrap
 
