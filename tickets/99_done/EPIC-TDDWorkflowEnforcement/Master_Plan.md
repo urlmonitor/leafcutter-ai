@@ -1,7 +1,7 @@
 ---
 title: "EPIC: TDD Workflow Enforcement"
 type: epic
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-26
@@ -12,6 +12,8 @@ priority: high
 # EPIC: TDD Workflow Enforcement
 
 Flip the leafcutter build pipeline to true Test-Driven Development: the `test-writer` agent runs **before** coder agents and writes failing tests from the ticket's `## Test Requirements` block; coder agents (`python-coder`, `sql-coder`) receive a new success gate of making those failing tests pass without weakening the test suite; a three-layer contract-shrinking guard (pre-commit hook + supervisor check + honor-system docs) prevents test deletion/skip/xfail; and supervisor phase ordering, agent definitions, skills, and the ticket template are all updated to reflect the new canonical flow.
+
+## Key Design Decisions
 
 Scope decisions locked before authoring:
 - **Retroactivity**: new tickets only. In-flight tickets (00_inbox/01_todo) continue under the old test-after flow.

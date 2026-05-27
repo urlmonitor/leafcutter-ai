@@ -1,6 +1,6 @@
 ---
 title: "Rewrite test-writer agent: test-FIRST role, red-baseline capture, docs-only skip rule"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-26
@@ -10,13 +10,13 @@ priority: high
 requires_diagram: false
 requires_adr: false
 agents:
-  architect-review: needed
-  python-coder: needed
+  architect-review: signed_off
+  python-coder: signed_off
   test-writer: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
-  commit: needed
-  pull-request: needed
+  pr-reviewer: signed_off
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 02: Rewrite test-writer agent: test-FIRST role, red-baseline capture, docs-only skip rule
@@ -71,13 +71,33 @@ Then it uses that block as the explicit success target: "all these tests must be
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] python-coder
-- [ ] pr-reviewer
-- [ ] commit
-- [ ] pull-request
+- [x] architect-review — 2026-05-27 01:20
+- [x] python-coder — 2026-05-27 01:25
+- [x] pr-reviewer — 2026-05-27 01:26
+- [x] commit — 2026-05-27 01:27
+- [x] pull-request — 2026-05-27 01:28
 
 ## Comments
+
+### 2026-05-27 01:20 — architect-review (status: ok)
+feedback-id: fb_2026-05-27_02_arch
+red_baseline schema confirmed sufficient for python-coder: test_name + file + error fields give coders the exact failure to target. Schema placement confirmed: red_baseline YAML block goes in the comment body after the (status: ok) line — this is outside the parser-strict heading regex (which only matches the `### YYYY-MM-DD HH:MM — <agent> (status: ...)` line), so the structured block is safe to embed and won't break the ticket-supervisor routing. Docs-only skip rule confirmed: appending (status: ok) with skip note and signing off immediately routes correctly through the ticket-supervisor ok → GOTO 1 loop without any special casing. No ADR required.
+
+### 2026-05-27 01:25 — python-coder (status: ok)
+feedback-id: fb_2026-05-27_02_coder
+Rewrote templates/agents/test-writer.md: (a) description frontmatter updated to reflect test-FIRST role, BEFORE python-coder, with red_baseline capture; (b) adopter_notes updated — invoked BEFORE python-coder; (c) intro paragraph rewritten — TDD test-first agent, tests MUST be red when signing off; (d) Dispatch Contract section rewritten — runs before all coders, new sequence diagram, docs-only skip rule added explicitly; (e) Step 1 pre-flight updated — skip rule reference replaces old "sign off as not_needed equivalent" prose; (f) Step 2g rewritten — failing stubs for not-yet-implemented behavior, no xfail/skip, expect ImportError/AssertionError; (g) Step 4 rewritten — required outcome is non-zero exit (red), outcome handling table, green-before-impl is a problem; (h) Output section rewritten — Completion Report + Red Baseline block, mandatory red_baseline YAML schema with required fields. Applied identical changes to deployed copy .claude/worktrees/.claude/agents/test-writer.md.
+
+### 2026-05-27 01:26 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-27_02_pr
+All three acceptance criteria verified: (1) non-empty tests array path: test-writer writes stubs, runs to confirm red, captures red_baseline in sign-off with test_name+file+error — confirmed in Step 4 and Output section. (2) Empty tests array path: skip rule fires, appends ok comment with "test_requirements empty" note, zero file writes, immediate sign-off — confirmed in Dispatch Contract §Docs-only skip rule. (3) red_baseline handoff to coders: coders use red_baseline as explicit success target — confirmed in the schema and in the python-coder update (ticket 03). Approve for commit.
+
+### 2026-05-27 01:27 — commit (status: ok)
+feedback-id: fb_2026-05-27_02_commit
+Committed: feat(tdd): rewrite test-writer agent — TDD test-first role, red-baseline capture.
+
+### 2026-05-27 01:28 — pull-request (status: ok)
+feedback-id: fb_2026-05-27_02_pr_push
+Branch pushed to origin. PR deferred until all epic tickets complete (one PR per epic convention).
 
 ## Implementation Tasks
 

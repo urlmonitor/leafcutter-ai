@@ -280,7 +280,9 @@ every ticket-supervisor that ran until a cleanup commit removed them.
     LET next_agent = first(pending) in natural order
                      (declaration order in the YAML; ties broken
                       by canonical phase ordering — architect-review,
-                      coder, test-runner, pr-reviewer, commit, pull-request,
+                      test-writer (priority 5, before coders),
+                      python-coder (priority 6), sql-coder (priority 7),
+                      test-runner, pr-reviewer, commit, pull-request,
                       status-checker, documentation-expert).
 
     # requires_adr pre-flight override
@@ -294,6 +296,21 @@ every ticket-supervisor that ran until a cleanup commit removed them.
     # Once adr-author is signed_off, the override no longer fires and
     # natural order resumes.
 
+    # docs-only / config-only test-writer skip rule
+    IF next_agent == "test-writer":
+      READ ticket body. Locate the `## Test Requirements` block (if present).
+      Parse the `tests:` YAML array inside that block.
+      IF tests array is EMPTY (`tests: []`) OR the `## Test Requirements`
+         block is absent entirely:
+        → SKIP test-writer: do NOT spawn it.
+           Mark agents["test-writer"] = "signed_off" in frontmatter.
+           Append comment to `## Comments`:
+             ### <today> <time> — ticket-supervisor (status: ok)
+             test_requirements empty — test-writer phase skipped (docs-only or config-only ticket)
+           GOTO top of loop (pick next pending agent from updated map).
+    # If tests: [] or block absent, proceed directly to next needed agent.
+    # Otherwise (tests array has entries), dispatch test-writer normally.
+
 2.  SPAWN next_agent with input { ticket_path: <absolute path> }.
     The agent invokes the `signoff` skill as its final action;
     on return, the ticket file has a new `## Comments` heading
@@ -306,6 +323,27 @@ every ticket-supervisor that ran until a cleanup commit removed them.
       --ticket "<ticket_path>" --phase "<next_agent>" \
       --log debugging/logs/agent_telemetry.jsonl || true
     ```
+
+    # post-coder contract-shrinking check (supervisor-side warn, not block)
+    IF next_agent IN {"python-coder", "sql-coder"}:
+      RUN: git diff --name-only HEAD~1..HEAD -- "*.py" | grep -E "test_|_test\.py$"
+      LET deleted_tests = files listed by `git diff --name-only --diff-filter=D HEAD~1..HEAD -- "test_*.py" "*_test.py"`
+      LET diff_lines = output of `git diff HEAD~1..HEAD`
+      LET weakening_found = (
+            any(deleted_tests)
+            OR diff_lines contains r"^\+.*pytest\.skip"
+            OR diff_lines contains r"^\+.*pytest\.mark\.xfail"
+            OR diff_lines contains r"^\+.*@unittest\.skip"
+            OR diff_lines contains r"^\+.*@unittest\.expectedFailure"
+      )
+      IF weakening_found:
+        → append warning comment to `## Comments` (do NOT block, do NOT change agent status):
+          ### <today> <time> — ticket-supervisor (status: ok)
+          contract-shrinking-warning: coder phase completed but potential test weakening detected.
+          Details: <specific files and patterns found, e.g. "test_foo.py deleted; pytest.mark.xfail added in test_bar.py">
+          Pre-commit hook will block if this reaches commit phase.
+    # This is the diagnostic/audit layer. The pre-commit hook (check_contract_shrinking.py)
+    # is the blocking layer. This warn does NOT halt the pipeline or change the sign-off.
 
 3.  RE-READ the ticket. Locate the LAST `## Comments` heading
     (parser-strict regex from signoff §5.4):

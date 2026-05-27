@@ -346,8 +346,8 @@
             "skills_used": [
                 "signoff"
             ],
-            "priority": 8,
-            "priority_rationale": "Receives handoff from coder agents; writes tests after implementation is complete",
+            "priority": 5,
+            "priority_rationale": "Writes failing tests before coders implement; ensures tests exist and are red before any production code is written",
             "requires_ticket_section": true
         },
         {

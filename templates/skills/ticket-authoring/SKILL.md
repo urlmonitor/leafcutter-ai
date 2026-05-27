@@ -101,8 +101,15 @@ files_touched:                     # optional — relative paths of files this t
   - live_trader/main.py            #   used by epic-supervisor for parallelism gating
   - models/candle_context.py
 agents:                            # optional — set by business-analyst / refinement;
-  python-coder: needed             #   status ∈ {not_needed | needed | signed_off | failed}
+  architect-review: needed         #   status ∈ {not_needed | needed | signed_off | failed}
+  test-writer: needed              #   priority 5 — writes failing tests BEFORE coders;
+  python-coder: needed             #   set test-writer: not_needed for docs-only / config-only tickets
+  sql-coder: not_needed            #   (ticket-supervisor will also auto-skip when tests: [] or absent)
+  test-runner: not_needed
+  documentation-expert: not_needed
   pr-reviewer: needed
+  commit: needed
+  pull-request: needed
 requires_documentation:            # optional — list of doc types from doc_types.json;
   - how_to                         #   ticket-wiring flips writer agents to needed
 ---
@@ -135,7 +142,7 @@ depends_on: []                     # epics are top-level
 | `priority` | optional | `critical` / `high` / `medium` / `low` |
 | `phase`, `tags`, `last_updated` | optional | Free-form helpers |
 | `files_touched` | optional | List of relative paths this ticket edits; used by `epic-supervisor` to detect file-touch overlap when scheduling parallel tickets. Populated by `business-analyst` / `refinement`; omit until those agents run. |
-| `agents` | optional | Map of `<agent-name>: <status>` where status ∈ `not_needed \| needed \| signed_off \| failed`. Populated by `business-analyst` / `refinement`. The hook validates every value against the enum; invalid values block the write. Valid agent names come from `leafcutter/config/agent_registry.json` (entries with `is_ticket_phase: true`); fall back to the hardcoded table in `.claude/agents/business-analyst.md` §"Default agents map by ticket archetype" when the registry is absent. See `.claude/skills/signoff/SKILL.md` for the full status lifecycle. |
+| `agents` | optional | Map of `<agent-name>: <status>` where status ∈ `not_needed \| needed \| signed_off \| failed`. Populated by `business-analyst` / `refinement`. The hook validates every value against the enum; invalid values block the write. Valid agent names come from `leafcutter/config/agent_registry.json` (entries with `is_ticket_phase: true`); fall back to the hardcoded table in `.claude/agents/business-analyst.md` §"Default agents map by ticket archetype" when the registry is absent. See `.claude/skills/signoff/SKILL.md` for the full status lifecycle. **Canonical ordering**: architect-review (4) → test-writer (5) → python-coder (6) → sql-coder (7) → test-runner (9) → documentation-expert (10) → pr-reviewer (11) → commit (12) → pull-request (13). Set `test-writer: not_needed` when `## Test Requirements` → `tests: []` (docs-only / config-only tickets). The `ticket-supervisor` will also auto-skip based on the `tests:` array, but setting `not_needed` in the map avoids the unnecessary spawn check. |
 | `requires_diagram` | **required** | Tri-state: `true` (diagram needed), `false` (considered, not needed), `null` (not applicable — pre-existing coverage). **Absent key is a hook failure** per ADR-026. |
 | `requires_adr` | **required** | Tri-state: `true` (ADR needed), `false` (considered, not needed), `null` (not applicable — pre-existing coverage). **Absent key is a hook failure** per ADR-026. |
 | `requires_documentation` | optional | List of doc type strings that must be produced for this ticket. Valid values come from `leafcutter/config/doc_types.json` (e.g. `[how_to, reference]`). When present, ticket-wiring flips the corresponding writer agents to `needed`. Omit when no doc deliverable is required. |
@@ -186,6 +193,14 @@ Append-only log. Each entry uses a parser-strict heading (three hashes):
 ```
 
 Leave blank when authoring. Phase agents append here as their final action.
+
+## Sign-offs
+- [ ] architect-review
+- [ ] test-writer
+- [ ] python-coder
+- [ ] pr-reviewer
+- [ ] commit
+- [ ] pull-request
 
 ## Implementation Tasks
 - [ ] Concrete step 1

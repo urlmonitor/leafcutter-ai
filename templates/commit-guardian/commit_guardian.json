@@ -635,6 +635,17 @@
                 ],
                 "pass_filenames": false,
                 "_comment": "EPIC-MermaidComplexityGuard/01: Counts structural elements (nodes, edges, participants, subgraphs) in mermaid blocks and warns when thresholds are exceeded. Warn-only by default; set mermaid_complexity.strict to true to block commits."
+            },
+            {
+                "id": "check-contract-shrinking",
+                "name": "Check Contract Shrinking (TDD Guard)",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_contract_shrinking.py",
+                "language": "system",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "EPIC-TDDWorkflowEnforcement/04: Blocks commits when test-weakening changes (test deletion, pytest.skip, pytest.mark.xfail, @unittest.skip, @unittest.expectedFailure) are staged concurrent with production code changes. Exits 0 when only test changes or only production changes are staged. See docs/how-to/writing-a-tdd-ticket.md."
             }
         ]
     },

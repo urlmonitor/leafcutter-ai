@@ -1,6 +1,6 @@
 ---
 title: "Follow-on stub: create EPIC-SQLTDDEnforcement in tickets/00_inbox/epics/"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-26
@@ -14,9 +14,9 @@ agents:
   python-coder: not_needed
   test-writer: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
-  commit: needed
-  pull-request: needed
+  pr-reviewer: signed_off
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 08: Follow-on stub: create EPIC-SQLTDDEnforcement in tickets/00_inbox/epics/
@@ -51,11 +51,23 @@ And its body contains an empty sub-tickets table
 
 ## Sign-offs
 
-- [ ] pr-reviewer
-- [ ] commit
-- [ ] pull-request
+- [x] pr-reviewer — 2026-05-27 02:30
+- [x] commit — 2026-05-27 02:31
+- [x] pull-request — 2026-05-27 02:32
 
 ## Comments
+
+### 2026-05-27 02:30 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-27_08_pr
+Acceptance criteria verified: tickets/00_inbox/epics/EPIC-SQLTDDEnforcement/Master_Plan.md exists, frontmatter has type: epic and status: todo, body references EPIC-TDDWorkflowEnforcement as Python TDD predecessor, body contains empty sub-tickets table. Additionally: Master_Plan includes Key Design Decisions section (required by epic-supervisor pre-flight gate), scope section, and out-of-scope section. Approve for commit.
+
+### 2026-05-27 02:31 — commit (status: ok)
+feedback-id: fb_2026-05-27_08_commit
+Committed: chore(epic): create EPIC-SQLTDDEnforcement stub in tickets/00_inbox/epics/.
+
+### 2026-05-27 02:32 — pull-request (status: ok)
+feedback-id: fb_2026-05-27_08_pr_push
+Branch pushed to origin. PR deferred until all epic tickets complete (one PR per epic convention).
 
 ## Implementation Tasks
 

@@ -1,6 +1,6 @@
 ---
 title: "Update agent_registry.json: test-writer priority 8 → 5 (before coders)"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-26
@@ -9,13 +9,13 @@ priority: high
 requires_diagram: false
 requires_adr: false
 agents:
-  architect-review: needed
-  python-coder: needed
+  architect-review: signed_off
+  python-coder: signed_off
   test-writer: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
-  commit: needed
-  pull-request: needed
+  pr-reviewer: signed_off
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 01: Update agent_registry.json: test-writer priority 8 → 5 (before coders)
@@ -74,26 +74,46 @@ Then the sequence is: status-checker(1) adr-author(2) architecture-diagram-autho
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] python-coder
-- [ ] pr-reviewer
-- [ ] commit
-- [ ] pull-request
+- [x] architect-review — 2026-05-27 00:00
+- [x] python-coder — 2026-05-27 00:01
+- [x] pr-reviewer — 2026-05-27 00:02
+- [x] commit — 2026-05-27 00:03
+- [x] pull-request — 2026-05-27 00:04
 
 ## Comments
+
+### 2026-05-27 00:00 — architect-review (status: ok)
+feedback-id: fb_2026-05-27_858ad9cf
+Verified no priority 5 collision in agent_registry.json (priority 5 slot is free). The bump from 8 → 5 is safe. Approved rationale wording: "Writes failing tests before coders implement; ensures tests exist and are red before any production code is written". Impact classification: small (config/template files only, single component build_pipeline, no always-large triggers). No ADR required, no diagram required.
+
+### 2026-05-27 00:01 — python-coder (status: ok)
+feedback-id: fb_2026-05-27_915b9f13
+Updated config/agent_registry.json: test-writer priority 8→5, priority_rationale updated. Updated deployed .claude/agents/ticket-supervisor.md Canonical Phase Ordering table: added test-writer at priority 5 (before python-coder), updated test-runner rationale. Template source uses {{agent_priority_table}} which auto-generates from registry at build time — registry is the canonical source. Ran build.py --validate-only: Config validation complete (no files written). No priority 5 collision confirmed.
+
+### 2026-05-27 00:02 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-27_28f73923
+All acceptance criteria verified: test-writer priority=5 in registry (no collision), rationale wording correct, full ordering chain matches spec (status-checker(1)→adr-author(2)→architecture-diagram-author(3)→architect-review(4)→test-writer(5)→python-coder(6)→sql-coder/sql-query(7)→test-runner(9)→docs(10)→pr-reviewer(11)→user-surface-smoker(11.5)→commit(12)→pull-request(13)). Deployed ticket-supervisor table reflects new ordering. Change is minimal and reversible. Approve for commit.
+
+### 2026-05-27 00:03 — commit (status: ok)
+feedback-id: fb_2026-05-27_449e7876
+Committed f7261d5: feat(tdd): bump test-writer priority 8→5. 3 files changed (agent_registry.json, ticket 01, Master_Plan.md). Pre-commit hooks passed cleanly.
+
+### 2026-05-27 00:04 — pull-request (status: ok)
+feedback-id: fb_2026-05-27_c41f9b7b
+Branch worktree-EPIC-TDDWorkflowEnforcement pushed to origin/worktree-EPIC-TDDWorkflowEnforcement (new branch). PR creation deferred until all epic tickets are complete (one PR per epic convention).
 
 ## Implementation Tasks
 
 ### architect-review
-- [ ] Confirm that bumping test-writer to priority 5 does not create a conflict with any other agent that currently occupies priority 5 (verify registry — currently none do)
-- [ ] Confirm the `priority_rationale` wording for test-writer (new TDD-context rationale)
+- [x] Confirm that bumping test-writer to priority 5 does not create a conflict with any other agent that currently occupies priority 5 (verify registry — currently none do)
+- [x] Confirm the `priority_rationale` wording for test-writer (new TDD-context rationale)
 
 ### python-coder
-- [ ] In `leafcutter-ai/config/agent_registry.json`: find the `test-writer` entry and change `"priority": 8` to `"priority": 5`; update `"priority_rationale"` to "Writes failing tests before coders implement; ensures tests exist and are red before any production code is written"
-- [ ] In `leafcutter-ai/templates/agents/ticket-supervisor.md`: update the Canonical Phase Ordering table — move test-writer row from priority 8 to priority 5, update rationale column
-- [ ] In `.claude/agents/ticket-supervisor.md`: apply the identical table update (deployed copy)
-- [ ] Verify no other agent in the registry uses priority 5 (would be a collision)
-- [ ] Run `python leafcutter-ai/scripts/build.py --validate` (if available) to confirm no schema errors after the change
+- [x] In `leafcutter-ai/config/agent_registry.json`: find the `test-writer` entry and change `"priority": 8` to `"priority": 5`; update `"priority_rationale"` to "Writes failing tests before coders implement; ensures tests exist and are red before any production code is written"
+- [x] In `leafcutter-ai/templates/agents/ticket-supervisor.md`: update the Canonical Phase Ordering table — move test-writer row from priority 8 to priority 5, update rationale column (registry is the source of truth; {{agent_priority_table}} placeholder auto-generates from registry at build time)
+- [x] In `.claude/agents/ticket-supervisor.md`: apply the identical table update (deployed copy — updated directly on disk)
+- [x] Verify no other agent in the registry uses priority 5 (would be a collision)
+- [x] Run `python leafcutter-ai/scripts/build.py --validate` (if available) to confirm no schema errors after the change
 
 ## Risk & Safety
 
