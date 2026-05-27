@@ -3,7 +3,7 @@ title: "pull-request agent — Reference"
 type: reference
 status: active
 created: 2026-05-07
-last_updated: 2026-05-07
+last_updated: 2026-05-27
 components:
   - "infrastructure"
 related_docs:
@@ -23,6 +23,32 @@ shipping chain. It runs after the `commit` agent has committed the change,
 drafts a PR title and body, asks the user for confirmation, then pushes the
 branch and calls `gh pr create`. On merge conflicts it delegates to
 `conflict-resolver` and retries once.
+
+---
+
+## Preconditions
+
+Before any other action the agent runs a **remote precondition check**:
+
+```bash
+git remote -v
+```
+
+If the output is empty (no remotes configured), the agent stops immediately — it
+does not draft a PR title or body, does not push, and does not call `gh pr create`.
+It returns:
+
+```
+Blocker: no git remote configured — cannot push or create PR.
+Configure a remote (e.g. git remote add origin <url>) and re-run this agent.
+```
+
+When a `ticket_path` is provided, the agent also writes a `(status: blocker)`
+comment to the ticket file so that `ticket-supervisor` does not dispatch a retry
+(this is a structural precondition failure, not a transient error).
+
+If at least one remote is configured the check passes silently and the agent
+continues to the confirmation flow.
 
 ---
 
@@ -84,6 +110,7 @@ If the push is rejected due to a non-fast-forward or diverged history:
 
 | Trigger | Behaviour |
 |---|---|
+| No git remote configured (`git remote -v` is empty) | Return blocker, write `(status: blocker)` to ticket if `ticket_path` provided, stop before drafting |
 | "push --force to main" in the user's message | Refuse, cite the Git Safety Protocol, stop |
 | Force-push to a non-main branch | Allowed if the user names the branch explicitly |
 | User says "cancel" at the confirmation step | Stop immediately, no push |
