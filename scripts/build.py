@@ -424,8 +424,17 @@ def main(argv: list[str] | None = None) -> int:
         if pkg_sha:
             write_lock_file(target_root, pkg_sha)
 
-    if not args.dry_run and not args.no_shims:
-        _install_shims(target_root)
+    if not args.no_shims:
+        output_root_name = config.get("output_root", ".leafcutter")
+        output_root = target_root / output_root_name
+        print("\nShim install:")
+        _install_shims(
+            target_root,
+            output_root=output_root,
+            config=config,
+            dry_run=args.dry_run,
+            force=effective_force,
+        )
 
     # Post-build: scan for placeholder content and referential integrity
     if not args.dry_run:

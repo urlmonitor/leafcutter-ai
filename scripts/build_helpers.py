@@ -263,38 +263,182 @@ def update_diagrams(package_root: Path) -> None:
               "Run manually: python leafcutter/scripts/generate_agent_diagram.py --output-format embed")
 
 
-def install_shims(target_root: Path) -> None:
-    """Dynamically import and run install_shims from the target project.
+def install_shims(
+    target_root: Path,
+    output_root: Path | None = None,
+    config: dict[str, Any] | None = None,
+    dry_run: bool = False,
+    force: bool = True,
+) -> list[dict[str, str]]:
+    """Create shims at canonical tool paths pointing into the consolidated output root.
+
+    Tools like Claude Code expect files at `.claude/agents/`, pre-commit reads
+    `.pre-commit-config.yaml` from the repo root, and Gemini reads `.gemini/`.
+    After build phases write everything into `<output_root>/`, this function
+    bridges those canonical paths via symlinks (preferred) or file copies
+    (Windows fallback).
+
+    The strategy is controlled by ``config["shim_strategy"]``:
+    - ``"symlink"``: always use symlinks; fail loudly on PermissionError.
+    - ``"copy"``: always use file copies (safe on all platforms).
+    - ``"auto"`` (default): try symlinks first, fall back to copies on error.
 
     Args:
-        target_root: Absolute path to the target project root; used to locate
-            ``scripts/commit_guardian/install_pre_commit_shims.py``.
+        target_root: Absolute path to the target project root.
+        output_root: Absolute path to the consolidated output directory
+            (e.g. ``target_root / ".leafcutter"``). When None, reads from
+            ``config["output_root"]`` or defaults to ``target_root / ".leafcutter"``.
+        config: Build config dict. Used to read ``shim_strategy``.
+        dry_run: When True, prints the shim plan but writes nothing.
+        force: When True, overwrites existing shims.
+
+    Returns:
+        List of dicts describing each shim: {canonical, target, method}.
     """
-    shims_module = (
-        target_root / "scripts" / "commit_guardian" / "install_pre_commit_shims.py"
-    )
-    if not shims_module.exists():
-        print(
-            f"\n[INFO] install_pre_commit_shims.py not found at {shims_module}; "
-            "skipping shim install."
-        )
-        return
+    if config is None:
+        config = {}
+
+    strategy = config.get("shim_strategy", "auto")
+    if output_root is None:
+        output_root = target_root / config.get("output_root", ".leafcutter")
+
+    shim_map: list[tuple[str, str]] = [
+        (".claude/agents", "agents"),
+        (".claude/skills", "skills"),
+        (".claude/commands", "commands"),
+        (".claude/hooks", "hooks"),
+        (".gemini", "gemini"),
+        (".antigravity", "antigravity"),
+    ]
+
+    results: list[dict[str, str]] = []
+
+    for canonical_rel, output_rel in shim_map:
+        canonical_path = target_root / canonical_rel
+        source_path = output_root / output_rel
+
+        if not source_path.exists():
+            continue
+
+        if canonical_path.exists() or canonical_path.is_symlink():
+            if not force:
+                results.append({
+                    "canonical": canonical_rel,
+                    "target": output_rel,
+                    "method": "skipped (exists)",
+                })
+                continue
+            if not dry_run:
+                if canonical_path.is_symlink() or canonical_path.is_file():
+                    canonical_path.unlink()
+                elif canonical_path.is_dir():
+                    import shutil
+                    shutil.rmtree(canonical_path)
+
+        if dry_run:
+            method = "symlink" if strategy != "copy" else "copy"
+            print(f"  [DRY-RUN] would shim {canonical_rel} -> {output_rel} ({method})")
+            results.append({
+                "canonical": canonical_rel,
+                "target": output_rel,
+                "method": f"dry-run ({method})",
+            })
+            continue
+
+        canonical_path.parent.mkdir(parents=True, exist_ok=True)
+        method = _create_shim(canonical_path, source_path, strategy)
+        results.append({
+            "canonical": canonical_rel,
+            "target": output_rel,
+            "method": method,
+        })
+        print(f"  shim: {canonical_rel} -> {output_rel} ({method})")
+
+    # Single-file shims (these are files, not directories)
+    file_shims: list[tuple[str, str]] = [
+        (".pre-commit-config.yaml", "pre-commit-config.yaml"),
+    ]
+
+    for canonical_rel, output_rel in file_shims:
+        canonical_path = target_root / canonical_rel
+        source_path = output_root / output_rel
+
+        if not source_path.exists():
+            continue
+
+        if canonical_path.exists() or canonical_path.is_symlink():
+            if not force:
+                results.append({
+                    "canonical": canonical_rel,
+                    "target": output_rel,
+                    "method": "skipped (exists)",
+                })
+                continue
+            if not dry_run:
+                canonical_path.unlink()
+
+        if dry_run:
+            method = "symlink" if strategy != "copy" else "copy"
+            print(f"  [DRY-RUN] would shim {canonical_rel} -> {output_rel} ({method})")
+            results.append({
+                "canonical": canonical_rel,
+                "target": output_rel,
+                "method": f"dry-run ({method})",
+            })
+            continue
+
+        canonical_path.parent.mkdir(parents=True, exist_ok=True)
+        method = _create_file_shim(canonical_path, source_path, strategy)
+        results.append({
+            "canonical": canonical_rel,
+            "target": output_rel,
+            "method": method,
+        })
+        print(f"  shim: {canonical_rel} -> {output_rel} ({method})")
+
+    return results
+
+
+def _create_shim(canonical: Path, source: Path, strategy: str) -> str:
+    """Create a directory shim (symlink or copy) at canonical pointing to source.
+
+    Returns the method used ("symlink" or "copy").
+    """
+    import shutil
+
+    if strategy == "copy":
+        shutil.copytree(source, canonical, dirs_exist_ok=True)
+        return "copy"
+
     try:
-        import importlib.util
-        spec = importlib.util.spec_from_file_location(
-            "install_pre_commit_shims", shims_module
-        )
-        if spec and spec.loader:
-            mod = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(mod)
-            print("\nInstalling pre-commit shims...")
-            mod.install_shims(target_root)
-            print("  Shims installed.")
-    except Exception as exc:
-        print(
-            f"\n[WARNING] Shim install failed: {exc}. "
-            "Run manually: python scripts/commit_guardian/install_pre_commit_shims.py"
-        )
+        canonical.symlink_to(source, target_is_directory=True)
+        return "symlink"
+    except (OSError, PermissionError):
+        if strategy == "symlink":
+            raise
+        shutil.copytree(source, canonical, dirs_exist_ok=True)
+        return "copy (symlink failed)"
+
+
+def _create_file_shim(canonical: Path, source: Path, strategy: str) -> str:
+    """Create a file shim (symlink or copy) at canonical pointing to source.
+
+    Returns the method used ("symlink" or "copy").
+    """
+    import shutil
+
+    if strategy == "copy":
+        shutil.copy2(source, canonical)
+        return "copy"
+
+    try:
+        canonical.symlink_to(source)
+        return "symlink"
+    except (OSError, PermissionError):
+        if strategy == "symlink":
+            raise
+        shutil.copy2(source, canonical)
+        return "copy (symlink failed)"
 
 
 # ====================================================================

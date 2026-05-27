@@ -8,6 +8,17 @@
       "type": "string",
       "description": "Human-readable note describing the config file purpose."
     },
+    "output_root": {
+      "type": "string",
+      "description": "Folder name under target_root where build.py writes all outputs. Configurable per consumer project.",
+      "default": ".leafcutter"
+    },
+    "shim_strategy": {
+      "type": "string",
+      "enum": ["symlink", "copy", "auto"],
+      "description": "How to bridge canonical tool paths (.claude/, .gemini/, etc.) to output_root. auto = symlink with copy fallback on PermissionError.",
+      "default": "auto"
+    },
     "tickets_inbox_path": {
       "type": "string",
       "description": "Root folder for standalone ticket files (00_inbox equivalent).",
