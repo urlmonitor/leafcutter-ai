@@ -1,6 +1,6 @@
 ---
 title: "Pre-commit hook: check-mermaid-complexity"
-status: todo
+status: done
 components:
   - commit_guardian
 created: 2026-05-26

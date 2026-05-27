@@ -1,7 +1,7 @@
 ---
 title: "EPIC: MermaidComplexityGuard — Deterministic + Agentic Diagram Complexity Defense"
 type: epic
-status: inbox
+status: done
 components:
   - commit_guardian
   - architecture_docs

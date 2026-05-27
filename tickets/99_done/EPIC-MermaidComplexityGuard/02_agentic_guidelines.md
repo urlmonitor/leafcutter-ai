@@ -1,6 +1,6 @@
 ---
 title: "Agentic split guidelines in write-c4-diagram skill + architecture-diagram-author"
-status: todo
+status: done
 components:
   - architecture_docs
 created: 2026-05-26
