@@ -111,6 +111,30 @@ it to the user before proceeding.
 
 ---
 
+## Step 2a — Single Concept Check
+
+Before allocating a filename, evaluate the single-concept rule from the
+write-c4-diagram skill (§2a). Apply the three split criteria:
+
+1. Count distinct actors initiating independent flows
+2. Check for distinct temporal phases
+3. Check for distinct bounded contexts
+
+**If any criterion triggers:**
+- Inform the user that the request will produce N separate diagrams
+- Proceed to Step 3 once per diagram (each gets its own sequence number
+  and scaffold call)
+- After all diagrams are complete, cross-link them via `related_diagrams:`
+  frontmatter and `See also:` prose links
+- Return one structured payload per diagram in the Step 7 response
+
+**If the diagram would exceed pre-commit complexity thresholds** (>15 nodes
+for flowchart/C4, >8 participants for sequence, >4 boundaries for any type),
+flag this to the user and recommend splitting even if the single-concept
+criteria don't trigger — the pre-commit hook will warn on commit.
+
+---
+
 ## Step 3 — Allocate the Filename
 
 Run the sequence allocator for the chosen tier level:

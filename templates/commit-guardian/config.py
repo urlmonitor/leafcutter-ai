@@ -240,6 +240,19 @@ SECURITY_SCANNER_SCRIPTS_DIR: str = _get(
     ".claude/skills/security-scanner/scripts",
 )
 
+# ---------------------------------------------------------------------------
+# check_mermaid_complexity
+# ---------------------------------------------------------------------------
+MERMAID_COMPLEXITY_STRICT: bool = _get("mermaid_complexity", "strict", False)
+MERMAID_COMPLEXITY_MAX_NODES: int = _get("mermaid_complexity", "max_nodes", 15)
+MERMAID_COMPLEXITY_MAX_EDGES: int = _get("mermaid_complexity", "max_edges", 20)
+MERMAID_COMPLEXITY_MAX_PARTICIPANTS: int = _get("mermaid_complexity", "max_participants", 8)
+MERMAID_COMPLEXITY_MAX_INTERACTIONS: int = _get("mermaid_complexity", "max_interactions", 25)
+MERMAID_COMPLEXITY_MAX_TABLES: int = _get("mermaid_complexity", "max_tables", 12)
+MERMAID_COMPLEXITY_MAX_STATES: int = _get("mermaid_complexity", "max_states", 10)
+MERMAID_COMPLEXITY_MAX_CLASSES: int = _get("mermaid_complexity", "max_classes", 10)
+MERMAID_COMPLEXITY_MAX_BOUNDARIES: int = _get("mermaid_complexity", "max_boundaries", 4)
+
 
 """
 ====================================================================
