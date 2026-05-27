@@ -1,7 +1,7 @@
 ---
 title: "EPIC: TDD Workflow Enforcement"
 type: epic
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-26
