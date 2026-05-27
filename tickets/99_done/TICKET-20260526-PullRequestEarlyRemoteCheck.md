@@ -13,7 +13,7 @@ tags:
 files_touched:
   - templates/agents/pull-request.md
 agents:
-  architect-review: needed
+  architect-review: signed_off
   python-coder: not_needed
   test-writer: not_needed
   test-runner: not_needed
@@ -109,7 +109,7 @@ placeholder_signature: "TODO|PLACEHOLDER|not implemented"
 
 ## Sign-offs
 
-- [ ] architect-review
+- [x] architect-review — 2026-05-27 09:00
 - [ ] user-surface-smoker
 - [ ] pr-reviewer
 - [ ] commit
@@ -117,22 +117,29 @@ placeholder_signature: "TODO|PLACEHOLDER|not implemented"
 
 ## Comments
 
+### architect-review — 2026-05-27 09:00 (status: ok)
+
+Impact: small. Single-file additive change to `templates/agents/pull-request.md`.
+Adds a precondition guard (Step 0) before any existing logic. No blast radius —
+existing step numbering and flow unchanged. The `(status: blocker)` classification
+is correct for structural failures that exhaust the adjudication ladder.
+
 ## Implementation Tasks
 
-- [ ] In `templates/agents/pull-request.md`: add a **Step 0 — Remote
+- [x] In `templates/agents/pull-request.md`: add a **Step 0 — Remote
   Precondition Check** as the very first step of the agent flow (before
   "Confirmation Contract" applies and before reading git log). Run
   `git remote -v`. If the output is empty, immediately return:
   `"Blocker: no git remote configured — cannot push or create PR. Configure
   a remote (e.g. git remote add origin <url>) and re-run this agent."` then
   stop. Do not proceed to draft generation.
-- [ ] Classify this failure as non-retryable in the agent's output so that
+- [x] Classify this failure as non-retryable in the agent's output so that
   ticket-supervisor does not dispatch a second attempt. The agent comment
   entry should use `(status: blocker)` rather than `(status: failed)` to
   signal to the ladder that the condition is structural.
-- [ ] Verify the happy path (remote present) is unaffected: no new prompts,
+- [x] Verify the happy path (remote present) is unaffected: no new prompts,
   no altered step numbering for the existing flow.
-- [ ] Run `python scripts/build.py --target-dir ..` to confirm the deployed
+- [x] Run `python scripts/build.py --target-dir ..` to confirm the deployed
   agent file at `.claude/agents/pull-request.md` reflects the updated
   template.
 

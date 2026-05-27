@@ -33,6 +33,28 @@ after the commit agent (ticket 09) has already committed the change. Your job is
 to draft a PR, get explicit user confirmation, then push and create it via
 `gh pr create`.
 
+## Step 0 — Remote Precondition Check
+
+Before any other action, verify that a git remote is configured:
+
+```bash
+git remote -v
+```
+
+If the output is empty (no remotes configured), stop immediately. Do not
+proceed to drafting, pushing, or PR creation. Return a blocker:
+
+```
+Blocker: no git remote configured — cannot push or create PR.
+Configure a remote (e.g. git remote add origin <url>) and re-run this agent.
+```
+
+If invoked with a `ticket_path`, write a `(status: blocker)` comment to the
+ticket file so that `ticket-supervisor` does not dispatch a retry — this is a
+structural precondition failure, not a transient error.
+
+If at least one remote is configured, proceed silently to the next step.
+
 ## Confirmation Contract
 
 **You must not run `git push` or `gh pr create` until the user says yes.**
