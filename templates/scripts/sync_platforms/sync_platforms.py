@@ -178,8 +178,10 @@ def sync_platforms() -> None:
     total_skills = perform_multi_way_sync(skill_dirs)
     
     total_synced = total_agents + total_skills
-    
+
     # One-way sync from source templates to platform outputs
+    leafcutter_templates = project_root / "templates"
+    is_source_repo = leafcutter_templates.is_dir()
     if is_source_repo:
         logger.info("\033[96mLeafcutter source repository detected. Syncing templates to platforms (one-way only).\033[0m")
         template_agent_dir = leafcutter_templates / "agents"

@@ -187,27 +187,27 @@ def test_sync_platforms_main_flow(mock_multi_sync, mock_get_active, mock_find_co
 @patch('sync_platforms.find_skills_config')
 @patch('sync_platforms.get_active_platforms')
 @patch('sync_platforms.perform_multi_way_sync')
-def test_sync_platforms_with_source_repo(mock_multi_sync, mock_get_active, mock_find_config, temp_project):
+@patch('sync_platforms.sync_directories')
+def test_sync_platforms_with_source_repo(mock_sync_dirs, mock_multi_sync, mock_get_active, mock_find_config, temp_project):
     """Test sync_platforms includes source repo templates when present."""
     mock_find_config.return_value = temp_project / "skills_config.json"
     mock_get_active.return_value = ["claude"]
     mock_multi_sync.return_value = 2
-    
-    # Create source repo structure
-    templates_dir = temp_project / "leafcutter-ai" / "templates"
-    templates_dir.mkdir(parents=True)
-    
+    mock_sync_dirs.return_value = 1
+
+    # Create templates/ at project_root so is_source_repo is True
+    templates_dir = temp_project / "templates"
+    (templates_dir / "agents").mkdir(parents=True)
+    (templates_dir / "skills").mkdir(parents=True)
+
     with patch('sync_platforms.Path') as mock_path:
-        # Mock __file__ resolution
         mock_file = mock_path.return_value
         mock_file.resolve.return_value.parent.parent.parent = temp_project
-        
+
         sync_platforms.sync_platforms()
-        
-        # Verify perform_multi_way_sync was called with lists including the templates dir
-        agents_call = mock_multi_sync.call_args_list[0][0][0]
-        skills_call = mock_multi_sync.call_args_list[1][0][0]
-        
-        assert any("leafcutter-ai" in str(d) and "agents" in str(d) for d in agents_call)
-        assert any("leafcutter-ai" in str(d) and "skills" in str(d) for d in skills_call)
+
+        # Verify sync_directories was called for one-way template sync
+        sync_calls = [str(c) for c in mock_sync_dirs.call_args_list]
+        assert any("templates" in c and "agents" in c for c in sync_calls)
+        assert any("templates" in c and "skills" in c for c in sync_calls)
 
