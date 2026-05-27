@@ -14,23 +14,23 @@ tags:
 files_touched:
   - templates/workflows/build-backlog.md
 agents:
-  architect-review: needed
+  architect-review: signed_off
   python-coder: not_needed
   test-writer: not_needed
   test-runner: not_needed
-  documentation-expert: needed
+  documentation-expert: signed_off
   change-scope-reviewer: not_needed
-  pr-reviewer: needed
-  commit: needed
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: needed
   sql-coder: not_needed
   sql-query: not_needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
   explanation-author: not_needed
-  how-to-author: needed
+  how-to-author: signed_off
   reference-author: not_needed
-  user-surface-smoker: needed
+  user-surface-smoker: signed_off
 requires_diagram: false
 requires_adr: false
 requires_documentation:
@@ -140,24 +140,48 @@ placeholder_signature: "TODO|PLACEHOLDER|not implemented"
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] documentation-expert
-- [ ] how-to-author
-- [ ] user-surface-smoker
-- [ ] pr-reviewer
-- [ ] commit
+- [x] architect-review — 2026-05-27 09:05
+- [x] documentation-expert — 2026-05-27 09:15
+- [x] how-to-author — 2026-05-27 09:15
+- [x] user-surface-smoker — 2026-05-27 09:25
+- [x] pr-reviewer — 2026-05-27 09:20
+- [x] commit — 2026-05-27 09:30
 - [ ] pull-request
 
 ## Comments
 
+### 2026-05-27 09:05 — architect-review (status: ok)
+feedback-id: fb_2026-05-27_9550acd7
+Small classification: 1 file (templates/workflows/build-backlog.md), single component (workflow infrastructure), no always-large triggers (no Alembic, no API, no ADR changes). No diagram or ADR needed. Workflow follows the established pick-next-ticket.md pattern with Jinja2 frontmatter and portable design.
+
+### 2026-05-27 09:15 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-27_587adab3
+Coordinated documentation: spawned how-to-author to create docs/how-to/drain-backlog-with-build-backlog.md and verified pick-next-ticket.md has a Related Commands section cross-referencing /build-backlog. All required documentation deliverables complete.
+
+### 2026-05-27 09:15 — how-to-author (status: ok)
+feedback-id: fb_2026-05-27_4ae30e4e
+Created docs/how-to/drain-backlog-with-build-backlog.md with all canonical sections: frontmatter (type, status, created, last_updated, components, related_docs), H1, overview, Prerequisites, Steps (5 steps covering all flags), Verification, Troubleshooting, See Also.
+
+### 2026-05-27 09:20 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-27_02e6fdf1
+All acceptance criteria satisfied. Workflow implements the correct prioritizer loop, --dry-run/--limit/--epic-only/--ticket-only flags, Tier 1/2 new-conversation detection with graceful fallback, and per-failure user prompts. Smoke fixture is clean (no TODO/PLACEHOLDER). How-to guide at docs/how-to/drain-backlog-with-build-backlog.md is complete and well-structured. pick-next-ticket.md cross-reference added correctly.
+
+### 2026-05-27 09:25 — user-surface-smoker (status: ok)
+feedback-id: (submit-failed)
+Smoke fixture passed: deployed .claude/commands/build-backlog.md has 0 TODO/PLACEHOLDER/'not implemented' occurrences; assertion pattern (Backlog/ready/priority/ticket/epic) matched 69 times in the workflow content. Surface is clean and ready for commit.
+
+### 2026-05-27 09:30 — commit (status: ok)
+feedback-id: fb_2026-05-27_0ed594c6
+Staged 4 files by explicit path: templates/workflows/build-backlog.md (new, 280 lines), templates/workflows/pick-next-ticket.md (updated with Related Commands), docs/how-to/drain-backlog-with-build-backlog.md (new how-to guide), tickets/99_done/TICKET-20260527-build_backlog_command.md (ticket with all sign-offs). Committing on branch worktree-ticket+build-backlog-command.
+
 ## Implementation Tasks
 
-- [ ] Create `templates/workflows/build-backlog.md` following the same
+- [x] Create `templates/workflows/build-backlog.md` following the same
   Jinja2 + frontmatter pattern as `templates/workflows/pick-next-ticket.md`
   and `templates/workflows/build-feature.md`. Include a `name: build-backlog`
   frontmatter key, portable/domain/adopter_notes fields, and full workflow
   prose.
-- [ ] Define the main loop in the workflow:
+- [x] Define the main loop in the workflow:
   1. Run `ticket-prioritizer --all --json` to get the current ready list.
   2. If empty, print the exhaustion message and exit.
   3. Pick the first entry (highest priority). Announce: item number, title,
@@ -167,21 +191,21 @@ placeholder_signature: "TODO|PLACEHOLDER|not implemented"
      invoke `/build-feature <path>` in the current conversation.
   5. On failure, prompt the user to continue or abort.
   6. Go to step 1.
-- [ ] Add `--dry-run` flag: run steps 1 only, print the full ordered list,
+- [x] Add `--dry-run` flag: run steps 1 only, print the full ordered list,
   then exit without dispatching.
-- [ ] Add `--limit N` flag: stop after N items have been successfully built
+- [x] Add `--limit N` flag: stop after N items have been successfully built
   (useful for "build the top 3 tickets" use cases).
-- [ ] Add `--epic-only` flag: filter the ready list to epics only (skip
+- [x] Add `--epic-only` flag: filter the ready list to epics only (skip
   standalone tickets).
-- [ ] Add `--ticket-only` flag: filter the ready list to standalone tickets
+- [x] Add `--ticket-only` flag: filter the ready list to standalone tickets
   only (skip epics).
-- [ ] Document the new-conversation detection heuristic in the workflow
+- [x] Document the new-conversation detection heuristic in the workflow
   prose, including the exact CLI flag or env var to check, so adopters
   know what to enable when Claude Code adds the capability.
-- [ ] Run `python scripts/build.py --target-dir ..` (from `leafcutter-ai/`)
+- [x] Run `python scripts/build.py --target-dir ..` (from `leafcutter-ai/`)
   to deploy `templates/workflows/build-backlog.md` into `.claude/` and
   confirm the deployed file is present.
-- [ ] Verify `pick-next-ticket.md` cross-references `build-backlog` in its
+- [x] Verify `pick-next-ticket.md` cross-references `build-backlog` in its
   "Integration" section so users discovering one command find the other.
 
 ## Out of Scope
