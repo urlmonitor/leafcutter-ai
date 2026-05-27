@@ -257,6 +257,7 @@ class TestEmitEntryUnknownType(unittest.TestCase):
             "epic_completion",
             "ticket_completion",
             "deploy_tag",
+            "feature",
             "manual",
             "rollback",
         ]

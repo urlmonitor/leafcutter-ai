@@ -34,7 +34,7 @@ from typing import Any, Optional
 
 #: Allowed values for the ``type`` frontmatter field.
 VALID_TYPES: frozenset[str] = frozenset(
-    {"epic_completion", "ticket_completion", "deploy_tag", "manual", "rollback"}
+    {"epic_completion", "ticket_completion", "deploy_tag", "feature", "manual", "rollback"}
 )
 
 #: Path to the commit-guardian config JSON, relative to the repo root.
