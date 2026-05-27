@@ -318,6 +318,66 @@ def _run_phases(
     return total
 
 
+_PRE_CONSOLIDATION_PATHS = [
+    ".claude/agents",
+    ".claude/skills",
+    ".claude/commands",
+    ".claude/hooks",
+    ".claude/settings.json",
+    "scripts/commit_guardian",
+    "scripts/doc_compliance",
+    "scripts/feedback",
+    "scripts/sync_platforms",
+    ".pre-commit-config.yaml",
+    ".gemini",
+    ".antigravity",
+]
+
+
+def _run_migration_report(target_root: Path, output_root: Path) -> int:
+    """Scan for stale pre-consolidation files and print a migration report.
+
+    Checks known pre-consolidation output paths. If a path exists and is NOT
+    a symlink pointing into the output root, it is reported as stale.
+
+    Returns 0 always (report-only, no deletions).
+    """
+    print(f"\nMigration report for: {target_root}")
+    print(f"Output root: {output_root}\n")
+
+    stale: list[str] = []
+    for rel_path in _PRE_CONSOLIDATION_PATHS:
+        full = target_root / rel_path
+        if not full.exists() and not full.is_symlink():
+            continue
+        if full.is_symlink():
+            link_target = full.resolve()
+            if str(link_target).startswith(str(output_root.resolve())):
+                continue
+        stale.append(rel_path)
+
+    if not stale:
+        print("No stale pre-consolidation files found. Migration complete.")
+        return 0
+
+    print(f"Found {len(stale)} stale pre-consolidation path(s):\n")
+    for p in stale:
+        full = target_root / p
+        kind = "directory" if full.is_dir() else "file"
+        print(f"  STALE: {p} ({kind})")
+
+    print(f"\nTo remove stale files, run:")
+    for p in stale:
+        full = target_root / p
+        if full.is_dir():
+            print(f"  rm -rf {p}")
+        else:
+            print(f"  rm {p}")
+
+    print(f"\nThen re-run: python {Path(__file__).name} --target-dir {target_root}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     """Entry point for the build script.
 
@@ -353,6 +413,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="Proceed despite breaking changes since last build (acknowledge migration steps).")
     parser.add_argument("--no-shims", action="store_true",
                         help="Skip the install_shims step at the end.")
+    parser.add_argument("--migrate", action="store_true",
+                        help="Scan for stale pre-consolidation files and print a migration report. No files are deleted.")
     parser.add_argument("--update-diagrams", action="store_true",
                         help="Regenerate Mermaid diagrams from registry and embed into target docs.")
     parser.add_argument("--seed-docs", action="store_true",
@@ -380,7 +442,12 @@ def main(argv: list[str] | None = None) -> int:
         print("Config validation complete (no files written).")
         return 0
 
-    # Halt-guard: check for breaking changes since consumer's last build
+    if args.migrate:
+        output_root_name = config.get("output_root", ".leafcutter")
+        output_root = target_root / output_root_name
+        return _run_migration_report(target_root, output_root)
+
+    # Halt-guard: check for breaking changes since last build
     changelogs_dir = package_root / "changelogs"
     halt_result = check_halt_guard(target_root, package_root, changelogs_dir)
     if halt_result.should_halt:
