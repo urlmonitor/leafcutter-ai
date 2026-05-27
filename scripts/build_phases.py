@@ -217,8 +217,8 @@ def build_agents(target_root: Path, config: dict[str, Any],
     })
 
     platform_dirs = {
-        "claude": ".claude/agents",
-        "antigravity": ".gemini/agents",
+        "claude": "agents",
+        "antigravity": "gemini/agents",
         "cursor": None,
         "copilot": None,
         "cline": None
@@ -228,7 +228,7 @@ def build_agents(target_root: Path, config: dict[str, Any],
     for template_file in sorted(agents_template_dir.glob("*.md")):
         if template_file.name.startswith("_"):
             continue  # Skip helper files like _signoff_block.md
-            
+
         compiled = compile_agent_template(
             template_file,
             config,
@@ -236,18 +236,18 @@ def build_agents(target_root: Path, config: dict[str, Any],
             agents=agents_list,
             skills_root=skills_root,
         )
-        
+
         for platform, is_active in platforms.items():
             if not is_active:
                 continue
-                
+
             output_subpath = platform_dirs.get(platform)
             if not output_subpath:
                 continue
-                
+
             output_dir = target_root / output_subpath
             output_path = output_dir / template_file.name
-            
+
             if _write(output_path, compiled, dry_run, force):
                 written += 1
                 if not dry_run:
@@ -285,8 +285,8 @@ def build_skills(target_root: Path, config: dict[str, Any],
     })
 
     platform_dirs = {
-        "claude": ".claude/skills",
-        "antigravity": ".gemini/skills",
+        "claude": "skills",
+        "antigravity": "gemini/skills",
         "cursor": None,
         "copilot": None,
         "cline": None
@@ -386,11 +386,11 @@ def build_workflows(target_root: Path, config: dict[str, Any],
     })
 
     platform_dirs = {
-        "claude": ".claude/commands",
-        "antigravity": ".gemini/workflows",
-        "cursor": ".cursor/rules",
-        "copilot": ".github/copilot-instructions",
-        "cline": ".cline/rules"
+        "claude": "commands",
+        "antigravity": "gemini/workflows",
+        "cursor": "cursor/rules",
+        "copilot": "copilot-instructions",
+        "cline": "cline/rules"
     }
 
     written = 0
@@ -433,7 +433,7 @@ def build_rules(target_root: Path, config: dict[str, Any],
     if not rules_dir.exists():
         return 0
 
-    output_dir = target_root / ".agents" / "rules"
+    output_dir = target_root / "rules"
     written = 0
 
     for template_file in sorted(rules_dir.glob("*.md")):
@@ -556,7 +556,7 @@ def build_commit_guardian(target_root: Path, config: dict[str, Any],
             if _write(output_path, text, dry_run, force):
                 written += 1
                 if not dry_run:
-                    print(f"  scripts/commit_guardian/{rel}")
+                    print(f"  commit_guardian/{rel}")
         else:
             # SHA-256 compare-before-copy skips identical binary files.
             if not _should_overwrite(output_path, force):
@@ -609,7 +609,7 @@ def build_doc_compliance(target_root: Path, config: dict[str, Any],
         if _write(output_path, text, dry_run, force):
             written += 1
             if not dry_run:
-                print(f"  scripts/doc_compliance/{rel}")
+                print(f"  doc_compliance/{rel}")
 
     return written
 
@@ -684,7 +684,7 @@ def build_feedback(target_root: Path, config: dict[str, Any],
         if _write(output_path, text, dry_run, force):
             written += 1
             if not dry_run:
-                print(f"  scripts/feedback/{script_name}")
+                print(f"  feedback/{script_name}")
 
     if config_src.is_file():
         config_output = target_root / "config" / "feedback_categories.yaml"
@@ -730,7 +730,7 @@ def build_antigravity_instructions(target_root: Path, config: dict[str, Any],
     if not platforms.get("antigravity", True):
         return 0
 
-    output_path = target_root / ".gemini" / "instructions.md"
+    output_path = target_root / "gemini" / "instructions.md"
     
     content = inject_config(template_path.read_text(encoding="utf-8"), config)
     if _write(output_path, content, dry_run, force):
@@ -773,7 +773,7 @@ def build_sync_platforms(target_root: Path, config: dict[str, Any],
             if _write(output_path, text, dry_run, force):
                 written += 1
                 if not dry_run:
-                    print(f"  scripts/sync_platforms/{rel}")
+                    print(f"  sync_platforms/{rel}")
         else:
             if not _should_overwrite(output_path, force):
                 continue

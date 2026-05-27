@@ -278,7 +278,7 @@ def build_precommit_config(target_root: Path, config: dict[str, Any],
     if not hooks:
         return 0
 
-    output_path = target_root / ".pre-commit-config.yaml"
+    output_path = target_root / "pre-commit-config.yaml"
 
     if output_path.exists():
         clean_lines = _strip_package_managed_blocks(

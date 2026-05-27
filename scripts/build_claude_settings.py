@@ -52,7 +52,7 @@ def build_claude_settings(
     written = 0
 
     # --- .claude/settings.json ---
-    target_settings = target_root / ".claude" / "settings.json"
+    target_settings = target_root / "settings.json"
     if not settings_template.exists():
         print("  claude-settings: templates/settings.json not found — skipping.")
     elif target_settings.exists() and not force:
@@ -72,7 +72,7 @@ def build_claude_settings(
         print("  claude-settings: templates/hooks/ not found — skipping hook scripts.")
         return written
 
-    target_hooks = target_root / ".claude" / "hooks"
+    target_hooks = target_root / "hooks"
     for src_file in sorted(hooks_template.iterdir()):
         if not src_file.is_file():
             continue

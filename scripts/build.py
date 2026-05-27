@@ -256,14 +256,20 @@ def _validate_all(config: dict, package_root: Path, validate_only: bool, dry_run
 
 def _run_phases(
     target_root: Path,
+    output_root: Path,
     config: dict,
     dry_run: bool,
     effective_force: bool,
 ) -> int:
     """Execute all build phases and print per-phase totals.
 
+    Build artifact phases write into ``output_root`` (.leafcutter/ by default).
+    User-curated scaffold phases (vision, glossary, roadmap, tickets) write
+    directly into ``target_root`` since they are write-if-absent and user-owned.
+
     Args:
         target_root: Absolute path to the target project root.
+        output_root: Absolute path to the consolidated output directory.
         config: Build configuration dict from load_config.
         dry_run: When True, logs intent but writes nothing.
         effective_force: When True, overwrites existing files.
@@ -272,30 +278,43 @@ def _run_phases(
         Total number of files written (or would-be-written in dry-run mode).
     """
     from typing import Any
-    phases: list[tuple[str, Any]] = [
+
+    # Phases whose output goes into .leafcutter/ (pure build artifacts)
+    artifact_phases: list[tuple[str, Any]] = [
         ("Agents", build_agents),
         ("Skills", build_skills),
         ("Claude settings", build_claude_settings),
         ("Workflows", build_workflows),
         ("Rules", build_rules),
-        ("Ticket lifecycle", build_ticket_lifecycle),
         ("Commit guardian", build_commit_guardian),
         ("Feedback", build_feedback),
         ("Propagation audit", propagation_audit),
         ("Pre-commit config", build_precommit_config),
         ("Doc compliance", build_doc_compliance),
+        ("Antigravity instructions", build_antigravity_instructions),
+        ("Sync platforms", build_sync_platforms),
+    ]
+
+    # Phases that write user-curated scaffolds at target_root (write-if-absent)
+    scaffold_phases: list[tuple[str, Any]] = [
+        ("Ticket lifecycle", build_ticket_lifecycle),
         ("Vision", build_vision),
         ("Roadmap", build_roadmap),
         ("Glossary", build_glossary),
         ("Config scaffolds", build_config_scaffolds),
-        ("Antigravity instructions", build_antigravity_instructions),
-        ("Sync platforms", build_sync_platforms),
     ]
+
     total = 0
-    for label, fn in phases:
+    for label, fn in artifact_phases:
+        print(f"{label}:")
+        total += fn(output_root, config, dry_run, effective_force)
+        print()
+
+    for label, fn in scaffold_phases:
         print(f"{label}:")
         total += fn(target_root, config, dry_run, effective_force)
         print()
+
     return total
 
 
@@ -389,14 +408,18 @@ def main(argv: list[str] | None = None) -> int:
               "--no-overwrite wins — existing files will be skipped.")
     effective_force: bool = not args.no_overwrite
 
+    output_root_name = config.get("output_root", ".leafcutter")
+    output_root = target_root / output_root_name
+
     dry_label = " (dry-run)" if args.dry_run else ""
-    print(f"\nBuilding{dry_label} into: {target_root}\n")
+    print(f"\nBuilding{dry_label} into: {target_root}")
+    print(f"Output root: {output_root}\n")
 
     # Reset the up-to-date counter before this run so consecutive CLI calls
     # report accurate per-run numbers.
     reset_uptodate_count()
 
-    total = _run_phases(target_root, config, args.dry_run, effective_force)
+    total = _run_phases(target_root, output_root, config, args.dry_run, effective_force)
 
     uptodate = get_uptodate_count()
     if args.dry_run:
@@ -425,8 +448,6 @@ def main(argv: list[str] | None = None) -> int:
             write_lock_file(target_root, pkg_sha)
 
     if not args.no_shims:
-        output_root_name = config.get("output_root", ".leafcutter")
-        output_root = target_root / output_root_name
         print("\nShim install:")
         _install_shims(
             target_root,

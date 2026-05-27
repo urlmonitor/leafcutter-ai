@@ -101,7 +101,7 @@ def _compute_output_mappings(
                 agents=agents_list,
                 skills_root=skills_root,
             )
-            output = target_root / ".claude" / "agents" / tpl.name
+            output = target_root / "agents" / tpl.name
             _add(tpl, output, compiled)
 
     # --- skills (markdown only) ---
@@ -112,7 +112,7 @@ def _compute_output_mappings(
                 continue
             rel = tpl.relative_to(skills_tpl_dir)
             compiled = compile_skill_template(tpl, config)
-            output = target_root / ".claude" / "skills" / rel
+            output = target_root / "skills" / rel
             _add(tpl, output, compiled)
 
     # --- workflows ---
@@ -120,7 +120,7 @@ def _compute_output_mappings(
     if workflows_tpl_dir.is_dir():
         for tpl in sorted(workflows_tpl_dir.glob("*.md")):
             text = inject_config(tpl.read_text(encoding="utf-8"), config)
-            output = target_root / ".claude" / "commands" / tpl.name
+            output = target_root / "commands" / tpl.name
             _add(tpl, output, text)
 
     # --- rules ---
@@ -128,7 +128,7 @@ def _compute_output_mappings(
     if rules_tpl_dir.is_dir():
         for tpl in sorted(rules_tpl_dir.glob("*.md")):
             text = inject_config(tpl.read_text(encoding="utf-8"), config)
-            output = target_root / ".agents" / "rules" / tpl.name
+            output = target_root / "rules" / tpl.name
             _add(tpl, output, text)
 
     return mappings
@@ -309,6 +309,10 @@ def install_shims(
         (".claude/hooks", "hooks"),
         (".gemini", "gemini"),
         (".antigravity", "antigravity"),
+        ("scripts/commit_guardian", "scripts/commit_guardian"),
+        ("scripts/doc_compliance", "scripts/doc_compliance"),
+        ("scripts/feedback", "scripts/feedback"),
+        ("scripts/sync_platforms", "scripts/sync_platforms"),
     ]
 
     results: list[dict[str, str]] = []
@@ -357,6 +361,7 @@ def install_shims(
     # Single-file shims (these are files, not directories)
     file_shims: list[tuple[str, str]] = [
         (".pre-commit-config.yaml", "pre-commit-config.yaml"),
+        (".claude/settings.json", "settings.json"),
     ]
 
     for canonical_rel, output_rel in file_shims:
