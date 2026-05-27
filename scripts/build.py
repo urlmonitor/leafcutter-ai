@@ -65,6 +65,14 @@ from build_halt_guard import (
     write_lock_file,
     _resolve_package_sha,
 )
+from release.compute_next_version import (
+    _resolve_repo_root as _cnv_resolve_repo_root,
+    _resolve_changelogs_dir as _cnv_resolve_changelogs_dir,
+    _find_last_version_tag,
+    _changelog_entries_since,
+    _compute_bump,
+    _bump_version,
+)
 # Re-export for backward compatibility with tests that access via _build.*
 from template_compiler import (  # noqa: F401
     parse_frontmatter,
@@ -252,6 +260,32 @@ def _validate_all(config: dict, package_root: Path, validate_only: bool, dry_run
             return 1
     return 0
 
+
+
+def _compute_version_str(package_root: Path) -> str:
+    """Derive the next SemVer version by scanning changelog entries.
+
+    Delegates entirely to the helpers in ``release.compute_next_version``.
+    Never stamps a git tag — tag creation is the responsibility of the CI
+    release workflow, not the build orchestrator.
+
+    Args:
+        package_root: Root of the leafcutter package (parents[0] of build.py).
+            Used to locate the repository root and the changelogs directory.
+
+    Returns:
+        Version string in ``vMAJOR.MINOR.PATCH`` format (e.g. ``v0.1.4``).
+        Falls back to ``v0.0.0`` when no changelog entries or v* tags are found.
+    """
+    repo_root = _cnv_resolve_repo_root()
+    changelogs_dir = _cnv_resolve_changelogs_dir(repo_root)
+    last_tag = _find_last_version_tag(repo_root)
+    baseline = last_tag or "v0.0.0"
+    entries = _changelog_entries_since(last_tag, changelogs_dir, repo_root)
+    if not entries:
+        return baseline
+    bump = _compute_bump(entries)
+    return _bump_version(baseline, bump)
 
 
 def _run_phases(
@@ -484,6 +518,11 @@ def main(argv: list[str] | None = None) -> int:
         print("Config validation complete (no files written).")
         return 0
 
+    # Compute the next SemVer version from changelog entries.
+    # Skipped under --validate-only (exits above); respected under --dry-run
+    # (prints the version but does not write the VERSION file).
+    computed_version = _compute_version_str(package_root)
+
     if args.migrate:
         output_root_name = config.get("output_root", ".leafcutter")
         output_root = target_root / output_root_name
@@ -539,6 +578,17 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Total files written: {total}")
         if uptodate:
             print(f"Up-to-date: {uptodate} files (unchanged)")
+
+    print(f"Build version: {computed_version}")
+
+    # Write the VERSION file to target_root so downstream tooling can read the
+    # computed version without re-running compute_next_version.py.
+    # Skipped under --dry-run (version is still printed above).
+    if not args.dry_run:
+        version_file = target_root / "VERSION"
+        version_file.write_text(computed_version + "\n", encoding="utf-8")
+    else:
+        print(f"  [DRY-RUN] would write {target_root / 'VERSION'}")
 
     # Write build manifest so check_build_drift.py (Direction A) and
     # check_output_drift.py (Direction B) can verify hashes.
@@ -666,4 +716,14 @@ if __name__ == "__main__":
 #   validation but before phase dispatch. Writes .leafcutter.lock (JSON
 #   with package SHA) after successful builds. --force-breaking flag
 #   overrides the halt; --dry-run prints notice but continues.
+# - 2026-05-27 12:00 [python-coder/TICKET-20260527-WireVersionIntoBuild]: (#TICKETLESS reason=standalone-ticket-closeout)
+#   Wired compute_next_version.py into build.py to auto-apply SemVer.
+#   Strategy chosen: write VERSION file to target_root (Option 1) + print
+#   "Build version: vX.Y.Z" in summary (Option 3). Option 2 (manifest key)
+#   not chosen to keep the manifest schema stable. Import path:
+#   `from release.compute_next_version import ...` (direct, not subprocess)
+#   — scripts/release/ is a proper package; scripts/ is already on sys.path
+#   when build.py runs. Version computation runs after config validation
+#   and before _run_phases(); skipped by --validate-only (early return);
+#   --dry-run prints but does not write the VERSION file.
 # ====================================================================
