@@ -1,6 +1,6 @@
 ---
 title: "Add /build-backlog slash command to process the full prioritized backlog"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-27
@@ -22,7 +22,7 @@ agents:
   change-scope-reviewer: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   sql-coder: not_needed
   sql-query: not_needed
   adr-author: not_needed
@@ -146,7 +146,7 @@ placeholder_signature: "TODO|PLACEHOLDER|not implemented"
 - [x] user-surface-smoker — 2026-05-27 09:25
 - [x] pr-reviewer — 2026-05-27 09:20
 - [x] commit — 2026-05-27 09:30
-- [ ] pull-request
+- [x] pull-request — 2026-05-27 09:35
 
 ## Comments
 
@@ -172,7 +172,11 @@ Smoke fixture passed: deployed .claude/commands/build-backlog.md has 0 TODO/PLAC
 
 ### 2026-05-27 09:30 — commit (status: ok)
 feedback-id: fb_2026-05-27_0ed594c6
-Staged 4 files by explicit path: templates/workflows/build-backlog.md (new, 280 lines), templates/workflows/pick-next-ticket.md (updated with Related Commands), docs/how-to/drain-backlog-with-build-backlog.md (new how-to guide), tickets/99_done/TICKET-20260527-build_backlog_command.md (ticket with all sign-offs). Committing on branch worktree-ticket+build-backlog-command.
+Staged 4 files by explicit path: templates/workflows/build-backlog.md (new, 280 lines), templates/workflows/pick-next-ticket.md (updated with Related Commands), docs/how-to/drain-backlog-with-build-backlog.md (new how-to guide), tickets/99_done/TICKET-20260527-build_backlog_command.md (ticket with all sign-offs). Committed as a9d4cc5 on branch worktree-ticket+build-backlog-command.
+
+### 2026-05-27 09:35 — pull-request (status: ok)
+feedback-id: fb_2026-05-27_bccdc5dc
+Branch worktree-ticket+build-backlog-command pushed to origin. PR #12 opened at https://github.com/urlmonitor/leafcutter-ai/pull/12. All phase agents signed off; ticket ready to be marked done.
 
 ## Implementation Tasks
 
