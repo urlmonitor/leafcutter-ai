@@ -365,7 +365,7 @@
             {
                 "id": "check-build-drift",
                 "name": "Check Build Drift (leafcutter)",
-                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_build_drift.py",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_build_drift.py",
                 "language": "system",
                 "files": "^leafcutter/templates/",
                 "stages": [
@@ -376,7 +376,7 @@
             {
                 "id": "check-secrets",
                 "name": "Check Secrets",
-                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_secrets.py",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_secrets.py",
                 "language": "system",
                 "stages": [
                     "pre-commit"
@@ -386,7 +386,7 @@
             {
                 "id": "check-doc-length",
                 "name": "Check Documentation Length",
-                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_doc_length.py",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_doc_length.py",
                 "language": "system",
                 "types": [
                     "markdown"
@@ -400,7 +400,7 @@
             {
                 "id": "check-structural-change",
                 "name": "Check Structural Change — Architecture Docs Required",
-                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_structural_change.py",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_structural_change.py",
                 "language": "system",
                 "stages": [
                     "pre-commit"
@@ -410,7 +410,7 @@
             {
                 "id": "check-components-integrity",
                 "name": "Check Components Registry Integrity",
-                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_components_integrity.py",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_components_integrity.py",
                 "language": "system",
                 "files": "^docs/components\\.json$",
                 "stages": [
@@ -421,7 +421,7 @@
             {
                 "id": "check-adr-coverage",
                 "name": "Check ADR Coverage",
-                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_adr_coverage.py",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_adr_coverage.py",
                 "language": "system",
                 "stages": [
                     "pre-commit"
@@ -431,7 +431,7 @@
             {
                 "id": "check-adr-cross-reference",
                 "name": "Check ADR Cross-References",
-                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_adr_cross_reference.py",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_adr_cross_reference.py",
                 "language": "system",
                 "files": "^docs/.*\\.md$",
                 "stages": [
@@ -442,7 +442,7 @@
             {
                 "id": "check-infra-docs",
                 "name": "Check Infrastructure Documentation",
-                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_infra_docs.py",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_infra_docs.py",
                 "language": "system",
                 "files": "(docker-compose.*\\.ya?ml|docker/Dockerfile\\.|init-db\\.sh|\\.env\\.(example|template))",
                 "stages": [
@@ -453,7 +453,7 @@
             {
                 "id": "check-agent-diagrams",
                 "name": "Check Agent Diagrams",
-                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_agent_diagrams.py",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_agent_diagrams.py",
                 "language": "system",
                 "stages": [
                     "pre-commit"
@@ -463,7 +463,7 @@
             {
                 "id": "check-agent-registry",
                 "name": "Check Agent Registry",
-                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_agent_registry.py",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_agent_registry.py",
                 "language": "system",
                 "stages": [
                     "pre-commit"
@@ -473,7 +473,7 @@
             {
                 "id": "check-mermaid-drift",
                 "name": "Check Mermaid Diagram Drift",
-                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_mermaid_drift.py",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_mermaid_drift.py",
                 "language": "system",
                 "files": "^docs/architecture/.*\\.md$",
                 "stages": [
@@ -486,7 +486,7 @@
             {
                 "id": "check-mermaid-parent-link",
                 "name": "Check Mermaid Parent-Link Bidirectionality",
-                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_mermaid_parent_link.py",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_mermaid_parent_link.py",
                 "language": "system",
                 "files": "^docs/architecture/.*\\.md$",
                 "stages": [
@@ -497,7 +497,7 @@
             {
                 "id": "check-diagram-naming",
                 "name": "Check Architecture Diagram Filename Convention",
-                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_diagram_naming.py",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_diagram_naming.py",
                 "language": "system",
                 "files": "^docs/architecture/.*\\.md$",
                 "stages": [
@@ -510,7 +510,7 @@
             {
                 "id": "check-paths-integrity",
                 "name": "Check Paths JSON Integrity",
-                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_paths_integrity.py",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_paths_integrity.py",
                 "language": "system",
                 "files": "^leafcutter/config/paths\\.json$",
                 "stages": [
@@ -521,7 +521,7 @@
             {
                 "id": "check-architecture-scaffolds",
                 "name": "Check Architecture Scaffold Integrity",
-                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_architecture_scaffolds.py",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_architecture_scaffolds.py",
                 "language": "system",
                 "files": "^leafcutter/templates/docs/architecture/",
                 "stages": [
@@ -532,7 +532,7 @@
             {
                 "id": "check-feedback-id",
                 "name": "Check Feedback ID in Signoff Comments",
-                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_feedback_id.py",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_feedback_id.py",
                 "language": "system",
                 "files": "^tickets/.*\\.md$",
                 "stages": [
@@ -543,7 +543,7 @@
             {
                 "id": "check-output-drift",
                 "name": "Check Output Drift (leafcutter Direction B)",
-                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_output_drift.py",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_output_drift.py",
                 "language": "system",
                 "files": "^(\\.claude/agents/|\\.claude/skills/|\\.agents/workflows/|\\.agents/rules/)",
                 "stages": [
@@ -555,7 +555,7 @@
             {
                 "id": "check-glossary-coverage",
                 "name": "Check Glossary Coverage (GlossaryAutomation)",
-                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_glossary_coverage.py",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_glossary_coverage.py",
                 "language": "system",
                 "files": ".*\\.(md|py|sql)$",
                 "stages": [
@@ -568,7 +568,7 @@
             {
                 "id": "check-placeholder-defaults",
                 "name": "Check Placeholder-Default Pattern (UserSurfaceVerification)",
-                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_placeholder_defaults.py",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_placeholder_defaults.py",
                 "language": "system",
                 "files": "\\.py$",
                 "stages": [
@@ -580,7 +580,7 @@
             {
                 "id": "check-commit-scope",
                 "name": "Check Commit Scope (warn-only — staged vs files_touched)",
-                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_commit_scope.py",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_commit_scope.py",
                 "language": "system",
                 "stages": [
                     "pre-commit"
@@ -591,7 +591,7 @@
             {
                 "id": "check-doc-types-agents",
                 "name": "Check Doc Types Agent References",
-                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_doc_types_agents.py",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_doc_types_agents.py",
                 "language": "system",
                 "files": "(config/doc_types\\.json|config/agent_registry\\.json)",
                 "stages": [
@@ -603,7 +603,7 @@
             {
                 "id": "check-roadmap-schema",
                 "name": "Check Roadmap JSON Schema Compliance",
-                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_roadmap_schema.py",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_roadmap_schema.py",
                 "language": "system",
                 "files": "^docs/roadmap\\.json$",
                 "stages": [
@@ -615,7 +615,7 @@
             {
                 "id": "regenerate-roadmap-mirror",
                 "name": "Regenerate docs/roadmap.md mirror",
-                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/regenerate_roadmap_mirror.py",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/regenerate_roadmap_mirror.py",
                 "language": "system",
                 "files": "^docs/roadmap\\.json$",
                 "stages": [

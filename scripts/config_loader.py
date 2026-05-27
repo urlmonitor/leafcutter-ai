@@ -71,8 +71,15 @@ def load_config(config_path: Path | None, target_root: Path) -> dict[str, Any]:
     return merged
 
 
+class ConfigValidationError(ValueError):
+    """Raised when a config value fails validation outside JSON-Schema."""
+
+
+_VALID_SHIM_STRATEGIES = ("symlink", "copy", "auto")
+
+
 def validate_config(config: dict[str, Any]) -> list[str]:
-    """Validate config against the package JSON schema.
+    """Validate config against the package JSON schema and custom rules.
 
     Args:
         config: Dictionary of config values to validate against the package
@@ -82,7 +89,17 @@ def validate_config(config: dict[str, Any]) -> list[str]:
         List of error message strings. Empty list means the config is valid.
         Returns a single warning string if ``jsonschema`` is not installed or
         the schema file is not found.
+
+    Raises:
+        ConfigValidationError: When shim_strategy has an invalid value.
     """
+    shim_strategy = config.get("shim_strategy", "auto")
+    if shim_strategy not in _VALID_SHIM_STRATEGIES:
+        raise ConfigValidationError(
+            f"Invalid shim_strategy: {shim_strategy!r}. "
+            f"Valid values: {', '.join(_VALID_SHIM_STRATEGIES)}"
+        )
+
     if not _JSONSCHEMA_AVAILABLE:
         return ["jsonschema not installed — skipping schema validation (pip install jsonschema)"]
     if not SCHEMA_PATH.exists():

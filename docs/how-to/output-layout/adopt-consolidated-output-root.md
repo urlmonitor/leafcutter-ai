@@ -1,0 +1,258 @@
+---
+title: "How to adopt the consolidated output root (.leafcutter/)"
+type: how_to
+status: active
+created: 2026-05-27
+last_updated: 2026-05-27
+components:
+  - build_system
+  - infrastructure
+related_docs:
+  - docs/architecture/adrs/ADR-004-consolidated-output-root.md
+  - docs/reference/skills-config-fields.md
+---
+
+# How to adopt the consolidated output root (.leafcutter/)
+
+This guide walks an existing leafcutter user through migrating to the
+consolidated output layout, where all `build.py` artifacts live under a single
+`.leafcutter/` directory at your project root. After following these steps,
+`scripts/`, `config/`, and `.claude/agents/` will be free of generated files,
+and tool integrations (Claude Code, pre-commit, Gemini) will continue to work
+via shims pointing into `.leafcutter/`.
+
+**Prerequisites**
+
+- You have leafcutter-ai installed in your project and `build.py` has run at
+  least once against a pre-migration layout.
+- `.claude/skills_config.json` exists (run `/onboard` if it does not).
+- Python 3.10 or later is available.
+- On Windows: Developer Mode is enabled, or you have accepted that shims will
+  be file copies rather than symlinks (see
+  [Windows symlink note](#3-configure-shim_strategy-windows-only) below).
+
+---
+
+## Steps
+
+### Step 1 — Check for stale files without deleting them
+
+Run the migration report to see what `build.py` will remove. This is a
+read-only scan — nothing is deleted.
+
+```bash
+python leafcutter-ai/scripts/build.py --migrate
+```
+
+The output lists:
+
+- Files at old locations (`scripts/commit_guardian/`, `.claude/agents/`, etc.)
+  that will be removed on the next full build.
+- Symlinks that already point into `.leafcutter/` (nothing to do for those).
+- The configured `output_root` that will be used.
+
+Review the list. If you see files you edited manually (e.g. a hand-customised
+agent), back them up before proceeding. User-curated files — `vision.md`,
+`glossary.md`, `tickets/`, `changelogs/` — are never touched by this process.
+
+### Step 2 — Confirm output_root in skills_config.json
+
+The defaults work out of the box; you only need this step if you want a
+non-default location.
+
+Open `.claude/skills_config.json` and confirm (or add) the two relevant keys:
+
+```json
+{
+  "output_root": ".leafcutter",
+  "shim_strategy": "auto"
+}
+```
+
+| Key | Default | Effect |
+|---|---|---|
+| `output_root` | `".leafcutter"` | Folder name at project root where all artifacts are written. |
+| `shim_strategy` | `"auto"` | How canonical paths are bridged. `"auto"` = symlink, with file-copy fallback on `PermissionError`. |
+
+Leave both keys at their defaults unless you have a specific reason to change
+them.
+
+### Step 3 — Configure shim_strategy (Windows only)
+
+Skip this step on Linux or macOS.
+
+On Windows, symlink creation requires either Developer Mode or administrator
+privileges. Without these, `build.py` will detect the `PermissionError` and
+fall back to file copies automatically when `shim_strategy` is `"auto"`.
+
+If you know your environment cannot create symlinks and want to be explicit, set:
+
+```json
+{
+  "shim_strategy": "copy"
+}
+```
+
+With `"copy"` shims, `.claude/agents/` and friends contain actual file copies.
+They stay in sync only when you re-run `build.py`; changes made directly inside
+`.claude/agents/` will be overwritten. Treat the copies as generated files.
+
+### Step 4 — Run build.py
+
+```bash
+python leafcutter-ai/scripts/build.py
+```
+
+`build.py` will, in order:
+
+1. Write all artifacts to `.leafcutter/` — agents, skills, commands, hooks,
+   scripts, pre-commit config.
+2. Auto-remove stale files at old locations (`scripts/commit_guardian/`,
+   `scripts/doc_compliance/`, `.claude/agents/` as a directory, etc.).
+3. Install shims at canonical tool paths:
+   - `.claude/agents/` → `.leafcutter/agents/`
+   - `.claude/skills/` → `.leafcutter/skills/`
+   - `.claude/commands/` → `.leafcutter/commands/`
+   - `.claude/hooks/` → `.leafcutter/hooks/`
+   - `.pre-commit-config.yaml` → `.leafcutter/pre-commit-config.yaml`
+   - `.gemini/` → `.leafcutter/gemini/`
+4. Inject the `.leafcutter/scripts/` path into pre-commit hook entries via
+   `{{config.output_root}}` substitution, so hooks like `commit_guardian`,
+   `doc_compliance`, `feedback`, and `sync_platforms` resolve correctly without
+   shims of their own.
+
+Internal scripts (`commit_guardian`, `doc_compliance`, `feedback`,
+`sync_platforms`) live at `.leafcutter/scripts/<name>/` and are referenced
+directly by the hook config. No shim is created for them; the hook entry path
+is written with the correct root at build time.
+
+After a successful run you will see output similar to:
+
+```
+Output root: /your/project/.leafcutter
+
+Phase 1: agents         ✓  42 files written
+Phase 2: skills         ✓  18 files written
+Phase 3: scripts        ✓   8 files written
+Stale paths removed:    4
+Shims installed:        7
+Build complete.
+```
+
+### Step 5 — Add .leafcutter/ to .gitignore
+
+`.leafcutter/` is a build artifact regenerated by `build.py`. The recommended
+posture is to gitignore it.
+
+Add the following entry to your project's `.gitignore`:
+
+```gitignore
+# leafcutter build output — regenerate with: python leafcutter-ai/scripts/build.py
+.leafcutter/
+```
+
+If your team prefers to commit the generated config for auditability (e.g. to
+track when agents change in PR reviews), you may omit this step and commit
+`.leafcutter/` as a checked-in artifact instead. Both postures are supported.
+
+---
+
+## Verification
+
+Run each check in order.
+
+**Check 1 — Shim structure is correct**
+
+```bash
+ls -la .claude/agents .claude/skills .pre-commit-config.yaml .gemini 2>&1
+```
+
+Expected output (symlinks):
+
+```
+.claude/agents -> ../.leafcutter/agents
+.claude/skills -> ../.leafcutter/skills
+.pre-commit-config.yaml -> .leafcutter/pre-commit-config.yaml
+.gemini -> .leafcutter/gemini
+```
+
+On Windows with `shim_strategy: copy`, the entries are directories and files
+rather than symlinks; the paths should still resolve and contain content.
+
+**Check 2 — Agents load in Claude Code**
+
+Open Claude Code in the project. Run any agent by name. If it responds
+normally, discovery is working.
+
+**Check 3 — Pre-commit hooks fire**
+
+```bash
+git commit --allow-empty -m "test: verify post-migration hook chain"
+```
+
+All configured pre-commit hooks should run and exit cleanly. A clean exit
+confirms that the `.leafcutter/scripts/` path injection is working.
+
+**Check 4 — No leafcutter noise in git status**
+
+```bash
+git status
+```
+
+If `.leafcutter/` is gitignored, it should not appear. If it is tracked, you
+should see only `.leafcutter/` changes — no leafcutter files scattered across
+`scripts/`, `.claude/agents/`, or project root.
+
+---
+
+## Troubleshooting
+
+1. **Symlink creation fails on Windows with `PermissionError`**
+   Enable Developer Mode in Windows Settings > For Developers, then re-run
+   `build.py`. Or set `"shim_strategy": "copy"` in `.claude/skills_config.json`
+   to skip symlink creation permanently.
+
+2. **Pre-commit hook fails with "file not found" referencing old path**
+   The hook entry still references the pre-migration path (e.g.
+   `scripts/commit_guardian/...`). Delete `.pre-commit-config.yaml` and
+   re-run `build.py` — the shim and path injection will recreate it with the
+   correct `.leafcutter/scripts/` path.
+
+3. **Claude Code reports "no agents found" after migration**
+   Check that `.claude/agents` is a symlink (or populated directory) pointing
+   into `.leafcutter/agents/`:
+   ```bash
+   ls -la .claude/agents
+   ```
+   If it is missing, re-run `build.py`. If it is a regular empty directory
+   left over from a partial migration, remove it first:
+   ```bash
+   rm -rf .claude/agents
+   python leafcutter-ai/scripts/build.py
+   ```
+
+4. **--migrate reports stale files but build.py does not remove them**
+   The `--migrate` flag is read-only. A subsequent plain `build.py` run
+   (without `--migrate`) performs the actual removal. If removal still does not
+   happen, confirm that the files are genuinely at the listed paths and that you
+   are running `build.py` from the project root.
+
+5. **User-curated files disappeared after migration**
+   This should not happen — `build.py` never removes `vision.md`, `glossary.md`,
+   `tickets/`, or `changelogs/`. If a file is missing, check git history:
+   ```bash
+   git log --all --full-history -- <path>
+   ```
+   If `build.py` removed it and it was genuinely user-curated, file a bug
+   against `leafcutter-ai` with the file path and the stale-removal log output.
+
+---
+
+## See Also
+
+- [ADR-004: Consolidated Output Root](../../architecture/adrs/ADR-004-consolidated-output-root.md) —
+  the decision record explaining why this layout was adopted, alternatives
+  considered, and positive/negative consequences.
+- `docs/reference/skills-config-fields.md` — full reference for all
+  `skills_config.json` keys including `output_root` and `shim_strategy`.
+- `docs/README.md` — Diataxis index of all project documentation genres.

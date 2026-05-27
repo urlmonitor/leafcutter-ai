@@ -256,14 +256,20 @@ def _validate_all(config: dict, package_root: Path, validate_only: bool, dry_run
 
 def _run_phases(
     target_root: Path,
+    output_root: Path,
     config: dict,
     dry_run: bool,
     effective_force: bool,
 ) -> int:
     """Execute all build phases and print per-phase totals.
 
+    Build artifact phases write into ``output_root`` (.leafcutter/ by default).
+    User-curated scaffold phases (vision, glossary, roadmap, tickets) write
+    directly into ``target_root`` since they are write-if-absent and user-owned.
+
     Args:
         target_root: Absolute path to the target project root.
+        output_root: Absolute path to the consolidated output directory.
         config: Build configuration dict from load_config.
         dry_run: When True, logs intent but writes nothing.
         effective_force: When True, overwrites existing files.
@@ -272,31 +278,146 @@ def _run_phases(
         Total number of files written (or would-be-written in dry-run mode).
     """
     from typing import Any
-    phases: list[tuple[str, Any]] = [
+
+    # Phases whose output goes into .leafcutter/ (external tools hardcode paths)
+    artifact_phases: list[tuple[str, Any]] = [
         ("Agents", build_agents),
         ("Skills", build_skills),
         ("Claude settings", build_claude_settings),
         ("Workflows", build_workflows),
+        ("Pre-commit config", build_precommit_config),
+        ("Antigravity instructions", build_antigravity_instructions),
+    ]
+
+    # Phases that write internal-only outputs into .leafcutter/ (no shim needed,
+    # but still consolidated so we don't pollute the user's scripts/, config/, etc.)
+    internal_phases: list[tuple[str, Any]] = [
         ("Rules", build_rules),
-        ("Ticket lifecycle", build_ticket_lifecycle),
         ("Commit guardian", build_commit_guardian),
         ("Feedback", build_feedback),
         ("Propagation audit", propagation_audit),
-        ("Pre-commit config", build_precommit_config),
         ("Doc compliance", build_doc_compliance),
+        ("Sync platforms", build_sync_platforms),
+    ]
+
+    # Phases that write user-curated scaffolds at target_root (write-if-absent)
+    scaffold_phases: list[tuple[str, Any]] = [
+        ("Ticket lifecycle", build_ticket_lifecycle),
         ("Vision", build_vision),
         ("Roadmap", build_roadmap),
         ("Glossary", build_glossary),
         ("Config scaffolds", build_config_scaffolds),
-        ("Antigravity instructions", build_antigravity_instructions),
-        ("Sync platforms", build_sync_platforms),
     ]
+
     total = 0
-    for label, fn in phases:
+    for label, fn in artifact_phases:
+        print(f"{label}:")
+        total += fn(output_root, config, dry_run, effective_force)
+        print()
+
+    for label, fn in internal_phases:
+        print(f"{label}:")
+        total += fn(output_root, config, dry_run, effective_force)
+        print()
+
+    for label, fn in scaffold_phases:
         print(f"{label}:")
         total += fn(target_root, config, dry_run, effective_force)
         print()
+
     return total
+
+
+_PRE_CONSOLIDATION_PATHS = [
+    ".claude/agents",
+    ".claude/skills",
+    ".claude/commands",
+    ".claude/hooks",
+    ".claude/settings.json",
+    ".pre-commit-config.yaml",
+    ".gemini",
+    "scripts/commit_guardian",
+    "scripts/doc_compliance",
+    "scripts/feedback",
+    "scripts/sync_platforms",
+]
+
+
+def _cleanup_stale_paths(target_root: Path, output_root: Path, dry_run: bool) -> int:
+    """Auto-remove stale pre-consolidation files that have moved into .leafcutter/.
+
+    Only removes paths that are real directories/files (not symlinks pointing
+    into the output root — those are shims we created).
+
+    Returns count of paths removed.
+    """
+    import shutil
+
+    removed = 0
+    for rel_path in _PRE_CONSOLIDATION_PATHS:
+        full = target_root / rel_path
+        if not full.exists() and not full.is_symlink():
+            continue
+        if full.is_symlink():
+            link_target = full.resolve()
+            if str(link_target).startswith(str(output_root.resolve())):
+                continue
+        if dry_run:
+            kind = "directory" if full.is_dir() else "file"
+            print(f"  [DRY-RUN] would remove stale {kind}: {rel_path}")
+            removed += 1
+            continue
+        if full.is_symlink() or full.is_file():
+            full.unlink()
+        elif full.is_dir():
+            shutil.rmtree(full)
+        print(f"  removed stale: {rel_path}")
+        removed += 1
+    return removed
+
+
+def _run_migration_report(target_root: Path, output_root: Path) -> int:
+    """Scan for stale pre-consolidation files and print a migration report.
+
+    Checks known pre-consolidation output paths. If a path exists and is NOT
+    a symlink pointing into the output root, it is reported as stale.
+
+    Returns 0 always (report-only, no deletions).
+    """
+    print(f"\nMigration report for: {target_root}")
+    print(f"Output root: {output_root}\n")
+
+    stale: list[str] = []
+    for rel_path in _PRE_CONSOLIDATION_PATHS:
+        full = target_root / rel_path
+        if not full.exists() and not full.is_symlink():
+            continue
+        if full.is_symlink():
+            link_target = full.resolve()
+            if str(link_target).startswith(str(output_root.resolve())):
+                continue
+        stale.append(rel_path)
+
+    if not stale:
+        print("No stale pre-consolidation files found. Migration complete.")
+        return 0
+
+    print(f"Found {len(stale)} stale pre-consolidation path(s):\n")
+    for p in stale:
+        full = target_root / p
+        kind = "directory" if full.is_dir() else "file"
+        print(f"  STALE: {p} ({kind})")
+
+    print(f"\nTo remove stale files, run:")
+    for p in stale:
+        full = target_root / p
+        if full.is_dir():
+            print(f"  rm -rf {p}")
+        else:
+            print(f"  rm {p}")
+
+    print(f"\nThen re-run: python {Path(__file__).name} --target-dir {target_root}")
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -334,6 +455,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="Proceed despite breaking changes since last build (acknowledge migration steps).")
     parser.add_argument("--no-shims", action="store_true",
                         help="Skip the install_shims step at the end.")
+    parser.add_argument("--migrate", action="store_true",
+                        help="Scan for stale pre-consolidation files and print a migration report. No files are deleted.")
     parser.add_argument("--update-diagrams", action="store_true",
                         help="Regenerate Mermaid diagrams from registry and embed into target docs.")
     parser.add_argument("--seed-docs", action="store_true",
@@ -361,7 +484,12 @@ def main(argv: list[str] | None = None) -> int:
         print("Config validation complete (no files written).")
         return 0
 
-    # Halt-guard: check for breaking changes since consumer's last build
+    if args.migrate:
+        output_root_name = config.get("output_root", ".leafcutter")
+        output_root = target_root / output_root_name
+        return _run_migration_report(target_root, output_root)
+
+    # Halt-guard: check for breaking changes since last build
     changelogs_dir = package_root / "changelogs"
     halt_result = check_halt_guard(target_root, package_root, changelogs_dir)
     if halt_result.should_halt:
@@ -389,14 +517,18 @@ def main(argv: list[str] | None = None) -> int:
               "--no-overwrite wins — existing files will be skipped.")
     effective_force: bool = not args.no_overwrite
 
+    output_root_name = config.get("output_root", ".leafcutter")
+    output_root = target_root / output_root_name
+
     dry_label = " (dry-run)" if args.dry_run else ""
-    print(f"\nBuilding{dry_label} into: {target_root}\n")
+    print(f"\nBuilding{dry_label} into: {target_root}")
+    print(f"Output root: {output_root}\n")
 
     # Reset the up-to-date counter before this run so consecutive CLI calls
     # report accurate per-run numbers.
     reset_uptodate_count()
 
-    total = _run_phases(target_root, config, args.dry_run, effective_force)
+    total = _run_phases(target_root, output_root, config, args.dry_run, effective_force)
 
     uptodate = get_uptodate_count()
     if args.dry_run:
@@ -424,8 +556,21 @@ def main(argv: list[str] | None = None) -> int:
         if pkg_sha:
             write_lock_file(target_root, pkg_sha)
 
-    if not args.dry_run and not args.no_shims:
-        _install_shims(target_root)
+    # Auto-clean stale pre-consolidation files before installing shims
+    print("\nStale file cleanup:")
+    stale_count = _cleanup_stale_paths(target_root, output_root, args.dry_run)
+    if stale_count == 0:
+        print("  (no stale files found)")
+
+    if not args.no_shims:
+        print("\nShim install:")
+        _install_shims(
+            target_root,
+            output_root=output_root,
+            config=config,
+            dry_run=args.dry_run,
+            force=effective_force,
+        )
 
     # Post-build: scan for placeholder content and referential integrity
     if not args.dry_run:

@@ -49,3 +49,4 @@ different places where they are mixed with proper project files."
 | 04 | [04_update_config_schema.md](./04_update_config_schema.md) | Update skills_config.json schema to configure the output root name/path | `[ ]` |
 | 05 | [05_migration_self_hosting.md](./05_migration_self_hosting.md) | Migrate the self-hosted repo (build-self.sh and ADR-001) to the new layout | `[ ]` |
 | 06 | [06_docs_and_gitignore.md](./06_docs_and_gitignore.md) | Write how-to guide, explanation doc, and .gitignore template for the new layout | `[ ]` |
+| 07 | [07_internal_paths_stay_at_root.md](./07_internal_paths_stay_at_root.md) | Keep internal-only outputs (scripts/, config/, rules/) at target_root — no shim needed | `[ ]` |

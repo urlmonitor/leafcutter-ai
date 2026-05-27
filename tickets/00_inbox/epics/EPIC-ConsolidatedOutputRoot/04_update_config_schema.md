@@ -69,14 +69,20 @@ Then it exits non-zero with "Invalid shim_strategy: teleport. Valid values:
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] python-coder
+- [x] architect-review
+- [x] python-coder
 - [ ] test-writer
 - [ ] pr-reviewer
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
+
+### python-coder — 2026-05-27
+(status: ok) Added output_root and shim_strategy to schema, defaults, and config_loader. ConfigValidationError raised on invalid shim_strategy. Keys are top-level in the merged config dict (no nesting needed).
+
+### architect-review — 2026-05-27
+(status: ok) Two fields sufficient for initial release. shim_paths can be added later if power users need fine-grained control over which canonical paths get shimmed.
 
 ## Implementation Tasks
 

@@ -6,6 +6,9 @@
   "architecture_overview": "",
   "test_commands": "",
 
+  "output_root": ".leafcutter",
+  "shim_strategy": "auto",
+
   "tickets_inbox_path": "tickets/00_inbox",
   "tickets_inbox_epics_path": "tickets/00_inbox/epics",
   "tickets_todo_path": "tickets/01_todo",
