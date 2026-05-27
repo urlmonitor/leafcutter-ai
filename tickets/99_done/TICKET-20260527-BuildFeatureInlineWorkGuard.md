@@ -1,6 +1,6 @@
 ---
 title: "Add hard guardrails to /build-feature to prevent inline implementation work"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-27
