@@ -16,6 +16,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "bash -c 'd=\"$PWD\"; while [ ! -d \"$d/.claude/hooks\" ] && [ \"$d\" != \"/\" ]; do d=\"$(dirname \"$d\")\"; done; python \"$d/.claude/hooks/inline_work_guard.py\"'",
+            "timeout": 10
+          },
+          {
+            "type": "command",
             "command": "bash -c 'd=\"$PWD\"; while [ ! -d \"$d/.claude/hooks\" ] && [ \"$d\" != \"/\" ]; do d=\"$(dirname \"$d\")\"; done; python \"$d/.claude/hooks/readme_read_guard.py\"'",
             "timeout": 10
           },
