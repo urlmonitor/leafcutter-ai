@@ -1,6 +1,6 @@
 ---
 title: "Update agent_registry.json: test-writer priority 8 → 5 (before coders)"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-26
@@ -14,8 +14,8 @@ agents:
   test-writer: not_needed
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 01: Update agent_registry.json: test-writer priority 8 → 5 (before coders)
@@ -77,8 +77,8 @@ Then the sequence is: status-checker(1) adr-author(2) architecture-diagram-autho
 - [x] architect-review — 2026-05-27 00:00
 - [x] python-coder — 2026-05-27 00:01
 - [x] pr-reviewer — 2026-05-27 00:02
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-05-27 00:03
+- [x] pull-request — 2026-05-27 00:04
 
 ## Comments
 
@@ -93,6 +93,14 @@ Updated config/agent_registry.json: test-writer priority 8→5, priority_rationa
 ### 2026-05-27 00:02 — pr-reviewer (status: ok)
 feedback-id: fb_2026-05-27_28f73923
 All acceptance criteria verified: test-writer priority=5 in registry (no collision), rationale wording correct, full ordering chain matches spec (status-checker(1)→adr-author(2)→architecture-diagram-author(3)→architect-review(4)→test-writer(5)→python-coder(6)→sql-coder/sql-query(7)→test-runner(9)→docs(10)→pr-reviewer(11)→user-surface-smoker(11.5)→commit(12)→pull-request(13)). Deployed ticket-supervisor table reflects new ordering. Change is minimal and reversible. Approve for commit.
+
+### 2026-05-27 00:03 — commit (status: ok)
+feedback-id: fb_2026-05-27_449e7876
+Committed f7261d5: feat(tdd): bump test-writer priority 8→5. 3 files changed (agent_registry.json, ticket 01, Master_Plan.md). Pre-commit hooks passed cleanly.
+
+### 2026-05-27 00:04 — pull-request (status: ok)
+feedback-id: fb_2026-05-27_c41f9b7b
+Branch worktree-EPIC-TDDWorkflowEnforcement pushed to origin/worktree-EPIC-TDDWorkflowEnforcement (new branch). PR creation deferred until all epic tickets are complete (one PR per epic convention).
 
 ## Implementation Tasks
 
