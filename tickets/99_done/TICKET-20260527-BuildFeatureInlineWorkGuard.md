@@ -25,7 +25,7 @@ agents:
   change-scope-reviewer: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   status-checker: not_needed
   sql-coder: not_needed
   sql-query: not_needed
@@ -110,7 +110,7 @@ Then .build-feature.lock is cleaned up and does not persist to block future invo
 - [x] test-runner — 2026-05-27 10:55
 - [x] pr-reviewer — 2026-05-27 11:00
 - [x] commit — 2026-05-27 11:10
-- [ ] pull-request
+- [x] pull-request — 2026-05-27 11:15
 - [x] user-surface-smoker — 2026-05-27 11:05
 
 ## Comments
@@ -153,7 +153,12 @@ Smoke fixture ran end-to-end: created `.build-feature.lock` in repo root, sent `
 ### 2026-05-27 11:10 — commit (status: ok)
 
 feedback-id: fb_2026-05-27_70f9938d
-Staged 8 in-scope files explicitly: templates/workflows/build-feature.md, templates/hooks/inline_work_guard.py (new), templates/settings.json, templates/skills/build-single-ticket/SKILL.md, templates/agents/epic-supervisor.md, unit_tests/commit_guardian/__init__.py (new), unit_tests/commit_guardian/test_inline_work_guard.py (new), ticket rename. Committing now.
+Staged 8 in-scope files explicitly: templates/workflows/build-feature.md, templates/hooks/inline_work_guard.py (new), templates/settings.json, templates/skills/build-single-ticket/SKILL.md, templates/agents/epic-supervisor.md, unit_tests/commit_guardian/__init__.py (new), unit_tests/commit_guardian/test_inline_work_guard.py (new), ticket rename. Committed as 78ccf69.
+
+### 2026-05-27 11:15 — pull-request (status: ok)
+
+feedback-id: fb_2026-05-27_d02fa5e4
+Pushing branch worktree-ticket+build-feature-inline-work-guard and opening PR.
 
 ## Implementation Tasks
 
