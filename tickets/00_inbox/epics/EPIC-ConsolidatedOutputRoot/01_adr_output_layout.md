@@ -24,7 +24,7 @@ agents:
 ## Goal
 In order to formalise the output-layout design, we need a new Architecture
 Decision Record that documents why all `build.py` outputs move to a single
-`leafcutter-project/` root, what alternatives were considered (symlinks,
+`.leafcutter/` root, what alternatives were considered (symlinks,
 physical copies, no-change), and the consequences for tools that read fixed
 paths (Claude Code, pre-commit, Gemini/Antigravity).
 
@@ -38,12 +38,13 @@ self-hosting boundary described in ADR-001-self-hosting-boundary.md.
 An ADR must exist and be accepted before any implementation tickets (02–06) can
 be merged. This ticket produces that ADR.
 
-Key questions the ADR must resolve (see also Master_Plan.md Open Questions):
+Key questions the ADR must resolve (see also Master_Plan.md Open Questions — resolved):
 - Does Claude Code follow symlinks for `.claude/agents/` and `.claude/skills/`?
   Answer determines whether a symlink shim layer is viable or whether physical
-  copies must remain.
-- Output root name (`leafcutter-project/`, `.leafcutter/`, `leafcutter-out/`).
-- Commit vs gitignore posture for the output root.
+  copies must remain. **Test empirically before writing the ADR.**
+- Output root name: **`.leafcutter/`** (decided).
+- Commit vs gitignore posture: **configurable per consumer project**, ADR
+  recommends git-ignored as default (decided).
 
 The ADR will reference ADR-001 (self-hosting boundary) and may require updating
 its "Consequences" section once the new layout is adopted.
@@ -85,7 +86,7 @@ Then the "Consequences" section notes the superseded layout or links to ADR-NNN
 
 ### adr-author
 - [ ] Investigate whether Claude Code follows symlinks for `.claude/` discovery
-  (can be tested locally — create a symlink `.claude/agents -> leafcutter-project/agents`
+  (can be tested locally — create a symlink `.claude/agents -> .leafcutter/agents`
   and verify Claude Code loads the agents)
 - [ ] Document findings in ADR-NNN-consolidated-output-root.md at
   `leafcutter-ai/docs/architecture/adrs/`

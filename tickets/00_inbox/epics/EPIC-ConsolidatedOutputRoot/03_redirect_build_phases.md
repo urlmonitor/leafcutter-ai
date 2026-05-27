@@ -1,5 +1,5 @@
 ---
-title: "Redirect all build phase outputs into leafcutter-project/ root"
+title: "Redirect all build phase outputs into .leafcutter/ root"
 status: todo
 components:
   - build_pipeline
@@ -33,12 +33,12 @@ agents:
   adr-author: not_needed
 ---
 
-# 03: Redirect All Build Phase Outputs into leafcutter-project/
+# 03: Redirect All Build Phase Outputs into .leafcutter/
 
 ## Goal
 In order to isolate leafcutter artifacts from consumer project files, we need
 to update every `build_*.py` phase module so that its output root is
-`<target_root>/leafcutter-project/` (configurable) rather than the project
+`<target_root>/.leafcutter/` (configurable) rather than the project
 root directly, then invoke the shim layer (ticket 02) to forward canonical
 paths.
 
@@ -51,7 +51,7 @@ paths.
   build manifest
 
 After this ticket, all phase functions redirect their writes to
-`<target_root>/leafcutter-project/<same-relative-path>`. The `install_shims()`
+`<target_root>/.leafcutter/<same-relative-path>`. The `install_shims()`
 function from ticket 02 then creates the canonical-path shims.
 
 Phase modules affected:
@@ -63,7 +63,7 @@ Phase modules affected:
 `build_config_scaffolds`, `seed_docs`, `update_diagrams`.
 
 The `output_root` for each phase is derived from
-`config.get("output_root", "leafcutter-project")`, which resolves relative to
+`config.get("output_root", ".leafcutter")`, which resolves relative to
 `target_root`.
 
 ## Acceptance Criteria
@@ -71,7 +71,7 @@ The `output_root` for each phase is derived from
 ```gherkin
 Given build.py runs on a clean consumer project
 When examining the filesystem after build
-Then all leafcutter-owned files exist under <target_root>/leafcutter-project/
+Then all leafcutter-owned files exist under <target_root>/.leafcutter/
 And .claude/, scripts/, docs/, and the project root contain no leafcutter files
   except shim symlinks or copies placed by install_shims()
 
@@ -82,7 +82,7 @@ Then old scattered files are detected and the user is warned to remove them
 
 Given build.py runs with --dry-run
 When examining the output
-Then the phase log shows "would write to leafcutter-project/<path>" for every
+Then the phase log shows "would write to .leafcutter/<path>" for every
   file that would be created
 ```
 
@@ -108,7 +108,7 @@ Then the phase log shows "would write to leafcutter-project/<path>" for every
 
 ### python-coder
 - [ ] Add `output_root` parameter to `config_loader.py` `load_config()`:
-  reads `config.get("output_root", "leafcutter-project")`, resolves it
+  reads `config.get("output_root", ".leafcutter")`, resolves it
   relative to `target_root`, and adds it to the returned config dict
 - [ ] Thread `output_root` path through `build.py` into every phase function
   call (each phase takes `target_root` — change signature to also accept
@@ -149,9 +149,9 @@ Then the phase log shows "would write to leafcutter-project/<path>" for every
   - `test_build_precommit_uses_output_root` — verifies `.pre-commit-config.yaml`
     is written under `output_root`, not target root
   - `test_output_root_default_is_leafcutter_project` — verifies the default
-    config value is `leafcutter-project`
+    config value is `.leafcutter`
   - `test_dry_run_logs_output_root_paths` — verifies dry-run logs show
-    `leafcutter-project/<path>`
+    `.leafcutter/<path>`
 
 ## Risk & Safety
 - Touches money? No.
@@ -161,6 +161,6 @@ Then the phase log shows "would write to leafcutter-project/<path>" for every
   migration ticket (05) adds the detection/cleanup path. Reversing requires
   reverting this ticket and ticket 05.
 - Breaking change for existing installs: after this ticket lands, running
-  `build.py` will write to `leafcutter-project/` but NOT clean up old files
+  `build.py` will write to `.leafcutter/` but NOT clean up old files
   at their previous locations. Existing installs need the migration step
   (ticket 05) to remove stale files.

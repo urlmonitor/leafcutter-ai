@@ -23,7 +23,7 @@ agents:
 # 02: Design and Prototype Symlink/Shim Layer
 
 ## Goal
-In order to move all `build.py` outputs under `leafcutter-project/` without
+In order to move all `build.py` outputs under `.leafcutter/` without
 breaking Claude Code, pre-commit, or Gemini/Antigravity tooling, we need a
 shim layer that places either symlinks or thin forwarding copies at the
 canonical paths those tools expect.
@@ -43,7 +43,7 @@ This ticket designs and prototypes the shim layer implementation that
 `build.py` will use (after ticket 03 redirects phases to the new root).
 
 Approach options (to be chosen based on ADR-001 outcome):
-1. **Symlinks**: `leafcutter-project/agents -> .claude/agents/` (or vice versa).
+1. **Symlinks**: `.leafcutter/agents -> .claude/agents/` (or vice versa).
    Lightweight; git-ignorable; does not work on Windows without Developer Mode.
 2. **File copies with manifest**: `build.py` copies shim files to canonical
    paths and records them in the build manifest so they can be detected/cleaned.
@@ -61,7 +61,7 @@ This ticket produces:
 
 - `data_flow` diagram at `leafcutter-ai/docs/architecture/c2-shim-layer.md`
   (parent: `leafcutter-ai/docs/architecture/c1-build-pipeline.md`) — shows how
-  `build.py` writes to `leafcutter-project/` and then creates shims pointing
+  `build.py` writes to `.leafcutter/` and then creates shims pointing
   back to canonical tool-expected paths.
 
 ## Acceptance Criteria
@@ -79,7 +79,7 @@ Then build.py falls back to file-copy shims and logs a warning
 
 Given build.py has run and created shims
 When the developer runs git status
-Then only leafcutter-project/ shows as untracked/modified (shim files at
+Then only .leafcutter/ shows as untracked/modified (shim files at
   .claude/ are either gitignored or identical to last commit, not dirty)
 
 Given install_shims() is called with dry_run=True
@@ -104,7 +104,7 @@ Then no files are written to disk and the shim plan is printed to stdout
 - [ ] Validate the chosen shim strategy (from ADR ticket 01) against the
   Windows symlink constraint and the git-cleanliness requirement
 - [ ] Confirm the `data_flow` diagram plan covers the full handoff from
-  build_phases → leafcutter-project/ → shim → canonical path
+  build_phases → .leafcutter/ → shim → canonical path
 
 ### python-coder
 - [ ] Implement `install_shims(target_root, config, dry_run, force)` in
@@ -124,7 +124,7 @@ Then no files are written to disk and the shim plan is printed to stdout
 ### test-writer
 - [ ] `leafcutter-ai/tests/test_build_shims.py`:
   - `test_install_shims_symlink_mode` — verifies symlinks are created at
-    canonical paths pointing into leafcutter-project/
+    canonical paths pointing into .leafcutter/
   - `test_install_shims_copy_fallback` — patches os.symlink to raise
     PermissionError; verifies file copies are used instead
   - `test_install_shims_dry_run` — verifies no files written with dry_run=True

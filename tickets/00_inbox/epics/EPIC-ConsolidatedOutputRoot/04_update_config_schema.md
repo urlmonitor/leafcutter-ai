@@ -51,7 +51,7 @@ only. No build phase code is changed here (that is ticket 03).
 ```gherkin
 Given skills_config.json does not include output_root
 When build.py runs
-Then it defaults to output_root = "leafcutter-project" without error
+Then it defaults to output_root = ".leafcutter" without error
 
 Given skills_config.json sets output_root = ".leafcutter"
 When build.py runs
@@ -90,8 +90,8 @@ Then it exits non-zero with "Invalid shim_strategy: teleport. Valid values:
   ```json
   "output_root": {
     "type": "string",
-    "description": "Folder name under target_root where build.py writes all outputs. Default: leafcutter-project",
-    "default": "leafcutter-project"
+    "description": "Folder name under target_root where build.py writes all outputs. Default: .leafcutter",
+    "default": ".leafcutter"
   },
   "shim_strategy": {
     "type": "string",
@@ -102,7 +102,7 @@ Then it exits non-zero with "Invalid shim_strategy: teleport. Valid values:
   ```
 - [ ] Add defaults to `leafcutter-ai/config/skills_config.default.json`:
   ```json
-  "output_root": "leafcutter-project",
+  "output_root": ".leafcutter",
   "shim_strategy": "auto"
   ```
 - [ ] Update `config_loader.py` `validate_config()` to check `shim_strategy`
@@ -118,7 +118,7 @@ Then it exits non-zero with "Invalid shim_strategy: teleport. Valid values:
 ### test-writer
 - [ ] `leafcutter-ai/tests/test_config_loader_output_root.py`:
   - `test_output_root_default` — omitting `output_root` returns
-    `"leafcutter-project"`
+    `".leafcutter"`
   - `test_output_root_custom` — setting `output_root = ".leafcutter"` is
     returned verbatim
   - `test_shim_strategy_invalid` — `"teleport"` raises `ConfigValidationError`

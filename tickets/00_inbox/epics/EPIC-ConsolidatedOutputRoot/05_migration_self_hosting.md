@@ -40,7 +40,7 @@ self-hosted repo itself passes a full build after the change.
 The leafcutter repo is self-hosting (see ADR-001). Its current `.claude/`
 directory contains compiled agents and skills that are build outputs from
 `build.py`. After tickets 03 and 04 land, a fresh `build.py` run will write
-to `leafcutter-project/` instead. The old files at `.claude/agents/`,
+to `.leafcutter/` instead. The old files at `.claude/agents/`,
 `scripts/commit_guardian/`, etc. are now stale and should be cleaned up.
 
 For consumer projects already using the pre-consolidation layout, we need:
@@ -52,16 +52,16 @@ For consumer projects already using the pre-consolidation layout, we need:
 The `build-self.sh` script calls `build.py` to regenerate the self-hosted
 repo's agents/skills. It must be updated to pass the new `output_root` (or
 rely on the default) and to update `.claude/skills_config.json` with
-`output_root: "leafcutter-project"`.
+`output_root: ".leafcutter"`.
 
 ## Acceptance Criteria
 
 ```gherkin
 Given the leafcutter repo's .claude/skills_config.json is updated with
-  output_root = "leafcutter-project"
+  output_root = ".leafcutter"
 When build-self.sh runs
-Then build.py succeeds and agents appear at leafcutter-project/agents/
-And shims exist at .claude/agents/ pointing into leafcutter-project/agents/
+Then build.py succeeds and agents appear at .leafcutter/agents/
+And shims exist at .claude/agents/ pointing into .leafcutter/agents/
 
 Given a consumer project that ran the old build.py (stale files at .claude/)
 When build.py --migrate runs
@@ -101,11 +101,11 @@ Then it succeeds with 0 warnings about stale files
   - Exits 0; does not delete anything
 - [ ] Update `.claude/skills_config.json` to add:
   ```json
-  "output_root": "leafcutter-project",
+  "output_root": ".leafcutter",
   "shim_strategy": "auto"
   ```
 - [ ] Update `leafcutter-ai/build-self.sh` if it hard-codes any output paths
-  that must now be `leafcutter-project/`-relative
+  that must now be `.leafcutter/`-relative
 - [ ] Ensure `write_build_manifest()` writes the manifest to
   `<output_root>/.leafcutter-build-manifest.json` (not project root)
   so subsequent `--migrate` runs can find it

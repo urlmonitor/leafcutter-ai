@@ -34,7 +34,7 @@ agents:
 # 06: Write How-To Guide, Explanation Doc, and .gitignore Guidance
 
 ## Goal
-In order to help developers understand and adopt the new `leafcutter-project/`
+In order to help developers understand and adopt the new `.leafcutter/`
 output layout, we need three documentation artifacts: a how-to guide for
 migrating an existing install, an explanation of why files are consolidated and
 what the shim layer does, and an updated reference for `skills_config.json`
@@ -59,10 +59,10 @@ After tickets 01–05 implement the consolidated output root, consumers need:
 
 4. **`.gitignore` guidance**: The explanation doc should include a code block
    showing the recommended `.gitignore` entry for consumer projects that want
-   to treat `leafcutter-project/` as a build artifact:
+   to treat `.leafcutter/` as a build artifact:
    ```
    # leafcutter build output — regenerate with: python leafcutter-ai/scripts/build.py
-   leafcutter-project/
+   .leafcutter/
    ```
 
 ## Acceptance Criteria
@@ -74,7 +74,7 @@ Then they can follow the steps end-to-end without asking a question and end up
   with a working consolidated-output-root install
 
 Given the explanation doc is written
-When a developer asks "why are leafcutter files in leafcutter-project/ now?"
+When a developer asks "why are leafcutter files in .leafcutter/ now?"
 Then the explanation doc answers the question in under 5 minutes of reading
 
 Given the reference doc is updated
@@ -83,7 +83,7 @@ Then they can find output_root and shim_strategy with their defaults and valid v
 
 Given the .gitignore guidance is in the explanation doc
 When a developer adds it to their .gitignore
-Then git status no longer shows leafcutter-project/ as untracked
+Then git status no longer shows .leafcutter/ as untracked
 ```
 
 ## Sign-offs
@@ -106,7 +106,7 @@ Then git status no longer shows leafcutter-project/ as untracked
   2. Update skills_config.json (add output_root, shim_strategy)
   3. Run `python leafcutter-ai/scripts/build.py --migrate` and review report
   4. Delete stale files listed by the migration report
-  5. Run `python leafcutter-ai/scripts/build.py` and verify leafcutter-project/
+  5. Run `python leafcutter-ai/scripts/build.py` and verify .leafcutter/
      exists with the expected structure
   6. Verify Claude Code still loads agents (test with `/help` or equivalent)
 
@@ -114,7 +114,7 @@ Then git status no longer shows leafcutter-project/ as untracked
 - [ ] Write `leafcutter-ai/docs/explanation/consolidated-output-root.md`
   covering:
   - Why: consumer project isolation (the "mixed files" problem)
-  - What: the leafcutter-project/ output root structure
+  - What: the .leafcutter/ output root structure
   - How: the shim layer — what it does and why tools like Claude Code and
     pre-commit still work
   - Trade-offs: Windows symlink caveat, gitignore-vs-commit decision,
@@ -125,7 +125,7 @@ Then git status no longer shows leafcutter-project/ as untracked
 - [ ] Update `leafcutter-ai/docs/reference/skills-config-fields.md` (create
   if absent) to include a table row for each new field:
   | Field | Type | Default | Valid Values | Description |
-  | `output_root` | string | `leafcutter-project` | any valid folder name | Output root for all build.py artifacts |
+  | `output_root` | string | `.leafcutter` | any valid folder name | Output root for all build.py artifacts |
   | `shim_strategy` | enum | `auto` | `symlink`, `copy`, `auto` | Bridge strategy for canonical tool paths |
 
 ## Risk & Safety
