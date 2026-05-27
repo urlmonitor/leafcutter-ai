@@ -138,3 +138,13 @@ the epic worktree (if needed) and drives the ticket through all its phase agents
 
 This is a two-step flow with a confirmation gate between selection and execution.
 Use `--auto` only in fully automated contexts where user confirmation is unnecessary.
+
+## Related Commands
+
+| Command | Use when |
+|---------|----------|
+| `/pick-next-ticket` | You want to select ONE ticket interactively from the top-5 candidates |
+| `/pick-next-ticket --auto` | You want to auto-select and build ONE ticket (highest priority) |
+| `/build-backlog --dry-run` | You want to preview the FULL ordered ready list without building |
+| `/build-backlog` | You want to drain the ENTIRE backlog automatically, item by item |
+| `/build-backlog --limit N` | You want to build the top N items in sequence |
