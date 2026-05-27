@@ -120,7 +120,7 @@ Then version computation is skipped entirely
 - [x] test-runner — 2026-05-27 10:45
 - [x] pr-reviewer — 2026-05-27 11:00
 - [x] commit — 2026-05-27 11:15
-- [ ] pull-request — failed 2026-05-27 11:30
+- [x] pull-request — 2026-05-27 (PR #17, merged)
 
 ## Comments
 
