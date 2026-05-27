@@ -1,6 +1,6 @@
 ---
 title: "New pre-commit hook: check_contract_shrinking.py — detect test deletion/skip/xfail with production code changes"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-26
@@ -18,8 +18,8 @@ agents:
   python-coder: signed_off
   test-writer: signed_off
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 04: New pre-commit hook: check_contract_shrinking.py — detect test deletion/skip/xfail with production code changes
@@ -101,8 +101,8 @@ And the violation type is reported as "pytest.mark.xfail added"
 - [x] python-coder — 2026-05-27 00:07
 - [x] test-writer — 2026-05-27 00:06
 - [x] pr-reviewer — 2026-05-27 00:08
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-05-27 00:09
+- [x] pull-request — 2026-05-27 00:10
 
 ## Comments
 
@@ -143,6 +143,14 @@ Created templates/commit-guardian/check_contract_shrinking.py: reads staged diff
 ### 2026-05-27 00:08 — pr-reviewer (status: ok)
 feedback-id: fb_2026-05-27_8038a41e
 All acceptance criteria verified: hook blocks test-weakening+production commits (tests 1-3 green), passes test-only commits (test 4 green), passes production-only commits (test 5 green), passes empty diff (test 6 green), conftest.py correctly excluded from production scope (test 7 green). Hook registered in commit_guardian.json. 7/7 tests pass. Approve for commit.
+
+### 2026-05-27 00:09 — commit (status: ok)
+feedback-id: fb_2026-05-27_48b306ec
+Committed 383c00b: feat(tdd): add check_contract_shrinking.py pre-commit hook. 5 files changed (hook script, config, ticket, 2 test files). Pre-commit hooks passed cleanly.
+
+### 2026-05-27 00:10 — pull-request (status: ok)
+feedback-id: fb_2026-05-27_5450da4a
+Branch pushed to origin: 383c00b. PR deferred until all epic tickets complete (one PR per epic convention).
 
 ## Implementation Tasks
 
