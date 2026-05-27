@@ -40,7 +40,7 @@ We did NOT implement a `--self` flag (as originally proposed). Instead, the conf
 - Onboarding is required, which prevents unconfigured builds from polluting the tree
 
 **Negative:**
-- Root-level `scripts/commit_guardian/` and `scripts/doc_compliance/` are still build outputs at root (can't move them without breaking hook paths in `.pre-commit-config.yaml`)
+- Root-level `scripts/commit_guardian/` and `scripts/doc_compliance/` are still build outputs at root (can't move them without breaking hook paths in `.pre-commit-config.yaml`) — resolved by [ADR-004](ADR-004-consolidated-output-root.md), which consolidates all outputs under `.leafcutter/` with a shim layer
 - The glossary CLAUDE.md section uses marker-based idempotency, so changing `docs_root` doesn't auto-update existing markers — requires a one-time manual fix
 
 ## Alternatives

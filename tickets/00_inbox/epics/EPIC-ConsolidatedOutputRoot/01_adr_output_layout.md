@@ -1,6 +1,6 @@
 ---
 title: "Author ADR for consolidated output layout decision"
-status: todo
+status: in_progress
 components:
   - build_pipeline
 created: 2026-05-26
@@ -74,13 +74,19 @@ Then the "Consequences" section notes the superseded layout or links to ADR-NNN
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] adr-author
+- [x] architect-review
+- [x] adr-author
 - [ ] pr-reviewer
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
+
+### adr-author — 2026-05-27
+(status: ok) ADR-004-consolidated-output-root.md written. Covers: output root name (.leafcutter/), shim strategy (auto: symlink with copy fallback), git posture (configurable, git-ignored recommended), Claude Code discovery (symlinks work via OS-level resolution, copy fallback for Windows). ADR-001 updated to reference ADR-004.
+
+### architect-review — 2026-05-27
+(status: ok) ADR-004 covers all three hard constraints: Claude Code discovery (shim layer), pre-commit root path (.pre-commit-config.yaml shimmed), Gemini/Antigravity fixed paths (shimmed). Windows symlink risk documented with auto-fallback to copies.
 
 ## Implementation Tasks
 
