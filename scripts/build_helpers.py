@@ -308,11 +308,6 @@ def install_shims(
         (".claude/commands", "commands"),
         (".claude/hooks", "hooks"),
         (".gemini", "gemini"),
-        (".antigravity", "antigravity"),
-        ("scripts/commit_guardian", "scripts/commit_guardian"),
-        ("scripts/doc_compliance", "scripts/doc_compliance"),
-        ("scripts/feedback", "scripts/feedback"),
-        ("scripts/sync_platforms", "scripts/sync_platforms"),
     ]
 
     results: list[dict[str, str]] = []

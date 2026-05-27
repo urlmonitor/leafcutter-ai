@@ -279,19 +279,23 @@ def _run_phases(
     """
     from typing import Any
 
-    # Phases whose output goes into .leafcutter/ (pure build artifacts)
+    # Phases whose output goes into .leafcutter/ (external tools hardcode paths)
     artifact_phases: list[tuple[str, Any]] = [
         ("Agents", build_agents),
         ("Skills", build_skills),
         ("Claude settings", build_claude_settings),
         ("Workflows", build_workflows),
+        ("Pre-commit config", build_precommit_config),
+        ("Antigravity instructions", build_antigravity_instructions),
+    ]
+
+    # Phases that write internal-only outputs at target_root (our code reads them)
+    internal_phases: list[tuple[str, Any]] = [
         ("Rules", build_rules),
         ("Commit guardian", build_commit_guardian),
         ("Feedback", build_feedback),
         ("Propagation audit", propagation_audit),
-        ("Pre-commit config", build_precommit_config),
         ("Doc compliance", build_doc_compliance),
-        ("Antigravity instructions", build_antigravity_instructions),
         ("Sync platforms", build_sync_platforms),
     ]
 
@@ -310,7 +314,7 @@ def _run_phases(
         total += fn(output_root, config, dry_run, effective_force)
         print()
 
-    for label, fn in scaffold_phases:
+    for label, fn in internal_phases + scaffold_phases:
         print(f"{label}:")
         total += fn(target_root, config, dry_run, effective_force)
         print()
@@ -324,13 +328,8 @@ _PRE_CONSOLIDATION_PATHS = [
     ".claude/commands",
     ".claude/hooks",
     ".claude/settings.json",
-    "scripts/commit_guardian",
-    "scripts/doc_compliance",
-    "scripts/feedback",
-    "scripts/sync_platforms",
     ".pre-commit-config.yaml",
     ".gemini",
-    ".antigravity",
 ]
 
 
