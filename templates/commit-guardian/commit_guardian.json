@@ -1,5 +1,5 @@
 {
-    "_comment": "Commit Guardian — Central Configuration. Edit this file to customize all pre-commit hook behavior.",
+    "_comment": "Commit Guardian \u2014 Central Configuration. Edit this file to customize all pre-commit hook behavior.",
     "roadmap_staleness_threshold_days": 30,
     "changelogs_dir": "changelogs",
     "excluded_dirs": [
@@ -11,7 +11,7 @@
         "templates"
     ],
     "file_size": {
-        "_comment": "check_file_size.py — Line limits for NEW files only",
+        "_comment": "check_file_size.py \u2014 Line limits for NEW files only",
         "line_limits": {
             ".py": 400,
             ".sql": 600
@@ -23,7 +23,7 @@
         ]
     },
     "complexity": {
-        "_comment": "check_complexity.py — Cyclomatic complexity for Python functions",
+        "_comment": "check_complexity.py \u2014 Cyclomatic complexity for Python functions",
         "max_score": 15,
         "excluded_dirs": [
             "alembic",
@@ -31,7 +31,7 @@
         ]
     },
     "sql_complexity": {
-        "_comment": "check_sql_complexity.py — Keyword-based complexity for SQL files. Threshold raised to 75 to accommodate pre-existing high-complexity procedures that predated this check.",
+        "_comment": "check_sql_complexity.py \u2014 Keyword-based complexity for SQL files. Threshold raised to 75 to accommodate pre-existing high-complexity procedures that predated this check.",
         "max_score": 75,
         "excluded_dirs": [
             "alembic",
@@ -39,7 +39,7 @@
         ]
     },
     "docstrings": {
-        "_comment": "check_docstrings.py — Google-style docstring enforcement",
+        "_comment": "check_docstrings.py \u2014 Google-style docstring enforcement",
         "style": "google",
         "trivial_max_lines": 5,
         "enforce_type_annotations": true,
@@ -85,7 +85,7 @@
         ]
     },
     "documentation": {
-        "_comment": "check_documentation.py — Module header and decision history enforcement",
+        "_comment": "check_documentation.py \u2014 Module header and decision history enforcement",
         "sql_required_fields": [
             "Object Name:",
             "Goal:",
@@ -100,7 +100,7 @@
         ]
     },
     "root_files": {
-        "_comment": "check_root_files.py — Whitelist of files allowed in the project root",
+        "_comment": "check_root_files.py \u2014 Whitelist of files allowed in the project root",
         "allowed_files": [
             ".gitignore",
             ".pre-commit-config.yaml",
@@ -140,7 +140,7 @@
         ]
     },
     "folder_density": {
-        "_comment": "check_folder_density.py — Max non-markdown files per folder",
+        "_comment": "check_folder_density.py \u2014 Max non-markdown files per folder",
         "max_files_per_folder": 15,
         "excluded_dirs": [
             "__pycache__",
@@ -160,7 +160,7 @@
         ]
     },
     "debug_scripts": {
-        "_comment": "check_debug_scripts.py — Metadata tag enforcement for debug scripts",
+        "_comment": "check_debug_scripts.py \u2014 Metadata tag enforcement for debug scripts",
         "valid_categories": [
             "check",
             "fix",
@@ -194,7 +194,7 @@
         ]
     },
     "infra_docs": {
-        "_comment": "check_infra_docs.py — Inline comment enforcement on infra files",
+        "_comment": "check_infra_docs.py \u2014 Inline comment enforcement on infra files",
         "infra_file_patterns": [
             "^docker-compose.*\\.ya?ml$",
             "^docker/Dockerfile\\.",
@@ -209,7 +209,7 @@
         ]
     },
     "doc_frontmatter": {
-        "_comment": "check_doc_frontmatter.py — YAML frontmatter validation for docs/*.md files",
+        "_comment": "check_doc_frontmatter.py \u2014 YAML frontmatter validation for docs/*.md files",
         "required_fields": {
             "docs/architecture/adrs/**": [
                 "title",
@@ -272,7 +272,7 @@
         "docs_dir": "docs"
     },
     "ticket_frontmatter": {
-        "_comment": "check_doc_frontmatter.py — YAML frontmatter validation for tickets/**/*.md (excluding tickets/**/README.md).",
+        "_comment": "check_doc_frontmatter.py \u2014 YAML frontmatter validation for tickets/**/*.md (excluding tickets/**/README.md).",
         "required_fields": [
             "title",
             "status",
@@ -293,13 +293,13 @@
         "tickets_dir": "tickets"
     },
     "doc_links": {
-        "_comment": "check_doc_links.py — Code-to-doc traceability link validation",
+        "_comment": "check_doc_links.py \u2014 Code-to-doc traceability link validation",
         "severity": "warn",
         "check_bidirectional": true,
         "check_mermaid_architecture_link": true
     },
     "adr_coverage": {
-        "_comment": "check_adr_coverage.py — Advisory warning when major structural changes land without an ADR",
+        "_comment": "check_adr_coverage.py \u2014 Advisory warning when major structural changes land without an ADR",
         "severity": "warn",
         "triggers": [
             "pyproject.toml (new dependency)",
@@ -311,14 +311,14 @@
         "adr_dir": "adr"
     },
     "doc_coverage": {
-        "_comment": "check_doc_coverage.py — Advisory warning when code changes land without doc updates",
+        "_comment": "check_doc_coverage.py \u2014 Advisory warning when code changes land without doc updates",
         "severity": "warn",
         "large_diff_threshold": 50,
         "use_knowledge_graph": true,
         "knowledge_graph_path": "knowledge_graph.json"
     },
     "structural_change": {
-        "_comment": "check_structural_change.py — Structural-change detector configuration",
+        "_comment": "check_structural_change.py \u2014 Structural-change detector configuration",
         "required_doc": "docs/components.json",
         "bypass_token": "[NO-ARCH-UPDATE]",
         "large_diff_threshold": 50,
@@ -346,11 +346,11 @@
         ]
     },
     "security_scanner": {
-        "_comment": "check_secrets.py — Path to the security-scanner skill's scripts directory, relative to the project root. Override if the skill lives at a different location in your project.",
+        "_comment": "check_secrets.py \u2014 Path to the security-scanner skill's scripts directory, relative to the project root. Override if the skill lives at a different location in your project.",
         "scripts_dir": ".claude/skills/security-scanner/scripts"
     },
     "commit_scope": {
-        "_comment": "check_commit_scope.py — Warn-only guard that diffs staged files against the active ticket's files_touched frontmatter. Option (c) hybrid: always exits 0. Upgrade path to blocking (option b): change exit code in check_commit_scope.py.",
+        "_comment": "check_commit_scope.py \u2014 Warn-only guard that diffs staged files against the active ticket's files_touched frontmatter. Option (c) hybrid: always exits 0. Upgrade path to blocking (option b): change exit code in check_commit_scope.py.",
         "hook_artefact_patterns": [
             "^changelogs/",
             "\\.md$",
@@ -399,7 +399,7 @@
             },
             {
                 "id": "check-structural-change",
-                "name": "Check Structural Change — Architecture Docs Required",
+                "name": "Check Structural Change \u2014 Architecture Docs Required",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_structural_change.py",
                 "language": "system",
                 "stages": [
@@ -579,14 +579,14 @@
             },
             {
                 "id": "check-commit-scope",
-                "name": "Check Commit Scope (warn-only — staged vs files_touched)",
+                "name": "Check Commit Scope (warn-only \u2014 staged vs files_touched)",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_commit_scope.py",
                 "language": "system",
                 "stages": [
                     "pre-commit"
                 ],
                 "pass_filenames": false,
-                "_comment": "Option (c) hybrid guard: diffs staged files against the active ticket's files_touched frontmatter. Always exits 0 — non-blocking advisory only. Upgrade to blocking (option b) by editing check_commit_scope.py. EPIC-AgentSystemFrictionReduction/01."
+                "_comment": "Option (c) hybrid guard: diffs staged files against the active ticket's files_touched frontmatter. Always exits 0 \u2014 non-blocking advisory only. Upgrade to blocking (option b) by editing check_commit_scope.py. EPIC-AgentSystemFrictionReduction/01."
             },
             {
                 "id": "check-doc-types-agents",
@@ -623,7 +623,31 @@
                 ],
                 "pass_filenames": false,
                 "_comment": "EPIC-RoadmapStewardship/01: When docs/roadmap.json is staged, regenerates docs/roadmap.md with an AUTO-GENERATED banner and git-adds it so both files land in the same commit. No-op when roadmap.json is not staged. KDD-01: pre-commit stage (not post-commit --amend)."
+            },
+            {
+                "id": "check-mermaid-complexity",
+                "name": "Check Mermaid Diagram Complexity",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_mermaid_complexity.py",
+                "language": "system",
+                "files": ".*\\.md$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "EPIC-MermaidComplexityGuard/01: Counts structural elements (nodes, edges, participants, subgraphs) in mermaid blocks and warns when thresholds are exceeded. Warn-only by default; set mermaid_complexity.strict to true to block commits."
             }
         ]
+    },
+    "mermaid_complexity": {
+        "_comment": "check_mermaid_complexity.py \u2014 Structural complexity limits for mermaid diagrams in .md files. Warn-only by default; set strict: true to block commits.",
+        "strict": false,
+        "max_nodes": 15,
+        "max_edges": 20,
+        "max_participants": 8,
+        "max_interactions": 25,
+        "max_tables": 12,
+        "max_states": 10,
+        "max_classes": 10,
+        "max_boundaries": 4
     }
 }

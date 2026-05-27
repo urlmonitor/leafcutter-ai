@@ -114,6 +114,51 @@ answer YES.
 
 ---
 
+## Section 2a: Single Concept Rule
+
+Before proceeding to scaffold, evaluate whether the requested diagram covers
+a single concept. A diagram MUST explain exactly **one concept, one flow, or
+one boundary**. Apply these three split criteria:
+
+1. **Distinct actors** — Count the actors (user roles, external systems,
+   subsystems) that initiate independent flows. If >1 actor initiates a flow
+   that could be understood without the other → split into separate diagrams.
+
+2. **Distinct temporal phases** — If you would describe the diagram as "first
+   X happens, then later Y happens" and X is complete before Y begins → split.
+   Each phase gets its own diagram.
+
+3. **Distinct bounded contexts** — If two parts of the diagram belong to
+   different domains (e.g. identity/auth vs. business logic) and connect only
+   through a single handoff (token, session, API call) → split and cross-link.
+
+**When splitting:**
+- Run the scaffold (§4) once per diagram, each with its own filename
+- Add `related_diagrams:` to each file's frontmatter listing the sibling paths
+- Add a `See also: [title](path)` line after the mermaid block in each file
+- The parent doc's `children:` list must include all split diagrams
+
+**When NOT to split:**
+- A single flow with many steps (that's just a long sequence — keep it, but
+  consider whether it exceeds the pre-commit complexity thresholds)
+- Components within one bounded context that collaborate tightly
+- A system context (L1) showing one system + its external dependencies
+
+**Example — split required:**
+Request: "Document the login + content authoring flow"
+- Entra login = identity bounded context, temporal phase 1
+- Content authoring = business domain, temporal phase 2
+- Connection: session token handoff
+- Result: two diagrams, cross-linked via `related_diagrams:` and `See also:`
+
+**Example — no split needed:**
+Request: "Document the candle data ingestion pipeline"
+- Single bounded context (market data)
+- Single temporal flow (fetch → transform → store)
+- Result: one diagram
+
+---
+
 ## Section 3: Diagram format rule (from ADR-015)
 
 **Read `docs/architecture/adrs/ADR-015-diagram-format-and-legends.md` now.**
