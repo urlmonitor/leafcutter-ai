@@ -23,7 +23,7 @@ agents:
   change-scope-reviewer: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: failed
   status-checker: not_needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -120,7 +120,7 @@ Then version computation is skipped entirely
 - [x] test-runner — 2026-05-27 10:45
 - [x] pr-reviewer — 2026-05-27 11:00
 - [x] commit — 2026-05-27 11:15
-- [ ] pull-request
+- [ ] pull-request — failed 2026-05-27 11:30
 
 ## Comments
 
@@ -155,7 +155,11 @@ Suppressed: 0 low, 0 Opus-dropped medium
 
 ### 2026-05-27 11:15 — commit (status: ok)
 feedback-id: fb_2026-05-27_65db2f1a
-Staged 3 files: scripts/build.py (implementation), unit_tests/test_build_version_wiring.py (tests), tickets/99_done/TICKET-20260527-WireVersionIntoBuild.md (ticket with all sign-offs). Commit will follow.
+Staged 3 files: scripts/build.py (implementation), unit_tests/test_build_version_wiring.py (tests), tickets/99_done/TICKET-20260527-WireVersionIntoBuild.md (ticket with all sign-offs). Commit created: cd7fea8.
+
+### 2026-05-27 11:30 — pull-request (status: blocker)
+feedback-id: fb_2026-05-27_299170d0
+Branch worktree-wire-version-into-build pushed to origin successfully. `gh pr create` failed with: "Unauthorized: As an Enterprise Managed User, you cannot access this content (createPullRequest)". The EMU restriction prevents programmatic PR creation via the gh CLI. The commit is on the remote branch. Suggested remediation: open a PR manually at https://github.com/urlmonitor/leafcutter-ai/compare/main...worktree-wire-version-into-build using the GitHub web UI.
 
 ## Escalation
 
