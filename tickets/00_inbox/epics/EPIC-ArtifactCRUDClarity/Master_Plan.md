@@ -54,6 +54,14 @@ An audit of the four artifact types surfaced seven structural problems:
 | 11 | [11_fix_skill_registry_validation.md](./11_fix_skill_registry_validation.md) | Fix: Bidirectional skill registry validation | `[ ]` |
 | 12 | [12_fix_build_clean_mode.md](./12_fix_build_clean_mode.md) | Fix: build.py --clean mode | `[ ]` |
 
+## Key Design Decisions
+
+1. **Documentation format**: All how-to and reference docs use the existing Diataxis structure under `docs/how-to/` and `docs/reference/` with standard frontmatter (`type: how_to` / `type: reference`). No new format introduced.
+2. **Registry update approach**: `skill_registry.json` and `agent_registry.json` drift fixes are additive-only (no entries removed). Validation is a read-only pre-commit check that fails loudly on mismatch.
+3. **`build.py --clean` scope**: Clean mode removes only files in output directories that have no corresponding source template (orphaned outputs). It does not touch source templates or user-created files.
+4. **Path canonicalization**: The deprecated `templates/commit-guardian/` path is replaced by `templates/scripts/commit_guardian/` everywhere; no backwards-compat shim is added.
+5. **Claude Code hooks vs pre-commit hooks**: Docs use the explicit full names ("Claude Code hook" and "pre-commit hook") throughout to eliminate naming collision. No directory rename needed.
+
 ## Phases
 
 ### Phase 1 — Documentation (tickets 01–08)

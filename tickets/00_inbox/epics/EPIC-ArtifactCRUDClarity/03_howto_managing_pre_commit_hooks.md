@@ -18,9 +18,9 @@ agents:
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
-  documentation-expert: needed
-  how-to-author: needed
-  pr-reviewer: needed
+  documentation-expert: signed_off
+  how-to-author: signed_off
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -64,20 +64,32 @@ Then it has valid frontmatter including type: how_to
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] how-to-author
-- [ ] pr-reviewer
+- [x] documentation-expert — 2026-05-28 13:45
+- [x] how-to-author — 2026-05-28 13:46
+- [x] pr-reviewer — 2026-05-28 13:48
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-05-28 13:45 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-28_e1ebb3b8
+Researched commit_guardian.json schema and canonical hook scripts directory. Authored docs/how-to/managing-pre-commit-hooks.md covering create, modify, disable, and delete operations. Included canonical-path callout (deprecated templates/commit-guardian/ warning), naming-collision note distinguishing pre-commit hooks from Claude Code hooks, and troubleshooting section. Frontmatter uses type: how_to, status: active, component: build_pipeline.
+
+### 2026-05-28 13:46 — how-to-author (status: ok)
+feedback-id: fb_2026-05-28_7d0931c3
+Reviewed the guide against how-to style standards: task-oriented structure with numbered procedural steps, clear prerequisites section, per-operation headings (Create/Modify/Disable/Delete), verification checklist, and troubleshooting with concrete symptom-to-fix mapping. Frontmatter valid (type: how_to, status: active, components: build_pipeline). No structural changes needed — guide meets how-to documentation standards.
+
+### 2026-05-28 13:48 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-28_6f939a84
+All four Gherkin acceptance criteria verified: (1) guide exists at docs/how-to/managing-pre-commit-hooks.md, (2) Create section covers script authoring, commit_guardian.json registration, build.py regeneration, and test-commit verification, (3) Disable section uses enabled: false with re-run build.py, (4) Delete section names all three removal targets (script, config block, hooks_manifest entry). Frontmatter passes doc_frontmatter guard: type: how_to, status: active, component: build_pipeline, related_docs paths exist. Canonical-path callout and naming-collision note both present. Approved.
+
 ## Implementation Tasks
 
 ### documentation-expert / how-to-author
 
-- [ ] Read `leafcutter-ai/config/commit_guardian.json` and `leafcutter-ai/templates/scripts/commit_guardian/` to understand the current hook structure and configuration schema.
-- [ ] Document CRUD operations in `leafcutter-ai/docs/how-to/managing-pre-commit-hooks.md`:
+- [x] Read `leafcutter-ai/config/commit_guardian.json` and `leafcutter-ai/templates/scripts/commit_guardian/` to understand the current hook structure and configuration schema.
+- [x] Document CRUD operations in `leafcutter-ai/docs/how-to/managing-pre-commit-hooks.md`:
   **Create:**
   1. Create a new Python script in `leafcutter-ai/templates/scripts/commit_guardian/<hook-name>.py`.
   2. Add an entry to `commit_guardian.json` with `id`, `script`, `enabled: true`, and any required parameters.
@@ -99,9 +111,9 @@ Then it has valid frontmatter including type: how_to
   2. Remove the entry from `commit_guardian.json`.
   3. Remove from hooks manifest.
   4. Run `build.py --clean` (post ticket 12) to remove the deployed artifact.
-- [ ] Add a "Canonical path" callout box explaining that `templates/commit-guardian/` is deprecated — use `templates/scripts/commit_guardian/` only.
-- [ ] Add "Naming collision note": pre-commit hooks (git hooks) vs Claude Code hooks (agent event hooks) are different systems. Link to how-to guide for Claude Code hooks (ticket 04).
-- [ ] Ensure the doc has valid frontmatter (type: how_to).
+- [x] Add a "Canonical path" callout box explaining that `templates/commit-guardian/` is deprecated — use `templates/scripts/commit_guardian/` only.
+- [x] Add "Naming collision note": pre-commit hooks (git hooks) vs Claude Code hooks (agent event hooks) are different systems. Link to how-to guide for Claude Code hooks (ticket 04).
+- [x] Ensure the doc has valid frontmatter (type: how_to).
 
 ## Risk & Safety
 

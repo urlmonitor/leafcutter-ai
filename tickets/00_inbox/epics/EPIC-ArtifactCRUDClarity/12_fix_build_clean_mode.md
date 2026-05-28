@@ -13,12 +13,12 @@ files_touched:
   - leafcutter-ai/scripts/build_phases.py
 agents:
   architect-review: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -63,20 +63,62 @@ Then files in .claude/ that were not created by build.py are not removed
 
 ## Sign-offs
 
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
-- [ ] pr-reviewer
+- [x] test-writer — 2026-05-28 00:00
+- [x] python-coder — 2026-05-28 00:01
+- [x] test-runner — 2026-05-28 00:02
+- [x] pr-reviewer — 2026-05-28 00:03
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-05-28 00:00 — test-writer (status: ok)
+feedback-id: fb_2026-05-28_730e1644
+Wrote 8 TDD stubs in `tests/test_build_clean.py` covering: orphaned agent removal, orphaned skill removal, orphaned hook removal, noop on valid artifacts, unmanaged file protection, --clean argparse flag acceptance, removal print output, and "No stale artifacts found" message. All 8 tests are RED (AttributeError: module 'build_phases' has no attribute 'clean_stale_artifacts') — implementation not yet written. Handoff to python-coder.
+red_baseline:
+  - test_name: test_clean_removes_orphaned_agent
+    file: tests/test_build_clean.py
+    error: "AttributeError: module 'build_phases' has no attribute 'clean_stale_artifacts'"
+  - test_name: test_clean_removes_orphaned_skill
+    file: tests/test_build_clean.py
+    error: "AttributeError: module 'build_phases' has no attribute 'clean_stale_artifacts'"
+  - test_name: test_clean_removes_orphaned_hook
+    file: tests/test_build_clean.py
+    error: "AttributeError: module 'build_phases' has no attribute 'clean_stale_artifacts'"
+  - test_name: test_clean_noop_on_valid_artifacts
+    file: tests/test_build_clean.py
+    error: "AttributeError: module 'build_phases' has no attribute 'clean_stale_artifacts'"
+  - test_name: test_clean_does_not_remove_unmanaged_files
+    file: tests/test_build_clean.py
+    error: "AttributeError: module 'build_phases' has no attribute 'clean_stale_artifacts'"
+  - test_name: test_clean_flag_accepted_by_argparse
+    file: tests/test_build_clean.py
+    error: "AssertionError: --clean caused argparse error (exit code 2) — flag not registered in argparse"
+  - test_name: test_clean_prints_each_removal
+    file: tests/test_build_clean.py
+    error: "AttributeError: module 'build_phases' has no attribute 'clean_stale_artifacts'"
+  - test_name: test_clean_noop_prints_no_stale_message
+    file: tests/test_build_clean.py
+    error: "AttributeError: module 'build_phases' has no attribute 'clean_stale_artifacts'"
+
+### 2026-05-28 00:01 — python-coder (status: ok)
+feedback-id: fb_2026-05-28_f8583729
+Added `clean_stale_artifacts(target_dir, source_manifests)` to `scripts/build_phases.py` with safety guard restricting removal to `.claude/agents/`, `.claude/skills/`, `.claude/hooks/`. Added `_build_source_manifests(output_root)` helper to `scripts/build.py` and `--clean` argparse flag wired to call both after normal build phases. All 8 TDD tests pass (8 passed in 69.92s).
+
+### 2026-05-28 00:02 — test-runner (status: ok)
+feedback-id: fb_2026-05-28_cc5f01ba
+Ran `pytest tests/test_build_clean.py -v`: 8 passed in 35.37s. Full suite: 249 passed, 2 pre-existing failures in test_emit_entry_cwd.py (CWD resolution issue unrelated to --clean). No regressions introduced.
+
+### 2026-05-28 00:03 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-28_87540c7a
+No high-confidence findings. One medium: `_build_source_manifests` in build.py has a dead `output_root` parameter (declared but never used; function derives paths from `__file__`). Non-blocking — no correctness impact, no security concern. Safety guard in clean_stale_artifacts correctly restricts removal to .claude/agents/, .claude/skills/, .claude/hooks/ only. Symlink handling correct. Opt-in flag does not affect existing callers. Approved; dead param noted for future cleanup.
+Review report: No high findings. Suppressed: 2 low nits. Escalation: none (medium count 1, threshold >3).
+
 ## Implementation Tasks
 
 ### test-writer
 
-- [ ] Write tests in `leafcutter-ai/tests/test_build_clean.py`:
+- [x] Write tests in `leafcutter-ai/tests/test_build_clean.py`:
   - `test_clean_removes_orphaned_agent`: create a temp target dir with a fake agent file, run build with --clean and no matching source template, assert the file is removed.
   - `test_clean_removes_orphaned_skill`: same for a skill directory.
   - `test_clean_removes_orphaned_hook`: same for a hook file.
@@ -86,16 +128,16 @@ Then files in .claude/ that were not created by build.py are not removed
 
 ### python-coder
 
-- [ ] Add `--clean` argument to `build.py`'s `argparse` block (boolean flag, default False).
-- [ ] Implement `clean_stale_artifacts(target_dir, source_manifests)` in `build_phases.py` (or `build.py` if no phases module exists):
+- [x] Add `--clean` argument to `build.py`'s `argparse` block (boolean flag, default False).
+- [x] Implement `clean_stale_artifacts(target_dir, source_manifests)` in `build_phases.py` (or `build.py` if no phases module exists):
   - For each artifact type (agents, skills, hooks, pre-commit hook scripts): compute the set of expected output paths from the current templates.
   - List actual paths in the corresponding target subdirectory.
   - Remove any target path not in the expected set.
   - Print each removal: `Removing stale artifact: <path>`.
   - Return count of removed items.
-- [ ] Wire `--clean` into the main build flow: when `--clean` is set, run `clean_stale_artifacts` after the normal compilation step.
-- [ ] Add a safety guard: only remove files/dirs that match the known artifact-type patterns (e.g. files under `.claude/agents/`, `.claude/skills/`, `.claude/hooks/`). Never remove arbitrary files.
-- [ ] Update `build.py` `--help` text to document `--clean`.
+- [x] Wire `--clean` into the main build flow: when `--clean` is set, run `clean_stale_artifacts` after the normal compilation step.
+- [x] Add a safety guard: only remove files/dirs that match the known artifact-type patterns (e.g. files under `.claude/agents/`, `.claude/skills/`, `.claude/hooks/`). Never remove arbitrary files.
+- [x] Update `build.py` `--help` text to document `--clean`.
 
 ### test-runner
 

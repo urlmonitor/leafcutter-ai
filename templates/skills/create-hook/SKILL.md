@@ -33,14 +33,14 @@ The caller must supply:
 
 Before writing anything:
 
-1. Confirm `leafcutter/templates/commit-guardian/<hook_name>.py` does NOT exist.
+1. Confirm `leafcutter/templates/scripts/commit_guardian/<hook_name>.py` does NOT exist.
    If it does, stop with: "Hook `<hook_name>` already exists at that path. Delete it first if you intend to replace it."
 2. Confirm `commit_guardian.json` does not already have a `config_section_key` matching `config_section_key`.
    If it does, stop with: "Config section `<config_section_key>` already exists in commit_guardian.json."
 
 ## Step 2 — Write the hook script template
 
-Create `leafcutter/templates/commit-guardian/<hook_name>.py` with this exact structure:
+Create `leafcutter/templates/scripts/commit_guardian/<hook_name>.py` with this exact structure:
 
 ```python
 """
@@ -114,7 +114,7 @@ Also copy this template to `scripts/commit_guardian/<hook_name>.py` in the targe
 
 ## Step 3 — Update commit_guardian.json
 
-Two locations within `leafcutter/templates/commit-guardian/commit_guardian.json` (and the live copy at `scripts/commit_guardian/commit_guardian.json`):
+Two locations within `leafcutter/templates/scripts/commit_guardian/commit_guardian.json` (and the live copy at `scripts/commit_guardian/commit_guardian.json`):
 
 ### 3a. Add a config section for hook settings
 
@@ -156,7 +156,7 @@ Anchor on an adjacent row — never use Write on the README. Use Edit.
 
 ## Step 5 — Register config constants in config.py
 
-In `leafcutter/templates/commit-guardian/config.py` and the live `scripts/commit_guardian/config.py`:
+In `leafcutter/templates/scripts/commit_guardian/config.py` and the live `scripts/commit_guardian/config.py`:
 
 1. Add a new `# ---------------------------------------------------------------------------` section
 2. Add a constant for each key in `config_defaults`:
@@ -173,7 +173,7 @@ In `leafcutter/templates/commit-guardian/config.py` and the live `scripts/commit
 Before declaring this step complete, scan the hook's import statement:
 
 ```bash
-grep -E "^from config import" leafcutter/templates/commit-guardian/<hook_name>.py
+grep -E "^from config import" leafcutter/templates/scripts/commit_guardian/<hook_name>.py
 ```
 
 For every name on the right-hand side, confirm a matching constant exists in
@@ -196,7 +196,7 @@ Run `build.py --target-dir . --force` from the project root to regenerate `.pre-
 
 1. `build.py --validate-only` must pass (no errors).
 2. Confirm the new hook appears in `.pre-commit-config.yaml`.
-3. Confirm `leafcutter/templates/commit-guardian/<hook_name>.py` exists.
+3. Confirm `leafcutter/templates/scripts/commit_guardian/<hook_name>.py` exists.
 4. Confirm the new section exists in both `commit_guardian.json` files.
 
 ## Invariants

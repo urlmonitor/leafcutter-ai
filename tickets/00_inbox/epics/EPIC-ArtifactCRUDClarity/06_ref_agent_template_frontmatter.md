@@ -19,9 +19,9 @@ agents:
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
-  documentation-expert: needed
-  reference-author: needed
-  pr-reviewer: needed
+  documentation-expert: signed_off
+  reference-author: signed_off
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -67,28 +67,40 @@ Then it has valid frontmatter including type: reference
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] reference-author
-- [ ] pr-reviewer
+- [x] documentation-expert — 2026-05-28 00:00
+- [x] reference-author — 2026-05-28 00:01
+- [x] pr-reviewer — 2026-05-28 00:02
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-05-28 00:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-28_c47a4590
+Dispatched reference-author to write docs/reference/agent-template-frontmatter.md. Sourced from all 45 agent templates in templates/agents/, template_compiler.py output_fm_keys definition, and agent_registry.json field schema. Doc covers runtime keys (name, description, model, tools, memory), build directives (portable, signoff, domain, config_keys, adopter_notes, requires_verification, inject_registry, spawn_allowlist), and registry cross-reference with priority table. Minimal and maximal frontmatter examples included.
+
+### 2026-05-28 00:01 — reference-author (status: ok)
+feedback-id: fb_2026-05-28_a1f24046
+Wrote docs/reference/agent-template-frontmatter.md (cross-cutting reference; location: docs/reference/). Runtime keys table covers name, description, model (haiku/sonnet/opus), tools (10 valid tool names), memory. Build directives table covers portable, signoff, domain, config_keys, adopter_notes, requires_verification, inject_registry, spawn_allowlist. Registry cross-reference table covers all 19 agent_registry.json entry fields including priority, conditional, conditional_field, invocation_surface, owns_file_extensions. Minimal and maximal YAML examples included. No README index for docs/reference/ exists yet — noted.
+
+### 2026-05-28 00:02 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-28_e21e4e87
+Review passed. No high-confidence findings. Two medium-confidence findings identified and resolved: (1) maximal frontmatter example had `memory: false` and `inject_registry: false` explicitly, which contradicts corpus convention of omitting false-valued boolean build directives — fixed to use YAML comments instead; (2) spawn_allowlist description minor imprecision (registry-read path) noted but non-blocking for lookup use. Diff is documentation-only; no code paths affected.
+
 ## Implementation Tasks
 
 ### documentation-expert / reference-author
 
-- [ ] Read all existing agent templates in `leafcutter-ai/templates/agents/` to extract the full set of frontmatter keys actually in use.
-- [ ] Read `leafcutter-ai/scripts/build.py` to identify all build directives it reads and what it does with them.
-- [ ] Read `leafcutter-ai/config/agent_registry.json` for the registry schema (id, tier, visibility, is_ticket_phase, default_status, etc.) — note these are registry fields, not template frontmatter, but cross-link them.
-- [ ] Write `leafcutter-ai/docs/reference/agent-template-frontmatter.md` with:
+- [x] Read all existing agent templates in `leafcutter-ai/templates/agents/` to extract the full set of frontmatter keys actually in use.
+- [x] Read `leafcutter-ai/scripts/build.py` to identify all build directives it reads and what it does with them.
+- [x] Read `leafcutter-ai/config/agent_registry.json` for the registry schema (id, tier, visibility, is_ticket_phase, default_status, etc.) — note these are registry fields, not template frontmatter, but cross-link them.
+- [x] Write `leafcutter-ai/docs/reference/agent-template-frontmatter.md` with:
   - **Runtime keys table**: `name`, `description`, `model`, `tools`, `memory` — type, required/optional, default, effect.
   - **Build directives table**: `portable`, `signoff`, `domain`, `config_keys`, `adopter_notes`, `requires_verification`, `inject_registry` — type, required/optional, default, effect on `build.py` output.
   - **Cross-reference**: link to `agent_registry.json` schema fields (id, tier, visibility, is_ticket_phase, trigger_conditions, default_status, spawn_allowlist).
   - **Valid values** for each enumerated field (e.g., `model: sonnet | opus`, `tools: []` list of valid Claude Code tool names).
   - **Examples** — one minimal and one maximal frontmatter block.
-- [ ] Ensure the doc has valid frontmatter (type: reference).
+- [x] Ensure the doc has valid frontmatter (type: reference).
 
 ## Risk & Safety
 
