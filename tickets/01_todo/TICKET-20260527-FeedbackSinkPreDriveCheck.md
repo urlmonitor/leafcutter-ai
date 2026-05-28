@@ -15,13 +15,13 @@ files_touched:
   - leafcutter-ai/templates/skills/building-epics/SKILL.md
   - leafcutter-ai/templates/agents/epic-supervisor.md
 agents:
-  architect-review: needed
+  architect-review: signed_off
   test-writer: not_needed
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
-  documentation-expert: needed
-  pr-reviewer: needed
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -90,27 +90,39 @@ Then the feedback-sink reachability check is documented as a numbered step
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] documentation-expert
-- [ ] pr-reviewer
+- [x] architect-review — 2026-05-28 08:00
+- [x] documentation-expert — 2026-05-28 08:15
+- [x] pr-reviewer — 2026-05-28 08:30
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-05-28 08:00 — architect-review (status: ok)
+feedback-id: fb_2026-05-28_777d9724
+Design approved. Warn-not-halt pattern for sink reachability is consistent with the existing orphan-process advisory pre-flight (step 6). Three-file touch is justified and correctly scoped. `debugging/logs/agent_telemetry.jsonl` path is consistent with existing emit_event calls. No architectural ambiguity; implementation is unambiguous. Handing to documentation-expert.
+
+### 2026-05-28 08:15 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-28_da43d365
+Added `## Pre-Drive Checklist` section with "Feedback sink reachable" item and probe script to CLAUDE.md. Added §1.0 (Feedback-Sink Reachability Pre-flight) to building-epics/SKILL.md before §1.1 — defines the writability probe, warn-not-halt failure behaviour, and user-confirmation flow. Added step 7 to epic-supervisor.md Pre-Flight Reads and updated the summary line from "six checks" to "seven checks". All acceptance criteria satisfied.
+
+### 2026-05-28 08:30 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-28_592386c9
+All three files correctly updated. Acceptance criteria satisfied: CLAUDE.md has Pre-Drive Checklist with sink probe and failure guidance; building-epics/SKILL.md has §1.0 with warn-not-halt recipe; epic-supervisor.md has step 7 referencing §1.0. Cross-references intact. No blockers.
+
 ## Implementation Tasks
 
 ### documentation-expert
 
-- [ ] Add a `## Pre-Drive Checklist` section to `leafcutter-ai/CLAUDE.md` (or extend an existing one if present). Include at minimum:
+- [x] Add a `## Pre-Drive Checklist` section to `leafcutter-ai/CLAUDE.md` (or extend an existing one if present). Include at minimum:
   - A checklist item titled "Feedback sink reachable" with a description of what to verify (e.g. that `debugging/logs/agent_telemetry.jsonl` is writable, or the configured remote endpoint responds to a test ping).
   - A note on what to do if the check fails: fix the sink before invoking `/build-feature`.
   - A brief rationale linking to this ticket (root cause: 23 silent `submit-failed` events during drive with no detection).
-- [ ] Add a numbered pre-flight step to `leafcutter-ai/templates/skills/building-epics/SKILL.md` (insert after the existing worktree preflight step, before the Master_Plan check). The step must:
+- [x] Add a numbered pre-flight step to `leafcutter-ai/templates/skills/building-epics/SKILL.md` (insert after the existing worktree preflight step, before the Master_Plan check). The step must:
   - Instruct `epic-supervisor` to verify feedback-sink reachability before dispatching any ticket.
   - Define the check: attempt a test write (or ping) to the configured sink path/endpoint; capture the exit code.
   - Define the failure behaviour: emit a structured warning to the user (`## Warning: Feedback sink unreachable`) and allow the user to proceed or abort — do not hard-halt silently and do not skip the warning.
-- [ ] Update `leafcutter-ai/templates/agents/epic-supervisor.md` `## Pre-Flight Reads` section to reference the new sink-check step in `building-epics/SKILL.md` so agents are aware the step exists and must be executed.
+- [x] Update `leafcutter-ai/templates/agents/epic-supervisor.md` `## Pre-Flight Reads` section to reference the new sink-check step in `building-epics/SKILL.md` so agents are aware the step exists and must be executed.
 
 ## Risk & Safety
 

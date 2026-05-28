@@ -25,6 +25,52 @@ If you change anything in this file, both `epic-supervisor` and `ticket-supervis
 
 The six-step loop from the spec (§6.1). This is the outer driver: it walks an epic until every ticket is signed off or the run is halted.
 
+### §1.0 Feedback-Sink Reachability Pre-flight (runs before §1.1 loop)
+
+Before entering the main epic loop (`epic-supervisor` step 1), verify that the feedback
+sink is reachable and writable. This prevents silent telemetry loss for the entire drive.
+
+**Check (POSIX):**
+
+```bash
+SINK_PATH="debugging/logs/agent_telemetry.jsonl"
+mkdir -p "$(dirname "$SINK_PATH")"
+if echo '{"probe":"pre-drive-reachability-check"}' >> "$SINK_PATH" 2>/dev/null; then
+  echo "Feedback sink OK: $SINK_PATH"
+  SINK_OK=1
+else
+  echo "## Warning: Feedback sink unreachable"
+  echo "Path: $SINK_PATH"
+  echo "Telemetry events will not be recorded for this drive."
+  SINK_OK=0
+fi
+```
+
+**Failure behaviour (warn, not hard-halt):**
+
+If the write fails (`SINK_OK=0`):
+
+1. Emit the structured warning block to the user:
+   ```
+   ## Warning: Feedback sink unreachable
+   Path: debugging/logs/agent_telemetry.jsonl
+   All telemetry for this drive will be lost (submit-failed events will not be recorded).
+   Fix the sink path or confirm before proceeding.
+   ```
+2. Ask the user: **"Proceed without telemetry? (yes / no)"**
+3. On `yes`: set `SINK_OK=1` and continue (user acknowledged the risk).
+4. On `no`: halt with `{status: "blocked", blocker_summary: "feedback sink unreachable — user declined to proceed"}`.
+
+Do NOT silently continue with `SINK_OK=0` — the warning must be surfaced to the user.
+
+If the write succeeds (`SINK_OK=1`), proceed to §1.1 without any user-facing message.
+
+**Root cause context:** During EPIC-FeedbackSinkPreDriveCheck (2026-05-27), 23 `submit-failed`
+events occurred over an entire drive without detection, yielding zero telemetry for the
+retrospective. This pre-flight step closes that gap.
+
+---
+
 ### §1.1 Pseudocode
 
 ```
