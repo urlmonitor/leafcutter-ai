@@ -129,20 +129,28 @@ clearly requires multiple independent sub-tickets.
 
 When you cannot determine the exact agents needed, use these defaults:
 
-| Archetype | architect-review | python-coder | test-writer | documentation-expert | pr-reviewer | commit | pull-request | user-surface-smoker |
-|---|---|---|---|---|---|---|---|---|
-| New feature (code) | needed | needed | needed | not_needed | needed | needed | needed | not_needed |
-| Refactor | needed | needed | needed | not_needed | needed | needed | needed | not_needed |
-| Bug fix | not_needed | needed | needed | not_needed | needed | needed | needed | not_needed |
-| Docs only | not_needed | not_needed | not_needed | needed | needed | needed | needed | not_needed |
-| Infrastructure | needed | needed | needed | not_needed | needed | needed | needed | not_needed |
-| Investigation | needed | not_needed | not_needed | needed | not_needed | needed | needed | not_needed |
-| User-facing surface (slash_command / pre_commit_hook / agent_orchestrated) | needed | needed | needed | not_needed | needed | needed | needed | needed |
+| Archetype | architect-review | python-coder | frontend-coder | test-writer | documentation-expert | pr-reviewer | commit | pull-request | user-surface-smoker |
+|---|---|---|---|---|---|---|---|---|---|
+| New feature (code) | needed | needed | not_needed | needed | not_needed | needed | needed | needed | not_needed |
+| Refactor | needed | needed | not_needed | needed | not_needed | needed | needed | needed | not_needed |
+| Bug fix | not_needed | needed | not_needed | needed | not_needed | needed | needed | needed | not_needed |
+| Docs only | not_needed | not_needed | not_needed | not_needed | needed | needed | needed | needed | not_needed |
+| Infrastructure | needed | needed | not_needed | needed | not_needed | needed | needed | needed | not_needed |
+| Investigation | needed | not_needed | not_needed | not_needed | needed | not_needed | needed | needed | not_needed |
+| User-facing surface (slash_command / pre_commit_hook / agent_orchestrated) | needed | needed | not_needed | needed | not_needed | needed | needed | needed | needed |
+| Frontend / UI feature | needed | not_needed | needed | needed | not_needed | needed | needed | needed | not_needed |
 
 > **User-facing surface archetype**: when `user_facing_surface` is not `null`, always set
 > `user-surface-smoker: needed` and include a `## Smoke Fixture` block in the ticket body
 > (see `ticket-authoring` SKILL.md §Smoke Fixture). The smoker runs at priority 11.5
 > (after `pr-reviewer`, before `commit`).
+
+> **frontend-coder activation**: The `frontend-coder` agent is also activated automatically
+> by the `agent_registry.json` DSL expression when `files_touched` contains frontend file
+> extensions (`.tsx`, `.jsx`, `.vue`, `.svelte`, `.html`, `.css`, `.scss`). This DSL check
+> takes precedence over the archetype table — if the registry fires `frontend-coder: needed`
+> for a ticket that would otherwise route to the "New feature (code)" archetype, the DSL
+> result is authoritative.
 
 ### user_facing_surface and actuation_contract fields
 
