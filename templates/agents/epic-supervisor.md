@@ -166,8 +166,26 @@ On every invocation, before reading any ticket or spawning any
    worktree blocked the first commit; the fix was a one-line
    `Stop-Process` after the hook surfaced the PIDs.
 
-Do not proceed until all six checks succeed (checks 1–5 are blocking;
-check 6 is advisory and may proceed with user acknowledgement).
+7. **Feedback-sink reachability check (warn-not-halt).** Before dispatching
+   any `ticket-supervisor`, verify that the telemetry sink is writable.
+   Execute the check defined in `building-epics` §1.0:
+
+   ```bash
+   SINK_PATH="debugging/logs/agent_telemetry.jsonl"
+   mkdir -p "$(dirname "$SINK_PATH")"
+   echo '{"probe":"pre-drive-reachability-check"}' >> "$SINK_PATH" 2>/dev/null \
+     && SINK_OK=1 || SINK_OK=0
+   ```
+
+   - **If `SINK_OK=1`** (write succeeded): proceed silently.
+   - **If `SINK_OK=0`** (write failed): emit the structured warning block and
+     ask the user **"Proceed without telemetry? (yes / no)"**. On `yes`,
+     continue. On `no`, halt. Do NOT silently proceed with an unreachable sink.
+   See `building-epics` §1.0 for the full failure-behaviour recipe.
+
+Do not proceed until all seven checks succeed (checks 1–5 are blocking;
+check 6 is advisory; check 7 is warn-not-halt and requires user acknowledgement
+if the sink is unreachable).
 
 ## Inputs
 

@@ -43,3 +43,29 @@ Current phase: `phase_1`
 Current outcome: Stable MVP that installs into any project and helps the user build good software — portable, self-onboarding, and reliable enough to use across multiple repos.
 
 <!-- roadmap-phase:end -->
+
+## Pre-Drive Checklist
+
+Run through these checks before invoking `/build-feature` or starting any epic drive.
+Skipping them risks silent failures that are hard to diagnose after the fact.
+
+### Feedback sink reachable
+
+**What to check:** Verify that `debugging/logs/agent_telemetry.jsonl` (or the configured
+remote endpoint, if any) is writable before the drive begins.
+
+```bash
+# Quick writability probe — should exit 0 and append one line
+echo '{"probe":"pre-drive-check"}' >> debugging/logs/agent_telemetry.jsonl \
+  && echo "Sink OK" || echo "Sink UNREACHABLE — fix before invoking /build-feature"
+```
+
+**If the check fails:** Do not start the drive. The most common causes are:
+- The `debugging/logs/` directory does not exist yet (`mkdir -p debugging/logs/`).
+- A remote endpoint (future) is down — wait for it to recover or disable remote logging.
+- A permissions issue on WSL2 NTFS mounts — remount or use a native Linux path.
+
+**Why this matters:** During a past epic drive, the sink was unreachable for the entire
+run. 23 `submit-failed` events occurred without detection — the drive completed but zero
+telemetry was captured, making the retrospective impossible.
+(Root cause ticket: TICKET-20260527-FeedbackSinkPreDriveCheck)
