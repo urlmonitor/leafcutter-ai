@@ -11,14 +11,14 @@ requires_adr: true
 files_touched:
   - leafcutter-ai/templates/agents/frontend-coder.md
 agents:
-  architect-review: needed
+  architect-review: signed_off
   python-coder: not_needed
   sql-coder: not_needed
   test-writer: not_needed
   test-runner: not_needed
-  documentation-expert: needed
-  adr-author: needed
-  pr-reviewer: needed
+  documentation-expert: signed_off
+  adr-author: signed_off
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -77,24 +77,40 @@ Then docs/architecture/adrs/ADR-NNN-frontend-coder-agent.md exists and passes th
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] documentation-expert
-- [ ] adr-author
-- [ ] pr-reviewer
+- [x] architect-review — 2026-05-28 11:50
+- [x] documentation-expert — 2026-05-28 12:00
+- [x] adr-author — 2026-05-28 11:45
+- [x] pr-reviewer — 2026-05-28 12:10
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-05-28 11:45 — adr-author (status: ok)
+feedback-id: fb_2026-05-28_5eb81f32
+Authored ADR-005-frontend-coder-agent.md at docs/architecture/adrs/. Covers: sibling vs sub-agent rationale (depth-3 cap, overloading concerns, dispatch log clarity), optional-skill file-existence detection contract, priority-8 slot rationale, and delegation boundaries. README index updated to include ADR-004 entries and ADR-005.
+
+### 2026-05-28 11:50 — architect-review (status: ok)
+feedback-id: fb_2026-05-28_18bf6147
+Classified as SMALL: 1 file touched (leafcutter-ai/templates/agents/frontend-coder.md), 1 component (build_pipeline), no always-large triggers (no migration, no hypertable, no public API change). ADR-005 has been authored and covers the design rationale. Acceptance-criteria note: the template body must reference ADR-005 explicitly so readers can trace the sibling-agent decision. No escalation needed.
+
+### 2026-05-28 12:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-28_4fc0369b
+Created templates/agents/frontend-coder.md (234 lines) following the python-coder/sql-coder skeleton. All required sections present: YAML frontmatter (name, model, tools, portable, config_keys, spawn_allowlist), Pre-Flight Reads (ticket, PROJECT_CONTEXT.md via config injection, ADRs, optional-skill detection), Tool Allowlist Reminder, Research Delegation, Optional-Skill Integration (frontend-design → read before writing; webapp-testing → screenshot after edits; Antigravity skip note), Stop-and-Ask rules for Python and SQL, File-Size Limit, Implementation Sequence, Pre-Completion Checks, Response Payload, Constraints, Sub-Agents table, Sign-off section. ADR-005 is referenced explicitly in the preamble and in frontmatter description.
+
+### 2026-05-28 12:10 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-28_c5e9dbee
+Reviewed all three deliverables: ADR-005-frontend-coder-agent.md (frontmatter valid, all 3 spec items covered), README.md (correctly updated), templates/agents/frontend-coder.md (all required sections present, ADR-005 referenced, no .py or .sql file references, optional-skill integration and Antigravity skip note correct). All acceptance criteria verified. No regressions to existing agent templates. build.py glob pattern picks up frontend-coder.md automatically — no build script changes needed.
+
 ## Implementation Tasks
 
 ### adr-author
 
-- [ ] Author ADR-NNN — `frontend-coder as a first-class sibling implementation agent` at `docs/architecture/adrs/ADR-NNN-frontend-coder-agent.md`. Cover: rationale for sibling (vs sub-agent) design, optional-skill integration contract (conditional on installed skill), stop-and-ask delegation boundaries (Python → python-coder, SQL → sql-coder).
+- [x] Author ADR-NNN — `frontend-coder as a first-class sibling implementation agent` at `docs/architecture/adrs/ADR-NNN-frontend-coder-agent.md`. Cover: rationale for sibling (vs sub-agent) design, optional-skill integration contract (conditional on installed skill), stop-and-ask delegation boundaries (Python → python-coder, SQL → sql-coder).
 
 ### documentation-expert
 
-- [ ] Create `leafcutter-ai/templates/agents/frontend-coder.md` following the python-coder/sql-coder skeleton. Sections required: YAML frontmatter (name: frontend-coder, model: sonnet, tools: Bash Read Edit Write Agent), Pre-Flight Reads (ticket body, PROJECT_CONTEXT.md, ADRs), Tool Allowlist Reminder (no Grep/Glob), Research Delegation, Stop-and-Ask Rule for Python/SQL, Optional-Skill Integration (webapp-testing → screenshot after implementation; frontend-design → apply design guidance before writing), File-Size Limit, Implementation Sequence, Pre-Completion Checks, Response Payload, Sign-off section, Constraints, Available Sub-Agents (research-agent).
+- [x] Create `leafcutter-ai/templates/agents/frontend-coder.md` following the python-coder/sql-coder skeleton. Sections required: YAML frontmatter (name: frontend-coder, model: sonnet, tools: Bash Read Edit Write Agent), Pre-Flight Reads (ticket body, PROJECT_CONTEXT.md, ADRs), Tool Allowlist Reminder (no Grep/Glob), Research Delegation, Stop-and-Ask Rule for Python/SQL, Optional-Skill Integration (webapp-testing → screenshot after implementation; frontend-design → apply design guidance before writing), File-Size Limit, Implementation Sequence, Pre-Completion Checks, Response Payload, Sign-off section, Constraints, Available Sub-Agents (research-agent).
 
 ## Risk & Safety
 
