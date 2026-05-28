@@ -157,6 +157,23 @@ worktree root) if it exists:
 `python-coder` or `sql-coder` start — this enforces the epic's primary
 must-have: diagrams and ADRs before coding.
 
+**frontend-coder dispatch (priority 8):**
+Invoke `frontend-coder` when `agents.get("frontend-coder") == "needed"`.
+Dispatch it after `sql-coder` (priority 7) and before `test-runner` (priority 9).
+This ordering ensures database schema changes are complete before UI is built,
+and the rendered output exists for the test-runner to verify.
+
+```python
+# Pseudocode for dispatch ordering around priority 8
+if agents.get("frontend-coder") == "needed":
+    spawn("frontend-coder", ticket_path=ticket_path)
+```
+
+**Note:** `frontend-coder` may invoke `webapp-testing` and `frontend-design` skills
+internally as part of its implementation loop. `ticket-supervisor` does NOT track
+these optional skills as separate phases — they are internal to `frontend-coder`'s
+execution. Only `frontend-coder` itself appears in the ticket's `agents:` map.
+
 ### Docs-only / config-only test-writer skip rule
 
 Before dispatching `test-writer` (priority 5), read the ticket's `## Test Requirements` block.

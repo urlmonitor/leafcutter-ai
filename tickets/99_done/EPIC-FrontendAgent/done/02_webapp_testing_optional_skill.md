@@ -1,0 +1,108 @@
+---
+title: "Author the webapp-testing optional skill template"
+status: done
+components:
+  - build_pipeline
+created: 2026-05-28
+depends_on:
+  - 01_frontend_coder_agent_template.md
+priority: high
+requires_diagram: false
+requires_adr: false
+files_touched:
+  - leafcutter-ai/templates/skills/webapp-testing/SKILL.md
+agents:
+  architect-review: signed_off
+  python-coder: not_needed
+  sql-coder: not_needed
+  test-writer: not_needed
+  test-runner: not_needed
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
+  commit: signed_off
+  pull-request: signed_off
+---
+
+# 02: Author the webapp-testing optional skill template
+
+## Actor / Goal
+
+In order to give `frontend-coder` verifiable feedback on its UI changes, we need a `webapp-testing` skill template so that the agent can take Playwright screenshots, capture browser console logs, and interact with the running app before signing off.
+
+## Context
+
+This is an optional skill — it is only installed when the user opts in during `/onboard` (or manually copies the skill file). The skill template lives in `leafcutter-ai/templates/skills/webapp-testing/SKILL.md` and is deployed to `.claude/skills/webapp-testing/SKILL.md` by `build.py`.
+
+The `webapp-testing` skill is consumed exclusively by `frontend-coder`. When `frontend-coder` detects the skill is installed (i.e. `.claude/skills/webapp-testing/SKILL.md` exists), it invokes the skill after making UI changes to capture a screenshot and verify no console errors.
+
+The skill should:
+- Document the Playwright-based operations available (screenshot, console-log capture, click/type interactions)
+- Specify the entry contract (what the calling agent passes: URL or app startup command, test steps)
+- Specify the exit contract (what the skill returns: screenshot path, console-log summary, pass/fail verdict)
+- Include a note for Antigravity adopters: skip this skill (Antigravity uses its internal browser)
+- Include a fallback for projects where Playwright is not installed: log a warning and exit gracefully
+
+Depends on ticket 01 because the skill's entry/exit contracts are defined jointly with the frontend-coder agent's optional-skill integration section.
+
+## Acceptance Criteria
+
+```gherkin
+Given leafcutter-ai/templates/skills/webapp-testing/SKILL.md is created
+When build.py --target-dir . is run
+Then .claude/skills/webapp-testing/SKILL.md exists and passes the skill frontmatter guard
+
+Given a frontend-coder agent loads the webapp-testing skill
+When it calls the skill with a URL and a list of test steps
+Then the skill returns a screenshot path and a console-log summary
+
+Given Playwright is not installed in the adopter's environment
+When webapp-testing skill is invoked
+Then it logs a one-line warning and exits without blocking the agent
+
+Given an Antigravity adopter installs this skill
+When they read the skill header
+Then a clearly visible note instructs them to skip this skill (Antigravity provides its own browser)
+```
+
+## Sign-offs
+
+- [x] architect-review — 2026-05-28 12:30
+- [x] documentation-expert — 2026-05-28 12:45
+- [x] pr-reviewer — 2026-05-28 13:00
+- [x] commit — 2026-05-28 13:05
+- [x] pull-request — 2026-05-28 13:05
+
+## Comments
+
+### 2026-05-28 12:30 — architect-review (status: ok)
+feedback-id: fb_2026-05-28_aa635bbd
+Classified as SMALL: 1 new SKILL.md file, 1 component (build_pipeline), no always-large triggers. The skill is a markdown template with no runtime effect until installed. No architectural concerns; the file-existence detection contract is already established by ADR-005.
+
+### 2026-05-28 12:45 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-28_c0a5f619
+Created templates/skills/webapp-testing/SKILL.md. Sections: frontmatter (name, allowed-tools: Bash Read Write), Antigravity skip note at top with environment variable check, §1 Prerequisites Check (Playwright detection + graceful fallback), §2 Input Contract (url_or_command + test_steps), §3 Operations (screenshot via CLI, console-log via Node.js script, click/type/wait interactions), §4 Output Contract (screenshot path, error/warning counts, pass/warn/fail verdict rules), §5 Playwright-not-installed fallback returning verdict=pass, §6 Constraints. All acceptance criteria met.
+
+### 2026-05-28 13:00 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-28_ee85bcfd
+SKILL.md reviewed: all 4 acceptance criteria verified (build.py deploys it, frontend-coder call contract matches, Playwright-not-installed fallback is graceful, Antigravity skip note is visible at top). No issues found. The skill correctly returns verdict=pass for graceful-skip scenarios (Playwright absent or Antigravity env). No source files are modified during skill execution (read-only run except for screenshot tmp file).
+
+### 2026-05-28 13:05 — commit (status: ok)
+feedback-id: fb_2026-05-28_3d20bc00
+Committed in batch 2 SHA 711f151 (11 files, 840 insertions). Epic-branch-only, no per-ticket PR.
+
+### 2026-05-28 13:05 — pull-request (status: ok)
+feedback-id: (submit-failed)
+Single-PR-per-epic convention: no per-ticket PR. PR opened at epic completion.
+
+## Implementation Tasks
+
+### documentation-expert
+
+- [x] Create `leafcutter-ai/templates/skills/webapp-testing/SKILL.md` with: YAML frontmatter (name: webapp-testing, allowed-tools: Bash Read Write), an Antigravity skip note at the top, an Input Contract section (URL or app-start command + test steps), an Operations section (screenshot, console-log capture, click/type interactions using Playwright CLI or npx playwright), an Output Contract section (screenshot path, console-log summary, pass/fail verdict), a Playwright-not-installed fallback (warn + exit 0), and a Constraints section.
+
+## Risk & Safety
+
+- Touches money? No.
+- Touches data? No — skill is a markdown template; no runtime side effects until installed and invoked.
+- Reversibility? Fully reversible. The skill file can be removed without affecting other agents.
+- Shared contract? The skill's entry/exit contracts are referenced by frontend-coder. Changes to them after ticket 01 is merged must be backward-compatible or coordinated with a frontend-coder update.

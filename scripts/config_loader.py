@@ -68,7 +68,43 @@ def load_config(config_path: Path | None, target_root: Path) -> dict[str, Any]:
                 break
 
     merged = {**defaults, **project_config}
-    return merged
+    return _flatten_nested_keys(merged)
+
+
+def _flatten_nested_keys(
+    config: dict[str, Any],
+    prefix: str = "",
+    separator: str = ".",
+) -> dict[str, Any]:
+    """Flatten nested dict keys into dot-notation strings.
+
+    Converts ``{"frontend": {"project_context_path": "..."}}`` into
+    ``{"frontend": {"project_context_path": "..."}, "frontend.project_context_path": "..."}``
+    so that ``{{frontend.project_context_path}}`` placeholders in agent/skill
+    templates resolve correctly via ``inject_config``.
+
+    The original nested dict keys are preserved alongside the flattened keys,
+    so existing code that reads ``config["frontend"]`` (the nested dict) still
+    works. Only dict values are flattened; list and scalar values are left as-is.
+
+    Args:
+        config: Flat-or-nested dictionary to flatten.
+        prefix: Dot-separated key prefix accumulated during recursion (empty
+            at the top level).
+        separator: Character to use between key segments (default: ``"."``)
+
+    Returns:
+        New dictionary with both the original keys and additional dot-notation
+        keys for every nested dict level.
+    """
+    result: dict[str, Any] = {}
+    for key, value in config.items():
+        full_key = f"{prefix}{separator}{key}" if prefix else key
+        result[full_key] = value
+        if isinstance(value, dict):
+            nested = _flatten_nested_keys(value, prefix=full_key, separator=separator)
+            result.update(nested)
+    return result
 
 
 class ConfigValidationError(ValueError):

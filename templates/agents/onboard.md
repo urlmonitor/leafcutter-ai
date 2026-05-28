@@ -42,6 +42,7 @@ silently on failure — halt and surface the error.
 3.  Scan folder structure: docs/, tests/, src/, sql/, packages           [ ]
 4.  Read discovery whitelist (README.md, pyproject.toml, etc.)           [ ]
 5.  Fan out onboard-config-section sub-agents (parallel, Haiku tier)     [ ]
+5b. Frontend optional skills: webapp-testing and frontend-design         [ ]
 6.  Collect sub-agent config fragments; merge into proposed config       [ ]
 7.  Present diff — ask for sign-off                                      [ ]
 8.  On approval: write .claude/skills_config.json                        [ ]
@@ -137,12 +138,97 @@ payload:
 
 Wait for all 5 to return config fragments.
 
+## Step 5b — Frontend Optional Skills
+
+**When to skip this step entirely:** Check the environment variable `ANTIGRAVITY`:
+
+```bash
+[ -n "$ANTIGRAVITY" ] && echo "antigravity" || echo "standard"
+```
+
+If `ANTIGRAVITY` is set (non-empty), print:
+> "webapp-testing skipped — Antigravity provides its own browser."
+Then skip the webapp-testing prompt and jump directly to the frontend-design prompt
+(step 5b-iv below). `frontend-design` is platform-agnostic and is still offered in
+Antigravity sessions.
+
+**Idempotency:** Before asking the user, check whether each skill file already exists.
+If `.claude/skills/webapp-testing/SKILL.md` already exists, skip the webapp-testing
+prompt silently. If `.claude/skills/frontend-design/SKILL.md` already exists, skip
+the frontend-design prompt silently. This makes step 5b safe to run on re-onboard.
+
+Run these sub-steps in sequence:
+
+**i. webapp-testing** (skip if ANTIGRAVITY is set OR skill file already exists)
+
+Ask:
+> "Would you like to install the webapp-testing skill (Playwright-based UI verification
+> for frontend-coder)? (yes / skip)"
+
+On `yes`:
+1. Create the target directory if it does not exist:
+   ```bash
+   mkdir -p .claude/skills/webapp-testing
+   ```
+2. Copy the skill file:
+   ```bash
+   cp leafcutter/templates/skills/webapp-testing/SKILL.md .claude/skills/webapp-testing/SKILL.md
+   ```
+3. Record `"webapp-testing"` in the local `optional_skills` list for step 5b-vi.
+4. Print: "webapp-testing installed at .claude/skills/webapp-testing/SKILL.md"
+
+On `skip`: proceed silently to step 5b-ii.
+
+**ii. frontend-design** (skip if skill file already exists)
+
+Ask:
+> "Would you like to install the frontend-design skill (distinctive design guidance to
+> prevent generic AI aesthetics)? (yes / skip)"
+
+On `yes`:
+1. Create the target directory if it does not exist:
+   ```bash
+   mkdir -p .claude/skills/frontend-design
+   ```
+2. Copy the skill file:
+   ```bash
+   cp leafcutter/templates/skills/frontend-design/SKILL.md .claude/skills/frontend-design/SKILL.md
+   ```
+3. Record `"frontend-design"` in the local `optional_skills` list for step 5b-vi.
+4. Print: "frontend-design installed at .claude/skills/frontend-design/SKILL.md"
+
+On `skip`: proceed silently to step 5b-vi.
+
+**iii. Record choices in config fragment**
+
+After both prompts complete, build a config fragment:
+
+```json
+{
+  "frontend": {
+    "optional_skills": ["<each approved skill name>"]
+  }
+}
+```
+
+If the user skipped both skills, set `optional_skills: []`.
+Store this fragment in memory as `frontend_fragment` — it will be merged in Step 6.
+
+**Antigravity detection note for adopters:**
+The detection heuristic is a simple environment-variable check: `[ -n "$ANTIGRAVITY" ]`.
+Adopters who use a different mechanism can override this by pre-setting `ANTIGRAVITY=1`
+in their shell or `.env` before invoking `/onboard`. Setting `ANTIGRAVITY=""` (empty
+string) is treated the same as not set — the check looks for non-empty value.
+
 ## Step 6 — Merge Config Fragments
 
 Merge all fragments using the file-separation strategy:
 - For each key in any fragment: if the key is **absent** from `.claude/skills_config.json`,
   include it in the proposed additions.
 - If a fragment key conflicts between sub-agents (unlikely): use the first non-empty value.
+- Include the `frontend_fragment` from Step 5b (the `frontend.optional_skills` list).
+  Deep-merge it into the proposed additions: if a `frontend` key already exists from
+  another fragment, merge the sub-keys rather than overwriting.
 
 Build the proposed additions dict.
 
