@@ -12,13 +12,13 @@ requires_adr: false
 files_touched:
   - leafcutter-ai/templates/skills/frontend-design/SKILL.md
 agents:
-  architect-review: needed
+  architect-review: signed_off
   python-coder: not_needed
   sql-coder: not_needed
   test-writer: not_needed
   test-runner: not_needed
-  documentation-expert: needed
-  pr-reviewer: needed
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -65,19 +65,31 @@ Then the skill contains at least 5 concrete, non-vague design principles with ex
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] documentation-expert
-- [ ] pr-reviewer
+- [x] architect-review — 2026-05-28 12:30
+- [x] documentation-expert — 2026-05-28 12:45
+- [x] pr-reviewer — 2026-05-28 13:00
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-05-28 12:30 — architect-review (status: ok)
+feedback-id: fb_2026-05-28_232f67d5
+Classified as SMALL: 1 new SKILL.md file, 1 component (build_pipeline), no always-large triggers. Design principles in the skill are advisory (not contractual); changes to them after shipping require no versioning gate. No architectural concerns.
+
+### 2026-05-28 12:45 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-28_70ec761d
+Created templates/skills/frontend-design/SKILL.md. Sections: frontmatter (name: frontend-design, allowed-tools: Read), §1 Purpose (anti-generic-AI-aesthetics goal), §2 Project Context Hook (check for design_system key in PROJECT_CONTEXT.md, defer to brand values), §3 Design Principles (5 concrete principles: custom font pairing, deliberate primary colour with rationale and concrete example, intentional negative space with specific measurements, deliberate interactive states with code examples, component-level personality with before/after comparison), §4 Pre-Write Checklist (6 questions including the distinctiveness test), §5 Constraints (platform-agnostic, allowed-tools: Read only). All acceptance criteria met including the ≥5 concrete non-vague principles requirement.
+
+### 2026-05-28 13:00 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-28_bd74e9fc
+SKILL.md reviewed: all 4 acceptance criteria verified (build.py deploys it, frontend-coder loads before writing, PROJECT_CONTEXT.md defers to project design system, ≥5 non-vague concrete principles with code examples). The skill correctly has allowed-tools: Read only — it does not write any files. The "distinctiveness test" question in the pre-write checklist addresses the core goal. No issues found.
+
 ## Implementation Tasks
 
 ### documentation-expert
 
-- [ ] Create `leafcutter-ai/templates/skills/frontend-design/SKILL.md` with: YAML frontmatter (name: frontend-design, allowed-tools: Read), a Purpose section explaining the anti-generic-AI-aesthetics goal, a Design Principles section with at least 5 concrete principles (e.g. "Use a custom font pairing, not the browser default"; "Choose a primary colour with a clear personality — avoid #3B82F6 as the default blue unless it is the project brand"), a Project Context Hook (load PROJECT_CONTEXT.md → design_system key if present, defer to brand values), a Pre-Write Checklist (questions frontend-coder asks before writing any UI output), and a Constraints section (platform-agnostic, no framework-specific imports).
+- [x] Create `leafcutter-ai/templates/skills/frontend-design/SKILL.md` with: YAML frontmatter (name: frontend-design, allowed-tools: Read), a Purpose section explaining the anti-generic-AI-aesthetics goal, a Design Principles section with at least 5 concrete principles (e.g. "Use a custom font pairing, not the browser default"; "Choose a primary colour with a clear personality — avoid #3B82F6 as the default blue unless it is the project brand"), a Project Context Hook (load PROJECT_CONTEXT.md → design_system key if present, defer to brand values), a Pre-Write Checklist (questions frontend-coder asks before writing any UI output), and a Constraints section (platform-agnostic, no framework-specific imports).
 
 ## Risk & Safety
 

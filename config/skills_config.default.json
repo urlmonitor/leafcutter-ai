@@ -46,6 +46,12 @@
     "exclude_paths": []
   },
 
+  "frontend": {
+    "project_context_path": ".agents/agents/frontend-coder/PROJECT_CONTEXT.md",
+    "optional_skills": [],
+    "test_command": ""
+  },
+
   "worktree_cleanup": {
     "kill_residual_processes": true,
     "log_globs": ["*.log", "precommit-autofix*.log", ".sql_test_results.json"],

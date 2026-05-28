@@ -12,13 +12,13 @@ requires_adr: false
 files_touched:
   - leafcutter-ai/templates/skills/webapp-testing/SKILL.md
 agents:
-  architect-review: needed
+  architect-review: signed_off
   python-coder: not_needed
   sql-coder: not_needed
   test-writer: not_needed
   test-runner: not_needed
-  documentation-expert: needed
-  pr-reviewer: needed
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -66,19 +66,31 @@ Then a clearly visible note instructs them to skip this skill (Antigravity provi
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] documentation-expert
-- [ ] pr-reviewer
+- [x] architect-review — 2026-05-28 12:30
+- [x] documentation-expert — 2026-05-28 12:45
+- [x] pr-reviewer — 2026-05-28 13:00
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-05-28 12:30 — architect-review (status: ok)
+feedback-id: fb_2026-05-28_aa635bbd
+Classified as SMALL: 1 new SKILL.md file, 1 component (build_pipeline), no always-large triggers. The skill is a markdown template with no runtime effect until installed. No architectural concerns; the file-existence detection contract is already established by ADR-005.
+
+### 2026-05-28 12:45 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-28_c0a5f619
+Created templates/skills/webapp-testing/SKILL.md. Sections: frontmatter (name, allowed-tools: Bash Read Write), Antigravity skip note at top with environment variable check, §1 Prerequisites Check (Playwright detection + graceful fallback), §2 Input Contract (url_or_command + test_steps), §3 Operations (screenshot via CLI, console-log via Node.js script, click/type/wait interactions), §4 Output Contract (screenshot path, error/warning counts, pass/warn/fail verdict rules), §5 Playwright-not-installed fallback returning verdict=pass, §6 Constraints. All acceptance criteria met.
+
+### 2026-05-28 13:00 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-28_ee85bcfd
+SKILL.md reviewed: all 4 acceptance criteria verified (build.py deploys it, frontend-coder call contract matches, Playwright-not-installed fallback is graceful, Antigravity skip note is visible at top). No issues found. The skill correctly returns verdict=pass for graceful-skip scenarios (Playwright absent or Antigravity env). No source files are modified during skill execution (read-only run except for screenshot tmp file).
+
 ## Implementation Tasks
 
 ### documentation-expert
 
-- [ ] Create `leafcutter-ai/templates/skills/webapp-testing/SKILL.md` with: YAML frontmatter (name: webapp-testing, allowed-tools: Bash Read Write), an Antigravity skip note at the top, an Input Contract section (URL or app-start command + test steps), an Operations section (screenshot, console-log capture, click/type interactions using Playwright CLI or npx playwright), an Output Contract section (screenshot path, console-log summary, pass/fail verdict), a Playwright-not-installed fallback (warn + exit 0), and a Constraints section.
+- [x] Create `leafcutter-ai/templates/skills/webapp-testing/SKILL.md` with: YAML frontmatter (name: webapp-testing, allowed-tools: Bash Read Write), an Antigravity skip note at the top, an Input Contract section (URL or app-start command + test steps), an Operations section (screenshot, console-log capture, click/type interactions using Playwright CLI or npx playwright), an Output Contract section (screenshot path, console-log summary, pass/fail verdict), a Playwright-not-installed fallback (warn + exit 0), and a Constraints section.
 
 ## Risk & Safety
 

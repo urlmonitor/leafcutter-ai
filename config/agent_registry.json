@@ -764,6 +764,58 @@
             ]
         },
         {
+            "id": "frontend-coder",
+            "name": "Frontend Coder",
+            "tier": "phase",
+            "role": "coding",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "research-agent"
+            ],
+            "spawned_by": [
+                "ticket-supervisor"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign when the ticket involves creating or modifying frontend/UI components, markup, or styles; or when files_touched contains frontend file extensions.",
+                "trigger_conditions": [
+                    {
+                        "type": "dsl",
+                        "expression": "files_touched contains *.tsx OR files_touched contains *.jsx OR files_touched contains *.vue OR files_touched contains *.svelte OR files_touched contains *.html OR files_touched contains *.css OR files_touched contains *.scss"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket involves creating or modifying frontend/UI components, markup, or styles"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket requires visual changes to a web interface"
+                    }
+                ],
+                "default_status": "not_needed"
+            },
+            "template_path": "templates/agents/frontend-coder.md",
+            "model": "sonnet",
+            "skills_used": [
+                "signoff",
+                "webapp-testing",
+                "frontend-design"
+            ],
+            "priority": 8,
+            "priority_rationale": "Frontend implementation; runs after sql-coder (7) so database schema changes are complete before UI is built, and before test-runner (9) so tests can verify the rendered output",
+            "requires_ticket_section": true,
+            "owns_file_extensions": [
+                ".tsx",
+                ".jsx",
+                ".vue",
+                ".svelte",
+                ".html",
+                ".css",
+                ".scss"
+            ]
+        },
+        {
             "id": "sql-table-creator",
             "name": "SQL Table Creator",
             "tier": "utility",
