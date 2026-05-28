@@ -18,9 +18,9 @@ agents:
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
-  documentation-expert: needed
-  how-to-author: needed
-  pr-reviewer: needed
+  documentation-expert: signed_off
+  how-to-author: signed_off
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -67,21 +67,33 @@ Then it has valid frontmatter including type: how_to
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] how-to-author
-- [ ] pr-reviewer
+- [x] documentation-expert — 2026-05-28 14:00
+- [x] how-to-author — 2026-05-28 14:05
+- [x] pr-reviewer — 2026-05-28 14:10
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-05-28 14:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-28_6668c69d
+Researched Claude Code hook system: read all 7 built-in hooks in templates/hooks/, templates/settings.json, and the create-hook skill. Documented stdin payload schema, stdout block-decision contract, exit code semantics, matcher forms, bash-c walker pattern, and built-in hook inventory. Guide written to docs/how-to/creating-a-claude-code-hook.md with valid how_to frontmatter.
+
+### 2026-05-28 14:05 — how-to-author (status: ok)
+feedback-id: fb_2026-05-28_9f4d4087
+Structured the guide into 8 procedural steps covering all ticket acceptance criteria: naming disambiguation (Claude Code vs pre-commit hooks), event types (PreToolUse/PostToolUse), stdin contract with per-tool field table, stdout block-decision pattern, exit code semantics, matcher forms, bash-c walker pattern, hook script template with fail-open pattern, settings.json registration, build.py deployment, and testing procedure. Added common mistakes table and built-in hooks reference table. Frontmatter uses type: how_to per doc_types.json.
+
+### 2026-05-28 14:10 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-28_75712aa8
+All 4 Gherkin acceptance criteria satisfied. Guide at leafcutter-ai/docs/how-to/creating-a-claude-code-hook.md with type: how_to frontmatter. Naming disambiguation between Claude Code hooks and pre-commit hooks present up front. stdin JSON contract documented with per-field and per-tool tables. Exit code semantics and fail-open convention documented. Matcher forms (exact, pipe-separated, regex) all covered. bash-c walker pattern explained with rationale. 8-step creation procedure complete including build.py deployment and manual test. Common mistakes table covers 7 failure patterns. No blockers — approved.
+
 ## Implementation Tasks
 
 ### documentation-expert / how-to-author
 
-- [ ] Read existing Claude Code hooks in `.claude/hooks/` (e.g. `ticket_frontmatter_guard.py`) to extract the stdin/stdout contract, exit code convention, and `bash -c` wrapper pattern.
-- [ ] Read `leafcutter-ai/templates/settings.json` to document the hook registration schema.
-- [ ] Write `leafcutter-ai/docs/how-to/creating-a-claude-code-hook.md` covering:
+- [x] Read existing Claude Code hooks in `.claude/hooks/` (e.g. `ticket_frontmatter_guard.py`) to extract the stdin/stdout contract, exit code convention, and `bash -c` wrapper pattern.
+- [x] Read `leafcutter-ai/templates/settings.json` to document the hook registration schema.
+- [x] Write `leafcutter-ai/docs/how-to/creating-a-claude-code-hook.md` covering:
   1. **Naming note**: Claude Code hooks (PreToolUse / PostToolUse) vs pre-commit hooks — explain the difference up front, with a link to ticket 03's guide.
   2. **Event types**: `PreToolUse` (fires before the tool runs; can block) and `PostToolUse` (fires after; observational).
   3. **stdin contract**: JSON object Claude Code sends (`tool_name`, `tool_input`, etc.) — document the exact schema.
@@ -95,8 +107,8 @@ Then it has valid frontmatter including type: how_to
      - Run `build.py` to deploy to `.claude/hooks/` and `.claude/settings.json`.
      - Test with a real tool invocation.
   9. **Fail-open convention**: hooks must never block Claude Code on an unexpected error — catch exceptions and exit 0.
-- [ ] Add a "Common Mistakes" table (wrong exit code for PostToolUse, blocking stdin parse errors, overly broad matchers).
-- [ ] Ensure the doc has valid frontmatter (type: how_to).
+- [x] Add a "Common Mistakes" table (wrong exit code for PostToolUse, blocking stdin parse errors, overly broad matchers).
+- [x] Ensure the doc has valid frontmatter (type: how_to).
 
 ## Risk & Safety
 

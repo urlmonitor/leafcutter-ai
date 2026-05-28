@@ -62,11 +62,38 @@
       "dependencies": []
     },
     {
+      "id": "doc-enforcer",
+      "name": "Doc Enforcer",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/doc-enforcer/",
+      "description": "Use when a coder agent finishes editing Python or SQL files. Enforces module docstrings, function docstrings, DECISION HISTORY block structure, and tail-tag ticket-traceability format on new entries. Also detects and reads .pending/adr_handoff.json to inject ADR back-links automatically.",
+      "dependencies": []
+    },
+    {
       "id": "feature",
       "name": "Feature",
       "portable": true,
       "domain": null,
       "template_path": "leafcutter/templates/skills/feature/",
+      "dependencies": []
+    },
+    {
+      "id": "frontend-design",
+      "name": "Frontend Design",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/frontend-design/",
+      "description": "Optional skill for frontend-coder. Provides design principles that counteract generic AI aesthetics — strong typographic hierarchy, intentional negative space, distinctive colour choices, and component-level personality. Installed by the /onboard wizard when the user opts in.",
+      "dependencies": []
+    },
+    {
+      "id": "glossary-bootstrap",
+      "name": "Glossary Bootstrap",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/glossary-bootstrap/",
+      "description": "Full-repo glossary bootstrap. Scans all .md/.py/.sql files for novel jargon candidates, dispatches the glossary-triage agent in parallel batches, applies decisions to docs/glossary.md and docs/glossary_blacklist.md, and commits the result.",
       "dependencies": []
     },
     {
@@ -118,6 +145,15 @@
       "dependencies": []
     },
     {
+      "id": "sql-query-past-queries",
+      "name": "SQL Query Past Queries",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/sql-query-past-queries/",
+      "description": "Scans the project's past-queries folder and surfaces prior queries relevant to the current request. Returns a ranked list of candidate queries for reuse.",
+      "dependencies": []
+    },
+    {
       "id": "ticket-authoring",
       "name": "Ticket Authoring",
       "portable": true,
@@ -139,6 +175,15 @@
       "portable": true,
       "domain": null,
       "template_path": "leafcutter/templates/skills/ticket-wiring/",
+      "dependencies": []
+    },
+    {
+      "id": "webapp-testing",
+      "name": "Webapp Testing",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/webapp-testing/",
+      "description": "Optional skill for frontend-coder. Provides Playwright-based UI verification: screenshots, browser console-log capture, and click/type interactions. Installed by the /onboard wizard when the user opts in.",
       "dependencies": []
     },
     {

@@ -19,9 +19,9 @@ agents:
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
-  documentation-expert: needed
-  how-to-author: needed
-  pr-reviewer: needed
+  documentation-expert: signed_off
+  how-to-author: signed_off
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -63,20 +63,37 @@ Then it has valid frontmatter including type: how_to
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] how-to-author
-- [ ] pr-reviewer
+- [x] documentation-expert — 2026-05-28 14:10
+- [x] how-to-author — 2026-05-28 14:12
+- [x] pr-reviewer — 2026-05-28 14:14
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-05-28 14:10 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-28_eed56ff7
+Researched all four artifact types (agent templates, skills, Claude Code hooks, pre-commit hooks). Wrote `docs/how-to/deprecating-or-removing-artifacts.md` with universal checklist, per-type deletion procedures, deprecation (soft-removal) section, real example sidebar for `templates/commit-guardian/` deprecation, and verification quick-reference table. Frontmatter validated as `type: how_to`.
+
+### 2026-05-28 14:12 — how-to-author (status: ok)
+feedback-id: fb_2026-05-28_697af5ad
+Reviewed `docs/how-to/deprecating-or-removing-artifacts.md`: all four artifact types covered with actionable step-by-step checklists, deprecation section present with registry flag and source-file comment patterns, real example sidebar documents the `templates/commit-guardian/` deprecation, frontmatter valid (`type: how_to`, `status: active`, all required fields). Verification quick-reference table matches acceptance criteria. Guide is ready for PR review.
+
+### 2026-05-28 14:14 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-28_bf625d61
+Review Report — Base: worktree-EPIC-ArtifactCRUDClarity. Diff size: 376 lines added (1 new file).
+High-Confidence Findings: No high-confidence findings.
+Medium-Confidence Findings: [M-1] docs/how-to/deprecating-or-removing-artifacts.md:3 — `type: how_to` vs `type: how-to`: commit_guardian.json allowed_types uses `how-to` (hyphen) but ticket spec and other untracked worktree files use `how_to` (underscore). Convention inconsistency; doc frontmatter guard will flag at commit time. Not a content blocker — the guide is accurate and complete.
+Suppressed: 0 low-confidence nits, 0 medium findings dropped by Opus.
+Escalation — Branch: none. Reason: not escalated: medium count was 1 (threshold > 3).
+All acceptance criteria met. Approved for commit.
+
 ## Implementation Tasks
 
 ### documentation-expert / how-to-author
 
-- [ ] Research all four artifact types' source locations, registry entries, and cross-references (use reference docs 06–08 as input once available; otherwise read source files directly).
-- [ ] Write `leafcutter-ai/docs/how-to/deprecating-or-removing-artifacts.md` with the following sections:
+- [x] Research all four artifact types' source locations, registry entries, and cross-references (use reference docs 06–08 as input once available; otherwise read source files directly).
+- [x] Write `leafcutter-ai/docs/how-to/deprecating-or-removing-artifacts.md` with the following sections:
 
   **Universal checklist (applies to all types):**
   - Back up or tag before deleting.
@@ -113,9 +130,9 @@ Then it has valid frontmatter including type: how_to
   - Update cross-references to point to the replacement artifact.
   - Do NOT delete the source file until all consumers have migrated.
 
-- [ ] Cross-link to reference docs 06–08 for the authoritative field inventories.
-- [ ] Add a "Real example" sidebar documenting the `templates/commit-guardian/` deprecation that motivated this epic.
-- [ ] Ensure the doc has valid frontmatter (type: how_to).
+- [x] Cross-link to reference docs 06–08 for the authoritative field inventories.
+- [x] Add a "Real example" sidebar documenting the `templates/commit-guardian/` deprecation that motivated this epic.
+- [x] Ensure the doc has valid frontmatter (type: how_to).
 
 ## Risk & Safety
 

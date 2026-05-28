@@ -396,6 +396,134 @@ def get_ticket_phase_agents(package_root: Path) -> list[dict[str, Any]]:
 
 
 # ====================================================================
+# SKILL REGISTRY VALIDATION
+# ====================================================================
+
+
+def validate_skill_registry(
+    package_root: Path,
+    skills_dir: Path | None = None,
+    registry_path: Path | None = None,
+) -> tuple[list[str], list[str]]:
+    """Validate bidirectional consistency between templates/skills/ and skill_registry.json.
+
+    Checks:
+      1. Every directory in templates/skills/ has a matching entry in skill_registry.json
+         (orphaned_dirs — directories without a registry entry).
+      2. Every entry in skill_registry.json has a corresponding directory in templates/skills/
+         (orphaned_entries — registry entries with no directory on disk).
+
+    Only top-level directories are checked. The README.md and any non-directory
+    file at the skills root are ignored.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root
+            (the directory containing config/, scripts/, templates/).
+        skills_dir: Override path to the templates/skills/ directory.
+            Defaults to package_root / "templates" / "skills".
+        registry_path: Override path to skill_registry.json.
+            Defaults to package_root / "config" / "skill_registry.json".
+
+    Returns:
+        Tuple (orphaned_dirs, orphaned_entries):
+          - orphaned_dirs: skill IDs (directory names) on disk with no registry entry.
+          - orphaned_entries: skill IDs in the registry with no corresponding directory.
+        An empty tuple of empty lists means full bidirectional consistency.
+
+    Raises:
+        FileNotFoundError: if the registry file does not exist.
+        json.JSONDecodeError: if the registry file is not valid JSON.
+        ValueError: if the registry has no 'skills' key or it is not a list.
+    """
+    if skills_dir is None:
+        skills_dir = package_root / "templates" / "skills"
+    if registry_path is None:
+        registry_path = package_root / "config" / "skill_registry.json"
+
+    # --- Load registry ---
+    if not registry_path.exists():
+        raise FileNotFoundError(
+            f"skill_registry.json not found at {registry_path}. "
+            "Create it or run build.py --validate to diagnose."
+        )
+    data: dict[str, Any] = json.loads(registry_path.read_text(encoding="utf-8"))
+    skills_list = data.get("skills")
+    if not isinstance(skills_list, list):
+        raise ValueError(
+            f"skill_registry.json has no 'skills' array or it is not a list (at {registry_path})."
+        )
+
+    registry_ids: set[str] = {entry["id"] for entry in skills_list if "id" in entry}
+
+    # --- Discover directories on disk ---
+    if not skills_dir.exists():
+        # Skills dir missing: every registry entry is orphaned, no dirs on disk.
+        return [], sorted(registry_ids)
+
+    disk_dirs: set[str] = {
+        item.name
+        for item in skills_dir.iterdir()
+        if item.is_dir()
+    }
+
+    orphaned_dirs = sorted(disk_dirs - registry_ids)
+    orphaned_entries = sorted(registry_ids - disk_dirs)
+    return orphaned_dirs, orphaned_entries
+
+
+def main_skill_registry() -> None:
+    """CLI entry point for skill registry validation.
+
+    Prints a human-readable diff and exits 0 (no mismatches) or 1 (mismatches found).
+    Usage: python registry_validator.py --skills
+    """
+    # Resolve the package root relative to this script's location.
+    package_root = Path(__file__).resolve().parent.parent
+
+    try:
+        orphaned_dirs, orphaned_entries = validate_skill_registry(package_root)
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"ERROR: {exc}", flush=True)
+        raise SystemExit(1) from exc
+    except json.JSONDecodeError as exc:
+        print(f"ERROR: skill_registry.json is not valid JSON: {exc}", flush=True)
+        raise SystemExit(1) from exc
+
+    if not orphaned_dirs and not orphaned_entries:
+        print("skill_registry.json is consistent with templates/skills/ (no mismatches).")
+        raise SystemExit(0)
+
+    if orphaned_dirs:
+        print("Orphaned skill directories (on disk, not in registry):")
+        for name in orphaned_dirs:
+            print(f"  - {name}")
+
+    if orphaned_entries:
+        print("Orphaned registry entries (in registry, no directory on disk):")
+        for name in orphaned_entries:
+            print(f"  - {name}")
+
+    raise SystemExit(1)
+
+
+if __name__ == "__main__":
+    import sys as _sys
+
+    if "--skills" in _sys.argv:
+        main_skill_registry()
+    else:
+        # Default: validate agent registry.
+        package_root = Path(__file__).resolve().parent.parent
+        errors = validate_agent_registry(package_root)
+        if errors:
+            for err in errors:
+                print(f"ERROR: {err}", flush=True)
+            raise SystemExit(1)
+        print("agent_registry.json is consistent (no errors).")
+        raise SystemExit(0)
+
+
+# ====================================================================
 # DECISION HISTORY
 # ====================================================================
 # - 2026-05-13 10:30 [epic-supervisor/ticket-20]: Initial implementation. (#EPIC-LeafcutterMVP/01)
@@ -425,4 +553,12 @@ def get_ticket_phase_agents(package_root: Path) -> list[dict[str, Any]]:
 #   templates/agents/ as a documentation file (asymmetry explainer, per ADR-025
 #   decision 6). The validator previously treated all .md files in templates/agents/
 #   as agent templates; README is excluded via the _NON_AGENT_STEMS set.
+# - 2026-05-28 10:00 [python-coder/EPIC-ArtifactCRUDClarity/11]: Added (#EPIC-ArtifactCRUDClarity/11)
+#   validate_skill_registry() for bidirectional skill registry validation.
+#   Checks templates/skills/ directories against skill_registry.json entries in
+#   both directions. Returns (orphaned_dirs, orphaned_entries) tuple so callers
+#   can decide whether to treat mismatches as fatal. main_skill_registry() CLI
+#   entry point exits 0 on clean, 1 with diff when mismatches found.
+#   __main__ block routes --skills flag to main_skill_registry() and defaults to
+#   agent registry validation for backward compatibility.
 # ====================================================================

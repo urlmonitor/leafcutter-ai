@@ -793,6 +793,76 @@ def build_sync_platforms(target_root: Path, config: dict[str, Any],
     return written
 
 
+# ---------------------------------------------------------------------------
+# Clean-mode: remove stale artifacts
+# ---------------------------------------------------------------------------
+
+#: Artifact subdirectories managed by build.py that are eligible for clean-mode
+#: removal. Only files/directories within these subdirectories are ever removed
+#: by clean_stale_artifacts(). Paths outside this list are never touched.
+_MANAGED_ARTIFACT_DIRS = {
+    "agents": "agents",       # .claude/agents/<name>.md
+    "skills": "skills",       # .claude/skills/<name>/
+    "hooks": "hooks",         # .claude/hooks/<name>.py
+}
+
+
+def clean_stale_artifacts(
+    target_dir: Path,
+    source_manifests: dict[str, set[str]],
+) -> int:
+    """Remove compiled artifacts in the target directory that have no matching source template.
+
+    Scans the three managed artifact subdirectories (``agents/``, ``skills/``,
+    ``hooks/``) inside ``<target_dir>/.claude/``. For each artifact found on
+    disk, checks whether its name appears in the corresponding set in
+    ``source_manifests``. Anything NOT in the manifest is considered stale and
+    is removed.
+
+    Only removes files/directories under the known managed subdirectories
+    (``.claude/agents/``, ``.claude/skills/``, ``.claude/hooks/``). Files
+    elsewhere in ``.claude/`` or the broader target directory are never touched.
+
+    Args:
+        target_dir: Root directory of the target project. The managed artifact
+            subdirectories are resolved relative to ``<target_dir>/.claude/``.
+        source_manifests: Mapping from artifact type to the set of expected
+            artifact names. Accepted keys: ``"agents"``, ``"skills"``, ``"hooks"``.
+            Each value is a set of file/directory **base names** (e.g.
+            ``{"my-agent.md", "other-agent.md"}``). An absent key is treated
+            the same as an empty set — all items of that type are considered
+            stale.
+
+    Returns:
+        Count of artifacts removed (0 when nothing is stale).
+    """
+    import shutil as _shutil
+
+    claude_dir = target_dir / ".claude"
+    removed = 0
+
+    for artifact_type, subdir_name in _MANAGED_ARTIFACT_DIRS.items():
+        managed_dir = claude_dir / subdir_name
+        if not managed_dir.exists():
+            continue
+
+        expected_names: set[str] = source_manifests.get(artifact_type, set())
+
+        for item in sorted(managed_dir.iterdir()):
+            if item.name not in expected_names:
+                print(f"Removing stale artifact: {item}")
+                if item.is_dir() and not item.is_symlink():
+                    _shutil.rmtree(item)
+                else:
+                    item.unlink()
+                removed += 1
+
+    if removed == 0:
+        print("No stale artifacts found")
+
+    return removed
+
+
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================

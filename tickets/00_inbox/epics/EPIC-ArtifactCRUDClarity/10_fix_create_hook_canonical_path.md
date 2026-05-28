@@ -13,11 +13,11 @@ files_touched:
 agents:
   architect-review: not_needed
   test-writer: not_needed
-  python-coder: needed
+  python-coder: signed_off
   sql-coder: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -53,21 +53,29 @@ Then the developer creates hook scripts in the correct location
 
 ## Sign-offs
 
-- [ ] python-coder
-- [ ] pr-reviewer
+- [x] python-coder — 2026-05-28 00:00
+- [x] pr-reviewer — 2026-05-28 00:01
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-05-28 00:00 — python-coder (status: ok)
+feedback-id: fb_2026-05-28_24db456d
+Replaced 6 occurrences of `templates/commit-guardian/` with `templates/scripts/commit_guardian/` in `templates/skills/create-hook/SKILL.md`. Verified zero deprecated path references remain via grep. No callout note added — no natural prose section exists for it. All acceptance criteria satisfied.
+
+### 2026-05-28 00:01 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-28_de1cab09
+Reviewed diff: 6 path string replacements, no other changes. Canonical path `templates/scripts/commit_guardian/` verified to exist in the repo. Scope matches `files_touched`. All acceptance criteria satisfied. Approved.
+
 ## Implementation Tasks
 
 ### python-coder
 
-- [ ] Read `leafcutter-ai/templates/skills/create-hook/SKILL.md` and identify all occurrences of `templates/commit-guardian/`.
-- [ ] Replace every occurrence of `templates/commit-guardian/` with `templates/scripts/commit_guardian/` using Edit (replace_all).
-- [ ] Verify with `grep -n "commit-guardian" leafcutter-ai/templates/skills/create-hook/SKILL.md` returns zero matches on the replaced path (the deprecated directory name itself can appear only in a "deprecated path" callout if one is added).
-- [ ] Optionally add a one-line callout note: "Note: `templates/commit-guardian/` is a deprecated path. Always use `templates/scripts/commit_guardian/`." — but only if the skill body has a natural place for it; do not add noise.
+- [x] Read `leafcutter-ai/templates/skills/create-hook/SKILL.md` and identify all occurrences of `templates/commit-guardian/`.
+- [x] Replace every occurrence of `templates/commit-guardian/` with `templates/scripts/commit_guardian/` using Edit (replace_all).
+- [x] Verify with `grep -n "commit-guardian" leafcutter-ai/templates/skills/create-hook/SKILL.md` returns zero matches on the replaced path (the deprecated directory name itself can appear only in a "deprecated path" callout if one is added).
+- [x] Optionally add a one-line callout note: "Note: `templates/commit-guardian/` is a deprecated path. Always use `templates/scripts/commit_guardian/`." — but only if the skill body has a natural place for it; do not add noise.
 
 ## Risk & Safety
 
