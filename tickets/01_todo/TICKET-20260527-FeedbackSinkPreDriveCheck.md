@@ -22,7 +22,7 @@ agents:
   test-runner: not_needed
   documentation-expert: signed_off
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -93,7 +93,7 @@ Then the feedback-sink reachability check is documented as a numbered step
 - [x] architect-review — 2026-05-28 08:00
 - [x] documentation-expert — 2026-05-28 08:15
 - [x] pr-reviewer — 2026-05-28 08:30
-- [ ] commit
+- [x] commit — 2026-05-28 08:45
 - [ ] pull-request
 
 ## Comments
@@ -109,6 +109,10 @@ Added `## Pre-Drive Checklist` section with "Feedback sink reachable" item and p
 ### 2026-05-28 08:30 — pr-reviewer (status: ok)
 feedback-id: fb_2026-05-28_592386c9
 All three files correctly updated. Acceptance criteria satisfied: CLAUDE.md has Pre-Drive Checklist with sink probe and failure guidance; building-epics/SKILL.md has §1.0 with warn-not-halt recipe; epic-supervisor.md has step 7 referencing §1.0. Cross-references intact. No blockers.
+
+### 2026-05-28 08:45 — commit (status: ok)
+feedback-id: fb_2026-05-28_776616e1
+Committed 4 files: CLAUDE.md, templates/skills/building-epics/SKILL.md, templates/agents/epic-supervisor.md, ticket (renamed 00_inbox → 01_todo). SHA: 29c0fdf. No pre-commit hook failures.
 
 ## Implementation Tasks
 
