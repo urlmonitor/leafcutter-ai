@@ -18,9 +18,9 @@ agents:
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
-  documentation-expert: needed
-  how-to-author: needed
-  pr-reviewer: needed
+  documentation-expert: signed_off
+  how-to-author: signed_off
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -59,20 +59,32 @@ Then it has valid frontmatter including type: how_to
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] how-to-author
-- [ ] pr-reviewer
+- [x] documentation-expert — 2026-05-28 09:00
+- [x] how-to-author — 2026-05-28 09:15
+- [x] pr-reviewer — 2026-05-28 09:30
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-05-28 09:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-28_9de086ea
+Researched SKILL.md frontmatter schema from existing skills (ticket-authoring, add-skill-to-package, signoff, building-epics) and skill_registry.json structure. Authored docs/how-to/creating-a-skill.md covering all 8 lifecycle steps: name choice, directory creation, frontmatter authoring (name/description/allowed-tools/internal), skill body structure, optional scripts/ subdirectory, registry registration, build.py deployment, and add-skill-to-package promotion. Included Common Mistakes table and See Also links. Doc has valid type: how_to frontmatter.
+
+### 2026-05-28 09:15 — how-to-author (status: ok)
+feedback-id: fb_2026-05-28_a47184cb
+Reviewed guide against how-to structure requirements: fixed type field from how_to to how-to (per frontmatter_validators.py convention), promoted Prerequisites from bold text to ## Prerequisites heading, added ## Verification section with runnable four-step checklist, standardized ## Common Mistakes and ## See Also headings to H2. Guide passes YAML frontmatter validation (title, type: how-to, status: active, created, last_updated, components: [build_pipeline], related_docs). No README in docs/how-to/ to update.
+
+### 2026-05-28 09:30 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-28_6cee1adc
+Reviewed docs/how-to/creating-a-skill.md against all 3 acceptance criteria (Gherkin scenarios). All 15 content checks pass: directory creation, all frontmatter fields (name/description/allowed-tools/internal), scripts/ subdirectory, registry registration, build.py run, add-skill-to-package promotion, internal: true note, Common Mistakes table, valid type: how-to frontmatter, Prerequisites H2, Verification H2, See Also H2. Zero high-confidence findings. All four relative links resolve correctly. Diff size: 323 lines in 1 new file vs HEAD. Escalation: none (0 medium findings, threshold is >3).
+
 ## Implementation Tasks
 
 ### documentation-expert / how-to-author
 
-- [ ] Research the `SKILL.md` frontmatter schema by reading existing skills (`ticket-authoring`, `ticket-wiring`, `add-skill-to-package`). Extract all valid frontmatter fields (`name`, `description`, `allowed-tools`, `internal`).
-- [ ] Document the full skill creation lifecycle in `leafcutter-ai/docs/how-to/creating-a-skill.md`:
+- [x] Research the `SKILL.md` frontmatter schema by reading existing skills (`ticket-authoring`, `ticket-wiring`, `add-skill-to-package`). Extract all valid frontmatter fields (`name`, `description`, `allowed-tools`, `internal`).
+- [x] Document the full skill creation lifecycle in `leafcutter-ai/docs/how-to/creating-a-skill.md`:
   1. Choose a skill name (kebab-case).
   2. Create `leafcutter-ai/templates/skills/<name>/` directory.
   3. Create `SKILL.md` with YAML frontmatter: `name`, `description`, `allowed-tools`, `internal` (true/false).
@@ -82,9 +94,9 @@ Then it has valid frontmatter including type: how_to
   7. Run `python leafcutter-ai/scripts/build.py --target-dir .` and verify no errors.
   8. Verify `.claude/skills/<name>/SKILL.md` exists.
   9. For promotion to an adopter project: invoke the `add-skill-to-package` skill (post ticket 09 fix, this also updates the registry).
-- [ ] Include a note on the `internal: true` flag — skills marked internal are not copied to adopter projects.
-- [ ] Include a "Common Mistakes" table (missing `allowed-tools`, forgetting registry entry, wrong `internal` value).
-- [ ] Ensure the doc file has valid frontmatter (type: how_to).
+- [x] Include a note on the `internal: true` flag — skills marked internal are not copied to adopter projects.
+- [x] Include a "Common Mistakes" table (missing `allowed-tools`, forgetting registry entry, wrong `internal` value).
+- [x] Ensure the doc file has valid frontmatter (type: how_to).
 
 ## Risk & Safety
 

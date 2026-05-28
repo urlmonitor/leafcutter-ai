@@ -19,9 +19,9 @@ agents:
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
-  documentation-expert: needed
-  reference-author: needed
-  pr-reviewer: needed
+  documentation-expert: signed_off
+  reference-author: signed_off
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -62,28 +62,40 @@ Then it has valid frontmatter including type: reference
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] reference-author
-- [ ] pr-reviewer
+- [x] documentation-expert — 2026-05-28 10:00
+- [x] reference-author — 2026-05-28 10:05
+- [x] pr-reviewer — 2026-05-28 10:10
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-05-28 10:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-28_a58bc846
+Researched all 21 skill templates in templates/skills/ and skill_registry.json schema. Authored docs/reference/skill-frontmatter.md covering all frontmatter fields (name, description, allowed-tools, internal, portable, disable-model-invocation), allowed-tools valid values and format conventions, the internal flag semantics, skill_registry.json schema, and two examples (minimal and full). Doc has valid frontmatter with type: reference.
+
+### 2026-05-28 10:05 — reference-author (status: ok)
+feedback-id: fb_2026-05-28_07381bd2
+Reference doc at docs/reference/skill-frontmatter.md complete. Covers: frontmatter fields table (6 fields with type/required/default/description), allowed-tools section with valid tool names and all Bash constrained-form examples observed in the ecosystem, internal flag semantics table, skill_registry.json schema table with all 8 fields, minimal and full frontmatter examples, and format conventions summary. All acceptance criteria met; doc passes doc frontmatter guard (type: reference, status: active, created/last_updated present).
+
+### 2026-05-28 10:10 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-28_ded0a067
+PR review passed. Verified all four acceptance criteria: (1) frontmatter fields table present with type/required/default/description columns for all 6 fields; (2) allowed-tools section lists all valid tool names and constrained Bash forms, explains the restriction contract; (3) internal flag section explains true vs false semantics and effect on build.py and add-skill-to-package; (4) doc has valid frontmatter with type: reference, status: active, created and last_updated. No blocking issues found.
+
 ## Implementation Tasks
 
 ### documentation-expert / reference-author
 
-- [ ] Read all existing skills in `leafcutter-ai/templates/skills/` to extract the complete set of frontmatter keys and their observed values.
-- [ ] Read `leafcutter-ai/config/skill_registry.json` to extract the registry-side schema and how it maps to frontmatter.
-- [ ] Write `leafcutter-ai/docs/reference/skill-frontmatter.md` with:
+- [x] Read all existing skills in `leafcutter-ai/templates/skills/` to extract the complete set of frontmatter keys and their observed values.
+- [x] Read `leafcutter-ai/config/skill_registry.json` to extract the registry-side schema and how it maps to frontmatter.
+- [x] Write `leafcutter-ai/docs/reference/skill-frontmatter.md` with:
   - **Frontmatter fields table**: `name`, `description`, `allowed-tools`, `internal` — type, required/optional, default, valid values, effect.
   - **`allowed-tools` details**: list all valid tool name strings (`Bash`, `Read`, `Edit`, `Write`, `Glob`, `Grep`, `Agent`, `mcp`, plus `Bash(<pattern>)` constrained forms). Explain that declaring a tool grants the skill user permission to use it within that skill's context.
   - **`internal` flag**: `true` = skill is not copied to adopter projects by `build.py`; `false` (default) = skill is public and deployed.
   - **Format conventions**: YAML block scalar vs flow style for `allowed-tools`, multi-line `description` quoting.
   - **skill_registry.json schema**: `id`, `description`, `path`, `internal` fields and their relationship to frontmatter values.
   - **Examples** — one minimal skill frontmatter and one with all fields.
-- [ ] Ensure the doc has valid frontmatter (type: reference).
+- [x] Ensure the doc has valid frontmatter (type: reference).
 
 ## Risk & Safety
 
