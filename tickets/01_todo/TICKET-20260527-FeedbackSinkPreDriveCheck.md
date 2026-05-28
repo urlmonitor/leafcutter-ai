@@ -23,7 +23,7 @@ agents:
   documentation-expert: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # Add feedback-sink reachability check to pre-drive checklist
@@ -94,7 +94,7 @@ Then the feedback-sink reachability check is documented as a numbered step
 - [x] documentation-expert — 2026-05-28 08:15
 - [x] pr-reviewer — 2026-05-28 08:30
 - [x] commit — 2026-05-28 08:45
-- [ ] pull-request
+- [x] pull-request — 2026-05-28 09:00
 
 ## Comments
 
@@ -113,6 +113,10 @@ All three files correctly updated. Acceptance criteria satisfied: CLAUDE.md has 
 ### 2026-05-28 08:45 — commit (status: ok)
 feedback-id: fb_2026-05-28_776616e1
 Committed 4 files: CLAUDE.md, templates/skills/building-epics/SKILL.md, templates/agents/epic-supervisor.md, ticket (renamed 00_inbox → 01_todo). SHA: 29c0fdf. No pre-commit hook failures.
+
+### 2026-05-28 09:00 — pull-request (status: ok)
+feedback-id: fb_2026-05-28_d130f5a7
+PR opened for branch worktree-TICKET-FeedbackSinkPreDriveCheck. All agents signed off.
 
 ## Implementation Tasks
 
