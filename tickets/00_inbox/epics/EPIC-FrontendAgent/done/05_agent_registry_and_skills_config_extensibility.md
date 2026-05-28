@@ -1,6 +1,6 @@
 ---
 title: "Register frontend-coder in agent_registry.json and extend skills_config.default.json"
-status: todo
+status: done
 components:
   - config_loader
 created: 2026-05-28
@@ -20,8 +20,8 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 05: Register frontend-coder in agent_registry.json and extend skills_config.default.json
@@ -78,8 +78,8 @@ Then the PROJECT_CONTEXT.md path is injected from skills_config.frontend.project
 - [x] test-writer — 2026-05-28 12:50
 - [x] test-runner — 2026-05-28 12:55
 - [x] pr-reviewer — 2026-05-28 13:00
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-05-28 13:05
+- [x] pull-request — 2026-05-28 13:05
 
 ## Comments
 
@@ -102,6 +102,14 @@ Ran: python3 -m pytest tests/test_agent_registry.py tests/test_skills_config_def
 ### 2026-05-28 13:00 — pr-reviewer (status: ok)
 feedback-id: fb_2026-05-28_32e605b1
 Reviewed all deliverables: agent_registry.json entry valid JSON, backward-compatible, priority=8, DSL expression scoped to frontend extensions only (no python-coder overlap risk), is_ticket_phase=true, requires_ticket_section=true. skills_config.default.json well-formed with frontend key. config_loader.py _flatten_nested_keys correctly handles nested dicts with dot-notation and preserves original nested dict. 20 tests pass, 5 existing tests pass. All acceptance criteria verified.
+
+### 2026-05-28 13:05 — commit (status: ok)
+feedback-id: fb_2026-05-28_5300376a
+Committed in batch 2 SHA 711f151. Epic-branch-only, no per-ticket PR.
+
+### 2026-05-28 13:05 — pull-request (status: ok)
+feedback-id: (submit-failed)
+Single-PR-per-epic convention: no per-ticket PR. PR opened at epic completion.
 
 ## Implementation Tasks
 

@@ -1,6 +1,6 @@
 ---
 title: "Author the webapp-testing optional skill template"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-28
@@ -19,8 +19,8 @@ agents:
   test-runner: not_needed
   documentation-expert: signed_off
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 02: Author the webapp-testing optional skill template
@@ -69,8 +69,8 @@ Then a clearly visible note instructs them to skip this skill (Antigravity provi
 - [x] architect-review — 2026-05-28 12:30
 - [x] documentation-expert — 2026-05-28 12:45
 - [x] pr-reviewer — 2026-05-28 13:00
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-05-28 13:05
+- [x] pull-request — 2026-05-28 13:05
 
 ## Comments
 
@@ -85,6 +85,14 @@ Created templates/skills/webapp-testing/SKILL.md. Sections: frontmatter (name, a
 ### 2026-05-28 13:00 — pr-reviewer (status: ok)
 feedback-id: fb_2026-05-28_ee85bcfd
 SKILL.md reviewed: all 4 acceptance criteria verified (build.py deploys it, frontend-coder call contract matches, Playwright-not-installed fallback is graceful, Antigravity skip note is visible at top). No issues found. The skill correctly returns verdict=pass for graceful-skip scenarios (Playwright absent or Antigravity env). No source files are modified during skill execution (read-only run except for screenshot tmp file).
+
+### 2026-05-28 13:05 — commit (status: ok)
+feedback-id: fb_2026-05-28_3d20bc00
+Committed in batch 2 SHA 711f151 (11 files, 840 insertions). Epic-branch-only, no per-ticket PR.
+
+### 2026-05-28 13:05 — pull-request (status: ok)
+feedback-id: (submit-failed)
+Single-PR-per-epic convention: no per-ticket PR. PR opened at epic completion.
 
 ## Implementation Tasks
 

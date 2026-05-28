@@ -1,6 +1,6 @@
 ---
 title: "Author the frontend-design optional skill template"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-28
@@ -19,8 +19,8 @@ agents:
   test-runner: not_needed
   documentation-expert: signed_off
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 03: Author the frontend-design optional skill template
@@ -68,8 +68,8 @@ Then the skill contains at least 5 concrete, non-vague design principles with ex
 - [x] architect-review — 2026-05-28 12:30
 - [x] documentation-expert — 2026-05-28 12:45
 - [x] pr-reviewer — 2026-05-28 13:00
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-05-28 13:05
+- [x] pull-request — 2026-05-28 13:05
 
 ## Comments
 
@@ -84,6 +84,14 @@ Created templates/skills/frontend-design/SKILL.md. Sections: frontmatter (name: 
 ### 2026-05-28 13:00 — pr-reviewer (status: ok)
 feedback-id: fb_2026-05-28_bd74e9fc
 SKILL.md reviewed: all 4 acceptance criteria verified (build.py deploys it, frontend-coder loads before writing, PROJECT_CONTEXT.md defers to project design system, ≥5 non-vague concrete principles with code examples). The skill correctly has allowed-tools: Read only — it does not write any files. The "distinctiveness test" question in the pre-write checklist addresses the core goal. No issues found.
+
+### 2026-05-28 13:05 — commit (status: ok)
+feedback-id: fb_2026-05-28_3406e3e5
+Committed in batch 2 SHA 711f151. Epic-branch-only, no per-ticket PR.
+
+### 2026-05-28 13:05 — pull-request (status: ok)
+feedback-id: (submit-failed)
+Single-PR-per-epic convention: no per-ticket PR. PR opened at epic completion.
 
 ## Implementation Tasks
 
