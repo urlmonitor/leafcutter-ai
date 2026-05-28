@@ -1,7 +1,7 @@
 ---
 title: "EPIC: Artifact CRUD Clarity"
 type: epic
-status: todo
+status: done
 components:
   - build_pipeline
   - config_loader
