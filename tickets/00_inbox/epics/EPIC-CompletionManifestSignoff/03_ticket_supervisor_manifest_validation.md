@@ -6,7 +6,25 @@ components:
 created: 2026-05-28
 depends_on:
   - 01_signoff_skill_manifest_section.md
-  - 02_agent_default_checklists.md
+  - 02_01_checklist_architect_review.md
+  - 02_02_checklist_python_coder.md
+  - 02_03_checklist_test_writer.md
+  - 02_04_checklist_test_runner.md
+  - 02_05_checklist_documentation_expert.md
+  - 02_06_checklist_change_scope_reviewer.md
+  - 02_07_checklist_pr_reviewer.md
+  - 02_08_checklist_commit.md
+  - 02_09_checklist_pull_request.md
+  - 02_10_checklist_status_checker.md
+  - 02_11_checklist_sql_coder.md
+  - 02_12_checklist_frontend_coder.md
+  - 02_13_checklist_sql_query.md
+  - 02_14_checklist_adr_author.md
+  - 02_15_checklist_architecture_diagram_author.md
+  - 02_16_checklist_explanation_author.md
+  - 02_17_checklist_how_to_author.md
+  - 02_18_checklist_reference_author.md
+  - 02_19_checklist_user_surface_smoker.md
 priority: high
 requires_diagram: false
 requires_adr: false
