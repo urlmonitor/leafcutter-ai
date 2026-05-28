@@ -18,13 +18,11 @@ from typing import Optional
 from _resolve_root import find_project_root
 
 project_root = find_project_root()
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
 
-from scripts.commit_guardian.config import EXCLUDED_DIRS
+from config import EXCLUDED_DIRS
 
 # Re-export validators for backward compatibility (used by unit tests)
-from scripts.commit_guardian.docstring_validators import (  # noqa: F401
+from docstring_validators import (  # noqa: F401
     _get_real_params,
     _has_return_value,
     _is_trivial,

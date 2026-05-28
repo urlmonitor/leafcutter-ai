@@ -37,10 +37,8 @@ from pathlib import Path
 # Fix import path when running from root
 _current_dir = Path(__file__).resolve().parent
 _project_root = _current_dir.parent.parent
-if str(_project_root) not in sys.path:
-    sys.path.insert(0, str(_project_root))
 
-from scripts.commit_guardian.config import SECURITY_SCANNER_SCRIPTS_DIR  # noqa: E402
+from config import SECURITY_SCANNER_SCRIPTS_DIR  # noqa: E402
 
 # Locate the skill scripts dir via config (portable across consumer projects)
 _REPO_ROOT = Path(__file__).parent.parent.parent

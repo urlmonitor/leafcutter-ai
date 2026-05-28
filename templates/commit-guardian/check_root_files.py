@@ -21,10 +21,8 @@ from pathlib import Path
 # Fix import path when running from root
 current_dir = Path(__file__).resolve().parent
 project_root = current_dir.parent.parent
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
 
-from scripts.commit_guardian.config import ALLOWED_ROOT_FILES, ALLOWED_ROOT_EXTENSIONS
+from config import ALLOWED_ROOT_FILES, ALLOWED_ROOT_EXTENSIONS
 
 # Backwards-compatible alias used by check_documentation.py
 ALLOWED_EXTENSIONS = ALLOWED_ROOT_EXTENSIONS

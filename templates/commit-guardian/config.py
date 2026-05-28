@@ -6,7 +6,7 @@ Every checker imports its constants from here — edit the JSON to customise.
 
 Usage::
 
-    from scripts.commit_guardian.config import MAX_COMPLEXITY_SCORE, EXCLUDED_DIRS
+    from config import MAX_COMPLEXITY_SCORE, EXCLUDED_DIRS
 """
 
 import json

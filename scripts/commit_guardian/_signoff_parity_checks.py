@@ -19,10 +19,8 @@ import yaml
 from _resolve_root import find_project_root
 
 _project_root = find_project_root()
-if str(_project_root) not in sys.path:
-    sys.path.insert(0, str(_project_root))
 
-from scripts.commit_guardian.config import (
+from config import (
     AGENT_REGISTRY_PATH,
     DOC_FM_COMPONENTS_REGISTRY,
     TICKET_FM_ALLOWED_STATUSES,

@@ -40,11 +40,9 @@ _HERE = Path(__file__).resolve().parent
 _REPO_ROOT = _HERE.parent.parent
 
 # Inject project root into sys.path so ``config.py`` can be imported.
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
 
 try:
-    from scripts.commit_guardian.config import load_config as _load_config
+    from config import load_config as _load_config
 
     _cfg = _load_config().get("commit_scope", {})
 except Exception:  # pragma: no cover — config import failure is non-fatal

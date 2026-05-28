@@ -9,8 +9,8 @@ import typing
 from pathlib import Path
 import json
 
-from scripts.doc_compliance.config import _load_config_and_registry
-from scripts.doc_compliance.scanner import Scanner
+from config import _load_config_and_registry
+from scanner import Scanner
 
 def _parse_files_from_batch(batch_file: typing.Union[str, Path]) -> set[str]:
     """Extract paths to be verified from a batch work order file.

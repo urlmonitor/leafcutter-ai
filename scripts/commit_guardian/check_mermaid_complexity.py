@@ -22,10 +22,8 @@ from pathlib import Path
 from _resolve_root import find_project_root
 
 project_root = find_project_root()
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
 
-from scripts.commit_guardian.config import (
+from config import (
     MERMAID_COMPLEXITY_MAX_BOUNDARIES,
     MERMAID_COMPLEXITY_MAX_CLASSES,
     MERMAID_COMPLEXITY_MAX_EDGES,

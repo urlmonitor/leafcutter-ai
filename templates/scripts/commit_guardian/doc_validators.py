@@ -16,7 +16,7 @@ from typing import Any
 
 import yaml
 
-from scripts.commit_guardian.config import (
+from config import (
     DOC_FM_ALLOWED_STATUSES,
     DOC_FM_ALLOWED_TYPES,
     DOC_FM_REQUIRED_FIELDS,

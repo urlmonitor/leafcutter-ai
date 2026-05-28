@@ -302,11 +302,7 @@ def validate_verification_flags(template_dir: Path) -> list[str]:
     Returns:
         List of error strings.
     """
-    try:
-        from scripts.template_compiler import parse_frontmatter
-    except ImportError:
-        # Fallback for some test runners or alternate paths
-        from template_compiler import parse_frontmatter
+    from template_compiler import parse_frontmatter
 
     errors = []
     if not template_dir.exists():

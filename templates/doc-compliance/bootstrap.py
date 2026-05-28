@@ -9,7 +9,11 @@ DOC_LINKS:
 import json
 import glob
 from pathlib import Path
-from scripts.doc_compliance.config import DEFAULT_CONFIG_FILE, DEFAULT_COMPONENTS_FILE, _get
+
+_SCRIPTS_DIR = Path(__file__).resolve().parent.parent
+_CG_DIR = _SCRIPTS_DIR / "commit_guardian"
+
+from config import DEFAULT_CONFIG_FILE, DEFAULT_COMPONENTS_FILE, _get
 
 def init_config(project_root: str = ".") -> None:
     """Generate a blank, project-agnostic doc_compliance.json skeleton.
@@ -21,7 +25,14 @@ def init_config(project_root: str = ".") -> None:
     Args:
         project_root: Root directory of the target project.
     """
-    from scripts.commit_guardian.config import DOC_FM_DOCS_DIR
+    try:
+        import importlib.util
+        _spec = importlib.util.spec_from_file_location("cg_config", _CG_DIR / "config.py")
+        _cg_cfg = importlib.util.module_from_spec(_spec)
+        _spec.loader.exec_module(_cg_cfg)
+        DOC_FM_DOCS_DIR = _cg_cfg.DOC_FM_DOCS_DIR
+    except (ImportError, FileNotFoundError):
+        DOC_FM_DOCS_DIR = "docs"
     docs_dir = Path(project_root) / DOC_FM_DOCS_DIR
     docs_dir.mkdir(exist_ok=True)
     config_path = docs_dir / "doc_compliance.json"
@@ -87,8 +98,12 @@ def bootstrap() -> None:
     }
 
     try:
-        from scripts.commit_guardian.config import DOC_FM_DOCS_DIR
-    except ImportError:
+        import importlib.util
+        _spec = importlib.util.spec_from_file_location("cg_config", _CG_DIR / "config.py")
+        _cg_cfg = importlib.util.module_from_spec(_spec)
+        _spec.loader.exec_module(_cg_cfg)
+        DOC_FM_DOCS_DIR = _cg_cfg.DOC_FM_DOCS_DIR
+    except (ImportError, FileNotFoundError):
         DOC_FM_DOCS_DIR = "docs"
     docs_dir = Path(DOC_FM_DOCS_DIR)
     docs_dir.mkdir(exist_ok=True)

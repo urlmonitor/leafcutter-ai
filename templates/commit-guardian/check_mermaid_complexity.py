@@ -21,10 +21,8 @@ from pathlib import Path
 
 current_dir = Path(__file__).resolve().parent
 project_root = current_dir.parent.parent
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
 
-from scripts.commit_guardian.config import (
+from config import (
     MERMAID_COMPLEXITY_MAX_BOUNDARIES,
     MERMAID_COMPLEXITY_MAX_CLASSES,
     MERMAID_COMPLEXITY_MAX_EDGES,

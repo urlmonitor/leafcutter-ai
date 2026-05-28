@@ -63,7 +63,7 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 try:
-    from scripts.commit_guardian.config import DOC_FM_DOCS_DIR as _DOCS_DIR
+    from config import DOC_FM_DOCS_DIR as _DOCS_DIR
 except ImportError:
     _DOCS_DIR = "docs"
 COMPONENTS_JSON_PATH = REPO_ROOT / _DOCS_DIR / "components.json"
