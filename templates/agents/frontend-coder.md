@@ -17,6 +17,7 @@ name: frontend-coder
 tools: Bash, Read, Edit, Write, Agent
 portable: true
 signoff: true
+requires_verification: true
 domain: null
 config_keys:
   frontend.project_context_path:

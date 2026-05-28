@@ -180,7 +180,8 @@
                 "sql-view-creator",
                 "test-planner",
                 "test-writer",
-                "product-owner-agent"
+                "product-owner-agent",
+                "frontend-coder"
             ],
             "is_ticket_phase": false,
             "selection_criteria": null,
@@ -805,6 +806,7 @@
             "priority": 8,
             "priority_rationale": "Frontend implementation; runs after sql-coder (7) so database schema changes are complete before UI is built, and before test-runner (9) so tests can verify the rendered output",
             "requires_ticket_section": true,
+            "requires_verification": true,
             "owns_file_extensions": [
                 ".tsx",
                 ".jsx",
