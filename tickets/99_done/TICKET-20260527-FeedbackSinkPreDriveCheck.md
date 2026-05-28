@@ -1,6 +1,6 @@
 ---
 title: "Add feedback-sink reachability check to pre-drive checklist"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-27
