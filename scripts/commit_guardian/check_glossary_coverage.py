@@ -35,6 +35,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from _resolve_root import find_project_root
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -332,7 +334,7 @@ def _load_detector():
     import importlib.util
     spec = importlib.util.spec_from_file_location(
         "glossary_detector",
-        Path(__file__).parent.parent / "glossary_detector.py",
+        find_project_root() / "scripts" / "glossary_detector.py",
     )
     if spec is None or spec.loader is None:
         print(

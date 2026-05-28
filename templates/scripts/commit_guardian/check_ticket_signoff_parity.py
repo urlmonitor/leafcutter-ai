@@ -36,10 +36,11 @@ from pathlib import Path
 # Fix import path when running as a script (not as a module).
 # check_documentation.py uses the same pattern — without this, `scripts.commit_guardian`
 # is not importable when run via `python scripts/commit_guardian/check_ticket_signoff_parity.py`.
-_current_dir = Path(__file__).resolve().parent
-_project_root = _current_dir.parent.parent
-if str(_project_root) not in sys.path:
-    sys.path.insert(0, str(_project_root))
+from _resolve_root import find_project_root
+
+project_root = find_project_root()
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 from scripts.commit_guardian._signoff_parity_checks import (  # noqa: E402
     VALID_STATUSES,
@@ -141,7 +142,7 @@ def _validate_ticket_content(content: str, ticket_path: str, valid_components: s
     violations.extend(_check_done_folder(ticket_path, agents))
 
     # Check #6: signed-off agents with requires_ticket_section: true must have no unchecked tasks.
-    _proj_root = Path(__file__).resolve().parent.parent.parent
+    _proj_root = find_project_root()
     _agent_registry = load_agent_registry(_proj_root)
     _impl_tasks = _parse_impl_tasks_section(content)
     violations.extend(_check_unchecked_tasks(agents, _impl_tasks, _agent_registry, ticket_path))
@@ -213,7 +214,7 @@ def main() -> int:
     enforce = args.enforce
     all_violations: list[tuple[str, str, bool]] = []  # (path, message, file_enforce)
 
-    project_root = Path(__file__).resolve().parent.parent.parent
+    project_root = find_project_root()
     valid_components = load_components_registry(project_root)
 
     for ticket_path in args.filenames:

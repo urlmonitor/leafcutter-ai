@@ -41,11 +41,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-# Fix import path when running from root
-_current_dir = Path(__file__).resolve().parent
-_project_root = _current_dir.parent.parent
-if str(_project_root) not in sys.path:
-    sys.path.insert(0, str(_project_root))
+from _resolve_root import find_project_root
+
+project_root = find_project_root()
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 from scripts.commit_guardian.config import DOC_COVERAGE_LARGE_DIFF_THRESHOLD  # noqa: E402
 

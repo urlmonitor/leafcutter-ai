@@ -20,9 +20,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-# Fix import path when running from root
-current_dir = Path(__file__).resolve().parent
-project_root = current_dir.parent.parent
+from _resolve_root import find_project_root
+
+project_root = find_project_root()
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
@@ -179,7 +179,7 @@ def get_agent_for_extension(
     """
     if registry_path is None:
         registry_path = (
-            Path(__file__).resolve().parent.parent.parent
+            find_project_root()
             / "leafcutter"
             / "config"
             / "agent_registry.json"

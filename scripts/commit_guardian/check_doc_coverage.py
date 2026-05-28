@@ -41,9 +41,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-# Fix import path when running from root
-_current_dir = Path(__file__).resolve().parent
-_project_root = _current_dir.parent.parent
+from _resolve_root import find_project_root
+
+_project_root = find_project_root()
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
 

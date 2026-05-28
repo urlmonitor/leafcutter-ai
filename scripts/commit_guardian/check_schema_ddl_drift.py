@@ -321,8 +321,9 @@ def run_check(
 
 def main() -> None:
     """Entry point for pre-commit invocation."""
+    from _resolve_root import find_project_root
     script_dir = Path(__file__).resolve().parent
-    repo_root = script_dir.parent.parent  # leafcutter/scripts/commit_guardian → repo root
+    repo_root = find_project_root()
 
     cfg = _load_ddl_drift_config(script_dir)
     trigger = cfg.get("trigger", "always")

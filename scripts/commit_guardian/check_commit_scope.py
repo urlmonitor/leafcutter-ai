@@ -36,10 +36,9 @@ from typing import Optional
 # ---------------------------------------------------------------------------
 # Config (soft-import — works even if the section is absent from the JSON)
 # ---------------------------------------------------------------------------
-_HERE = Path(__file__).resolve().parent
-_REPO_ROOT = _HERE.parent.parent
+from _resolve_root import find_project_root
 
-# Inject project root into sys.path so ``config.py`` can be imported.
+_REPO_ROOT = find_project_root()
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
