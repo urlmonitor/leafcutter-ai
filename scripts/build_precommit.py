@@ -237,6 +237,24 @@ def _build_output_lines(clean_lines: list[str], hook_yaml_blocks: list[str]) -> 
     return "\n".join(output_lines) + "\n"
 
 
+def _resolve_template_vars(
+    hooks: list[dict[str, Any]], config: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """Replace ``{{config.KEY}}`` placeholders in hook string fields."""
+    from template_compiler import inject_config
+
+    resolved = []
+    for hook in hooks:
+        h = {}
+        for k, v in hook.items():
+            if isinstance(v, str):
+                h[k] = inject_config(v, config)
+            else:
+                h[k] = v
+        resolved.append(h)
+    return resolved
+
+
 def build_precommit_config(target_root: Path, config: dict[str, Any],
                            dry_run: bool, force: bool) -> int:
     """Generate or update ``.pre-commit-config.yaml`` at the target project root.
@@ -277,6 +295,8 @@ def build_precommit_config(target_root: Path, config: dict[str, Any],
     hooks = raw.get("hooks_manifest", {}).get("hooks", [])
     if not hooks:
         return 0
+
+    hooks = _resolve_template_vars(hooks, config)
 
     output_path = target_root / "pre-commit-config.yaml"
 
