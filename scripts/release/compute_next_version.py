@@ -101,7 +101,7 @@ def _changelog_entries_since(tag: Optional[str], changelogs_dir: Path, repo_root
 
     try:
         result = subprocess.run(
-            ["git", "log", f"{tag}..HEAD", "--name-only", "--pretty=format:", "--", str(changelogs_dir)],
+            ["git", "log", f"{tag}^..HEAD", "--name-only", "--pretty=format:", "--", str(changelogs_dir)],
             capture_output=True,
             text=True,
             cwd=repo_root,
@@ -169,7 +169,7 @@ def _compute_bump(entries: list[Path]) -> str:
         fm = _parse_frontmatter(entry)
         if fm.get("breaking") is True:
             return "major"
-        if fm.get("type") == "feature":
+        if fm.get("type") in {"feature", "epic_completion"}:
             has_feature = True
 
     return "minor" if has_feature else "patch"
