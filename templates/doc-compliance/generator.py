@@ -9,9 +9,9 @@ import typing
 from pathlib import Path
 from datetime import datetime, timezone
 from collections import defaultdict
-from scripts.doc_compliance.config import DEFAULT_CONFIG_FILE, DEFAULT_COMPONENTS_FILE
-from scripts.doc_compliance.utils import safe_print
-from scripts.doc_compliance.scanner import Scanner
+from config import DEFAULT_CONFIG_FILE, DEFAULT_COMPONENTS_FILE
+from utils import safe_print
+from scanner import Scanner
 
 def get_unreviewed_components(registry: dict) -> list[tuple[str, dict]]:
     """Return a list of component entries that are still in draft/unreviewed state.

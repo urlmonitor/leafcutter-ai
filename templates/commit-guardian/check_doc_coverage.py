@@ -44,10 +44,8 @@ from pathlib import Path
 # Fix import path when running from root
 _current_dir = Path(__file__).resolve().parent
 _project_root = _current_dir.parent.parent
-if str(_project_root) not in sys.path:
-    sys.path.insert(0, str(_project_root))
 
-from scripts.commit_guardian.config import DOC_COVERAGE_LARGE_DIFF_THRESHOLD  # noqa: E402
+from config import DOC_COVERAGE_LARGE_DIFF_THRESHOLD  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # ANSI colours (matching existing hook style)

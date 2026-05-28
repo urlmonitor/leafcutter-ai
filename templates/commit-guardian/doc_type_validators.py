@@ -13,7 +13,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from scripts.commit_guardian.config import DOC_FM_ALLOWED_TYPES
+from config import DOC_FM_ALLOWED_TYPES
 
 _DOC_TYPES_JSON = (
     Path(__file__).resolve().parents[2]

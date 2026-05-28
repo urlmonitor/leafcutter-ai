@@ -68,10 +68,8 @@ from pathlib import Path
 from _resolve_root import find_project_root
 
 _project_root = find_project_root()
-if str(_project_root) not in sys.path:
-    sys.path.insert(0, str(_project_root))
 
-from scripts.commit_guardian.config import (
+from config import (
     STRUCTURAL_SIGNALS,
     STRUCTURAL_REQUIRED_DOC,
     STRUCTURAL_BYPASS_TOKEN,

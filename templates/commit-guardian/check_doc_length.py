@@ -26,17 +26,15 @@ from pathlib import Path
 # Fix import path when running from root
 current_dir = Path(__file__).resolve().parent
 project_root = current_dir.parent.parent
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
 
-from scripts.commit_guardian.config import (
+from config import (
     DOC_LENGTH_MAX_LINES,
     DOC_LENGTH_MAX_LINES_ADR,
     DOC_LENGTH_MAX_SECTIONS,
     DOC_LENGTH_SEVERITY,
     DOC_LENGTH_EXCLUDED_FILES,
 )
-from scripts.commit_guardian.doc_length_helpers import (
+from doc_length_helpers import (
     lookup_writer_agent,
     read_frontmatter_type,
 )

@@ -53,16 +53,14 @@ from pathlib import Path
 from _resolve_root import find_project_root
 
 project_root = find_project_root()
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
 
-from scripts.commit_guardian.config import (
+from config import (
     DOC_FM_COMPONENTS_REGISTRY,
     DOC_FM_DOCS_DIR,
     TICKET_FM_TICKETS_DIR,
 )
 
-from scripts.commit_guardian.frontmatter_validators import (
+from frontmatter_validators import (
     validate_doc_file,
     validate_ticket_file,
 )

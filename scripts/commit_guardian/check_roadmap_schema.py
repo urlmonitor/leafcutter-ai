@@ -26,7 +26,7 @@ from pathlib import Path
 
 SCHEMA_RELATIVE = "leafcutter/config/roadmap.schema.json"
 try:
-    from scripts.commit_guardian.config import DOC_FM_DOCS_DIR as _DOCS_DIR
+    from config import DOC_FM_DOCS_DIR as _DOCS_DIR
 except ImportError:
     _DOCS_DIR = "docs"
 ROADMAP_RELATIVE = f"{_DOCS_DIR}/roadmap.json"

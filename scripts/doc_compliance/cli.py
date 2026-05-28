@@ -9,11 +9,11 @@ import sys
 from pathlib import Path
 import json
 
-from scripts.doc_compliance.bootstrap import init_config, bootstrap, discover_components
-from scripts.doc_compliance.generator import review_registry, generate_orders
-from scripts.doc_compliance.verifier import verify_batch
-from scripts.doc_compliance.scanner import Scanner
-from scripts.doc_compliance.config import DEFAULT_CONFIG_FILE, DEFAULT_COMPONENTS_FILE
+from bootstrap import init_config, bootstrap, discover_components
+from generator import review_registry, generate_orders
+from verifier import verify_batch
+from scanner import Scanner
+from config import DEFAULT_CONFIG_FILE, DEFAULT_COMPONENTS_FILE
 
 # Ensure stdout uses UTF-8 to prevent charmap errors on Windows when printing emojis
 if hasattr(sys.stdout, "reconfigure"):

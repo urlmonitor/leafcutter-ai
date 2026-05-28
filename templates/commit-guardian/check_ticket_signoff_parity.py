@@ -38,10 +38,8 @@ from pathlib import Path
 # is not importable when run via `python scripts/commit_guardian/check_ticket_signoff_parity.py`.
 _current_dir = Path(__file__).resolve().parent
 _project_root = _current_dir.parent.parent
-if str(_project_root) not in sys.path:
-    sys.path.insert(0, str(_project_root))
 
-from scripts.commit_guardian._signoff_parity_checks import (  # noqa: E402
+from _signoff_parity_checks import (  # noqa: E402
     VALID_STATUSES,
     _build_signoffs_map,
     _check_done_folder,

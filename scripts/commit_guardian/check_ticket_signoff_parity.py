@@ -36,10 +36,8 @@ from pathlib import Path
 from _resolve_root import find_project_root
 
 _project_root = find_project_root()
-if str(_project_root) not in sys.path:
-    sys.path.insert(0, str(_project_root))
 
-from scripts.commit_guardian._signoff_parity_checks import (  # noqa: E402
+from _signoff_parity_checks import (  # noqa: E402
     VALID_STATUSES,
     _build_signoffs_map,
     _check_done_folder,

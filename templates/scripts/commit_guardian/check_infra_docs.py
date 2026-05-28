@@ -34,10 +34,8 @@ from pathlib import Path
 from _resolve_root import find_project_root
 
 project_root = find_project_root()
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
 
-from scripts.commit_guardian.config import INFRA_FILE_PATTERNS, INFRA_HIGH_IMPACT_KEYWORDS
+from config import INFRA_FILE_PATTERNS, INFRA_HIGH_IMPACT_KEYWORDS
 
 # Alias for backwards compatibility within this file
 INFRA_PATTERNS: list[str] = INFRA_FILE_PATTERNS

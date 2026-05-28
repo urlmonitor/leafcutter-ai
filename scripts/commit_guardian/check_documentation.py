@@ -22,16 +22,14 @@ from pathlib import Path
 from _resolve_root import find_project_root
 
 project_root = find_project_root()
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
 
-from scripts.commit_guardian.check_root_files import ALLOWED_ROOT_FILES, ALLOWED_EXTENSIONS
-from scripts.commit_guardian.config import (
+from check_root_files import ALLOWED_ROOT_FILES, ALLOWED_EXTENSIONS
+from config import (
     EXCLUDED_DIRS,
     SQL_REQUIRED_FIELDS,
     PYTHON_REQUIRED_FIELDS,
 )
-from scripts.commit_guardian.doc_validators import (
+from doc_validators import (
     extract_header_text,
     verify_decision_history,
     _validate_architecture,

@@ -17,7 +17,7 @@ from typing import Any
 
 import yaml
 
-from scripts.commit_guardian.config import (
+from config import (
     DOC_FM_ALLOWED_STATUSES,
     DOC_FM_FLIGHT_LEVEL_VALUES,
     DOC_FM_REQUIRED_FIELDS,
@@ -26,10 +26,10 @@ from scripts.commit_guardian.config import (
     TICKET_FM_ALLOWED_TYPES,
     TICKET_FM_REQUIRED_FIELDS,
 )
-from scripts.commit_guardian.diagram_type_validators import (
+from diagram_type_validators import (
     validate_diagram_type,
 )
-from scripts.commit_guardian.doc_type_validators import (
+from doc_type_validators import (
     validate_doc_type,
     validate_requires_documentation,
 )

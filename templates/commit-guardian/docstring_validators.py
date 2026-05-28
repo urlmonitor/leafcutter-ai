@@ -13,7 +13,7 @@ from pathlib import Path
 from docstring_parser import parse as parse_docstring, DocstringStyle
 from docstring_parser.common import Docstring
 
-from scripts.commit_guardian.config import (
+from config import (
     DOCSTRING_TRIVIAL_MAX_LINES,
     ENFORCE_TYPE_ANNOTATIONS,
     EXEMPT_DUNDERS,

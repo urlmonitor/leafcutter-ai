@@ -22,10 +22,8 @@ from pathlib import Path
 from _resolve_root import find_project_root
 
 project_root = find_project_root()
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
 
-from scripts.commit_guardian.config import MAX_SQL_COMPLEXITY_SCORE, SQL_COMPLEXITY_EXCLUDED_DIRS
+from config import MAX_SQL_COMPLEXITY_SCORE, SQL_COMPLEXITY_EXCLUDED_DIRS
 
 # Keywords that dramatically increase structural complexity in SQL / PL/pgSQL
 COMPLEXITY_KEYWORDS = re.compile(
@@ -51,7 +49,7 @@ def calculate_sql_complexity(source_code: str) -> int:
         plpython_bodies = re.findall(r'\$BODY\$(.*?)\$BODY\$\s+LANGUAGE\s+plpython3u\b', source_code, flags=re.IGNORECASE | re.DOTALL)
 
     if plpython_bodies:
-        from scripts.commit_guardian.check_complexity import calculate_complexities
+        from check_complexity import calculate_complexities
         for body in plpython_bodies:
             # Wrap in dummy function to make indentation valid
             indented = "\n".join("    " + line for line in body.splitlines())

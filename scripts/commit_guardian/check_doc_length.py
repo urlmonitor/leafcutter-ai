@@ -26,17 +26,15 @@ from pathlib import Path
 from _resolve_root import find_project_root
 
 project_root = find_project_root()
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
 
-from scripts.commit_guardian.config import (
+from config import (
     DOC_LENGTH_MAX_LINES,
     DOC_LENGTH_MAX_LINES_ADR,
     DOC_LENGTH_MAX_SECTIONS,
     DOC_LENGTH_SEVERITY,
     DOC_LENGTH_EXCLUDED_FILES,
 )
-from scripts.commit_guardian.doc_length_helpers import (
+from doc_length_helpers import (
     lookup_writer_agent,
     read_frontmatter_type,
 )
