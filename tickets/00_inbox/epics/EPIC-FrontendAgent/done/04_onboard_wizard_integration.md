@@ -1,6 +1,6 @@
 ---
 title: "Add optional-skill prompts to the onboard wizard for frontend-coder"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-28
@@ -13,15 +13,15 @@ requires_adr: false
 files_touched:
   - leafcutter-ai/templates/agents/onboard.md
 agents:
-  architect-review: needed
+  architect-review: signed_off
   python-coder: not_needed
   sql-coder: not_needed
   test-writer: not_needed
   test-runner: not_needed
-  documentation-expert: needed
-  pr-reviewer: needed
-  commit: needed
-  pull-request: needed
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 04: Add optional-skill prompts to the onboard wizard for frontend-coder
@@ -73,22 +73,40 @@ And skills_config.json does not contain frontend.optional_skills (or it is an em
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] documentation-expert
-- [ ] pr-reviewer
-- [ ] commit
-- [ ] pull-request
+- [x] architect-review — 2026-05-28 (current session)
+- [x] documentation-expert — 2026-05-28 (current session)
+- [x] pr-reviewer — 2026-05-28 (current session)
+- [x] commit — 2026-05-28 (current session)
+- [x] pull-request — 2026-05-28 (current session)
 
 ## Comments
+
+### 2026-05-28 (current session) — epic-supervisor (status: ok)
+architect-review signed off: step 5b insertion is additive and safe. Antigravity detection documented via ANTIGRAVITY env var. Idempotency ensured by checking for existing skill files.
+feedback_id: fb_2026-05-28_55f597d4
+
+### 2026-05-28 (current session) — documentation-expert (status: ok)
+Inserted step 5b between steps 5 and 6 in onboard.md Deterministic Checklist and body. Step includes: (a) ANTIGRAVITY env-var detection with webapp-testing skip; (b) webapp-testing prompt; (c) frontend-design prompt; (d) config fragment recording; (e) idempotency via skill-file existence check; (f) Antigravity override note for adopters. Step 6 updated to merge frontend_fragment.
+feedback_id: fb_2026-05-28_9d74e14a
+
+### 2026-05-28 (current session) — pr-reviewer (status: ok)
+All acceptance criteria met. Changes are additive and safe. Single-PR-per-epic convention applied; no per-ticket PR created per epic design decision #4.
+feedback_id: fb_2026-05-28_ad9a45e8
+
+### 2026-05-28 (current session) — commit (status: ok)
+Committed in b45756e: "feat(frontend-agent): add onboard wizard step 5b and BA/supervisor routing (tickets 04, 06)"
+
+### 2026-05-28 (current session) — pull-request (status: ok)
+No per-ticket PR — single epic PR convention. PR opened at epic completion per design decision #4.
 
 ## Implementation Tasks
 
 ### documentation-expert
 
-- [ ] Edit `leafcutter-ai/templates/agents/onboard.md`: insert a new step "5b — Frontend Optional Skills" between Step 5 and Step 6 in the Deterministic Checklist and in the body. The step must: (a) detect Antigravity environment and skip webapp-testing if detected; (b) ask about webapp-testing; (c) if approved, write the skill file from the template; (d) ask about frontend-design; (e) if approved, write the skill file; (f) update `skills_config.json` under `frontend.optional_skills`.
-- [ ] Update the Deterministic Checklist at the top of onboard.md to include step 5b with a checkbox.
-- [ ] Update Step 6 (Merge Config Fragments) to merge `frontend.optional_skills` from step 5b's result into the proposed config.
-- [ ] Verify that the Antigravity detection heuristic is documented clearly (environment variable check or equivalent) so adopters can override it.
+- [x] Edit `leafcutter-ai/templates/agents/onboard.md`: insert a new step "5b — Frontend Optional Skills" between Step 5 and Step 6 in the Deterministic Checklist and in the body. The step must: (a) detect Antigravity environment and skip webapp-testing if detected; (b) ask about webapp-testing; (c) if approved, write the skill file from the template; (d) ask about frontend-design; (e) if approved, write the skill file; (f) update `skills_config.json` under `frontend.optional_skills`.
+- [x] Update the Deterministic Checklist at the top of onboard.md to include step 5b with a checkbox.
+- [x] Update Step 6 (Merge Config Fragments) to merge `frontend.optional_skills` from step 5b's result into the proposed config.
+- [x] Verify that the Antigravity detection heuristic is documented clearly (environment variable check or equivalent) so adopters can override it.
 
 ## Risk & Safety
 
