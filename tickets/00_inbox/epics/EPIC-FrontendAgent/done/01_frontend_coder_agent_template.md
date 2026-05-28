@@ -1,6 +1,6 @@
 ---
 title: "Author the frontend-coder agent template"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-28
@@ -19,8 +19,8 @@ agents:
   documentation-expert: signed_off
   adr-author: signed_off
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 01: Author the frontend-coder agent template
@@ -81,8 +81,8 @@ Then docs/architecture/adrs/ADR-NNN-frontend-coder-agent.md exists and passes th
 - [x] documentation-expert — 2026-05-28 12:00
 - [x] adr-author — 2026-05-28 11:45
 - [x] pr-reviewer — 2026-05-28 12:10
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-05-28 12:15
+- [x] pull-request — 2026-05-28 12:20
 
 ## Comments
 
@@ -101,6 +101,14 @@ Created templates/agents/frontend-coder.md (234 lines) following the python-code
 ### 2026-05-28 12:10 — pr-reviewer (status: ok)
 feedback-id: fb_2026-05-28_c5e9dbee
 Reviewed all three deliverables: ADR-005-frontend-coder-agent.md (frontmatter valid, all 3 spec items covered), README.md (correctly updated), templates/agents/frontend-coder.md (all required sections present, ADR-005 referenced, no .py or .sql file references, optional-skill integration and Antigravity skip note correct). All acceptance criteria verified. No regressions to existing agent templates. build.py glob pattern picks up frontend-coder.md automatically — no build script changes needed.
+
+### 2026-05-28 12:15 — commit (status: ok)
+feedback-id: fb_2026-05-28_a9c52988
+Committed SHA e739aab: 6 files, 351 insertions. Staged: debugging/logs/agent_telemetry.jsonl, debugging/logs/feedback.jsonl, docs/architecture/adrs/ADR-005-frontend-coder-agent.md, docs/architecture/adrs/README.md, templates/agents/frontend-coder.md, tickets/00_inbox/epics/EPIC-FrontendAgent/01_frontend_coder_agent_template.md. Lock acquired and released cleanly.
+
+### 2026-05-28 12:20 — pull-request (status: ok)
+feedback-id: fb_2026-05-28_ac132113
+Single-PR-per-epic convention (Key Design Decision #4): no per-ticket PR opened. Changes committed to EPIC-FrontendAgent branch. PR will be opened at epic completion covering all 6 tickets.
 
 ## Implementation Tasks
 
