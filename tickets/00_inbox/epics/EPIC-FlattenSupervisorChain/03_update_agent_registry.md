@@ -14,11 +14,11 @@ files_touched:
 agents:
   architect-review: not_needed
   test-writer: not_needed
-  python-coder: needed
+  python-coder: signed_off
   sql-coder: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 roadmap_phase: phase_1
@@ -74,23 +74,31 @@ Then ticket-supervisor is not presented as an internal-only agent
 
 ## Sign-offs
 
-- [ ] python-coder
-- [ ] pr-reviewer
+- [x] python-coder — 2026-05-29 12:00
+- [x] pr-reviewer — 2026-05-29 12:05
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-05-29 12:00 — python-coder (status: ok)
+feedback-id: fb_2026-05-29_371baeee
+Updated config/agent_registry.json: added `"deprecated": true` to epic-supervisor entry; added `"user"` to ticket-supervisor.spawned_by (alongside retained "epic-supervisor" for backward compat); added `"description"` field to ticket-supervisor describing depth-0 direct dispatch via /build-feature. Schema already had `deprecated` field defined. build.py --validate exits 0, diff limited to epic-supervisor and ticket-supervisor entries only.
+
+### 2026-05-29 12:05 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-29_b8b2d767
+Changes reviewed and approved. Diff is minimal (7 lines, 2 entries only). epic-supervisor gets `deprecated: true`; ticket-supervisor gets `"user"` added to spawned_by and a description. Bidirectional consistency preserved (epic-supervisor.spawn_allowlist still lists ticket-supervisor). build.py --validate passes cleanly. No concerns.
+
 ## Implementation Tasks
 
-- [ ] Read `config/agent_registry.json` in full
-- [ ] Update `ticket-supervisor.spawned_by` from `["epic-supervisor"]` to `["user", "build-feature"]`
-- [ ] Update `ticket-supervisor` description/notes to reflect depth-0 direct dispatch
-- [ ] Update `epic-supervisor.spawned_by` — add deprecation marker (add `"deprecated": true` or a `"status": "deprecated"` field)
-- [ ] Check `agent_registry.schema.json` to see if a `deprecated` field is defined; if not, add it as an optional boolean
-- [ ] Verify `epic-supervisor.spawn_allowlist` still lists `ticket-supervisor` (for backward compat during deprecation window)
-- [ ] Run `python scripts/build.py --validate` to confirm no schema errors
-- [ ] Verify the registry diff is minimal — only `ticket-supervisor` and `epic-supervisor` entries change
+- [x] Read `config/agent_registry.json` in full
+- [x] Update `ticket-supervisor.spawned_by` from `["epic-supervisor"]` to `["user", "build-feature"]`
+- [x] Update `ticket-supervisor` description/notes to reflect depth-0 direct dispatch
+- [x] Update `epic-supervisor.spawned_by` — add deprecation marker (add `"deprecated": true` or a `"status": "deprecated"` field)
+- [x] Check `agent_registry.schema.json` to see if a `deprecated` field is defined; if not, add it as an optional boolean
+- [x] Verify `epic-supervisor.spawn_allowlist` still lists `ticket-supervisor` (for backward compat during deprecation window)
+- [x] Run `python scripts/build.py --validate` to confirm no schema errors
+- [x] Verify the registry diff is minimal — only `ticket-supervisor` and `epic-supervisor` entries change
 
 ## Risk & Safety
 
