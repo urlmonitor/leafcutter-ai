@@ -24,7 +24,7 @@ commits:
   - 918bcee
   - bca4dd0
   - 3894734
-breaking: true
+breaking: false
 migration_steps: 
   - Run `python scripts/build.py --migrate` to preview stale files that will be removed at old locations.
   - Set `output_root: .leafcutter` and `shim_strategy: symlink` in skills_config.json (or accept defaults).
