@@ -98,6 +98,11 @@ retrospective. This pre-flight step closes that gap.
                                     (transitive closure).
     Pick batch by ascending NN execution-order prefix when ties exist.
 
+3a. VERIFY disjoint file sets: before dispatching, assert that no two tickets
+    in `batch` share an entry in their `files_touched` frontmatter. If overlap
+    is detected, remove the overlapping tickets from `batch` and serialize them
+    in subsequent passes (treat the overlap as a physical edge, re-run step 3).
+
 4.  DISPATCH one ticket-supervisor per ticket in `batch`, in parallel.
     Each child receives its `ticket_path` as input.
 
