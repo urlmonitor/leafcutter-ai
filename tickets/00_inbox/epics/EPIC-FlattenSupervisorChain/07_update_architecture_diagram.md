@@ -14,13 +14,13 @@ files_touched:
   - docs/architecture/components/supervisor-spawn-topology.md
 agents:
   architect-review: not_needed
-  architecture-diagram-author: needed
+  architecture-diagram-author: signed_off
   test-writer: not_needed
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 roadmap_phase: phase_1
@@ -76,26 +76,34 @@ Then no validation errors are emitted for the diagram_type
 
 ## Sign-offs
 
-- [ ] architecture-diagram-author
-- [ ] pr-reviewer
+- [x] architecture-diagram-author — 2026-05-29 12:00
+- [x] pr-reviewer — 2026-05-29 12:01
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-05-29 12:00 — architecture-diagram-author (status: ok)
+feedback-id: fb_2026-05-29_a4b06419
+Created docs/architecture/components/supervisor-spawn-topology.md from scratch (directory did not exist). Wrote Mermaid flowchart TD agent_flow diagram showing the flattened two-tier spawn topology with ADR-006 reference. Frontmatter includes diagram_type: agent_flow, status: accepted, components: [build_pipeline], created: 2026-05-29. build-self.sh produced no doc-frontmatter validation errors.
+
+### 2026-05-29 12:01 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-29_fd70e035
+All acceptance criteria pass: diagram_type agent_flow and status accepted present in frontmatter; /build-feature → ticket-supervisor (depth 0) and ticket-supervisor → phase agents (depth 1) shown with solid arrows; epic-supervisor marked DEPRECATED with dashed legacy-only arrow (no active spawn path); ADR-006 referenced in overview and references section; build-self.sh clean. Approved for commit.
+
 ## Implementation Tasks
 
-- [ ] Check whether `docs/architecture/components/supervisor-spawn-topology.md` exists; if yes, read it; if no, create from scratch
-- [ ] Author a Mermaid `flowchart TD` diagram in an `agent_flow` format:
+- [x] Check whether `docs/architecture/components/supervisor-spawn-topology.md` exists; if yes, read it; if no, create from scratch
+- [x] Author a Mermaid `flowchart TD` diagram in an `agent_flow` format:
   ```
   user -->|/build-feature| build_feature[/build-feature workflow]
   build_feature -->|depth 0| ticket_supervisor[ticket-supervisor]
   ticket_supervisor -->|depth 1| phase_agents[phase agents\narchitect-review, python-coder, etc.]
   epic_supervisor["epic-supervisor (DEPRECATED)"] -.->|legacy only| ticket_supervisor
   ```
-- [ ] Write the file with valid doc frontmatter: `diagram_type: agent_flow`, `status: accepted`, `components: [build_pipeline]`, `created: 2026-05-29`
-- [ ] Reference ADR-006 in the doc body
-- [ ] Run `./build-self.sh` and confirm no doc-frontmatter validation errors
+- [x] Write the file with valid doc frontmatter: `diagram_type: agent_flow`, `status: accepted`, `components: [build_pipeline]`, `created: 2026-05-29`
+- [x] Reference ADR-006 in the doc body
+- [x] Run `./build-self.sh` and confirm no doc-frontmatter validation errors
 
 ## Risk & Safety
 
