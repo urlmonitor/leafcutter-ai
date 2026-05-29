@@ -16,6 +16,13 @@ This skill is the **single source of truth** for ticket-phase status management.
 
 If you change anything in this file, the parity guard and every consuming agent will see the change at the next invocation — that's the point. Adding a new status or a new comment tag is an edit to this one file, never an ad-hoc choice in an agent prompt.
 
+> **ADR trigger (KI-2 from EPIC-CompletionManifestSignoff):** Any ticket that modifies
+> this file — its status enum, comment-heading schema, `completion_manifest` format, or
+> validation rules — is a supervisor/agent contract change and **must** set
+> `requires_adr: true` in its frontmatter. See `ticket-authoring/SKILL.md §Required vs
+> Optional` → `requires_adr` for the full list of contract surfaces that trigger this
+> rule.
+
 ---
 
 ## §1 Status Enum (canonical)
