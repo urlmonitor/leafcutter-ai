@@ -10,8 +10,8 @@ priority: high
 requires_diagram: false
 requires_adr: false
 agents:
-  documentation-expert: needed
-  pr-reviewer: needed
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -44,15 +44,31 @@ And it contains exactly: guide_written, location_correct, steps_validated
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] pr-reviewer
+- [x] documentation-expert — 2026-05-29 12:00
+- [x] pr-reviewer — 2026-05-29 12:05
 - [ ] commit
 - [ ] pull-request
 
 ## Implementation Tasks
 
 ### documentation-expert
-- [ ] Edit `templates/agents/how-to-author.md` frontmatter: add `default_artifact_checklist: [guide_written, location_correct, steps_validated]`
-- [ ] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
+- [x] Edit `templates/agents/how-to-author.md` frontmatter: add `default_artifact_checklist: [guide_written, location_correct, steps_validated]`
+- [x] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
 
 ## Comments
+
+### 2026-05-29 12:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-29_c347002e
+completion_manifest:
+  guide_written: true
+  location_correct: true
+  steps_validated: true
+Added `default_artifact_checklist` YAML block to `templates/agents/how-to-author.md` frontmatter with items `guide_written`, `location_correct`, `steps_validated`. Added step 6 in the Execution Loop instructing the agent to populate `completion_manifest:` on sign-off referencing signoff §2b.
+
+### 2026-05-29 12:05 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-29_4a92f00d
+completion_manifest:
+  acceptance_criteria_met: true
+  change_scope_correct: true
+  no_regressions_found: true
+Reviewed the diff: `default_artifact_checklist` correctly added to frontmatter with the three specified items, and step 6 in the Execution Loop correctly instructs the agent to use these items in `completion_manifest:` on sign-off referencing signoff §2b. All acceptance criteria satisfied. Approved.

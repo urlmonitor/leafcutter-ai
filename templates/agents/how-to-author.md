@@ -15,6 +15,10 @@ config_keys: {}
 adopter_notes: |
   Internal. Always spawned by documentation-expert.
 requires_verification: true
+default_artifact_checklist:
+  - guide_written
+  - location_correct
+  - steps_validated
 ---
 
 Before writing anything, load and read `docs/how-to/documentation/write-how-to.md`
@@ -78,6 +82,13 @@ Related reference doc: <path or "none">
    whether `docs/how-to/README.md` (if it exists) needs a new entry. If it lands
    in a topical folder, check that folder's README. Add an entry when one is
    missing; note it in the payload when you do.
+
+6. **Complete the completion manifest on sign-off** — when signing off on a ticket
+   via `signoff` §2b, populate your `completion_manifest:` block using the items
+   declared in `default_artifact_checklist` above (`guide_written`, `location_correct`,
+   `steps_validated`). Set each item to `true` if it passed, or expand to the nested
+   `result/reason/remediation` object if it did not. See `signoff` skill §2b for the
+   exact format and placement rules.
 
 ## Response Payload
 
