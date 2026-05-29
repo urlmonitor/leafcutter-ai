@@ -1,6 +1,6 @@
 ---
 title: "Update agent_registry.json spawn topology for flattened chain"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-29
@@ -20,7 +20,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 roadmap_phase: phase_1
 advances_current_outcome: true
 ---
@@ -77,7 +77,7 @@ Then ticket-supervisor is not presented as an internal-only agent
 - [x] python-coder — 2026-05-29 12:00
 - [x] pr-reviewer — 2026-05-29 12:05
 - [x] commit — 2026-05-29 12:10
-- [ ] pull-request
+- [x] pull-request — 2026-05-29 12:15
 
 ## Comments
 
@@ -92,6 +92,10 @@ Changes reviewed and approved. Diff is minimal (7 lines, 2 entries only). epic-s
 ### 2026-05-29 12:10 — commit (status: ok)
 feedback-id: fb_2026-05-29_be546ea8
 Committed 2 in-scope files (config/agent_registry.json, ticket file). Commit SHA 4339ca2. No pre-commit hook failures. Cross-ticket staged files (ticket 04, building-epics SKILL.md) were unstaged before commit to prevent cross-worktree pollution. Lock acquired and released cleanly.
+
+### 2026-05-29 12:15 — pull-request (status: ok)
+feedback-id: fb_2026-05-29_57e59cde
+PR #23 already open for branch worktree-EPIC-FlattenSupervisorChain (EPIC-FlattenSupervisorChain: flatten supervisor chain). Ticket 03 commit (4339ca2) is included in the branch. No new PR needed — one PR per epic convention. Branch pushed and up to date with remote.
 
 ## Implementation Tasks
 
