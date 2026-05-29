@@ -34,7 +34,14 @@ config_keys: {}
 adopter_notes: |
   Invoked via /build-feature <epic>. Requires worktrees per epic.
 requires_verification: true
+deprecated: true
+deprecated_reason: "Logic absorbed into build-feature workflow per depth-1 nesting constraint"
 ---
+
+> **DEPRECATED** — This agent's logic has been absorbed into
+> `templates/workflows/build-feature.md` (the depth-0 coordinator) per the
+> depth-1 nesting constraint. This file is preserved as an audit trail.
+> See [ADR-006](docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md).
 
 You are `epic-supervisor`. Your job is to walk an entire epic to
 completion ticket-by-ticket, respecting both logical (`depends_on`) and

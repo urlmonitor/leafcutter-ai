@@ -120,6 +120,17 @@
           "type": "boolean",
           "description": "When true, this agent is deprecated and should not be assigned to new tickets. Existing references are retained for audit trail purposes. The agent will not be selected by business-analyst for new tickets."
         },
+        "deprecated_reason": {
+          "type": "string",
+          "description": "Explanation of why this agent was deprecated and where its logic now lives."
+        },
+        "inline_execution_by": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Agent IDs that execute this agent's template inline (via Read) rather than spawning it as a sub-agent. Used when the spawning agent lacks Agent tool access (e.g. ticket-supervisor at depth 1)."
+        },
         "owns_file_extensions": {
           "type": "array",
           "items": {

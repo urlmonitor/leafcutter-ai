@@ -8,9 +8,9 @@ description: Drive a single standalone ticket (not part of an epic) through its 
 
 This skill is the single-ticket analogue of `/build-feature`'s epic
 flow. It owns the ticket-file lifecycle (inbox → todo → done) and the
-worktree dance; everything *inside* the ticket (phase agents,
-sign-offs, commit-phase lock, failure adjudication) belongs to
-`ticket-supervisor` and the runbook in
+worktree dance; everything *inside* the ticket (phase work executed inline,
+sign-offs, commit-phase lock, failure adjudication) is performed inline
+by `ticket-supervisor` following the runbook in
 `.claude/skills/building-epics/SKILL.md`.
 
 ## Input
@@ -133,20 +133,59 @@ Dispatch the `ticket-supervisor` agent via the `Agent` tool with input:
 {
   "ticket_path":   "<absolute path inside the worktree>",
   "worktree_path": "<WORKTREE_PATH>",
-  "branch":        "<BRANCH>",
-  "via":           "/build-feature (build-single-ticket)"
+  "branch":        "<BRANCH>"
 }
 ```
 
-The `via` marker satisfies `ticket-supervisor`'s "refuse direct user
-invocation" rule — this skill is its sanctioned entry path for
-standalone tickets, analogous to how `epic-supervisor` is the
-sanctioned entry for epic tickets.
+`ticket-supervisor` accepts dispatch from any depth-0 context — no
+`via` marker is needed.
 
-`ticket-supervisor` walks the phase agents per
-`.claude/skills/building-epics/SKILL.md` §2 (the five-step ticket
-loop), holding the worktree-root commit-phase lock per §5 around
-`commit` and `pull-request`.
+`ticket-supervisor` performs all phase work inline (no sub-agent
+dispatch) per `.claude/skills/building-epics/SKILL.md` §2, holding
+the worktree-root commit-phase lock per §5 around `commit` and
+`pull-request`.
+
+### Step 4a — Brainstorm escalation loop
+
+`ticket-supervisor` runs at depth 1 and cannot dispatch sub-agents.
+When it encounters a design-class blocker, it returns:
+
+```json
+{
+  "status": "blocked",
+  "escalation_type": "brainstorm",
+  "design_question": "<the question>",
+  "ticket_path": "<path>",
+  "phase": "<phase that hit the blocker>",
+  "context": "<relevant context>"
+}
+```
+
+This skill runs at depth 0 and CAN dispatch `brainstorm-lead` at depth 1.
+Handle this escalation as follows:
+
+1. **Detect**: Check the return payload for `escalation_type == "brainstorm"`.
+2. **Dispatch brainstorm-lead** at depth 1 via the `Agent` tool with the
+   `design_question` and `context` as input.
+3. **Collect** the recommendation from `brainstorm-lead`.
+4. **Re-invoke ticket-supervisor** with the recommendation:
+   ```json
+   {
+     "ticket_path": "<same path>",
+     "worktree_path": "<WORKTREE_PATH>",
+     "branch": "<BRANCH>",
+     "brainstorm_recommendation": "<recommendation from brainstorm-lead>"
+   }
+   ```
+
+**Cap**: 1 brainstorm escalation per ticket. If ticket-supervisor returns
+a second `brainstorm` escalation, treat it as a standard `blocked` payload
+and surface it to the user.
+
+**Non-brainstorm blocked/failed**: If ticket-supervisor returns
+`{status: "blocked"}` or `{status: "failed"}` WITHOUT
+`escalation_type: "brainstorm"`, surface the payload to the user
+unchanged — do NOT attempt brainstorm escalation.
 
 ## Step 5 — Verify done state (post-supervisor)
 
@@ -369,18 +408,18 @@ Do not add any other preamble or summary text.
 ## What this skill does NOT do
 
 - **Does not handle epics.** If `$ARGUMENTS` resolves to an epic
-  folder (one containing `Master_Plan.md`), `/build-feature` routes
-  to `epic-supervisor` directly — this skill is never invoked.
+  folder (one containing `Master_Plan.md`), `/build-feature` drives
+  the epic inline — this skill is never invoked.
 - **Does not open the PR or commit the ticket implementation.** Those
-  flow through the `commit` and `pull-request` phase agents under
-  `ticket-supervisor`, with the commit-phase serialization lock from
-  `building-epics` §5. The pre-move in Step 3 stages a rename but never
-  commits it — the `commit` phase picks the staged rename up alongside
-  the regular implementation diff, so the move travels into the PR as
-  part of the normal commit, not as a follow-up bookkeeping commit.
-  The one exception is the post-completion changelog commit in Step 5b,
-  which mirrors `epic-supervisor` Step 2 and lands on the same PR branch
-  the `pull-request` phase opened.
+  are performed inline by `ticket-supervisor` (which does all phase
+  work itself, without dispatching sub-agents), with the commit-phase
+  serialization lock from `building-epics` §5. The pre-move in Step 3
+  stages a rename but never commits it — the `commit` phase picks the
+  staged rename up alongside the regular implementation diff, so the
+  move travels into the PR as part of the normal commit, not as a
+  follow-up bookkeeping commit. The one exception is the post-completion
+  changelog commit in Step 5b, which lands on the same PR branch the
+  `pull-request` phase opened.
 - **Does not bypass user escalation.** When the supervisor surfaces
   a `(status: question)` or a `failed` payload, this skill is a
   passthrough — it does not try to answer on the user's behalf.
@@ -390,7 +429,7 @@ Do not add any other preamble or summary text.
 - `.claude/commands/build-feature.md` — the slash command that
   dispatches this skill for single-ticket arguments.
 - `.claude/agents/ticket-supervisor.md` — the inner driver this
-  skill spawns.
+  skill dispatches. Performs all phase work inline (no sub-agent dispatch).
 - `scripts/setup_ticket_worktree.py` — canonical worktree + ticket-move
   script called in Step 2. Edit this script to change the bootstrap steps.
 - `.claude/skills/building-epics/SKILL.md` — operational runbook

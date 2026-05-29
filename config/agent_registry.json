@@ -25,7 +25,9 @@
             "skills_used": [
                 "building-epics",
                 "signoff"
-            ]
+            ],
+            "deprecated": true,
+            "deprecated_reason": "Logic absorbed into build-feature workflow per depth-1 nesting constraint. Template preserved as audit trail."
         },
         {
             "id": "ticket-supervisor",
@@ -34,11 +36,9 @@
             "role": "orchestration",
             "portable": true,
             "domain": null,
-            "spawn_allowlist": [
-                "__ticket_phase_agents__"
-            ],
+            "spawn_allowlist": [],
             "spawned_by": [
-                "epic-supervisor"
+                "user"
             ],
             "is_ticket_phase": false,
             "selection_criteria": null,
@@ -130,7 +130,7 @@
                 "brainstorm-worker"
             ],
             "spawned_by": [
-                "ticket-supervisor"
+                "user"
             ],
             "is_ticket_phase": false,
             "selection_criteria": null,
@@ -201,7 +201,6 @@
                 "architect-review-deep"
             ],
             "spawned_by": [
-                "ticket-supervisor",
                 "create-ticket"
             ],
             "is_ticket_phase": true,
@@ -238,7 +237,10 @@
             ],
             "priority": 4,
             "priority_rationale": "Runs after ADR and diagram authors; shapes design before any implementation begins",
-            "requires_ticket_section": false
+            "requires_ticket_section": false,
+            "inline_execution_by": [
+                "ticket-supervisor"
+            ]
         },
         {
             "id": "python-coder",
@@ -252,7 +254,6 @@
                 "test-runner"
             ],
             "spawned_by": [
-                "ticket-supervisor",
                 "sql-coder"
             ],
             "is_ticket_phase": true,
@@ -288,6 +289,9 @@
             "requires_ticket_section": true,
             "owns_file_extensions": [
                 ".py"
+            ],
+            "inline_execution_by": [
+                "ticket-supervisor"
             ]
         },
         {
@@ -320,9 +324,7 @@
                 "research-agent",
                 "test-runner"
             ],
-            "spawned_by": [
-                "ticket-supervisor"
-            ],
+            "spawned_by": [],
             "is_ticket_phase": true,
             "selection_criteria": {
                 "description": "Assign when the ticket includes test_requirements with a non-empty tests array.",
@@ -349,7 +351,10 @@
             ],
             "priority": 5,
             "priority_rationale": "Writes failing tests before coders implement; ensures tests exist and are red before any production code is written",
-            "requires_ticket_section": true
+            "requires_ticket_section": true,
+            "inline_execution_by": [
+                "ticket-supervisor"
+            ]
         },
         {
             "id": "test-runner",
@@ -360,7 +365,6 @@
             "domain": null,
             "spawn_allowlist": [],
             "spawned_by": [
-                "ticket-supervisor",
                 "python-coder",
                 "test-writer",
                 "finalize-feature"
@@ -391,7 +395,10 @@
             ],
             "priority": 9,
             "priority_rationale": "Validates test suite after test-writer completes; must run after tests are written",
-            "requires_ticket_section": false
+            "requires_ticket_section": false,
+            "inline_execution_by": [
+                "ticket-supervisor"
+            ]
         },
         {
             "id": "documentation-expert",
@@ -409,9 +416,7 @@
                 "reference-author",
                 "glossary-triage"
             ],
-            "spawned_by": [
-                "ticket-supervisor"
-            ],
+            "spawned_by": [],
             "is_ticket_phase": true,
             "selection_criteria": {
                 "description": "Assign when the ticket requires documentation changes in docs/ or adds/modifies agents/skills that need README entries.",
@@ -442,7 +447,10 @@
             ],
             "priority": 10,
             "priority_rationale": "Documents changes after code and tests are complete; runs before final PR review",
-            "requires_ticket_section": true
+            "requires_ticket_section": true,
+            "inline_execution_by": [
+                "ticket-supervisor"
+            ]
         },
         {
             "id": "change-scope-reviewer",
@@ -452,9 +460,7 @@
             "portable": true,
             "domain": null,
             "spawn_allowlist": [],
-            "spawned_by": [
-                "ticket-supervisor"
-            ],
+            "spawned_by": [],
             "is_ticket_phase": true,
             "selection_criteria": {
                 "description": "Assign when the ticket has a non-empty out_of_scope list or touches multiple components where scope drift is a concern.",
@@ -477,7 +483,10 @@
             ],
             "priority": 10,
             "priority_rationale": "Runs after coder phase and before pr-reviewer; verifies the actual change set matches the planned scope",
-            "requires_ticket_section": false
+            "requires_ticket_section": false,
+            "inline_execution_by": [
+                "ticket-supervisor"
+            ]
         },
         {
             "id": "pr-reviewer",
@@ -487,12 +496,10 @@
             "portable": true,
             "domain": null,
             "spawn_allowlist": [],
-            "spawned_by": [
-                "ticket-supervisor"
-            ],
+            "spawned_by": [],
             "is_ticket_phase": true,
             "selection_criteria": {
-                "description": "Assign to every ticket that produces a code or documentation change — this is the final quality gate before commit.",
+                "description": "Assign to every ticket that produces a code or documentation change \u2014 this is the final quality gate before commit.",
                 "trigger_conditions": [
                     {
                         "type": "llm",
@@ -512,7 +519,10 @@
             ],
             "priority": 11,
             "priority_rationale": "Final quality gate; runs after all implementation and documentation is complete",
-            "requires_ticket_section": false
+            "requires_ticket_section": false,
+            "inline_execution_by": [
+                "ticket-supervisor"
+            ]
         },
         {
             "id": "commit",
@@ -522,9 +532,7 @@
             "portable": true,
             "domain": null,
             "spawn_allowlist": [],
-            "spawned_by": [
-                "ticket-supervisor"
-            ],
+            "spawned_by": [],
             "is_ticket_phase": true,
             "selection_criteria": {
                 "description": "Assign to every ticket that produces a committed artifact.",
@@ -543,7 +551,10 @@
             ],
             "priority": 12,
             "priority_rationale": "Atomic commit phase; runs after PR review approves the change",
-            "requires_ticket_section": false
+            "requires_ticket_section": false,
+            "inline_execution_by": [
+                "ticket-supervisor"
+            ]
         },
         {
             "id": "pull-request",
@@ -556,7 +567,6 @@
                 "conflict-resolver"
             ],
             "spawned_by": [
-                "ticket-supervisor",
                 "finalize-feature"
             ],
             "is_ticket_phase": true,
@@ -577,7 +587,10 @@
             ],
             "priority": 13,
             "priority_rationale": "Pushes branch and opens PR; final step in the ticket lifecycle",
-            "requires_ticket_section": false
+            "requires_ticket_section": false,
+            "inline_execution_by": [
+                "ticket-supervisor"
+            ]
         },
         {
             "id": "conflict-resolver",
@@ -609,7 +622,6 @@
                 "research-agent"
             ],
             "spawned_by": [
-                "ticket-supervisor",
                 "finalize-feature"
             ],
             "is_ticket_phase": true,
@@ -634,7 +646,10 @@
             ],
             "priority": 1,
             "priority_rationale": "Runs before any author or coder; verifies current system state is as expected",
-            "requires_ticket_section": false
+            "requires_ticket_section": false,
+            "inline_execution_by": [
+                "ticket-supervisor"
+            ]
         },
         {
             "id": "worktree-agent",
@@ -726,9 +741,7 @@
                 "research-agent",
                 "python-coder"
             ],
-            "spawned_by": [
-                "ticket-supervisor"
-            ],
+            "spawned_by": [],
             "is_ticket_phase": true,
             "selection_criteria": {
                 "description": "Assign when the ticket involves SQL objects: tables, procedures, functions, views, or indexes.",
@@ -762,6 +775,9 @@
             "requires_ticket_section": true,
             "owns_file_extensions": [
                 ".sql"
+            ],
+            "inline_execution_by": [
+                "ticket-supervisor"
             ]
         },
         {
@@ -774,9 +790,7 @@
             "spawn_allowlist": [
                 "research-agent"
             ],
-            "spawned_by": [
-                "ticket-supervisor"
-            ],
+            "spawned_by": [],
             "is_ticket_phase": true,
             "selection_criteria": {
                 "description": "Assign when the ticket involves creating or modifying frontend/UI components, markup, or styles; or when files_touched contains frontend file extensions.",
@@ -815,6 +829,9 @@
                 ".html",
                 ".css",
                 ".scss"
+            ],
+            "inline_execution_by": [
+                "ticket-supervisor"
             ]
         },
         {
@@ -847,7 +864,6 @@
                 "research-agent"
             ],
             "spawned_by": [
-                "ticket-supervisor",
                 "sql-coder"
             ],
             "is_ticket_phase": true,
@@ -873,7 +889,10 @@
             ],
             "priority": 7,
             "priority_rationale": "Ad-hoc query authoring; co-equal with sql-coder (both priority 7) but for read-only queries",
-            "requires_ticket_section": true
+            "requires_ticket_section": true,
+            "inline_execution_by": [
+                "ticket-supervisor"
+            ]
         },
         {
             "id": "sql-test-writer",
@@ -1026,7 +1045,6 @@
             "domain": null,
             "spawn_allowlist": [],
             "spawned_by": [
-                "ticket-supervisor",
                 "documentation-expert"
             ],
             "is_ticket_phase": true,
@@ -1049,7 +1067,10 @@
             "skills_used": [],
             "priority": 2,
             "priority_rationale": "ADR must exist before coders or diagram authors reference architectural decisions",
-            "requires_ticket_section": true
+            "requires_ticket_section": true,
+            "inline_execution_by": [
+                "ticket-supervisor"
+            ]
         },
         {
             "id": "architect-review-deep",
@@ -1077,7 +1098,6 @@
             "domain": null,
             "spawn_allowlist": [],
             "spawned_by": [
-                "ticket-supervisor",
                 "documentation-expert"
             ],
             "is_ticket_phase": true,
@@ -1102,7 +1122,10 @@
             ],
             "priority": 3,
             "priority_rationale": "Diagram must exist before coders reference the architecture; runs after ADR author",
-            "requires_ticket_section": true
+            "requires_ticket_section": true,
+            "inline_execution_by": [
+                "ticket-supervisor"
+            ]
         },
         {
             "id": "conflict-resolver-deep",
@@ -1130,7 +1153,6 @@
             "domain": null,
             "spawn_allowlist": [],
             "spawned_by": [
-                "ticket-supervisor",
                 "documentation-expert"
             ],
             "is_ticket_phase": true,
@@ -1153,7 +1175,10 @@
             "skills_used": [],
             "priority": 10,
             "priority_rationale": "Documentation specialist; runs in the documentation phase alongside documentation-expert",
-            "requires_ticket_section": true
+            "requires_ticket_section": true,
+            "inline_execution_by": [
+                "ticket-supervisor"
+            ]
         },
         {
             "id": "how-to-author",
@@ -1164,7 +1189,6 @@
             "domain": null,
             "spawn_allowlist": [],
             "spawned_by": [
-                "ticket-supervisor",
                 "documentation-expert"
             ],
             "is_ticket_phase": true,
@@ -1187,7 +1211,10 @@
             "skills_used": [],
             "priority": 10,
             "priority_rationale": "Documentation specialist; runs in the documentation phase alongside documentation-expert",
-            "requires_ticket_section": true
+            "requires_ticket_section": true,
+            "inline_execution_by": [
+                "ticket-supervisor"
+            ]
         },
         {
             "id": "reference-author",
@@ -1200,7 +1227,6 @@
                 "research-agent"
             ],
             "spawned_by": [
-                "ticket-supervisor",
                 "documentation-expert"
             ],
             "is_ticket_phase": true,
@@ -1225,7 +1251,10 @@
             ],
             "priority": 10,
             "priority_rationale": "Documentation specialist; runs in the documentation phase alongside documentation-expert",
-            "requires_ticket_section": true
+            "requires_ticket_section": true,
+            "inline_execution_by": [
+                "ticket-supervisor"
+            ]
         },
         {
             "id": "glossary-triage",
@@ -1252,9 +1281,7 @@
             "portable": true,
             "domain": null,
             "spawn_allowlist": [],
-            "spawned_by": [
-                "ticket-supervisor"
-            ],
+            "spawned_by": [],
             "is_ticket_phase": true,
             "selection_criteria": {
                 "description": "Assign when the ticket introduces or modifies a user-facing surface (slash command, pre-commit hook, agent-orchestrated entrypoint, or cron script). Conditional: only emitted in the agents: map when user_facing_surface != null in the ticket frontmatter.",
@@ -1283,7 +1310,10 @@
             "priority_rationale": "Runs after pr-reviewer (11) confirms tests green, before commit (12) locks the worktree. Invokes the surface end-to-end with production wiring and asserts observable side-effects. See ADR-036.",
             "conditional": true,
             "conditional_field": "user_facing_surface",
-            "requires_ticket_section": false
+            "requires_ticket_section": false,
+            "inline_execution_by": [
+                "ticket-supervisor"
+            ]
         },
         {
             "id": "onboard",
@@ -1346,5 +1376,4 @@
             ]
         }
     ]
-
 }
