@@ -10,9 +10,9 @@ priority: high
 requires_diagram: false
 requires_adr: false
 agents:
-  documentation-expert: needed
-  pr-reviewer: needed
-  commit: needed
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -44,15 +44,38 @@ And it contains exactly: diff_reviewed, scope_classification_complete, no_hard_v
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] pr-reviewer
-- [ ] commit
+- [x] documentation-expert — 2026-05-29 00:00
+- [x] pr-reviewer — 2026-05-29 00:01
+- [x] commit — 2026-05-29 00:02
 - [ ] pull-request
 
 ## Implementation Tasks
 
 ### documentation-expert
-- [ ] Edit `templates/agents/change-scope-reviewer.md` frontmatter: add `default_artifact_checklist: [diff_reviewed, scope_classification_complete, no_hard_violations]`
-- [ ] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
+- [x] Edit `templates/agents/change-scope-reviewer.md` frontmatter: add `default_artifact_checklist: [diff_reviewed, scope_classification_complete, no_hard_violations]`
+- [x] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
 
 ## Comments
+
+### 2026-05-29 00:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-29_4edddc43
+completion_manifest:
+  frontmatter_checklist_added: true
+  instruction_paragraph_added: true
+Added `default_artifact_checklist` to `templates/agents/change-scope-reviewer.md` frontmatter with items `diff_reviewed`, `scope_classification_complete`, `no_hard_violations`. Added instruction paragraph in Step 5 referencing signoff §2b `completion_manifest:` requirement.
+
+### 2026-05-29 00:01 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-29_323546f0
+completion_manifest:
+  diff_reviewed: true
+  scope_classification_complete: true
+  no_hard_violations: true
+Change verified: `default_artifact_checklist` is present in frontmatter with exactly the three required items (`diff_reviewed`, `scope_classification_complete`, `no_hard_violations`). Instruction paragraph in Step 5 correctly references signoff §2b. All acceptance criteria satisfied.
+
+### 2026-05-29 00:02 — commit (status: ok)
+feedback-id: fb_2026-05-29_ff4eb7b7
+completion_manifest:
+  staged_files_verified: true
+  epic_scope_clean: true
+  commit_successful: true
+Committing batch of EPIC-CompletionManifestSignoff agent checklist tickets (02_02 through 02_06 plus other staged epic artifacts). All 20 staged files are within EPIC-CompletionManifestSignoff scope.

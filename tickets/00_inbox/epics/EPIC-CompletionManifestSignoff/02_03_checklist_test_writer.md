@@ -10,8 +10,8 @@ priority: high
 requires_diagram: false
 requires_adr: false
 agents:
-  documentation-expert: needed
-  pr-reviewer: needed
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -44,15 +44,30 @@ And it contains exactly: test_stubs_created, all_tests_red, red_baseline_capture
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] pr-reviewer
+- [x] documentation-expert — 2026-05-29 10:00
+- [x] pr-reviewer — 2026-05-29 10:05
 - [ ] commit
 - [ ] pull-request
 
 ## Implementation Tasks
 
 ### documentation-expert
-- [ ] Edit `templates/agents/test-writer.md` frontmatter: add `default_artifact_checklist: [test_stubs_created, all_tests_red, red_baseline_captured]`
-- [ ] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
+- [x] Edit `templates/agents/test-writer.md` frontmatter: add `default_artifact_checklist: [test_stubs_created, all_tests_red, red_baseline_captured]`
+- [x] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
 
 ## Comments
+
+### 2026-05-29 10:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-29_efdbad1b
+completion_manifest:
+  frontmatter_checklist_added: true
+  instruction_paragraph_added: true
+Added `default_artifact_checklist: [test_stubs_created, all_tests_red, red_baseline_captured]` to `templates/agents/test-writer.md` frontmatter. Added "Completion Manifest (mandatory per signoff §2b)" instruction paragraph in the Sign-off section explaining each checklist item and referencing signoff §2b format rules.
+
+### 2026-05-29 10:05 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-29_60fcd21e
+completion_manifest:
+  acceptance_criteria_satisfied: true
+  no_regressions_found: true
+  change_scope_matches_ticket: true
+Frontmatter `default_artifact_checklist` contains exactly the three items specified by the ticket (`test_stubs_created`, `all_tests_red`, `red_baseline_captured`). Instruction paragraph correctly references signoff §2b, explains each item, and is additive only. Change approved.
