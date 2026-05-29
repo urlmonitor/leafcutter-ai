@@ -14,6 +14,10 @@ signoff: true
 requires_verification: true
 domain: null
 config_keys: {}
+default_artifact_checklist:
+  - adr_file_created
+  - all_sections_present
+  - status_set
 adopter_notes: |
   Internal. Always spawned by documentation-expert.
 ---
@@ -178,6 +182,23 @@ else:
   explicitly delegated here (rare; confirm with the spec before spawning).
 
 {{project_paths_table}}
+
+## Completion Manifest
+
+When signing off on a ticket (when `ticket_path` is provided), you MUST include a
+`completion_manifest:` block in your sign-off comment body per `signoff` §2b. Map
+each item in your frontmatter `default_artifact_checklist` to a result:
+
+```yaml
+completion_manifest:
+  adr_file_created: true
+  all_sections_present: true
+  status_set: true
+```
+
+If any item cannot be confirmed, expand it to the nested `result/reason/remediation`
+format required by signoff §2b. See that skill section for the full schema and
+examples.
 
 ## Sign-off (when ticket_path is provided)
 

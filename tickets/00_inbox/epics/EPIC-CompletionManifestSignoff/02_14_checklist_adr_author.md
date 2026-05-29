@@ -10,8 +10,8 @@ priority: high
 requires_diagram: false
 requires_adr: false
 agents:
-  documentation-expert: needed
-  pr-reviewer: needed
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -44,15 +44,31 @@ And it contains exactly: adr_file_created, all_sections_present, status_set
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] pr-reviewer
+- [x] documentation-expert — 2026-05-29 12:00
+- [x] pr-reviewer — 2026-05-29 12:05
 - [ ] commit
 - [ ] pull-request
 
 ## Implementation Tasks
 
 ### documentation-expert
-- [ ] Edit `templates/agents/adr-author.md` frontmatter: add `default_artifact_checklist: [adr_file_created, all_sections_present, status_set]`
-- [ ] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
+- [x] Edit `templates/agents/adr-author.md` frontmatter: add `default_artifact_checklist: [adr_file_created, all_sections_present, status_set]`
+- [x] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
 
 ## Comments
+
+### 2026-05-29 12:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-29_162e7fdc
+completion_manifest:
+  adr_file_created: true
+  all_sections_present: true
+  status_set: true
+Added `default_artifact_checklist: [adr_file_created, all_sections_present, status_set]` to `templates/agents/adr-author.md` frontmatter and added a "Completion Manifest" instruction paragraph in the body referencing signoff §2b. Both implementation tasks complete.
+
+### 2026-05-29 12:05 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-29_a9edef57
+completion_manifest:
+  adr_file_created: true
+  all_sections_present: true
+  status_set: true
+Verified `default_artifact_checklist` is present in frontmatter as a YAML list with exactly the three required items (adr_file_created, all_sections_present, status_set). Completion Manifest section in body correctly references signoff §2b. All acceptance criteria satisfied. Change is minimal and well-targeted.
