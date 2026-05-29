@@ -430,7 +430,30 @@ every ticket-supervisor that ran until a cleanup commit removed them.
 | `blocker` | Run **failure adjudication** (§3). May respawn a sibling, may escalate to `brainstorm-lead`, may halt. | Loop control depends on adjudication branch. |
 | `question` | HALT the ticket. Build the user-escalation payload (§6) and return `{status: "blocked", payload: ...}` to the parent epic-supervisor. | Terminal for this `ticket-supervisor` until user replies. |
 
-### §2.3 Sign-off invariants (delegate to `signoff` skill)
+### §2.3 Completion Manifest Validation (post-comment-parse step)
+
+After parsing the latest comment status tag (step 3 of the §2.1 pseudocode) and **before** routing on it (step 4), the ticket-supervisor MUST read the `completion_manifest:` YAML block in that comment body. The manifest format is defined in [`signoff` §2b](../signoff/SKILL.md) — this section describes only the **supervisory actions** taken based on its contents.
+
+#### Supervisor routing table for manifest state
+
+| Manifest state | Description | Supervisor action |
+|---|---|---|
+| **all-true** | Every item in `completion_manifest:` is bare `true`. | Proceed normally — route on the comment status tag as usual (GOTO §2.2). |
+| **ok-with-false** | Comment status is `ok` but one or more manifest items have `result: false` with a nested object. | Downgrade-to-blocker: treat the comment as if its status were `blocker` and run failure adjudication (§3). The named remediation inside the false item drives the adjudication case selection. |
+| **malformed** | A manifest item has a bare `false` value (not a nested object with `result`, `reason`, and `remediation` sub-keys). See "Bare-False Rule" in `signoff` §2b. | Retry-once: re-invoke the **same** agent with a request to expand the bare `false` into a valid nested object. Cap: **1 retry per manifest, not per item** — if a second malformed manifest is returned by the same agent on the same ticket, fall through to §3.4 (halt). |
+| **absent** | The comment body contains no `completion_manifest:` key at all. | Warn+skip: append a structured supervisor comment noting the absence, then proceed as if all-true. Legacy tickets authored before EPIC-CompletionManifestSignoff are expected to be absent; new sign-offs should always include the block. |
+
+#### Malformed-retry cap
+
+The malformed-retry cap is **1 per manifest** (i.e. per agent invocation), not 1 per individual false item within the manifest. If the retry produces a second malformed manifest — even if only one item remains bare-`false` — the cap is exhausted and the supervisor falls through to §3.4 directly. This cap counts against the same per-phase retry budget as the §3.1 trivial-mechanical retry (the two share the cap, not each having their own separate 1-retry allowance).
+
+#### Legacy compatibility
+
+The manifest validation step is a **no-op for absent manifests** — it never blocks progress on legacy tickets. The requirement to include `completion_manifest:` applies only to sign-offs written after the epoch ticket (`01_signoff_skill_manifest_section.md`) is merged. See `signoff` §2b (Legacy Compatibility) for the canonical statement of this rule.
+
+---
+
+### §2.4 Sign-off invariants (delegate to `signoff` skill)
 
 After every spawned agent returns, the ticket file MUST satisfy the validator rules in [`signoff` §5](../signoff/SKILL.md). If a parity violation is detected (frontmatter `agents` ≠ `## Sign-offs`), the ticket-supervisor halts immediately with a `failed` payload — it does not attempt to repair the ticket.
 
