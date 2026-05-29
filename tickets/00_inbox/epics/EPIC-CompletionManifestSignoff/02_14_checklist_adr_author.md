@@ -12,7 +12,7 @@ requires_adr: false
 agents:
   documentation-expert: signed_off
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -46,7 +46,7 @@ And it contains exactly: adr_file_created, all_sections_present, status_set
 
 - [x] documentation-expert — 2026-05-29 12:00
 - [x] pr-reviewer — 2026-05-29 12:05
-- [ ] commit
+- [x] commit — 2026-05-29 12:11
 - [ ] pull-request
 
 ## Implementation Tasks
@@ -72,3 +72,11 @@ completion_manifest:
   all_sections_present: true
   status_set: true
 Verified `default_artifact_checklist` is present in frontmatter as a YAML list with exactly the three required items (adr_file_created, all_sections_present, status_set). Completion Manifest section in body correctly references signoff §2b. All acceptance criteria satisfied. Change is minimal and well-targeted.
+
+### 2026-05-29 12:11 — commit (status: ok)
+feedback-id: fb_2026-05-29_c8e7322c
+completion_manifest:
+  adr_file_created: true
+  all_sections_present: true
+  status_set: true
+Committed templates/agents/adr-author.md and ticket 02_14 as 2-file commit 9c54f3a (feat(adr-author): add default_artifact_checklist to frontmatter). No pre-commit hook failures. Staged set was clean — only the two in-scope files.
