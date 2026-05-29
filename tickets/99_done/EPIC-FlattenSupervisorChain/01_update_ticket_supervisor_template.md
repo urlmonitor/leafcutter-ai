@@ -1,6 +1,6 @@
 ---
 title: "Update ticket-supervisor template for depth-0 dispatch"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-29
@@ -20,7 +20,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 roadmap_phase: phase_1
 advances_current_outcome: true
 ---
@@ -96,7 +96,7 @@ Then the built .claude/agents/ticket-supervisor.md reflects the changes
 - [x] python-coder — 2026-05-29 10:15
 - [x] pr-reviewer — 2026-05-29 10:20
 - [x] commit — 2026-05-29 10:25
-- [ ] pull-request
+- [x] pull-request — 2026-05-29 10:30
 
 ## Comments
 
@@ -115,6 +115,10 @@ All acceptance criteria verified: (1) description no longer says "invoked only b
 ### 2026-05-29 10:25 — commit (status: ok)
 feedback-id: fb_2026-05-29_807da8b1
 Committed templates/agents/ticket-supervisor.md and ticket file. Staged by explicit path per commit discipline SOP. Pre-commit hooks ran cleanly.
+
+### 2026-05-29 10:30 — pull-request (status: ok)
+feedback-id: fb_2026-05-29_99c6e4d9
+Pushed branch worktree-EPIC-FlattenSupervisorChain and opened PR #23 at https://github.com/urlmonitor/leafcutter-ai/pull/23 covering tickets 06 (ADR-006) and 01 (template update).
 
 ## Implementation Tasks
 
