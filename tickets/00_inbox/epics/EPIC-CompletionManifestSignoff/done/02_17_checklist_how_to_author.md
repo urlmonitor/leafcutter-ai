@@ -1,6 +1,6 @@
 ---
 title: "Add default_artifact_checklist to how-to-author"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-28
@@ -12,8 +12,8 @@ requires_adr: false
 agents:
   documentation-expert: signed_off
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: not_needed
 ---
 
 # 02_17: Add default_artifact_checklist to how-to-author
@@ -46,8 +46,7 @@ And it contains exactly: guide_written, location_correct, steps_validated
 
 - [x] documentation-expert — 2026-05-29 12:00
 - [x] pr-reviewer — 2026-05-29 12:05
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-05-29 13:13
 
 ## Implementation Tasks
 
@@ -72,3 +71,11 @@ completion_manifest:
   change_scope_correct: true
   no_regressions_found: true
 Reviewed the diff: `default_artifact_checklist` correctly added to frontmatter with the three specified items, and step 6 in the Execution Loop correctly instructs the agent to use these items in `completion_manifest:` on sign-off referencing signoff §2b. All acceptance criteria satisfied. Approved.
+
+### 2026-05-29 13:13 — commit (status: ok)
+feedback-id: fb_2026-05-29_22b76593
+completion_manifest:
+  commit_created: true
+  only_ticket_files_staged: true
+  hooks_passed: true
+Committed as SHA 04e00a3 (`feat(how-to-author): add default_artifact_checklist to frontmatter`). Files committed: `templates/agents/how-to-author.md` and `tickets/.../02_17_checklist_how_to_author.md`. All pre-commit hooks passed.
