@@ -12,13 +12,13 @@ requires_adr: false
 files_touched:
   - templates/workflows/build-feature.md
 agents:
-  architect-review: needed
+  architect-review: signed_off
   test-writer: not_needed
-  python-coder: needed
+  python-coder: signed_off
   sql-coder: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 roadmap_phase: phase_1
@@ -77,24 +77,36 @@ Then the epic path references ticket-supervisor as its direct dispatch target
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] python-coder
-- [ ] pr-reviewer
+- [x] architect-review — 2026-05-29 10:00
+- [x] python-coder — 2026-05-29 10:15
+- [x] pr-reviewer — 2026-05-29 10:20
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-05-29 10:00 — architect-review (status: ok)
+feedback-id: (submit-failed)
+Impact: small — 1 file (templates/workflows/build-feature.md), 1 component (build_pipeline). No always-large triggers (no Alembic, no hypertable, no public API, no ADR contract change). Design concerns: (1) lock-file lifecycle comment in STOP block still references epic-supervisor for lock deletion — update to reference ticket-supervisor; (2) batching logic from building-epics §1.1 (depends_on graph) must be moved inline faithfully; (3) lock-file protocol and build-single-ticket path unchanged. No ADR or diagram needed. Escalation: none.
+
+### 2026-05-29 10:20 — pr-reviewer (status: ok)
+feedback-id: (submit-failed)
+All acceptance criteria met: Step B now dispatches ticket-supervisor directly inline (no epic-supervisor), single-ticket path unchanged, lock protocol preserved, build succeeds, built file clean. No blockers.
+
+### 2026-05-29 10:15 — python-coder (status: ok)
+feedback-id: (submit-failed)
+Rewrote Step B in templates/workflows/build-feature.md to implement epic-level batching inline: removed epic-supervisor dispatch, added ready_batch computation loop (reads Master_Plan, checks depends_on, dispatches ticket-supervisor per ready ticket in parallel). Updated STOP block lock lifecycle, intro description, Step A prose, and References to remove all epic-supervisor dispatch references. Ran build-self.sh: build succeeded, built commands/build-feature.md contains zero epic-supervisor references in the dispatch path (two remaining references are explanatory rationale text only).
+
 ## Implementation Tasks
 
-- [ ] Read `templates/workflows/build-feature.md` in full to understand the current Step B block
-- [ ] Remove or rewrite "Step B — Dispatch the epic-supervisor" to instead implement epic-level batching inline (read Master_Plan, compute ready tickets from `depends_on`, dispatch `ticket-supervisor` per ready ticket)
-- [ ] Wire the dependency-graph batching logic (currently inside `epic-supervisor`) directly into the build-feature workflow or a new sub-skill — keep the batch loop: read tickets, check `depends_on`, spawn `ticket-supervisor` per ready ticket in parallel
-- [ ] Preserve the worktree-setup step (Step A) unchanged — it is correct
-- [ ] Preserve the lock-file protocol unchanged
-- [ ] Remove the "Step B" reference to `epic-supervisor` and delete or redirect Step A's epic-supervisor cleanup path
-- [ ] Update the "References" section: replace `epic-supervisor` reference with direct note that epic batching is now inline
-- [ ] Run `./build-self.sh` and confirm built workflow does not reference `epic-supervisor` in the dispatch path
+- [x] Read `templates/workflows/build-feature.md` in full to understand the current Step B block
+- [x] Remove or rewrite "Step B — Dispatch the epic-supervisor" to instead implement epic-level batching inline (read Master_Plan, compute ready tickets from `depends_on`, dispatch `ticket-supervisor` per ready ticket)
+- [x] Wire the dependency-graph batching logic (currently inside `epic-supervisor`) directly into the build-feature workflow or a new sub-skill — keep the batch loop: read tickets, check `depends_on`, spawn `ticket-supervisor` per ready ticket in parallel
+- [x] Preserve the worktree-setup step (Step A) unchanged — it is correct
+- [x] Preserve the lock-file protocol unchanged
+- [x] Remove the "Step B" reference to `epic-supervisor` and delete or redirect Step A's epic-supervisor cleanup path
+- [x] Update the "References" section: replace `epic-supervisor` reference with direct note that epic batching is now inline
+- [x] Run `./build-self.sh` and confirm built workflow does not reference `epic-supervisor` in the dispatch path
 
 ## Risk & Safety
 
