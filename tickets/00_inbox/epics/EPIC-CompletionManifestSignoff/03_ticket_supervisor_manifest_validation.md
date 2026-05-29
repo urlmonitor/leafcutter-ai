@@ -29,14 +29,14 @@ priority: high
 requires_diagram: false
 requires_adr: false
 agents:
-  architect-review: needed
+  architect-review: signed_off
   test-writer: not_needed
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
-  documentation-expert: needed
-  pr-reviewer: needed
-  commit: needed
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -83,27 +83,68 @@ Then the union of both lists is used for manifest cross-reference
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] documentation-expert
-- [ ] pr-reviewer
-- [ ] commit
+- [x] architect-review — 2026-05-29 10:00
+- [x] documentation-expert — 2026-05-29 10:05
+- [x] pr-reviewer — 2026-05-29 10:10
+- [x] commit — 2026-05-29 10:15
 - [ ] pull-request
 
 ## Comments
 
+### 2026-05-29 10:00 — architect-review (status: ok)
+feedback-id: fb_2026-05-29_faade454
+completion_manifest:
+  blast_radius_assessed: true
+  impact_classified: true
+  architectural_note_written: true
+Documentation-only change to `templates/agents/ticket-supervisor.md` (1 file, 1 component — build_pipeline). Classified as **small**: no always-large trigger fired, single component, no ADR required. The proposed §2.3 insertion point (between status-tag parse and route-on-status) is architecturally sound and does not break existing ok/handoff/blocker/question branching. Retry-once cap for malformed manifests is correctly bounded. Checklist resolution order (agent defaults → ticket overrides → union) aligns with the building-epics dispatch contract.
+
+## Escalation
+
+Branch: none
+Reason: 1 file in build_pipeline component; no always-large trigger fired; no ADR or diagram needed.
+
+### 2026-05-29 10:05 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-29_68ba86de
+completion_manifest:
+  section_inserted: true
+  validation_algorithm_documented: true
+  malformed_manifest_retry_documented: true
+  legacy_graceful_skip_documented: true
+  blocker_payload_yaml_example_added: true
+Inserted §2.3 "Completion Manifest Validation" into `templates/agents/ticket-supervisor.md` after the disk-diff guard and parity check, and before the routing table. The section covers: (1) expected checklist resolution (agent defaults + ticket overrides → union), (2) three-case manifest parsing (absent/malformed/well-formed), (3) ok+false downgrade to blocker, and (4) YAML blocker payload example with `manifest_violations` list. All five acceptance criteria satisfied.
+
+### 2026-05-29 10:10 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-29_2462be0a
+completion_manifest:
+  insertion_point_correct: true
+  three_case_structure_complete: true
+  blocker_payload_yaml_present: true
+  no_regression_to_routing_table: true
+  all_acceptance_criteria_covered: true
+§2.3 insertion is well-placed and well-formed. All five Gherkin acceptance criteria are covered by the three-case structure (absent/malformed/well-formed). The routing table is preserved verbatim in §2.3 Step 4, with no regression to ok/handoff/blocker/question branching. Approved.
+
+### 2026-05-29 10:15 — commit (status: ok)
+feedback-id: fb_2026-05-29_396d44c3
+completion_manifest:
+  files_staged_by_explicit_path: true
+  commit_created: true
+  ticket_signed_off: true
+Staged `templates/agents/ticket-supervisor.md` and the ticket file by explicit path (no git add .); committed to worktree branch `worktree-EPIC-CompletionManifestSignoff`. Pull-request phase skipped per caller instructions.
+
 ## Implementation Tasks
 
 ### architect-review
-- [ ] Review the proposed §2.3 insertion point in the ticket-supervisor five-step loop (between status-tag parse and route-on-status) — confirm it does not break the existing ok/handoff/blocker/question branching
-- [ ] Confirm the retry-once behaviour for malformed manifests is bounded (single retry only, then treat as malformed-blocker)
-- [ ] Verify the checklist resolution order (agent defaults → ticket overrides → union) aligns with the building-epics skill dispatch contract
+- [x] Review the proposed §2.3 insertion point in the ticket-supervisor five-step loop (between status-tag parse and route-on-status) — confirm it does not break the existing ok/handoff/blocker/question branching
+- [x] Confirm the retry-once behaviour for malformed manifests is bounded (single retry only, then treat as malformed-blocker)
+- [x] Verify the checklist resolution order (agent defaults → ticket overrides → union) aligns with the building-epics skill dispatch contract
 
 ### documentation-expert
-- [ ] Insert §2.3 into `templates/agents/ticket-supervisor.md` after the existing "parse comment status tag" step in the five-step loop description
-- [ ] Document the validation algorithm: resolve expected checklist, parse manifest, check parity, downgrade-to-blocker on ok+false
-- [ ] Document the malformed-manifest retry protocol (single retry, then blocker)
-- [ ] Document the legacy graceful skip (absent manifest = warn, not block)
-- [ ] Add a YAML example showing the supervisor's blocker payload when ok+false parity is violated
+- [x] Insert §2.3 into `templates/agents/ticket-supervisor.md` after the existing "parse comment status tag" step in the five-step loop description
+- [x] Document the validation algorithm: resolve expected checklist, parse manifest, check parity, downgrade-to-blocker on ok+false
+- [x] Document the malformed-manifest retry protocol (single retry, then blocker)
+- [x] Document the legacy graceful skip (absent manifest = warn, not block)
+- [x] Add a YAML example showing the supervisor's blocker payload when ok+false parity is violated
 
 ## Risk & Safety
 - Touches money? No.
