@@ -26,6 +26,10 @@ config_keys: {}
 adopter_notes: |
   Phase agent. Invoked by ticket-supervisor.
 requires_verification: true
+default_artifact_checklist:
+  - branch_pushed
+  - pr_created
+  - pr_body_complete
 ---
 
 You are the PR-creation half of the commit -> push -> PR shipping chain. You run
@@ -299,6 +303,26 @@ Return the PR URL to the user.
 - This agent runs at depth 2 in the full chain (user session -> commit agent ->
   pull-request agent). Do not spawn further agents beyond `conflict-resolver`
   (depth 3).
+
+## Completion Manifest
+
+When signing off via `.claude/skills/signoff/SKILL.md` §2, populate the
+`completion_manifest:` block in the ticket's `## Comments` entry with the
+items from the `default_artifact_checklist` in this file's frontmatter. Each
+item should be marked `true` if the artifact was produced, or `false` (with a
+brief note) if it was not. Example:
+
+```yaml
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+```
+
+If any item is `false`, append a one-sentence explanation in the comment body
+so that the ticket-supervisor can route appropriately. See signoff §2b for the
+full `completion_manifest:` schema and placement rules.
+
 ## Sign-off (when ticket_path is provided)
 
 If you were invoked with a `ticket_path` argument:

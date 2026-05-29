@@ -1,6 +1,6 @@
 ---
 title: "Add default_artifact_checklist to pull-request"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-28
@@ -10,10 +10,10 @@ priority: high
 requires_diagram: false
 requires_adr: false
 agents:
-  documentation-expert: needed
-  pr-reviewer: needed
-  commit: needed
-  pull-request: needed
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
+  commit: signed_off
+  pull-request: not_needed
 ---
 
 # 02_09: Add default_artifact_checklist to pull-request
@@ -44,15 +44,26 @@ And it contains exactly: branch_pushed, pr_created, pr_body_complete
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] pr-reviewer
-- [ ] commit
-- [ ] pull-request
+- [x] documentation-expert — 2026-05-29 12:00
+- [x] pr-reviewer — 2026-05-29 12:05
+- [x] commit — 2026-05-29 12:12
 
 ## Implementation Tasks
 
 ### documentation-expert
-- [ ] Edit `templates/agents/pull-request.md` frontmatter: add `default_artifact_checklist: [branch_pushed, pr_created, pr_body_complete]`
-- [ ] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
+- [x] Edit `templates/agents/pull-request.md` frontmatter: add `default_artifact_checklist: [branch_pushed, pr_created, pr_body_complete]`
+- [x] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
 
 ## Comments
+
+### 2026-05-29 12:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-29_f0738b5a
+Added `default_artifact_checklist: [branch_pushed, pr_created, pr_body_complete]` to `templates/agents/pull-request.md` frontmatter. Added Completion Manifest section in the body referencing signoff §2b `completion_manifest:` schema and placement rules.
+
+### 2026-05-29 12:05 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-29_70aa90b8
+All acceptance criteria met: `default_artifact_checklist` key present as YAML list with exactly `branch_pushed`, `pr_created`, `pr_body_complete`. Completion Manifest paragraph added correctly referencing signoff §2b. No regressions to existing agent behavior.
+
+### 2026-05-29 12:12 — commit (status: ok)
+feedback-id: fb_2026-05-29_c6d99f06
+Committed `templates/agents/pull-request.md` with `default_artifact_checklist` frontmatter and Completion Manifest instruction paragraph. Staged explicit paths only: `templates/agents/pull-request.md` and ticket file.
