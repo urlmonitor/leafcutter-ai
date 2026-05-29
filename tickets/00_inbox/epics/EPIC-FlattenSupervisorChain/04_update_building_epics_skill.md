@@ -14,11 +14,11 @@ files_touched:
 agents:
   architect-review: not_needed
   test-writer: not_needed
-  python-coder: needed
+  python-coder: signed_off
   sql-coder: not_needed
   test-runner: not_needed
-  documentation-expert: needed
-  pr-reviewer: needed
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 roadmap_phase: phase_1
@@ -72,23 +72,35 @@ And depth-0 dispatch is explicitly noted
 
 ## Sign-offs
 
-- [ ] python-coder
-- [ ] documentation-expert
-- [ ] pr-reviewer
+- [x] python-coder — 2026-05-29 09:05
+- [x] documentation-expert — 2026-05-29 09:07
+- [x] pr-reviewer — 2026-05-29 09:10
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-05-29 09:05 — python-coder (status: ok)
+feedback-id: fb_2026-05-29_d25472d6
+Updated `templates/skills/building-epics/SKILL.md`: §1 header renamed to "now inlined in /build-feature", deprecation note added at top of §1 referencing ADR-006, all §1 references to epic-supervisor as primary dispatcher replaced with /build-feature, §2 and §3 verified unchanged. `build-self.sh` ran successfully; `.leafcutter/skills/building-epics/SKILL.md` reflects the updates.
+
+### 2026-05-29 09:07 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-29_cefb49b2
+Reviewed `templates/skills/building-epics/SKILL.md` update. §1 accurately documents the flat dispatch model with ADR-006 deprecation note, all `epic-supervisor`-as-orchestrator references in §1 replaced with `/build-feature`, §2 and §3 content verified unchanged. No additional documentation artifacts (changelog entries, how-to docs) required for this skill-only change as the ADR-006 doc covers the architectural rationale.
+
+### 2026-05-29 09:10 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-29_6715ef91
+Review passed. All §1 `epic-supervisor` primary-dispatcher references replaced with `/build-feature`; ADR-006 deprecation note present at top of §1; §2 and §3 verified unchanged; `files_touched` matches the single file edited; telemetry `--agent` values updated from `epic-supervisor` to `build-feature`. No blockers found.
+
 ## Implementation Tasks
 
-- [ ] Read `templates/skills/building-epics/SKILL.md` in full
-- [ ] Identify every section that describes `epic-supervisor` as the primary dispatcher of `ticket-supervisor`
-- [ ] Update §1 header to state that the epic-level batching is now inlined in `/build-feature` (not in `epic-supervisor`)
-- [ ] Add a note at the top of §1: "Note: `epic-supervisor` is deprecated (ADR-006). `/build-feature` now owns the epic-level ticket batching described in this section."
-- [ ] Search for "epic-supervisor spawns ticket-supervisor" phrasing and replace with "/build-feature dispatches ticket-supervisor directly (depth 0)"
-- [ ] Ensure §2 (ticket-level five-step loop) and §3 (failure adjudication) are UNCHANGED
-- [ ] Run `./build-self.sh` and verify `.claude/skills/building-epics/SKILL.md` reflects the updates
+- [x] Read `templates/skills/building-epics/SKILL.md` in full
+- [x] Identify every section that describes `epic-supervisor` as the primary dispatcher of `ticket-supervisor`
+- [x] Update §1 header to state that the epic-level batching is now inlined in `/build-feature` (not in `epic-supervisor`)
+- [x] Add a note at the top of §1: "Note: `epic-supervisor` is deprecated (ADR-006). `/build-feature` now owns the epic-level ticket batching described in this section."
+- [x] Search for "epic-supervisor spawns ticket-supervisor" phrasing and replace with "/build-feature dispatches ticket-supervisor directly (depth 0)"
+- [x] Ensure §2 (ticket-level five-step loop) and §3 (failure adjudication) are UNCHANGED
+- [x] Run `./build-self.sh` and verify `.claude/skills/building-epics/SKILL.md` reflects the updates
 
 ## Risk & Safety
 
