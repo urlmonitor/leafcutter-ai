@@ -10,8 +10,8 @@ priority: high
 requires_diagram: false
 requires_adr: false
 agents:
-  documentation-expert: needed
-  pr-reviewer: needed
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -44,15 +44,30 @@ And it contains exactly: code_implemented, ui_verified, design_principles_applie
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] pr-reviewer
+- [x] documentation-expert — 2026-05-29 00:00
+- [x] pr-reviewer — 2026-05-29 00:01
 - [ ] commit
 - [ ] pull-request
 
 ## Implementation Tasks
 
 ### documentation-expert
-- [ ] Edit `templates/agents/frontend-coder.md` frontmatter: add `default_artifact_checklist: [code_implemented, ui_verified, design_principles_applied]`
-- [ ] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
+- [x] Edit `templates/agents/frontend-coder.md` frontmatter: add `default_artifact_checklist: [code_implemented, ui_verified, design_principles_applied]`
+- [x] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
 
 ## Comments
+
+### 2026-05-29 00:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-29_b3d156ec
+completion_manifest:
+  frontmatter_checklist_added: true
+  signoff_paragraph_added: true
+Added `default_artifact_checklist` with items `code_implemented`, `ui_verified`, `design_principles_applied` to `templates/agents/frontend-coder.md` frontmatter. Added instruction paragraph in the Sign-off section referencing signoff §2b completion_manifest requirement.
+
+### 2026-05-29 00:01 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-29_f4290519
+completion_manifest:
+  checklist_items_match_spec: true
+  signoff_paragraph_clear: true
+  no_regressions_found: true
+Change is clean and minimal. `default_artifact_checklist` contains exactly `code_implemented`, `ui_verified`, `design_principles_applied` as specified. The §2b instruction paragraph is correctly placed in the Sign-off section and accurately describes the completion_manifest requirement.
