@@ -64,6 +64,16 @@ a misconfiguration. The build step must detect this condition and unset the key
 before proceeding. If `core.hooksPath` points to a non-default custom path, the
 build step must warn but not override the user's choice.
 
+A third issue: `build.py --target-dir .` writes `.leafcutter/` output to the
+target directory (the workspace parent), but the git repo root may be a
+subdirectory (e.g. `leafcutter-ai/`). The `.pre-commit-config.yaml` references
+`.leafcutter/scripts/commit_guardian/...` paths relative to the git root, but
+`.leafcutter/` lives one level up. `install_hooks()` must detect the actual git
+root (via `git rev-parse --show-toplevel`) and ensure `.leafcutter/` is reachable
+from it — either by symlinking or by adjusting the shim target. Without this,
+`pre-commit install` succeeds but every hook fails at runtime with "No such file
+or directory".
+
 The fix lives in `build_helpers.py` (new `install_hooks()` function called from
 `build.py` main, after shim installation). It must be idempotent — re-running
 `build.py` multiple times must not break an already-installed hook.
@@ -102,6 +112,12 @@ Given pre-commit is not installed in the current environment
 When install_hooks() attempts to run pre-commit install
 Then it prints a warning "pre-commit not found; skipping hook install"
   AND the build exits 0 (non-fatal)
+
+Given the target-dir is a workspace parent and .git/ lives in a subdirectory
+When install_hooks() detects that git rev-parse --show-toplevel differs from target_root
+Then it creates a .leafcutter symlink inside the git root pointing to target_root/.leafcutter/
+  AND .pre-commit-config.yaml is readable from the git root
+  AND pre-commit hooks can resolve .leafcutter/scripts/... paths at runtime
 ```
 
 ## Sign-offs
