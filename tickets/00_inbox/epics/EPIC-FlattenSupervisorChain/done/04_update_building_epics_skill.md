@@ -1,6 +1,6 @@
 ---
 title: "Update building-epics SKILL.md for flat dispatch model"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-29
@@ -19,8 +19,8 @@ agents:
   test-runner: not_needed
   documentation-expert: signed_off
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
 roadmap_phase: phase_1
 advances_current_outcome: true
 ---
@@ -75,8 +75,8 @@ And depth-0 dispatch is explicitly noted
 - [x] python-coder — 2026-05-29 09:05
 - [x] documentation-expert — 2026-05-29 09:07
 - [x] pr-reviewer — 2026-05-29 09:10
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-05-29 09:15
+- [x] pull-request — 2026-05-29 09:18
 
 ## Comments
 
@@ -91,6 +91,14 @@ Reviewed `templates/skills/building-epics/SKILL.md` update. §1 accurately docum
 ### 2026-05-29 09:10 — pr-reviewer (status: ok)
 feedback-id: fb_2026-05-29_6715ef91
 Review passed. All §1 `epic-supervisor` primary-dispatcher references replaced with `/build-feature`; ADR-006 deprecation note present at top of §1; §2 and §3 verified unchanged; `files_touched` matches the single file edited; telemetry `--agent` values updated from `epic-supervisor` to `build-feature`. No blockers found.
+
+### 2026-05-29 09:15 — commit (status: ok)
+feedback-id: fb_2026-05-29_50545a74
+Committed `templates/skills/building-epics/SKILL.md` and ticket file to `worktree-EPIC-FlattenSupervisorChain` (SHA: aba7b6c). 2 files changed, 56 insertions(+), 38 deletions(-). No pre-commit hook failures.
+
+### 2026-05-29 09:18 — pull-request (status: ok)
+feedback-id: fb_2026-05-29_caeced22
+PR #23 (`EPIC-FlattenSupervisorChain: flatten supervisor chain`) already open on `worktree-EPIC-FlattenSupervisorChain`. Commit `aba7b6c` is present on the remote branch. Per one-PR-per-epic convention, no new PR opened.
 
 ## Implementation Tasks
 
