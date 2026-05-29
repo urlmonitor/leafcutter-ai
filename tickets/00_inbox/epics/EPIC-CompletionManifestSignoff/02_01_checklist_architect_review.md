@@ -10,7 +10,7 @@ priority: high
 requires_diagram: false
 requires_adr: false
 agents:
-  documentation-expert: needed
+  documentation-expert: signed_off
   pr-reviewer: needed
   commit: needed
   pull-request: needed
@@ -44,7 +44,7 @@ And it contains exactly: blast_radius_assessed, impact_classified, architectural
 
 ## Sign-offs
 
-- [ ] documentation-expert
+- [x] documentation-expert — 2026-05-29 13:30
 - [ ] pr-reviewer
 - [ ] commit
 - [ ] pull-request
@@ -52,7 +52,14 @@ And it contains exactly: blast_radius_assessed, impact_classified, architectural
 ## Implementation Tasks
 
 ### documentation-expert
-- [ ] Edit `templates/agents/architect-review.md` frontmatter: add `default_artifact_checklist: [blast_radius_assessed, impact_classified, architectural_note_written]`
-- [ ] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
+- [x] Edit `templates/agents/architect-review.md` frontmatter: add `default_artifact_checklist: [blast_radius_assessed, impact_classified, architectural_note_written]`
+- [x] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
 
 ## Comments
+
+### 2026-05-29 13:30 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-29_dad7c0bd
+completion_manifest:
+  frontmatter_checklist_added: true
+  body_instruction_paragraph_added: true
+Added `default_artifact_checklist: [blast_radius_assessed, impact_classified, architectural_note_written]` to `templates/agents/architect-review.md` frontmatter and inserted a "Sign-off Completion Manifest" section in the body referencing `signoff` §2b with per-item guidance and bare-false rule reminder.

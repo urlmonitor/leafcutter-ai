@@ -10,8 +10,8 @@ priority: high
 requires_diagram: false
 requires_adr: false
 agents:
-  documentation-expert: needed
-  pr-reviewer: needed
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -45,15 +45,30 @@ And it contains exactly: code_implemented, tests_passing, doc_enforcer_clean, co
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] pr-reviewer
+- [x] documentation-expert — 2026-05-29 10:00
+- [x] pr-reviewer — 2026-05-29 10:05
 - [ ] commit
 - [ ] pull-request
 
 ## Implementation Tasks
 
 ### documentation-expert
-- [ ] Edit `templates/agents/python-coder.md` frontmatter: add `default_artifact_checklist: [code_implemented, tests_passing, doc_enforcer_clean, complexity_check_clean]`
-- [ ] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
+- [x] Edit `templates/agents/python-coder.md` frontmatter: add `default_artifact_checklist: [code_implemented, tests_passing, doc_enforcer_clean, complexity_check_clean]`
+- [x] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
 
 ## Comments
+
+### 2026-05-29 10:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-29_12578f1c
+completion_manifest:
+  frontmatter_checklist_added: true
+  instruction_paragraph_added: true
+Added `default_artifact_checklist` to `templates/agents/python-coder.md` frontmatter with four items: code_implemented, tests_passing, doc_enforcer_clean, complexity_check_clean. Added a "Completion Manifest (mandatory)" instruction subsection under Sign-off referencing signoff §2b format rules.
+
+### 2026-05-29 10:05 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-29_85cb77f3
+completion_manifest:
+  acceptance_criteria_verified: true
+  no_regressions_found: true
+  diff_matches_ticket_spec: true
+Reviewed diff: frontmatter checklist contains exactly the four specified items; instruction paragraph correctly references signoff §2b and is placed logically. Acceptance criteria pass. Approved for commit.

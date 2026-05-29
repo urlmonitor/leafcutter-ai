@@ -21,6 +21,10 @@ config_keys: {}
 adopter_notes: |
   Phase agent. Invoked by ticket-supervisor.
 requires_verification: true
+default_artifact_checklist:
+  - blast_radius_assessed
+  - impact_classified
+  - architectural_note_written
 ---
 
 You are the architectural gatekeeper. You receive a refined ticket (plus any
@@ -181,6 +185,23 @@ Use the following heuristics to decide whether to suggest a diagram:
 
 Choose the `path` by running `python leafcutter/scripts/next_diagram_seq.py <level>`
 to get the next free sequence number, then construct `c{level}-{seq:03d}-{slug}.md`.
+
+## Sign-off Completion Manifest
+
+When signing off on a ticket, include a `completion_manifest:` block in your
+`## Comments` entry per `signoff` §2b. The items in `default_artifact_checklist`
+(see frontmatter) are the required keys for every architect-review sign-off:
+
+- `blast_radius_assessed` — confirm you ran blast-radius analysis via `research-agent`
+  and evaluated all affected files and components.
+- `impact_classified` — confirm you applied the small/large rubric and recorded the
+  classification with the specific triggering criterion.
+- `architectural_note_written` — confirm an `architectural_note` was produced and
+  included in the Step 4 output payload (inline for small, from `architect-review-deep`
+  for large).
+
+A bare `false` for any item is malformed per `signoff` §2b Bare-False Rule; expand it
+to a nested object with `result`, `reason`, and `remediation`.
 
 ## Step 5 — Escalation Log
 

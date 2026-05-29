@@ -1,6 +1,6 @@
 ---
 title: "Add default_artifact_checklist to frontend-coder"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-28
@@ -12,8 +12,8 @@ requires_adr: false
 agents:
   documentation-expert: signed_off
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: not_needed
 ---
 
 # 02_12: Add default_artifact_checklist to frontend-coder
@@ -46,8 +46,7 @@ And it contains exactly: code_implemented, ui_verified, design_principles_applie
 
 - [x] documentation-expert — 2026-05-29 00:00
 - [x] pr-reviewer — 2026-05-29 00:01
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-05-29 13:14
 
 ## Implementation Tasks
 
@@ -71,3 +70,11 @@ completion_manifest:
   signoff_paragraph_clear: true
   no_regressions_found: true
 Change is clean and minimal. `default_artifact_checklist` contains exactly `code_implemented`, `ui_verified`, `design_principles_applied` as specified. The §2b instruction paragraph is correctly placed in the Sign-off section and accurately describes the completion_manifest requirement.
+
+### 2026-05-29 13:14 — commit (status: ok)
+feedback-id: fb_2026-05-29_a9f69842
+completion_manifest:
+  changes_committed: true
+  ticket_file_staged: true
+  pull_request_skipped: true
+Changes to `templates/agents/frontend-coder.md` committed in worktree batch commit d6dc383. pull-request phase skipped per caller instruction (commit-only run).

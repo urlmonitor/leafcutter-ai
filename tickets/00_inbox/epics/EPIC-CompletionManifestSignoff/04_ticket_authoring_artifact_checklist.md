@@ -15,9 +15,9 @@ agents:
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
-  documentation-expert: needed
-  pr-reviewer: needed
-  commit: needed
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
+  commit: failed
   pull-request: needed
 ---
 
@@ -60,19 +60,45 @@ Then a commented-out artifact_checklist example is visible showing the per-agent
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] pr-reviewer
-- [ ] commit
+- [x] documentation-expert — 2026-05-29 12:00
+- [x] pr-reviewer — 2026-05-29 12:01
+- [ ] commit — failed 2026-05-29 12:02
 - [ ] pull-request
 
 ## Comments
 
+### 2026-05-29 12:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-29_f50d8a40
+completion_manifest:
+  artifact_checklist_row_added: true
+  frontmatter_example_updated: true
+  common_mistakes_row_added: true
+Added artifact_checklist field to templates/skills/ticket-authoring/SKILL.md: inserted optional row in the Required vs Optional table, added a commented-out three-line example block in the frontmatter schema, and appended a Common Mistakes row for the agent-name vs item-name keying mistake.
+
+### 2026-05-29 12:01 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-29_847ef706
+completion_manifest:
+  changes_match_acceptance_criteria: true
+  artifact_checklist_row_correct: true
+  frontmatter_example_well_formed: true
+  common_mistakes_row_accurate: true
+All three documentation changes are correct and complete. The artifact_checklist row in the Required vs Optional table carries the right description. The commented-out frontmatter example shows the correct per-agent nested structure. The Common Mistakes row correctly identifies the keying mistake. No issues found; approved for commit.
+
+### 2026-05-29 12:02 — commit (status: blocker)
+feedback-id: (submit-failed)
+completion_manifest:
+  files_staged:
+    result: false
+    reason: "C: drive at 100% capacity (7.9MB free); git index write fails with 'unable to write new index file'."
+    remediation: "Free disk space on C: (at least ~100MB), then re-run the commit phase: git add templates/skills/ticket-authoring/SKILL.md tickets/00_inbox/epics/EPIC-CompletionManifestSignoff/04_ticket_authoring_artifact_checklist.md && git commit."
+Attempted to stage files but git add failed because the C: drive is full (237G used, 7.9M free). All documentation edits are on disk and correct; only the git staging/commit step is blocked. Free disk space and retry.
+
 ## Implementation Tasks
 
 ### documentation-expert
-- [ ] Add `artifact_checklist` row to the "Required vs Optional" table in `templates/skills/ticket-authoring/SKILL.md` (optional, with description: "Per-agent checklist overrides. Map of agent-name → list of item names. Merges with agent's default_artifact_checklist; ticket items extend defaults, same key overrides.")
-- [ ] Add `artifact_checklist:` to the frontmatter schema example block as a commented-out optional field with a one-line example showing one agent key
-- [ ] Update the "Common Mistakes" table with a row: "artifact_checklist keyed by item name instead of agent name | Must be a map of agent-name → list"
+- [x] Add `artifact_checklist` row to the "Required vs Optional" table in `templates/skills/ticket-authoring/SKILL.md` (optional, with description: "Per-agent checklist overrides. Map of agent-name → list of item names. Merges with agent's default_artifact_checklist; ticket items extend defaults, same key overrides.")
+- [x] Add `artifact_checklist:` to the frontmatter schema example block as a commented-out optional field with a one-line example showing one agent key
+- [x] Update the "Common Mistakes" table with a row: "artifact_checklist keyed by item name instead of agent name | Must be a map of agent-name → list"
 
 ## Risk & Safety
 - Touches money? No.

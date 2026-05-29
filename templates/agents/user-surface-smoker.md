@@ -18,6 +18,10 @@ portable: true
 signoff: true
 domain: null
 config_keys: {}
+default_artifact_checklist:
+  - surface_invoked
+  - assertions_passed
+  - no_placeholder_signatures
 adopter_notes: |
   Conditional phase agent. Only emitted in agents: map when user_facing_surface != null.
   Priority 11.5 — after pr-reviewer (11), before commit (12).
@@ -166,6 +170,22 @@ This agent's own ticket (EPIC-UserSurfaceVerification/03) includes a `## Smoke
 Fixture` block. Once this agent is shipped, invoking it against its own ticket
 should pass: the synthetic surface described in the fixture would exercise real
 dispatch (not a placeholder) and the assertion regex would match.
+
+## Completion Manifest Requirement
+
+When signing off, include a `completion_manifest:` block in your comment body
+per signoff §2b. The items in `default_artifact_checklist` (defined in this
+template's frontmatter) form the required manifest keys. For each key:
+
+- `surface_invoked` — set to `true` if the named surface was successfully
+  invoked with production wiring; `false` (expanded) if invocation failed.
+- `assertions_passed` — set to `true` if all assertion regexes matched
+  observed output; `false` (expanded) if any regex failed to match.
+- `no_placeholder_signatures` — set to `true` if no `placeholder_signature`
+  regex triggered; `false` (expanded) if a placeholder was detected.
+
+See signoff §2b for the required format: bare `true` for passing items; a
+nested object with `result`, `reason`, and `remediation` for any `false` item.
 
 """
 ====================================================================

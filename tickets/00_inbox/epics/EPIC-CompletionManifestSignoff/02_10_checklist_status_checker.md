@@ -10,8 +10,8 @@ priority: high
 requires_diagram: false
 requires_adr: false
 agents:
-  documentation-expert: needed
-  pr-reviewer: needed
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -44,15 +44,31 @@ And it contains exactly: state_verified, git_history_checked, status_reported
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] pr-reviewer
+- [x] documentation-expert — 2026-05-29 14:00
+- [x] pr-reviewer — 2026-05-29 14:01
 - [ ] commit
 - [ ] pull-request
 
 ## Implementation Tasks
 
 ### documentation-expert
-- [ ] Edit `templates/agents/status-checker.md` frontmatter: add `default_artifact_checklist: [state_verified, git_history_checked, status_reported]`
-- [ ] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
+- [x] Edit `templates/agents/status-checker.md` frontmatter: add `default_artifact_checklist: [state_verified, git_history_checked, status_reported]`
+- [x] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
 
 ## Comments
+
+### 2026-05-29 14:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-29_73ae8d08
+completion_manifest:
+  doc_written: true
+  cross_links_added: true
+  diataxis_genre_correct: true
+Added `default_artifact_checklist: [state_verified, git_history_checked, status_reported]` to `templates/agents/status-checker.md` frontmatter. Added `## Completion Manifest (sign-off §2b)` instruction paragraph in the agent body explaining each checklist item and referencing `signoff` skill §2b for the full contract.
+
+### 2026-05-29 14:01 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-29_1a007923
+completion_manifest:
+  diff_reviewed: true
+  no_high_findings: true
+  scope_verified: true
+No high or medium findings. The `default_artifact_checklist` frontmatter (3 items) and §2b instruction paragraph are correctly formed and match the ticket's acceptance criteria exactly.
