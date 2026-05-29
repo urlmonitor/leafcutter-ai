@@ -1,7 +1,7 @@
 ---
 title: "EPIC: Completion Manifest Signoff"
 type: epic
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-28
