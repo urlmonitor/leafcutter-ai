@@ -1,13 +1,13 @@
 ---
 allowed-tools: Read, Edit, Bash(ls *)
-description: Operational runbook loaded by `epic-supervisor` and `ticket-supervisor`
-  as their primary instruction set. Use when an agent needs to walk an epic ticket-by-ticket
-  (dependency batching + file-touch parallelism gate), drive a single ticket through
-  its phase agents (read `agents` map → spawn next `needed` → parse comment status
-  → route ok/handoff/blocker/question), adjudicate failures with explicit retry caps,
-  hold the commit-phase serialization lock, or escalate blockers to the user via the
-  structured payload. Pulled in by both supervisors; phase agents themselves use the
-  `signoff` skill, not this one.
+description: Operational runbook loaded by `ticket-supervisor` (and historically by
+  `epic-supervisor`, now deprecated per ADR-006) as its primary instruction set. Use
+  when an agent needs to walk an epic ticket-by-ticket (dependency batching + file-touch
+  parallelism gate), drive a single ticket through its phase agents (read `agents` map
+  → spawn next `needed` → parse comment status → route ok/handoff/blocker/question),
+  adjudicate failures with explicit retry caps, hold the commit-phase serialization
+  lock, or escalate blockers to the user via the structured payload. Phase agents
+  themselves use the `signoff` skill, not this one.
 name: building-epics
 ---
 
@@ -17,17 +17,22 @@ This skill is the **single runbook** for the supervisory layer. It encodes the c
 
 It is the operational complement to the [`signoff`](../signoff/SKILL.md) skill. `signoff` defines **what** the on-disk state means and how to mutate it; `building-epics` defines **how** supervisors decide what to do next based on that state. Status-enum semantics, frontmatter ↔ `## Sign-offs` parity, and the comment-heading schema all live in `signoff` and are not duplicated here.
 
-If you change anything in this file, both `epic-supervisor` and `ticket-supervisor` will see the change at their next invocation — that's the point. Adding a new retry cap or a new escalation tier is an edit to this one file, never an ad-hoc choice in a supervisor prompt.
+If you change anything in this file, `ticket-supervisor` will see the change at its next invocation — that's the point. Adding a new retry cap or a new escalation tier is an edit to this one file, never an ad-hoc choice in a supervisor prompt.
 
 ---
 
-## §1 Epic-level Algorithm (epic-supervisor)
+## §1 Epic-level Algorithm (now inlined in `/build-feature`)
+
+> **Note:** `epic-supervisor` is deprecated (ADR-006). `/build-feature` now owns the
+> epic-level ticket batching described in this section. `ticket-supervisor` runs at
+> depth 0, dispatched directly by `/build-feature` — there is no intermediate
+> `epic-supervisor` layer between them.
 
 The six-step loop from the spec (§6.1). This is the outer driver: it walks an epic until every ticket is signed off or the run is halted.
 
 ### §1.0 Feedback-Sink Reachability Pre-flight (runs before §1.1 loop)
 
-Before entering the main epic loop (`epic-supervisor` step 1), verify that the feedback
+Before entering the main epic loop (`/build-feature` step 1), verify that the feedback
 sink is reachable and writable. This prevents silent telemetry loss for the entire drive.
 
 **Check (POSIX):**
@@ -93,6 +98,11 @@ retrospective. This pre-flight step closes that gap.
                                     (transitive closure).
     Pick batch by ascending NN execution-order prefix when ties exist.
 
+3a. VERIFY disjoint file sets: before dispatching, assert that no two tickets
+    in `batch` share an entry in their `files_touched` frontmatter. If overlap
+    is detected, remove the overlapping tickets from `batch` and serialize them
+    in subsequent passes (treat the overlap as a physical edge, re-run step 3).
+
 4.  DISPATCH one ticket-supervisor per ticket in `batch`, in parallel.
     Each child receives its `ticket_path` as input.
 
@@ -112,7 +122,7 @@ retrospective. This pre-flight step closes that gap.
     (non-blocking) per ticket in the batch:
     ```bash
     python .claude/skills/agent-telemetry/scripts/emit_event.py \
-      --agent "epic-supervisor" --event supervisor_dispatch \
+      --agent "build-feature" --event supervisor_dispatch \
       --ticket "<ticket_path>" \
       --log debugging/logs/agent_telemetry.jsonl || true
     ```
@@ -131,7 +141,7 @@ retrospective. This pre-flight step closes that gap.
         Emit `epic_halted` (non-blocking):
         ```bash
         python .claude/skills/agent-telemetry/scripts/emit_event.py \
-          --agent "epic-supervisor" --event epic_halted \
+          --agent "build-feature" --event epic_halted \
           --outcome blocked \
           --log debugging/logs/agent_telemetry.jsonl || true
         ```
@@ -145,7 +155,7 @@ retrospective. This pre-flight step closes that gap.
         Emit `epic_complete` (non-blocking):
         ```bash
         python .claude/skills/agent-telemetry/scripts/emit_event.py \
-          --agent "epic-supervisor" --event epic_complete \
+          --agent "build-feature" --event epic_complete \
           --outcome ok \
           --log debugging/logs/agent_telemetry.jsonl || true
         ```
@@ -170,11 +180,11 @@ No additional enforcement is required: the per-pass scan is inherent to the loop
 > 1. `a.files_touched ∩ b.files_touched = ∅`  *(disjoint physical footprint)*, AND
 > 2. neither `a depends_on b` nor `b depends_on a` under the **transitive closure** of `depends_on` *(no logical dependency chain)*.
 
-Both conditions must hold. The file-touch set is authoritative — it is populated by `business-analyst` / `refinement` and validated by the frontmatter guard. If a ticket's `files_touched` is missing or empty, `epic-supervisor` MUST treat that ticket as conflicting with every other ticket and run it serially (default-conservative).
+Both conditions must hold. The file-touch set is authoritative — it is populated by `business-analyst` / `refinement` and validated by the frontmatter guard. If a ticket's `files_touched` is missing or empty, `/build-feature` MUST treat that ticket as conflicting with every other ticket and run it serially (default-conservative).
 
 ### §1.3 Halt conditions (epic-level)
 
-The epic-supervisor halts the entire run only when:
+`/build-feature` halts the entire run only when:
 
 - A child returns `{status: "blocked"}` and the blocker is **structural** — i.e. the suggested remediation requires resolving an ambiguity (`question`-class) that affects multiple tickets, OR a phase agent that is on the critical path of every remaining ticket has returned `failed`.
 - The dependency graph contains a cycle that survives `files_touched` projection (this should never occur — refinement prevents it — but treat it as a halt-class invariant violation).
@@ -183,7 +193,7 @@ The epic-supervisor halts the entire run only when:
 In all other blocker scenarios, the epic continues with the remaining independent tickets while the blocked ticket awaits user input. See §6.
 ### §1.4 Worktree lifecycle — close-worktree prohibition
 
-The epic-supervisor **MUST NOT** invoke `close-worktree`, `git worktree remove`, or
+`/build-feature` **MUST NOT** invoke `close-worktree`, `git worktree remove`, or
 `git branch -D` until **every sub-ticket in the epic is in `done/` status**.
 
 Premature invocation of `close-worktree` destroys the branch ref while in-progress commits
@@ -199,7 +209,7 @@ recover (see below).
 
 #### §1.4.1 All-Tickets-Done Gate (mandatory counting gate before close-worktree)
 
-When the epic-supervisor reaches the post-completion chain Step 5 (Worktree Cleanup),
+When `/build-feature` reaches the post-completion chain Step 5 (Worktree Cleanup),
 it MUST run this counting gate before spawning `worktree-agent`:
 
 ```python
@@ -254,10 +264,11 @@ git -C <wt> restore .
 ```
 
 See `docs/how-to/epic-supervisor-recovery.md` for the full step-by-step recovery guide.
+(Note: this doc predates ADR-006; the recovery steps remain valid — substitute `/build-feature` for `epic-supervisor` throughout.)
 
 ### §1.5 Ticket close-out — two-pass pattern (implementation + status-checker)
 
-When running individual ticket-supervisors (not a full epic-supervisor run), the supervisor
+When running individual ticket-supervisors (not a full `/build-feature` epic drive), the supervisor
 naturally stops after the commit phase **without** moving the ticket file to `done/` or
 flipping `pull-request: needed → signed_off`. This is correct for parallel safety but
 leaves the ticket visible to the ticket-prioritizer as "ready" — causing it to appear as
@@ -548,7 +559,7 @@ Wrap the entire commit-phase invocation in a `trap`-style `finally` so the lock 
 
 ### §5.4 Recovery
 
-If `epic-supervisor` is restarted and finds an existing `.epic-commit-lock` whose `<pid>` is not alive, it MUST log a warning and `rm -f` the stale lock before resuming. A live PID inside an unfamiliar lock means another supervisor instance is running — halt and surface to user (§3.4).
+If `/build-feature` is restarted and finds an existing `.epic-commit-lock` whose `<pid>` is not alive, it MUST log a warning and `rm -f` the stale lock before resuming. A live PID inside an unfamiliar lock means another supervisor instance is running — halt and surface to user (§3.4).
 
 ### §5.5 Standing kill auth scope (idle-only)
 
@@ -652,7 +663,7 @@ the original stash-conflict incident.
 
 ## §6 User Escalation Contract
 
-When a ticket halts (Case §3.4 fall-through, or `question`-class comment from §2.2), the ticket-supervisor returns this exact payload to its parent `epic-supervisor`, which in turn relays it to the user.
+When a ticket halts (Case §3.4 fall-through, or `question`-class comment from §2.2), the ticket-supervisor returns this exact payload to its caller (`/build-feature`), which in turn relays it to the user.
 
 ### §6.1 Payload schema
 
@@ -674,7 +685,7 @@ All four fields are required. The values are:
 
 ### §6.2 Epic-level continuation rule (explicit)
 
-> **`epic-supervisor` MAY continue processing other tickets in the current batch (and subsequent batches) while a blocked ticket waits for user input**, provided the remaining tickets do not depend on the blocked one (transitively, via either `depends_on` or `files_touched`).
+> **`/build-feature` MAY continue processing other tickets in the current batch (and subsequent batches) while a blocked ticket waits for user input**, provided the remaining tickets do not depend on the blocked one (transitively, via either `depends_on` or `files_touched`).
 
 Equivalent phrasing: a single ticket's user-escalation does NOT halt the epic by default. The epic only halts when the §1.3 conditions are met (structural blocker, dependency-cycle invariant violation, or unrecoverable lock state).
 
@@ -682,7 +693,7 @@ When the user replies and resolves the blocker, the supervisor flow is:
 
 1. User edits the blocked ticket directly (e.g. flips a `failed` row to `needed`, or appends an answering comment with the chosen approach).
 2. User resumes via `/build-feature <epic>` (or however the harness is wired).
-3. `epic-supervisor` re-reads `Master_Plan.md`, rebuilds the dependency graph, and re-enters its main loop at §1 step 3 — the resolved ticket is once again `ready`.
+3. `/build-feature` re-reads `Master_Plan.md`, rebuilds the dependency graph, and re-enters its main loop at §1 step 3 — the resolved ticket is once again `ready`.
 
 ---
 
@@ -791,8 +802,8 @@ happened with `post_checkout_drift_check.py` during EPIC-WorkflowArchitect —
 forces a Master_Plan count correction and wastes coder time. This check is
 fast (seconds per file) and catches the failure class at the cheapest point.
 
-The `epic-supervisor` does NOT re-run this check at dispatch time; it trusts the
-Master_Plan. The discipline is upstream of the supervisor loop.
+`/build-feature` does NOT re-run this check at dispatch time; it trusts the
+Master_Plan. The discipline is upstream of the dispatch loop.
 
 ### §7.2 Epic archival gate (supervisor)
 

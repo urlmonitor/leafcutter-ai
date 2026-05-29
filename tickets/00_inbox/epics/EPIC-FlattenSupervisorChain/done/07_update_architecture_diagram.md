@@ -1,6 +1,6 @@
 ---
 title: "Update agent_flow architecture diagram for flattened spawn topology"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-29
@@ -14,15 +14,15 @@ files_touched:
   - docs/architecture/components/supervisor-spawn-topology.md
 agents:
   architect-review: not_needed
-  architecture-diagram-author: needed
+  architecture-diagram-author: signed_off
   test-writer: not_needed
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
-  commit: needed
-  pull-request: needed
+  pr-reviewer: signed_off
+  commit: signed_off
+  pull-request: signed_off
 roadmap_phase: phase_1
 advances_current_outcome: false
 ---
@@ -76,26 +76,42 @@ Then no validation errors are emitted for the diagram_type
 
 ## Sign-offs
 
-- [ ] architecture-diagram-author
-- [ ] pr-reviewer
-- [ ] commit
-- [ ] pull-request
+- [x] architecture-diagram-author — 2026-05-29 12:00
+- [x] pr-reviewer — 2026-05-29 12:01
+- [x] commit — 2026-05-29 12:02
+- [x] pull-request — 2026-05-29 12:03
 
 ## Comments
 
+### 2026-05-29 12:00 — architecture-diagram-author (status: ok)
+feedback-id: fb_2026-05-29_a4b06419
+Created docs/architecture/components/supervisor-spawn-topology.md from scratch (directory did not exist). Wrote Mermaid flowchart TD agent_flow diagram showing the flattened two-tier spawn topology with ADR-006 reference. Frontmatter includes diagram_type: agent_flow, status: accepted, components: [build_pipeline], created: 2026-05-29. build-self.sh produced no doc-frontmatter validation errors.
+
+### 2026-05-29 12:01 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-29_fd70e035
+All acceptance criteria pass: diagram_type agent_flow and status accepted present in frontmatter; /build-feature → ticket-supervisor (depth 0) and ticket-supervisor → phase agents (depth 1) shown with solid arrows; epic-supervisor marked DEPRECATED with dashed legacy-only arrow (no active spawn path); ADR-006 referenced in overview and references section; build-self.sh clean. Approved for commit.
+
+### 2026-05-29 12:02 — commit (status: ok)
+feedback-id: fb_2026-05-29_63f3fb67
+Committed supervisor-spawn-topology.md (new file) and ticket sign-offs atomically on branch worktree-EPIC-FlattenSupervisorChain. SHA: a68228f. Pre-commit hooks passed cleanly. 2 files changed, 99 insertions.
+
+### 2026-05-29 12:03 — pull-request (status: ok)
+feedback-id: fb_2026-05-29_d3630eb8
+PR #23 already open for branch worktree-EPIC-FlattenSupervisorChain (epic-level PR per convention). Ticket 07 commits pushed and included in the PR. Branch pushed to origin successfully.
+
 ## Implementation Tasks
 
-- [ ] Check whether `docs/architecture/components/supervisor-spawn-topology.md` exists; if yes, read it; if no, create from scratch
-- [ ] Author a Mermaid `flowchart TD` diagram in an `agent_flow` format:
+- [x] Check whether `docs/architecture/components/supervisor-spawn-topology.md` exists; if yes, read it; if no, create from scratch
+- [x] Author a Mermaid `flowchart TD` diagram in an `agent_flow` format:
   ```
   user -->|/build-feature| build_feature[/build-feature workflow]
   build_feature -->|depth 0| ticket_supervisor[ticket-supervisor]
   ticket_supervisor -->|depth 1| phase_agents[phase agents\narchitect-review, python-coder, etc.]
   epic_supervisor["epic-supervisor (DEPRECATED)"] -.->|legacy only| ticket_supervisor
   ```
-- [ ] Write the file with valid doc frontmatter: `diagram_type: agent_flow`, `status: accepted`, `components: [build_pipeline]`, `created: 2026-05-29`
-- [ ] Reference ADR-006 in the doc body
-- [ ] Run `./build-self.sh` and confirm no doc-frontmatter validation errors
+- [x] Write the file with valid doc frontmatter: `diagram_type: agent_flow`, `status: accepted`, `components: [build_pipeline]`, `created: 2026-05-29`
+- [x] Reference ADR-006 in the doc body
+- [x] Run `./build-self.sh` and confirm no doc-frontmatter validation errors
 
 ## Risk & Safety
 

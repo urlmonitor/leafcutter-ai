@@ -1,13 +1,14 @@
 ---
-description: "User-facing entry point to the supervisor system. Resolve an epic name, an epic folder path, or a single standalone-ticket file path under tickets/, then dispatch the right supervisor (epic-supervisor for epics, build-single-ticket sub-skill for standalone tickets) to drive it to completion."
+description: "User-facing entry point to the supervisor system. Resolve an epic name, an epic folder path, or a single standalone-ticket file path under tickets/, then dispatch ticket-supervisor directly per ready ticket (for epics) or the build-single-ticket sub-skill (for standalone tickets) to drive it to completion."
 ---
 
 > **STOP — PROHIBITION ON INLINE IMPLEMENTATION WORK**
 >
 > This command MUST dispatch a supervisor agent. It MUST NOT perform any
 > implementation work inline. If you find yourself doing any of the following
-> WITHOUT first dispatching `epic-supervisor` or the `build-single-ticket`
-> sub-skill, **stop immediately** and dispatch the correct supervisor first:
+> WITHOUT first dispatching `ticket-supervisor` (for epic batches) or the
+> `build-single-ticket` sub-skill (for standalone tickets), **stop immediately**
+> and dispatch the correct supervisor first:
 >
 > - Reading ticket files to plan implementation
 > - Writing or editing source code, configuration, or documentation files
@@ -16,13 +17,13 @@ description: "User-facing entry point to the supervisor system. Resolve an epic 
 >
 > The `inline_work_guard.py` PreToolUse hook enforces this mechanically:
 > it blocks Edit/Write tool calls while `.build-feature.lock` exists (written
-> at the start of this command). The lock is deleted by the supervisor on
-> startup. Any Edit/Write that fires before deletion means a supervisor was
-> not dispatched — **dispatch the supervisor now**.
+> at the start of this command). The lock is deleted by the first dispatched
+> ticket-supervisor on startup. Any Edit/Write that fires before deletion means
+> a supervisor was not dispatched — **dispatch the supervisor now**.
 >
 > **Lock lifecycle:**
 > 1. This command writes `.build-feature.lock` at argument-resolution start.
-> 2. `epic-supervisor` Pre-Flight step 4 deletes it before spawning any ticket-supervisor.
+> 2. The first dispatched `ticket-supervisor` (Step B) deletes it before running any phase agents.
 > 3. `build-single-ticket` Step 1 deletes it before dispatching `ticket-supervisor`.
 > 4. On all exit paths (success, error, zero-match, multi-match), this command
 >    deletes any remaining lock file so it does not persist across invocations.
@@ -32,17 +33,17 @@ description: "User-facing entry point to the supervisor system. Resolve an epic 
 This is **the** user-facing entry point to the supervisor system shipped
 by EPIC-AgentSupervisor. It accepts one argument:
 
-- An **epic name** or **epic folder path** → dispatches `epic-supervisor`
-  to drive the epic ticket-by-ticket.
+- An **epic name** or **epic folder path** → dispatches `ticket-supervisor`
+  directly, one per ready ticket, driving each ticket through its phase agents
+  at depth 0 without going through `epic-supervisor`.
 - A **single standalone ticket file path** (a `.md` under
   `tickets/00_inbox/` or `tickets/01_todo/`, NOT inside an `EPIC-*/`
   folder) → dispatches the `build-single-ticket` sub-skill, which owns
   the inbox → todo → done lifecycle and then spawns `ticket-supervisor`
   to walk the phase agents.
 
-Everything below the supervisors — `ticket-supervisor`, phase agents,
-the brainstorm tier — is internal; the user reaches all of it through
-this single command.
+Everything below `ticket-supervisor` — phase agents, the brainstorm tier —
+is internal; the user reaches all of it through this single command.
 
 ## Argument
 
@@ -156,7 +157,7 @@ Searched:
 (Use a full path if the epic lives elsewhere, or run /create-ticket to scaffold a new epic.)
 ```
 
-…and exit non-zero. Do not spawn `epic-supervisor`.
+…and exit non-zero. Do not dispatch any ticket-supervisor.
 
 ### Multiple matches
 
@@ -174,7 +175,7 @@ Re-run with the full path, e.g.
   /build-feature tickets/01_todo/<arg>
 ```
 
-Do not spawn `epic-supervisor`.
+Do not dispatch any ticket-supervisor.
 
 ### Exactly one match
 
@@ -182,7 +183,7 @@ Convert the resolved folder to an absolute path; call it `EPIC_FOLDER`. Extract 
 
 #### Step A — Ensure the epic worktree exists (mandatory, blocking)
 
-Per the project convention (codified in user-memory `feedback_epic_worktree.md` and the `feature` skill): **all epic work must happen inside the dedicated epic worktree, NEVER on `main`.** This step is unconditional and runs before `epic-supervisor` is dispatched.
+Per the project convention (codified in user-memory `feedback_epic_worktree.md` and the `feature` skill): **all epic work must happen inside the dedicated epic worktree, NEVER on `main`.** This step is unconditional and runs before ticket-supervisor is dispatched (Step B).
 
 1. Pick the first sub-ticket file under `EPIC_FOLDER` (sorted by `NN_*.md` execution-order prefix). The `feature` skill routes on a ticket path, so we hand it a real ticket:
 
@@ -190,7 +191,7 @@ Per the project convention (codified in user-memory `feedback_epic_worktree.md` 
    FIRST_TICKET=$(ls "$EPIC_FOLDER"/[0-9][0-9]_*.md 2>/dev/null | sort | head -1)
    ```
 
-   If `FIRST_TICKET` is empty, the epic has no executable sub-tickets — abort with a clear error and exit non-zero. Do **not** spawn `epic-supervisor`.
+   If `FIRST_TICKET` is empty, the epic has no executable sub-tickets — abort with a clear error and exit non-zero. Do **not** proceed to Step B.
 
 2. {% if platform == 'claude' %}
    Dispatch the `worktree-agent` via the `Agent` tool with action `create` and the ticket path as the argument. The agent delegates to `.claude/skills/feature/SKILL.md` "Epic Workflow", which:
@@ -213,9 +214,9 @@ Per the project convention (codified in user-memory `feedback_epic_worktree.md` 
    cd "$WORKTREE_PATH"
    ```
 
-   The sub-agent (`worktree-agent`) `cd`s in its own session — that does not propagate. This explicit `cd` in the slash-command body is what propagates to `epic-supervisor`.
+   The sub-agent (`worktree-agent`) `cd`s in its own session — that does not propagate. This explicit `cd` in the slash-command body is what propagates to `ticket-supervisor` (dispatched inline in Step B).
 
-5. If the worktree-agent reports failure (creation error, dirty parent, etc.), abort `/build-feature` with its error verbatim. **Do not fall through to dispatching `epic-supervisor` on `main`** — silent main-branch execution is the exact bug this step exists to prevent.
+5. If the worktree-agent reports failure (creation error, dirty parent, etc.), abort `/build-feature` with its error verbatim. **Do not fall through to dispatching ticket-supervisors on `main`** — silent main-branch execution is the exact bug this step exists to prevent.
 
 6. **Reachability check.** After `worktree-agent` returns (step 2–3 above), verify that the epic folder is present in the new worktree:
 
@@ -237,7 +238,7 @@ Per the project convention (codified in user-memory `feedback_epic_worktree.md` 
       ```
       Apply in chronological order (oldest first) if more than one commit is listed.
    c. Re-run the reachability check. If `Master_Plan.md` is now present, proceed to Step B.
-   d. If still absent after all cherry-picks, **abort** with a clear error message — do NOT dispatch `epic-supervisor` on an empty epic:
+   d. If still absent after all cherry-picks, **abort** with a clear error message — do NOT proceed to Step B with an empty epic:
       ```
       Error: epic folder not reachable in worktree after cherry-pick recovery.
       Epic folder: <EPIC_FOLDER_REPO_RELATIVE>
@@ -247,29 +248,100 @@ Per the project convention (codified in user-memory `feedback_epic_worktree.md` 
 
    See `.claude/skills/build-feature-ops-notes/SKILL.md` §KI-1 for the root-cause explanation and background.
 
-#### Step B — Dispatch the epic-supervisor
+#### Step B — Dispatch ticket-supervisor directly (epic batching inline)
 
-{% if platform == 'claude' %}
-Dispatch the `epic-supervisor` agent via the `Agent` tool with input:
+> **Rationale:** `epic-supervisor` is NOT dispatched here. Claude Code's
+> hard sub-agent depth limit means epic-supervisor → ticket-supervisor →
+> phase agents would exceed depth 2. Instead, this command implements the
+> epic-level batching loop inline and dispatches `ticket-supervisor` at
+> depth 0 directly, keeping phase agents at depth 1 within the limit.
+> See EPIC-FlattenSupervisorChain ticket 02 for the full design rationale.
+
+**Epic batching loop** — repeat until every ticket in the epic is `done` or
+the run is blocked/halted:
+
+1. **Read `Master_Plan.md`** from `EPIC_FOLDER`. Extract the list of all
+   sub-ticket filenames in the epic (all `NN_*.md` files under `EPIC_FOLDER`,
+   excluding `Master_Plan.md`).
+
+2. **Read every sub-ticket frontmatter** to determine:
+   - `status:` (done, todo, or blocked)
+   - `depends_on:` list (filenames of prerequisite tickets, relative to epic folder)
+
+3. **Compute `ready_batch`** — the maximal set of tickets that:
+   - Have `status:` NOT equal to `done`
+   - Have every ticket in their `depends_on` list at `status: done`
+   - Have disjoint `files_touched` sets with all other tickets in the batch
+     (no physical overlap — use conservative single-ticket batching when in doubt)
+   - Are not already in a `blocked` state awaiting user resolution
+
+   If `ready_batch` is empty and there are still non-done tickets: surface every
+   blocked payload collected so far and halt with a structured summary. If all
+   tickets are `done`, proceed to the completion message below.
+
+   > **Tie-breaking:** when multiple tickets are ready simultaneously, sort by
+   > ascending `NN_` numeric prefix (lower number runs first).
+
+4. **Dispatch one `ticket-supervisor` per ticket in `ready_batch`**, in
+   parallel. Each dispatch is an `Agent` tool call with input:
+
+   ```
+   {
+     "ticket_path": "<absolute path to the sub-ticket .md file>",
+     "context": {
+       "epic_path": "<EPIC_FOLDER>",
+       "worktree_path": "<WORKTREE_PATH>",
+       "epic_branch": "<EPIC_NAME>"
+     }
+   }
+   ```
+
+   > **[DISPATCH PROHIBITION]** NEVER describe an `Agent` tool-call and then
+   > stop. If the next intended action is an `Agent` tool call, invoke the
+   > tool immediately. Describing the call and stopping leaves on-disk state
+   > unchanged and appears as a successful run to the user.
+
+   > **[DISPATCH VERIFICATION]** After issuing all N `Agent` tool calls,
+   > confirm N result blocks appear in context before proceeding to step 5.
+   > If fewer results appear than calls issued, halt and report the missing
+   > dispatches to the user.
+
+5. **Wait for the entire batch to complete** (barrier). Each `ticket-supervisor`
+   returns one of:
+   - `{ "status": "done" }` — ticket fully signed off
+   - `{ "status": "blocked", "payload": { ... } }` — user input required
+   - `{ "status": "failed", "payload": { ... } }` — halt-class failure
+
+6. **Route on batch results:**
+   - If any returned `blocked` with a structural blocker (affects multiple
+     remaining tickets or is a dependency-cycle): halt, surface all pending
+     payloads to the user.
+   - If any returned `blocked` but the blocker is local to that ticket:
+     record the blocked payload, KEEP the loop running, GOTO step 1
+     (the blocked ticket will be excluded from `ready_batch` on next pass).
+   - If any returned `failed`: halt immediately, surface the failure payload.
+   - If all tickets are `done`: exit loop and proceed to the completion message.
+   - Otherwise: GOTO step 1.
+
+**Completion message** (print when all tickets are `done`):
 
 ```
-{
-  "epic_path":     "<EPIC_FOLDER>",
-  "worktree_path": "<WORKTREE_PATH>",
-  "epic_branch":   "<EPIC_NAME>"
-}
+Epic <EPIC_NAME> complete.
+All sub-tickets signed off. Branch: <EPIC_NAME>.
+Next step: run /finalize-feature <EPIC_NAME> to open the PR and close the worktree.
 ```
-{% elif platform == 'antigravity' %}
-Run the epic-supervisor script via the terminal tool:
 
-```bash
-python .agents/agents/epic-supervisor/scripts/run.py --epic_path="<EPIC_FOLDER>" --worktree_path="<WORKTREE_PATH>" --epic_branch="<EPIC_NAME>"
+**Blocked summary format** (print when halting on blockers):
+
 ```
-{% endif %}
+Epic <EPIC_NAME> halted — <N> ticket(s) blocked.
 
-`epic-supervisor` performs its own worktree preflight check (see `.claude/agents/epic-supervisor.md` §Pre-Flight Reads step 4) and will halt without spawning any `ticket-supervisor` if it is not inside `worktree_path` on branch `epic_branch`. That is the safety net behind Step A.
-
-Return `epic-supervisor`'s output verbatim. Do not summarise, do not add a preamble, do not modify formatting — the agent's output is already user-facing per its design (see `docs/agents/coding/epic-supervisor.md`).
+<For each blocked ticket:>
+  Ticket: <ticket_path>
+  Phase:  <phase>
+  Blocker: <blocker_summary>
+  Remediation: <suggested_remediation>
+```
 
 ## Single Ticket Workflow
 
@@ -335,16 +407,15 @@ non-zero with its own error message — surface it verbatim too.
 
 - `.claude/skills/build-single-ticket/SKILL.md` — the sub-skill
   dispatched for standalone-ticket arguments.
-- `.claude/agents/epic-supervisor.md` — the agent dispatched by this
-  command for epic arguments.
-- `.claude/agents/ticket-supervisor.md` — the inner driver the
-  epic-supervisor (or `build-single-ticket`) dispatches per ticket.
+- `.claude/agents/ticket-supervisor.md` — the driver dispatched per
+  ready ticket for both epic and standalone paths. For epics, this
+  command dispatches it directly at depth 0; for standalone tickets,
+  `build-single-ticket` dispatches it.
 - `.claude/agents/brainstorm-lead.md` + `brainstorm-worker.md` — the
   design-escalation tier reached from inside `ticket-supervisor` via
   `building-epics` §3.3.
 - `.claude/skills/building-epics/SKILL.md` — operational runbook for
-  the entire supervisor stack.
-- `docs/agents/coding/epic-supervisor.md` — reference doc for the
-  outer driver.
+  the supervisor stack. §1.1 defines the dependency-graph batching
+  algorithm implemented inline in Step B of this command.
 - `docs/agents/coding/brainstorm-lead.md` — reference doc for the
   brainstorm tier.

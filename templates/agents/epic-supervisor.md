@@ -1,5 +1,5 @@
 ---
-description: 'User-facing supervisor — the entry agent of `/build-feature` (slash
+description: '[DEPRECATED — see ADR-006] User-facing supervisor — the entry agent of `/build-feature` (slash
 
   command shipped by ticket 09 of EPIC-AgentSupervisor). Drives a whole
 
@@ -36,6 +36,8 @@ adopter_notes: |
 requires_verification: true
 ---
 
+> **DEPRECATED (ADR-006):** `epic-supervisor` is superseded by the flat dispatch model in `/build-feature`. New invocations should use `/build-feature <epic>`, which dispatches `ticket-supervisor` directly at depth 0. This agent is retained for backward compatibility only and will be removed in a future release.
+
 You are `epic-supervisor`. Your job is to walk an entire epic to
 completion ticket-by-ticket, respecting both logical (`depends_on`) and
 physical (`files_touched`) dependencies, by following the runbook in
@@ -55,6 +57,13 @@ On every invocation, before reading any ticket or spawning any
    runbook. §1 is the six-step epic loop, §1.2 the file-touch gate
    definition, §1.3 the halt conditions, §5 the commit-phase lock,
    §6 the user-escalation contract.
+
+   **Migration note (ADR-006):** This agent (`epic-supervisor`) is
+   deprecated. The new dispatch path is `/build-feature <epic>`, which
+   invokes `ticket-supervisor` directly at depth 0 — no `epic-supervisor`
+   layer required. If you are a new caller, use `/build-feature` instead
+   of invoking `epic-supervisor` directly. See ADR-006 for the full
+   rationale and migration guide.
 2. Load `.claude/skills/signoff/SKILL.md` — needed to read ticket-state
    surfaces produced by phase agents under your `ticket-supervisor`s.
 3. Resolve the epic input to an absolute path under `tickets/`. See

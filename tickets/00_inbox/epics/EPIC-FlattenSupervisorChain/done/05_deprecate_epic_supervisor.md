@@ -1,6 +1,6 @@
 ---
 title: "Mark epic-supervisor template as deprecated"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-29
@@ -14,13 +14,13 @@ files_touched:
 agents:
   architect-review: not_needed
   test-writer: not_needed
-  python-coder: needed
+  python-coder: signed_off
   sql-coder: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
-  commit: needed
-  pull-request: needed
+  pr-reviewer: signed_off
+  commit: signed_off
+  pull-request: signed_off
 roadmap_phase: phase_1
 advances_current_outcome: false
 ---
@@ -73,27 +73,43 @@ Then a deprecation warning is emitted but execution still proceeds (no hard brea
 
 ## Sign-offs
 
-- [ ] python-coder
-- [ ] pr-reviewer
-- [ ] commit
-- [ ] pull-request
+- [x] python-coder — 2026-05-29 12:00
+- [x] pr-reviewer — 2026-05-29 12:05
+- [x] commit — 2026-05-29 12:10
+- [x] pull-request — 2026-05-29 12:15
 
 ## Comments
 
+### 2026-05-29 12:00 — python-coder (status: ok)
+feedback-id: fb_2026-05-29_a0816fa3
+Prepended `[DEPRECATED — see ADR-006]` to the `description:` frontmatter field, added top-of-body deprecation banner after the frontmatter closing `---`, and added a migration note under Pre-Flight Reads step 1. No functional logic was changed. Ran build (via `scripts/build.py --target-dir <main-repo>`) and confirmed `.claude/agents/epic-supervisor.md` carries all three additions.
+
+### 2026-05-29 12:05 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-29_a692e79a
+All three deprecation additions are correct and accurate: frontmatter prefix `[DEPRECATED — see ADR-006]`, top-of-body blockquote banner, and migration note under Pre-Flight Reads step 1 referencing ADR-006. No functional logic changed. Built `.claude/agents/epic-supervisor.md` confirmed to contain all additions. Acceptance criteria fully satisfied.
+
+### 2026-05-29 12:10 — commit (status: ok)
+feedback-id: fb_2026-05-29_536d9d51
+Committed `templates/agents/epic-supervisor.md` and ticket file to worktree-EPIC-FlattenSupervisorChain. SHA: 0a13174. 2 files, 28 insertions, 11 deletions. All pre-commit hooks passed.
+
+### 2026-05-29 12:15 — pull-request (status: ok)
+feedback-id: fb_2026-05-29_efda69f5
+Branch worktree-EPIC-FlattenSupervisorChain pushed to origin (93722ad..0a13174). Existing epic PR #23 updated with ticket-05 commit. One PR per epic convention; no new PR created.
+
 ## Implementation Tasks
 
-- [ ] Read `templates/agents/epic-supervisor.md` in full
-- [ ] Prepend `[DEPRECATED — see ADR-006]` to the `description:` frontmatter field
-- [ ] Add a top-of-body deprecation banner after the frontmatter:
+- [x] Read `templates/agents/epic-supervisor.md` in full
+- [x] Prepend `[DEPRECATED — see ADR-006]` to the `description:` frontmatter field
+- [x] Add a top-of-body deprecation banner after the frontmatter:
   ```
   > **DEPRECATED (ADR-006):** `epic-supervisor` is superseded by the flat dispatch
   > model in `/build-feature`. New invocations should use `/build-feature <epic>`,
   > which dispatches `ticket-supervisor` directly at depth 0. This agent is retained
   > for backward compatibility only and will be removed in a future release.
   ```
-- [ ] Add a migration note under "Pre-Flight Reads" step 1 referencing ADR-006 and the new path
-- [ ] Do NOT change any functional logic — the agent must still work for legacy callers
-- [ ] Run `./build-self.sh` and verify the built `.claude/agents/epic-supervisor.md` includes the deprecation banner
+- [x] Add a migration note under "Pre-Flight Reads" step 1 referencing ADR-006 and the new path
+- [x] Do NOT change any functional logic — the agent must still work for legacy callers
+- [x] Run `./build-self.sh` and verify the built `.claude/agents/epic-supervisor.md` includes the deprecation banner
 
 ## Risk & Safety
 
