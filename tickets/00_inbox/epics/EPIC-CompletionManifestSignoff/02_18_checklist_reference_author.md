@@ -10,8 +10,8 @@ priority: high
 requires_diagram: false
 requires_adr: false
 agents:
-  documentation-expert: needed
-  pr-reviewer: needed
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -44,15 +44,31 @@ And it contains exactly: reference_doc_written, schema_tables_complete, genre_gu
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] pr-reviewer
+- [x] documentation-expert — 2026-05-29 10:00
+- [x] pr-reviewer — 2026-05-29 10:05
 - [ ] commit
 - [ ] pull-request
 
 ## Implementation Tasks
 
 ### documentation-expert
-- [ ] Edit `templates/agents/reference-author.md` frontmatter: add `default_artifact_checklist: [reference_doc_written, schema_tables_complete, genre_guard_passed]`
-- [ ] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
+- [x] Edit `templates/agents/reference-author.md` frontmatter: add `default_artifact_checklist: [reference_doc_written, schema_tables_complete, genre_guard_passed]`
+- [x] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
 
 ## Comments
+
+### 2026-05-29 10:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-29_1ed8779d
+completion_manifest:
+  reference_doc_written: true
+  schema_tables_complete: true
+  genre_guard_passed: true
+Added `default_artifact_checklist` to `templates/agents/reference-author.md` frontmatter with items `reference_doc_written`, `schema_tables_complete`, `genre_guard_passed`. Added `## Completion Manifest` instruction paragraph referencing signoff §2b.
+
+### 2026-05-29 10:05 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-29_86866d68
+completion_manifest:
+  checklist_items_correct: true
+  acceptance_criteria_met: true
+  instruction_paragraph_references_signoff_s2b: true
+Review passed. `default_artifact_checklist` contains exactly the three required items in correct order; the `## Completion Manifest` paragraph correctly references signoff §2b and includes the bare-false rule warning.

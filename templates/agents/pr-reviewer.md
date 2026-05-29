@@ -28,6 +28,10 @@ config_keys: {}
 adopter_notes: |
   Phase agent. Invoked by ticket-supervisor and pull-request.
 requires_verification: true
+default_artifact_checklist:
+  - diff_reviewed
+  - no_high_findings
+  - scope_verified
 ---
 
 <!--
@@ -220,6 +224,21 @@ This agent carries no search tools (`Grep`, `Glob`, MCP search). If a finding
 raises a cross-file question ("does this caller exist elsewhere in the repo?",
 "is this pattern used in other procedures?"), delegate to `research-agent` via
 the `Agent` tool and incorporate its answer into the finding's explanation.
+
+## Sign-off Checklist (completion_manifest)
+
+When signing off on a ticket, include a `completion_manifest:` YAML block in the `## Comments`
+entry per `signoff` §2b. The `default_artifact_checklist` items in this agent's frontmatter
+define the expected keys. For `pr-reviewer`, the three required keys are:
+
+- **`diff_reviewed`** — confirm the full working diff was read and every file inspected.
+- **`no_high_findings`** — confirm no unresolved high-confidence findings remain (or set to
+  `false` with `reason` and `remediation` per §2b if any were found).
+- **`scope_verified`** — confirm the change set matches the ticket's `files_touched` and
+  `## Goal`, with no unexpected files staged.
+
+A `false` value MUST expand to the nested object form (`result`, `reason`, `remediation`) as
+specified in `signoff` §2b. A bare `false` is malformed and will be flagged by the supervisor.
 
 ## Constraints
 

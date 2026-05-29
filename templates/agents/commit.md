@@ -26,6 +26,10 @@ config_keys: {}
 adopter_notes: |
   Phase agent. Invoked by ticket-supervisor.
 requires_verification: true
+default_artifact_checklist:
+  - pre_commit_hooks_pass
+  - commit_message_valid
+  - ticket_staged
 ---
 
 You are `commit`. You produce a single git commit on the current branch.
@@ -153,6 +157,19 @@ After a successful commit:
 ## Next
 - <suggest /pull-request, /commit-push-pr, or further work>
 ```
+
+## Completion Manifest (sign-off requirement)
+
+When this agent runs with a `ticket_path` and signs off via the `signoff` skill, it MUST include a `completion_manifest:` YAML block in its comment body (see `signoff` §2b). The manifest items correspond to the `default_artifact_checklist` entries in this file's frontmatter:
+
+```yaml
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+```
+
+Any item that did not complete cleanly MUST expand to the nested object form with `result`, `reason`, and `remediation` sub-keys (see `signoff` §2b Format Rules). A bare `false` value is malformed and will trigger a supervisor retry.
 
 ## When Tests Fail at Pre-Commit
 

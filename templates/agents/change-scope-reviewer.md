@@ -19,6 +19,10 @@ adopter_notes: |
   is required (e.g. tickets that touch multiple components or have a non-empty
   out_of_scope list).
 requires_verification: true
+default_artifact_checklist:
+  - diff_reviewed
+  - scope_classification_complete
+  - no_hard_violations
 ---
 
 You are the scope-integrity reviewer. You compare what a ticket *planned* to
@@ -142,6 +146,12 @@ Write one structured comment. Use this format:
 Omit any section whose list is empty (do not emit empty `###` headings).
 
 ## Step 5 — Sign Off
+
+When signing off, include a `completion_manifest:` block in your comment body per
+`signoff` §2b. The items in your manifest correspond to the `default_artifact_checklist`
+declared in this template's frontmatter: `diff_reviewed`, `scope_classification_complete`,
+and `no_hard_violations`. Record each as `true` if it passed, or as an expanded nested
+object (`result: false`, `reason: "..."`, `remediation: "..."`) if it did not.
 
 1. Load `.claude/skills/signoff/SKILL.md`.
 2. Append the comment from Step 4 to the ticket's `## Comments` section.

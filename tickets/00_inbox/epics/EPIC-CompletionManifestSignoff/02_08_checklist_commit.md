@@ -10,8 +10,8 @@ priority: high
 requires_diagram: false
 requires_adr: false
 agents:
-  documentation-expert: needed
-  pr-reviewer: needed
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -44,15 +44,30 @@ And it contains exactly: pre_commit_hooks_pass, commit_message_valid, ticket_sta
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] pr-reviewer
+- [x] documentation-expert — 2026-05-29 12:00
+- [x] pr-reviewer — 2026-05-29 12:05
 - [ ] commit
 - [ ] pull-request
 
 ## Implementation Tasks
 
 ### documentation-expert
-- [ ] Edit `templates/agents/commit.md` frontmatter: add `default_artifact_checklist: [pre_commit_hooks_pass, commit_message_valid, ticket_staged]`
-- [ ] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
+- [x] Edit `templates/agents/commit.md` frontmatter: add `default_artifact_checklist: [pre_commit_hooks_pass, commit_message_valid, ticket_staged]`
+- [x] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
 
 ## Comments
+
+### 2026-05-29 12:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-29_611f8d36
+completion_manifest:
+  frontmatter_checklist_added: true
+  instruction_paragraph_added: true
+Added `default_artifact_checklist` YAML block to `templates/agents/commit.md` frontmatter with items pre_commit_hooks_pass, commit_message_valid, ticket_staged. Added a "Completion Manifest" section in the agent body referencing signoff §2b and the nested-object expansion rule for false items.
+
+### 2026-05-29 12:05 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-29_2292c744
+completion_manifest:
+  acceptance_criteria_met: true
+  frontmatter_checklist_correct: true
+  instruction_paragraph_references_signoff_2b: true
+All acceptance criteria met: `default_artifact_checklist` present in frontmatter with exactly the three required items (pre_commit_hooks_pass, commit_message_valid, ticket_staged). Instruction paragraph in body correctly references signoff §2b and explains the nested-object expansion rule for false values. No blockers.

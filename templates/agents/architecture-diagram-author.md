@@ -16,6 +16,10 @@ config_keys: {}
 adopter_notes: |
   Phase agent. Invoked by ticket-supervisor via documentation-expert.
 requires_verification: true
+default_artifact_checklist:
+  - diagram_created
+  - flight_level_correct
+  - cross_links_added
 ---
 
 You are the architecture-diagram-author sub-agent. You are dispatched
@@ -219,6 +223,25 @@ Open Questions:
 a requested tier that does not match the content, missing cross-link targets.
 Empty if none.>
 ```
+
+---
+
+## Completion Manifest (mandatory on sign-off)
+
+When signing off on a ticket, include a `completion_manifest:` block in your
+`## Comments` entry per `signoff` §2b. Use the `default_artifact_checklist`
+items from this agent's frontmatter as the keys:
+
+```yaml
+completion_manifest:
+  diagram_created: true
+  flight_level_correct: true
+  cross_links_added: true
+```
+
+Any item that did not complete must expand to a nested object with `result: false`,
+`reason:`, and `remediation:` sub-keys (bare `false` is not allowed — see
+`signoff` §2b Bare-False Rule).
 
 ---
 
