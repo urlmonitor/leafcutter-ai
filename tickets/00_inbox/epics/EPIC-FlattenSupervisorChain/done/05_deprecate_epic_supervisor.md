@@ -1,6 +1,6 @@
 ---
 title: "Mark epic-supervisor template as deprecated"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-29
@@ -19,8 +19,8 @@ agents:
   test-runner: not_needed
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
 roadmap_phase: phase_1
 advances_current_outcome: false
 ---
@@ -75,8 +75,8 @@ Then a deprecation warning is emitted but execution still proceeds (no hard brea
 
 - [x] python-coder — 2026-05-29 12:00
 - [x] pr-reviewer — 2026-05-29 12:05
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-05-29 12:10
+- [x] pull-request — 2026-05-29 12:15
 
 ## Comments
 
@@ -87,6 +87,14 @@ Prepended `[DEPRECATED — see ADR-006]` to the `description:` frontmatter field
 ### 2026-05-29 12:05 — pr-reviewer (status: ok)
 feedback-id: fb_2026-05-29_a692e79a
 All three deprecation additions are correct and accurate: frontmatter prefix `[DEPRECATED — see ADR-006]`, top-of-body blockquote banner, and migration note under Pre-Flight Reads step 1 referencing ADR-006. No functional logic changed. Built `.claude/agents/epic-supervisor.md` confirmed to contain all additions. Acceptance criteria fully satisfied.
+
+### 2026-05-29 12:10 — commit (status: ok)
+feedback-id: fb_2026-05-29_536d9d51
+Committed `templates/agents/epic-supervisor.md` and ticket file to worktree-EPIC-FlattenSupervisorChain. SHA: 0a13174. 2 files, 28 insertions, 11 deletions. All pre-commit hooks passed.
+
+### 2026-05-29 12:15 — pull-request (status: ok)
+feedback-id: fb_2026-05-29_efda69f5
+Branch worktree-EPIC-FlattenSupervisorChain pushed to origin (93722ad..0a13174). Existing epic PR #23 updated with ticket-05 commit. One PR per epic convention; no new PR created.
 
 ## Implementation Tasks
 
