@@ -10,8 +10,8 @@ priority: high
 requires_diagram: false
 requires_adr: false
 agents:
-  documentation-expert: needed
-  pr-reviewer: needed
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -44,15 +44,28 @@ And it contains exactly: doc_written, cross_links_added, diataxis_genre_correct
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] pr-reviewer
+- [x] documentation-expert — 2026-05-29 00:00
+- [x] pr-reviewer — 2026-05-29 00:01
 - [ ] commit
 - [ ] pull-request
 
 ## Implementation Tasks
 
 ### documentation-expert
-- [ ] Edit `templates/agents/documentation-expert.md` frontmatter: add `default_artifact_checklist: [doc_written, cross_links_added, diataxis_genre_correct]`
-- [ ] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
+- [x] Edit `templates/agents/documentation-expert.md` frontmatter: add `default_artifact_checklist: [doc_written, cross_links_added, diataxis_genre_correct]`
+- [x] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
 
 ## Comments
+
+### 2026-05-29 00:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-29_e26f9fb8
+Added `default_artifact_checklist` to frontmatter of `templates/agents/documentation-expert.md` with items: doc_written, cross_links_added, diataxis_genre_correct. Added `## Completion Manifest (sign-off §2b)` instruction section to agent body explaining how to populate the completion_manifest block on sign-off.
+
+completion_manifest:
+  doc_written: true
+  cross_links_added: true
+  diataxis_genre_correct: true
+
+### 2026-05-29 00:01 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-29_564a2aba
+Review passed. Frontmatter addition is syntactically correct YAML; checklist contains exactly the three items specified in acceptance criteria. Instruction paragraph in body is clear, provides a concrete example, and references signoff §2b. Minor blank-line formatting fix applied. No blockers.
