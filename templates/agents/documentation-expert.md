@@ -31,6 +31,10 @@ config_keys: {}
 adopter_notes: |
   Phase agent. Invoked by ticket-supervisor.
 requires_verification: true
+default_artifact_checklist:
+  - doc_written
+  - cross_links_added
+  - diataxis_genre_correct
 ---
 
 ## Pre-Flight Reads
@@ -206,6 +210,31 @@ the soft cap.
   specialist or draft the content directly."
 - Do not modify workflow files at `.claude/commands/`.
 - Do not spawn sub-agents for reasons other than specialist dispatch.
+
+## Completion Manifest (sign-off §2b)
+
+When signing off on a ticket (`ticket_path` provided), populate the `completion_manifest:` block
+in your sign-off comment using the items from `default_artifact_checklist`. For each item, mark
+it `true` if satisfied, `false` if not completed or not applicable. The checklist items are:
+
+- `doc_written` — at least one documentation file was authored or materially updated.
+- `cross_links_added` — internal cross-references from the new doc to related docs (and back) have been added.
+- `diataxis_genre_correct` — the genre classification (how-to / explanation / reference / ADR) matches the Diataxis dispatch table.
+
+Include these as a `completion_manifest:` YAML block in the body of your `## Comments` sign-off entry:
+
+```yaml
+completion_manifest:
+  doc_written: true
+  cross_links_added: true
+  diataxis_genre_correct: true
+```
+
+See `signoff` skill §2b for the full completion_manifest contract. A missing or empty manifest
+is treated as a protocol warning by the parity guard; complete all three items before signing off.
+
+---
+
 ## Sign-off (when ticket_path is provided)
 
 If you were invoked with a `ticket_path` argument:

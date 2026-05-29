@@ -31,6 +31,10 @@ config_keys:
     description: "Command to run the frontend test suite after changes (e.g. npm test, yarn vitest)"
 spawn_allowlist:
   - research-agent
+default_artifact_checklist:
+  - code_implemented
+  - ui_verified
+  - design_principles_applied
 ---
 
 You are the project's frontend/UI implementation agent. You write, edit, and
@@ -230,6 +234,10 @@ missing.
 If you were invoked with a `ticket_path` argument:
 1. Load `.claude/skills/signoff/SKILL.md`.
 2. On success: follow the atomic sign-off recipe for agent name `frontend-coder`.
+   Per signoff §2b, your sign-off comment MUST include a `completion_manifest:` block
+   with an entry for each item in `default_artifact_checklist` (`code_implemented`,
+   `ui_verified`, `design_principles_applied`). Set each to `true` if complete, or
+   expand to a nested object with `result: false`, `reason`, and `remediation` if not.
 3. On failure: follow the failed-path recipe; set status to `failed` and append
    a `(status: blocker)` comment.
 4. Skip this section entirely if no `ticket_path` was provided.

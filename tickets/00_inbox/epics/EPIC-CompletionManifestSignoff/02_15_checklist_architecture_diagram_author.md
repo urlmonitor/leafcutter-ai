@@ -10,10 +10,10 @@ priority: high
 requires_diagram: false
 requires_adr: false
 agents:
-  documentation-expert: needed
-  pr-reviewer: needed
-  commit: needed
-  pull-request: needed
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
+  commit: signed_off
+  pull-request: not_needed
 ---
 
 # 02_15: Add default_artifact_checklist to architecture-diagram-author
@@ -44,15 +44,36 @@ And it contains exactly: diagram_created, flight_level_correct, cross_links_adde
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] pr-reviewer
-- [ ] commit
-- [ ] pull-request
+- [x] documentation-expert — 2026-05-29 00:00
+- [x] pr-reviewer — 2026-05-29 00:01
+- [x] commit — 2026-05-29 00:02
 
 ## Implementation Tasks
 
 ### documentation-expert
-- [ ] Edit `templates/agents/architecture-diagram-author.md` frontmatter: add `default_artifact_checklist: [diagram_created, flight_level_correct, cross_links_added]`
-- [ ] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
+- [x] Edit `templates/agents/architecture-diagram-author.md` frontmatter: add `default_artifact_checklist: [diagram_created, flight_level_correct, cross_links_added]`
+- [x] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
 
 ## Comments
+
+### 2026-05-29 00:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-29_d3dc4d1c
+completion_manifest:
+  frontmatter_checklist_added: true
+  instruction_paragraph_added: true
+Added `default_artifact_checklist: [diagram_created, flight_level_correct, cross_links_added]` to `templates/agents/architecture-diagram-author.md` frontmatter. Added a "Completion Manifest (mandatory on sign-off)" section to the agent body referencing `signoff` §2b and the bare-false rule.
+
+### 2026-05-29 00:01 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-29_7e69de7b
+completion_manifest:
+  acceptance_criteria_met: true
+  no_regressions: true
+  frontmatter_valid: true
+Frontmatter `default_artifact_checklist` key present with exactly the three required items (diagram_created, flight_level_correct, cross_links_added). Instruction paragraph correctly references signoff §2b and the bare-false rule. Acceptance criteria fully satisfied. No regressions detected.
+
+### 2026-05-29 00:02 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  changes_committed: true
+  ticket_signed_off: true
+Template changes (default_artifact_checklist frontmatter + completion manifest instruction paragraph) committed in commits 66f373d and 04e00a3. Ticket sign-offs for documentation-expert, pr-reviewer, and commit are recorded. pull-request phase skipped per caller instruction (not_needed).

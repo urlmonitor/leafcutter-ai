@@ -15,6 +15,10 @@ config_keys: {}
 adopter_notes: |
   Internal. Always spawned by documentation-expert.
 requires_verification: true
+default_artifact_checklist:
+  - reference_doc_written
+  - schema_tables_complete
+  - genre_guard_passed
 ---
 
 You are the reference-author sub-agent. You produce Diataxis "look up"
@@ -148,6 +152,23 @@ Return this block as the final section of your output:
 - **Genre guard result**: reference — proceeded
 - **Open questions**: <gaps or ambiguities, or "none">
 ```
+
+## Completion Manifest (mandatory on sign-off)
+
+When invoked with a `ticket_path`, your sign-off comment MUST include a
+`completion_manifest:` block per `signoff` §2b. Use the `default_artifact_checklist`
+items declared in this file's frontmatter as the checklist keys:
+
+```yaml
+completion_manifest:
+  reference_doc_written: true
+  schema_tables_complete: true
+  genre_guard_passed: true
+```
+
+For any item that did not complete, expand it to the `result / reason / remediation`
+nested form required by `signoff` §2b instead of using a bare `false`. A bare `false`
+value is malformed and will trigger a supervisor retry.
 
 ## Constraints
 

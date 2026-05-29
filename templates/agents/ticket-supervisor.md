@@ -221,15 +221,7 @@ ticket 04) is the **blocking layer**. This warn is non-destructive and never hal
    `{ticket_path: <absolute path>}`. The agent invokes `signoff` as its
    final action.
 5. Re-read the ticket. Locate the LAST `## Comments` heading per the
-   parser-strict regex in `signoff` §5.4. Route on the status tag using
-   the table in `building-epics` §2.2:
-   - `ok` → loop to step 1.
-   - `handoff` → flip the named sibling to `needed`, override natural
-     order, loop to step 1.
-   - `blocker` → run failure adjudication (`building-epics` §3); see
-     "Failure adjudication" below.
-   - `question` → halt, build the §6 payload, return
-     `{status: "blocked", payload: ...}` to the caller.
+   parser-strict regex in `signoff` §5.4. Parse the status tag.
 
 After every spawned agent returns, run the disk-diff guard **before**
 routing on the comment status:
@@ -257,6 +249,119 @@ changed on disk. Do NOT spawn the next phase agent. Return:
 
 Then verify ticket parity per `signoff` §5. If parity is violated, halt
 immediately with a `failed` payload — do NOT attempt to repair the ticket.
+
+### §2.3 Completion Manifest Validation
+
+After the disk-diff guard and parity check pass, and **before** routing on
+the status tag, parse the `completion_manifest:` block from the latest comment
+body and validate it.
+
+**Step 1 — Resolve the expected checklist**
+
+Combine two sources into a union (neither list cancels the other):
+
+1. The agent's `default_artifact_checklist` from its template frontmatter
+   (e.g. `templates/agents/<agent-name>.md`).
+2. Any `artifact_checklist:` key in the ticket's own frontmatter (ticket-level
+   overrides and additions).
+
+The union of both lists is the **expected checklist** for this invocation. If
+neither source provides a checklist, the expected checklist is empty and
+manifest validation is a no-op.
+
+**Step 2 — Parse the manifest**
+
+Locate the `completion_manifest:` YAML block in the latest comment body (per
+`signoff` §2b). Three cases:
+
+**Case A — Manifest absent (legacy graceful skip)**
+
+If no `completion_manifest:` block is present in the comment, emit a warning
+and proceed normally. Do NOT block:
+
+```
+[ticket-supervisor] WARNING: agent '<agent_name>' sign-off comment has no
+completion_manifest: block. Legacy ticket or pre-epoch agent — skipping
+manifest validation. Expected checklist: <expected_items or "(none)">.
+```
+
+Continue to step 6 (route on status tag) unchanged.
+
+**Case B — Manifest malformed (bare `false` without nested object)**
+
+A manifest item written as `<key>: false` (bare boolean, not a nested object
+with `result`, `reason`, `remediation`) is malformed per `signoff` §2b
+Bare-False Rule.
+
+Action: retry **once**, re-invoking the same agent with a request to expand
+the bare `false` into a nested object:
+
+```
+completion_manifest item '<key>' is a bare false — expand it to:
+  <key>:
+    result: false
+    reason: "<one sentence explaining what failed>"
+    remediation: "<one sentence with the suggested next step>"
+```
+
+This retry counts against the §3.1 trivial-mechanical cap (1 per phase per
+ticket). If the retry still produces a bare `false`, fall through to §3.4
+(failure adjudication → halt).
+
+**Case C — Manifest present and well-formed**
+
+Cross-reference each item in the expected checklist:
+
+- If the item is `true` (or a nested object with `result: true`): passes.
+- If the item is a nested object with `result: false`: fails — collect the
+  item name, `reason`, and `remediation` for the blocker payload.
+- If an expected item is absent from the manifest: treat as implicitly `true`
+  (agent did not explicitly flag a failure).
+
+**Step 3 — Status-tag downgrade on ok+false parity violation**
+
+If the parsed status tag is `ok` **and** one or more checklist items have
+`result: false`:
+
+- This is an **ok+false parity violation**: the agent declared success while
+  leaving deliverables false.
+- Downgrade the effective status to `blocker`.
+- Surface each failing item's `reason` and `remediation` to failure
+  adjudication. Do NOT modify the comment heading on disk — the downgrade is
+  in-memory only; the supervisor routes on the downgraded status.
+
+Blocker payload for ok+false parity violation:
+
+```yaml
+status: blocked
+payload:
+  ticket_path: "<absolute path>"
+  phase: "<agent_name>"
+  blocker_summary: "ok+false parity violation: agent declared ok but manifest item '<key>' has result: false."
+  suggested_remediation: "<remediation text from the false manifest item>"
+  manifest_violations:
+    - key: "<item_name>"
+      reason: "<reason text from manifest>"
+      remediation: "<remediation text from manifest>"
+```
+
+The `manifest_violations` list is optional in the output schema but SHOULD be
+populated when multiple items fail, so the user and downstream adjudication can
+see the full scope.
+
+**Step 4 — Route on the (possibly downgraded) status**
+
+With the effective status determined (either the original parsed tag, or
+`blocker` if downgraded by §2.3 Step 3), route using the table in §2.2:
+
+6. Route on the status tag using the table in `building-epics` §2.2:
+   - `ok` → loop to step 1.
+   - `handoff` → flip the named sibling to `needed`, override natural
+     order, loop to step 1.
+   - `blocker` → run failure adjudication (`building-epics` §3); see
+     "Failure adjudication" below.
+   - `question` → halt, build the §6 payload, return
+     `{status: "blocked", payload: ...}` to the caller.
 
 ## Failure adjudication
 

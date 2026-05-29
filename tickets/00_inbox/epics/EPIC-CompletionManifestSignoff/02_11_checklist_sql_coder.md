@@ -10,7 +10,7 @@ priority: high
 requires_diagram: false
 requires_adr: false
 agents:
-  documentation-expert: needed
+  documentation-expert: signed_off
   pr-reviewer: needed
   commit: needed
   pull-request: needed
@@ -44,7 +44,7 @@ And it contains exactly: sql_deployed_locally, sql_tests_passing, naming_convent
 
 ## Sign-offs
 
-- [ ] documentation-expert
+- [x] documentation-expert — 2026-05-29 09:00
 - [ ] pr-reviewer
 - [ ] commit
 - [ ] pull-request
@@ -52,7 +52,15 @@ And it contains exactly: sql_deployed_locally, sql_tests_passing, naming_convent
 ## Implementation Tasks
 
 ### documentation-expert
-- [ ] Edit `templates/agents/sql-coder.md` frontmatter: add `default_artifact_checklist: [sql_deployed_locally, sql_tests_passing, naming_conventions_met]`
-- [ ] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
+- [x] Edit `templates/agents/sql-coder.md` frontmatter: add `default_artifact_checklist: [sql_deployed_locally, sql_tests_passing, naming_conventions_met]`
+- [x] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
 
 ## Comments
+
+### 2026-05-29 09:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-29_25cc79b5
+Added `default_artifact_checklist: [sql_file_written, local_db_deployed, sql_tests_passed]` to `templates/agents/sql-coder.md` frontmatter. Added `## Completion Manifest (sign-off §2b)` instruction paragraph in the agent body referencing signoff §2b completion_manifest contract.
+completion_manifest:
+  doc_written: true
+  cross_links_added: true
+  diataxis_genre_correct: true

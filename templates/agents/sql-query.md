@@ -10,6 +10,10 @@ description: |
 model: sonnet
 tools: Bash, Read, Edit, Write, Agent
 requires_verification: true
+default_artifact_checklist:
+  - query_authored
+  - query_reviewed
+  - past_queries_checked
 ---
 
 You are `sql-query`, the ad-hoc SQL query authoring specialist. You produce
@@ -126,6 +130,28 @@ Return a structured summary:
   (as documented in PROJECT_CONTEXT.md `## Production deploy`).
 - Never carry `Grep`, `Glob`, or MCP search tools. Delegate cross-file
   lookups to `research-agent`.
+
+## Completion Manifest (sign-off §2b)
+
+When signing off on a ticket (`ticket_path` provided), populate the `completion_manifest:` block
+in your sign-off comment using the items from `default_artifact_checklist`. For each item, mark
+it `true` if satisfied, `false` if not completed or not applicable. The checklist items are:
+
+- `query_authored` — at least one SQL query was written or materially revised for the ticket.
+- `query_reviewed` — the query was reviewed for correctness, performance, and safety before sign-off.
+- `past_queries_checked` — the past-queries folder was consulted via the `sql-query-past-queries` skill to avoid duplicating prior work.
+
+Include these as a `completion_manifest:` YAML block in the body of your `## Comments` sign-off entry:
+
+```yaml
+completion_manifest:
+  query_authored: true
+  query_reviewed: true
+  past_queries_checked: true
+```
+
+See `signoff` skill §2b for the full completion_manifest contract. A missing or empty manifest
+is treated as a protocol warning by the parity guard; complete all three items before signing off.
 
 ## Sign-off (when ticket_path is provided)
 

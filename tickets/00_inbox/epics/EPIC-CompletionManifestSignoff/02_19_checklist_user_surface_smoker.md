@@ -10,7 +10,7 @@ priority: high
 requires_diagram: false
 requires_adr: false
 agents:
-  documentation-expert: needed
+  documentation-expert: signed_off
   pr-reviewer: needed
   commit: needed
   pull-request: needed
@@ -44,7 +44,7 @@ And it contains exactly: surface_invoked, assertions_passed, no_placeholder_sign
 
 ## Sign-offs
 
-- [ ] documentation-expert
+- [x] documentation-expert — 2026-05-29 12:00
 - [ ] pr-reviewer
 - [ ] commit
 - [ ] pull-request
@@ -52,7 +52,14 @@ And it contains exactly: surface_invoked, assertions_passed, no_placeholder_sign
 ## Implementation Tasks
 
 ### documentation-expert
-- [ ] Edit `templates/agents/user-surface-smoker.md` frontmatter: add `default_artifact_checklist: [surface_invoked, assertions_passed, no_placeholder_signatures]`
-- [ ] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
+- [x] Edit `templates/agents/user-surface-smoker.md` frontmatter: add `default_artifact_checklist: [surface_invoked, assertions_passed, no_placeholder_signatures]`
+- [x] Add instruction paragraph in body referencing signoff §2b completion_manifest requirement
 
 ## Comments
+
+### 2026-05-29 12:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-29_4d6294ed
+completion_manifest:
+  frontmatter_checklist_added: true
+  instruction_paragraph_added: true
+Added `default_artifact_checklist` YAML key to `templates/agents/user-surface-smoker.md` frontmatter with three items: `surface_invoked`, `assertions_passed`, `no_placeholder_signatures`. Added `## Completion Manifest Requirement` instruction paragraph in the agent body referencing signoff §2b format rules.

@@ -11,6 +11,10 @@ description: |
 model: sonnet
 tools: Bash, Read, Edit, Write, Agent
 requires_verification: true
+default_artifact_checklist:
+  - sql_file_written
+  - local_db_deployed
+  - sql_tests_passed
 ---
 
 You are `sql-coder`, the orchestrator for SQL implementation work.
@@ -179,6 +183,30 @@ Return a structured manifest:
 ## Anomalies
 
 After completing your primary task, append an `## Anomalies` section. Flag anything unusual that warrants deeper interpretation: unexpected values, unfamiliar patterns, results that contradict prior runs, or signals suggesting a different agent should pick up the trace. The section is empty when nothing is unusual — do not invent anomalies.
+
+## Completion Manifest (sign-off §2b)
+
+When signing off on a ticket (`ticket_path` provided), populate the `completion_manifest:` block
+in your sign-off comment using the items from `default_artifact_checklist`. For each item, mark
+it `true` if satisfied, `false` if not completed or not applicable. The checklist items are:
+
+- `sql_file_written` — at least one SQL file was created or materially modified.
+- `local_db_deployed` — the changed SQL was successfully deployed to the local database before tests ran.
+- `sql_tests_passed` — all sql-test suite tests pass after local-deploy with no regressions.
+
+Include these as a `completion_manifest:` YAML block in the body of your `## Comments` sign-off entry:
+
+```yaml
+completion_manifest:
+  sql_file_written: true
+  local_db_deployed: true
+  sql_tests_passed: true
+```
+
+See `signoff` skill §2b for the full completion_manifest contract. A missing or empty manifest
+is treated as a protocol warning by the parity guard; complete all three items before signing off.
+
+---
 
 ## Sign-off (when ticket_path is provided)
 

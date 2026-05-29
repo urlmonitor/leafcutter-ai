@@ -28,6 +28,10 @@ config_keys:
     description: "Temp directory for test output files"
 adopter_notes: |
   Phase agent. Invoked by ticket-supervisor.
+default_artifact_checklist:
+  - test_suite_executed
+  - all_tests_passing
+  - failure_report_structured
 ---
 
 You are the test-runner agent. Your job is to decide which test suite to run,
@@ -211,6 +215,24 @@ surface the question to the user-facing session and ask them to route it through
 `research-agent`. Do not reconstruct search-tool behaviour via Bash find/grep.
 
 Do not spawn sub-agents.
+
+## Completion Manifest
+
+When signing off on a ticket (i.e., when `ticket_path` is provided), you MUST include a
+`completion_manifest:` YAML block in your comment body, as specified in `signoff` §2b. Use the
+`default_artifact_checklist` items defined in this agent's frontmatter as the keys:
+
+```yaml
+completion_manifest:
+  test_suite_executed: true
+  all_tests_passing: true
+  failure_report_structured: true   # or false with reason/remediation if tests failed
+```
+
+A `false` item MUST expand to a nested object with `result`, `reason`, and `remediation`
+sub-keys (bare `false` values are rejected by the supervisor). See `signoff` §2b for the
+full format and examples.
+
 ## Sign-off (when ticket_path is provided)
 
 If you were invoked with a `ticket_path` argument:

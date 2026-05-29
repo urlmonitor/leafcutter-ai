@@ -194,6 +194,94 @@ Each of steps 2 and 3 is one `Edit` call. They cannot be combined into a single 
 
 ---
 
+## §2b Completion Manifest (mandatory for post-epoch sign-offs)
+
+Every phase agent MUST include a `completion_manifest:` YAML block in its sign-off comment body. The manifest records whether each of the agent's acceptance criteria or key tasks completed successfully.
+
+### Placement
+
+The `completion_manifest:` block is placed in the `## Comments` body in this order:
+
+```
+feedback-id: fb_2026-05-14_a3f2c891
+completion_manifest:
+  <checklist_item>: true
+  <checklist_item>:
+    result: false
+    reason: "..."
+    remediation: "..."
+<prose summary (1–5 sentences)>
+```
+
+The `completion_manifest:` block MUST appear after `feedback-id:` and before the prose summary.
+
+### Format Rules
+
+- **`true` items**: bare boolean — no explanation is needed or expected.
+  ```yaml
+  completion_manifest:
+    tests_green: true
+    files_touched_match_plan: true
+  ```
+
+- **`false` items**: MUST expand to a nested object with three sub-keys:
+  ```yaml
+  completion_manifest:
+    tests_green:
+      result: false
+      reason: "One assertion failed: expected 200, got 404."
+      remediation: "Respawn python-coder with this test failure as input."
+  ```
+  The three sub-keys are all required: `result` (always `false`), `reason` (non-empty string explaining what failed), `remediation` (non-empty string with the suggested next step).
+
+### Bare-False Rule (malformed manifest)
+
+A manifest item written as:
+```yaml
+completion_manifest:
+  tests_green: false   # bare false — NOT allowed
+```
+is **malformed**. When the supervisor reads a manifest with a bare `false` value (not a nested object), it:
+
+1. Marks the manifest malformed.
+2. Retries once, re-invoking the same agent with a request to expand the bare `false` into a nested object with `result`, `reason`, and `remediation`.
+3. If the retry still produces a bare `false`, the supervisor falls through to the §3.4 failure-adjudication halt.
+
+The retry is capped at **1 per phase per ticket** and counts against the same cap as the §3.1 trivial-mechanical retry.
+
+### Legacy Compatibility
+
+Tickets authored before EPIC-CompletionManifestSignoff do not have `completion_manifest:` blocks in their Comments. The supervisor accepts the absence gracefully — it does NOT block progress or require back-fill. This requirement applies only to sign-offs written after the epoch ticket (this ticket, `01_signoff_skill_manifest_section.md`) is merged.
+
+### §2b Manifest Examples
+
+**All passing — items are bare `true`:**
+
+```yaml
+feedback-id: fb_2026-05-29_a1b2c3d4
+completion_manifest:
+  skill_section_inserted: true
+  examples_subsection_added: true
+  comment_recipe_updated: true
+Inserted §2b into signoff SKILL.md; all three implementation tasks complete.
+```
+
+**Mixed result — one item failed:**
+
+```yaml
+feedback-id: fb_2026-05-29_e5f6a7b8
+completion_manifest:
+  schema_migration_applied: true
+  tests_green:
+    result: false
+    reason: "test_candle_horizon.py::test_populate_features failed: assertion 200 != 404 on /api/candles endpoint."
+    remediation: "Respawn python-coder with the failing test traceback; the endpoint path changed in commit a3c12ff."
+  documentation_updated: true
+Ran migration successfully; one test is red due to a stale endpoint path — see manifest.
+```
+
+---
+
 ## §3 Comment-Append Recipe
 
 Every phase agent appends one `## Comments` entry per invocation. The heading is parser-strict; the supervisor reads only the heading to decide its next move.
@@ -222,11 +310,23 @@ Every phase agent appends one `## Comments` entry per invocation. The heading is
 
 ### Body
 
-The comment body begins with the `feedback-id:` line (from §2a), followed by
-1–5 sentences of prose:
+The comment body is structured in this order:
+
+1. `feedback-id:` line (from §2a) — always first.
+2. `completion_manifest:` YAML block (from §2b) — immediately after `feedback-id:`, before prose.
+3. Prose summary — 1–5 sentences after the manifest block.
+
+Full body template:
 
 ```
 feedback-id: fb_2026-05-14_a3f2c891
+completion_manifest:
+  <checklist_item>: true
+  <checklist_item>:
+    result: false
+    reason: "..."
+    remediation: "..."
+<prose summary>
 ```
 
 - For `ok`: a one-liner summarising what changed and any test status.
@@ -235,9 +335,11 @@ feedback-id: fb_2026-05-14_a3f2c891
 - For `question`: the precise ambiguity and the options the user should choose between.
 
 **Backward compatibility**: tickets authored before EPIC-FeedbackCollection do not
-have `feedback-id:` lines. The parity guard and retrospective-agent accept their
-absence gracefully. This requirement applies only to signoffs after the feedback
-system epoch (when `submit_feedback.py` is present in the worktree).
+have `feedback-id:` lines, and tickets authored before EPIC-CompletionManifestSignoff
+do not have `completion_manifest:` blocks. The parity guard and retrospective-agent
+accept their absence gracefully. These requirements apply only to signoffs after
+the respective epoch (when `submit_feedback.py` is present, and when the manifest
+epoch ticket is merged, respectively).
 
 ### Edit pattern
 

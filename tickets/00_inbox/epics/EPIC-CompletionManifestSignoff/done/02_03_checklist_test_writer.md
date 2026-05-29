@@ -1,6 +1,6 @@
 ---
 title: "Add default_artifact_checklist to test-writer"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-28
@@ -12,8 +12,8 @@ requires_adr: false
 agents:
   documentation-expert: signed_off
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: not_needed
 ---
 
 # 02_03: Add default_artifact_checklist to test-writer
@@ -46,8 +46,7 @@ And it contains exactly: test_stubs_created, all_tests_red, red_baseline_capture
 
 - [x] documentation-expert — 2026-05-29 10:00
 - [x] pr-reviewer — 2026-05-29 10:05
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-05-29 10:15
 
 ## Implementation Tasks
 
@@ -71,3 +70,11 @@ completion_manifest:
   no_regressions_found: true
   change_scope_matches_ticket: true
 Frontmatter `default_artifact_checklist` contains exactly the three items specified by the ticket (`test_stubs_created`, `all_tests_red`, `red_baseline_captured`). Instruction paragraph correctly references signoff §2b, explains each item, and is additive only. Change approved.
+
+### 2026-05-29 10:15 — commit (status: ok)
+feedback-id: fb_2026-05-29_af4ffd84
+completion_manifest:
+  files_committed: true
+  commit_sha: 31253a7
+  staged_set_correct: true
+Changes to templates/agents/test-writer.md (default_artifact_checklist frontmatter + §2b instruction paragraph) and ticket sign-off committed in 31253a7. Both files confirmed in diff via git show.

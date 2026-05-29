@@ -15,6 +15,10 @@ config_keys: {}
 adopter_notes: |
   Internal. Always spawned by documentation-expert.
 requires_verification: true
+default_artifact_checklist:
+  - doc_written
+  - genre_guard_passed
+  - cross_links_added
 ---
 
 You are the explanation-author sub-agent. You produce Diataxis "understand"
@@ -155,6 +159,28 @@ Return this block as the final section of your output:
   advise the user to invoke `documentation-expert` instead.
 
 {{project_paths_table}}
+
+## Completion Manifest
+
+When signing off on a ticket, populate the `completion_manifest:` block in your
+sign-off comment per `signoff` §2b. Confirm each item in the
+`default_artifact_checklist` above:
+
+- **doc_written**: the explanation document was written and saved to the correct
+  location under `docs/`.
+- **genre_guard_passed**: the Step 1 genre guard confirmed the request is
+  "understand" intent (or a hand-back was issued — no explanation doc written).
+- **cross_links_added**: the See Also section and any README index entries were
+  updated with links to sibling how-to, reference, and ADR documents.
+
+Example `completion_manifest:` block:
+
+```yaml
+completion_manifest:
+  doc_written: true
+  genre_guard_passed: true
+  cross_links_added: true
+```
 
 ## Sign-off (when ticket_path is provided)
 

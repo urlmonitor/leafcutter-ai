@@ -112,6 +112,9 @@ agents:                            # optional — set by business-analyst / refi
   pull-request: needed
 requires_documentation:            # optional — list of doc types from doc_types.json;
   - how_to                         #   ticket-wiring flips writer agents to needed
+# artifact_checklist:              # optional — per-agent checklist overrides; map of
+#   python-coder:                  #   agent-name → list of item names; merges with
+#     - linting_clean              #   agent's default_artifact_checklist
 ---
 ```
 
@@ -150,6 +153,7 @@ depends_on: []                     # epics are top-level
 | `actuation_contract` | optional (required when `user_facing_surface` != null) | One sentence describing the observable side effect when the surface is invoked in production with no parameter overrides. Example: `"Writes N entries to docs/glossary.md and exits 0 on success."`. Used by `user-surface-smoker` to build the `assertion:` regex for the Smoke Fixture. |
 | `roadmap_phase` | optional | Phase ID from `docs/roadmap.json` that this ticket belongs to (e.g. `phase_1`). The hook prints a **warning** (not a block) when the value is not a known phase ID. Omit on tickets predating the roadmap or when the phase is unclear. |
 | `advances_current_outcome` | optional | Boolean (`true` / `false`). Set `true` when this ticket directly advances the current must-achieve outcome in `docs/roadmap.json`. The hook prints a **warning** (not a block) when the value is not a boolean. Omit when not applicable. |
+| `artifact_checklist` | optional | Per-agent checklist overrides. Map of agent-name → list of item names. Merges with agent's default_artifact_checklist; ticket items extend defaults, same key overrides. |
 
 ### `depends_on` Resolution
 
@@ -392,6 +396,7 @@ Before a `refinement` agent returns its payload, it MUST verify all of the follo
 | `components: documentation_system` (string) | Must be a list: `components:\n  - documentation_system` |
 | Picking a date from your training-data sense of "now" | Always use today's date from context |
 | Master plan without `type: epic` | Add `type: epic` so tooling can distinguish epics from sub-tickets |
+| `artifact_checklist` keyed by item name instead of agent name | Must be a map of agent-name → list |
 
 ## Quick Reference
 
