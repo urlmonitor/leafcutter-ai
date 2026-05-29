@@ -1,6 +1,6 @@
 ---
 title: "Update agent_flow architecture diagram for flattened spawn topology"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-29
@@ -22,7 +22,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 roadmap_phase: phase_1
 advances_current_outcome: false
 ---
@@ -79,7 +79,7 @@ Then no validation errors are emitted for the diagram_type
 - [x] architecture-diagram-author — 2026-05-29 12:00
 - [x] pr-reviewer — 2026-05-29 12:01
 - [x] commit — 2026-05-29 12:02
-- [ ] pull-request
+- [x] pull-request — 2026-05-29 12:03
 
 ## Comments
 
@@ -94,6 +94,10 @@ All acceptance criteria pass: diagram_type agent_flow and status accepted presen
 ### 2026-05-29 12:02 — commit (status: ok)
 feedback-id: fb_2026-05-29_63f3fb67
 Committed supervisor-spawn-topology.md (new file) and ticket sign-offs atomically on branch worktree-EPIC-FlattenSupervisorChain. SHA: a68228f. Pre-commit hooks passed cleanly. 2 files changed, 99 insertions.
+
+### 2026-05-29 12:03 — pull-request (status: ok)
+feedback-id: fb_2026-05-29_d3630eb8
+PR #23 already open for branch worktree-EPIC-FlattenSupervisorChain (epic-level PR per convention). Ticket 07 commits pushed and included in the PR. Branch pushed to origin successfully.
 
 ## Implementation Tasks
 
