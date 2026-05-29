@@ -21,7 +21,7 @@ agents:
   test-runner: not_needed
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 roadmap_phase: phase_1
 advances_current_outcome: false
@@ -78,7 +78,7 @@ Then no validation errors are emitted for the diagram_type
 
 - [x] architecture-diagram-author — 2026-05-29 12:00
 - [x] pr-reviewer — 2026-05-29 12:01
-- [ ] commit
+- [x] commit — 2026-05-29 12:02
 - [ ] pull-request
 
 ## Comments
@@ -90,6 +90,10 @@ Created docs/architecture/components/supervisor-spawn-topology.md from scratch (
 ### 2026-05-29 12:01 — pr-reviewer (status: ok)
 feedback-id: fb_2026-05-29_fd70e035
 All acceptance criteria pass: diagram_type agent_flow and status accepted present in frontmatter; /build-feature → ticket-supervisor (depth 0) and ticket-supervisor → phase agents (depth 1) shown with solid arrows; epic-supervisor marked DEPRECATED with dashed legacy-only arrow (no active spawn path); ADR-006 referenced in overview and references section; build-self.sh clean. Approved for commit.
+
+### 2026-05-29 12:02 — commit (status: ok)
+feedback-id: fb_2026-05-29_63f3fb67
+Committed supervisor-spawn-topology.md (new file) and ticket sign-offs atomically on branch worktree-EPIC-FlattenSupervisorChain. SHA: a68228f. Pre-commit hooks passed cleanly. 2 files changed, 99 insertions.
 
 ## Implementation Tasks
 
