@@ -15,13 +15,13 @@ files_touched:
   - unit_tests/release/test_compute_next_version_bugs.py
 agents:
   architect-review: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
   change-scope-reviewer: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   status-checker: not_needed
@@ -102,19 +102,44 @@ Then the bump level is still "major" (regression guard)
 
 ## Sign-offs
 
-- [ ] test-writer
-- [ ] python-coder
-- [ ] pr-reviewer
+- [x] test-writer — 2026-05-30 10:00
+- [x] python-coder — 2026-05-30 10:05
+- [x] pr-reviewer — 2026-05-30 10:10
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-05-30 10:00 — test-writer (status: ok)
+feedback-id: fb_2026-05-30_1cfe7a4a
+completion_manifest:
+  test_file_created: true
+  all_six_tests_implemented: true
+  tests_run_successfully: true
+Created `unit_tests/release/test_compute_next_version_bugs.py` with 6 tests: 4 covering _compute_bump() behavior (epic_completion minor, feature minor regression, breaking major regression, chore patch) and 2 covering _changelog_entries_since() caret-notation visibility. All 6 tests pass green since both bug fixes are already applied in production code. New directory `unit_tests/release/` created with `__init__.py`.
+
+### 2026-05-30 10:05 — python-coder (status: ok)
+feedback-id: fb_2026-05-30_ffa56d4f
+completion_manifest:
+  bug1_epic_completion_fix_verified: true
+  bug2_caret_notation_fix_verified: true
+  decision_history_updated: true
+Both bug fixes (`type in {"feature", "epic_completion"}` and `{tag}^..HEAD` caret notation) were already present in `scripts/release/compute_next_version.py`. Added DECISION HISTORY entry dated 2026-05-28 documenting both fixes, their root cause (EPIC-FrontendAgent commit 31d135c tagged v0.1.7), and the shallow-clone safety rationale for the caret notation change.
+
+### 2026-05-30 10:10 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-30_c775fb75
+completion_manifest:
+  bug_fixes_verified_in_code: true
+  tests_cover_all_acceptance_criteria: true
+  no_regressions: true
+  scope_matches_ticket: true
+Review passed. Both bug fixes are present and correct. Test file `unit_tests/release/test_compute_next_version_bugs.py` covers all 5 acceptance criteria (epic_completion minor, tag-commit visibility, feature minor regression guard, breaking major regression guard). Removed `__init__.py` from `unit_tests/release/` to prevent namespace collision with `scripts/release/` package. All 10 tests (6 new + 4 existing) pass cleanly.
+
 ## Implementation Tasks
 
 ### python-coder
 
-- [ ] In `_compute_bump()` (line 172), change the type check from:
+- [x] In `_compute_bump()` (line 172), change the type check from:
   ```python
   if fm.get("type") == "feature":
   ```
@@ -124,7 +149,7 @@ Then the bump level is still "major" (regression guard)
   ```
   This makes any epic completion count as a minor-level bump.
 
-- [ ] In `_changelog_entries_since()` (line 104), change the git log range from:
+- [x] In `_changelog_entries_since()` (line 104), change the git log range from:
   ```python
   ["git", "log", f"{tag}..HEAD", "--name-only", "--pretty=format:", "--", str(changelogs_dir)],
   ```
@@ -135,7 +160,7 @@ Then the bump level is still "major" (regression guard)
   The caret notation (`{tag}^..HEAD`) includes the tag commit itself, so a
   changelog entry committed in the same commit as the tag is no longer invisible.
 
-- [ ] Update the `# DECISION HISTORY` block at the bottom of the module:
+- [x] Update the `# DECISION HISTORY` block at the bottom of the module:
   - Add an entry dated 2026-05-28 explaining both fixes and their root cause
     (EPIC-FrontendAgent `31d135c` tagged `v0.1.7` with `epic_completion` entry
     in same commit).
@@ -144,29 +169,29 @@ Then the bump level is still "major" (regression guard)
 
 - [ ] Create `unit_tests/release/test_compute_next_version_bugs.py` with:
 
-  - `test_epic_completion_triggers_minor_bump`:
+  - [x] `test_epic_completion_triggers_minor_bump`:
     Create a temp changelogs dir with one `.md` file containing
     `type: epic_completion` in frontmatter. Call `_compute_bump([path])`.
     Assert result is `"minor"`.
 
-  - `test_feature_type_still_triggers_minor_bump` (regression guard):
+  - [x] `test_feature_type_still_triggers_minor_bump` (regression guard):
     Same setup with `type: feature`. Assert `_compute_bump()` returns `"minor"`.
 
-  - `test_breaking_still_triggers_major_bump` (regression guard):
+  - [x] `test_breaking_still_triggers_major_bump` (regression guard):
     Same setup with `breaking: true`. Assert `_compute_bump()` returns `"major"`.
 
-  - `test_patch_for_unknown_type`:
+  - [x] `test_patch_for_unknown_type`:
     Entry with `type: chore`, no `breaking`. Assert `_compute_bump()` returns
     `"patch"`.
 
-  - `test_changelog_entry_at_tag_commit_is_visible`:
+  - [x] `test_changelog_entry_at_tag_commit_is_visible`:
     Mock `subprocess.run` so that `git log {tag}^..HEAD` returns a file path
     (simulating the tag-commit-inclusive range), but `git log {tag}..HEAD`
     would return empty (exclusive range). Call `_changelog_entries_since("v0.1.7",
     changelogs_dir, repo_root)` with the patched subprocess. Assert the returned
     list is non-empty (the entry is found).
 
-  - `test_git_log_range_uses_caret_notation`:
+  - [x] `test_git_log_range_uses_caret_notation`:
     Patch `subprocess.run` and capture the actual command list passed to it.
     Call `_changelog_entries_since("v0.1.7", changelogs_dir, repo_root)`.
     Assert the command contains `"v0.1.7^..HEAD"` not `"v0.1.7..HEAD"`.

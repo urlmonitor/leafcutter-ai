@@ -278,4 +278,21 @@ if __name__ == "__main__":
 #   and applies bump logic: any breaking=true → MAJOR, any type=feature
 #   → MINOR, otherwise PATCH. --tag flag stamps the git tag. --repo-root
 #   and --changelogs-dir flags provided for testability. Stdlib-only.
+#
+# - 2026-05-28 [python-coder/TICKET-20260528-FixComputeNextVersionBugs]: (#TICKET-20260528-FixComputeNextVersionBugs)
+#   Fixed two silent correctness bugs discovered during EPIC-FrontendAgent
+#   finalization (commit 31d135c tagged v0.1.7):
+#   Bug 1 (_compute_bump): Changed `fm.get("type") == "feature"` to
+#     `fm.get("type") in {"feature", "epic_completion"}` so that changelog
+#     entries written by changelog-agent with type: epic_completion (standard
+#     for all epic completions) correctly trigger a minor bump. Without this
+#     fix, no future epic completion would ever produce a version bump.
+#   Bug 2 (_changelog_entries_since): Changed git log range from `{tag}..HEAD`
+#     (exclusive — misses the tag commit) to `{tag}^..HEAD` (caret notation —
+#     includes the tag commit itself). This fixes silent invisibility of changelog
+#     entries committed in the same commit as the tag. The caret notation is safe:
+#     `{tag}^` is the parent of the tag commit; entries predating the tag remain
+#     excluded by the `..HEAD` right boundary. Shallow-clone edge case (where
+#     `{tag}^` may not exist) is already handled by the existing
+#     `except subprocess.CalledProcessError` fallback (returns all entries).
 # ====================================================================
