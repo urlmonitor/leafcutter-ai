@@ -15,10 +15,10 @@ files_touched:
   - leafcutter-ai/docs/architecture/agent_knowledge_plane.md
   - leafcutter-ai/CLAUDE.md
 agents:
-  architect-review: needed
-  architecture-diagram-author: needed
-  documentation-expert: needed
-  pr-reviewer: needed
+  architect-review: signed_off
+  architecture-diagram-author: signed_off
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   python-coder: not_needed
@@ -135,20 +135,69 @@ it, WHEN it is loaded, WHAT format it has, and INTO WHICH agents it is injected.
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] architecture-diagram-author
-- [ ] documentation-expert
-- [ ] pr-reviewer
+- [x] architect-review — 2026-05-30 10:00
+- [x] architecture-diagram-author — 2026-05-30 10:00
+- [x] documentation-expert — 2026-05-30 10:01
+- [x] pr-reviewer — 2026-05-30 10:02
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-05-30 10:00 — architecture-diagram-author (status: ok)
+feedback-id: fb_2026-05-30_0f91c794
+completion_manifest:
+  diagram_type_valid: true
+  mermaid_diagram_created: true
+  all_channels_represented: true
+  injection_timing_diagram_created: true
+Authored two mermaid `data_flow` diagrams in `docs/architecture/agent_knowledge_plane.md`: Diagram 1 maps all 11 knowledge-injection channels to the agent context window (grouped by injection scope); Diagram 2 shows injection timing by channel (harness startup / agent spawn / during execution). Both diagrams use the `flowchart` syntax with consistent color-coding. `diagram_type: data_flow` confirmed valid in `config/diagram_types.json`.
+
+### 2026-05-30 10:00 — architect-review (status: ok)
+feedback-id: fb_2026-05-30_83710f65
+completion_manifest:
+  frontmatter_valid: true
+  diagram_type_enum_correct: true
+  all_11_channels_enumerated: true
+  cross_links_bidirectional: true
+  channel_detail_sections_present: true
+  injection_priority_rules_present: true
+  design_principles_documented: true
+Reviewed `docs/architecture/agent_knowledge_plane.md`. All 11 knowledge sources enumerated per ticket scope. `diagram_type: data_flow` is a valid canonical enum per `config/diagram_types.json` (not the deprecated `dataflow`). `related_code:` field included as required by the `data_flow` type. Cross-links to `agent_knowledge_system.md` and `agent_delivery_workflows.md` are present and bidirectional (both sibling docs updated). Injection priority rules and design principles documented. Architecture is coherent with the L2-Container flight level.
+
+### 2026-05-30 10:01 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-30_8ae3ae68
+completion_manifest:
+  main_deliverable_created: true
+  frontmatter_valid: true
+  channel_table_complete: true
+  mermaid_diagrams_present: true
+  cross_link_to_agent_knowledge_system: true
+  cross_link_to_agent_delivery_workflows: true
+  claude_md_updated: true
+  agent_knowledge_system_updated: true
+Authored `docs/architecture/agent_knowledge_plane.md` with valid YAML frontmatter (`diagram_type: data_flow`, `flight_level: L2-Container`), 11-channel enumeration table (Source / Written by / Loaded when / Format / Target agents), two mermaid diagrams, per-channel detail sections, injection priority rules, design principles, and full cross-reference section. Updated `CLAUDE.md` with an "Architecture Reference" table linking to the new doc and both sibling docs. Updated `docs/architecture/agent_knowledge_system.md` References section to add a bidirectional cross-link back to the new doc. All acceptance criteria met.
+
+### 2026-05-30 10:02 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-30_ab816e18
+completion_manifest:
+  acceptance_criteria_met: true
+  diagram_type_valid_in_registry: true
+  mermaid_diagram_present: true
+  knowledge_source_table_complete: true
+  all_11_sources_covered: true
+  cross_link_to_agent_knowledge_system: true
+  cross_link_to_agent_delivery_workflows: true
+  claude_md_cross_link_added: true
+  bidirectional_links_verified: true
+  no_code_changes: true
+PR review passed. All acceptance criteria satisfied: (1) `docs/architecture/agent_knowledge_plane.md` exists with `diagram_type: data_flow` — a valid canonical enum per `config/diagram_types.json`; (2) two mermaid diagrams present mapping all 11 knowledge sources to the agent context window; (3) knowledge-source table includes Source / Written by / Loaded when / Format / Target agents columns covering all 11 required sources; (4) `CLAUDE.md` contains an "Architecture Reference" section with cross-links; (5) `agent_knowledge_system.md` References section updated with a bidirectional cross-link to the new doc. Documentation-only change — no code, no config, fully reversible.
+
 ## Implementation Tasks
 
-- [ ] Read `agent_delivery_workflows.md` and `agent_knowledge_system.md` for
+- [x] Read `agent_delivery_workflows.md` and `agent_knowledge_system.md` for
       house style and cross-link targets
-- [ ] Author `leafcutter-ai/docs/architecture/agent_knowledge_plane.md` with:
+- [x] Author `leafcutter-ai/docs/architecture/agent_knowledge_plane.md` with:
   - Valid frontmatter (`diagram_type: data_flow`, `flight_level: L2-Container`
     or `L3-Component` at the architecture-diagram-author's discretion)
   - Intro paragraph explaining the knowledge plane concept
@@ -158,9 +207,9 @@ it, WHEN it is loaded, WHAT format it has, and INTO WHICH agents it is injected.
     Format / Target agents)
   - Cross-link to `agent_knowledge_system.md` (capture side) and
     `agent_delivery_workflows.md` (execution side)
-- [ ] Update `leafcutter-ai/CLAUDE.md` to add a cross-link to the new doc
+- [x] Update `leafcutter-ai/CLAUDE.md` to add a cross-link to the new doc
       (under an "Architecture Reference" or existing TOC heading)
-- [ ] Verify the new doc's `diagram_type` value is in `leafcutter-ai/config/diagram_types.json`
+- [x] Verify the new doc's `diagram_type` value is in `leafcutter-ai/config/diagram_types.json`
       before writing (pre-commit hook validates this)
 
 ## Risk & Safety

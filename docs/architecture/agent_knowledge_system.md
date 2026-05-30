@@ -116,6 +116,9 @@ a `knowledge_captured` telemetry event to `agent_telemetry.jsonl`.
 
 ## References
 
+- **[Agent Knowledge Plane](agent_knowledge_plane.md)** — the injection-side
+  complement to this document: enumerates all 11 channels through which
+  agents receive context at invocation time (pre-execution knowledge injection).
 - `.claude/skills/route-learning/SKILL.md` — full 11-step decision tree
 - `.claude/skills/capture-learning/SKILL.md` — write executor and error handling
 - `.claude/skills/signoff/SKILL.md` §7 — mandatory knowledge-capture trigger
