@@ -1,6 +1,6 @@
 ---
 title: "Fix _resolve_repo_root() to handle .git-as-file (submodule) topology"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-30

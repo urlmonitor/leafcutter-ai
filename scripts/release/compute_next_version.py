@@ -29,17 +29,23 @@ from typing import Optional
 def _resolve_repo_root() -> Path:
     """Compute the repository root from this script's own location.
 
-    Supports both:
+    Supports three topologies:
     1. Standalone package development workspace:
        __file__ = <repo_root>/scripts/release/compute_next_version.py
-       parents[2] = <repo_root>
-    2. Consumer project environment:
-       __file__ = <repo_root>/leafcutter/scripts/release/compute_next_version.py
-       parents[3] = <repo_root>
+       parents[2] = <repo_root>, .git is a directory
+    2. Consumer project environment (copy-installed):
+       __file__ = <consumer>/leafcutter/scripts/release/compute_next_version.py
+       parents[2] = <consumer>/leafcutter/ — no .git at all
+       parents[3] = <consumer>/ — .git is a directory
+    3. Consumer project submodule environment:
+       __file__ = <consumer>/leafcutter/scripts/release/compute_next_version.py
+       parents[2] = <consumer>/leafcutter/ — .git is a *file* (submodule pointer)
+       .git exists() == True, so parents[2] is returned correctly
     """
     resolved_self = Path(__file__).resolve()
     p2 = resolved_self.parents[2]
-    if (p2 / ".git").is_dir():
+    # .git may be a directory (normal clone) or a file (submodule / worktree link)
+    if (p2 / ".git").exists():
         return p2
     return resolved_self.parents[3]
 
@@ -295,4 +301,9 @@ if __name__ == "__main__":
 #     excluded by the `..HEAD` right boundary. Shallow-clone edge case (where
 #     `{tag}^` may not exist) is already handled by the existing
 #     `except subprocess.CalledProcessError` fallback (returns all entries).
+# - 2026-05-30 [python-coder/TICKET-20260530-FixRepoRootSubmoduleResolution]:
+#   Fixed _resolve_repo_root() to handle .git-as-file (submodule topology).
+#   Changed (p2 / ".git").is_dir() to .exists() so that submodule pointer
+#   files are recognised. Without this fix, consumer projects using leafcutter
+#   as a submodule resolved to the consumer root, producing wrong versions.
 # ====================================================================
