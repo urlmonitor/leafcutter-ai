@@ -30,7 +30,7 @@ agents:
   reference-author: not_needed
   pr-reviewer: signed_off
   user-surface-smoker: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
   status-checker: not_needed
   adr-author: not_needed
@@ -153,7 +153,7 @@ Then it contains no reference to /build-feature inside the dispatch loop
 - [x] documentation-expert — 2026-05-30 12:10
 - [x] pr-reviewer — 2026-05-30 12:15
 - [x] user-surface-smoker — 2026-05-30 12:20
-- [ ] commit
+- [x] commit — 2026-05-30 14:36
 - [ ] pull-request
 
 ## Comments
