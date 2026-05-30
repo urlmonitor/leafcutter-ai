@@ -1,6 +1,6 @@
 ---
 title: "Adapt /build-backlog to dispatch ticket-supervisors directly (remove /build-feature middleman)"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-30
@@ -16,22 +16,22 @@ files_touched:
   - templates/workflows/build-backlog.md
   - .leafcutter/commands/build-backlog.md
 agents:
-  architect-review: needed
+  architect-review: signed_off
   test-writer: not_needed
   python-coder: not_needed
   sql-coder: not_needed
   sql-query: not_needed
   frontend-coder: not_needed
   test-runner: not_needed
-  documentation-expert: needed
+  documentation-expert: signed_off
   change-scope-reviewer: not_needed
   explanation-author: not_needed
   how-to-author: not_needed
   reference-author: not_needed
-  pr-reviewer: needed
-  user-surface-smoker: needed
-  commit: needed
-  pull-request: needed
+  pr-reviewer: signed_off
+  user-surface-smoker: signed_off
+  commit: signed_off
+  pull-request: signed_off
   status-checker: not_needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -149,14 +149,58 @@ Then it contains no reference to /build-feature inside the dispatch loop
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] documentation-expert
-- [ ] pr-reviewer
-- [ ] user-surface-smoker
-- [ ] commit
-- [ ] pull-request
+- [x] architect-review — 2026-05-30 12:00
+- [x] documentation-expert — 2026-05-30 12:10
+- [x] pr-reviewer — 2026-05-30 12:15
+- [x] user-surface-smoker — 2026-05-30 12:20
+- [x] commit — 2026-05-30 14:36
+- [x] pull-request — 2026-05-30 14:40
 
 ## Comments
+
+### 2026-05-30 12:00 — architect-review (status: ok)
+feedback-id: fb_2026-05-30_76195b96
+completion_manifest:
+  impact_classified: true
+  rubric_applied: true
+  requires_adr_set: true
+  suggested_diagrams_evaluated: true
+Docs-only rewrite of two markdown workflow files. Impact classification: small. No always-large triggers fire (no Alembic migration, no hypertable change, no public API change, no ADR contract change). 2 files touched, 1 component (build_pipeline), no cross-module boundary. The new direct-dispatch pattern mirrors build-feature Step B exactly — well-precedented under ADR-006/EPIC-FlattenSupervisorChain. No ADR needed; no diagram needed. No acceptance-criteria adjustments required.
+
+## Escalation
+
+Branch: none
+Reason: 2 files in 1 component (build_pipeline); no always-large trigger fired; documentation-only change.
+
+### 2026-05-30 12:20 — user-surface-smoker (status: ok)
+feedback-id: fb_2026-05-30_2724ec63
+completion_manifest:
+  assertion_text_present: true
+  placeholder_signature_absent: true
+  dry_run_output_format_present: true
+Smoke fixture executed against .leafcutter/commands/build-backlog.md. Assertion check: "BACKLOG READY LIST" and "Backlog exhausted" both present. Placeholder signature check: no "Tier 2", "new-conversation", or "CLAUDE_NEW_CONVERSATION" text found. The three remaining /build-feature references are in the intro paragraph and a rationale blockquote — neither is a dispatch instruction. Surface is clear to proceed to commit.
+
+### 2026-05-30 12:15 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-30_6784f42f
+completion_manifest:
+  diff_reviewed: true
+  acceptance_criteria_verified: true
+  no_high_confidence_blockers: true
+  banned_references_absent: true
+  step_renumbering_correct: true
+Reviewed staged diff of templates/workflows/build-backlog.md and .leafcutter/commands/build-backlog.md. All acceptance criteria met: Step 4b is the new direct-dispatch block, Tier 2/new-conversation appendix removed, steps correctly renumbered 4a/4b/4c, frontmatter updated, example output updated. No /build-feature call remains in the dispatch loop. Build validation passed. No high-confidence blockers found.
+
+### 2026-05-30 12:10 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-30_1ae91929
+completion_manifest:
+  template_rewritten: true
+  step_4b_replaced_with_direct_dispatch: true
+  tier2_appendix_removed: true
+  steps_renumbered: true
+  deployed_copy_updated: true
+  build_validation_passed: true
+  no_banned_references_in_dispatch_loop: true
+Rewrote `templates/workflows/build-backlog.md`: replaced Step 4b (Tier 2/new-conversation detection + /build-feature call) with a direct ticket-supervisor dispatch block (epic path via worktree-agent + ticket-supervisor; standalone path via build-single-ticket skill). Removed the "New-Conversation Capability (Tier 2 detail)" appendix. Renumbered Step 4c → 4b (outcome handling merged into 4b) and Step 4d → 4c (re-evaluate). Updated frontmatter description, adopter_notes, flags table, example output, and error handling table. Applied identical changes to `.leafcutter/commands/build-backlog.md`. Build validation (`build.py --validate-only`) exits 0. No Tier 2 or new-conversation text remains; no /build-feature dispatch call remains in the loop.
 
 ## Smoke Fixture
 
@@ -172,7 +216,7 @@ placeholder_signature: "Tier 2|new-conversation|/build-feature"
 
 ### documentation-expert
 
-- [ ] Rewrite `templates/workflows/build-backlog.md`:
+- [x] Rewrite `templates/workflows/build-backlog.md`:
   - **Replace Step 4b** (new-conversation / Tier 2 detection and `/build-feature`
     dispatch) with a direct dispatch block structured as:
     - **For epic items:** group by epic folder. For each epic group:
@@ -200,10 +244,10 @@ placeholder_signature: "Tier 2|new-conversation|/build-feature"
   - **Preserve unchanged:** Step 1 (run prioritizer), Step 2 (dry-run output),
     Step 3 (empty list), Step 5 (exit summary), Error Handling table, all flags,
     and the `## Integration with /pick-next-ticket` table.
-- [ ] Apply the same changes to `.leafcutter/commands/build-backlog.md` (the
+- [x] Apply the same changes to `.leafcutter/commands/build-backlog.md` (the
   deployed development copy) so the command is live without waiting for a full
   `build.py` rebuild.
-- [ ] Verify the updated template compiles correctly:
+- [x] Verify the updated template compiles correctly:
   `python leafcutter-ai/scripts/build.py --target-dir . --validate-only`
   Must exit 0 with no placeholder injection errors.
 
