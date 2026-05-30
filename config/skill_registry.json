@@ -202,6 +202,15 @@
       "template_path": "leafcutter/templates/skills/roadmap-steward/",
       "dependencies": [],
       "description": "Wraps roadmap_query.py --audit to produce audit_result JSON (all_items, starved_items, off_roadmap_tickets) for the product-owner-agent."
+    },
+    {
+      "id": "route-knowledge",
+      "name": "Route Knowledge",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/route-knowledge/",
+      "dependencies": [],
+      "description": "Knowledge routing classifier. Use when a user says 'remember this', 'capture this', or 'we should write this down'. Covers the full surface taxonomy (memory subtypes, CLAUDE.md inline/TOC, per-folder README, agent frontmatter, ADR, architecture doc, Diataxis docs, glossary, settings.json, ticket bodies, skills_config.json). Returns { target_surface, path, rationale }. Also used by documentation-expert as a pre-flight gate before Diataxis routing."
     }
   ]
 }

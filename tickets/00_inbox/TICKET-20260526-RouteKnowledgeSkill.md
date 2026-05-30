@@ -26,9 +26,9 @@ agents:
   python-coder: not_needed
   test-writer: not_needed
   test-runner: not_needed
-  documentation-expert: needed
+  documentation-expert: signed_off
   change-scope-reviewer: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: not_needed
   status-checker: not_needed
@@ -157,16 +157,16 @@ Then .claude/skills/route-knowledge/SKILL.md exists in the consumer project
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] pr-reviewer
+- [x] documentation-expert — 2026-05-30 14:00
+- [x] pr-reviewer — 2026-05-30 14:05
 - [ ] commit
 
 ## Implementation Tasks
 
 ### documentation-expert
-- [ ] Read the knowledge-distribution architecture doc (sibling ticket output) to
+- [x] Read the knowledge-distribution architecture doc (sibling ticket output) to
       extract the canonical surface list.
-- [ ] Draft `leafcutter-ai/templates/skills/route-knowledge/SKILL.md` with:
+- [x] Draft `leafcutter-ai/templates/skills/route-knowledge/SKILL.md` with:
   - Frontmatter: `name: route-knowledge`, `allowed-tools: Read`, `description`
     that triggers auto-selection when user says "remember X" / "capture this".
   - `## Input Contract` section: knowledge text, optional context (originating agent,
@@ -183,7 +183,7 @@ Then .claude/skills/route-knowledge/SKILL.md exists in the consumer project
     flow, never hand-edit.
   - `## References` section citing the knowledge-distribution architecture doc as
     surface-inventory source of truth.
-- [ ] Update `leafcutter-ai/templates/agents/documentation-expert.md`:
+- [x] Update `leafcutter-ai/templates/agents/documentation-expert.md`:
   - Add `route-knowledge` to the `## Pre-Flight Reads` / pre-flight section.
   - Insert a `## Pre-Flight: Knowledge Surface Check` step (before the Diataxis
     dispatch table) that invokes the `route-knowledge` skill.
@@ -193,11 +193,11 @@ Then .claude/skills/route-knowledge/SKILL.md exists in the consumer project
     caller for them to act on the correct surface.
 
 ### pr-reviewer
-- [ ] Verify `SKILL.md` frontmatter is valid (name, description, allowed-tools).
-- [ ] Verify decision tree covers all 14 surfaces in the acceptance criteria taxonomy.
-- [ ] Verify CLAUDE.md inline-vs-TOC distinction is explicit with examples.
-- [ ] Verify `documentation-expert.md` pre-flight section calls `route-knowledge`.
-- [ ] Verify `skill_registry.json` has been updated with the new skill entry.
+- [x] Verify `SKILL.md` frontmatter is valid (name, description, allowed-tools).
+- [x] Verify decision tree covers all 14 surfaces in the acceptance criteria taxonomy.
+- [x] Verify CLAUDE.md inline-vs-TOC distinction is explicit with examples.
+- [x] Verify `documentation-expert.md` pre-flight section calls `route-knowledge`.
+- [x] Verify `skill_registry.json` has been updated with the new skill entry.
 
 ### commit
 - [ ] Stage and commit:
@@ -216,3 +216,23 @@ Then .claude/skills/route-knowledge/SKILL.md exists in the consumer project
 - **depends_on constraint**: if the sibling architecture doc ticket has not landed,
   the `## References` section of the skill will cite a not-yet-existing file. The
   implementer may use a placeholder path and update it when the doc lands.
+
+## Comments
+
+### 2026-05-30 14:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-30_0fe90789
+completion_manifest:
+  doc_written: true
+  cross_links_added: true
+  diataxis_genre_correct: true
+Created `templates/skills/route-knowledge/SKILL.md` with full 17-step decision tree covering all 14+ surfaces in the taxonomy (Steps 0–17 including duplicate detection). Added `## Pre-Flight: Knowledge Surface Check` section to `templates/agents/documentation-expert.md` that gates Diataxis routing on `route-knowledge` output. Added `route-knowledge` entry to `config/skill_registry.json`. The `route-learning` skill was confirmed absent from templates (no existing skill to extend/alias), so `route-knowledge` is a new standalone skill as designed. References point to the sibling architecture doc at `docs/architecture/agent_knowledge_plane.md` which was confirmed to exist (committed as 0671a10).
+
+### 2026-05-30 14:05 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-30_9aeb4ce9
+completion_manifest:
+  frontmatter_valid: true
+  surfaces_covered: true
+  claude_md_rule_explicit: true
+  doc_expert_preflight: true
+  skill_registry_updated: true
+All 5 PR reviewer checks passed. SKILL.md frontmatter is valid (name: route-knowledge, allowed-tools: Read, description triggers auto-selection). Decision tree covers all 14 required surfaces (memory subtypes, CLAUDE.md inline/TOC, per-folder README, agent frontmatter, ADR, architecture doc, how-to, reference, explanation, glossary, settings.json, ticket body, skills_config). CLAUDE.md inline-vs-TOC rule has two worked examples with expected JSON output. documentation-expert.md pre-flight invokes route-knowledge with non-Diataxis routing logic. skill_registry.json entry present with portable: true and correct template_path.

@@ -45,6 +45,58 @@ genre lands in the project.
 
 ---
 
+## Pre-Flight: Knowledge Surface Check
+
+Before dispatching any Diataxis specialist, check whether the request is a
+"remember this" / "capture this" / "write this down" trigger. If it is,
+invoke the `route-knowledge` skill to confirm the knowledge belongs on a
+documentation surface.
+
+**When to apply:** Any request whose intent is knowledge persistence rather than
+documentation authoring — user says "remember X", "capture this", "save this
+for later", "we should write this down", or similar.
+
+**Steps:**
+
+1. Invoke the `route-knowledge` skill (load
+   `.claude/skills/route-knowledge/SKILL.md`) and pass the knowledge text
+   plus any available context (originating agent, file being edited,
+   ticket in scope).
+
+2. Read `target_surface` from the routing decision:
+
+   - If `target_surface` is one of:
+     `how-to`, `reference`, `explanation`, `architecture-doc`, `adr`
+     → proceed with normal Diataxis dispatch (use the Doc Type Dispatch Table
+     below to select the specialist).
+
+   - If `target_surface` is `duplicate`:
+     → do NOT dispatch a Diataxis writer. Return the duplicate location to
+     the caller: "Near-duplicate already exists at `<path>` — no new doc
+     written."
+
+   - For any other `target_surface` (e.g. `memory-user`, `memory-project`,
+     `CLAUDE.md-inline`, `CLAUDE.md-toc`, `per-folder-readme`,
+     `agent-frontmatter`, `glossary`, `settings-json`, `ticket-body`,
+     `skills-config`, `unknown`):
+     → do NOT dispatch a Diataxis writer.
+     → Return the routing decision directly to the caller:
+     ```
+     route-knowledge decision: { target_surface: "<surface>", path: "<path>", rationale: "<rationale>" }
+     This knowledge does not belong on a Diataxis documentation surface.
+     Suggested action: <surface-specific instruction from route-knowledge output>.
+     ```
+
+3. If `route-knowledge` is unavailable (skill file not found):
+   → log a one-line warning: `route-knowledge skill unavailable — skipping
+   surface pre-flight check` and proceed with normal Diataxis dispatch.
+
+**Non-blocking contract:** A failure in this pre-flight step MUST NOT abort
+the documentation task. Wrap in a try/except and fall through to the Diataxis
+dispatch table on any exception.
+
+---
+
 ## Doc Type Dispatch Table
 
 {{doc_types_dispatch_table}}
