@@ -196,7 +196,7 @@ Call `emit_entry.py`:
 
 ```bash
 python leafcutter/scripts/changelog/emit_entry.py \
-  --changelog-dir "changelogs/" \
+  --changelog-dir "{{config.changelog_folder}}" \
   --payload '<JSON payload>'
 ```
 
@@ -207,7 +207,7 @@ Print the path of the written file to the user.
 Stage and commit the new changelog entry file:
 
 ```bash
-git add "changelogs/"
+git add "{{config.changelog_folder}}"
 git commit -m "chore(changelog): add entry for <deploy-tag or date>"
 ```
 
@@ -216,5 +216,5 @@ git commit -m "chore(changelog): add entry for <deploy-tag or date>"
 - Always use `--no-pager` in git commands to avoid blocking on interactive output.
 - Do NOT write to or edit `CHANGELOG.md` under any circumstances.
 - Do NOT create the deployment tag unless explicitly in the `/prod-deploy` flow.
-- The `changelogs/` directory is created automatically by
+- The `{{config.changelog_folder}}` directory is created automatically by
   `emit_entry.py` if it does not exist — do not pre-create it.

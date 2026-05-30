@@ -238,6 +238,35 @@ def _inject_file_size_limits(config: dict, package_root: Path) -> None:
     config["file_size_limit_py"] = py_limit
 
 
+def _inject_changelogs_dir(config: dict, package_root: Path) -> None:
+    """Inject changelogs_dir from commit_guardian.json into the config dict.
+
+    Reads changelogs_dir from the commit-guardian template JSON and adds
+    changelog_folder to config so that the changelog-agent template
+    can reference it as {{config.changelog_folder}}.
+
+    Falls back to "changelogs/" when the JSON is absent or malformed.
+
+    Args:
+        config: The mutable config dict returned by load_config; modified
+            in-place with the new changelog_folder key.
+        package_root: Absolute path to the leafcutter package root,
+            used to locate templates/scripts/commit_guardian/commit_guardian.json.
+    """
+    cg_path = package_root / "templates" / "scripts" / "commit_guardian" / "commit_guardian.json"
+    if not cg_path.exists():
+        cg_path = package_root / "templates" / "commit-guardian" / "commit_guardian.json"
+    changelogs_dir: str = "changelogs/"
+    try:
+        with cg_path.open(encoding="utf-8") as fh:
+            cg = json.load(fh)
+        raw = cg.get("changelogs_dir", "changelogs")
+        changelogs_dir = raw.rstrip("/") + "/"
+    except (OSError, json.JSONDecodeError, TypeError, ValueError):
+        pass
+    config["changelog_folder"] = changelogs_dir
+
+
 def _validate_all(config: dict, package_root: Path, validate_only: bool, dry_run: bool) -> int:
     """Run config and registry validation and return an exit code.
 
@@ -571,6 +600,7 @@ def main(argv: list[str] | None = None) -> int:
 
     package_root = Path(__file__).resolve().parent.parent
     _inject_file_size_limits(config, package_root)
+    _inject_changelogs_dir(config, package_root)
     if _validate_all(config, package_root, args.validate_only, args.dry_run):
         return 1
 
@@ -796,4 +826,9 @@ if __name__ == "__main__":
 #   when build.py runs. Version computation runs after config validation
 #   and before _run_phases(); skipped by --validate-only (early return);
 #   --dry-run prints but does not write the VERSION file.
+# - 2026-05-30 10:05 [python-coder/TICKET-20260530-ChangelogAgentPlaceholderFix]: (#TICKETLESS reason=standalone-ticket-closeout)
+#   Added _inject_changelogs_dir() helper. Reads changelogs_dir from commit_guardian.json
+#   and injects config["changelog_folder"] so the changelog-agent template can reference
+#   {{config.changelog_folder}} instead of the hardcoded "changelogs/" literal.
+#   Called immediately after _inject_file_size_limits(). Fallback: "changelogs/".
 # ====================================================================

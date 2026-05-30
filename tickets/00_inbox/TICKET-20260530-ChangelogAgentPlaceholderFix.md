@@ -17,13 +17,13 @@ files_touched:
   - unit_tests/test_build_changelog_placeholder.py
 agents:
   architect-review: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
   change-scope-reviewer: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   status-checker: not_needed
@@ -118,19 +118,65 @@ Then {{config.changelog_folder}} is replaced by the injected value
 
 ## Sign-offs
 
-- [ ] test-writer
-- [ ] python-coder
-- [ ] pr-reviewer
+- [x] test-writer — 2026-05-30 10:00
+- [x] python-coder — 2026-05-30 10:05
+- [x] pr-reviewer — 2026-05-30 10:10
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-05-30 10:00 — test-writer (status: ok)
+feedback-id: fb_2026-05-30_e276dcb5
+completion_manifest:
+  test_file_created: true
+  tests_red: true
+  all_six_tests_written: true
+red_baseline:
+  - test_name: test_inject_changelogs_dir_reads_from_commit_guardian
+    file: unit_tests/test_build_changelog_placeholder.py
+    error: "AttributeError: module 'build' has no attribute '_inject_changelogs_dir'"
+  - test_name: test_inject_changelogs_dir_custom_path
+    file: unit_tests/test_build_changelog_placeholder.py
+    error: "AttributeError: module 'build' has no attribute '_inject_changelogs_dir'"
+  - test_name: test_inject_changelogs_dir_trailing_slash_normalised
+    file: unit_tests/test_build_changelog_placeholder.py
+    error: "AttributeError: module 'build' has no attribute '_inject_changelogs_dir'"
+  - test_name: test_inject_changelogs_dir_fallback_when_json_absent
+    file: unit_tests/test_build_changelog_placeholder.py
+    error: "AttributeError: module 'build' has no attribute '_inject_changelogs_dir'"
+  - test_name: test_changelog_folder_custom_path_resolved_in_compiled_template
+    file: unit_tests/test_build_changelog_placeholder.py
+    error: "AssertionError: Found hardcoded 'changelogs/' in a coder-injected line: '--changelog-dir \"changelogs/\" \\'"
+Created unit_tests/test_build_changelog_placeholder.py with 6 tests (5 red, 1 pre-passes). The _inject_changelogs_dir unit tests fail with AttributeError as expected. The custom-path integration test fails because the template still has the hardcoded literal. python-coder must add _inject_changelogs_dir to build.py and replace hardcoded literals in changelog-agent.md.
+
+### 2026-05-30 10:05 — python-coder (status: ok)
+feedback-id: fb_2026-05-30_99750c15
+completion_manifest:
+  template_step7_placeholder_replaced: true
+  template_step8_placeholder_replaced: true
+  template_constraints_placeholder_replaced: true
+  inject_changelogs_dir_function_added: true
+  inject_changelogs_dir_call_added: true
+  decision_history_updated: true
+  all_six_tests_green: true
+Added _inject_changelogs_dir() to scripts/build.py (after _inject_file_size_limits) and replaced 3 hardcoded changelogs/ literals in templates/agents/changelog-agent.md with {{config.changelog_folder}}. All 6 unit tests pass.
+
+### 2026-05-30 10:10 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-30_26f701a0
+completion_manifest:
+  all_acceptance_criteria_met: true
+  implementation_matches_tasks: true
+  tests_written_and_green: true
+  no_regressions: true
+  code_quality_acceptable: true
+PR review passed. All 4 acceptance criteria satisfied by 6 passing tests. Implementation exactly follows _inject_file_size_limits pattern. No regressions detected.
+
 ## Implementation Tasks
 
 ### python-coder
 
-- [ ] In `templates/agents/changelog-agent.md`, Step 7 — replace:
+- [x] In `templates/agents/changelog-agent.md`, Step 7 — replace:
   ```bash
   python leafcutter/scripts/changelog/emit_entry.py \
     --changelog-dir "changelogs/" \
@@ -141,7 +187,7 @@ Then {{config.changelog_folder}} is replaced by the injected value
     --changelog-dir "{{config.changelog_folder}}" \
   ```
 
-- [ ] In `templates/agents/changelog-agent.md`, Step 8 — replace:
+- [x] In `templates/agents/changelog-agent.md`, Step 8 — replace:
   ```bash
   git add "changelogs/"
   ```
@@ -150,7 +196,7 @@ Then {{config.changelog_folder}} is replaced by the injected value
   git add "{{config.changelog_folder}}"
   ```
 
-- [ ] In `templates/agents/changelog-agent.md`, Constraints section — replace:
+- [x] In `templates/agents/changelog-agent.md`, Constraints section — replace:
   ```
   The `changelogs/` directory is created automatically by
   ```
@@ -159,7 +205,7 @@ Then {{config.changelog_folder}} is replaced by the injected value
   The `{{config.changelog_folder}}` directory is created automatically by
   ```
 
-- [ ] In `scripts/build.py`, add a new function `_inject_changelogs_dir` directly
+- [x] In `scripts/build.py`, add a new function `_inject_changelogs_dir` directly
   after `_inject_file_size_limits` (approx. line 238), following the exact same
   pattern:
 
@@ -194,7 +240,7 @@ Then {{config.changelog_folder}} is replaced by the injected value
       config["changelog_folder"] = changelogs_dir
   ```
 
-- [ ] In `scripts/build.py`, call `_inject_changelogs_dir(config, package_root)`
+- [x] In `scripts/build.py`, call `_inject_changelogs_dir(config, package_root)`
   immediately after the existing `_inject_file_size_limits(config, package_root)`
   call (approx. line 572):
 
@@ -203,13 +249,13 @@ Then {{config.changelog_folder}} is replaced by the injected value
   _inject_changelogs_dir(config, package_root)   # <-- add this line
   ```
 
-- [ ] Update the module-level docstring comment block near the bottom of
+- [x] Update the module-level docstring comment block near the bottom of
   `build.py` (the `# Enables python-coder template...` comment) to document
   the new injection alongside `file_size_limit_py`.
 
 ### test-writer
 
-- [ ] Create `unit_tests/test_build_changelog_placeholder.py` with the following
+- [x] Create `unit_tests/test_build_changelog_placeholder.py` with the following
   tests (follow the style of `unit_tests/test_build_version_wiring.py`):
 
   - `test_inject_changelogs_dir_reads_from_commit_guardian`:
