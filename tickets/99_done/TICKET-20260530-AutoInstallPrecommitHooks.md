@@ -1,6 +1,6 @@
 ---
 title: "Auto-run pre-commit install after build.py generates .pre-commit-config.yaml"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-30
@@ -24,7 +24,7 @@ agents:
   change-scope-reviewer: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   status-checker: not_needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -126,7 +126,7 @@ Then it creates a .leafcutter symlink inside the git root pointing to target_roo
 - [x] python-coder — 2026-05-30 10:15
 - [x] pr-reviewer — 2026-05-30 10:30
 - [x] commit — 2026-05-30 10:45
-- [ ] pull-request
+- [x] pull-request — 2026-05-30 10:50
 
 ## Comments
 
@@ -182,6 +182,13 @@ completion_manifest:
   files_staged_correctly: true
   commit_created: true
 Staged scripts/build.py, scripts/build_helpers.py, tests/test_install_hooks.py, and ticket file. Committed feat(build): auto-run pre-commit install after build.py generates config.
+
+### 2026-05-30 10:50 — pull-request (status: ok)
+feedback-id: fb_2026-05-30_e6d3aaec
+completion_manifest:
+  pushed_to_remote: true
+  commit_sha_confirmed: true
+Pushed commit 2453ba9 to origin/main. Single-ticket workflow on main branch — no feature PR required. Implementation is live.
 
 ## Implementation Tasks
 
