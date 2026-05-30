@@ -1,6 +1,6 @@
 ---
 title: "Architecture Doc: Agent Knowledge Plane"
-status: todo
+status: done
 components:
   - build_pipeline
   - config_loader
@@ -19,8 +19,8 @@ agents:
   architecture-diagram-author: signed_off
   documentation-expert: signed_off
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   python-coder: not_needed
   sql-coder: not_needed
   test-writer: not_needed
@@ -139,8 +139,8 @@ it, WHEN it is loaded, WHAT format it has, and INTO WHICH agents it is injected.
 - [x] architecture-diagram-author — 2026-05-30 10:00
 - [x] documentation-expert — 2026-05-30 10:01
 - [x] pr-reviewer — 2026-05-30 10:02
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-05-30 10:10
+- [x] pull-request — 2026-05-30 10:15
 
 ## Comments
 
@@ -192,6 +192,21 @@ completion_manifest:
   bidirectional_links_verified: true
   no_code_changes: true
 PR review passed. All acceptance criteria satisfied: (1) `docs/architecture/agent_knowledge_plane.md` exists with `diagram_type: data_flow` — a valid canonical enum per `config/diagram_types.json`; (2) two mermaid diagrams present mapping all 11 knowledge sources to the agent context window; (3) knowledge-source table includes Source / Written by / Loaded when / Format / Target agents columns covering all 11 required sources; (4) `CLAUDE.md` contains an "Architecture Reference" section with cross-links; (5) `agent_knowledge_system.md` References section updated with a bidirectional cross-link to the new doc. Documentation-only change — no code, no config, fully reversible.
+
+### 2026-05-30 10:10 — commit (status: ok)
+feedback-id: fb_2026-05-30_79834938
+completion_manifest:
+  all_files_staged_explicitly: true
+  pre_commit_hooks_passed: true
+  commit_created: true
+Committed as 0671a10. All pre-commit hooks passed including check-mermaid-drift (required adding related-code-hash:3a2a4fc1 marker) and check-secrets. Four files committed: CLAUDE.md, docs/architecture/agent_knowledge_plane.md (new), docs/architecture/agent_knowledge_system.md, ticket file.
+
+### 2026-05-30 10:15 — pull-request (status: ok)
+feedback-id: fb_2026-05-30_0c9ab740
+completion_manifest:
+  branch_pushed: true
+  changes_on_remote: true
+Pushed commit 0671a10 to origin/main. Changes are live on the main branch of github.com-urlmonitor:urlmonitor/leafcutter-ai.git. No separate PR branch was needed as this ticket targets main directly.
 
 ## Implementation Tasks
 
