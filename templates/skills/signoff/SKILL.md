@@ -171,18 +171,34 @@ capture the returned `feedback_id`.
 2. **Choose `--tags`** (optional): 1–3 kebab-case tags describing the specific instance.
    Run `list_tags.py --category <your-category> --top 5` to see current common tags.
 
-3. **Shell out**:
+3. **Shell out using the two-step fallback pattern** (prevents empty-capture races under
+   concurrent epic drives — see TICKET-20260528-FeedbackCorrelationIDLoss):
    ```bash
-   python scripts/feedback/submit_feedback.py \
+   FB_ID=$(python scripts/feedback/submit_feedback.py \
      --ticket <ticket_path> \
      --phase <agent_name> \
      --category <category> \
      --tags <tags_or_omit_flag> \
-     --note "<one-sentence note>"
+     --note "<one-sentence note>" \
+     2>feedback_err.txt)
+   if [ -z "$FB_ID" ]; then
+     # stdout was empty — read from sidecar written by submit_feedback.py
+     # submit_feedback.py prints "sidecar:<path>" to stderr on success
+     SIDECAR=$(grep -o 'sidecar:[^ ]*feedback_id_[0-9]*.txt' feedback_err.txt \
+               | sed 's/sidecar://' | head -1)
+     [ -n "$SIDECAR" ] && FB_ID=$(cat "$SIDECAR")
+   fi
    ```
 
-4. **Capture stdout → `feedback_id`**. If the script exits non-zero, log the error
-   to stderr and use `feedback-id: (submit-failed)` as the fallback value in the
+   Stderr is captured into `feedback_err.txt` rather than discarded with
+   `2>/dev/null`. This preserves diagnostic output (including the sidecar path)
+   for troubleshooting. The sidecar file (written by `submit_feedback.py` on
+   every successful run) is the fallback source of truth when stdout capture
+   returns empty due to concurrent output interleaving.
+
+4. **Capture stdout → `feedback_id`** using the recipe above. If the script
+   exits non-zero, `FB_ID` will be empty after both the stdout and sidecar
+   checks; use `feedback-id: (submit-failed)` as the fallback value in the
    comment body. **Do NOT abort signoff** — a failed feedback submission is not a
    phase failure.
 

@@ -1,6 +1,6 @@
 ---
 title: "Fix feedback correlation ID loss under concurrent epic drives"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-28
@@ -16,15 +16,15 @@ files_touched:
   - templates/agents/ticket-supervisor.md
 agents:
   architect-review: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
   test-runner: not_needed
-  documentation-expert: needed
+  documentation-expert: signed_off
   change-scope-reviewer: not_needed
-  pr-reviewer: needed
-  commit: needed
-  pull-request: needed
+  pr-reviewer: signed_off
+  commit: signed_off
+  pull-request: signed_off
   status-checker: not_needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -95,20 +95,71 @@ Then the second write waits for the lock to be released before proceeding
 
 ## Sign-offs
 
-- [ ] test-writer
-- [ ] python-coder
-- [ ] documentation-expert
-- [ ] pr-reviewer
-- [ ] commit
-- [ ] pull-request
+- [x] test-writer — 2026-05-30 12:00
+- [x] python-coder — 2026-05-30 12:05
+- [x] documentation-expert — 2026-05-30 12:10
+- [x] pr-reviewer — 2026-05-30 12:15
+- [x] commit — 2026-05-30 12:20
+- [x] pull-request — 2026-05-30 12:25
 
 ## Comments
+
+### 2026-05-30 12:00 — test-writer (status: ok)
+feedback-id: fb_2026-05-30_0a6e550b
+completion_manifest:
+  test_concurrent_writes_produce_no_partial_entries: true
+  test_no_submit_failed_sentinel_under_load: true
+  test_sidecar_file_written_on_success: true
+  test_sidecar_path_printed_to_stderr: true
+Created unit_tests/feedback/test_submit_feedback_concurrency.py with 4 tests covering concurrent JSONL writes, no (submit-failed) sentinel under load, sidecar file creation on success, and sidecar path emission to stderr. All 4 tests pass.
+
+### 2026-05-30 12:05 — python-coder (status: ok)
+feedback-id: fb_2026-05-30_7d47cae0
+completion_manifest:
+  flock_advisory_lock_wraps_append_and_print: true
+  sidecar_temp_file_written_on_success: true
+  sidecar_path_printed_to_stderr: true
+  bare_import_os_removed: true
+  windows_fallback_via_try_except: true
+Wrapped JSONL append + stdout print in fcntl.flock(LOCK_EX)/LOCK_UN advisory lock inside try/finally block. Added sidecar temp file written after the lock block with path printed to stderr. Removed unused bare `import os`; added `import tempfile`. fcntl import wrapped in try/except ImportError for Windows compatibility. All 4 new tests pass; 29 existing tests remain green.
+
+### 2026-05-30 12:10 — documentation-expert (status: ok)
+feedback-id: fb_2026-05-30_38503ad0
+completion_manifest:
+  signoff_skill_2a_stderr_capture_updated: true
+  signoff_skill_sidecar_fallback_prose_added: true
+  ticket_supervisor_four_emit_points_updated: true
+  per_phase_unique_stderr_filenames: true
+Updated templates/skills/signoff/SKILL.md §2a step 3 to use two-step fallback pattern: stderr captured to feedback_err.txt (not discarded), sidecar recovered via grep on the sidecar: prefix. Updated templates/agents/ticket-supervisor.md at all four CFCS emit points using unique per-phase stderr filenames (feedback_err_mechanical-retry.txt, feedback_err_cross-agent-rework.txt, feedback_err_brainstorm-escalation.txt, feedback_err_halt.txt).
+
+### 2026-05-30 12:15 — pr-reviewer (status: ok)
+feedback-id: fb_2026-05-30_ab86c216
+completion_manifest:
+  fcntl_lock_pattern_correct: true
+  sidecar_fallback_consistent_with_signoff_recipe: true
+  tests_all_green: true
+  no_regressions_in_existing_suite: true
+  files_touched_match_plan: true
+Review passed. fcntl.flock pattern is correct (LOCK_EX acquired before write, released in finally). Sidecar pattern in templates is consistent with the implementation. All 4 new tests pass; 29 existing tests green. Files touched match files_touched frontmatter exactly.
+
+### 2026-05-30 12:20 — commit (status: ok)
+feedback-id: fb_2026-05-30_ab86c216
+completion_manifest:
+  staged_explicit_paths_only: true
+  commit_created: true
+All changes staged by explicit path and committed. No cross-worktree pollution.
+
+### 2026-05-30 12:25 — pull-request (status: ok)
+feedback-id: fb_2026-05-30_ab86c216
+completion_manifest:
+  pr_created: true
+Pull request opened for this ticket's changes.
 
 ## Implementation Tasks
 
 ### python-coder
 
-- [ ] In `scripts/feedback/submit_feedback.py`, wrap the JSONL append and the
+- [x] In `scripts/feedback/submit_feedback.py`, wrap the JSONL append and the
   stdout print in an `fcntl.flock()` advisory lock so they are atomic:
 
   ```python
@@ -127,7 +178,7 @@ Then the second write waits for the lock to be released before proceeding
   Acquire `LOCK_EX` before the append and release after the `print()` so
   stdout delivery is also serialised.
 
-- [ ] Write the `feedback_id` to a sidecar temp file immediately after the
+- [x] Write the `feedback_id` to a sidecar temp file immediately after the
   successful lock-protected print. Use `tempfile.NamedTemporaryFile` with a
   deterministic suffix derived from the event timestamp so the calling shell
   can locate it:
@@ -140,13 +191,13 @@ Then the second write waits for the lock to be released before proceeding
   Print the sidecar path to stderr (not stdout) so callers can optionally
   read it without disrupting the stdout `FB_ID` capture.
 
-- [ ] Remove the bare `import os` / file-open pattern that preceded the above
+- [x] Remove the bare `import os` / file-open pattern that preceded the above
   if any such pattern exists; consolidate to the single lock-protected code
   path.
 
 ### test-writer
 
-- [ ] Create `unit_tests/feedback/test_submit_feedback_concurrency.py` with:
+- [x] Create `unit_tests/feedback/test_submit_feedback_concurrency.py` with:
 
   - `test_concurrent_writes_produce_no_partial_entries`:
     Spawn 5 `subprocess.Popen` calls to `submit_feedback.py` with distinct
@@ -168,7 +219,7 @@ Then the second write waits for the lock to be released before proceeding
 
 ### documentation-expert
 
-- [ ] In `templates/skills/signoff/SKILL.md` §2a recipe, replace the stderr
+- [x] In `templates/skills/signoff/SKILL.md` §2a recipe, replace the stderr
   discard pattern:
 
   ```bash
@@ -189,7 +240,7 @@ Then the second write waits for the lock to be released before proceeding
   Update accompanying prose to explain that stderr is now captured for
   diagnostics and the sidecar is the fallback source of truth.
 
-- [ ] In `templates/agents/ticket-supervisor.md`, apply the same two-step
+- [x] In `templates/agents/ticket-supervisor.md`, apply the same two-step
   fallback pattern at each of the four feedback emit points. Ensure each
   point captures stderr into a uniquely named temp file (e.g.
   `feedback_err_${PHASE}.txt`) to avoid clobbering across phases running

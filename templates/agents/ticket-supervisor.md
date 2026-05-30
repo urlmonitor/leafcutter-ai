@@ -379,7 +379,13 @@ in `building-epics` §3 in order; pick the FIRST matching case:
      --category subagent-quality \
      --tags "agent-<failing_agent>,retry-<count>,mechanical-retry" \
      --note "Mechanical retry: <failing_agent> failed with a single-file concrete fix on <ticket_basename>." \
-     --jsonl debugging/logs/feedback.jsonl 2>/dev/null) || FB_ID="(submit-failed)"
+     --jsonl debugging/logs/feedback.jsonl \
+     2>feedback_err_mechanical-retry.txt)
+   if [ -z "$FB_ID" ]; then
+     SIDECAR=$(grep -o 'sidecar:[^ ]*feedback_id_[0-9]*.txt' feedback_err_mechanical-retry.txt | sed 's/sidecar://' | head -1)
+     [ -n "$SIDECAR" ] && FB_ID=$(cat "$SIDECAR")
+   fi
+   FB_ID="${FB_ID:-(submit-failed)}"
    ```
    Include `feedback_id: $FB_ID` in the structured payload returned to `epic-supervisor`.
 
@@ -394,7 +400,13 @@ in `building-epics` §3 in order; pick the FIRST matching case:
      --category subagent-quality \
      --tags "agent-<failing_agent>,retry-<count>,cross-agent-rework" \
      --note "Cross-agent rework: <reviewer_agent> sent <failing_agent> back on <ticket_basename>." \
-     --jsonl debugging/logs/feedback.jsonl 2>/dev/null) || FB_ID="(submit-failed)"
+     --jsonl debugging/logs/feedback.jsonl \
+     2>feedback_err_cross-agent-rework.txt)
+   if [ -z "$FB_ID" ]; then
+     SIDECAR=$(grep -o 'sidecar:[^ ]*feedback_id_[0-9]*.txt' feedback_err_cross-agent-rework.txt | sed 's/sidecar://' | head -1)
+     [ -n "$SIDECAR" ] && FB_ID=$(cat "$SIDECAR")
+   fi
+   FB_ID="${FB_ID:-(submit-failed)}"
    ```
 
 3. **Open-ended design choice** (§3.3) — architectural ambiguity. Spawn
@@ -410,7 +422,13 @@ in `building-epics` §3 in order; pick the FIRST matching case:
      --category subagent-quality \
      --tags "agent-<failing_agent>,brainstorm-escalation" \
      --note "Brainstorm escalation: <failing_agent> triggered open-ended design question on <ticket_basename>." \
-     --jsonl debugging/logs/feedback.jsonl 2>/dev/null) || FB_ID="(submit-failed)"
+     --jsonl debugging/logs/feedback.jsonl \
+     2>feedback_err_brainstorm-escalation.txt)
+   if [ -z "$FB_ID" ]; then
+     SIDECAR=$(grep -o 'sidecar:[^ ]*feedback_id_[0-9]*.txt' feedback_err_brainstorm-escalation.txt | sed 's/sidecar://' | head -1)
+     [ -n "$SIDECAR" ] && FB_ID=$(cat "$SIDECAR")
+   fi
+   FB_ID="${FB_ID:-(submit-failed)}"
    ```
 
 4. **Otherwise / cap exhausted** (§3.4) — verify the failed agent already
@@ -424,7 +442,13 @@ in `building-epics` §3 in order; pick the FIRST matching case:
      --category subagent-quality \
      --tags "agent-<failing_agent>,halt,<cap_kind>" \
      --note "Halt: <failing_agent> exhausted adjudication ladder (<cap_kind>) on <ticket_basename>." \
-     --jsonl debugging/logs/feedback.jsonl 2>/dev/null) || FB_ID="(submit-failed)"
+     --jsonl debugging/logs/feedback.jsonl \
+     2>feedback_err_halt.txt)
+   if [ -z "$FB_ID" ]; then
+     SIDECAR=$(grep -o 'sidecar:[^ ]*feedback_id_[0-9]*.txt' feedback_err_halt.txt | sed 's/sidecar://' | head -1)
+     [ -n "$SIDECAR" ] && FB_ID=$(cat "$SIDECAR")
+   fi
+   FB_ID="${FB_ID:-(submit-failed)}"
    ```
    Include `feedback_id: $FB_ID` in the blocked payload returned to `epic-supervisor`.
 

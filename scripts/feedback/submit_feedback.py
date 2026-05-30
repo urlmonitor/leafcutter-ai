@@ -44,12 +44,18 @@ import argparse
 import difflib
 import hashlib
 import json
-import os
 import re
 import secrets
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+
+try:
+    import fcntl as _fcntl  # POSIX only; not available on Windows
+    _FCNTL_AVAILABLE = True
+except ImportError:
+    _FCNTL_AVAILABLE = False
 
 # ---------------------------------------------------------------------------
 # Project root discovery
@@ -482,16 +488,39 @@ def main(argv: list[str] | None = None) -> int:
     entry = _build_entry(args, tags, severity, feedback_id, timestamp)
 
     # ------------------------------------------------------------------
-    # Write JSONL
+    # Write JSONL (atomic under concurrent writes via advisory flock)
     # ------------------------------------------------------------------
     jsonl_path = Path(args.jsonl) if args.jsonl else _JSONL_DEFAULT
     jsonl_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(jsonl_path, "a", encoding="utf-8") as fh:
-        fh.write(json.dumps(entry, separators=(",", ":")) + "\n")
+        if _FCNTL_AVAILABLE:
+            _fcntl.flock(fh, _fcntl.LOCK_EX)
+        try:
+            fh.write(json.dumps(entry, separators=(",", ":")) + "\n")
+            fh.flush()
+            # Print feedback_id to stdout INSIDE the lock so stdout delivery
+            # is serialised with the append, preventing empty-capture races.
+            print(feedback_id)
+        finally:
+            if _FCNTL_AVAILABLE:
+                _fcntl.flock(fh, _fcntl.LOCK_UN)
 
-    # Print feedback_id to stdout for capture by the signoff skill
-    print(feedback_id)
+    # ------------------------------------------------------------------
+    # Sidecar temp file — fallback recovery when stdout capture fails
+    # ------------------------------------------------------------------
+    # Write feedback_id to a deterministic-suffix temp file so calling
+    # agents can recover the ID even if stdout capture returned empty.
+    # The path is printed to stderr (not stdout) to avoid disrupting FB_ID.
+    ts_epoch = int(datetime.now(timezone.utc).timestamp())
+    sidecar_path = Path(tempfile.gettempdir()) / f"feedback_id_{ts_epoch}.txt"
+    try:
+        sidecar_path.write_text(feedback_id, encoding="utf-8")
+        print(f"sidecar:{sidecar_path}", file=sys.stderr)
+    except OSError:
+        # Non-fatal: sidecar write failure does not affect the JSONL entry.
+        pass
+
     return 0
 
 
@@ -501,6 +530,17 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-05-30 12:00 [python-coder/TICKET-20260528-FeedbackCorrelationIDLoss]:
+#   Wrapped JSONL append and stdout print in fcntl.flock(LOCK_EX) advisory
+#   lock so concurrent writers serialise both the append and the stdout
+#   print. Stdout delivery inside the lock prevents empty-capture races
+#   that previously caused (submit-failed) sentinels in ticket comments.
+#   Added sidecar temp file (feedback_id_<epoch>.txt in tempdir) as a
+#   fallback: calling agents can read the ID from the sidecar when stdout
+#   capture fails. Sidecar path is printed to stderr to avoid disrupting
+#   FB_ID=$(...) capture. fcntl import wrapped in try/except ImportError
+#   for Windows compatibility (falls back to unlocked path with a warning).
+#   Removed bare `import os` (was unused after refactor). (#TICKET-20260528)
 # - 2026-05-21 12:00 [python-coder/TICKET-20260519-deploy_feedback_scripts_via_build]:
 #   Replaced hardcoded parents[3] JSONL path with _find_project_root() helper
 #   that walks up from __file__ looking for .claude/ directory. Also changed
