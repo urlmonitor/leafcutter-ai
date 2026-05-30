@@ -1,6 +1,6 @@
 ---
 title: "Fix changelog-agent template: replace hardcoded changelogs/ path with {{config.changelog_folder}} placeholder"
-status: todo
+status: done
 components:
   - build_pipeline
   - config_loader
@@ -24,8 +24,8 @@ agents:
   documentation-expert: not_needed
   change-scope-reviewer: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   status-checker: not_needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -121,8 +121,8 @@ Then {{config.changelog_folder}} is replaced by the injected value
 - [x] test-writer — 2026-05-30 10:00
 - [x] python-coder — 2026-05-30 10:05
 - [x] pr-reviewer — 2026-05-30 10:10
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-05-30 10:15
+- [x] pull-request — 2026-05-30 10:20
 
 ## Comments
 
@@ -171,6 +171,21 @@ completion_manifest:
   no_regressions: true
   code_quality_acceptable: true
 PR review passed. All 4 acceptance criteria satisfied by 6 passing tests. Implementation exactly follows _inject_file_size_limits pattern. No regressions detected.
+
+### 2026-05-30 10:15 — commit (status: ok)
+feedback-id: fb_2026-05-30_1c7d836c
+completion_manifest:
+  files_staged_correctly: true
+  pre_commit_hooks_passed: true
+  commit_created: true
+Committed 4 files (changelog-agent.md, build.py, test file, ticket) in commit 6e74018. All 23 pre-commit checks passed (10 applicable, 13 skipped).
+
+### 2026-05-30 10:20 — pull-request (status: ok)
+feedback-id: fb_2026-05-30_067c32ef
+completion_manifest:
+  changes_pushed_to_main: true
+  commit_sha_confirmed: true
+Pushed commit 6e74018 directly to origin/main (standalone ticket — no feature branch). Changes are live at https://github.com/urlmonitor/leafcutter-ai/commit/6e74018.
 
 ## Implementation Tasks
 
