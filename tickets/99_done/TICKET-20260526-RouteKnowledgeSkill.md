@@ -1,6 +1,6 @@
 ---
 title: "Add portable route-knowledge skill for user-triggered knowledge capture"
-status: todo
+status: done
 components:
   - build_pipeline
   - config_loader
@@ -29,7 +29,7 @@ agents:
   documentation-expert: signed_off
   change-scope-reviewer: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: not_needed
   status-checker: not_needed
   sql-coder: not_needed
@@ -159,7 +159,7 @@ Then .claude/skills/route-knowledge/SKILL.md exists in the consumer project
 
 - [x] documentation-expert — 2026-05-30 14:00
 - [x] pr-reviewer — 2026-05-30 14:05
-- [ ] commit
+- [x] commit — 2026-05-30 14:15
 
 ## Implementation Tasks
 
@@ -200,11 +200,11 @@ Then .claude/skills/route-knowledge/SKILL.md exists in the consumer project
 - [x] Verify `skill_registry.json` has been updated with the new skill entry.
 
 ### commit
-- [ ] Stage and commit:
+- [x] Stage and commit:
   - `leafcutter-ai/templates/skills/route-knowledge/SKILL.md`
   - `leafcutter-ai/config/skill_registry.json`
   - `leafcutter-ai/templates/agents/documentation-expert.md`
-- [ ] Commit message: `feat(skills): add route-knowledge skill for user-triggered knowledge capture`
+- [x] Commit message: `feat(skills): add route-knowledge skill for user-triggered knowledge capture`
 
 ## Risk & Safety
 
@@ -236,3 +236,11 @@ completion_manifest:
   doc_expert_preflight: true
   skill_registry_updated: true
 All 5 PR reviewer checks passed. SKILL.md frontmatter is valid (name: route-knowledge, allowed-tools: Read, description triggers auto-selection). Decision tree covers all 14 required surfaces (memory subtypes, CLAUDE.md inline/TOC, per-folder README, agent frontmatter, ADR, architecture doc, how-to, reference, explanation, glossary, settings.json, ticket body, skills_config). CLAUDE.md inline-vs-TOC rule has two worked examples with expected JSON output. documentation-expert.md pre-flight invokes route-knowledge with non-Diataxis routing logic. skill_registry.json entry present with portable: true and correct template_path.
+
+### 2026-05-30 14:15 — commit (status: ok)
+feedback-id: fb_2026-05-30_e6e6a43c
+completion_manifest:
+  files_staged_explicitly: true
+  commit_created: true
+  commit_message_correct: true
+Committed SHA 790228a: feat(skills): add route-knowledge skill for user-triggered knowledge capture. Files staged explicitly (no git add -A): templates/skills/route-knowledge/SKILL.md (A), config/skill_registry.json (M), templates/agents/documentation-expert.md (M), tickets/00_inbox/TICKET-20260526-RouteKnowledgeSkill.md (M). Pre-commit hooks passed (Secrets, ADR Coverage, Structural Change checks all green). Unrelated files (feedback.jsonl, TICKET-20260530-BuildBacklogDirectDispatch.md) left unstaged.
