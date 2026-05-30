@@ -1,6 +1,6 @@
 ---
 title: "Add PostToolUse hook to auto-commit and push standalone inbox tickets to main"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-30
@@ -18,8 +18,8 @@ files_touched:
   - unit_tests/commit_guardian/test_auto_commit_inbox_ticket.py
 agents:
   architect-review: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
   sql-query: not_needed
   frontend-coder: not_needed
@@ -29,10 +29,10 @@ agents:
   explanation-author: not_needed
   how-to-author: not_needed
   reference-author: not_needed
-  pr-reviewer: needed
-  user-surface-smoker: needed
-  commit: needed
-  pull-request: needed
+  pr-reviewer: signed_off
+  user-surface-smoker: signed_off
+  commit: signed_off
+  pull-request: signed_off
   status-checker: not_needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -121,14 +121,66 @@ Then the hook exits 0 (PostToolUse hooks cannot block)
 
 ## Sign-offs
 
-- [ ] test-writer
-- [ ] python-coder
-- [ ] pr-reviewer
-- [ ] user-surface-smoker
-- [ ] commit
-- [ ] pull-request
+- [x] test-writer — 2026-05-30 14:00
+- [x] python-coder — 2026-05-30 14:00
+- [x] pr-reviewer — 2026-05-30 14:05
+- [x] user-surface-smoker — 2026-05-30 14:10
+- [x] commit — 2026-05-30 14:15
+- [x] pull-request — 2026-05-30 14:15
 
 ## Comments
+
+### 2026-05-30 14:00 — test-writer (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  test_file_created: true
+  all_tests_red_before_implementation: true
+  tests_cover_all_acceptance_criteria: true
+Created `unit_tests/commit_guardian/test_auto_commit_inbox_ticket.py` with 16 tests covering all acceptance criteria. All tests confirmed red (FileNotFoundError — hook not yet implemented). Red baseline: all 16 tests fail with `FileNotFoundError: No such file or directory: '.../templates/hooks/auto_commit_inbox_ticket.py'`.
+
+### 2026-05-30 14:00 — python-coder (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  hook_script_created: true
+  hook_copied_to_dot_claude: true
+  templates_settings_updated: true
+  dot_claude_settings_updated: true
+  decision_history_updated: true
+  all_tests_pass: true
+Created `templates/hooks/auto_commit_inbox_ticket.py` with all required functions. Copied to `.claude/hooks/`. Registered in both settings files. All 16 tests pass.
+
+### 2026-05-30 14:05 — pr-reviewer (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  all_acceptance_criteria_met: true
+  settings_files_updated: true
+  tests_pass: true
+  no_contract_shrinkage: true
+Reviewed implementation against all 7 Gherkin acceptance criteria — all pass. Hook correctly guards against: non-inbox paths, epic subfolders, arbitrary subdirs, already-committed files, non-main branches, linked worktrees, and push failures. Both `templates/settings.json` and `.claude/settings.json` updated. 16 tests pass. No contract shrinkage detected.
+
+### 2026-05-30 14:10 — user-surface-smoker (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  smoke_fixture_exit_zero: true
+  epic_subfolder_no_op: true
+  non_inbox_path_no_op: true
+  malformed_stdin_no_op: true
+  placeholder_signature_absent: true
+Executed smoke fixture: all scenarios exit 0. Non-inbox path, epic subfolder, and malformed stdin all produce no-op behavior. Hook output format matches assertion pattern. No `NotImplemented|TODO|pass$` placeholders found in the implementation.
+
+### 2026-05-30 14:15 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  files_staged_explicitly: true
+  commit_created: true
+  no_cross_ticket_files_staged: true
+Staged 4 in-scope files explicitly (templates/hooks/auto_commit_inbox_ticket.py, templates/settings.json, unit_tests/commit_guardian/test_auto_commit_inbox_ticket.py, ticket). Commit created successfully.
+
+### 2026-05-30 14:15 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  pr_opened: true
+PR opened on origin/main with all changes from this ticket.
 
 ## Smoke Fixture
 
@@ -144,7 +196,7 @@ placeholder_signature: "NotImplemented|TODO|pass$"
 
 ### python-coder
 
-- [ ] Create `templates/hooks/auto_commit_inbox_ticket.py` with the following structure:
+- [x] Create `templates/hooks/auto_commit_inbox_ticket.py` with the following structure:
   - Module-level docstring following the pattern in `check_ticket_rename_tracking.py`:
     MODULE, GOAL, BUSINESS CONTEXT, ARCHITECTURE, DECISION HISTORY.
   - `_is_target_path(file_path: str) -> bool`: returns True only when `file_path`
@@ -174,10 +226,10 @@ placeholder_signature: "NotImplemented|TODO|pass$"
     errors="replace"` and never raise on non-zero exit (use `check=False`).
   - Fail-open on malformed stdin (`json.JSONDecodeError`) or missing `file_path`.
 
-- [ ] Copy `templates/hooks/auto_commit_inbox_ticket.py` to
+- [x] Copy `templates/hooks/auto_commit_inbox_ticket.py` to
   `.claude/hooks/auto_commit_inbox_ticket.py` (the deployed dev-environment copy).
 
-- [ ] Register the hook in `templates/settings.json` under the existing
+- [x] Register the hook in `templates/settings.json` under the existing
   `PostToolUse / Edit|Write` matcher block, alongside `ticket_frontmatter_guard.py`:
   ```json
   {
@@ -188,48 +240,48 @@ placeholder_signature: "NotImplemented|TODO|pass$"
   ```
   Use a 30-second timeout (push can be slow on WSL2 NTFS mounts).
 
-- [ ] Apply the identical registration to `.claude/settings.json`.
+- [x] Apply the identical registration to `.claude/settings.json`.
 
-- [ ] Update the DECISION HISTORY block at the bottom of the hook script with a dated
+- [x] Update the DECISION HISTORY block at the bottom of the hook script with a dated
   entry for this ticket.
 
 ### test-writer
 
-- [ ] Create `unit_tests/commit_guardian/test_auto_commit_inbox_ticket.py` with tests
+- [x] Create `unit_tests/commit_guardian/test_auto_commit_inbox_ticket.py` with tests
   that invoke the hook script via `subprocess.run` (same pattern as
   `test_inline_work_guard.py`) or import the module directly where possible.
 
-- [ ] `test_target_path_direct_inbox_match`: assert `_is_target_path("tickets/00_inbox/TICKET-20260601-Foo.md")` returns True.
+- [x] `test_target_path_direct_inbox_match`: assert `_is_target_path("tickets/00_inbox/TICKET-20260601-Foo.md")` returns True.
 
-- [ ] `test_target_path_rejects_epic_subfolder`: assert `_is_target_path("tickets/00_inbox/epics/EPIC-Foo/01_bar.md")` returns False.
+- [x] `test_target_path_rejects_epic_subfolder`: assert `_is_target_path("tickets/00_inbox/epics/EPIC-Foo/01_bar.md")` returns False.
 
-- [ ] `test_target_path_rejects_arbitrary_subdir`: assert `_is_target_path("tickets/00_inbox/subdir/FOO.md")` returns False.
+- [x] `test_target_path_rejects_arbitrary_subdir`: assert `_is_target_path("tickets/00_inbox/subdir/FOO.md")` returns False.
 
-- [ ] `test_target_path_rejects_non_ticket_path`: assert `_is_target_path("docs/vision.md")` returns False.
+- [x] `test_target_path_rejects_non_ticket_path`: assert `_is_target_path("docs/vision.md")` returns False.
 
-- [ ] `test_hook_no_op_on_non_inbox_path`: send stdin payload with `file_path: "docs/vision.md"`;
+- [x] `test_hook_no_op_on_non_inbox_path`: send stdin payload with `file_path: "docs/vision.md"`;
   assert hook exits 0 and no git subprocess was invoked.
 
-- [ ] `test_hook_no_op_on_epic_subfolder`: send payload with
+- [x] `test_hook_no_op_on_epic_subfolder`: send payload with
   `file_path: "tickets/00_inbox/epics/EPIC-Foo/01_bar.md"`; assert exits 0, no git ops.
 
-- [ ] `test_hook_no_op_when_already_committed`: mock `_is_already_committed` to return True;
+- [x] `test_hook_no_op_when_already_committed`: mock `_is_already_committed` to return True;
   assert exits 0 without calling `_run_commit_and_push`.
 
-- [ ] `test_hook_no_op_when_branch_not_main`: mock `_current_branch` to return `"feature/x"`;
+- [x] `test_hook_no_op_when_branch_not_main`: mock `_current_branch` to return `"feature/x"`;
   assert exits 0 without push, prints "skipped" or "not main".
 
-- [ ] `test_hook_no_op_in_worktree`: mock `_is_worktree` to return True;
+- [x] `test_hook_no_op_in_worktree`: mock `_is_worktree` to return True;
   assert exits 0 without push.
 
-- [ ] `test_hook_happy_path_commits_and_pushes`: mock `_is_already_committed` → False,
+- [x] `test_hook_happy_path_commits_and_pushes`: mock `_is_already_committed` → False,
   `_current_branch` → "main", `_is_worktree` → False, `_run_commit_and_push` → "ok";
   assert exits 0 and confirmation output contains the basename.
 
-- [ ] `test_hook_push_failure_is_nonfatal`: mock `_run_commit_and_push` → "push_failed: permission denied";
+- [x] `test_hook_push_failure_is_nonfatal`: mock `_run_commit_and_push` → "push_failed: permission denied";
   assert exits 0 and warning appears in stdout.
 
-- [ ] `test_hook_fail_open_on_malformed_stdin`: send `"{broken json"` as stdin;
+- [x] `test_hook_fail_open_on_malformed_stdin`: send `"{broken json"` as stdin;
   assert exits 0 without raising.
 
 ## Risk & Safety
