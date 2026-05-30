@@ -1,6 +1,6 @@
 ---
 title: "Adapt /build-backlog to dispatch ticket-supervisors directly (remove /build-feature middleman)"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-30
@@ -31,7 +31,7 @@ agents:
   pr-reviewer: signed_off
   user-surface-smoker: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   status-checker: not_needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -154,7 +154,7 @@ Then it contains no reference to /build-feature inside the dispatch loop
 - [x] pr-reviewer — 2026-05-30 12:15
 - [x] user-surface-smoker — 2026-05-30 12:20
 - [x] commit — 2026-05-30 14:36
-- [ ] pull-request
+- [x] pull-request — 2026-05-30 14:40
 
 ## Comments
 
