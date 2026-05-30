@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -441,6 +443,71 @@ def _create_file_shim(canonical: Path, source: Path, strategy: str) -> str:
         return "copy (symlink failed)"
 
 
+def install_hooks(target_root, dry_run=False):
+    """Run ``pre-commit install`` after build.py writes .pre-commit-config.yaml.
+
+    Closes the "last mile" gap: the generated config exists on disk but
+    ``pre-commit install`` must be run to wire ``.git/hooks/pre-commit`` to it.
+    This function is idempotent — calling it multiple times on the same project
+    is safe.
+
+    Args:
+        target_root: Absolute path to the target project root.
+        dry_run: When True, prints the action but does not run any subprocess.
+
+    Returns:
+        One of "installed", "dry-run", "failed",
+        "skipped (pre-commit not found)", or "skipped (custom hooksPath)".
+    """
+    # 1. Check pre-commit binary availability.
+    if not shutil.which("pre-commit"):
+        print("  [WARNING] pre-commit not found; skipping hook install")
+        return "skipped (pre-commit not found)"
+
+    # 2. Dry-run guard (before any subprocess calls that mutate state).
+    if dry_run:
+        print("  [DRY-RUN] would run pre-commit install")
+        return "dry-run"
+
+    # 3. Check core.hooksPath git config.
+    hooks_path_result = subprocess.run(
+        ["git", "-C", str(target_root), "config", "--get", "core.hooksPath"],
+        capture_output=True,
+        text=True,
+    )
+    if hooks_path_result.returncode == 0:
+        hooks_path_value = hooks_path_result.stdout.strip()
+        if hooks_path_value.lower() in (".git/hooks", ".git\\hooks"):
+            # Redundant default - unset to allow pre-commit to install cleanly.
+            subprocess.run(
+                ["git", "-C", str(target_root), "config", "--unset", "core.hooksPath"],
+                capture_output=True,
+            )
+            print("  hooks: cleared redundant core.hooksPath (.git/hooks)")
+        elif hooks_path_value:
+            print(
+                f"  [WARNING] core.hooksPath is set to '{hooks_path_value}' "
+                "(non-default); skipping pre-commit install"
+            )
+            return "skipped (custom hooksPath)"
+
+    # 4. Run pre-commit install.
+    try:
+        subprocess.run(
+            ["pre-commit", "install"],
+            cwd=str(target_root),
+            check=True,
+            capture_output=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        stderr = exc.stderr.decode("utf-8", errors="replace") if exc.stderr else ""
+        print(f"  [WARNING] pre-commit install failed: {stderr.strip()}")
+        return "failed"
+
+    print("  hooks: pre-commit install OK")
+    return "installed"
+
+
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
@@ -462,4 +529,12 @@ def _create_file_shim(canonical: Path, source: Path, strategy: str) -> str:
 #   rendered output so check_output_drift.py can detect Direction B drift.
 #   build_manifest.py and build_extras.py (my branch's separate modules) are
 #   superseded by this consolidated module.
+# - 2026-05-30 10:15 [python-coder/TICKET-20260530-AutoInstallPrecommitHooks]: Added (#TICKET-20260530)
+#   install_hooks(target_root, dry_run) to close the "last mile" gap between
+#   generating .pre-commit-config.yaml and activating it. Handles: pre-commit
+#   not on PATH (non-fatal warning), dry-run mode (returns early before any
+#   subprocess), core.hooksPath redundant default (auto-unset), core.hooksPath
+#   custom path (warn+skip), and CalledProcessError (non-fatal, returns "failed").
+#   Called from build.py main() under the same --no-shims guard as install_shims().
+#   Idempotent. Added shutil and subprocess to module-level imports.
 # ====================================================================

@@ -51,6 +51,7 @@ from build_helpers import (
     seed_docs as _seed_docs,
     update_diagrams as _update_diagrams,
     install_shims as _install_shims,
+    install_hooks as _install_hooks,
     write_build_manifest,
 )
 from build_glossary import build_glossary
@@ -687,6 +688,9 @@ def main(argv: list[str] | None = None) -> int:
             dry_run=args.dry_run,
             force=effective_force,
         )
+
+        print("\nHook install:")
+        _install_hooks(target_root, dry_run=args.dry_run)
 
     # Post-build: scan for placeholder content and referential integrity
     if not args.dry_run:
