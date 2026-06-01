@@ -18,10 +18,10 @@ files_touched:
   - templates/workflows/build-feature.md
 agents:
   architect-review: needed
-  test-writer: not_needed
-  python-coder: not_needed
+  test-writer: needed
+  python-coder: needed
   sql-coder: not_needed
-  test-runner: not_needed
+  test-runner: needed
   documentation-expert: not_needed
   pr-reviewer: needed
   commit: needed
@@ -142,9 +142,50 @@ Then build-ticket.js is called directly (not build-epic.js)
  And the epic planner is not triggered
 ```
 
+## Test Requirements
+
+Tests live in `unit_tests/test_build_epic_workflow.py` and must pass via
+`pytest unit_tests/test_build_epic_workflow.py` in the worktree.
+
+```json
+{
+  "rationale": "Epic workflow is deterministic JS — validate syntax, meta block, agent references, batch-ordering invariants, and parallel() usage.",
+  "tests": [
+    {
+      "name": "test_build_epic_js_is_valid_javascript",
+      "covers": "Script parses without syntax errors (run via node --check)",
+      "location": "unit_tests/test_build_epic_workflow.py"
+    },
+    {
+      "name": "test_meta_block_has_required_fields",
+      "covers": "meta.name, meta.description, and meta.phases are present and non-empty",
+      "location": "unit_tests/test_build_epic_workflow.py"
+    },
+    {
+      "name": "test_planner_schema_requests_batches_array",
+      "covers": "The planner agent() call includes a schema that requires a 'batches' array field",
+      "location": "unit_tests/test_build_epic_workflow.py"
+    },
+    {
+      "name": "test_parallel_used_within_batch_not_across_batches",
+      "covers": "parallel() is called per-batch (within the for loop), not wrapping the batch loop itself",
+      "location": "unit_tests/test_build_epic_workflow.py"
+    },
+    {
+      "name": "test_halt_stops_subsequent_batches",
+      "covers": "A halt classification in any batch ticket breaks the outer batch loop",
+      "location": "unit_tests/test_build_epic_workflow.py"
+    }
+  ]
+}
+```
+
 ## Sign-offs
 
 - [ ] architect-review
+- [ ] test-writer
+- [ ] python-coder
+- [ ] test-runner
 - [ ] architecture-diagram-author
 - [ ] pr-reviewer
 - [ ] commit

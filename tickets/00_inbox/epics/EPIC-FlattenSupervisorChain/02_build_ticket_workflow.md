@@ -16,10 +16,10 @@ files_touched:
   - templates/workflows-js/build-ticket.js
 agents:
   architect-review: needed
-  test-writer: not_needed
-  python-coder: not_needed
+  test-writer: needed
+  python-coder: needed
   sql-coder: not_needed
-  test-runner: not_needed
+  test-runner: needed
   documentation-expert: not_needed
   pr-reviewer: needed
   commit: needed
@@ -135,9 +135,55 @@ Then no phase agent is dispatched
  And the workflow exits cleanly with "no phases to run"
 ```
 
+## Test Requirements
+
+Tests live in `unit_tests/test_build_ticket_workflow.py` and must pass via
+`pytest unit_tests/test_build_ticket_workflow.py` in the worktree.
+
+```json
+{
+  "rationale": "Workflow JS scripts are deterministic code — we can validate syntax, meta block structure, agent references against the registry, and phase ordering logic without invoking Claude Code.",
+  "tests": [
+    {
+      "name": "test_build_ticket_js_is_valid_javascript",
+      "covers": "Script parses without syntax errors (run via node --check)",
+      "location": "unit_tests/test_build_ticket_workflow.py"
+    },
+    {
+      "name": "test_meta_block_has_required_fields",
+      "covers": "meta.name, meta.description, and meta.phases are present and non-empty",
+      "location": "unit_tests/test_build_ticket_workflow.py"
+    },
+    {
+      "name": "test_agent_types_exist_in_registry",
+      "covers": "Every agentType string referenced in the script exists in config/agent_registry.json",
+      "location": "unit_tests/test_build_ticket_workflow.py"
+    },
+    {
+      "name": "test_schema_objects_are_valid_json_schema",
+      "covers": "Any schema: {...} objects in agent() calls are structurally valid JSON Schema",
+      "location": "unit_tests/test_build_ticket_workflow.py"
+    },
+    {
+      "name": "test_phase_ordering_matches_canonical_priority",
+      "covers": "The phaseOrder array matches the canonical agent priority from building-epics skill",
+      "location": "unit_tests/test_build_ticket_workflow.py"
+    },
+    {
+      "name": "test_retry_cap_is_bounded",
+      "covers": "MAX_RETRIES constant exists and is <= 3 (prevents runaway loops)",
+      "location": "unit_tests/test_build_ticket_workflow.py"
+    }
+  ]
+}
+```
+
 ## Sign-offs
 
 - [ ] architect-review
+- [ ] test-writer
+- [ ] python-coder
+- [ ] test-runner
 - [ ] architecture-diagram-author
 - [ ] pr-reviewer
 - [ ] commit

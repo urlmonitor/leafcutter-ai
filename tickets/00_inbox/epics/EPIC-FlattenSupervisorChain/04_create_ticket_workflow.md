@@ -17,10 +17,10 @@ files_touched:
   - templates/workflows/create-ticket.md
 agents:
   architect-review: needed
-  test-writer: not_needed
-  python-coder: not_needed
+  test-writer: needed
+  python-coder: needed
   sql-coder: not_needed
-  test-runner: not_needed
+  test-runner: needed
   documentation-expert: not_needed
   pr-reviewer: needed
   commit: needed
@@ -106,9 +106,50 @@ When create-ticket.js would otherwise call create-epic
 Then the depth-cap error is returned and no create-epic call is made
 ```
 
+## Test Requirements
+
+Tests live in `unit_tests/test_create_ticket_workflow.py` and must pass via
+`pytest unit_tests/test_create_ticket_workflow.py` in the worktree.
+
+```json
+{
+  "rationale": "Validate script syntax, meta block, routing logic branches, and depth-cap enforcement without invoking Claude Code.",
+  "tests": [
+    {
+      "name": "test_create_ticket_js_is_valid_javascript",
+      "covers": "Script parses without syntax errors (run via node --check)",
+      "location": "unit_tests/test_create_ticket_workflow.py"
+    },
+    {
+      "name": "test_meta_block_has_required_fields",
+      "covers": "meta.name, meta.description, and meta.phases are present and non-empty",
+      "location": "unit_tests/test_create_ticket_workflow.py"
+    },
+    {
+      "name": "test_routing_branches_cover_both_decisions",
+      "covers": "Script contains branches for routing_decision == standard_ticket and routing_decision == epic",
+      "location": "unit_tests/test_create_ticket_workflow.py"
+    },
+    {
+      "name": "test_depth_cap_guard_present",
+      "covers": "Script enforces depth >= 3 guard before create-epic dispatch",
+      "location": "unit_tests/test_create_ticket_workflow.py"
+    },
+    {
+      "name": "test_parallel_used_for_refinement_and_architect",
+      "covers": "refinement and architect-review are dispatched via parallel() not sequentially",
+      "location": "unit_tests/test_create_ticket_workflow.py"
+    }
+  ]
+}
+```
+
 ## Sign-offs
 
 - [ ] architect-review
+- [ ] test-writer
+- [ ] python-coder
+- [ ] test-runner
 - [ ] pr-reviewer
 - [ ] commit
 - [ ] pull-request

@@ -90,15 +90,16 @@ workflow execution.
 | 05 | [05_onboarding_docs.md](./05_onboarding_docs.md) | Update onboarding wizard and docs for workflow version requirement | `[ ]` |
 | 06 | [06_deprecate_supervisors.md](./06_deprecate_supervisors.md) | Mark epic-supervisor and ticket-supervisor as legacy_only in agent_registry | `[ ]` |
 | 07 | [07_settings_allowlist.md](./07_settings_allowlist.md) | Ship comprehensive git/gh/python/npm allowlist in settings.json template | `[ ]` |
+| 08 | [08_enable_agent_teams.md](./08_enable_agent_teams.md) | Enable experimental Agent Teams via settings.json env var + constraints doc | `[ ]` |
 
 ## Risk & Safety
+
+- Parallelism note (updated): tickets 01, 07, and 08 can run immediately (08
+  depends on 07 for the settings.json file but not for logic). Tickets 02, 03,
+  04 depend on 01. Tickets 05 and 06 can run after 02–04 are drafted.
 
 - Touches money? No.
 - Touches data? No.
 - Reversibility? High — the dual-path build gate means legacy agent templates
   remain functional for sub-v2.1.154 installs. JS workflow files are additive;
   removing them restores prior behaviour.
-- Parallelism note: tickets 01 and 07 are independent of each other and of the
-  JS workflow tickets. Tickets 02, 03, 04 depend on 01 (the build phase must
-  exist before the scripts it copies are added). Tickets 05 and 06 can run
-  after 02–04 are drafted but before they are merged.
