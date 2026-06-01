@@ -1,6 +1,6 @@
 ---
 title: "Update onboarding wizard and docs for Claude Code Workflow version requirement"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-01
@@ -26,8 +26,8 @@ agents:
   test-runner: not_needed
   documentation-expert: signed_off
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   explanation-author: not_needed
@@ -111,8 +111,8 @@ Then they find a clear description of the planner-agent overhead per ticket
 - [x] documentation-expert — 2026-06-01 14:00
 - [x] how-to-author — 2026-06-01 14:10
 - [x] pr-reviewer — 2026-06-01 14:20
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-01 14:30
+- [x] pull-request — 2026-06-01 14:35
 
 ## Comments
 
@@ -139,6 +139,20 @@ completion_manifest:
   no_high_findings: true
   scope_verified: true
 No high-confidence findings. All four Acceptance Criteria satisfied: onboard.md Step 1b covers both version branches with correct warning block format; workflow-constraints.md covers version, token cost, no-mid-run-steering, and crash-resume; configure-workflow-allowlist.md covers allowedTools vs dangerouslyAllowTools, recommended entries, and settings.json placement. Note: ticket 06 files are in the working diff but are correctly scoped separately — commit phase must stage only ticket 05 files explicitly.
+
+### 2026-06-01 14:30 — commit (status: ok)
+feedback-id: fb_2026-06-01_3ef2b0dc
+completion_manifest:
+  staged_correct_files: true
+  commit_succeeded: true
+  lock_released: true
+Staged 4 ticket-05-scoped files (templates/agents/onboard.md, docs/reference/workflow-constraints.md, docs/how-to/configure-workflow-allowlist.md, ticket file). Committed as bf20f11: 4 files changed, 458 insertions(+), 9 deletions(-). Commit lock acquired and released. Ticket 06 files correctly excluded from staging.
+
+### 2026-06-01 14:35 — pull-request (status: ok)
+feedback-id: fb_2026-06-01_f7b4e9d2
+completion_manifest:
+  pr_deferred_to_epic: true
+Deferred to epic-level PR per leafcutter one-PR-per-epic convention. Changes are committed locally at bf20f11. The PR will be opened by /build-feature at epic completion.
 
 ## Implementation Tasks
 
