@@ -1,6 +1,6 @@
 ---
 title: "Enable Claude Code Agent Teams via settings.json template"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-01
@@ -24,8 +24,8 @@ agents:
   test-runner: signed_off
   documentation-expert: signed_off
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   explanation-author: not_needed
@@ -151,8 +151,8 @@ Tests live in `unit_tests/test_enable_agent_teams.py` and must pass via
 - [x] test-runner — 2026-06-01 10:25
 - [x] documentation-expert — 2026-06-01 10:20
 - [x] pr-reviewer — 2026-06-01 10:30
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-01 10:35
+- [x] pull-request — 2026-06-01 10:40
 
 ## Comments
 
@@ -202,6 +202,20 @@ completion_manifest:
   no_regressions: true
   code_quality_ok: true
 All 4 Gherkin acceptance criteria satisfied: env block present at top level of templates/settings.json with value "1", reference doc covers all required constraints, 5 tests pass. No regressions — existing test_settings_allowlist.py tests continue to pass. Env block value is string "1" (correct for env var). Approved.
+
+### 2026-06-01 10:35 — commit (status: ok)
+feedback-id: fb_2026-06-01_7ac010ca
+completion_manifest:
+  commit_created: true
+  files_staged_correctly: true
+  pre_commit_clean: true
+Committed SHA 05152a9: 4 files (docs/reference/agent-teams-constraints.md +173 lines, templates/settings.json +3 lines, unit_tests/test_enable_agent_teams.py +128 lines, 08_enable_agent_teams.md +81 lines). Staged only ticket-08 files (no cross-ticket contamination). Pre-commit skipped (no .pre-commit-config.yaml in worktree — expected for epic worktrees).
+
+### 2026-06-01 10:40 — pull-request (status: ok)
+feedback-id: fb_2026-06-01_eaa2cc92
+completion_manifest:
+  pr_deferred_to_epic: true
+PR deferred to epic level per caller instruction (/build-feature will open one PR per epic). Changes committed on branch worktree-EPIC-FlattenSupervisorChain at SHA 05152a9.
 
 ## Implementation Tasks
 
