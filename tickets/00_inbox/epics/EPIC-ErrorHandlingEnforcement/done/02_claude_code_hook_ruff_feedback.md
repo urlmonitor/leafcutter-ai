@@ -29,7 +29,7 @@ agents:
   explanation-author: not_needed
   user-surface-smoker: signed_off
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -93,10 +93,19 @@ Then the hook catches the CalledProcessError and injects a warning message
 - [x] test-runner — 2026-06-01 10:30
 - [x] user-surface-smoker — 2026-06-01 11:00
 - [x] pr-reviewer — 2026-06-01 10:45
-- [ ] commit
+- [x] commit — 2026-06-01 11:15
 - [ ] pull-request
 
 ## Comments
+
+### 2026-06-01 11:15 — commit (status: ok)
+feedback-id: fb_2026-06-01_fb179a57
+completion_manifest:
+  commit_clean: true
+  pre_commit_passed: true
+  all_files_committed: true
+
+Two commits created: `9c9e928` (hook script, test file, ticket sign-off) and `e23c781` (config/settings.json). All pre-commit hooks passed on both commits. Git log confirms both commits on `worktree-EPIC-ErrorHandlingEnforcement` branch.
 
 ### 2026-06-01 11:00 — user-surface-smoker (status: ok)
 feedback-id: fb_2026-06-01_9528f183
