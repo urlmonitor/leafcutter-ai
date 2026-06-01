@@ -257,6 +257,133 @@ def build_agents(target_root: Path, config: dict[str, Any],
     return written
 
 
+def build_workflow_scripts(target_root: Path, config: dict[str, Any],
+                           dry_run: bool, force: bool) -> int:
+    """Copy Claude Code Workflow JS scripts to ``<target_root>/.claude/workflows/``.
+
+    Gated on two conditions (both must pass for files to be copied):
+
+    1. **Opt-in flag**: ``config["workflows"]["enabled"]`` must be ``True``.
+       Default is ``False`` — workflows are experimental. If absent or ``False``,
+       the phase skips silently with a "skipped (not enabled" message.
+
+    2. **Version check**: detects Claude Code version via the
+       ``CLAUDE_CODE_VERSION`` environment variable, then ``claude --version``
+       subprocess (2-second timeout), then treats version as unknown.
+       - Below minimum (``2.1.154``): warn and skip file copying.
+       - Unknown: warn and install (fail-open, since CI may lack Claude Code).
+
+    Applies the compare-before-write guard so that identical files are skipped
+    on subsequent runs, satisfying the idempotency requirement.
+
+    Args:
+        target_root: Absolute path to the target project root directory.
+        config: Merged config dictionary; reads ``config["workflows"]["enabled"]``.
+        dry_run: When True, logs intent but writes nothing.
+        force: When True, overwrites existing files.
+
+    Returns:
+        Count of ``.js`` files written (or that would be written in dry-run mode).
+    """
+    import os
+    import subprocess
+    from packaging.version import Version, InvalidVersion  # type: ignore[import]
+
+    _MINIMUM_VERSION = "2.1.154"
+
+    # ------------------------------------------------------------------
+    # Gate 1 — opt-in flag
+    # ------------------------------------------------------------------
+    workflows_config = config.get("workflows", {})
+    enabled = workflows_config.get("enabled", False) if isinstance(workflows_config, dict) else False
+    if not enabled:
+        print("Workflow scripts: skipped (not enabled in skills_config.json)")
+        return 0
+
+    # ------------------------------------------------------------------
+    # Gate 2 — version detection
+    # ------------------------------------------------------------------
+    version_str: str | None = os.environ.get("CLAUDE_CODE_VERSION")
+    if not version_str:
+        try:
+            result = subprocess.run(
+                ["claude", "--version"],
+                capture_output=True,
+                text=True,
+                timeout=2,
+            )
+            # `claude --version` typically outputs e.g. "2.1.154" or "2.1.154\n"
+            if result.returncode == 0:
+                version_str = result.stdout.strip().split()[-1]
+        except Exception:  # noqa: BLE001
+            version_str = None
+
+    version_known = version_str is not None
+    version_ok = False
+    if version_known:
+        try:
+            version_ok = Version(version_str) >= Version(_MINIMUM_VERSION)
+        except InvalidVersion:
+            version_known = False  # Treat unparseable version as unknown.
+
+    if version_known and not version_ok:
+        print(
+            f"[WARNING] Claude Code >= {_MINIMUM_VERSION} required for workflow "
+            f"scripts. Detected: {version_str}. Skipping."
+        )
+        return 0
+
+    if not version_known:
+        print(
+            "[WARNING] Claude Code version unknown. "
+            "Installing workflow scripts (fail-open)."
+        )
+        # Fall through — continue with file copying.
+
+    # ------------------------------------------------------------------
+    # Copy .js files from templates/workflows-js/ to target/.claude/workflows/
+    # ------------------------------------------------------------------
+    workflows_js_src = TEMPLATES_DIR / "workflows-js"
+    if not workflows_js_src.exists():
+        print("Workflow scripts: 0 installed (templates/workflows-js/ absent)")
+        return 0
+
+    output_dir = target_root / ".claude" / "workflows"
+    written = 0
+    unchanged = 0
+
+    for js_file in sorted(workflows_js_src.glob("*.js")):
+        dest = output_dir / js_file.name
+        content = js_file.read_bytes()
+
+        if not _should_overwrite(dest, force):
+            continue
+
+        # Compare-before-write guard (binary — SHA-256).
+        if dest.exists():
+            import hashlib as _hashlib
+            existing_digest = _hashlib.sha256(dest.read_bytes()).hexdigest()
+            new_digest = _hashlib.sha256(content).hexdigest()
+            if existing_digest == new_digest:
+                global _uptodate_count  # noqa: PLW0603
+                _uptodate_count += 1
+                unchanged += 1
+                continue
+
+        if dry_run:
+            print(f"  [DRY-RUN] would write .claude/workflows/{js_file.name}")
+            written += 1
+        else:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(content)
+            written += 1
+
+    if not dry_run:
+        print(f"Workflow scripts: {written} installed ({unchanged} unchanged)")
+
+    return written
+
+
 def build_skills(target_root: Path, config: dict[str, Any],
                  dry_run: bool, force: bool) -> int:
     """Copy all skill templates to ``<target_root>/.claude/skills/``.
@@ -988,4 +1115,10 @@ def clean_stale_artifacts(
 #   phase to compile ANTIGRAVITY.md.template to .gemini/instructions.md.
 # - 2026-05-22 [python-coder/Ticket-10]: Added build_sync_platforms phase to
 #   deploy scripts/sync_platforms directory.
+# - 2026-06-01 [python-coder/EPIC-FlattenSupervisorChain/01]: Added build_workflow_scripts()
+#   phase. Copies .js files from templates/workflows-js/ to target/.claude/workflows/.
+#   Dual-gate: opt-in flag (skills_config.json workflows.enabled, default false) and
+#   Claude Code version check (>= 2.1.154, via CLAUDE_CODE_VERSION env or subprocess).
+#   Below-minimum: warns and skips. Unknown version: warns and continues (fail-open).
+#   Compare-before-write guard prevents mtime churn on unchanged files. (#EPIC-FlattenSupervisorChain/01)
 # ====================================================================
