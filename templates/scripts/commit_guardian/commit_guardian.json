@@ -623,7 +623,73 @@
                 ],
                 "pass_filenames": false,
                 "_comment": "EPIC-RoadmapStewardship/01: When docs/roadmap.json is staged, regenerates docs/roadmap.md with an AUTO-GENERATED banner and git-adds it so both files land in the same commit. No-op when roadmap.json is not staged. KDD-01: pre-commit stage (not post-commit --amend)."
+            },
+            {
+                "id": "check-mermaid-complexity",
+                "name": "Check Mermaid Diagram Complexity",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_mermaid_complexity.py",
+                "language": "system",
+                "files": ".*\\.md$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "EPIC-MermaidComplexityGuard/01: Counts structural elements (nodes, edges, participants, subgraphs) in mermaid blocks and warns when thresholds are exceeded. Warn-only by default; set mermaid_complexity.strict to true to block commits."
+            },
+            {
+                "id": "check-contract-shrinking",
+                "name": "Check Contract Shrinking (TDD Guard)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_contract_shrinking.py",
+                "language": "system",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "EPIC-TDDWorkflowEnforcement/04: Blocks commits when test-weakening changes (test deletion, pytest.skip, pytest.mark.xfail, @unittest.skip, @unittest.expectedFailure) are staged concurrent with production code changes. Exits 0 when only test changes or only production changes are staged. See docs/how-to/writing-a-tdd-ticket.md."
+            },
+            {
+                "id": "check-exception-handling",
+                "name": "Check Exception Handling (AST I/O Boundary Guard)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_exception_handling.py",
+                "language": "system",
+                "files": "\\.py$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": true,
+                "_comment": "EPIC-ErrorHandlingEnforcement/01: AST-based hook that flags bare except: (E722), blind except Exception: without reraise/log (BLE001), and calls to requests.get/open/cursor.execute not enclosed in try/except (IO-001). Runs on every staged .py file. Exit 1 on violations, 0 on clean."
             }
         ]
+    },
+    "exception_handling": {
+        "_comment": "check_exception_handling.py — AST-based I/O boundary and exception-clause enforcement. Ruff rules E722, BLE001, and TRY are also enforced via pyproject.toml [tool.ruff.lint] select. This section configures the custom AST check.",
+        "ruff_rules": ["E722", "BLE001", "TRY"],
+        "io_boundary_calls": [
+            "requests.get",
+            "requests.post",
+            "requests.put",
+            "requests.patch",
+            "requests.delete",
+            "requests.head",
+            "requests.options",
+            "requests.request",
+            "open",
+            "cursor.execute",
+            "cursor.executemany",
+            "cursor.callproc"
+        ],
+        "blind_exception_names": ["Exception", "BaseException"]
+    },
+    "mermaid_complexity": {
+        "_comment": "check_mermaid_complexity.py — Structural complexity limits for mermaid diagrams in .md files. Warn-only by default; set strict: true to block commits.",
+        "strict": false,
+        "max_nodes": 15,
+        "max_edges": 20,
+        "max_participants": 8,
+        "max_interactions": 25,
+        "max_tables": 12,
+        "max_states": 10,
+        "max_classes": 10,
+        "max_boundaries": 4
     }
 }

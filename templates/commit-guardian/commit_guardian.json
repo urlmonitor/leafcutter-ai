@@ -646,8 +646,39 @@
                 ],
                 "pass_filenames": false,
                 "_comment": "EPIC-TDDWorkflowEnforcement/04: Blocks commits when test-weakening changes (test deletion, pytest.skip, pytest.mark.xfail, @unittest.skip, @unittest.expectedFailure) are staged concurrent with production code changes. Exits 0 when only test changes or only production changes are staged. See docs/how-to/writing-a-tdd-ticket.md."
+            },
+            {
+                "id": "check-exception-handling",
+                "name": "Check Exception Handling (AST I/O Boundary Guard)",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_exception_handling.py",
+                "language": "system",
+                "files": "\\.py$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": true,
+                "_comment": "EPIC-ErrorHandlingEnforcement/01: AST-based hook that flags bare except: (E722), blind except Exception: without reraise/log (BLE001), and calls to requests.get/open/cursor.execute not enclosed in try/except (IO-001). Runs on every staged .py file. Exit 1 on violations, 0 on clean."
             }
         ]
+    },
+    "exception_handling": {
+        "_comment": "check_exception_handling.py — AST-based I/O boundary and exception-clause enforcement. Ruff rules E722, BLE001, and TRY are also enforced via pyproject.toml [tool.ruff.lint] select. This section configures the custom AST check.",
+        "ruff_rules": ["E722", "BLE001", "TRY"],
+        "io_boundary_calls": [
+            "requests.get",
+            "requests.post",
+            "requests.put",
+            "requests.patch",
+            "requests.delete",
+            "requests.head",
+            "requests.options",
+            "requests.request",
+            "open",
+            "cursor.execute",
+            "cursor.executemany",
+            "cursor.callproc"
+        ],
+        "blind_exception_names": ["Exception", "BaseException"]
     },
     "mermaid_complexity": {
         "_comment": "check_mermaid_complexity.py \u2014 Structural complexity limits for mermaid diagrams in .md files. Warn-only by default; set strict: true to block commits.",

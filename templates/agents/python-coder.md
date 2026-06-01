@@ -268,6 +268,55 @@ When your implementation requires new or updated tests:
 
 This ensures test-writer has a clear handoff list and the parity guard can enforce completion.
 
+## Error Handling Policy
+
+All Python code you write or modify must follow these four rules. They are
+enforced mechanically at commit time by Ruff (rules E722, BLE001, TRY).
+
+**Rule 1 — External I/O must be wrapped.**
+All calls to `requests.*`, `open()`, `cursor.execute()`, subprocess calls,
+and any other operation that crosses a process or system boundary must be
+wrapped in `try/except <SpecificExceptionType>`.
+
+```python
+# Good
+try:
+    response = requests.get(url, timeout=10)
+except requests.RequestException as exc:
+    logger.warning("Request failed: %s", exc)
+    raise
+
+# Bad — no try/except around external call
+response = requests.get(url)
+```
+
+**Rule 2 — Never bare except (Ruff E722).**
+`except:` with no exception type is forbidden. Always name at least one
+specific exception type.
+
+**Rule 3 — Never silently swallow (Ruff BLE001, TRY).**
+Every `except` block must either (a) log the error at WARNING or higher, or
+(b) re-raise. An empty block or flag-only block is a violation.
+
+```python
+# Good
+except OSError as exc:
+    logger.warning("File operation failed: %s", exc)
+    raise
+
+# Bad — silently swallowed
+except OSError:
+    pass
+```
+
+**Rule 4 — No try/except on pure internal functions.**
+Functions with no I/O, no external service calls, and no shared-state
+mutation must NOT be wrapped in try/except. Let exceptions propagate to the
+I/O boundary.
+
+See `CLAUDE.md` §"Error Handling Policy" for full examples and Ruff rule
+references (E722, BLE001, TRY).
+
 ## Constraints
 
 - Do NOT modify `.claude/skills/*/SKILL.md` files — skills are canonical and untouched.

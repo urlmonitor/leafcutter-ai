@@ -93,6 +93,11 @@
             "type": "command",
             "command": "bash -c 'd=\"$PWD\"; while [ ! -d \"$d/.claude/hooks\" ] && [ \"$d\" != \"/\" ]; do d=\"$(dirname \"$d\")\"; done; python \"$d/.claude/hooks/auto_commit_inbox_ticket.py\"'",
             "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'd=\"$PWD\"; while [ ! -d \"$d/.claude/hooks\" ] && [ \"$d\" != \"/\" ]; do d=\"$(dirname \"$d\")\"; done; python \"$d/.claude/hooks/check_exception_handling_hook.py\"'",
+            "timeout": 15
           }
         ]
       }

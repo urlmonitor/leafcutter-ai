@@ -52,6 +52,89 @@ Current outcome: Stable MVP that installs into any project and helps the user bu
 | Agent Knowledge System | [docs/architecture/agent_knowledge_system.md](docs/architecture/agent_knowledge_system.md) | How agents classify, route, and persist learnings after task completion (post-execution knowledge capture). |
 | Agent Delivery Workflows | [docs/architecture/agent_delivery_workflows.md](docs/architecture/agent_delivery_workflows.md) | Supervisor dispatch topology, ticket batching, and blocker adjudication flows. |
 
+## Error Handling Policy
+
+All Python code in this repository must follow these four rules. They are
+enforced mechanically at commit time by Ruff (rules E722, BLE001, TRY); the
+rules below explain the *why* so violations are understandable before you hit
+the linter.
+
+**Rule 1 — External I/O must be wrapped.**
+All calls to `requests.*`, `open()`, `cursor.execute()`, subprocess calls,
+and any other operation that crosses a process or system boundary must be
+wrapped in `try/except <SpecificExceptionType>`. "External I/O" means any
+call that can raise an OS, network, or database error.
+
+```python
+# Good
+try:
+    response = requests.get(url, timeout=10)
+except requests.RequestException as exc:
+    logger.warning("Request failed: %s", exc)
+    raise
+
+# Bad — no try/except around external call
+response = requests.get(url)
+```
+
+**Rule 2 — Never bare except (Ruff E722).**
+`except:` with no exception type is forbidden. Always name at least one
+specific exception type. Ruff rule E722 blocks the commit on bare excepts.
+
+```python
+# Good
+except ValueError as exc:
+
+# Bad — bare except
+except:
+```
+
+**Rule 3 — Never silently swallow (Ruff BLE001, TRY).**
+Every `except` block must either (a) log the error at WARNING or higher via
+the project logger, or (b) re-raise the exception (as-is or wrapped in a
+typed exception). An empty block or one that only sets a flag without logging
+is a violation. Ruff rules BLE001 and the TRY family catch common forms.
+
+```python
+# Good — log and re-raise
+except OSError as exc:
+    logger.warning("File operation failed: %s", exc)
+    raise
+
+# Good — wrap in typed exception
+except OSError as exc:
+    raise ConfigLoadError("Cannot read config") from exc
+
+# Bad — silently swallowed
+except OSError:
+    pass
+```
+
+**Rule 4 — No try/except on pure internal functions.**
+Functions that do not perform I/O, do not call external services, and do not
+mutate shared state must NOT be wrapped in try/except by default. Adding
+try/except to pure functions obscures bugs. If a pure function raises
+unexpectedly, let it propagate — the caller at the I/O boundary is
+responsible.
+
+```python
+# Good — pure function, no try/except
+def calculate_offset(start: int, end: int) -> int:
+    return end - start
+
+# Bad — unnecessary try/except on pure function
+def calculate_offset(start: int, end: int) -> int:
+    try:
+        return end - start
+    except Exception:
+        return 0
+```
+
+For deeper explanation of the Ruff rules, see:
+- [E722](https://docs.astral.sh/ruff/rules/bare-except/) — bare-except
+- [BLE001](https://docs.astral.sh/ruff/rules/blind-exception/) — blind exception catch
+- [TRY](https://docs.astral.sh/ruff/rules/#tryceratops-try) — tryceratops family
+
 ## Pre-Drive Checklist
 
 Run through these checks before invoking `/build-feature` or starting any epic drive.
