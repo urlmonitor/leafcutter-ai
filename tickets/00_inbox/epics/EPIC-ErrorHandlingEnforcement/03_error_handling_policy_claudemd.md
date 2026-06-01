@@ -27,7 +27,7 @@ agents:
   explanation-author: not_needed
   user-surface-smoker: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -87,7 +87,7 @@ Then the section is self-contained: it names the Ruff rule IDs (E722, BLE001, TR
 
 - [x] documentation-expert — 2026-06-01 12:00
 - [x] pr-reviewer — 2026-06-01 12:05
-- [ ] commit
+- [x] commit — 2026-06-01 12:10
 - [ ] pull-request
 
 ## Comments
@@ -107,6 +107,14 @@ completion_manifest:
   no_high_findings: true
   scope_verified: true
 Reviewed 132 lines across CLAUDE.md (+83) and templates/agents/python-coder.md (+49). No high-confidence findings. All four error-handling rules present with correct Ruff rule IDs (E722, BLE001, TRY). Scope matches files_touched — no unexpected files staged. Escalation: not needed (0 medium findings, threshold > 3).
+
+### 2026-06-01 12:10 — commit (status: ok)
+feedback-id: fb_2026-06-01_2ec30ced
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Committed SHA 624f53b "docs: add Error Handling Policy to CLAUDE.md and python-coder template". All 23 pre-commit hooks passed (secrets, ADR coverage, agent registry, feedback-id, glossary coverage, commit scope — all green). 3 files, 293 insertions.
 
 ## Implementation Tasks
 
