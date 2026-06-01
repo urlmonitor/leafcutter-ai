@@ -235,3 +235,76 @@ def test_halt_stops_subsequent_batches():
         "terminate the batch loop on a halt. A halt from any ticket must stop "
         "subsequent batches from starting."
     )
+
+
+# ---------------------------------------------------------------------------
+# Test 6 — worktree guard returns structured error on main clone
+# ---------------------------------------------------------------------------
+
+
+def test_worktree_guard_returns_error_on_main_clone():
+    """Worktree guard must return status 'error' with worktree_required when on main."""
+    if not _WORKFLOW_PATH.exists():
+        pytest.fail(f"build-epic.js not found at {_WORKFLOW_PATH}.")
+
+    content = _WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "worktree_required" in content, (
+        "build-epic.js must return a 'worktree_required' field in the error "
+        "response when the worktree guard detects the main clone."
+    )
+
+    assert "action_required" in content, (
+        "build-epic.js must return an 'action_required' field instructing "
+        "the caller how to create a worktree."
+    )
+
+    assert re.search(r'git_type\s*===\s*["\']directory["\']', content), (
+        "build-epic.js must check if git_type === 'directory' to detect "
+        "the main clone (where .git is a directory, not a file)."
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 7 — worktree guard allows continuation when in a worktree
+# ---------------------------------------------------------------------------
+
+
+def test_worktree_guard_allows_worktree():
+    """Worktree guard must proceed past the check when .git is a file (worktree)."""
+    if not _WORKFLOW_PATH.exists():
+        pytest.fail(f"build-epic.js not found at {_WORKFLOW_PATH}.")
+
+    content = _WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "worktreeCheck" in content or "worktree_check" in content or "worktree" in content.lower(), (
+        "build-epic.js must have a worktree detection variable or agent call."
+    )
+
+    guard_pos = content.find("worktree_required")
+    planner_pos = content.find("plannerResult")
+
+    assert guard_pos < planner_pos, (
+        "The worktree guard must run BEFORE the planner agent dispatch. "
+        f"Found worktree_required at position {guard_pos} but plannerResult at {planner_pos}."
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 8 — worktree_path propagated to build-ticket sub-workflow calls
+# ---------------------------------------------------------------------------
+
+
+def test_worktree_path_propagated_to_sub_workflows():
+    """build-epic.js must pass worktree_path to each workflow('build-ticket', ...) call."""
+    if not _WORKFLOW_PATH.exists():
+        pytest.fail(f"build-epic.js not found at {_WORKFLOW_PATH}.")
+
+    content = _WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    workflow_call_region = content[content.find("workflow("):]
+    assert "worktree_path" in workflow_call_region, (
+        "build-epic.js must pass 'worktree_path' in the input object when "
+        "calling workflow('build-ticket', ...). Child tickets need the "
+        "worktree path for context."
+    )
