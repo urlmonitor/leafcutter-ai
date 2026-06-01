@@ -1,0 +1,60 @@
+{
+  "_comment": "Paths SSOT — single source of truth for every architectural folder location. All values are project-relative POSIX paths. Directories carry a trailing slash. Files have no trailing slash. Add optional: true to any path that may not exist in all project clones to skip the existence check in check_paths_integrity.py.",
+  "paths": {
+    "docs": {
+      "root": "docs/",
+      "architecture": "docs/architecture/",
+      "architecture_adrs": "docs/architecture/adrs/",
+      "architecture_components": "docs/architecture/components/",
+      "architecture_components_optional": true,
+      "how_to": "docs/how-to/",
+      "reference": "docs/reference/",
+      "explanation": "docs/explanation/",
+      "explanation_optional": true,
+      "tutorials": "docs/tutorials/",
+      "tutorials_optional": true,
+      "logic": "docs/logic/",
+      "retrospectives": "docs/retrospectives/",
+      "retrospectives_optional": true
+    },
+    "tickets": {
+      "root": "tickets/",
+      "inbox": "tickets/00_inbox/",
+      "inbox_epics": "tickets/00_inbox/epics/",
+      "todo": "tickets/01_todo/",
+      "done": "tickets/99_done/",
+      "done_optional": true,
+      "rejected": "tickets/99_rejected/",
+      "rejected_optional": true
+    },
+    "package": {
+      "root": "leafcutter/",
+      "config": "leafcutter/config/",
+      "templates_agents": "leafcutter/templates/agents/",
+      "templates_skills": "leafcutter/templates/skills/",
+      "templates_commit_guardian": "leafcutter/templates/commit-guardian/",
+      "scripts": "leafcutter/scripts/",
+      "scripts_commit_guardian": "leafcutter/scripts/commit_guardian/",
+      "scripts_commit_guardian_optional": true,
+      "scripts_doc_compliance": "leafcutter/scripts/doc_compliance/",
+      "scripts_doc_compliance_optional": true,
+      "build_script": "leafcutter/scripts/build.py"
+    },
+    "project_local": {
+      "claude_agents": ".claude/agents/",
+      "claude_skills": ".claude/skills/",
+      "claude_hooks": ".claude/hooks/",
+      "alembic_versions": "alembic/versions/",
+      "alembic_versions_optional": true
+    },
+    "tests": {
+      "root": "unit_tests/",
+      "commit_guardian": "unit_tests/commit_guardian/",
+      "commit_guardian_optional": true,
+      "live_trader": "unit_tests/live_trader/",
+      "live_trader_optional": true,
+      "sql_functions": "unit_tests/sql_functions/",
+      "sql_functions_optional": true
+    }
+  }
+}

@@ -1,0 +1,61 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code
+in this repository.
+
+## What This Project Does
+
+{{config.project_description}}
+<!-- TODO: fill in project_description — describe your project's purpose and core pipeline -->
+
+## Common Commands
+
+{{config.common_commands}}
+<!-- TODO: fill in common_commands — list your most-used dev commands (tests, migrations, deploys) -->
+
+## Architecture
+
+{{config.architecture_overview}}
+<!-- TODO: fill in architecture_overview — point to your architecture docs and key entry points -->
+
+## Testing
+
+{{config.test_commands}}
+<!-- TODO: fill in test_commands — describe how to run your tests and any CI requirements -->
+
+## Conventions
+
+This project uses the leafcutter conventions:
+
+- **Ticket-driven development**: all work starts in `tickets/00_inbox/`. Use `/build-feature <epic>` to drive an epic to completion.
+- **Pre-commit hooks** via `commit_guardian`: run automatically on every `git commit`. Fix violations before committing — do not use `--no-verify`.
+- **Skill-based agent prompting**: Claude Code reads `.claude/skills/<skill>/SKILL.md` for specialist guidance. Use `/glossary-bootstrap` once after install.
+- **DECISION HISTORY blocks** in every modified Python file: each changed `.py` file must append a dated entry in the `# DECISION HISTORY` block at the file's end.
+
+## Critical Rules
+
+### Pre-commit Hooks
+- Do NOT bypass hooks with `--no-verify` except for files this session did not touch.
+- When `git commit` fails on pre-commit, invoke the `precommit-autofix` skill.
+
+### Folder READMEs are load-bearing
+Before editing any file in a gated folder (`.claude/agents/`, `.claude/skills/`,
+`.claude/hooks/`, `alembic/versions/`), read the nearest-ancestor `README.md`.
+The `readme_read_guard.py` hook will block edits if the README has not been read.
+
+### STRICT WORKFLOW ENFORCEMENT
+- **NEVER** change code without asking the user OR having an explicit ticket assigned.
+- If functionality is discovered missing during an epic, **DO NOT** spontaneously implement it. You must add new tickets for the missing features.
+- This ensures all changes properly trigger documentation updates, code splitting, architecture diagrams, and unit tests as mandated by the ticket lifecycle.
+
+<!--
+====================================================================
+DECISION HISTORY
+====================================================================
+- 2026-05-22 [AI]: Added STRICT WORKFLOW ENFORCEMENT section to prevent untracked code changes and enforce ticket-driven development.
+====================================================================
+-->
+
+### Architectural Context Passing
+- **Upstream Agents** (Architects, BAs, Ticket Creators): Must read global architecture (docs/vision.md, docs/components.json) and embed relevant local architecture into the tickets they create.
+- **Downstream Agents** (Coders, Testers): Must strictly follow the architectural constraints provided in the ticket and reject tickets that lack sufficient context.

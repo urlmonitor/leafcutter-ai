@@ -1,0 +1,167 @@
+---
+title: "Add known-failing-tests baseline so commits only block on net-new test failures"
+status: done
+components:
+  - build_system
+created: 2026-05-22
+depends_on: []
+priority: high
+requires_diagram: false
+requires_adr: false
+roadmap_phase: phase_1
+advances_current_outcome: true
+files_touched:
+  - scripts/commit_guardian/known_failing_tests.json
+  - scripts/commit_guardian/commit_guardian.json
+  - .pre-commit-config.yaml
+agents:
+  architect-review: not_needed
+  python-coder: signed_off
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
+  commit: signed_off
+  pull-request: needed
+  test-writer: signed_off
+  adr-author: not_needed
+  architecture-diagram-author: not_needed
+  sql-coder: not_needed
+  user-surface-smoker: not_needed
+---
+
+# 06: Add known-failing-tests baseline so commits only block on net-new test failures
+
+## Actor / Goal
+
+In order to eliminate the `--no-verify` escape path that users reach for when pre-existing test failures block unrelated commits, the pre-commit test hook must diff current failures against a maintained baseline file and block **only** on failures that are not already recorded in the baseline.
+
+## Context
+
+Feedback sources: general pattern observed across the feedback corpus — when `pytest` discovers pre-existing failures (tests that were already failing before the current change), the pre-commit hook blocks the entire commit. Users who are not responsible for those failures reach for `--no-verify` to ship their own unrelated work. This erodes hook discipline across the board.
+
+The `--no-verify` escape path is the most harmful hygiene gap in the commit pipeline: it bypasses ALL hooks, not just the failing test check.
+
+The root cause is that the pre-commit test hook applies a binary pass/fail against the full test suite, with no concept of "previously known failing". Any pre-existing failure, however unrelated, becomes a blocker.
+
+The fix: maintain a baseline file (`scripts/commit_guardian/known_failing_tests.json` — confirm exact path during refinement) that lists tests currently known to be failing. The pre-commit hook diffs current failures against the baseline and blocks only on **new** failures (those present in current run but absent from the baseline). Baseline updates are an explicit, reviewable `git add` action, not a side-effect of running tests.
+
+## Acceptance Criteria
+
+```gherkin
+Given a test that is listed in the known-failing baseline is still failing
+When the pre-commit test hook runs
+Then the hook exits 0 for that test (it is a known failure, not a new regression)
+And the commit proceeds normally
+
+Given a test that is NOT listed in the baseline fails
+When the pre-commit test hook runs
+Then the hook exits 1 and reports the new failure
+And the commit is blocked with an actionable error identifying the new failing test(s)
+
+Given a developer wants to update the baseline (acknowledging a new known-failing test)
+When they run the baseline-update command
+Then the baseline file is updated and the change is staged as a reviewable git diff
+And a subsequent commit with the same failure is no longer blocked
+
+Given the baseline file does not exist
+When the pre-commit test hook runs
+Then the hook treats all failures as new (same behaviour as no-baseline mode)
+And exits 1 if any tests fail
+```
+
+## Sign-offs
+
+- [x] python-coder — 2026-05-22 10:00
+- [x] documentation-expert — 2026-05-22 10:00
+- [x] test-writer — 2026-05-22 10:00
+- [x] pr-reviewer — 2026-05-22 10:10
+- [x] commit — 2026-05-22 10:15
+- [ ] pull-request
+
+## Comments
+
+### 2026-05-22 10:00 — python-coder (status: ok)
+
+feedback-id: fb_2026-05-22_c460cc2a
+Created `scripts/commit_guardian/known_failing_tests.py` with `load_baseline`, `write_baseline`, `collect_failing_tests`, `run_hook`, and `run_update`. Created `scripts/commit_guardian/known_failing_tests.json` with empty baseline. Registered `run-tests-with-baseline` hook in `scripts/commit_guardian/commit_guardian.json`. No existing pytest pre-commit hook was found to modify — the baseline mechanism is a new addition.
+
+### 2026-05-22 10:00 — documentation-expert (status: ok)
+
+feedback-id: fb_2026-05-22_1cdc94e5
+Created `docs/how-to/known-failing-tests-baseline.md` explaining the baseline workflow, when to update, `--update` command, policy against accumulation, and what NOT to do. Added "When Tests Fail at Pre-Commit" section to `templates/agents/commit.md` directing agents to use the baseline mechanism instead of `--no-verify`.
+
+### 2026-05-22 10:00 — test-writer (status: ok)
+
+feedback-id: fb_2026-05-22_ae9f3b01
+Created `tests/test_known_failing_tests.py` with 16 unit tests covering `load_baseline` (5 tests: empty file, non-empty, absent, malformed JSON, missing key), `write_baseline` (3 tests: roundtrip, sorted output, empty set), `run_hook` (5 tests: all-baseline exits 0, new failure exits 1, no failures exits 0, absent baseline with failure exits 1, absent baseline no failures exits 0), and `run_update` (3 tests: writes failures, empty set, always exits 0). All 16 pass.
+
+### 2026-05-22 10:10 — pr-reviewer (status: ok)
+
+feedback-id: fb_2026-05-22_acccb24e
+Review passed. `known_failing_tests.py` correctly implements fail-open (absent/malformed baseline → empty frozenset), new-failures computation (`current - baseline`), and sorted JSON output for clean diffs. The `--update` CLI always exits 0. Hook registration in `commit_guardian.json` uses `pass_filenames: false` correctly. How-to doc covers the complete workflow including the 30-day policy against baseline accumulation. `commit.md` section correctly directs agents away from `--no-verify`. All 16 tests pass. All acceptance criteria met.
+
+### 2026-05-22 10:15 — commit (status: ok)
+
+feedback-id: fb_2026-05-22_5534db8b
+Committed in 34dac75 (batch 1). All 16 new tests pass. HEAD verified moved.
+
+## Locked Approach
+
+**Hook candidate: pre-commit test hook with baseline diffing.**
+
+The pre-commit hook that runs the test suite is modified to:
+
+1. Collect the set of currently failing test node IDs from the `pytest` run (via `--tb=no -q` or JSON report).
+2. Load `scripts/commit_guardian/known_failing_tests.json` (if it exists). The baseline is a JSON object:
+   ```json
+   {
+     "baseline_date": "YYYY-MM-DD",
+     "known_failing": [
+       "unit_tests/foo/test_bar.py::test_something",
+       "unit_tests/baz/test_qux.py::test_another"
+     ]
+   }
+   ```
+3. Compute `new_failures = current_failures - known_failing_set`.
+4. If `new_failures` is empty: exit 0 (all failures are baseline-known; commit proceeds).
+5. If `new_failures` is non-empty: exit 1, reporting only the new failures.
+
+A companion CLI command (e.g. `python scripts/commit_guardian/known_failing_tests.py --update`) regenerates the baseline from the current failing test set. This command is the only way to update the baseline — the hook never writes to it automatically.
+
+Confirm the exact file path (`scripts/commit_guardian/known_failing_tests.json`) during refinement by checking for an existing test-hook entry in `commit_guardian.json`.
+
+## Implementation Tasks
+
+### python-coder
+- [x] Read `scripts/commit_guardian/commit_guardian.json` and identify the hook entry that runs pytest at pre-commit time. Note the exact `hook_id`, script path, and any existing failure-handling logic.
+- [x] Implement the baseline file schema (`known_failing_tests.json`) and a loader function that returns a `frozenset` of test node IDs. If the file is absent or malformed, return an empty set (fail-open: treat all failures as new).
+- [x] Modify the pre-commit test hook script to:
+  - Run pytest and collect failing test node IDs.
+  - Load the baseline.
+  - Compute the diff and exit 0 or 1 accordingly.
+  - On exit 1, print the new failures clearly and include a hint: "To acknowledge these failures as baseline, run: `python scripts/commit_guardian/known_failing_tests.py --update`".
+- [x] Implement the `--update` CLI subcommand: run pytest, collect all current failures, write them to the baseline file with the current date, and print the path of the updated file.
+- [x] Register any new script in `commit_guardian.json` and `.pre-commit-config.yaml` at the correct stage.
+
+### documentation-expert
+- [x] Write or update a how-to in `docs/how-to/` explaining the baseline workflow:
+  - When to update the baseline (acknowledging a pre-existing failure that is not yours to fix in this PR).
+  - How to update it (`--update` command).
+  - Policy: baseline entries must not accumulate indefinitely — link to the epic ticket for any entry older than 30 days.
+- [x] Add a note in `.claude/agents/commit.md` referencing the baseline approach so commit agents do not reach for `--no-verify` when tests fail.
+
+### test-writer
+- [x] Write a unit test in `unit_tests/commit_guardian/` that:
+  - Mocks a pytest run returning `{test_A, test_B}` as failures.
+  - Sets the baseline to `{test_A}`.
+  - Asserts the hook exits 1 and reports only `test_B`.
+- [x] Write a test where all current failures are in the baseline — assert hook exits 0.
+- [x] Write a test where the baseline file is absent — assert hook exits 1 if any tests fail (fail-open).
+- [x] Write a test for the `--update` command: after running it, the baseline file contains the current failing set.
+
+## Risk & Safety
+
+- Touches money? No.
+- Touches data? No.
+- Reversibility? Removing the baseline file or the diffing logic reverts to prior all-or-nothing behaviour. The baseline file itself is tracked in git, so any update is reviewable and revertable.
+- Risk of misuse: the baseline mechanism must NOT become a dumping ground for ignored failures. The `--update` command produces a reviewable diff (the baseline file changes appear in `git diff`), so the PR review step acts as a gate on baseline growth.
+- The hook must still run pytest — it must not skip the test run. The baseline only affects how failures are reported, not whether tests run.

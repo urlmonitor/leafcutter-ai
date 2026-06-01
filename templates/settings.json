@@ -1,0 +1,106 @@
+{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "allowedTools": [
+    "Bash(git status*)",
+    "Bash(git diff*)",
+    "Bash(git log*)",
+    "Bash(git add *)",
+    "Bash(git commit*)",
+    "Bash(git fetch*)",
+    "Bash(git branch*)",
+    "Bash(git checkout *)",
+    "Bash(git mv *)",
+    "Bash(git worktree *)",
+    "Bash(gh pr create*)",
+    "Bash(gh pr view*)",
+    "Bash(gh pr list*)",
+    "Bash(gh issue*)",
+    "Bash(python -m pytest*)",
+    "Bash(python scripts/*)",
+    "Bash(pip install*)",
+    "Bash(npm test*)",
+    "Bash(npm run*)",
+    "Bash(ls *)",
+    "Bash(find . *)",
+    "Bash(cat *)",
+    "Bash(echo *)"
+  ],
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'd=\"$PWD\"; while [ ! -d \"$d/.claude/hooks\" ] && [ \"$d\" != \"/\" ]; do d=\"$(dirname \"$d\")\"; done; python \"$d/.claude/hooks/check_commit_ticket_staged.py\"'",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'd=\"$PWD\"; while [ ! -d \"$d/.claude/hooks\" ] && [ \"$d\" != \"/\" ]; do d=\"$(dirname \"$d\")\"; done; python \"$d/.claude/hooks/inline_work_guard.py\"'",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'd=\"$PWD\"; while [ ! -d \"$d/.claude/hooks\" ] && [ \"$d\" != \"/\" ]; do d=\"$(dirname \"$d\")\"; done; python \"$d/.claude/hooks/readme_read_guard.py\"'",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'd=\"$PWD\"; while [ ! -d \"$d/.claude/hooks\" ] && [ \"$d\" != \"/\" ]; do d=\"$(dirname \"$d\")\"; done; python \"$d/.claude/hooks/documentation_guard.py\"'",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'd=\"$PWD\"; while [ ! -d \"$d/.claude/hooks\" ] && [ \"$d\" != \"/\" ]; do d=\"$(dirname \"$d\")\"; done; python \"$d/.claude/hooks/check_ticket_rename_tracking.py\"'",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'd=\"$PWD\"; while [ ! -d \"$d/.claude/hooks\" ] && [ \"$d\" != \"/\" ]; do d=\"$(dirname \"$d\")\"; done; python \"$d/.claude/hooks/readme_marker_recorder.py\"'",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'd=\"$PWD\"; while [ ! -d \"$d/.claude/hooks\" ] && [ \"$d\" != \"/\" ]; do d=\"$(dirname \"$d\")\"; done; python \"$d/.claude/hooks/ticket_frontmatter_guard.py\"'",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'd=\"$PWD\"; while [ ! -d \"$d/.claude/hooks\" ] && [ \"$d\" != \"/\" ]; do d=\"$(dirname \"$d\")\"; done; python \"$d/.claude/hooks/auto_commit_inbox_ticket.py\"'",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'd=\"$PWD\"; while [ ! -d \"$d/.claude/hooks\" ] && [ \"$d\" != \"/\" ]; do d=\"$(dirname \"$d\")\"; done; python \"$d/.claude/hooks/check_exception_handling_hook.py\"'",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

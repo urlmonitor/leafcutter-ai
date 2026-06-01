@@ -1,0 +1,38 @@
+{
+  "components": {
+    "sync_platforms": {
+      "id": "sync_platforms",
+      "name": "Sync Platforms",
+      "type": "utility",
+      "description": "Synchronization workflows between platforms.",
+      "detail_ref": "docs/workflows/sync_platforms.md",
+      "status": "reviewed",
+      "primary_code": [
+        "templates/scripts/sync_platforms/",
+        "tests/test_sync_platforms.py"
+      ]
+    },
+    "build_pipeline": {
+      "id": "build_pipeline",
+      "name": "Build Pipeline",
+      "type": "infrastructure",
+      "description": "Orchestrates the compilation of templates into platform-specific outputs.",
+      "detail_ref": "docs/build-pipeline.md",
+      "status": "active",
+      "primary_code": [
+        "scripts/build.py",
+        "scripts/build_phases.py"
+      ]
+    },
+    "config_loader": {
+      "id": "config_loader",
+      "name": "Config Loader",
+      "type": "utility",
+      "description": "Loads and validates skills_config.json.",
+      "status": "active",
+      "primary_code": [
+        "scripts/config_loader.py"
+      ]
+    }
+  }
+}
