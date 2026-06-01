@@ -1,6 +1,6 @@
 ---
 title: "PostToolUse Claude Code hook: run ruff on Edit/Write for immediate exception feedback"
-status: todo
+status: done
 components:
   - build_pipeline
   - config_loader
@@ -30,7 +30,7 @@ agents:
   user-surface-smoker: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 02: PostToolUse Claude Code hook: run ruff on Edit/Write for immediate exception feedback
@@ -94,9 +94,17 @@ Then the hook catches the CalledProcessError and injects a warning message
 - [x] user-surface-smoker — 2026-06-01 11:00
 - [x] pr-reviewer — 2026-06-01 10:45
 - [x] commit — 2026-06-01 11:15
-- [ ] pull-request
+- [x] pull-request — 2026-06-01 11:30
 
 ## Comments
+
+### 2026-06-01 11:30 — pull-request (status: ok)
+feedback-id: fb_2026-06-01_2cf09741
+completion_manifest:
+  pushed_to_remote: true
+  pr_updated: true
+
+Pushed branch to origin. Existing PR #27 updated: https://github.com/urlmonitor/leafcutter-ai/pull/27 — new commits (9c9e928, e23c781) are now on the remote.
 
 ### 2026-06-01 11:15 — commit (status: ok)
 feedback-id: fb_2026-06-01_fb179a57
