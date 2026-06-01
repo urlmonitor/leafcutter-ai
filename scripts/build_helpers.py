@@ -456,17 +456,34 @@ def _create_file_shim(canonical: Path, source: Path, strategy: str) -> str:
 def _resolve_precommit_cmd():
     """Return the command list to invoke pre-commit, or None if unavailable.
 
-    Two-tier detection:
+    Three-tier detection:
     1. ``shutil.which("pre-commit")`` — binary on PATH.
     2. ``importlib.util.find_spec("pre_commit")`` — installed as a Python
        package in the same environment running build.py (handles the common
        case where pip installed it but the Scripts/ dir isn't on PATH).
+    3. Probe known pip/pipx install locations — handles non-interactive shells
+       where ~/.local/bin or Scripts/ aren't in PATH.
     """
     if shutil.which("pre-commit"):
         return ["pre-commit"]
     if importlib.util.find_spec("pre_commit"):
         return [sys.executable, "-m", "pre_commit"]
+    for candidate in _precommit_known_paths():
+        if candidate.is_file():
+            return [str(candidate)]
     return None
+
+
+def _precommit_known_paths():
+    """Yield common install locations for the pre-commit binary."""
+    home = Path.home()
+    yield home / ".local" / "bin" / "pre-commit"
+    exe_dir = Path(sys.executable).parent
+    yield exe_dir / "pre-commit"
+    if sys.platform == "win32":
+        yield exe_dir / "Scripts" / "pre-commit.exe"
+    else:
+        yield exe_dir / "Scripts" / "pre-commit"
 
 
 def install_hooks(target_root, dry_run=False):
