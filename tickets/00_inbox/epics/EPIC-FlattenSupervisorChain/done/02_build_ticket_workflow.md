@@ -1,6 +1,6 @@
 ---
 title: "Write build-ticket.js workflow script to replace ticket-supervisor"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-01
@@ -23,7 +23,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: signed_off
   explanation-author: not_needed
@@ -187,9 +187,15 @@ Tests live in `unit_tests/test_build_ticket_workflow.py` and must pass via
 - [x] architecture-diagram-author — 2026-06-01 09:00
 - [x] pr-reviewer — 2026-06-01 09:30
 - [x] commit — 2026-06-01 09:35
-- [ ] pull-request
+- [x] pull-request — 2026-06-01 09:40
 
 ## Comments
+
+### 2026-06-01 09:40 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  pr_deferred_to_epic_level: true
+PR deferred to epic level per caller instruction (EPIC-FlattenSupervisorChain will open one PR for all tickets). All implementation is committed on branch worktree-EPIC-FlattenSupervisorChain.
 
 ### 2026-06-01 09:35 — commit (status: ok)
 feedback-id: (submit-failed)
