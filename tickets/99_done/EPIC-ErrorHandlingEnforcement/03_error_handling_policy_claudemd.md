@@ -1,6 +1,6 @@
 ---
 title: "Add error-handling policy to CLAUDE.md and coder skill templates"
-status: todo
+status: done
 components:
   - build_pipeline
   - config_loader
@@ -28,7 +28,7 @@ agents:
   user-surface-smoker: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 03: Add error-handling policy to CLAUDE.md and coder skill templates
@@ -88,7 +88,7 @@ Then the section is self-contained: it names the Ruff rule IDs (E722, BLE001, TR
 - [x] documentation-expert — 2026-06-01 12:00
 - [x] pr-reviewer — 2026-06-01 12:05
 - [x] commit — 2026-06-01 12:10
-- [ ] pull-request
+- [x] pull-request — 2026-06-01 12:15
 
 ## Comments
 
@@ -115,6 +115,14 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Committed SHA 624f53b "docs: add Error Handling Policy to CLAUDE.md and python-coder template". All 23 pre-commit hooks passed (secrets, ADR coverage, agent registry, feedback-id, glossary coverage, commit scope — all green). 3 files, 293 insertions.
+
+### 2026-06-01 12:15 — pull-request (status: ok)
+feedback-id: fb_2026-06-01_fea79976
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Pushed branch worktree-EPIC-ErrorHandlingEnforcement to origin. PR #27 opened at https://github.com/urlmonitor/leafcutter-ai/pull/27. Title: "docs: add Error Handling Policy to CLAUDE.md and python-coder template". All agents signed off — ticket marked done.
 
 ## Implementation Tasks
 
