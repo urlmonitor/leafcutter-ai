@@ -26,7 +26,8 @@
                 "building-epics",
                 "signoff"
             ],
-            "deprecated": true
+            "deprecated": true,
+            "legacy_only": true
         },
         {
             "id": "ticket-supervisor",
@@ -50,7 +51,8 @@
                 "building-epics",
                 "signoff"
             ],
-            "description": "Drives a single ticket from needed agents to fully signed off. Dispatched directly at depth-0 by /build-feature (the user-facing entrypoint) or by the deprecated epic-supervisor during the deprecation window. Phase agents run at depth-1."
+            "description": "Drives a single ticket from needed agents to fully signed off. Dispatched directly at depth-0 by /build-feature (the user-facing entrypoint) or by the deprecated epic-supervisor during the deprecation window. Phase agents run at depth-1.",
+            "legacy_only": true
         },
         {
             "id": "create-ticket",

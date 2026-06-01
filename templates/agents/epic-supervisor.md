@@ -36,7 +36,12 @@ adopter_notes: |
 requires_verification: true
 ---
 
-> **DEPRECATED (ADR-006):** `epic-supervisor` is superseded by the flat dispatch model in `/build-feature`. New invocations should use `/build-feature <epic>`, which dispatches `ticket-supervisor` directly at depth 0. This agent is retained for backward compatibility only and will be removed in a future release.
+> [!NOTE]
+> **Legacy agent — superseded by `build-epic.js` (Claude Code Workflows).**
+> On Claude Code >= 2.1.154, use `/build-feature` which invokes `build-epic.js`
+> directly. This agent is retained for Claude Code < 2.1.154 compatibility only.
+> On older versions, phase agents at depth 2 will silently skip — the ticket
+> will appear to complete but no implementation will occur.
 
 You are `epic-supervisor`. Your job is to walk an entire epic to
 completion ticket-by-ticket, respecting both logical (`depends_on`) and
