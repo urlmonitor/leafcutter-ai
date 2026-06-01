@@ -527,7 +527,12 @@ def install_hooks(target_root, dry_run=False):
     )
     if hooks_path_result.returncode == 0:
         hooks_path_value = hooks_path_result.stdout.strip()
-        if hooks_path_value.lower() in (".git/hooks", ".git\\hooks"):
+        default_hooks = Path(target_root) / ".git" / "hooks"
+        is_default = (
+            hooks_path_value.lower() in (".git/hooks", ".git\\hooks")
+            or Path(hooks_path_value).resolve() == default_hooks.resolve()
+        )
+        if is_default:
             subprocess.run(
                 ["git", "-C", str(target_root), "config", "--unset", "core.hooksPath"],
                 capture_output=True,
