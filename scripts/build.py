@@ -68,6 +68,17 @@ from build_halt_guard import (
     write_lock_file,
     _resolve_package_sha,
 )
+from build_colors import (
+    BOLD,
+    RESET,
+    GREEN,
+    DIM,
+    warn as _warn,
+    error as _error,
+    success as _success,
+    dry_run as _dry_run_msg,
+    heading as _heading,
+)
 from release.compute_next_version import (
     _resolve_repo_root as _cnv_resolve_repo_root,
     _resolve_changelogs_dir as _cnv_resolve_changelogs_dir,
@@ -134,7 +145,7 @@ def write_file(target: Path, content: str, dry_run: bool, force: bool) -> bool:
     if not should_overwrite(target, force):
         return False
     if dry_run:
-        print(f"  [DRY-RUN] would write {target}")
+        _dry_run_msg(f"would write {target}")
         return True
     # Compare-before-write: skip if on-disk content is byte-identical.
     # This check runs only for real writes; dry-run always reports True
@@ -171,13 +182,13 @@ def _handle_config_errors(errors: list[str], validate_only: bool, dry_run: bool)
         0 if the build should continue despite the errors, 1 to abort.
     """
     for err in errors:
-        print(f"  [CONFIG ERROR] {err}", file=sys.stderr)
+        _error(f"[CONFIG] {err}")
     if validate_only or not dry_run:
         if not _JSONSCHEMA_AVAILABLE:
-            print("  [WARNING] Skipping validation (jsonschema not installed).")
+            _warn("Skipping validation (jsonschema not installed).")
             return 0
         if errors[0].startswith("jsonschema"):
-            print("  [WARNING] jsonschema unavailable — proceeding without strict validation.")
+            _warn("jsonschema unavailable — proceeding without strict validation.")
             return 0
         return 1
     return 0
@@ -195,7 +206,7 @@ def _handle_registry_errors(errors: list[str], dry_run: bool) -> int:
         0 if the build should continue, 1 to abort.
     """
     for err in errors:
-        print(f"  [REGISTRY ERROR] {err}", file=sys.stderr)
+        _error(f"[REGISTRY] {err}")
     return 0 if dry_run else 1
 
 
@@ -378,17 +389,17 @@ def _run_phases(
 
     total = 0
     for label, fn in artifact_phases:
-        print(f"{label}:")
+        _heading(label)
         total += fn(output_root, config, dry_run, effective_force)
         print()
 
     for label, fn in internal_phases:
-        print(f"{label}:")
+        _heading(label)
         total += fn(output_root, config, dry_run, effective_force)
         print()
 
     for label, fn in scaffold_phases:
-        print(f"{label}:")
+        _heading(label)
         total += fn(target_root, config, dry_run, effective_force)
         print()
 
@@ -482,14 +493,14 @@ def _cleanup_stale_paths(target_root: Path, output_root: Path, dry_run: bool) ->
                 continue
         if dry_run:
             kind = "directory" if full.is_dir() else "file"
-            print(f"  [DRY-RUN] would remove stale {kind}: {rel_path}")
+            _dry_run_msg(f"would remove stale {kind}: {rel_path}")
             removed += 1
             continue
         if full.is_symlink() or full.is_file():
             full.unlink()
         elif full.is_dir():
             shutil.rmtree(full)
-        print(f"  removed stale: {rel_path}")
+        _success(f"removed stale: {rel_path}")
         removed += 1
     return removed
 
@@ -597,7 +608,7 @@ def main(argv: list[str] | None = None) -> int:
     target_root = Path(args.target_dir).resolve() if args.target_dir else Path.cwd()
     config_path = Path(args.config_path).resolve() if args.config_path else None
 
-    print(f"Loading config for target: {target_root}")
+    print(f"{BOLD}Loading config for target:{RESET} {target_root}")
     config = load_config(config_path, target_root)
 
     package_root = Path(__file__).resolve().parent.parent
@@ -607,7 +618,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     if args.validate_only:
-        print("Config validation complete (no files written).")
+        _success("Config validation complete (no files written).")
         return 0
 
     # Compute the next SemVer version from changelog entries.
@@ -627,11 +638,14 @@ def main(argv: list[str] | None = None) -> int:
         notice = format_migration_notice(halt_result)
         print(notice, file=sys.stderr)
         if args.dry_run:
-            print("\n  [DRY-RUN] Would halt here — continuing for dry-run inspection.")
+            print()
+            _dry_run_msg("Would halt here — continuing for dry-run inspection.")
         elif not args.force_breaking:
             return 1
         else:
-            print("\n  [WARNING] --force-breaking: proceeding despite breaking changes.\n")
+            print()
+            _warn("--force-breaking: proceeding despite breaking changes.")
+            print()
 
     if args.update_diagrams:
         _update_diagrams(package_root)
@@ -644,15 +658,15 @@ def main(argv: list[str] | None = None) -> int:
     # retained as a no-op alias for the default.  When both --force and
     # --no-overwrite are supplied, --no-overwrite wins and a warning is printed.
     if args.force and args.no_overwrite:
-        print("[WARNING] Both --force and --no-overwrite were supplied; "
+        _warn("Both --force and --no-overwrite were supplied; "
               "--no-overwrite wins — existing files will be skipped.")
     effective_force: bool = not args.no_overwrite
 
     output_root_name = config.get("output_root", ".leafcutter")
     output_root = target_root / output_root_name
 
-    dry_label = " (dry-run)" if args.dry_run else ""
-    print(f"\nBuilding{dry_label} into: {target_root}")
+    dry_label = f" {DIM}(dry-run){RESET}" if args.dry_run else ""
+    print(f"\n{BOLD}Building{RESET}{dry_label} into: {target_root}")
     print(f"Output root: {output_root}\n")
 
     # Reset the up-to-date counter before this run so consecutive CLI calls
@@ -663,15 +677,15 @@ def main(argv: list[str] | None = None) -> int:
 
     uptodate = get_uptodate_count()
     if args.dry_run:
-        print(f"Total files to write: {total}")
+        print(f"Total files to write: {GREEN}{total}{RESET}")
         if uptodate:
             print(f"Would be up-to-date: {uptodate} files (unchanged)")
     else:
-        print(f"Total files written: {total}")
+        print(f"Total files written: {GREEN}{total}{RESET}")
         if uptodate:
             print(f"Up-to-date: {uptodate} files (unchanged)")
 
-    print(f"Build version: {computed_version}")
+    print(f"Build version: {GREEN}{computed_version}{RESET}")
 
     # Write the VERSION file to target_root so downstream tooling can read the
     # computed version without re-running compute_next_version.py.
@@ -680,11 +694,10 @@ def main(argv: list[str] | None = None) -> int:
         version_file = target_root / "VERSION"
         version_file.write_text(computed_version + "\n", encoding="utf-8")
     else:
-        print(f"  [DRY-RUN] would write {target_root / 'VERSION'}")
+        _dry_run_msg(f"would write {target_root / 'VERSION'}")
 
-    # Write build manifest so check_build_drift.py (Direction A) and
-    # check_output_drift.py (Direction B) can verify hashes.
-    print("\nBuild manifest:")
+    print()
+    _heading("Build manifest")
     write_build_manifest(
         package_root,
         dry_run=args.dry_run,
@@ -698,21 +711,21 @@ def main(argv: list[str] | None = None) -> int:
         if pkg_sha:
             write_lock_file(target_root, pkg_sha)
 
-    # Auto-clean stale pre-consolidation files before installing shims
-    print("\nStale file cleanup:")
+    print()
+    _heading("Stale file cleanup")
     stale_count = _cleanup_stale_paths(target_root, output_root, args.dry_run)
     if stale_count == 0:
-        print("  (no stale files found)")
+        print(f"  {DIM}(no stale files found){RESET}")
 
-    # --clean: remove compiled artifacts that have no corresponding source template.
-    # Runs after the normal build phases so the source manifest is up-to-date.
     if args.clean:
-        print("\nClean mode:")
+        print()
+        _heading("Clean mode")
         source_manifests = _build_source_manifests(output_root)
         clean_stale_artifacts(target_root, source_manifests)
 
     if not args.no_shims:
-        print("\nShim install:")
+        print()
+        _heading("Shim install")
         _install_shims(
             target_root,
             output_root=output_root,
@@ -721,7 +734,8 @@ def main(argv: list[str] | None = None) -> int:
             force=effective_force,
         )
 
-        print("\nHook install:")
+        print()
+        _heading("Hook install")
         _install_hooks(target_root, dry_run=args.dry_run)
 
     # Post-build: scan for placeholder content and referential integrity

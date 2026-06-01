@@ -16,12 +16,19 @@ ARCHITECTURE: Each function is self-contained and safe to import independently.
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
+
+from build_colors import dry_run as _dry_run
+from build_colors import error as _error
+from build_colors import info as _info
+from build_colors import success as _success
+from build_colors import warn as _warn
 
 
 def _compute_output_mappings(
@@ -169,7 +176,7 @@ def write_build_manifest(
     manifest_path = package_root / ".build_manifest.json"
 
     if not templates_dir.is_dir():
-        print(f"  [MANIFEST] templates/agents/ not found at {templates_dir}; skipping.")
+        _warn(f"templates/agents/ not found at {templates_dir}; skipping.")
         return
 
     # --- Direction A: template hashes (flat dict, backward-compatible) ---
@@ -185,10 +192,9 @@ def write_build_manifest(
         try:
             output_mappings = _compute_output_mappings(package_root, target_root, config)
         except Exception as exc:  # noqa: BLE001
-            print(
-                f"  [MANIFEST] WARNING — could not compute output_mappings: {exc}. "
-                "Direction B detection will be unavailable until next build.",
-                file=sys.stderr,
+            _warn(
+                f"could not compute output_mappings: {exc}. "
+                "Direction B detection will be unavailable until next build."
             )
 
     # Merge into final manifest structure
@@ -196,8 +202,8 @@ def write_build_manifest(
     manifest["output_mappings"] = output_mappings
 
     if dry_run:
-        print(
-            f"  [DRY-RUN] would write build manifest ({len(template_hashes)} template "
+        _dry_run(
+            f"would write build manifest ({len(template_hashes)} template "
             f"+ {len(output_mappings)} output_mappings entries) -> {manifest_path}"
         )
         return
@@ -206,8 +212,8 @@ def write_build_manifest(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
-    print(
-        f"  Wrote build manifest ({len(template_hashes)} template "
+    _success(
+        f"build manifest ({len(template_hashes)} template "
         f"+ {len(output_mappings)} output_mappings entries) -> {manifest_path}"
     )
 
@@ -234,8 +240,9 @@ def seed_docs(target_root: Path, dry_run: bool) -> None:
             f"  Done: {len(result['copied'])} copied, {len(result['skipped'])} skipped."
         )
     except Exception as exc:
-        print(
-            f"\n[WARNING] Scaffold seeding failed: {exc}. "
+        print()
+        _warn(
+            f"Scaffold seeding failed: {exc}. "
             "Run manually: python leafcutter/scripts/seed_project_docs.py"
         )
 
@@ -261,7 +268,8 @@ def update_diagrams(package_root: Path) -> None:
                 status = "updated" if was_updated else "no change"
                 print(f"  {path}: {status}")
     except Exception as exc:
-        print(f"\n[WARNING] Diagram update failed: {exc}. "
+        print()
+        _warn(f"Diagram update failed: {exc}. "
               "Run manually: python leafcutter/scripts/generate_agent_diagram.py --output-format embed")
 
 
@@ -319,7 +327,7 @@ def install_shims(
         source_path = output_root / output_rel
 
         if not source_path.exists():
-            print(f"  [WARNING] shim source missing: {output_rel}/ — "
+            _warn(f"shim source missing: {output_rel}/ — "
                   f"no build phase populated it. Skipping {canonical_rel} shim.")
             continue
 
@@ -340,7 +348,7 @@ def install_shims(
 
         if dry_run:
             method = "symlink" if strategy != "copy" else "copy"
-            print(f"  [DRY-RUN] would shim {canonical_rel} -> {output_rel} ({method})")
+            _dry_run(f"would shim {canonical_rel} -> {output_rel} ({method})")
             results.append({
                 "canonical": canonical_rel,
                 "target": output_rel,
@@ -355,7 +363,7 @@ def install_shims(
             "target": output_rel,
             "method": method,
         })
-        print(f"  shim: {canonical_rel} -> {output_rel} ({method})")
+        _info(f"shim: {canonical_rel} -> {output_rel} ({method})")
 
     # Single-file shims (these are files, not directories)
     file_shims: list[tuple[str, str]] = [
@@ -383,7 +391,7 @@ def install_shims(
 
         if dry_run:
             method = "symlink" if strategy != "copy" else "copy"
-            print(f"  [DRY-RUN] would shim {canonical_rel} -> {output_rel} ({method})")
+            _dry_run(f"would shim {canonical_rel} -> {output_rel} ({method})")
             results.append({
                 "canonical": canonical_rel,
                 "target": output_rel,
@@ -398,7 +406,7 @@ def install_shims(
             "target": output_rel,
             "method": method,
         })
-        print(f"  shim: {canonical_rel} -> {output_rel} ({method})")
+        _info(f"shim: {canonical_rel} -> {output_rel} ({method})")
 
     return results
 
@@ -445,6 +453,22 @@ def _create_file_shim(canonical: Path, source: Path, strategy: str) -> str:
         return "copy (symlink failed)"
 
 
+def _resolve_precommit_cmd():
+    """Return the command list to invoke pre-commit, or None if unavailable.
+
+    Two-tier detection:
+    1. ``shutil.which("pre-commit")`` — binary on PATH.
+    2. ``importlib.util.find_spec("pre_commit")`` — installed as a Python
+       package in the same environment running build.py (handles the common
+       case where pip installed it but the Scripts/ dir isn't on PATH).
+    """
+    if shutil.which("pre-commit"):
+        return ["pre-commit"]
+    if importlib.util.find_spec("pre_commit"):
+        return [sys.executable, "-m", "pre_commit"]
+    return None
+
+
 def install_hooks(target_root, dry_run=False):
     """Run ``pre-commit install`` after build.py writes .pre-commit-config.yaml.
 
@@ -461,14 +485,21 @@ def install_hooks(target_root, dry_run=False):
         One of "installed", "dry-run", "failed",
         "skipped (pre-commit not found)", or "skipped (custom hooksPath)".
     """
-    # 1. Check pre-commit binary availability.
-    if not shutil.which("pre-commit"):
-        print("  [WARNING] pre-commit not found; skipping hook install")
+    # 1. Resolve pre-commit binary (PATH lookup, then Python module fallback).
+    precommit_cmd = _resolve_precommit_cmd()
+    if precommit_cmd is None:
+        _warn("pre-commit not found; skipping hook install")
+        _info("         Pre-commit runs code-quality checks automatically before")
+        _info("         each commit. Install it with:")
+        _info("")
+        _info("           pip install pre-commit")
+        _info("")
+        _info("         Then re-run this build to complete hook setup.")
         return "skipped (pre-commit not found)"
 
     # 2. Dry-run guard (before any subprocess calls that mutate state).
     if dry_run:
-        print("  [DRY-RUN] would run pre-commit install")
+        _dry_run("would run pre-commit install")
         return "dry-run"
 
     # 3. Check core.hooksPath git config.
@@ -480,15 +511,14 @@ def install_hooks(target_root, dry_run=False):
     if hooks_path_result.returncode == 0:
         hooks_path_value = hooks_path_result.stdout.strip()
         if hooks_path_value.lower() in (".git/hooks", ".git\\hooks"):
-            # Redundant default - unset to allow pre-commit to install cleanly.
             subprocess.run(
                 ["git", "-C", str(target_root), "config", "--unset", "core.hooksPath"],
                 capture_output=True,
             )
-            print("  hooks: cleared redundant core.hooksPath (.git/hooks)")
+            _info("hooks: cleared redundant core.hooksPath (.git/hooks)")
         elif hooks_path_value:
-            print(
-                f"  [WARNING] core.hooksPath is set to '{hooks_path_value}' "
+            _warn(
+                f"core.hooksPath is set to '{hooks_path_value}' "
                 "(non-default); skipping pre-commit install"
             )
             return "skipped (custom hooksPath)"
@@ -496,17 +526,17 @@ def install_hooks(target_root, dry_run=False):
     # 4. Run pre-commit install.
     try:
         subprocess.run(
-            ["pre-commit", "install"],
+            [*precommit_cmd, "install"],
             cwd=str(target_root),
             check=True,
             capture_output=True,
         )
     except subprocess.CalledProcessError as exc:
         stderr = exc.stderr.decode("utf-8", errors="replace") if exc.stderr else ""
-        print(f"  [WARNING] pre-commit install failed: {stderr.strip()}")
+        _error(f"pre-commit install failed: {stderr.strip()}")
         return "failed"
 
-    print("  hooks: pre-commit install OK")
+    _success("hooks: pre-commit install OK")
     return "installed"
 
 
