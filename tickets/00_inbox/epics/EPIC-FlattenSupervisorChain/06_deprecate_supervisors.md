@@ -1,0 +1,153 @@
+---
+title: "Mark epic-supervisor and ticket-supervisor as legacy_only in agent_registry.json"
+status: todo
+components:
+  - build_pipeline
+created: 2026-06-01
+depends_on:
+  - 02_build_ticket_workflow.md
+  - 03_build_epic_workflow.md
+priority: medium
+phase: "Phase 1"
+roadmap_phase: phase_1
+advances_current_outcome: true
+requires_diagram: false
+requires_adr: false
+files_touched:
+  - config/agent_registry.json
+  - templates/agents/epic-supervisor.md
+  - templates/agents/ticket-supervisor.md
+agents:
+  architect-review: not_needed
+  test-writer: needed
+  python-coder: needed
+  sql-coder: not_needed
+  test-runner: needed
+  documentation-expert: not_needed
+  pr-reviewer: needed
+  commit: needed
+  pull-request: needed
+  adr-author: not_needed
+  architecture-diagram-author: not_needed
+  explanation-author: not_needed
+  how-to-author: not_needed
+  reference-author: not_needed
+  user-surface-smoker: not_needed
+user_facing_surface: null
+---
+
+# 06: Mark epic-supervisor and ticket-supervisor as legacy_only in agent_registry.json
+
+## Actor / Goal
+
+In order to signal clearly that epic-supervisor and ticket-supervisor are
+superseded by the JS workflow path while keeping them functional for sub-v2.1.154
+installs, we need to add `legacy_only: true` to their registry entries and insert
+a deprecation-warning block at the top of each agent template.
+
+## Context
+
+ADR-006 already set `"deprecated": true` on `epic-supervisor` in `agent_registry.json`.
+This ticket extends that signal:
+
+- Adds `"legacy_only": true` to both `epic-supervisor` and `ticket-supervisor`
+  registry entries (a clearer, actionable flag that tooling can gate on).
+- Inserts a `> [!NOTE] This agent is in legacy mode...` header in each template
+  file so any adopter who opens it sees the deprecation notice and the JS
+  workflow alternative immediately.
+- Adds a "degraded experience" note to the templates that describes what breaks
+  on older Claude Code versions (phase agents silently skip at depth 2).
+- Does NOT delete or disable either template — they remain compilable and
+  functional for users on Claude Code < 2.1.154.
+
+### Relationship to build.py dual-path
+
+Ticket 01 gates JS workflow installation on version detection. On installs
+where the JS files are absent (because the build ran on Claude Code < 2.1.154),
+`build.py` still compiles both supervisor templates via `build_agents()`.
+The `legacy_only` flag in the registry enables future tooling to automatically
+skip spawning these agents when workflows are available.
+
+### Architectural context
+
+- ADR-006: `docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md` §3:
+  "epic-supervisor is deprecated, not deleted."
+- Registry: `config/agent_registry.json`
+- Templates: `templates/agents/epic-supervisor.md`, `templates/agents/ticket-supervisor.md`
+
+## Acceptance Criteria
+
+```gherkin
+Given agent_registry.json before this change
+When this ticket is applied
+Then epic-supervisor entry has "legacy_only": true AND "deprecated": true
+ And ticket-supervisor entry has "legacy_only": true
+
+Given the compiled epic-supervisor.md agent file in .claude/agents/
+When an adopter opens the file
+Then the first non-frontmatter content is a deprecation notice
+ And the notice names the JS workflow alternative (build-epic.js)
+ And the notice states the minimum Claude Code version for the JS path (2.1.154)
+
+Given the compiled ticket-supervisor.md agent file
+When an adopter opens the file
+Then the first non-frontmatter content is a deprecation notice
+ And the notice names the JS workflow alternative (build-ticket.js)
+
+Given a build.py run on Claude Code >= 2.1.154
+When both supervisor templates are still present in templates/agents/
+Then build_agents() still compiles them (no hard-delete from build phase)
+ And build_workflow_scripts() also installs the JS alternatives
+ And the two paths coexist without conflict
+```
+
+## Sign-offs
+
+- [ ] test-writer
+- [ ] python-coder
+- [ ] test-runner
+- [ ] pr-reviewer
+- [ ] commit
+- [ ] pull-request
+
+## Comments
+
+## Implementation Tasks
+
+### python-coder
+
+- [ ] In `config/agent_registry.json`:
+  - Add `"legacy_only": true` to the `epic-supervisor` entry (alongside the
+    existing `"deprecated": true`).
+  - Add `"legacy_only": true` to the `ticket-supervisor` entry.
+- [ ] In `templates/agents/epic-supervisor.md`, insert at the top of the agent
+  body (after the YAML frontmatter block) a deprecation notice:
+  ```
+  > [!NOTE]
+  > **Legacy agent — superseded by `build-epic.js` (Claude Code Workflows).**
+  > On Claude Code >= 2.1.154, use `/build-feature` which invokes `build-epic.js`
+  > directly. This agent is retained for Claude Code < 2.1.154 compatibility only.
+  > On older versions, phase agents at depth 2 will silently skip — the ticket
+  > will appear to complete but no implementation will occur.
+  ```
+- [ ] In `templates/agents/ticket-supervisor.md`, insert a matching deprecation
+  notice referencing `build-ticket.js`.
+
+### test-writer
+
+- [ ] Add `unit_tests/test_agent_registry_legacy_flags.py`:
+  - `test_epic_supervisor_has_legacy_only_flag` — load `agent_registry.json`,
+    assert `epic-supervisor` entry has `legacy_only == True`.
+  - `test_ticket_supervisor_has_legacy_only_flag` — same for `ticket-supervisor`.
+  - `test_legacy_agents_still_have_template_files` — assert both template paths
+    still exist (not deleted).
+
+## Risk & Safety
+
+- Touches money? No.
+- Touches data? No.
+- Reversibility? Registry changes are reversible by removing the `legacy_only`
+  key. Template header additions are easily reverted.
+- Dependency note: this ticket depends on tickets 02 and 03 being DRAFTED so
+  the deprecation notices can name the correct JS alternative filenames. It does
+  not need to wait for them to be merged.
