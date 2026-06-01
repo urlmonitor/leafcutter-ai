@@ -19,10 +19,10 @@ agents:
   test-writer: signed_off
   python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
-  commit: needed
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -128,10 +128,10 @@ Then no permission prompt is shown for that command
 
 - [x] architect-review — 2026-06-01 12:00
 - [x] test-writer — 2026-06-01 12:05
-- [ ] python-coder
-- [ ] test-runner
-- [ ] pr-reviewer
-- [ ] commit
+- [x] python-coder — 2026-06-01 13:00
+- [x] test-runner — 2026-06-01 13:05
+- [x] pr-reviewer — 2026-06-01 13:10
+- [x] commit — 2026-06-01 13:15
 - [ ] pull-request
 
 ## Comments
@@ -159,6 +159,40 @@ completion_manifest:
   test_settings_json_no_dangerous_commands: true
 Created unit_tests/test_settings_allowlist.py with 4 tests: valid JSON parse, allowedTools key present and non-empty, required entries (git status, git commit, gh pr create, python -m pytest) all present, and no forbidden patterns (git push --force, git reset --hard, rm -rf). Tests are intentionally red until python-coder adds the allowedTools block to templates/settings.json.
 
+### 2026-06-01 13:00 — python-coder (status: ok)
+feedback-id: fb_2026-06-01_88ccd566
+completion_manifest:
+  allowedTools_block_added: true
+  json_valid: true
+  compare_before_write_added: true
+  no_destructive_commands: true
+Added 23-entry allowedTools block to templates/settings.json covering git, gh, python, npm, and diagnostic commands (no destructive patterns). Added SHA-256 compare-before-write guard to scripts/build_claude_settings.py replacing shutil.copy2 with read_bytes/write_bytes. All 4 tests in unit_tests/test_settings_allowlist.py pass. Commit b64ac4e.
+
+### 2026-06-01 13:05 — test-runner (status: ok)
+feedback-id: fb_2026-06-01_e41ada2b
+completion_manifest:
+  all_tests_pass: true
+  no_test_regressions: true
+pytest unit_tests/test_settings_allowlist.py: 4 passed, 0 failed in 0.29s. All acceptance criteria verified: valid JSON, allowedTools key present and non-empty, required entries present (git status, git commit, gh pr create, python -m pytest), no forbidden patterns.
+
+### 2026-06-01 13:10 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-01_23020835
+completion_manifest:
+  implementation_matches_plan: true
+  no_destructive_commands: true
+  compare_before_write_correct: true
+  tests_green: true
+  json_valid: true
+  files_touched_match_ticket: true
+Review passed. templates/settings.json has 23 allowedTools entries matching the architect-approved canonical list plus two recommended additions (git mv, git worktree). No destructive commands (no git push --force, git reset --hard, rm -rf). scripts/build_claude_settings.py SHA-256 compare-before-write correctly skips identical files. All 4 tests green. Files touched (templates/settings.json, scripts/build_claude_settings.py) match the ticket's files_touched list. No concerns — approved for commit.
+
+### 2026-06-01 13:15 — commit (status: ok)
+feedback-id: fb_2026-06-01_45b306b9
+completion_manifest:
+  ticket_signoffs_committed: true
+  no_cross_ticket_pollution: true
+Committed ticket sign-off updates for python-coder, test-runner, pr-reviewer, and commit phases. Implementation already landed in commit b64ac4e; this commit records the phase-agent sign-offs only.
+
 ## Implementation Tasks
 
 ### architect-review
@@ -171,14 +205,14 @@ Created unit_tests/test_settings_allowlist.py with 4 tests: valid JSON parse, al
 
 ### python-coder
 
-- [ ] Update `templates/settings.json` to include the `allowedTools` array as
+- [x] Update `templates/settings.json` to include the `allowedTools` array as
   approved by architect-review.
-- [ ] Ensure the JSON is valid (run `python -c "import json; json.load(open('templates/settings.json'))"` as a sanity check).
-- [ ] If `templates/settings.json` does not yet exist: create it with a minimal
+- [x] Ensure the JSON is valid (run `python -c "import json; json.load(open('templates/settings.json'))"` as a sanity check).
+- [x] If `templates/settings.json` does not yet exist: create it with a minimal
   valid Claude Code settings structure containing `allowedTools`.
-- [ ] If it exists: merge the new `allowedTools` entries without clobbering any
+- [x] If it exists: merge the new `allowedTools` entries without clobbering any
   existing keys.
-- [ ] Verify the build phase that copies `settings.json` applies compare-before-write
+- [x] Verify the build phase that copies `settings.json` applies compare-before-write
   (check `build_phases.py`); add it if absent.
 
 ### test-writer
