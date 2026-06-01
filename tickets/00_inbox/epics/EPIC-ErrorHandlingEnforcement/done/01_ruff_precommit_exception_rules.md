@@ -1,6 +1,6 @@
 ---
 title: "Configure Ruff exception rules and AST I/O boundary check in pre-commit"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-31
@@ -28,7 +28,7 @@ agents:
   user-surface-smoker: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 01: Configure Ruff exception rules and AST I/O boundary check in pre-commit
@@ -93,7 +93,7 @@ Then ruff and the AST check both pass and the commit succeeds
 - [x] test-runner — 2026-06-01 10:30
 - [x] pr-reviewer — 2026-06-01 10:45
 - [x] commit — 2026-06-01 11:00
-- [ ] pull-request
+- [x] pull-request — 2026-06-01 11:15
 
 ## Comments
 
@@ -154,7 +154,14 @@ completion_manifest:
   files_staged_explicitly: true
   commit_created: true
   pre_commit_hooks_pass: true
-Staged explicit file paths per commit-discipline SOP; pre-commit hooks pass; commit created on worktree-EPIC-ErrorHandlingEnforcement branch.
+Staged explicit file paths per commit-discipline SOP; pre-commit hooks pass; commit bab5de3 created on worktree-EPIC-ErrorHandlingEnforcement branch.
+
+### 2026-06-01 11:15 — pull-request (status: ok)
+feedback-id: fb_2026-06-01_6837b845
+completion_manifest:
+  pr_exists_or_created: true
+  commits_pushed: true
+PR #27 already exists on branch worktree-EPIC-ErrorHandlingEnforcement. Pushed commit bab5de3 to update it. No new PR needed.
 
 ## Implementation Tasks
 
