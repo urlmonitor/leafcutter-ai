@@ -164,6 +164,49 @@ async function run({ userInput, agent, workflow, parallel }) {
   }
 
   // -------------------------------------------------------------------------
+  // Step 0 — Worktree guard: refuse to run on the main clone
+  // -------------------------------------------------------------------------
+  // A git worktree's .git is a file (containing a gitdir: pointer); in the
+  // main clone .git is a directory. Running implementation work on main risks
+  // corrupting the shared working tree. If not in a worktree, emit a
+  // structured error instructing the caller to create one first.
+  const worktreeCheck = await agent({
+    agentType: "status-checker",
+    input: {
+      instructions:
+        "Run these two shell commands and report the results as JSON:\n" +
+        "1. `test -f .git && echo file || echo directory` — determines if .git is a file (worktree) or directory (main clone)\n" +
+        "2. `git branch --show-current` — reports the current branch name\n" +
+        "Return ONLY a JSON object: { \"git_type\": \"file\"|\"directory\", \"branch\": \"<name>\" }",
+    },
+  });
+
+  let gitInfo;
+  try {
+    gitInfo =
+      typeof worktreeCheck === "string"
+        ? JSON.parse(worktreeCheck)
+        : worktreeCheck;
+  } catch (err) {
+    gitInfo = { git_type: "unknown", branch: "unknown" };
+  }
+
+  if (gitInfo.git_type === "directory" || gitInfo.branch === "main" || gitInfo.branch === "master") {
+    return {
+      status: "error",
+      worktree_required: true,
+      message:
+        "build-epic.js must run inside a git worktree, not the main clone. " +
+        "The current working directory has .git as a " + gitInfo.git_type +
+        " (branch: " + gitInfo.branch + "). " +
+        "Create a worktree first:\n" +
+        "  /worktree create <epic-branch-name>\n" +
+        "Then re-run /build-feature from inside the worktree.",
+      action_required: "create_worktree",
+    };
+  }
+
+  // -------------------------------------------------------------------------
   // Step 1 — Planner: read Master_Plan.md + all ticket frontmatter → batches
   // -------------------------------------------------------------------------
   // The workflow script cannot read files directly. A planner agent reads
@@ -242,13 +285,16 @@ async function run({ userInput, agent, workflow, parallel }) {
     // -----------------------------------------------------------------------
     // Step 4 — Dispatch all tickets in this batch via parallel()
     // -----------------------------------------------------------------------
-    // Each parallel slot calls the build-ticket workflow with the ticket path.
+    // Each parallel slot calls the build-ticket workflow with the ticket path
+    // and the worktree_path so child tickets retain worktree context.
     // parallel() waits for ALL slots to complete before returning the results.
+    const worktreePath = gitInfo.worktree_path || process.cwd();
     const batchResults = await parallel(
       tickets.map((ticket) => async () => {
         try {
           const result = await workflow("build-ticket", {
             ticket_path: ticket.path,
+            worktree_path: worktreePath,
           });
           return {
             ticket_path: ticket.path,

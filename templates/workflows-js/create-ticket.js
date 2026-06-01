@@ -36,6 +36,11 @@ const DEPTH_CAP = 3;
 /**
  * Main entry point called by the Claude Code workflow runtime.
  *
+ * DESIGN NOTE: This workflow intentionally runs on the main branch (no
+ * worktree guard). create-ticket is a planning tool — it creates ticket
+ * files but does not modify implementation code. Running on main is safe
+ * and correct: the ticket file should land directly in tickets/00_inbox/.
+ *
  * @param {object} params
  * @param {string} params.userInput  - The raw user request string ($ARGUMENTS).
  * @param {number} [params.currentDepth=1] - Caller's current dispatch depth.

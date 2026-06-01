@@ -279,3 +279,56 @@ def test_retry_cap_is_bounded():
         f"MAX_RETRIES is {max_retries_value} but must be > 0 "
         f"(at least one retry must be allowed for mechanical blockers)."
     )
+
+
+# ---------------------------------------------------------------------------
+# Test 7 — worktree guard returns structured error on main clone
+# ---------------------------------------------------------------------------
+
+
+def test_worktree_guard_returns_error_on_main_clone():
+    """Worktree guard must return status 'error' with worktree_required when on main."""
+    if not _WORKFLOW_PATH.exists():
+        pytest.fail(f"build-ticket.js not found at {_WORKFLOW_PATH}.")
+
+    content = _WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "worktree_required" in content, (
+        "build-ticket.js must return a 'worktree_required' field in the error "
+        "response when the worktree guard detects the main clone."
+    )
+
+    assert "action_required" in content, (
+        "build-ticket.js must return an 'action_required' field instructing "
+        "the caller how to create a worktree."
+    )
+
+    assert re.search(r'git_type\s*===\s*["\']directory["\']', content), (
+        "build-ticket.js must check if git_type === 'directory' to detect "
+        "the main clone (where .git is a directory, not a file)."
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 8 — worktree guard allows continuation when in a worktree
+# ---------------------------------------------------------------------------
+
+
+def test_worktree_guard_allows_worktree():
+    """Worktree guard must proceed past the check when .git is a file (worktree)."""
+    if not _WORKFLOW_PATH.exists():
+        pytest.fail(f"build-ticket.js not found at {_WORKFLOW_PATH}.")
+
+    content = _WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "worktreeCheck" in content or "worktree_check" in content or "worktree" in content.lower(), (
+        "build-ticket.js must have a worktree detection variable or agent call."
+    )
+
+    guard_pos = content.find("worktree_required")
+    planner_pos = content.find("plannerResult")
+
+    assert guard_pos < planner_pos, (
+        "The worktree guard must run BEFORE the planner agent dispatch. "
+        f"Found worktree_required at position {guard_pos} but plannerResult at {planner_pos}."
+    )

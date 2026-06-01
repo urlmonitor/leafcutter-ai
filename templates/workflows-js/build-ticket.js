@@ -119,6 +119,48 @@ async function run({ userInput, agent }) {
   }
 
   // -------------------------------------------------------------------------
+  // Step 0 — Worktree guard: refuse to run on the main clone
+  // -------------------------------------------------------------------------
+  // A git worktree's .git is a file (containing a gitdir: pointer); in the
+  // main clone .git is a directory. Running implementation work on main risks
+  // corrupting the shared working tree.
+  const worktreeCheck = await agent({
+    agentType: "status-checker",
+    input: {
+      instructions:
+        "Run these two shell commands and report the results as JSON:\n" +
+        "1. `test -f .git && echo file || echo directory` — determines if .git is a file (worktree) or directory (main clone)\n" +
+        "2. `git branch --show-current` — reports the current branch name\n" +
+        "Return ONLY a JSON object: { \"git_type\": \"file\"|\"directory\", \"branch\": \"<name>\" }",
+    },
+  });
+
+  let gitInfo;
+  try {
+    gitInfo =
+      typeof worktreeCheck === "string"
+        ? JSON.parse(worktreeCheck)
+        : worktreeCheck;
+  } catch (err) {
+    gitInfo = { git_type: "unknown", branch: "unknown" };
+  }
+
+  if (gitInfo.git_type === "directory" || gitInfo.branch === "main" || gitInfo.branch === "master") {
+    return {
+      status: "error",
+      worktree_required: true,
+      message:
+        "build-ticket.js must run inside a git worktree, not the main clone. " +
+        "The current working directory has .git as a " + gitInfo.git_type +
+        " (branch: " + gitInfo.branch + "). " +
+        "Create a worktree first:\n" +
+        "  /worktree create <branch-name>\n" +
+        "Then re-run /build-feature from inside the worktree.",
+      action_required: "create_worktree",
+    };
+  }
+
+  // -------------------------------------------------------------------------
   // Step 1 — Planner: read ticket frontmatter → ordered_phases JSON
   // -------------------------------------------------------------------------
   // The workflow script cannot read files directly. The status-checker agent
