@@ -60,6 +60,8 @@ _PROSE_FILE_PREFIXES = (
     "tickets\\",
     "docs/retrospectives/",
     "docs\\retrospectives\\",
+    "templates/skills/",
+    "templates\\skills\\",
 )
 
 # Mirror of scan_secrets entropy constants (kept in sync with the skill).

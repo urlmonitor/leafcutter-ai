@@ -319,6 +319,8 @@ def install_shims(
         source_path = output_root / output_rel
 
         if not source_path.exists():
+            print(f"  [WARNING] shim source missing: {output_rel}/ — "
+                  f"no build phase populated it. Skipping {canonical_rel} shim.")
             continue
 
         if canonical_path.exists() or canonical_path.is_symlink():

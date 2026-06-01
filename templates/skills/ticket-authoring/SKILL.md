@@ -180,7 +180,10 @@ In order to <outcome>, we need to <change> so that <user-facing benefit>.
 
 ## Context
 Why now, what changed, and what existing piece this builds on. Link
-sibling tickets, related docs, ADRs.
+sibling tickets, related docs, ADRs. When the ticket touches a module
+that mirrors an existing module's pattern, explicitly list all locations
+where analogous or duplicate logic exists so duplication risks are
+visible before implementation begins.
 
 ## Acceptance Criteria
 ```gherkin
