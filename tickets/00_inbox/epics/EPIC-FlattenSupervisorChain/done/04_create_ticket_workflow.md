@@ -1,6 +1,6 @@
 ---
 title: "Write create-ticket.js workflow script to replace the BA → refinement → architect chain"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-01
@@ -23,8 +23,8 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   explanation-author: not_needed
@@ -151,8 +151,8 @@ Tests live in `unit_tests/test_create_ticket_workflow.py` and must pass via
 - [x] python-coder — 2026-06-01 09:15
 - [x] test-runner — 2026-06-01 09:20
 - [x] pr-reviewer — 2026-06-01 09:25
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-01 09:30
+- [x] pull-request — 2026-06-01 09:35
 
 ## Comments
 
@@ -210,6 +210,22 @@ completion_manifest:
   implementation_matches_spec: true
   files_touched_match_plan: true
 Review passed. create-ticket.js correctly implements all Gherkin acceptance criteria: depth-1 BA dispatch, routing on routing_decision, depth-cap guard (DEPTH_CAP=3) before create-epic, open questions via prompt(), test-planner at depth 1, parallel dispatch for refinement+architect-review, and ticket-wiring assembly. create-ticket.md updated with version routing. All 5 tests green. No regressions. Two files touched match the ticket's files_touched list exactly.
+
+### 2026-06-01 09:30 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  staged_files_are_ticket_scoped: true
+  commit_succeeded: true
+  no_parallel_ticket_files_included: true
+  commit_message_references_ticket: true
+Committed 4 files: templates/workflows-js/create-ticket.js (new), templates/workflows/create-ticket.md (updated), unit_tests/test_create_ticket_workflow.py (new), tickets/.../04_create_ticket_workflow.md (sign-offs). Staged exclusively ticket-04 files; parallel-ticket files (08) were unstaged before commit. Commit SHA: c34e753.
+
+### 2026-06-01 09:35 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  pr_deferred_to_epic_level: true
+  no_premature_pr_opened: true
+PR deferred to epic-level per ticket-supervisor instructions ("Do NOT open a PR — just commit. The PR will be opened at the epic level."). Ticket commit c34e753 is on branch worktree-EPIC-FlattenSupervisorChain. The epic-level PR will include all tickets when all are complete.
 
 ## Implementation Tasks
 

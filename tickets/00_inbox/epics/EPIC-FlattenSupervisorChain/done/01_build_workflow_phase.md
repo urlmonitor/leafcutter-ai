@@ -1,6 +1,6 @@
 ---
 title: "Add build_workflow_scripts() phase to build.py with Claude Code version detection"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-01
@@ -26,7 +26,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   explanation-author: not_needed
@@ -134,7 +134,7 @@ Then git diff shows no changes (compare-before-write applied to .js files)
 - [x] test-runner — 2026-06-01 10:40
 - [x] pr-reviewer — 2026-06-01 10:50
 - [x] commit — 2026-06-01 10:55
-- [ ] pull-request
+- [x] pull-request — 2026-06-01 11:00
 
 ## Comments
 
@@ -190,6 +190,12 @@ completion_manifest:
   commit_created: true
   tests_still_pass_post_commit: true
 Staged and committed: scripts/build_phases.py, scripts/build.py, templates/workflows-js/.gitkeep, unit_tests/test_build_workflow_phase.py, and the ticket file. All 5 workflow phase tests pass.
+
+### 2026-06-01 11:00 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  pr_deferred_to_epic_level: true
+PR deferred to epic level per caller instruction (EPIC-FlattenSupervisorChain will open one PR for all tickets). Commit 78d58d0 is on branch worktree-EPIC-FlattenSupervisorChain and ready for the epic-level PR.
 
 ## Escalation
 
