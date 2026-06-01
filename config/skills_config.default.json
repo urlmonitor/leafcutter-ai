@@ -58,6 +58,10 @@
     "protected_paths": []
   },
 
+  "hooks": {
+    "exception_handling_hook": ".claude/hooks/check_exception_handling_hook.py"
+  },
+
   "testing_context": {
     "test_root": "unit_tests/",
     "readme_path": "unit_tests/README.md",
