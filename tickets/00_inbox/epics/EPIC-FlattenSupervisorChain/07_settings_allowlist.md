@@ -15,9 +15,9 @@ files_touched:
   - templates/settings.json
   - scripts/build_phases.py
 agents:
-  architect-review: needed
-  test-writer: needed
-  python-coder: needed
+  architect-review: signed_off
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
   test-runner: needed
   documentation-expert: not_needed
@@ -126,8 +126,8 @@ Then no permission prompt is shown for that command
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] test-writer
+- [x] architect-review — 2026-06-01 12:00
+- [x] test-writer — 2026-06-01 12:05
 - [ ] python-coder
 - [ ] test-runner
 - [ ] pr-reviewer
@@ -136,15 +136,38 @@ Then no permission prompt is shown for that command
 
 ## Comments
 
+### 2026-06-01 12:00 — architect-review (status: ok)
+feedback-id: fb_2026-06-01_4808cc84
+completion_manifest:
+  allowlist_entries_reviewed: true
+  no_destructive_commands: true
+  missing_commands_assessed: true
+  correct_key_confirmed: true
+Impact classification: SMALL (2 files, 1 component: build_pipeline; no always-large triggers). All 21 canonical allowlist entries reviewed — none include git push --force, git reset --hard, or rm -rf. `allowedTools` (not `dangerouslyAllowTools`) is the correct key per Claude Code docs. Additional entries recommended: `Bash(git mv *)` (needed for ticket archival), `Bash(git worktree *)` (needed for worktree management). The `Bash(git checkout *)` entry is acceptable for workflow agents but python-coder should note the security comment from the ticket (prefer path-scoped patterns). No ADR required; no diagrams needed.
+
+## Escalation
+
+Branch: none
+Reason: 2 files in 1 component (build_pipeline); no always-large trigger fired.
+
+### 2026-06-01 12:05 — test-writer (status: ok)
+feedback-id: fb_2026-06-01_f8f570ff
+completion_manifest:
+  test_settings_json_is_valid_json: true
+  test_settings_json_contains_allowedTools: true
+  test_settings_json_contains_required_entries: true
+  test_settings_json_no_dangerous_commands: true
+Created unit_tests/test_settings_allowlist.py with 4 tests: valid JSON parse, allowedTools key present and non-empty, required entries (git status, git commit, gh pr create, python -m pytest) all present, and no forbidden patterns (git push --force, git reset --hard, rm -rf). Tests are intentionally red until python-coder adds the allowedTools block to templates/settings.json.
+
 ## Implementation Tasks
 
 ### architect-review
 
-- [ ] Review the canonical allowlist in the Context section above.
-- [ ] Confirm each entry is necessary and safe (no destructive commands included).
-- [ ] Add any missing commands required by the workflow scripts in tickets 02–04
+- [x] Review the canonical allowlist in the Context section above.
+- [x] Confirm each entry is necessary and safe (no destructive commands included).
+- [x] Add any missing commands required by the workflow scripts in tickets 02–04
   (consult those tickets' Implementation Tasks for shell commands issued by phase agents).
-- [ ] Confirm `allowedTools` (not `dangerouslyAllowTools`) is the correct key.
+- [x] Confirm `allowedTools` (not `dangerouslyAllowTools`) is the correct key.
 
 ### python-coder
 
@@ -160,7 +183,7 @@ Then no permission prompt is shown for that command
 
 ### test-writer
 
-- [ ] Add `unit_tests/test_settings_allowlist.py`:
+- [x] Add `unit_tests/test_settings_allowlist.py`:
   - `test_settings_json_contains_allowedTools` — load `templates/settings.json`,
     assert `allowedTools` key exists and is a non-empty list.
   - `test_settings_json_no_dangerous_commands` — assert the allowedTools list

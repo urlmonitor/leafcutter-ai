@@ -16,6 +16,7 @@ files_touched:
   - scripts/build_phases.py
   - templates/workflows-js/
   - scripts/commit_guardian/commit_guardian.json
+  - skills_config.json
 agents:
   architect-review: needed
   test-writer: needed
@@ -50,11 +51,21 @@ Claude Code Workflows require version >= 2.1.154. The `templates/workflows-js/`
 directory will contain the workflow JS scripts authored in tickets 02–04. This
 ticket creates the build infrastructure so those scripts are deployed correctly.
 
-The build phase is gated on a version check: if the detected Claude Code version is
-below 2.1.154, the phase emits a loud warning and skips file copying (it does NOT
-hard-fail the build, so legacy installs continue working via the agent path). When
-the Claude Code version is unknown or undetectable, the phase emits a warning and
-continues (fail-open, since many CI environments do not have Claude Code installed).
+The build phase is gated on **two** conditions:
+
+1. **Opt-in flag**: `skills_config.json → workflows.enabled` must be `true`.
+   Default is `false` — workflows are experimental and must be explicitly opted
+   into. If the key is absent or `false`, the phase skips silently (no warning,
+   since this is the expected default state).
+
+2. **Version check**: if the detected Claude Code version is below 2.1.154, the
+   phase emits a loud warning and skips file copying (it does NOT hard-fail the
+   build, so legacy installs continue working via the agent path). When the
+   Claude Code version is unknown or undetectable, the phase emits a warning and
+   continues (fail-open, since many CI environments do not have Claude Code
+   installed).
+
+Both conditions must pass for workflow scripts to be installed.
 
 ### Version detection strategy
 
@@ -85,18 +96,27 @@ idempotency.
 
 ```gherkin
 Given templates/workflows-js/ contains at least one .js file
+  And skills_config.json has workflows.enabled = true
   And the target project has Claude Code >= 2.1.154 (CLAUDE_CODE_VERSION env set)
 When python scripts/build.py --target-dir <target>
 Then .claude/workflows/<filename>.js exists in the target
  And the build output includes "Workflow scripts: N installed"
 
-Given CLAUDE_CODE_VERSION is set to "2.0.0" (below minimum)
+Given skills_config.json has workflows.enabled = false (or key absent)
+When python scripts/build.py --target-dir <target>
+Then .claude/workflows/ is NOT populated with .js files
+ And the build output includes "Workflow scripts: skipped (not enabled in skills_config.json)"
+ And the build exits 0
+
+Given skills_config.json has workflows.enabled = true
+  And CLAUDE_CODE_VERSION is set to "2.0.0" (below minimum)
 When python scripts/build.py --target-dir <target>
 Then the build output includes a warning containing "Claude Code >= 2.1.154 required"
  And .claude/workflows/ is NOT populated with .js files
  And the build exits 0 (warning only, not a hard failure)
 
-Given CLAUDE_CODE_VERSION is absent and claude --version fails
+Given skills_config.json has workflows.enabled = true
+  And CLAUDE_CODE_VERSION is absent and claude --version fails
 When python scripts/build.py --target-dir <target>
 Then the build output includes a warning about unknown Claude Code version
  And .claude/workflows/ IS populated (fail-open)
@@ -123,6 +143,7 @@ Then git diff shows no changes (compare-before-write applied to .js files)
 ### architect-review
 
 - [ ] Confirm the phase insertion point (after build_agents, before build_hooks).
+- [ ] Confirm the dual-gate design: `skills_config.json → workflows.enabled` (opt-in, default false) AND version check.
 - [ ] Confirm the version-detection fallback chain is acceptable (env var → subprocess → warn + continue).
 - [ ] Confirm compare-before-write must apply to .js files (yes — idempotency requirement).
 
@@ -130,7 +151,8 @@ Then git diff shows no changes (compare-before-write applied to .js files)
 
 - [ ] Create `templates/workflows-js/` directory with a `.gitkeep` so it is tracked before workflow scripts land.
 - [ ] In `scripts/build_phases.py`, add `build_workflow_scripts(config, target_dir)`:
-  - Detect Claude Code version via `CLAUDE_CODE_VERSION` env var, then `claude --version` subprocess, then unknown.
+  - **First gate — opt-in flag**: read `config["workflows"]["enabled"]` from skills_config.json. If absent or `false`, emit `Workflow scripts: skipped (not enabled in skills_config.json)` and return 0.
+  - **Second gate — version check**: detect Claude Code version via `CLAUDE_CODE_VERSION` env var, then `claude --version` subprocess, then unknown.
   - Compare detected version against minimum `2.1.154` using `packaging.version` or a manual tuple comparison.
   - If below minimum: emit `[WARNING] Claude Code >= 2.1.154 required for workflow scripts. Skipping.` and return.
   - If unknown: emit `[WARNING] Claude Code version unknown. Installing workflow scripts (fail-open).` and continue.
@@ -142,9 +164,10 @@ Then git diff shows no changes (compare-before-write applied to .js files)
 ### test-writer
 
 - [ ] Add `unit_tests/test_build_workflow_phase.py`:
-  - `test_workflow_scripts_installed_when_version_ok` — mock `CLAUDE_CODE_VERSION=2.1.154`, assert JS files appear in target.
-  - `test_workflow_scripts_skipped_when_version_below_minimum` — mock `CLAUDE_CODE_VERSION=2.0.0`, assert target `.claude/workflows/` is empty or absent, assert warning in output.
-  - `test_workflow_scripts_installed_when_version_unknown` — unset env var and mock subprocess failure, assert files installed and warning present.
+  - `test_workflow_scripts_skipped_when_not_enabled` — config has `workflows.enabled = false` (or key absent), assert `.claude/workflows/` not populated, assert "skipped (not enabled" in output.
+  - `test_workflow_scripts_installed_when_enabled_and_version_ok` — config has `workflows.enabled = true`, mock `CLAUDE_CODE_VERSION=2.1.154`, assert JS files appear in target.
+  - `test_workflow_scripts_skipped_when_version_below_minimum` — config enabled, mock `CLAUDE_CODE_VERSION=2.0.0`, assert target `.claude/workflows/` is empty or absent, assert warning in output.
+  - `test_workflow_scripts_installed_when_version_unknown` — config enabled, unset env var and mock subprocess failure, assert files installed and warning present.
   - `test_build_workflow_phase_idempotent` — run phase twice, assert no second write occurs (compare-before-write).
 
 ## Risk & Safety

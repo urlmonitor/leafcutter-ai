@@ -15,6 +15,7 @@ ARCHITECTURE: One public function ``build_claude_settings`` (matches the standar
 from __future__ import annotations
 
 import shutil
+import hashlib
 from pathlib import Path
 from typing import Any
 
@@ -57,8 +58,17 @@ def build_claude_settings(
             print("  [DRY-RUN] would write .claude/settings.json")
             written += 1
         else:
+            # Compare-before-write: skip if byte-identical to avoid mtime churn
+            # and spurious git status entries on idempotent build runs.
+            src_bytes = settings_template.read_bytes()
+            if target_settings.exists():
+                def _sha256(data: bytes) -> str:
+                    return hashlib.sha256(data).hexdigest()
+                if _sha256(src_bytes) == _sha256(target_settings.read_bytes()):
+                    print("  claude-settings: .claude/settings.json up-to-date (unchanged)")
+                    return written
             target_settings.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(settings_template, target_settings)
+            target_settings.write_bytes(src_bytes)
             print("  claude-settings: wrote .claude/settings.json")
             written += 1
 
@@ -70,4 +80,10 @@ def build_claude_settings(
 # ===========================================================================
 # - 2026-05-18 12:30 [EPIC-PortableInstallHardening/T06]: Created module. Installs .claude/settings.json (from templates/settings.json) and 4 portable hook scripts (readme_read_guard, documentation_guard, ticket_frontmatter_guard, readme_marker_recorder) to .claude/hooks/ on fresh install. Honour-existing semantics; force=True overrides. (#EPIC-PortableInstallHardening/T06)
 # - 2026-06-01 [TICKET-20260601-FixHooksDeploymentPipeline]: Removed hook-script copying from this module. Hook deployment is now handled by build_hooks() in build_phases.py, which supports multi-platform (claude + gemini) and uses compare-before-write guards. This module now only installs settings.json.
+# - 2026-06-01 [python-coder/EPIC-FlattenSupervisorChain/07]: Added compare-before-write (#EPIC-FlattenSupervisorChain/07)
+#   guard using SHA-256 hash comparison. Replaces shutil.copy2 with
+#   read_bytes()/write_bytes() so byte-identical files are skipped,
+#   eliminating mtime churn on idempotent build runs. Also added
+#   allowedTools block to templates/settings.json (23 entries covering
+#   git, gh, python, npm, and diagnostic commands; no destructive patterns).
 # ===========================================================================
