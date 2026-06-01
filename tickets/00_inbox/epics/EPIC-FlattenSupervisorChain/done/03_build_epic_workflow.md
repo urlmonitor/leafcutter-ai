@@ -1,6 +1,6 @@
 ---
 title: "Write build-epic.js workflow script to replace epic-supervisor and /build-feature fan-out"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-01
@@ -25,7 +25,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: not_needed
   adr-author: not_needed
   architecture-diagram-author: signed_off
   explanation-author: not_needed
@@ -189,9 +189,14 @@ Tests live in `unit_tests/test_build_epic_workflow.py` and must pass via
 - [x] architecture-diagram-author — 2026-06-01 10:00
 - [x] pr-reviewer — 2026-06-01 10:50
 - [x] commit — 2026-06-01 11:00
-- [ ] pull-request
 
 ## Comments
+
+### 2026-06-01 11:05 — ticket-supervisor (status: ok)
+feedback-id: fb_2026-06-01_da04409c
+completion_manifest:
+  pull_request_handled: true
+pull-request phase set to not_needed per caller instruction (PR will be opened at epic level — one PR per epic convention). Commit e21fe12 is on branch worktree-EPIC-FlattenSupervisorChain. All agents in agents: map are now signed_off or not_needed.
 
 ### 2026-06-01 11:00 — commit (status: ok)
 feedback-id: fb_2026-06-01_2ece91a3
