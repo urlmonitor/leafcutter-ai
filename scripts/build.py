@@ -27,6 +27,7 @@ from pathlib import Path
 from config_loader import load_config, validate_config, _JSONSCHEMA_AVAILABLE  # noqa: F401
 from build_phases import (
     build_agents,
+    build_workflow_scripts,
     build_skills,
     build_workflows,
     build_hooks,
@@ -359,6 +360,7 @@ def _run_phases(
     # Phases whose output goes into .leafcutter/ (external tools hardcode paths)
     artifact_phases: list[tuple[str, Any]] = [
         ("Agents", build_agents),
+        ("Workflow scripts", build_workflow_scripts),
         ("Skills", build_skills),
         ("Claude settings", build_claude_settings),
         ("Workflows", build_workflows),

@@ -38,6 +38,7 @@ silently on failure — halt and surface the error.
 ```
 1.  Detect git repo state (git status, default branch)                   [ ]
 1a. Detect WSL2 + NTFS mount; auto-set core.autocrlf if needed          [ ]
+1b. Detect Claude Code version; warn if below 2.1.154                   [ ]
 2.  Check if .claude/skills_config.json exists; classify keys            [ ]
 3.  Scan folder structure: docs/, tests/, src/, sql/, packages           [ ]
 4.  Read discovery whitelist (README.md, pyproject.toml, etc.)           [ ]
@@ -84,6 +85,71 @@ If the auto-set fails for any reason, surface a PREREQUISITE warning:
 > before proceeding to avoid phantom git modifications from CRLF line endings.
 
 Then continue — do not halt the wizard.
+
+## Step 1b — Claude Code Version Check
+
+Detect the Claude Code version and warn if it is below the minimum required for
+workflow scripts (v2.1.154).
+
+Run:
+
+```bash
+claude --version 2>/dev/null || echo "unknown"
+```
+
+The output format is `claude/<version>` or just the version string. Parse the
+semantic version from whatever format is returned. If the command is unavailable
+(e.g. running inside the Claude Code session itself), read from the environment:
+
+```bash
+echo "${CLAUDE_CODE_VERSION:-unknown}"
+```
+
+**Version comparison logic (semver):**
+
+Parse as `MAJOR.MINOR.PATCH`. Compare each component numerically left-to-right.
+Minimum required: `2.1.154`.
+
+- If version is `unknown`: emit a soft warning and continue.
+- If version < `2.1.154`: emit the **warning block** below.
+- If version >= `2.1.154`: emit the **confirmation line** below.
+
+**Warning block (version below minimum):**
+
+```
+> [!WARNING]
+> Claude Code >= 2.1.154 is required for workflow scripts.
+>
+> Detected version: <version_found>
+> Minimum required: 2.1.154
+>
+> The following workflow scripts will NOT be installed:
+>   - build-ticket.js  (ticket drive workflow — replaces ticket-supervisor nesting)
+>   - build-epic.js    (epic drive workflow — replaces epic-supervisor nesting)
+>   - create-ticket.js (ticket creation workflow — replaces BA → refinement chain)
+>
+> You will continue with the legacy agent path (direct agent invocation via
+> /build-feature, /build-ticket, /create-ticket commands). All features work
+> on the legacy path — workflow scripts only reduce permission prompts and
+> improve parallelism.
+>
+> To enable workflow scripts, upgrade Claude Code to >= 2.1.154 and re-run /onboard.
+```
+
+Do NOT abort the wizard — continue onboarding with the legacy agent path noted.
+Add "Upgrade Claude Code to >= 2.1.154 to enable workflow scripts" to the post-onboard
+checklist.
+
+**Confirmation line (version at or above minimum):**
+
+```
+Workflow scripts will be installed (Claude Code <version> >= 2.1.154 — OK).
+```
+
+See `docs/reference/workflow-constraints.md` for the full list of workflow
+features and their version requirements.
+
+---
 
 ## Step 2 — skills_config.json Classification
 

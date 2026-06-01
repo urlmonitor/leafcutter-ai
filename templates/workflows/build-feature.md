@@ -248,17 +248,56 @@ Per the project convention (codified in user-memory `feedback_epic_worktree.md` 
 
    See `.claude/skills/build-feature-ops-notes/SKILL.md` §KI-1 for the root-cause explanation and background.
 
-#### Step B — Dispatch ticket-supervisor directly (epic batching inline)
+#### Step B — Invoke build-epic.js (preferred) or fall back to inline batching
 
-> **Rationale:** `epic-supervisor` is NOT dispatched here. Claude Code's
-> hard sub-agent depth limit means epic-supervisor → ticket-supervisor →
-> phase agents would exceed depth 2. Instead, this command implements the
-> epic-level batching loop inline and dispatches `ticket-supervisor` at
-> depth 0 directly, keeping phase agents at depth 1 within the limit.
-> See EPIC-FlattenSupervisorChain ticket 02 for the full design rationale.
+> **Rationale:** `build-epic.js` is the deterministic JS workflow script that
+> implements the epic batching algorithm (building-epics §1.1) without LLM
+> prose ambiguity. It is available on Claude Code installations ≥ v2.1.154.
+> On older installs the inline fallback below applies.
+>
+> See EPIC-FlattenSupervisorChain ticket 03 for the full design rationale.
+> ADR: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
 
-**Epic batching loop** — repeat until every ticket in the epic is `done` or
-the run is blocked/halted:
+**Preferred path — invoke build-epic.js:**
+
+Check whether `build-epic.js` is available at
+`<WORKTREE_PATH>/templates/workflows-js/build-epic.js`.
+
+If it exists, invoke the `build-epic` workflow:
+
+```
+workflow("build-epic", { epic_path: EPIC_FOLDER })
+```
+
+This delegates all batching, parallel dispatch, and halt detection to the
+JS layer. The workflow returns one of:
+
+- `{ status: "ok", ... }` — all tickets completed.
+- `{ status: "blocked", halted_tickets: [...], ... }` — one or more tickets
+  failed or blocked. Surface the `halted_tickets` array to the user and halt.
+- `{ status: "error", message: "..." }` — unrecoverable error (e.g. planner
+  agent returned unparseable output). Surface the message and halt.
+
+On `ok`, print the completion message:
+
+```
+Epic <EPIC_NAME> complete.
+All sub-tickets signed off. Branch: <EPIC_NAME>.
+Next step: run /finalize-feature <EPIC_NAME> to open the PR and close the worktree.
+```
+
+On `blocked`, print the blocked summary using `result.halted_tickets`.
+
+**Fallback path — inline batching (build-epic.js absent):**
+
+If `build-epic.js` is not present (e.g. on a sub-v2.1.154 install or on a
+worktree that pre-dates ticket 03), use the inline prose implementation below.
+This is the ADR-006 §C implementation — it is preserved as a safety net and
+will be removed once build-epic.js has been validated across all supported
+install versions.
+
+**Inline epic batching loop** — repeat until every ticket in the epic is
+`done` or the run is blocked/halted:
 
 1. **Read `Master_Plan.md`** from `EPIC_FOLDER`. Extract the list of all
    sub-ticket filenames in the epic (all `NN_*.md` files under `EPIC_FOLDER`,

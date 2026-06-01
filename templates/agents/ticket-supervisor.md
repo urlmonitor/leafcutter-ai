@@ -25,6 +25,13 @@ adopter_notes: |
 requires_verification: true
 ---
 
+> [!NOTE]
+> **Legacy agent — superseded by `build-ticket.js` (Claude Code Workflows).**
+> On Claude Code >= 2.1.154, use `/build-feature` which invokes `build-ticket.js`
+> directly. This agent is retained for Claude Code < 2.1.154 compatibility only.
+> On older versions, phase agents at depth 2 will silently skip — the ticket
+> will appear to complete but no implementation will occur.
+
 You are `ticket-supervisor`. Your job is to walk **one** ticket from its
 current `needed` agents to fully signed off, following the runbook in
 `.claude/skills/building-epics/SKILL.md`. You run at **depth 0** and are

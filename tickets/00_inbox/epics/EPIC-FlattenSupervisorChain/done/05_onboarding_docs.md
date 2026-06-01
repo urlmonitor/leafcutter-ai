@@ -1,6 +1,6 @@
 ---
 title: "Update onboarding wizard and docs for Claude Code Workflow version requirement"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-01
@@ -24,14 +24,14 @@ agents:
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
-  documentation-expert: needed
-  pr-reviewer: needed
-  commit: needed
-  pull-request: needed
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
+  commit: signed_off
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   explanation-author: not_needed
-  how-to-author: needed
+  how-to-author: signed_off
   reference-author: not_needed
   user-surface-smoker: not_needed
 user_facing_surface: null
@@ -108,25 +108,63 @@ Then they find a clear description of the planner-agent overhead per ticket
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] how-to-author
-- [ ] pr-reviewer
-- [ ] commit
-- [ ] pull-request
+- [x] documentation-expert — 2026-06-01 14:00
+- [x] how-to-author — 2026-06-01 14:10
+- [x] pr-reviewer — 2026-06-01 14:20
+- [x] commit — 2026-06-01 14:30
+- [x] pull-request — 2026-06-01 14:35
 
 ## Comments
+
+### 2026-06-01 14:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-06-01_70137bdb
+completion_manifest:
+  doc_written: true
+  cross_links_added: true
+  diataxis_genre_correct: true
+Updated `templates/agents/onboard.md` with Step 1b — Claude Code version check (>= 2.1.154 required, warning block + confirmation line). Created `docs/reference/workflow-constraints.md` covering minimum version, token cost implications, no-mid-run-steering constraint, and crash-resume mechanism. How-to guide (`docs/how-to/configure-workflow-allowlist.md`) is the responsibility of the how-to-author phase which follows.
+
+### 2026-06-01 14:10 — how-to-author (status: ok)
+feedback-id: fb_2026-06-01_699e58e6
+completion_manifest:
+  guide_written: true
+  location_correct: true
+  steps_validated: true
+Created `docs/how-to/configure-workflow-allowlist.md` with Prerequisites, Steps 1–4 (locate settings.json, add allowlist entries, understand allowedTools vs dangerouslyAllowTools, verify), Verification section, and cross-references. Guide placed in `docs/how-to/` (general contributor audience). Cross-links to `docs/reference/workflow-constraints.md` and `templates/settings.json` added.
+
+### 2026-06-01 14:20 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-01_d9eba6c3
+completion_manifest:
+  diff_reviewed: true
+  no_high_findings: true
+  scope_verified: true
+No high-confidence findings. All four Acceptance Criteria satisfied: onboard.md Step 1b covers both version branches with correct warning block format; workflow-constraints.md covers version, token cost, no-mid-run-steering, and crash-resume; configure-workflow-allowlist.md covers allowedTools vs dangerouslyAllowTools, recommended entries, and settings.json placement. Note: ticket 06 files are in the working diff but are correctly scoped separately — commit phase must stage only ticket 05 files explicitly.
+
+### 2026-06-01 14:30 — commit (status: ok)
+feedback-id: fb_2026-06-01_3ef2b0dc
+completion_manifest:
+  staged_correct_files: true
+  commit_succeeded: true
+  lock_released: true
+Staged 4 ticket-05-scoped files (templates/agents/onboard.md, docs/reference/workflow-constraints.md, docs/how-to/configure-workflow-allowlist.md, ticket file). Committed as bf20f11: 4 files changed, 458 insertions(+), 9 deletions(-). Commit lock acquired and released. Ticket 06 files correctly excluded from staging.
+
+### 2026-06-01 14:35 — pull-request (status: ok)
+feedback-id: fb_2026-06-01_f7b4e9d2
+completion_manifest:
+  pr_deferred_to_epic: true
+Deferred to epic-level PR per leafcutter one-PR-per-epic convention. Changes are committed locally at bf20f11. The PR will be opened by /build-feature at epic completion.
 
 ## Implementation Tasks
 
 ### documentation-expert
 
-- [ ] Update `templates/agents/onboard.md`:
+- [x] Update `templates/agents/onboard.md`:
   - Add a version check step: detect `CLAUDE_CODE_VERSION` (or call `claude --version`).
   - If below 2.1.154: emit a prominently-formatted warning block (use markdown
     `> [!WARNING]` if supported) listing: version found, minimum required, and
     which workflow scripts will NOT be installed.
   - If >= 2.1.154: emit a brief confirmation line.
-- [ ] Create `docs/reference/workflow-constraints.md` covering:
+- [x] Create `docs/reference/workflow-constraints.md` covering:
   - Minimum version requirement and detection command.
   - Planner-agent token overhead (one extra LLM call per ticket drive start, per
     epic plan start, and per create-ticket invocation).
@@ -139,7 +177,7 @@ Then they find a clear description of the planner-agent overhead per ticket
 
 ### how-to-author
 
-- [ ] Create `docs/how-to/configure-workflow-allowlist.md`:
+- [x] Create `docs/how-to/configure-workflow-allowlist.md`:
   - Explain that workflow sub-agents run in `acceptEdits` mode but shell
     commands still trigger permission prompts.
   - Show the recommended `settings.json` snippet (see ticket 07 for the

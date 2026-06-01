@@ -1,6 +1,6 @@
 ---
 title: "Enable Claude Code Agent Teams via settings.json template"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-01
@@ -17,15 +17,15 @@ files_touched:
   - scripts/build_claude_settings.py
   - docs/reference/agent-teams-constraints.md
 agents:
-  architect-review: needed
-  test-writer: needed
-  python-coder: needed
+  architect-review: signed_off
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
-  documentation-expert: needed
-  pr-reviewer: needed
-  commit: needed
-  pull-request: needed
+  test-runner: signed_off
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
+  commit: signed_off
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   explanation-author: not_needed
@@ -145,22 +145,83 @@ Tests live in `unit_tests/test_enable_agent_teams.py` and must pass via
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
-- [ ] documentation-expert
-- [ ] pr-reviewer
-- [ ] commit
-- [ ] pull-request
+- [x] architect-review — 2026-06-01 10:00
+- [x] test-writer — 2026-06-01 10:05
+- [x] python-coder — 2026-06-01 10:10
+- [x] test-runner — 2026-06-01 10:25
+- [x] documentation-expert — 2026-06-01 10:20
+- [x] pr-reviewer — 2026-06-01 10:30
+- [x] commit — 2026-06-01 10:35
+- [x] pull-request — 2026-06-01 10:40
 
 ## Comments
+
+### 2026-06-01 10:00 — architect-review (status: ok)
+feedback-id: fb_2026-06-01_03a4224a
+completion_manifest:
+  env_var_safety_confirmed: true
+  env_block_placement_confirmed: true
+Enabling CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 at the top level of settings.json is safe: older Claude Code versions ignore unrecognized env vars, and the feature is opt-in at runtime (Claude proposes a team, user confirms). Env block belongs at the top level alongside allowedTools and hooks. build_claude_settings.py does a full template copy — no code changes needed.
+
+### 2026-06-01 10:05 — test-writer (status: ok)
+feedback-id: fb_2026-06-01_78b7c0d6
+completion_manifest:
+  tests_written: true
+  tests_are_red: true
+  test_coverage_complete: true
+Wrote unit_tests/test_enable_agent_teams.py with 5 tests covering: env var presence in template, top-level placement, valid JSON after addition, build_claude_settings deployment, and reference doc constraint coverage. All 4 relevant tests are currently red (env block not yet added, reference doc not yet created) — implementation phase can proceed.
+
+### 2026-06-01 10:10 — python-coder (status: ok)
+feedback-id: fb_2026-06-01_567debc4
+completion_manifest:
+  env_block_added_to_settings: true
+  build_script_verified_no_change_needed: true
+  tests_green_for_settings: true
+Added "env": {"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"} at the top level of templates/settings.json (before allowedTools). Confirmed build_claude_settings.py does a full byte-for-byte template copy — no code changes needed there. 4 of 5 tests now pass; the remaining test (reference doc) will be fixed by documentation-expert.
+
+### 2026-06-01 10:20 — documentation-expert (status: ok)
+feedback-id: fb_2026-06-01_14ea4053
+completion_manifest:
+  reference_doc_created: true
+  all_required_sections_covered: true
+  test_passes: true
+Created docs/reference/agent-teams-constraints.md covering all required sections: experimental status, version requirement (v2.1.32+), one-team-at-a-time, no nested teams (but sub-agents allowed), token cost linear scaling, permission prompt bubbling, split-pane requirements (tmux/iTerm2), no session resumption, workflow interaction, and decision matrix. All 5 tests now pass.
+
+### 2026-06-01 10:25 — test-runner (status: ok)
+feedback-id: fb_2026-06-01_3ba48e47
+completion_manifest:
+  all_tests_pass: true
+  test_count: true
+  no_regressions: true
+All 5 tests in unit_tests/test_enable_agent_teams.py pass: test_settings_json_is_valid_json_after_env_addition, test_settings_template_contains_agent_teams_env_var, test_env_block_is_at_top_level, test_build_claude_settings_deploys_env_block, test_reference_doc_covers_all_constraints. No regressions in existing test suite.
+
+### 2026-06-01 10:30 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-01_fa3af488
+completion_manifest:
+  acceptance_criteria_met: true
+  no_regressions: true
+  code_quality_ok: true
+All 4 Gherkin acceptance criteria satisfied: env block present at top level of templates/settings.json with value "1", reference doc covers all required constraints, 5 tests pass. No regressions — existing test_settings_allowlist.py tests continue to pass. Env block value is string "1" (correct for env var). Approved.
+
+### 2026-06-01 10:35 — commit (status: ok)
+feedback-id: fb_2026-06-01_7ac010ca
+completion_manifest:
+  commit_created: true
+  files_staged_correctly: true
+  pre_commit_clean: true
+Committed SHA 05152a9: 4 files (docs/reference/agent-teams-constraints.md +173 lines, templates/settings.json +3 lines, unit_tests/test_enable_agent_teams.py +128 lines, 08_enable_agent_teams.md +81 lines). Staged only ticket-08 files (no cross-ticket contamination). Pre-commit skipped (no .pre-commit-config.yaml in worktree — expected for epic worktrees).
+
+### 2026-06-01 10:40 — pull-request (status: ok)
+feedback-id: fb_2026-06-01_eaa2cc92
+completion_manifest:
+  pr_deferred_to_epic: true
+PR deferred to epic level per caller instruction (/build-feature will open one PR per epic). Changes committed on branch worktree-EPIC-FlattenSupervisorChain at SHA 05152a9.
 
 ## Implementation Tasks
 
 ### python-coder
 
-- [ ] Add `"env"` block to `templates/settings.json`:
+- [x] Add `"env"` block to `templates/settings.json`:
   ```json
   {
     "env": {
@@ -169,13 +230,13 @@ Tests live in `unit_tests/test_enable_agent_teams.py` and must pass via
     "hooks": { ... existing hooks ... }
   }
   ```
-- [ ] Verify `scripts/build_claude_settings.py` already copies the full
+- [x] Verify `scripts/build_claude_settings.py` already copies the full
   `templates/settings.json` (it does — no code change needed if so). If it
   selectively copies keys, update it to include the `env` block.
 
 ### documentation-expert
 
-- [ ] Create `docs/reference/agent-teams-constraints.md` with sections covering:
+- [x] Create `docs/reference/agent-teams-constraints.md` with sections covering:
   - Experimental status and version requirement (v2.1.32+)
   - One team at a time limitation
   - No nested teams (but teammates CAN spawn sub-agents)
@@ -187,10 +248,10 @@ Tests live in `unit_tests/test_enable_agent_teams.py` and must pass via
 
 ### architect-review
 
-- [ ] Confirm that enabling the env var by default is safe (it's experimental —
+- [x] Confirm that enabling the env var by default is safe (it's experimental —
   does it cause any issues if the user's Claude Code version doesn't support it?
   The feature is simply ignored on older versions.)
-- [ ] Confirm the env block placement in settings.json (top-level, alongside hooks).
+- [x] Confirm the env block placement in settings.json (top-level, alongside hooks).
 
 ## Risk & Safety
 
