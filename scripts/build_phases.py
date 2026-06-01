@@ -11,10 +11,11 @@ BUSINESS CONTEXT: Templates for agents, skills, workflows, rules, hooks, and
     compile_agent_template(), enabling {{my_spawn_allowlist}},
     {{my_skills_used}}, and {{registry_phase_agents_table}} placeholder
     resolution at build time.
-ARCHITECTURE: Nine public phase functions, one per output category:
-    ``build_agents``, ``build_skills``, ``build_workflows``, ``build_rules``,
-    ``build_ticket_lifecycle``, ``build_commit_guardian``, ``build_precommit_config``
-    (imported from build_precommit.py), ``build_doc_compliance``, ``build_antigravity_instructions``.
+ARCHITECTURE: Ten public phase functions, one per output category:
+    ``build_agents``, ``build_skills``, ``build_workflows``, ``build_hooks``,
+    ``build_rules``, ``build_ticket_lifecycle``, ``build_commit_guardian``,
+    ``build_precommit_config`` (imported from build_precommit.py),
+    ``build_doc_compliance``, ``build_antigravity_instructions``.
     All functions share the same signature (target_root, config, dry_run, force)
     and return a file-written count. File-write helpers come from build.py's
     ``write_file`` and ``should_overwrite``. The ``force`` parameter defaults
@@ -412,6 +413,70 @@ def build_workflows(target_root: Path, config: dict[str, Any],
                 written += 1
                 if not dry_run:
                     print(f"  {output_subpath}/{template_file.name}")
+
+    return written
+
+
+def build_hooks(target_root: Path, config: dict[str, Any],
+                dry_run: bool, force: bool) -> int:
+    """Copy hook scripts verbatim to platform-specific hook directories.
+
+    Hooks are plain Python scripts (no template compilation). Each ``.py`` file
+    in ``templates/hooks/`` is copied to the active platform directories.
+
+    Args:
+        target_root: Absolute path to the target project root directory.
+        config: Merged config dictionary (used for platform selection).
+        dry_run: When True, logs intent but writes nothing.
+        force: When True, overwrites existing files.
+
+    Returns:
+        Count of files written (or that would be written in dry-run mode).
+    """
+    hooks_template_dir = TEMPLATES_DIR / "hooks"
+    if not hooks_template_dir.exists():
+        return 0
+
+    platforms = config.get("platforms", {
+        "claude": True,
+        "antigravity": True,
+        "cursor": False,
+        "copilot": False,
+        "cline": False
+    })
+
+    platform_dirs = {
+        "claude": "hooks",
+        "antigravity": "gemini/hooks",
+        "cursor": None,
+        "copilot": None,
+        "cline": None
+    }
+
+    written = 0
+    for hook_file in sorted(hooks_template_dir.glob("*.py")):
+        if hook_file.name.startswith("_"):
+            continue
+        if hook_file.name == "__pycache__":
+            continue
+
+        content = hook_file.read_text(encoding="utf-8")
+
+        for platform, is_active in platforms.items():
+            if not is_active:
+                continue
+
+            output_subpath = platform_dirs.get(platform)
+            if not output_subpath:
+                continue
+
+            output_dir = target_root / output_subpath
+            output_path = output_dir / hook_file.name
+
+            if _write(output_path, content, dry_run, force):
+                written += 1
+                if not dry_run:
+                    print(f"  {output_subpath}/{hook_file.name}")
 
     return written
 

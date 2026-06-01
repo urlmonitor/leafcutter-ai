@@ -1,6 +1,6 @@
 ---
 title: "Fix hooks deployment pipeline: add build_hooks phase and investigate /finalize-feature discovery"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-01
@@ -11,14 +11,8 @@ requires_adr: false
 files_touched:
   - scripts/build_phases.py
   - scripts/build.py
-  - templates/hooks/auto_commit_inbox_ticket.py
-  - templates/hooks/check_commit_ticket_staged.py
-  - templates/hooks/check_ticket_rename_tracking.py
-  - templates/hooks/documentation_guard.py
-  - templates/hooks/inline_work_guard.py
-  - templates/hooks/readme_marker_recorder.py
-  - templates/hooks/readme_read_guard.py
-  - templates/hooks/ticket_frontmatter_guard.py
+  - scripts/build_claude_settings.py
+  - unit_tests/test_build_hooks.py
 agents:
   architect-review: needed
   python-coder: needed

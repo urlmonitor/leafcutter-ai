@@ -29,6 +29,7 @@ from build_phases import (
     build_agents,
     build_skills,
     build_workflows,
+    build_hooks,
     build_rules,
     build_ticket_lifecycle,
     build_commit_guardian,
@@ -350,6 +351,7 @@ def _run_phases(
         ("Skills", build_skills),
         ("Claude settings", build_claude_settings),
         ("Workflows", build_workflows),
+        ("Hooks", build_hooks),
         ("Pre-commit config", build_precommit_config),
         ("Antigravity instructions", build_antigravity_instructions),
     ]
