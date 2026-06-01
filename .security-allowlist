@@ -1,7 +1,0 @@
-# Allowlist for bypass tokens in commit-guardian scripts
-GENERIC_SECRET:scripts/commit_guardian/check_architecture_scaffolds.py:*
-GENERIC_SECRET:scripts/commit_guardian/check_diagram_naming.py:*
-GENERIC_SECRET:scripts/commit_guardian/check_feedback_id.py:*
-GENERIC_SECRET:scripts/commit_guardian/check_mermaid_drift.py:*
-GENERIC_SECRET:scripts/commit_guardian/check_paths_integrity.py:*
-ENTROPY_HIGH:templates/hooks/auto_commit_inbox_ticket.py:8
