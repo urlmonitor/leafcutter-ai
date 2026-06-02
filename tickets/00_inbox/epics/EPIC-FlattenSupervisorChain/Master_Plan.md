@@ -91,6 +91,7 @@ workflow execution.
 | 06 | [06_deprecate_supervisors.md](./06_deprecate_supervisors.md) | Mark epic-supervisor and ticket-supervisor as legacy_only in agent_registry | `[ ]` |
 | 07 | [07_settings_allowlist.md](./07_settings_allowlist.md) | Ship comprehensive git/gh/python/npm allowlist in settings.json template | `[ ]` |
 | 08 | [08_enable_agent_teams.md](./08_enable_agent_teams.md) | Enable experimental Agent Teams via settings.json env var + constraints doc | `[ ]` |
+| 10 | [10_finalize_feature_workflow.md](./10_finalize_feature_workflow.md) | Convert finalize-feature to a JS workflow script (leaf workflow, 6 steps, prompt gates) | `[ ]` |
 
 ## Risk & Safety
 
