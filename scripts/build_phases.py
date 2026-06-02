@@ -843,6 +843,42 @@ def build_vision(target_root: Path, config: dict[str, Any],
     return 0
 
 
+def build_components_registry(target_root: Path, config: dict[str, Any],
+                              dry_run: bool, force: bool) -> int:
+    """Materialise docs/components.json from the components template — write-if-absent only.
+
+    This phase intentionally overrides the ``force`` flag passed by the caller.
+    A project's components.json is a human-curated living registry; once it exists
+    it must never be clobbered by a build run.
+
+    Args:
+        target_root: Absolute path to the target project root directory.
+        config: Merged config dictionary used for placeholder injection.
+        dry_run: When True, logs intent but writes nothing.
+        force: Ignored — this phase always uses write-if-absent semantics.
+
+    Returns:
+        1 if the file was (or would be in dry-run mode) written; 0 if skipped.
+    """
+    template_path = TEMPLATES_DIR / "docs" / "components.json.template"
+    if not template_path.exists():
+        return 0
+    docs_dir = config.get("docs_root", "docs/").rstrip("/")
+    target_path = target_root / docs_dir / "components.json"
+    if target_path.exists():
+        print(f"  components: {docs_dir}/components.json exists (skipped)")
+        return 0
+    content = inject_config(template_path.read_text(encoding="utf-8"), config)
+    if _write(target_path, content, dry_run, force=False):
+        print(
+            "  components: created from template "
+            "(PLEASE POPULATE — add one entry per module; "
+            "see templates/docs/components.json.template for the schema)"
+        )
+        return 1
+    return 0
+
+
 def build_feedback(target_root: Path, config: dict[str, Any],
                    dry_run: bool, force: bool) -> int:
     """Deploy feedback scripts and config to ``<target_root>/scripts/feedback/`` and ``<target_root>/config/``.
@@ -1124,4 +1160,9 @@ def clean_stale_artifacts(
 #   Claude Code version check (>= 2.1.154, via CLAUDE_CODE_VERSION env or subprocess).
 #   Below-minimum: warns and skips. Unknown version: warns and continues (fail-open).
 #   Compare-before-write guard prevents mtime churn on unchanged files. (#EPIC-FlattenSupervisorChain/01)
+# - 2026-06-02 [python-coder/TICKET-20260602-ComponentsRegistryScaffold]: Added
+#   build_components_registry() phase. Materialises docs/components.json from
+#   templates/docs/components.json.template with unconditional write-if-absent
+#   semantics (force=False always passed to _write, ignoring caller flag).
+#   Follows the build_vision() pattern exactly. (#TICKET-20260602-ComponentsRegistryScaffold)
 # ====================================================================

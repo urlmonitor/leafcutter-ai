@@ -17,8 +17,8 @@ files_touched:
   - leafcutter-ai/tests/test_components_registry_scaffold.py
 agents:
   architect-review: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
   sql-query: not_needed
   frontend-coder: not_needed
@@ -32,7 +32,7 @@ agents:
   architecture-diagram-author: not_needed
   user-surface-smoker: not_needed
   status-checker: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -136,13 +136,46 @@ Then no file is written and the phase reports intent only
 
 ## Sign-offs
 
-- [ ] test-writer
-- [ ] python-coder
-- [ ] pr-reviewer
+- [x] test-writer — 2026-06-02 10:00
+- [x] python-coder — 2026-06-02 10:15
+- [x] pr-reviewer — 2026-06-02 10:20
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
+
+### 2026-06-02 10:00 — test-writer (status: ok)
+feedback-id: fb_2026-06-02_ece72fb5
+completion_manifest:
+  test_file_created: true
+  all_five_test_cases_present: true
+  tests_import_correctly: true
+Created tests/test_components_registry_scaffold.py with 5 test cases covering all acceptance criteria (create-when-absent, skip-when-exists, dry-run, missing-template, force-ignored). Tests are currently red (ImportError on build_components_registry) as expected before python-coder implements the function.
+
+### 2026-06-02 10:15 — python-coder (status: ok)
+feedback-id: fb_2026-06-02_dc6ff4f9
+completion_manifest:
+  template_created: true
+  build_components_registry_added: true
+  build_py_wired: true
+  decision_history_added: true
+  change_log_added: true
+  all_five_tests_green: true
+  no_regressions: true
+Implemented all 3 deliverables: templates/docs/components.json.template (with _comment key, tolerated by check_components_integrity.py which only reads data["components"]), build_components_registry() in build_phases.py after build_vision() with identical write-if-absent pattern, and wired into scaffold_phases in build.py between Roadmap and Glossary. All 5 acceptance-criteria tests pass; full suite shows 4 pre-existing failures unrelated to this ticket.
+
+### 2026-06-02 10:20 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-02_c8800692
+completion_manifest:
+  scope_matches_plan: true
+  pattern_fidelity: true
+  template_valid_json: true
+  import_correct: true
+  wiring_position_correct: true
+  hook_compatibility_verified: true
+  tests_green: true
+  logs_added: true
+Reviewed full diff: additive only (build.py +6, build_phases.py +41, 2 new files). build_components_registry() is a faithful replica of build_vision() with force=False hardcoded. Template is valid JSON; _comment key is silently ignored by check_components_integrity.py (it reads data.get("components", {}) only). All 5 tests pass. No blockers.
 
 ## Implementation Tasks
 
@@ -150,7 +183,7 @@ Then no file is written and the phase reports intent only
 
 **Deliverable 1 — Create `templates/docs/components.json.template`**
 
-- [ ] Create the file `leafcutter-ai/templates/docs/components.json.template`
+- [x] Create the file `leafcutter-ai/templates/docs/components.json.template`
   with the following content (no YAML frontmatter — this is a JSON template):
 
   ```json
@@ -166,7 +199,7 @@ Then no file is written and the phase reports intent only
 
 **Deliverable 2 — Add `build_components_registry()` to `scripts/build_phases.py`**
 
-- [ ] Add the following function immediately after `build_vision()` (around line 844,
+- [x] Add the following function immediately after `build_vision()` (around line 844,
   before `build_feedback()`):
 
   ```python
@@ -206,29 +239,29 @@ Then no file is written and the phase reports intent only
       return 0
   ```
 
-- [ ] Add a `# DECISION HISTORY` entry at the bottom of `build_phases.py` documenting
+- [x] Add a `# DECISION HISTORY` entry at the bottom of `build_phases.py` documenting
   the addition (date: 2026-06-02, ticket: this ticket basename).
 
 **Deliverable 3 — Wire the phase into `build.py`**
 
-- [ ] In `build.py`, add the import alongside the existing `build_vision` import:
+- [x] In `build.py`, add the import alongside the existing `build_vision` import:
   ```python
   from build_phases import build_components_registry
   ```
   (or extend the existing `from build_phases import build_vision, ...` line)
 
-- [ ] Add the phase entry to `scaffold_phases` between `("Roadmap", build_roadmap)`
+- [x] Add the phase entry to `scaffold_phases` between `("Roadmap", build_roadmap)`
   and `("Glossary", build_glossary)`:
   ```python
   ("Components registry", build_components_registry),
   ```
 
-- [ ] Add a `# CHANGE LOG` entry at the bottom of `build.py` documenting the
+- [x] Add a `# CHANGE LOG` entry at the bottom of `build.py` documenting the
   addition (date: 2026-06-02, ticket: this ticket basename).
 
 ### test-writer
 
-- [ ] Create `leafcutter-ai/tests/test_components_registry_scaffold.py` with these
+- [x] Create `leafcutter-ai/tests/test_components_registry_scaffold.py` with these
   test cases (use `tmp_path` fixture — never write to project dirs):
 
   - `test_creates_components_json_when_absent`:

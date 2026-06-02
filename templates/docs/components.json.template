@@ -1,0 +1,4 @@
+{
+  "_comment": "Component registry for this project. Each key is a component ID used in ticket frontmatter (components: field) and agent references. Add an entry here for each logical module, service, or subsystem. Valid fields per entry: id (string, matches key), name (string), type (string), description (string), status (string: active|reviewed|deprecated), primary_code (list of relative paths), detail_ref (optional path to architecture doc).",
+  "components": {}
+}
