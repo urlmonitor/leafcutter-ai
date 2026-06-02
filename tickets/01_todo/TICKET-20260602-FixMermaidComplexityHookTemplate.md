@@ -18,12 +18,12 @@ files_touched:
 agents:
   architect-review: not_needed
   test-writer: not_needed
-  python-coder: needed
+  python-coder: signed_off
   sql-coder: not_needed
   test-runner: not_needed
-  documentation-expert: needed
+  documentation-expert: signed_off
   change-scope-reviewer: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   status-checker: not_needed
@@ -124,13 +124,43 @@ Then it completes successfully with no drift errors
 
 ## Sign-offs
 
-- [ ] python-coder
-- [ ] documentation-expert
-- [ ] pr-reviewer
+- [x] python-coder — 2026-06-02 14:00
+- [x] documentation-expert — 2026-06-02 14:01
+- [x] pr-reviewer — 2026-06-02 14:02
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
+
+### 2026-06-02 14:00 — python-coder (status: ok)
+feedback-id: fb_2026-06-02_cef25c88
+completion_manifest:
+  canonical_template_created: true
+  deprecated_template_removed: true
+  build_validate_passes: true
+  import_uses_resolve_root: true
+Chose Option A: moved check_mermaid_complexity.py from templates/commit-guardian/ to templates/scripts/commit_guardian/ via git rename. The canonical copy already uses `from _resolve_root import find_project_root`. build.py prefers templates/scripts/commit_guardian/ over the deprecated dir, so no build.py reference updates were needed. `python scripts/build.py --target-dir ../..` completed with 0 errors and 1 file written (the new canonical template deployed to scripts/commit_guardian/).
+
+### 2026-06-02 14:01 — documentation-expert (status: ok)
+feedback-id: fb_2026-06-02_b0c6b769
+completion_manifest:
+  hook_added_to_flowchart: true
+  pass_edge_added: true
+  fail_edge_added: true
+  diagram_syntax_valid: true
+Added H11 node `check-mermaid-complexity\nmermaid diagrams under complexity limits` to the Hook Execution Sequence flowchart in docs/pre-commit-hooks.md, with matching `H11 -->|pass| COMMIT` and `H11 -->|fail| FIX` edges consistent with the H1–H10 pattern. Flowchart syntax is balanced.
+
+### 2026-06-02 14:02 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-02_e190b5e9
+completion_manifest:
+  acceptance_criteria_met: true
+  import_fix_correct: true
+  canonical_template_has_resolve_root: true
+  deprecated_template_removed_cleanly: true
+  docs_updated: true
+  build_passes: true
+  ticket_parity_valid: true
+All 7 acceptance criteria satisfied. The import section in templates/scripts/commit_guardian/check_mermaid_complexity.py is identical to scripts/commit_guardian/check_mermaid_complexity.py (both use `from _resolve_root import find_project_root`). `_resolve_root.py` is co-located in the canonical template dir. Deprecated copy removed cleanly via git rename. docs/pre-commit-hooks.md H11 node and edges are well-formed. build.py completes with no drift errors. No issues found — approving for commit.
 
 ## Implementation Tasks
 
@@ -138,7 +168,7 @@ Then it completes successfully with no drift errors
 
 **Deliverable 1 — Create canonical template copy**
 
-- [ ] Copy `leafcutter-ai/scripts/commit_guardian/check_mermaid_complexity.py`
+- [x] Copy `leafcutter-ai/scripts/commit_guardian/check_mermaid_complexity.py`
   verbatim to `leafcutter-ai/templates/scripts/commit_guardian/check_mermaid_complexity.py`.
   This is the working version that already uses `from _resolve_root import find_project_root`.
   Do not alter its content — the deployed and template versions must be identical so
@@ -161,21 +191,21 @@ a code comment:
   `templates/commit-guardian/_resolve_root.py` exists (copy from
   `templates/scripts/commit_guardian/_resolve_root.py` if absent).
 
-- [ ] Pick and execute Option A or Option B above.
-- [ ] Confirm `build.py --validate-only` passes after the change.
+- [x] Pick and execute Option A or Option B above.
+- [x] Confirm `build.py --validate-only` passes after the change.
 
 ### documentation-expert
 
 **Deliverable — Update `docs/pre-commit-hooks.md`**
 
-- [ ] Add `check-mermaid-complexity` to the Hook Execution Sequence mermaid
+- [x] Add `check-mermaid-complexity` to the Hook Execution Sequence mermaid
   flowchart in `docs/pre-commit-hooks.md`. Insert it alongside the other
   quality-gate hooks (`H1`–`H10`). Use a label consistent with the existing
   hook label style, e.g.:
   `H11[check-mermaid-complexity\nmermaid diagrams under complexity limits]`
-- [ ] Add a corresponding `H11 -->|pass| COMMIT` and `H11 -->|fail| FIX` edge
+- [x] Add a corresponding `H11 -->|pass| COMMIT` and `H11 -->|fail| FIX` edge
   to match the pattern of the surrounding hooks.
-- [ ] Verify the mermaid diagram still renders correctly (balanced flowchart syntax).
+- [x] Verify the mermaid diagram still renders correctly (balanced flowchart syntax).
 
 ## Risk & Safety
 
