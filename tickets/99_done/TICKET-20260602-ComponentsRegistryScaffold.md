@@ -1,6 +1,6 @@
 ---
 title: "Add components.json scaffold to build pipeline (write-if-absent)"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-02
