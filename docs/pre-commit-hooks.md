@@ -19,6 +19,7 @@ flowchart TD
     PC --> H8[run-unit-tests\nfast test suite]
     PC --> H9[check-structural-change\narchitecture docs required\nfor structural changes]
     PC --> H10[build-drift-check\ntemplates match generated output]
+    PC --> H11[check-mermaid-complexity\nmermaid diagrams under complexity limits]
 
     H1 -->|pass| COMMIT[commit proceeds]
     H2 -->|pass| COMMIT
@@ -30,6 +31,7 @@ flowchart TD
     H8 -->|pass| COMMIT
     H9 -->|pass| COMMIT
     H10 -->|pass| COMMIT
+    H11 -->|pass| COMMIT
 
     H1 -->|fail| FIX[precommit-autofix\nskill routes to haiku/sonnet]
     H4 -->|fail| FIX
@@ -37,6 +39,7 @@ flowchart TD
     H6 -->|fail| FIX
     H8 -->|fail| FIX
     H10 -->|fail| FIX
+    H11 -->|fail| FIX
     FIX --> GC
 ```
 
