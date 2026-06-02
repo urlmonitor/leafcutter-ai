@@ -1,6 +1,6 @@
 ---
 title: "Fix broken import in mermaid complexity hook template"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-02
@@ -25,7 +25,7 @@ agents:
   change-scope-reviewer: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   status-checker: not_needed
   frontend-coder: not_needed
   sql-query: not_needed
@@ -128,7 +128,7 @@ Then it completes successfully with no drift errors
 - [x] documentation-expert — 2026-06-02 14:01
 - [x] pr-reviewer — 2026-06-02 14:02
 - [x] commit — 2026-06-02 14:03
-- [ ] pull-request
+- [x] pull-request — 2026-06-02 14:04
 
 ## Comments
 
@@ -169,6 +169,14 @@ completion_manifest:
   staged_files_correct: true
   no_verify_justified: true
 Committed 8480ead on branch worktree-fix-mermaid-hook. Staged exactly the 3 in-scope files: docs/pre-commit-hooks.md, templates/scripts/commit_guardian/check_mermaid_complexity.py (renamed from deprecated dir), tickets/01_todo/TICKET-20260602-FixMermaidComplexityHookTemplate.md. Used --no-verify because check-mermaid-complexity is the subject of this fix and would fail on its own broken template; all other hooks would pass.
+
+### 2026-06-02 14:04 — pull-request (status: ok)
+feedback-id: fb_2026-06-02_7a840c6a
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+  pr_url_recorded: true
+Pushed branch worktree-fix-mermaid-hook to origin and opened PR #31 at https://github.com/urlmonitor/leafcutter-ai/pull/31 against base main.
 
 ## Implementation Tasks
 
