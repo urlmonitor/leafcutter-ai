@@ -33,7 +33,7 @@ agents:
   user-surface-smoker: not_needed
   status-checker: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -139,7 +139,7 @@ Then no file is written and the phase reports intent only
 - [x] test-writer — 2026-06-02 10:00
 - [x] python-coder — 2026-06-02 10:15
 - [x] pr-reviewer — 2026-06-02 10:20
-- [ ] commit
+- [x] commit — 2026-06-02 10:25
 - [ ] pull-request
 
 ## Comments
@@ -176,6 +176,14 @@ completion_manifest:
   tests_green: true
   logs_added: true
 Reviewed full diff: additive only (build.py +6, build_phases.py +41, 2 new files). build_components_registry() is a faithful replica of build_vision() with force=False hardcoded. Template is valid JSON; _comment key is silently ignored by check_components_integrity.py (it reads data.get("components", {}) only). All 5 tests pass. No blockers.
+
+### 2026-06-02 10:25 — commit (status: ok)
+feedback-id: fb_2026-06-02_1be56b7f
+completion_manifest:
+  staged_explicit_paths_only: true
+  commit_created: true
+  no_unintended_files: true
+Committed SHA 6d83bf4: 5 files (scripts/build.py, scripts/build_phases.py, templates/docs/components.json.template, tests/test_components_registry_scaffold.py, tickets/01_todo/TICKET-20260602-ComponentsRegistryScaffold.md). Staged by explicit path — no wildcard add used.
 
 ## Implementation Tasks
 
