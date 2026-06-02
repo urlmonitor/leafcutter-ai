@@ -140,6 +140,14 @@ def _compute_output_mappings(
             output = target_root / "rules" / tpl.name
             _add(tpl, output, text)
 
+    # --- workflow scripts (JS, no compilation — raw copy) ---
+    workflows_js_dir = templates_dir / "workflows-js"
+    if workflows_js_dir.is_dir():
+        for tpl in sorted(workflows_js_dir.glob("*.js")):
+            content = tpl.read_text(encoding="utf-8")
+            output = target_root / ".claude" / "workflows" / tpl.name
+            _add(tpl, output, content)
+
     return mappings
 
 
@@ -192,6 +200,12 @@ def write_build_manifest(
         try:
             output_mappings = _compute_output_mappings(package_root, target_root, config)
         except Exception as exc:  # noqa: BLE001
+            import warnings
+            warnings.warn(
+                f"could not compute output_mappings: {exc}. "
+                "Direction B detection will be unavailable until next build.",
+                stacklevel=2,
+            )
             _warn(
                 f"could not compute output_mappings: {exc}. "
                 "Direction B detection will be unavailable until next build."
@@ -317,6 +331,7 @@ def install_shims(
         (".claude/skills", "skills"),
         (".claude/commands", "commands"),
         (".claude/hooks", "hooks"),
+        (".claude/workflows", ".claude/workflows"),
         (".gemini", "gemini"),
     ]
 

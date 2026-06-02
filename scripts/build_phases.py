@@ -315,7 +315,9 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
             # `claude --version` typically outputs e.g. "2.1.154" or "2.1.154\n"
             if result.returncode == 0:
                 version_str = result.stdout.strip().split()[-1]
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            import warnings
+            warnings.warn(f"claude --version probe failed: {exc}", stacklevel=2)
             version_str = None
 
     version_known = version_str is not None
@@ -993,9 +995,10 @@ def build_sync_platforms(target_root: Path, config: dict[str, Any],
 #: removal. Only files/directories within these subdirectories are ever removed
 #: by clean_stale_artifacts(). Paths outside this list are never touched.
 _MANAGED_ARTIFACT_DIRS = {
-    "agents": "agents",       # .claude/agents/<name>.md
-    "skills": "skills",       # .claude/skills/<name>/
-    "hooks": "hooks",         # .claude/hooks/<name>.py
+    "agents": "agents",
+    "skills": "skills",
+    "hooks": "hooks",
+    "workflows": ".claude/workflows",
 }
 
 

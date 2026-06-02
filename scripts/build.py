@@ -467,10 +467,19 @@ def _build_source_manifests(output_root: Path) -> dict:
             if f.is_file():
                 hooks.add(f.name)
 
+    # Workflow scripts: each *.js file in templates/workflows-js/
+    workflows_js_dir = templates_dir / "workflows-js"
+    workflows: set[str] = set()
+    if workflows_js_dir.exists():
+        for f in workflows_js_dir.glob("*.js"):
+            if f.is_file():
+                workflows.add(f.name)
+
     return {
         "agents": agents,
         "skills": skills,
         "hooks": hooks,
+        "workflows": workflows,
     }
 
 

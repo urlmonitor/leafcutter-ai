@@ -60,7 +60,9 @@ _MANIFEST_PATH = _REPO_ROOT / "leafcutter" / ".build_manifest.json"
 _OUTPUT_DIRS = [
     _REPO_ROOT / ".claude" / "agents",
     _REPO_ROOT / ".claude" / "skills",
-    _REPO_ROOT / ".agents" / "workflows",
+    _REPO_ROOT / ".claude" / "commands",
+    _REPO_ROOT / ".claude" / "hooks",
+    _REPO_ROOT / ".claude" / "workflows",
     _REPO_ROOT / ".agents" / "rules",
 ]
 
