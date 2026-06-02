@@ -38,6 +38,7 @@ from build_phases import (
     build_doc_compliance,
     build_feedback,
     build_vision,
+    build_components_registry,
     build_antigravity_instructions,
     build_sync_platforms,
     reset_uptodate_count,
@@ -385,6 +386,7 @@ def _run_phases(
         ("Ticket lifecycle", build_ticket_lifecycle),
         ("Vision", build_vision),
         ("Roadmap", build_roadmap),
+        ("Components registry", build_components_registry),
         ("Glossary", build_glossary),
         ("Config scaffolds", build_config_scaffolds),
     ]
@@ -858,4 +860,8 @@ if __name__ == "__main__":
 #   and injects config["changelog_folder"] so the changelog-agent template can reference
 #   {{config.changelog_folder}} instead of the hardcoded "changelogs/" literal.
 #   Called immediately after _inject_file_size_limits(). Fallback: "changelogs/".
+# - 2026-06-02 [python-coder/TICKET-20260602-ComponentsRegistryScaffold]: Imported
+#   build_components_registry from build_phases and added ("Components registry",
+#   build_components_registry) entry to scaffold_phases between ("Roadmap", build_roadmap)
+#   and ("Glossary", build_glossary). (#TICKET-20260602-ComponentsRegistryScaffold)
 # ====================================================================
