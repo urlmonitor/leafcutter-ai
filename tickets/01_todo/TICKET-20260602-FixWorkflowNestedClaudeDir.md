@@ -15,7 +15,7 @@ files_touched:
   - scripts/build_phases.py
 agents:
   architect-review: not_needed
-  test-writer: needed
+  test-writer: signed_off
   python-coder: needed
   sql-coder: not_needed
   test-runner: needed
@@ -87,7 +87,7 @@ Then the output path resolves to target_root / "workflows" / tpl.name (not targe
 
 ## Sign-offs
 
-- [ ] test-writer
+- [x] test-writer — 2026-06-02 14:00
 - [ ] python-coder
 - [ ] test-runner
 - [ ] pr-reviewer
@@ -96,11 +96,19 @@ Then the output path resolves to target_root / "workflows" / tpl.name (not targe
 
 ## Comments
 
+### 2026-06-02 14:00 — test-writer (status: ok)
+feedback-id: fb_2026-06-02_794a0b08
+completion_manifest:
+  tests_written: true
+  tests_are_red_before_fix: true
+  coverage_includes_all_four_locations: true
+Created `unit_tests/test_build_workflow_output_paths.py` with 4 failing tests (RED baseline confirmed): test_build_workflow_scripts_writes_to_output_root_workflows, test_install_shims_workflows_entry_maps_to_output_root_workflows, test_install_shims_does_not_use_nested_claude_path, and test_compute_output_mappings_workflow_js_uses_correct_output_key. All 4 tests fail against the current broken code and cover all four hardcoded locations described in the ticket.
+
 ## Implementation Tasks
 
 ### test-writer
 
-- [ ] Add or extend a test in `unit_tests/test_build_artifact_parity.py` (or a
+- [x] Add or extend a test in `unit_tests/test_build_artifact_parity.py` (or a
   dedicated `test_build_workflow_scripts.py`) verifying:
   - `_compute_output_mappings()` places a sample `sample.js` under
     `<target_root>/workflows/sample.js` — not under `.claude/workflows/`.
