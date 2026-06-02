@@ -186,19 +186,21 @@ def test_compute_output_mappings_workflow_js_uses_correct_output_key(
     """_compute_output_mappings() must record workflow JS outputs under
     <target_root>/workflows/<name>, not <target_root>/.claude/workflows/<name>.
     """
-    # target_root here represents output_root passed to _compute_output_mappings
     fake_target = tmp_path / ".leafcutter"
     fake_target.mkdir(parents=True)
 
-    # We need a minimal package_root layout
     package_root = tmp_path / "leafcutter"
     package_root.mkdir()
     (package_root / "config").mkdir()
-    templates_dir = workflows_js_fixture  # already patched on build_helpers
+    (package_root / "scripts").mkdir()
+
+    tpl_dir = package_root / "templates"
+    wf_js_dir = tpl_dir / "workflows-js"
+    wf_js_dir.mkdir(parents=True)
+    (wf_js_dir / "build-feature.js").write_text("// wf", encoding="utf-8")
 
     mappings = build_helpers._compute_output_mappings(
         package_root=package_root,
-        templates_dir=templates_dir,
         target_root=fake_target,
         config={},
     )

@@ -259,7 +259,7 @@ def build_agents(target_root: Path, config: dict[str, Any],
 
 def build_workflow_scripts(target_root: Path, config: dict[str, Any],
                            dry_run: bool, force: bool) -> int:
-    """Copy Claude Code Workflow JS scripts to ``<target_root>/.claude/workflows/``.
+    """Copy Claude Code Workflow JS scripts to ``<output_root>/workflows/``.
 
     Gated on two conditions (both must pass for files to be copied):
 
@@ -343,14 +343,14 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
         # Fall through — continue with file copying.
 
     # ------------------------------------------------------------------
-    # Copy .js files from templates/workflows-js/ to target/.claude/workflows/
+    # Copy .js files from templates/workflows-js/ to output_root/workflows/
     # ------------------------------------------------------------------
     workflows_js_src = TEMPLATES_DIR / "workflows-js"
     if not workflows_js_src.exists():
         print("Workflow scripts: 0 installed (templates/workflows-js/ absent)")
         return 0
 
-    output_dir = target_root / ".claude" / "workflows"
+    output_dir = target_root / "workflows"
     written = 0
     unchanged = 0
 

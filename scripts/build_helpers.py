@@ -145,7 +145,7 @@ def _compute_output_mappings(
     if workflows_js_dir.is_dir():
         for tpl in sorted(workflows_js_dir.glob("*.js")):
             content = tpl.read_text(encoding="utf-8")
-            output = target_root / ".claude" / "workflows" / tpl.name
+            output = target_root / "workflows" / tpl.name
             _add(tpl, output, content)
 
     return mappings
@@ -331,7 +331,7 @@ def install_shims(
         (".claude/skills", "skills"),
         (".claude/commands", "commands"),
         (".claude/hooks", "hooks"),
-        (".claude/workflows", ".claude/workflows"),
+        (".claude/workflows", "workflows"),
         (".gemini", "gemini"),
     ]
 

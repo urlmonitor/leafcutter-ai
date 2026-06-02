@@ -88,8 +88,8 @@ Then the output path resolves to target_root / "workflows" / tpl.name (not targe
 ## Sign-offs
 
 - [x] test-writer — 2026-06-02 14:00
-- [ ] python-coder
-- [ ] test-runner
+- [x] python-coder — 2026-06-02 14:30
+- [x] test-runner — 2026-06-02 14:30
 - [ ] pr-reviewer
 - [ ] commit
 - [ ] pull-request
