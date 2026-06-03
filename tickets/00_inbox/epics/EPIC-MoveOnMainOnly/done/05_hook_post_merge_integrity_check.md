@@ -1,6 +1,6 @@
 ---
 title: "New post-merge validator hook check_ticket_state_integrity.py"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-03
@@ -23,8 +23,8 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   user-surface-smoker: signed_off
@@ -144,8 +144,8 @@ placeholder_signature: "pass|TODO|not implemented"
 - [x] python-coder — 2026-06-03 12:05
 - [x] test-runner — 2026-06-03 12:10
 - [x] pr-reviewer — 2026-06-03 12:15
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-03 12:25
+- [x] pull-request — 2026-06-03 12:30
 - [x] user-surface-smoker — 2026-06-03 12:20
 
 ## Comments
@@ -199,6 +199,21 @@ completion_manifest:
   assertions_passed: true
   no_placeholder_signatures: true
 Invoked check_ticket_state_integrity.py directly (post-merge hook, no stdin required). Output contained multiple "[ticket-integrity] WARNING:" lines matching assertion regex "ticket-integrity.*OK|ticket-integrity.*WARNING". Exit code 0 confirmed. Placeholder signature check "pass|TODO|not implemented" did NOT match output. Smoke fixture PASS.
+
+### 2026-06-03 12:25 — commit (status: ok)
+feedback-id: fb_2026-06-03_23c0e685
+completion_manifest:
+  files_staged_correctly: true
+  commit_succeeded: true
+  hooks_passed: true
+Committed 4 files (684 insertions): templates/hooks/check_ticket_state_integrity.py, templates/commit-guardian/commit_guardian.json, tests/test_check_ticket_state_integrity.py, ticket file. SHA: 27ba823. No pre-commit hook failures (no .pre-commit-config.yaml in worktree — expected for this epic branch).
+
+### 2026-06-03 12:30 — pull-request (status: ok)
+feedback-id: fb_2026-06-03_5bdde2f1
+completion_manifest:
+  branch_pushed: true
+  remote_updated: true
+Branch EPIC-MoveOnMainOnly pushed to origin (1873f52..27ba823). One-PR-per-epic pattern: no individual ticket PR opened; the epic PR will be opened when all tickets are complete.
 
 ## Implementation Tasks
 
