@@ -16,14 +16,14 @@ files_touched:
   - templates/agents/live-surface-tester.md
   - config/agent_registry.json
 agents:
-  architect-review: needed
+  architect-review: signed_off
   adr-author: not_needed
   test-writer: not_needed
-  python-coder: needed
+  python-coder: signed_off
   sql-coder: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   architecture-diagram-author: not_needed
@@ -135,17 +135,47 @@ Then live-surface-tester: not_needed (or absent) in the compiled agents map
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] python-coder
-- [ ] pr-reviewer
+- [x] architect-review — 2026-06-03 12:00
+- [x] python-coder — 2026-06-03 12:10
+- [x] pr-reviewer — 2026-06-03 12:20
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-06-03 12:00 — architect-review (status: ok)
+feedback-id: fb_2026-06-03_7ad0385e
+completion_manifest:
+  blast_radius_assessed: true
+  impact_classified: true
+  architectural_note_written: true
+Ticket is small-case (2 files, 1 component: build_pipeline). No always-large trigger fires. ADR-007 is accepted and covers all design decisions (read-only agent, priority 11.8, conditional dispatch on live_surface_test). Template must mirror user-surface-smoker.md structure with tools: Bash, Read only. Registry entry must include conditional: true, conditional_field: live_surface_test, priority: 11.8. No cross-cutting risk; no additional ADR or diagram needed.
+
+## Escalation
+
+Branch: none
+Reason: 2 files in 1 component (build_pipeline); no always-large trigger fired. ADR-007 already accepted.
+
+### 2026-06-03 12:20 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-03_c40b4084
+completion_manifest:
+  blast_radius_assessed: true
+  impact_classified: true
+  architectural_note_written: true
+Review passed. Template `live-surface-tester.md`: no `{config.*}` placeholders, tools restricted to Bash/Read only (no Edit/Write), priority 11.8 stated, conditional field correct, 7-step algorithm complete with unconditional teardown, completion manifest requirement documented. Registry entry: id/name/tier/role/is_ticket_phase/priority/conditional/conditional_field all correct per acceptance criteria. Build validation shows only pre-existing errors (not introduced by this ticket).
+
+### 2026-06-03 12:10 — python-coder (status: ok)
+feedback-id: fb_2026-06-03_395354bd
+completion_manifest:
+  code_implemented: true
+  tests_passing: true
+  doc_enforcer_clean: true
+  complexity_check_clean: true
+Created `templates/agents/live-surface-tester.md` with tools: Bash, Read only, priority 11.8, conditional on live_surface_test, default_artifact_checklist (server_started, all_fixtures_passed, server_stopped), 7-step algorithm, and decision history block. Added registry entry in `config/agent_registry.json` after user-surface-smoker with all required fields including conditional: true, conditional_field: live_surface_test, priority: 11.8, is_ticket_phase: true. `build.py --validate-only` shows only pre-existing errors (feedback-analyst.md not in registry; code-review-architect.md missing requires_verification) — no new errors introduced.
+
 ## Implementation Tasks
 
-- [ ] Author `templates/agents/live-surface-tester.md`:
+- [x] Author `templates/agents/live-surface-tester.md`:
   - YAML frontmatter: `name`, `description`, `tools: Bash, Read`,
     `model: sonnet`, `portable: true`, `signoff: true`, `conditional: true`,
     `conditional_field: live_surface_test`
@@ -160,7 +190,7 @@ Then live-surface-tester: not_needed (or absent) in the compiled agents map
     - `## Cost Cap` (one invocation per ticket)
     - `## Completion Manifest Requirement` (same pattern as user-surface-smoker)
   - Decision History comment block at the bottom
-- [ ] Update `config/agent_registry.json`:
+- [x] Update `config/agent_registry.json`:
   - Add entry for `live-surface-tester` after `user-surface-smoker`
   - Fields: `id`, `name`, `tier: phase`, `role: quality`, `portable: true`,
     `domain: null`, `spawn_allowlist: []`,
@@ -169,7 +199,7 @@ Then live-surface-tester: not_needed (or absent) in the compiled agents map
     `template_path`, `model: sonnet`, `skills_used: ["signoff"]`,
     `priority: 11.8`, `priority_rationale`, `conditional: true`,
     `conditional_field: live_surface_test`, `requires_ticket_section: true`
-- [ ] Verify `build.py --validate-only` passes after the registry update
+- [x] Verify `build.py --validate-only` passes after the registry update
 
 ## Risk & Safety
 

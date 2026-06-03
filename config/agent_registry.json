@@ -1309,6 +1309,43 @@
             "requires_ticket_section": false
         },
         {
+            "id": "live-surface-tester",
+            "name": "Live Surface Tester",
+            "tier": "phase",
+            "role": "quality",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "ticket-supervisor"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign when the ticket requires live HTTP or browser surface testing. Conditional: only emitted in the agents: map when live_surface_test: true in ticket frontmatter AND live_surface_testing.enabled: true in skills_config.json.",
+                "trigger_conditions": [
+                    {
+                        "type": "dsl",
+                        "expression": "ticket frontmatter live_surface_test == true"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket introduces or modifies an HTTP endpoint or browser-rendered surface that should be verified with live requests"
+                    }
+                ],
+                "default_status": "not_needed"
+            },
+            "template_path": "templates/agents/live-surface-tester.md",
+            "model": "sonnet",
+            "skills_used": [
+                "signoff"
+            ],
+            "priority": 11.8,
+            "priority_rationale": "Runs after user-surface-smoker (11.5) confirms surface is reachable, before commit (12) locks the worktree. Issues structured HTTP assertions against live fixtures. See ADR-007.",
+            "conditional": true,
+            "conditional_field": "live_surface_test",
+            "requires_ticket_section": true
+        },
+        {
             "id": "onboard",
             "name": "Onboard Install Wizard",
             "tier": "utility",
