@@ -1,6 +1,6 @@
 ---
 title: "Convert finalize-feature from LLM agent to deterministic JS workflow script"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-02
@@ -22,7 +22,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   explanation-author: not_needed
@@ -196,7 +196,7 @@ Then it contains a reference to finalize-feature.js as the primary dispatch path
 - [x] architect-review — 2026-06-03 10:30
 - [x] pr-reviewer — 2026-06-03 10:45
 - [x] commit — 2026-06-03 11:15
-- [ ] pull-request
+- [x] pull-request — 2026-06-03 11:30
 - [x] user-surface-smoker — 2026-06-03 11:00
 
 ## Smoke Fixture
@@ -210,6 +210,14 @@ placeholder_signature: "Invoke the .finalize-feature. agent"
 ```
 
 ## Comments
+
+### 2026-06-03 11:30 — pull-request (status: ok)
+feedback-id: fb_2026-06-03_4fdc1400
+completion_manifest:
+  pr_opened: true
+  branch_pushed: true
+  pr_url_recorded: true
+PR #34 opened: https://github.com/urlmonitor/leafcutter-ai/pull/34. Branch feature/finalizefeaturejsworkflow pushed to origin. PR title: "feat(workflows): add finalize-feature.js deterministic JS workflow". Auth: urlmonitor account.
 
 ### 2026-06-03 11:15 — commit (status: ok)
 feedback-id: fb_2026-06-03_6f2e417d
