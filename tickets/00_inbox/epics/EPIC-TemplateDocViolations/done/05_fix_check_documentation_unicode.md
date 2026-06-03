@@ -1,6 +1,6 @@
 ---
 title: "Fix UnicodeDecodeError in check_documentation.py on Windows (subprocess encoding)"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-26
@@ -23,7 +23,7 @@ agents:
   documentation-expert: not_needed
   change-scope-reviewer: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: not_needed
   status-checker: not_needed
   sql-coder: not_needed
@@ -100,9 +100,17 @@ Then subprocess.run() contains encoding="utf-8"
 
 - [x] python-coder — 2026-06-03 14:00
 - [x] pr-reviewer — 2026-06-03 14:05
-- [ ] commit
+- [x] commit — 2026-06-03 14:10
 
 ## Comments
+
+### 2026-06-03 14:10 — commit (status: ok)
+feedback-id: fb_2026-06-03_7ac7d998
+completion_manifest:
+  commit_landed_clean: true
+  staged_files_match_files_touched: true
+  pre_commit_hooks_passed: true
+Commit b62f738 landed cleanly on branch EPIC-TemplateDocViolations. No pre-commit config present in worktree (expected). All 4 files staged and committed: 3 implementation files + ticket file.
 
 ### 2026-06-03 14:05 — pr-reviewer (status: ok)
 feedback-id: fb_2026-06-03_3ed3105f
