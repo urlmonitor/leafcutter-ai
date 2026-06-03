@@ -282,23 +282,53 @@ def build_doc_type_reference_table(package_root: Path | None = None) -> str:
     return "\n".join(lines)
 
 
-def build_project_paths_table(package_root: Path | None = None) -> str:
+def build_project_paths_table(
+    package_root: Path | None = None,
+    config: dict[str, Any] | None = None,
+) -> str:
     """Render the project-paths table for ``{{project_paths_table}}``.
 
     Reads ``leafcutter/config/paths.json``, flattens to dotted keys,
-    and renders a markdown table with columns Key and Path. Used by agents that
-    need to know where project folders live (architect-review, business-analyst,
+    optionally applies a config overlay for self-hosting builds, and renders a
+    markdown table with columns Key and Path. Used by agents that need to know
+    where project folders live (architect-review, business-analyst,
     architecture-diagram-author, adr-author, how-to-author, reference-author,
     explanation-author, create-ticket, ticket-supervisor).
+
+    When ``config`` is provided, the following keys override the corresponding
+    ``paths.json`` values so that compiled agent prompts reflect the actual paths
+    used by the project rather than the static defaults:
+
+    ============================================  ========================
+    config key                                    paths.json dotted key
+    ============================================  ========================
+    ``tickets_inbox_path``                        ``tickets.inbox``
+    ``tickets_inbox_epics_path``                  ``tickets.inbox_epics``
+    ``tickets_todo_path``                         ``tickets.todo``
+    ``tickets_done_path``                         ``tickets.done``
+    ``tickets_rejected_path``                     ``tickets.rejected``
+    ``docs_root``                                 ``docs.root``
+    ============================================  ========================
 
     Args:
         package_root: Root of the leafcutter package (the directory
             containing ``config/``). Defaults to the package root resolved from
             this file's location.
+        config: Optional merged config dictionary. When present, values for the
+            keys listed above replace the corresponding ``paths.json`` defaults
+            before the table is rendered. Non-present or empty-string config
+            values are silently ignored.
 
     Returns:
         Markdown section string (heading + table), or a descriptive fallback
         when the file is missing or empty.
+
+    # DECISION HISTORY
+    # - 2026-06-03 12:00 [python-coder/TICKET-20260603-ConfigDrivenBuildPaths]:
+    #   Added ``config`` parameter. After flattening paths.json, overlay matching
+    #   config keys so that self-hosting builds emit the correct path values into
+    #   compiled agent prompts (e.g. "leafcutter-ai/tickets/00_inbox/" instead of
+    #   "tickets/00_inbox/"). (#TICKET-20260603-ConfigDrivenBuildPaths)
     """
     root = package_root or _PACKAGE_ROOT
     paths_json = root / "config" / "paths.json"
@@ -338,6 +368,25 @@ def build_project_paths_table(package_root: Path | None = None) -> str:
         return rows
 
     flat = _flatten(nested)
+
+    # Apply config overlay: replace paths.json values with config-derived paths.
+    # Only non-empty config values participate in the override.
+    if config:
+        _config_to_paths_key: dict[str, str] = {
+            "tickets_inbox_path":       "tickets.inbox",
+            "tickets_inbox_epics_path": "tickets.inbox_epics",
+            "tickets_todo_path":        "tickets.todo",
+            "tickets_done_path":        "tickets.done",
+            "tickets_rejected_path":    "tickets.rejected",
+            "docs_root":                "docs.root",
+        }
+        flat_dict = dict(flat)
+        for cfg_key, paths_key in _config_to_paths_key.items():
+            val = config.get(cfg_key)
+            if val:
+                flat_dict[paths_key] = val
+        flat = list(flat_dict.items())
+
     if not flat:
         return "_(No path string entries in paths.json)_"
 
