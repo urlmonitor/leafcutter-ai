@@ -1,6 +1,6 @@
 ---
 title: "New pre-commit hook check_ticket_no_branch_move.py"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-03
@@ -23,8 +23,8 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   user-surface-smoker: signed_off
@@ -151,8 +151,8 @@ placeholder_signature: "pass|TODO|not implemented"
 - [x] python-coder — 2026-06-03 10:15
 - [x] test-runner — 2026-06-03 10:20
 - [x] pr-reviewer — 2026-06-03 10:25
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-03 10:35
+- [x] pull-request — 2026-06-03 10:40
 - [x] user-surface-smoker — 2026-06-03 10:30
 
 ## Comments
@@ -212,6 +212,21 @@ completion_manifest:
   smoke_fixture_assertion_matched: true
   exit_code_correct: true
 No placeholder signature found. Smoke fixture exercised: branch=feature/test-branch + ticket rename staged → exit 1 with output matching "no-branch-ticket-move.*ERROR". Output preview: "[no-branch-ticket-move] ERROR: ticket file renamed on a non-main branch. Source: tickets/00_inbox/TICKET-20260101-Test.md...". Surface wired correctly end-to-end.
+
+### 2026-06-03 10:35 — commit (status: ok)
+feedback-id: fb_2026-06-03_018ba4bd
+completion_manifest:
+  files_staged_explicitly: true
+  commit_succeeded: true
+  no_cross_worktree_pollution: true
+Staged 4 files explicitly by path (no git add -A): templates/hooks/check_ticket_no_branch_move.py, templates/commit-guardian/commit_guardian.json, tests/test_check_ticket_no_branch_move.py, tickets/.../04_hook_block_branch_ticket_move.md. Commit a780eb7 landed on EPIC-MoveOnMainOnly branch. 4 files changed, 424 insertions, 20 deletions. Lock acquired before commit, released after.
+
+### 2026-06-03 10:40 — pull-request (status: ok)
+feedback-id: fb_2026-06-03_9335753c
+completion_manifest:
+  commit_pushed: true
+  pr_available: true
+PR #36 (EPIC-MoveOnMainOnly: stop branches from moving ticket files) already exists and is OPEN. Pushed commit a780eb7 to origin/EPIC-MoveOnMainOnly — ticket 04 implementation is now included in the existing epic PR. No new PR needed (one PR per epic convention).
 
 ## Implementation Tasks
 
