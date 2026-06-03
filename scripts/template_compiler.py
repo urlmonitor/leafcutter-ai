@@ -246,8 +246,9 @@ def _apply_registry_injection(
     registry_path: Path | None,
     skills_root: Path | None,
     inject_registry: bool,
+    config: dict[str, Any] | None = None,
 ) -> str:
-    """Apply all four registry placeholder types to a template body.
+    """Apply all registry placeholder types to a template body.
 
     Resolves ``{{my_spawn_allowlist}}``, ``{{my_skills_used}}``,
     ``{{registry_phase_agents_table}}`` (when inject_registry is True),
@@ -262,9 +263,18 @@ def _apply_registry_injection(
         registry_path: Path to agent_registry.json (for Type 3 only).
         skills_root: Path to ``templates/skills/`` (for Type 2 descriptions).
         inject_registry: When True, resolve Type 3 placeholder.
+        config: Optional merged config dict. When provided, passed to
+            ``build_project_paths_table()`` so that config-overridden paths
+            (e.g. ``tickets_inbox_path``) are reflected in the rendered table.
 
     Returns:
         Body text with all applicable placeholders replaced.
+
+    # DECISION HISTORY
+    # - 2026-06-03 12:00 [python-coder/TICKET-20260603-ConfigDrivenBuildPaths]:
+    #   Added ``config`` parameter and threaded it to build_project_paths_table()
+    #   so that the Type 5 placeholder reflects config-overridden paths rather
+    #   than paths.json static defaults. (#TICKET-20260603-ConfigDrivenBuildPaths)
     """
     if "{{my_spawn_allowlist}}" in body:
         try:
@@ -292,9 +302,9 @@ def _apply_registry_injection(
         doc_table = build_doc_type_reference_table()
         body = body.replace("{{doc_type_reference_table}}", doc_table)
 
-    # Type 5: {{project_paths_table}} — injected from paths.json
+    # Type 5: {{project_paths_table}} — injected from paths.json with config overlay
     if "{{project_paths_table}}" in body:
-        paths_table = build_project_paths_table()
+        paths_table = build_project_paths_table(config=config)
         body = body.replace("{{project_paths_table}}", paths_table)
 
     # Type 6: {{agent_priority_table}} — canonical phase ordering from registry
@@ -391,6 +401,7 @@ def compile_agent_template(
             registry_path=registry_path,
             skills_root=skills_root,
             inject_registry=bool(fm.get("inject_registry", False)),
+            config=config,
         )
 
     if fm.get("requires_verification") is True:
@@ -478,4 +489,9 @@ def compile_skill_template(template_path: Path, config: dict[str, Any]) -> str:
 # - 2026-05-14 20:30 [ticket-add-postedit-verification]: Added build_verification_block (#EPIC-LeafcutterMVP/01)
 #   and injection logic before terminal JSON blocks. Added requires_verification
 #   to docstrings.
+# - 2026-06-03 12:00 [python-coder/TICKET-20260603-ConfigDrivenBuildPaths]:
+#   Added config parameter to _apply_registry_injection() and threaded it from
+#   compile_agent_template(). build_project_paths_table() now receives config so
+#   that the {{project_paths_table}} placeholder reflects config-overridden paths
+#   (e.g. tickets_inbox_path) in compiled agent prompts. (#TICKET-20260603-ConfigDrivenBuildPaths)
 # ====================================================================

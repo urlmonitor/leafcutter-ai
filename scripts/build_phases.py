@@ -648,16 +648,35 @@ def build_ticket_lifecycle(target_root: Path, config: dict[str, Any],
     Reads ``leafcutter/config/ticket_lifecycle.json`` as the source
     of truth for folder names. Creates each folder with a generated README and
     a ``.gitkeep`` file. Also copies ``ticket_lifecycle.json`` to
-    ``<target_root>/tickets/ticket_lifecycle.json`` so supervisors can read it.
+    ``<tickets_root>/ticket_lifecycle.json`` so supervisors can read it.
+
+    The tickets root is derived from the ``tickets_inbox_path`` config key
+    (e.g. ``"leafcutter-ai/tickets/00_inbox"`` → root is
+    ``"leafcutter-ai/tickets/"``). Falls back to ``"tickets/"`` when the key
+    is absent, preserving consumer-project defaults. A skip-if-manifest-exists
+    guard prevents re-running on already-populated projects (override with
+    ``force=True``).
+
+    Folder paths declared in the manifest may be remapped via config overlay
+    using the same key mapping used by ``build_project_paths_table()``.
 
     Args:
         target_root: Absolute path to the target project root directory.
         config: Merged config dictionary used for placeholder injection.
         dry_run: When True, logs intent but writes nothing.
-        force: When True, overwrites existing files.
+        force: When True, bypasses the skip-if-manifest-exists guard and
+            overwrites existing files.
 
     Returns:
         Count of files written (or that would be written in dry-run mode).
+
+    # DECISION HISTORY
+    # - 2026-06-03 12:00 [python-coder/TICKET-20260603-ConfigDrivenBuildPaths]:
+    #   Replaced hardcoded ``target_root / "tickets"`` with config-derived path
+    #   from ``tickets_inbox_path`` key. Added skip-if-manifest-exists guard and
+    #   folder remap dict to support self-hosting builds where ticket dirs live
+    #   under ``leafcutter-ai/`` instead of the workspace root.
+    #   (#TICKET-20260603-ConfigDrivenBuildPaths)
     """
     import json as _json
 
@@ -666,18 +685,43 @@ def build_ticket_lifecycle(target_root: Path, config: dict[str, Any],
         return 0
 
     manifest_path = PACKAGE_ROOT / "config" / "ticket_lifecycle.json"
-    tickets_root = target_root / "tickets"
+
+    # Derive tickets_root from config — supports self-hosting builds where the
+    # inbox lives under a subdirectory (e.g. "leafcutter-ai/tickets/00_inbox").
+    inbox_path_str = config.get("tickets_inbox_path", "tickets/00_inbox")
+    tickets_root = (target_root / inbox_path_str).parent
+
     written = 0
+
+    # Skip guard: if the manifest already exists and force is False, skip all
+    # writes — matches the write-if-absent pattern used by build_vision().
+    target_manifest = tickets_root / "ticket_lifecycle.json"
+    if target_manifest.exists() and not force:
+        print(
+            f"  ticket_lifecycle: {tickets_root.relative_to(target_root)}"
+            f"/ticket_lifecycle.json exists (skipped)"
+        )
+        return 0
+
+    # Folder remap: canonical manifest paths → config-overridden actual paths.
+    # Ensures that self-hosting builds write to the correct location rather than
+    # the hardcoded "tickets/NN_*" canonical names in ticket_lifecycle.json.
+    _folder_remap = {
+        "tickets/00_inbox":    config.get("tickets_inbox_path",    "tickets/00_inbox"),
+        "tickets/01_todo":     config.get("tickets_todo_path",     "tickets/01_todo"),
+        "tickets/99_done":     config.get("tickets_done_path",     "tickets/99_done"),
+        "tickets/99_rejected": config.get("tickets_rejected_path", "tickets/99_rejected"),
+    }
 
     # Copy ticket_lifecycle.json to the target project
     if manifest_path.exists():
-        target_manifest = tickets_root / "ticket_lifecycle.json"
         if _write(target_manifest,
                   manifest_path.read_text(encoding="utf-8"),
                   dry_run, force):
             written += 1
             if not dry_run:
-                print("  tickets/ticket_lifecycle.json")
+                rel_manifest = tickets_root.relative_to(target_root)
+                print(f"  {rel_manifest}/ticket_lifecycle.json")
 
     # Copy all template files (READMEs, .gitkeeps)
     for template_file in sorted(lifecycle_dir.rglob("*")):
@@ -689,7 +733,7 @@ def build_ticket_lifecycle(target_root: Path, config: dict[str, Any],
         if _write(output_path, text, dry_run, force):
             written += 1
             if not dry_run:
-                print(f"  tickets/{rel}")
+                print(f"  {tickets_root.relative_to(target_root)}/{rel}")
 
     # Scaffold all folders declared in ticket_lifecycle.json (the manifest is
     # the single source of truth — create any that templates didn't cover).
@@ -699,18 +743,20 @@ def build_ticket_lifecycle(target_root: Path, config: dict[str, Any],
         except (OSError, _json.JSONDecodeError):
             manifest = {}
         for folder in manifest.get("folders", []):
-            folder_path = target_root / folder["path"]
+            canonical = folder["path"]
+            actual_rel = _folder_remap.get(canonical, canonical)
+            folder_path = target_root / actual_rel
             gitkeep = folder_path / ".gitkeep"
             if _write(gitkeep, "", dry_run, force=False):
                 written += 1
                 if not dry_run:
-                    print(f"  {folder['path']}/.gitkeep")
+                    print(f"  {actual_rel}/.gitkeep")
             if folder.get("has_epics_subfolder"):
                 epics_gitkeep = folder_path / "epics" / ".gitkeep"
                 if _write(epics_gitkeep, "", dry_run, force=False):
                     written += 1
                     if not dry_run:
-                        print(f"  {folder['path']}/epics/.gitkeep")
+                        print(f"  {actual_rel}/epics/.gitkeep")
 
     return written
 
@@ -1170,4 +1216,10 @@ def clean_stale_artifacts(
 #   includes ".md" in the inject_config path). No code change required.
 #   README.md added to templates/scripts/sync_platforms/ and
 #   scripts/sync_platforms/ to satisfy check_documentation hook. (#EPIC-TemplateDocViolations/04)
+# - 2026-06-03 12:00 [python-coder/TICKET-20260603-ConfigDrivenBuildPaths]:
+#   Fixed build_ticket_lifecycle() to derive tickets_root from config key
+#   tickets_inbox_path instead of hardcoding "tickets". Added skip-if-manifest-
+#   exists guard (matches build_vision() pattern). Added _folder_remap dict so
+#   manifest canonical paths are rewritten to config-overridden actual paths.
+#   (#TICKET-20260603-ConfigDrivenBuildPaths)
 # ====================================================================
