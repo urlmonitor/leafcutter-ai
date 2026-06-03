@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -170,6 +171,54 @@ def _write_jsonl(path: Path, entries: list[dict]) -> None:
         sys.exit(2)
 
 
+_RESOLVE_SCRIPT = Path(__file__).resolve().parent / "resolve_feedback.py"
+
+
+def _call_resolve_feedback(
+    feedback_id: str,
+    ticket: str,
+    jsonl_path: Path | None,
+) -> None:
+    """Call resolve_feedback.py to mark the entry resolved.
+
+    Called only when --ticket was supplied to link_feedback.py. The call is
+    best-effort: an OSError (binary not found, path error) is caught, logged
+    to stderr, and the caller's exit code is not changed. A non-zero exit
+    from resolve_feedback.py (e.g. "already resolved" no-op) is also treated
+    as acceptable — logged at debug level to stderr, not propagated.
+
+    Args:
+        feedback_id: The feedback_id to resolve.
+        ticket: The ticket path to record as resolution_ticket.
+        jsonl_path: Optional JSONL path override; forwarded to resolve_feedback.py
+            so worktree-safe paths are preserved.
+    """
+    cmd = [
+        sys.executable,
+        str(_RESOLVE_SCRIPT),
+        "--feedback-id", feedback_id,
+        "--ticket", ticket,
+    ]
+    if jsonl_path is not None:
+        cmd += ["--jsonl", str(jsonl_path)]
+
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            # Non-zero exit is acceptable (e.g. already resolved, not found).
+            # Log as a debug note so operators can investigate if needed.
+            print(
+                f"DEBUG: resolve_feedback.py exited {result.returncode} for "
+                f"{feedback_id}: {result.stderr.strip() or result.stdout.strip()}",
+                file=sys.stderr,
+            )
+    except OSError as exc:
+        print(
+            f"WARNING: Could not call resolve_feedback.py for {feedback_id}: {exc}",
+            file=sys.stderr,
+        )
+
+
 def main(argv: list[str] | None = None) -> int:
     """Entry point for link_feedback.py.
 
@@ -230,6 +279,14 @@ def main(argv: list[str] | None = None) -> int:
 
     added_desc = ", ".join(f"{r['type']}:{r['ref']}" for r in added)
     print(f"linked {args.feedback_id} -> {added_desc}")
+
+    # Auto-resolve: when --ticket was supplied, also mark the feedback entry
+    # as resolved. Gated on --ticket only (commits and PRs do not signify that
+    # a ticket was created; --ticket is the resolution ref of record).
+    if args.ticket:
+        explicit_jsonl = Path(args.jsonl) if args.jsonl else None
+        _call_resolve_feedback(args.feedback_id, args.ticket, explicit_jsonl)
+
     return 0
 
 
@@ -248,4 +305,11 @@ if __name__ == "__main__":
 #   duplicate refs (same type+ref tuple) are silently skipped.
 #   Exit codes: 0=success, 1=validation/not-found, 2=filesystem.
 #   override with --jsonl for worktree-safe invocation.
+# - 2026-06-03 10:30 [TICKET-20260603-AutoResolveFeedbackOnTicketCreate]: Add auto-resolve call when --ticket is supplied. (#TICKET-20260603-AutoResolveFeedbackOnTicketCreate)
+#   After writing the addressed_by ref, call resolve_feedback.py with
+#   --feedback-id and --ticket when --ticket was supplied. Gated on --ticket
+#   only (commits/PRs do not signify a ticket was created). OSError from
+#   subprocess.run is caught and logged to stderr; non-zero exit from
+#   resolve_feedback.py is treated as a debug note, not a failure — the
+#   linking step's exit code is never changed by the resolve call.
 # ====================================================================

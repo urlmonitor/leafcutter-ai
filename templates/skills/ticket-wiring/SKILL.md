@@ -215,6 +215,37 @@ Apply this recovery logic:
   empty `## Comments` section. Without `agents:`, `ticket-supervisor` will
   block the ticket as un-driveable when `/build-feature` runs.
 
+## Step 3b — Auto-resolve originating feedback (when feedback_id present)
+
+After the ticket file is written successfully (Step 2 complete, Step 4 not
+yet run), check whether a `feedback_id` is present in the invocation context
+(passed by the user, by create-ticket's orchestrator, or injected by a
+retrospective-agent session).
+
+**When `feedback_id` is present:**
+
+Run:
+
+```bash
+python scripts/feedback/resolve_feedback.py \
+    --feedback-id <feedback_id> \
+    --ticket <relative_ticket_path>
+```
+
+Use the same `__file__`-relative path resolution pattern as
+`link_feedback.py` so the script works from any working directory.
+
+- If the script exits 0 (`resolved ...` or `no-op ...`): log the one-line
+  stdout to the ticket's `## Comments` section as an informational note
+  (status: ok), then continue to Step 4.
+- If the script exits 1 (feedback_id not found): emit a **warning** to the
+  user but do NOT abort ticket creation. The ticket file is already written;
+  the resolution failure is non-fatal.
+- If the script exits 2 (filesystem error): emit a **warning** and surface
+  the stderr output. Do NOT abort ticket creation.
+
+**When `feedback_id` is absent:** skip this step entirely.
+
 ## Step 4 — Verify
 
 After writing the ticket file, verify it passes the

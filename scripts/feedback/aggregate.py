@@ -390,6 +390,12 @@ def main(argv: list[str] | None = None) -> int:
         default="table",
         help="Output format (default: table).",
     )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        default=False,
+        help="Shorthand for --format json. When set, overrides --format.",
+    )
     resolution_group = parser.add_mutually_exclusive_group()
     resolution_group.add_argument(
         "--unresolved",
@@ -424,7 +430,11 @@ def main(argv: list[str] | None = None) -> int:
 
     summary = _build_summary(filtered, unresolved_only=args.unresolved, resolved_only=args.resolved)
 
-    if args.format == "json":
+    if args.json:
+        # --json outputs a plain JSON array of entry dicts (for programmatic use by agents).
+        # This differs from --format json which outputs {"entries": [...], "summary": {...}}.
+        print(json.dumps(filtered, indent=2))
+    elif args.format == "json":
         print(_format_json(filtered, summary))
     else:
         print(_format_table(filtered, summary))
@@ -438,6 +448,12 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-06-03 10:30 [TICKET-20260603-AutoResolveFeedbackOnTicketCreate]: Add --json shorthand flag. (#TICKET-20260603-AutoResolveFeedbackOnTicketCreate)
+#   business-analyst.md Step 1.5 uses `aggregate.py --unresolved --json` to obtain a
+#   plain JSON list of unresolved entries. Added --json as a distinct flag (not an alias
+#   for --format json) that outputs a plain JSON array of entry dicts. This differs from
+#   --format json (which outputs {"entries": [...], "summary": {...}}) to avoid breaking
+#   existing callers of --format json. The BA needs a plain list for LLM filtering.
 # - 2026-06-03 09:15 [TICKET-20260603-FeedbackResolutionTracking]: Add resolution filters. (#TICKET-20260603-FeedbackResolutionTracking)
 #   Added --unresolved and --resolved CLI flags (mutually exclusive) to filter_entries()
 #   and main(). Entries without resolved_at treated as unresolved (backward-compat).

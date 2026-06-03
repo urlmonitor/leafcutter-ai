@@ -17,12 +17,12 @@ files_touched:
   - leafcutter-ai/templates/agents/business-analyst.md
 agents:
   architect-review: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   adr-author: not_needed
@@ -112,20 +112,82 @@ And the create-ticket orchestrator surfaces these to the user before proceeding 
 
 ## Sign-offs
 
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
-- [ ] pr-reviewer
+- [x] test-writer — 2026-06-03 10:30
+- [x] python-coder — 2026-06-03 11:00
+- [x] test-runner — 2026-06-03 11:15
+- [x] pr-reviewer — 2026-06-03 11:30
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-06-03 10:30 — test-writer (status: ok)
+feedback-id: fb_2026-06-03_4dd92b26
+completion_manifest:
+  test_stubs_created: true
+  all_tests_red: true
+  red_baseline_captured: true
+red_baseline:
+  - test_name: test_ticket_flag_triggers_resolve_subprocess
+    file: unit_tests/test_link_feedback_resolve.py
+    error: "AssertionError: False is not true : subprocess.run was not called with resolve_feedback.py when --ticket was supplied."
+  - test_name: test_aggregate_unresolved_produces_list
+    file: unit_tests/test_ticket_wiring_resolve.py
+    error: "AssertionError: 2 != 0 : aggregate.py --unresolved --json must exit 0. aggregate.py does not yet support --json flag (use --format json instead)."
+
+## Test Writer — Completion Report
+
+### Tests Written
+| File | Directory | Framework | Status |
+|---|---|---|---|
+| test_link_feedback_resolve.py | unit_tests/ | unittest | written |
+| test_ticket_wiring_resolve.py | unit_tests/ | unittest | written |
+
+### Verification Run
+- Command: `python -m pytest unit_tests/test_link_feedback_resolve.py unit_tests/test_ticket_wiring_resolve.py -v`
+- Result: 2 failures, 7 passed — red baseline established
+  - `test_ticket_flag_triggers_resolve_subprocess` FAILS: subprocess.run not called with resolve_feedback.py (link_feedback.py not yet updated)
+  - `test_aggregate_unresolved_produces_list` FAILS: aggregate.py does not support `--json` flag yet
+
+### Notes
+7 tests pass immediately (regression/contract tests for existing resolve_feedback.py and aggregate.py behaviour). 2 tests are correctly red for the new functionality to be implemented by python-coder.
+
+### 2026-06-03 11:00 — python-coder (status: ok)
+feedback-id: fb_2026-06-03_2fb8bba5
+completion_manifest:
+  link_feedback_resolve_call: true
+  ticket_wiring_step_3b: true
+  business_analyst_step_1_5: true
+  aggregate_json_flag: true
+  all_tests_green: true
+  ruff_clean: true
+
+Extended `link_feedback.py` with `_call_resolve_feedback()` helper and auto-resolve call gated on `--ticket` presence. Added `Step 3b` to `ticket-wiring/SKILL.md`. Added `Step 1.5` and `related_feedback` field to `business-analyst.md`. Added `--json` flag to `aggregate.py` (outputs plain JSON list, distinct from `--format json` which outputs wrapped object). All 27 tests pass, Ruff clean.
+
+### 2026-06-03 11:15 — test-runner (status: ok)
+feedback-id: fb_2026-06-03_148c1464
+completion_manifest:
+  full_suite_run: true
+  new_tests_green: true
+  no_new_regressions: true
+
+137 of 139 tests pass. 2 pre-existing failures in `test_build_workflow_phase.py` (missing `build-feature.js` in this environment — unrelated to this ticket's changes). All 9 new tests (`test_link_feedback_resolve.py` x5, `test_ticket_wiring_resolve.py` x4) pass. No regressions in `unit_tests/feedback/` (18 tests all pass).
+
+### 2026-06-03 11:30 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-03_1ba1ee5c
+completion_manifest:
+  acceptance_criteria_met: true
+  error_handling_policy_followed: true
+  tests_adequate: true
+  no_security_concerns: true
+
+All acceptance criteria met. `_call_resolve_feedback()` correctly implements the four-rule error policy (subprocess wrapped in try/except OSError, non-zero exit logged but not propagated). `--ticket`-only guard correctly prevents resolve call for --commit-only and --pr-only invocations. `ticket-wiring` Step 3b and `business-analyst` Step 1.5 match the ticket specification. The `--json` flag for aggregate.py is a clean addition that doesn't break existing `--format json` callers. Approved.
+
 ## Implementation Tasks
 
 ### python-coder — extend link_feedback.py to call resolve_feedback.py
 
-- [ ] After the `_write_jsonl` call in `link_feedback.py`'s `main()` (i.e. after
+- [x] After the `_write_jsonl` call in `link_feedback.py`'s `main()` (i.e. after
   a ref was successfully added to `addressed_by`), call `resolve_feedback.py`
   on the same `feedback_id` and `--ticket` arg.
 
@@ -146,7 +208,7 @@ And the create-ticket orchestrator surfaces these to the user before proceeding 
 
 ### python-coder — extend ticket-wiring SKILL.md to call resolve_feedback.py
 
-- [ ] Add a new **Step 3b — Auto-resolve originating feedback** subsection to
+- [x] Add a new **Step 3b — Auto-resolve originating feedback** subsection to
   `templates/skills/ticket-wiring/SKILL.md`, positioned immediately after
   the current "Step 3 — Error Recovery Path" section and before "Step 4 — Verify".
 
@@ -186,7 +248,7 @@ And the create-ticket orchestrator surfaces these to the user before proceeding 
 
 ### python-coder — optional: surface related feedback in business-analyst.md
 
-- [ ] In `templates/agents/business-analyst.md`, add a Step 1.5 after the
+- [x] In `templates/agents/business-analyst.md`, add a Step 1.5 after the
   six-dimension scoping step and before spawning test-planner:
 
   ```markdown
@@ -220,7 +282,7 @@ And the create-ticket orchestrator surfaces these to the user before proceeding 
 
 ### test-writer
 
-- [ ] Write tests in `unit_tests/test_link_feedback_resolve.py`:
+- [x] Write tests in `unit_tests/test_link_feedback_resolve.py`:
   - When `--ticket` is supplied and the feedback_id exists, `resolve_feedback`
     subprocess is called with the correct args.
   - When `--commit`-only is supplied, `resolve_feedback` is NOT called.
@@ -230,7 +292,7 @@ And the create-ticket orchestrator surfaces these to the user before proceeding 
     error), `link_feedback.py` logs to stderr but still exits 0 for the
     linking step.
 
-- [ ] Write tests in `unit_tests/test_ticket_wiring_resolve.py` (or extend
+- [x] Write tests in `unit_tests/test_ticket_wiring_resolve.py` (or extend
   existing ticket-wiring tests):
   - When `feedback_id` is present in context and `resolve_feedback.py` exits 0,
     a comment line is appended to the ticket's `## Comments` section.
