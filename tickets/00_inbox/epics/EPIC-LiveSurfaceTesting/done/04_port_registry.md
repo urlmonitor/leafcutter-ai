@@ -1,6 +1,6 @@
 ---
 title: "Implement port registry module (scripts/port_registry.py) with CLI"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-03
