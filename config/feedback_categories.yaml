@@ -43,6 +43,7 @@ categories:
       - explanation-author
       - how-to-author
       - reference-author
+      - user-surface-smoker
     default_severity: low
 
   - id: knowledge-gap
@@ -65,6 +66,7 @@ categories:
       - explanation-author
       - how-to-author
       - reference-author
+      - user-surface-smoker
     default_severity: medium
 
   - id: quality-concern
@@ -96,6 +98,7 @@ categories:
       - explanation-author
       - how-to-author
       - reference-author
+      - user-surface-smoker
       - epic-supervisor
       - ticket-supervisor
     default_severity: medium
@@ -120,6 +123,7 @@ categories:
       - explanation-author
       - how-to-author
       - reference-author
+      - user-surface-smoker
       - epic-supervisor
       - ticket-supervisor
     default_severity: medium
@@ -144,6 +148,7 @@ categories:
       - explanation-author
       - how-to-author
       - reference-author
+      - user-surface-smoker
       - epic-supervisor
       - ticket-supervisor
     default_severity: high
@@ -178,6 +183,7 @@ categories:
       - explanation-author
       - how-to-author
       - reference-author
+      - user-surface-smoker
     default_severity: low
 
   - id: process-finding
@@ -207,4 +213,11 @@ categories:
 #   only. Added epic-supervisor and ticket-supervisor to allowed_writers for tooling-issue,
 #   convention-ambiguity, and blocker (supervisors observe and classify these failure modes).
 #   Category id subagent-quality is stable — never rename (CFCS vocab rules).
+# - 2026-06-03 00:02 [python-coder/TICKET-20260603-SmokerFeedbackSinkWorktree]: Added user-surface-smoker to allowed_writers.
+#   Root cause: user-surface-smoker was absent from all allowed_writers lists, causing
+#   submit_feedback.py to exit code 1 (validation failure) before writing any JSONL entry.
+#   Fix: added user-surface-smoker to complete, knowledge-gap, tooling-issue,
+#   convention-ambiguity, blocker, and success-pattern categories. quality-concern and
+#   subagent-quality remain restricted to reviewer-class and supervisor agents respectively.
+#   (#TICKET-20260603-SmokerFeedbackSinkWorktree)
 # ====================================================================
