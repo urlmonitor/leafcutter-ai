@@ -1,6 +1,6 @@
 ---
 title: "Auto-resolve feedback entries when a ticket is created from them"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-03
@@ -23,8 +23,8 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   user-surface-smoker: not_needed
@@ -116,8 +116,8 @@ And the create-ticket orchestrator surfaces these to the user before proceeding 
 - [x] python-coder — 2026-06-03 11:00
 - [x] test-runner — 2026-06-03 11:15
 - [x] pr-reviewer — 2026-06-03 11:30
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-03 11:45
+- [x] pull-request — 2026-06-03 12:00
 
 ## Comments
 
@@ -182,6 +182,23 @@ completion_manifest:
   no_security_concerns: true
 
 All acceptance criteria met. `_call_resolve_feedback()` correctly implements the four-rule error policy (subprocess wrapped in try/except OSError, non-zero exit logged but not propagated). `--ticket`-only guard correctly prevents resolve call for --commit-only and --pr-only invocations. `ticket-wiring` Step 3b and `business-analyst` Step 1.5 match the ticket specification. The `--json` flag for aggregate.py is a clean addition that doesn't break existing `--format json` callers. Approved.
+
+### 2026-06-03 11:45 — commit (status: ok)
+feedback-id: fb_2026-06-03_e0e13308
+completion_manifest:
+  commit_created: true
+  files_staged_correctly: true
+  no_cross_ticket_pollution: true
+
+Committed as `339a75c feat(feedback): auto-resolve feedback entries when ticket is created from them`. 7 files changed (5 modified, 2 new test files). SHA: 339a75c.
+
+### 2026-06-03 12:00 — pull-request (status: ok)
+feedback-id: fb_2026-06-03_d264aef1
+completion_manifest:
+  branch_pushed: true
+  pr_updated: true
+
+Pushed to existing PR #41 (feature/feedbackresolutiontracking → main). PR URL: https://github.com/urlmonitor/leafcutter-ai/pull/41
 
 ## Implementation Tasks
 
