@@ -658,6 +658,17 @@
                 ],
                 "pass_filenames": true,
                 "_comment": "EPIC-ErrorHandlingEnforcement/01: AST-based hook that flags bare except: (E722), blind except Exception: without reraise/log (BLE001), and calls to requests.get/open/cursor.execute not enclosed in try/except (IO-001). Runs on every staged .py file. Exit 1 on violations, 0 on clean."
+            },
+            {
+                "id": "check-ticket-no-branch-move",
+                "name": "Check Ticket No Branch Move (move-on-main-only policy)",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_ticket_no_branch_move.py",
+                "language": "system",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "EPIC-MoveOnMainOnly/04: Blocks commits that stage a rename (R entry) of any file under tickets/ on a branch other than main or master. Enforces the move-on-main-only pattern at commit time. Exits 0 on main/master or when no ticket renames are staged."
             }
         ]
     },

@@ -16,18 +16,18 @@ files_touched:
   - templates/commit-guardian/commit_guardian.json
   - templates/commit-guardian/hooks_manifest.json
 agents:
-  architect-review: needed
-  test-writer: needed
-  python-coder: needed
+  architect-review: signed_off
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
-  user-surface-smoker: needed
+  user-surface-smoker: signed_off
 user_facing_surface: pre_commit_hook
 actuation_contract: "Inspects the git staged index for R (rename) entries whose source or destination paths match the tickets/ directory tree; if running on a non-main/master branch and a rename is detected, exits non-zero with a descriptive error message directing the author to edit frontmatter status instead."
 ---
@@ -146,22 +146,78 @@ placeholder_signature: "pass|TODO|not implemented"
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
-- [ ] pr-reviewer
+- [x] architect-review — 2026-06-03 10:00
+- [x] test-writer — 2026-06-03 10:05
+- [x] python-coder — 2026-06-03 10:15
+- [x] test-runner — 2026-06-03 10:20
+- [x] pr-reviewer — 2026-06-03 10:25
 - [ ] commit
 - [ ] pull-request
-- [ ] user-surface-smoker
+- [x] user-surface-smoker — 2026-06-03 10:30
 
 ## Comments
+
+### 2026-06-03 10:00 — architect-review (status: ok)
+feedback-id: fb_2026-06-03_1dc23306
+completion_manifest:
+  blast_radius_assessed: true
+  impact_classified: true
+  architectural_note_written: true
+Impact: SMALL. Affected files: templates/hooks/check_ticket_no_branch_move.py (new), templates/commit-guardian/commit_guardian.json (update). Single component: build_pipeline. No always-large triggers (no Alembic migration, no hypertable change, no public API change, no ADR contract change). No ADR required. No diagram needed. Hook is self-contained (stdlib only), complements check_ticket_rename_tracking.py as a policy gate at commit time.
+
+## Escalation
+
+Branch: none
+Reason: 2 files in 1 component (build_pipeline); no always-large trigger fired.
+
+### 2026-06-03 10:05 — test-writer (status: ok)
+feedback-id: fb_2026-06-03_e7021f43
+completion_manifest:
+  test_stubs_created: true
+  red_baseline_confirmed: true
+  test_file_path_matches_plan: true
+Created tests/test_check_ticket_no_branch_move.py with 5 test cases covering all acceptance criteria: blocks on feature branch with ticket rename (exit 1 + "no-branch-ticket-move"), allows on main branch, allows non-ticket renames, allows empty rename list, blocks rename to 99_done/ on non-main branch. All 5 tests are RED (FileNotFoundError — hook not yet implemented), confirming the TDD baseline.
+
+### 2026-06-03 10:15 — python-coder (status: ok)
+feedback-id: fb_2026-06-03_b9ff4bd2
+completion_manifest:
+  hook_file_created: true
+  hook_registered_in_commit_guardian: true
+  ruff_clean: true
+  all_tests_green: true
+Created templates/hooks/check_ticket_no_branch_move.py with _current_branch(), _get_staged_renames(), _is_ticket_path(), and main() per spec. Fixed two TRY300 Ruff violations (subprocess.run calls restructured with try/except/else pattern). Registered hook in templates/commit-guardian/commit_guardian.json under hooks_manifest.hooks as "check-ticket-no-branch-move". All 5 tests now pass (were RED before implementation).
+
+### 2026-06-03 10:20 — test-runner (status: ok)
+feedback-id: fb_2026-06-03_3b9685f3
+completion_manifest:
+  ticket_tests_green: true
+  no_regressions: true
+5/5 ticket tests pass. Full suite: 275 passed, 4 pre-existing failures (test_emit_entry_cwd x2, test_install_hooks, test_skill_registry — all unrelated to this ticket, none touch check_ticket_no_branch_move). No regressions introduced.
+
+### 2026-06-03 10:25 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-03_63ef6585
+completion_manifest:
+  acceptance_criteria_covered: true
+  error_message_format_correct: true
+  fail_open_behaviour_verified: true
+  hook_registration_correct: true
+  ruff_clean: true
+  no_external_dependencies: true
+All 4 acceptance criteria scenarios are correctly handled by the implementation. Error message includes "no-branch-ticket-move", source, dest, branch, policy explanation, and --no-verify escape hatch exactly as specified. Fail-open on subprocess errors (returns "main" / empty list). Hook registration in commit_guardian.json uses correct entry path convention and pass_filenames: false. No blocking issues.
+
+### 2026-06-03 10:30 — user-surface-smoker (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  placeholder_check_passed: true
+  smoke_fixture_assertion_matched: true
+  exit_code_correct: true
+No placeholder signature found. Smoke fixture exercised: branch=feature/test-branch + ticket rename staged → exit 1 with output matching "no-branch-ticket-move.*ERROR". Output preview: "[no-branch-ticket-move] ERROR: ticket file renamed on a non-main branch. Source: tickets/00_inbox/TICKET-20260101-Test.md...". Surface wired correctly end-to-end.
 
 ## Implementation Tasks
 
 ### python-coder
 
-- [ ] Create `templates/hooks/check_ticket_no_branch_move.py` with:
+- [x] Create `templates/hooks/check_ticket_no_branch_move.py` with:
   - Module docstring following the `MODULE / GOAL / BUSINESS CONTEXT /
     ARCHITECTURE / DECISION HISTORY` format from sibling hooks.
   - `_current_branch() -> str`: runs `git rev-parse --abbrev-ref HEAD`;
@@ -174,24 +230,24 @@ placeholder_signature: "pass|TODO|not implemented"
   - No external dependencies — pure stdlib (subprocess, sys).
   - Pre-commit hook contract: reads nothing from stdin; exit 0 = allow,
     exit non-zero = block.
-- [ ] Register the hook in `templates/commit-guardian/commit_guardian.json`
+- [x] Register the hook in `templates/commit-guardian/commit_guardian.json`
   (or `hooks_manifest.json`) under the `pre_commit` hooks list. Use the same
   schema entry format as `check_ticket_rename_tracking.py` (if that hook is
   registered there) or follow the existing `pre_commit` entry pattern.
 
 ### test-writer
 
-- [ ] Create `tests/test_check_ticket_no_branch_move.py`.
-- [ ] `test_blocks_ticket_rename_on_feature_branch`: mock `_current_branch` to
+- [x] Create `tests/test_check_ticket_no_branch_move.py`.
+- [x] `test_blocks_ticket_rename_on_feature_branch`: mock `_current_branch` to
   return `"feature/my-branch"`; mock `_get_staged_renames` to return
   `[("tickets/00_inbox/T.md", "tickets/01_todo/T.md")]`; assert `main()`
   exits with code 1 and prints "no-branch-ticket-move".
-- [ ] `test_allows_ticket_rename_on_main`: mock `_current_branch` to return
+- [x] `test_allows_ticket_rename_on_main`: mock `_current_branch` to return
   `"main"`; same renames; assert `main()` exits 0.
-- [ ] `test_allows_non_ticket_rename_on_feature_branch`: mock renames for
+- [x] `test_allows_non_ticket_rename_on_feature_branch`: mock renames for
   `docs/README.md → docs/GUIDE.md`; assert `main()` exits 0.
-- [ ] `test_allows_no_renames`: mock empty rename list; assert `main()` exits 0.
-- [ ] `test_blocks_on_master_branch_rename`: mock branch `"not-main"` and
+- [x] `test_allows_no_renames`: mock empty rename list; assert `main()` exits 0.
+- [x] `test_blocks_on_master_branch_rename`: mock branch `"not-main"` and
   renames with destination in `tickets/99_done/`; assert exit 1.
 
 ## Risk & Safety
