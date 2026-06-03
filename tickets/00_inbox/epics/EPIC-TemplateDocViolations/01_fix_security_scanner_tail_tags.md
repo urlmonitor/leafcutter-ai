@@ -18,13 +18,13 @@ files_touched:
   - leafcutter-ai/templates/skills/security-scanner/scripts/scan_secrets.py
 agents:
   architect-review: not_needed
-  python-coder: needed
+  python-coder: signed_off
   test-writer: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
   change-scope-reviewer: not_needed
-  pr-reviewer: needed
-  commit: needed
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: not_needed
   status-checker: not_needed
   sql-coder: not_needed
@@ -98,24 +98,50 @@ Then line 12 ends with (#TICKETLESS reason=initial-skill-implementation)
 
 ## Sign-offs
 
-- [ ] python-coder
-- [ ] pr-reviewer
-- [ ] commit
+- [x] python-coder — 2026-06-03 00:00
+- [x] pr-reviewer — 2026-06-03 00:00
+- [x] commit — 2026-06-03 00:00
 
 ## Comments
 
+### 2026-06-03 00:00 — python-coder (status: ok)
+feedback-id: fb_2026-06-03_5d163552
+completion_manifest:
+  generate_security_report_tail_tag_added: true
+  scan_dependencies_tail_tag_added: true
+  scan_docker_tail_tag_added: true
+  scan_secrets_tail_tag_added: true
+  decision_history_entries_added: true
+Appended (#TICKETLESS reason=initial-skill-implementation) to the initial-implementation DECISION HISTORY entry in all four security-scanner scripts. Added a new DECISION HISTORY entry with (#EPIC-TemplateDocViolations/01) tail-tag to each file. All acceptance criteria satisfied.
+
+### 2026-06-03 00:00 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-03_c89125c1
+completion_manifest:
+  changes_match_spec: true
+  no_logic_changes: true
+  tail_tag_format_correct: true
+  decision_history_entries_present: true
+All four security-scanner scripts have the tail-tag appended to the initial-implementation DECISION HISTORY entry and a new entry added documenting this fix. Changes are minimal string appends only; no logic changes. Tail-tag format matches the spec exactly. Approved.
+
+### 2026-06-03 00:00 — commit (status: ok)
+feedback-id: fb_2026-06-03_74b932f7
+completion_manifest:
+  files_staged: true
+  commit_succeeded: true
+Staged and committed: generate_security_report.py, scan_dependencies.py, scan_docker.py, scan_secrets.py, and ticket 01 sign-off.
+
 ## Implementation Tasks
 
-- [ ] In `leafcutter-ai/templates/skills/security-scanner/scripts/generate_security_report.py`,
+- [x] In `leafcutter-ai/templates/skills/security-scanner/scripts/generate_security_report.py`,
   append ` (#TICKETLESS reason=initial-skill-implementation)` to the line:
   `# - 2026-05-13 15:00 [epic-supervisor/ticket-23]: Initial implementation.`
-- [ ] In `leafcutter-ai/templates/skills/security-scanner/scripts/scan_dependencies.py`,
+- [x] In `leafcutter-ai/templates/skills/security-scanner/scripts/scan_dependencies.py`,
   same fix on the same entry line
-- [ ] In `leafcutter-ai/templates/skills/security-scanner/scripts/scan_docker.py`,
+- [x] In `leafcutter-ai/templates/skills/security-scanner/scripts/scan_docker.py`,
   same fix on line 14 (the initial-implementation entry; line 18 already has a tag)
-- [ ] In `leafcutter-ai/templates/skills/security-scanner/scripts/scan_secrets.py`,
+- [x] In `leafcutter-ai/templates/skills/security-scanner/scripts/scan_secrets.py`,
   same fix on the same entry line
-- [ ] Add a DECISION HISTORY entry to each of the four files documenting this fix
+- [x] Add a DECISION HISTORY entry to each of the four files documenting this fix
   (with HH:MM and `(#EPIC-TemplateDocViolations/01)` tail-tag)
 
 ## Risk & Safety

@@ -14,7 +14,8 @@ ARCHITECTURE: Standalone script. Accepts docker-compose file paths as
 # - 2026-05-13 15:00 [epic-supervisor/ticket-23]: Initial implementation.
 #   Pure YAML parse approach chosen to avoid Docker daemon dependency.
 #   Focused on the three highest-risk patterns: privileged, host network,
-#   and exposed 0.0.0.0 ports.
+#   and exposed 0.0.0.0 ports. (#TICKETLESS reason=initial-skill-implementation)
+# - 2026-06-03 00:00 [ticket-supervisor]: Append tail-tag to initial-implementation DECISION HISTORY entry to satisfy check_documentation hook. (#EPIC-TemplateDocViolations/01)
 # - 2026-05-18 12:00 [EPIC-PortableInstallHardening/T01]: Genericised BUSINESS CONTEXT docstring for leafcutter promotion. (#EPIC-PortableInstallHardening/T01)
 """
 

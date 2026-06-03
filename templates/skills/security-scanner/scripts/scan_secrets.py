@@ -11,7 +11,8 @@ ARCHITECTURE: Standalone script. Accepts file paths as CLI args. Returns exit
 # DECISION HISTORY
 # - 2026-05-13 15:00 [epic-supervisor/ticket-23]: Initial implementation.
 #   Shannon entropy threshold 4.5 chosen to minimize false positives on
-#   base64 test data while catching 36+ char API keys.
+#   base64 test data while catching 36+ char API keys. (#TICKETLESS reason=initial-skill-implementation)
+# - 2026-06-03 00:00 [ticket-supervisor]: Append tail-tag to initial-implementation DECISION HISTORY entry to satisfy check_documentation hook. (#EPIC-TemplateDocViolations/01)
 """
 
 from __future__ import annotations
