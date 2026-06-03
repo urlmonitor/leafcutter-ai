@@ -21,7 +21,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -98,7 +98,7 @@ Then the function is absent (zero matches)
 - [x] python-coder — 2026-06-03 10:02
 - [x] test-runner — 2026-06-03 10:03
 - [x] pr-reviewer — 2026-06-03 10:04
-- [ ] commit
+- [x] commit — 2026-06-03 10:05
 - [ ] pull-request
 
 ## Comments
@@ -143,6 +143,14 @@ completion_manifest:
   docstrings_accurate: true
   decision_history_present: true
 Change is correct and complete. Identified and fixed stale references to "ticket move" in the module-level docstring (`GOAL`, `ARCHITECTURE`), the argparse top-level `description`, and the `cmd_setup_ticket` docstring — all still said "ticket move" after the removal. Updated all three to accurately reflect the no-move behavior. All 7 tests pass after the docstring fixes. Approved.
+
+### 2026-06-03 10:05 — commit (status: ok)
+feedback-id: fb_2026-06-03_2ee7493e
+completion_manifest:
+  commit_succeeded: true
+  correct_files_staged: true
+  lock_acquired_and_released: true
+4 files committed cleanly (SHA 5ce21d1): `setup_ticket_worktree.py`, `test_setup_ticket_worktree.py`, `01_remove_move_ticket_from_worktree_setup.md`, `feedback.jsonl`. Commit-phase lock acquired before staging and released after success. Pre-commit config absent in worktree (epic branch), hooks will apply on main after PR merge.
 
 ## Implementation Tasks
 
