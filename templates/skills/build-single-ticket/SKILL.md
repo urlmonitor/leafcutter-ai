@@ -1,10 +1,15 @@
 ---
 name: build-single-ticket
 internal: true
-description: Drive a single standalone ticket (not part of an epic) through its phase agents. Moves the ticket file from 00_inbox → 01_todo, creates an isolated worktree, dispatches ticket-supervisor, and on success moves the ticket to 99_done. Invoked by /build-feature when its argument resolves to a `.md` file outside an `EPIC-*/` folder.
+description: Drive a single standalone ticket (not part of an epic) through its phase agents. Creates an isolated worktree, dispatches ticket-supervisor, and on success the ticket lifecycle folder is reconciled on main by finalize-feature.js. Invoked by /build-feature when its argument resolves to a `.md` file outside an `EPIC-*/` folder.
 ---
 
 # build-single-ticket
+
+> **Move-on-main-only (EPIC-MoveOnMainOnly):** As of EPIC-MoveOnMainOnly, branches no longer
+> move ticket files between lifecycle folders. This skill's job is to drive the ticket through
+> phase agents. Folder reconciliation (inbox → done) happens on `main` after merge via
+> `finalize-feature.js` Step 5.
 
 This skill is the single-ticket analogue of `/build-feature`'s epic
 flow. It owns the ticket-file lifecycle (inbox → todo → done) and the
@@ -54,7 +59,7 @@ If `$ARGUMENTS` is empty, print usage and exit non-zero. Do not spawn
    Phase agents that subsequently call Edit/Write will find no lock and be
    allowed through. If the lock file does not exist, the `rm -f` is a no-op.
 
-## Step 2 — Set up the worktree and promote the ticket (mandatory, blocking)
+## Step 2 — Set up the worktree (mandatory, blocking)
 
 Per the project convention (`feedback_epic_worktree.md`): standalone tickets
 large enough to invoke `/build-feature` should run in their own worktree,
@@ -71,61 +76,19 @@ Parse the JSON output (single line on stdout):
 
 - `worktree_path` → `WORKTREE_PATH`
 - `branch` → `BRANCH`
-- `ticket_path_new` → `TICKET_PATH` (updated location inside the worktree)
+- `ticket_path_final` → `TICKET_PATH` (the ticket's path inside the worktree)
 
 On non-zero exit, surface stderr verbatim and stop — do NOT fall through to
 running on `main`. Silent-main-branch execution is the exact bug the worktree
 convention exists to prevent.
 
+The script creates and bootstraps the worktree. It does NOT move the ticket
+file — folder position is reconciled on main by `finalize-feature.js` after
+merge.
+
 Do NOT dispatch `worktree-agent` as a separate Agent tool call.
-Do NOT run a separate `git mv` shell step.
-The script handles both concerns atomically and idempotently.
 
-## Step 3 — Pre-move the ticket to `99_done/` (inside the worktree)
-
-After `setup_ticket_worktree.py` returns, the ticket file lives at
-`tickets/01_todo/<basename>` inside the worktree. Move it directly to
-`tickets/99_done/<basename>` BEFORE dispatching `ticket-supervisor`:
-
-```bash
-git -C "$WORKTREE_PATH" mv \
-    "tickets/01_todo/<basename>" \
-    "tickets/99_done/<basename>"
-```
-
-Update the path you pass to `ticket-supervisor` so it reads / edits the
-file at its new `99_done/` location.
-
-**Rename tracking.** The `git mv` above stages both the deletion of the
-old path and the addition of the new path as a single rename (`R` in
-`git diff --cached --name-status`). The commit-phase agent must NOT call
-a bare `git add tickets/99_done/<basename>` later — doing so can break
-the rename detection. A `check_ticket_rename_tracking` PostToolUse hook
-fires after every `git mv` on inbox paths to verify this.
-
-**Why pre-move instead of post-move.** The `commit` phase agent stages
-every uncommitted worktree change (including the rename + every sign-off
-edit phase agents wrote during the drive). The `pull-request` phase then
-opens a PR whose diff contains the move alongside the implementation —
-the reviewer sees the completed ticket file in the same PR as the code.
-Moving the ticket *after* `pull-request` opens (the old behaviour) leaves
-a stray `chore(tickets): mark <basename> done` commit on the branch that
-never makes it into the PR and has to be cleaned up separately.
-
-**Why the move is safe before work is done.** `ticket-supervisor` works
-on whatever ticket path it is given — it does not check directory name.
-Phase agents (architect-review, python-coder, …) write sign-offs and
-comments to the file at the path they receive. The `99_done/` location
-is a filesystem fact, not a state machine: the `## Sign-offs` checklist
-and `Comments` section are still the source of truth for "done-ness",
-and the parity guard in Step 5 enforces that they are consistent before
-this skill returns success.
-
-If the worktree is dirty for the ticket file path at this point
-(uncommitted edits from a previous attempt), abort with a clear error —
-do NOT silently overwrite.
-
-## Step 4 — Dispatch `ticket-supervisor`
+## Step 3 — Dispatch `ticket-supervisor`
 
 Dispatch the `ticket-supervisor` agent via the `Agent` tool with input:
 
@@ -148,13 +111,13 @@ sanctioned entry for epic tickets.
 loop), holding the worktree-root commit-phase lock per §5 around
 `commit` and `pull-request`.
 
-## Step 5 — Verify done state (post-supervisor)
+## Step 4 — Verify done state (post-supervisor)
 
-When `ticket-supervisor` returns `{"status": "done"}`, the ticket file
-is already at `tickets/99_done/<basename>` (placed there by Step 3) and
-the rename + all sign-off edits are already in the PR opened by the
-`pull-request` phase. This skill performs no further file moves on the
-success path — Step 5 is purely a verification gate.
+When `ticket-supervisor` returns `{"status": "done"}`, all sign-off edits
+are already in the PR opened by the `pull-request` phase. The ticket file
+remains in its original lifecycle folder on the branch (no `git mv` was
+performed). This skill performs no file moves on the success path — Step 4
+is purely a verification gate.
 
 **Preflight guard (parity + clean working tree):**
 
@@ -216,9 +179,9 @@ supervisor `status: done` residual in `.claude/agents/pull-request.md` — the
 same file the ticket had already edited. Punting it would have opened a
 second ticket for a trivial in-scope change.
 
-**Step 5c — Emit feedback on residuals (best-effort)**
+**Step 4c — Emit feedback on residuals (best-effort)**
 
-When Step 5 preflight detects an in-scope uncommitted delta and commits it:
+When Step 4 preflight detects an in-scope uncommitted delta and commits it:
 
 1. Determine the category:
    - `subagent-quality` if the residual is a sign-off frontmatter change or a
@@ -232,8 +195,8 @@ When Step 5 preflight detects an in-scope uncommitted delta and commits it:
      --ticket "<ticket_path>" \
      --phase ticket-supervisor \
      --category <category> \
-     --tags "dangling-signoff,step5-residual" \
-     --note "Step 5 in-scope residual committed: <brief description of the delta>"
+     --tags "dangling-signoff,step4-residual" \
+     --note "Step 4 in-scope residual committed: <brief description of the delta>"
    ```
 
 3. If `submit_feedback.py` exits non-zero or raises an exception, print the
@@ -255,7 +218,7 @@ a `failed` payload to `/build-feature`:
 }
 ```
 
-### Step 5b — Changelog entry (success path, mirrors epic-supervisor Step 2)
+### Step 4b — Changelog entry (success path, mirrors epic-supervisor Step 2)
 
 Once the parity guard passes, write a per-file changelog entry capturing the
 ticket completion. This mirrors `epic-supervisor` Step 2 (the
@@ -264,8 +227,7 @@ ticket completion. This mirrors `epic-supervisor` Step 2 (the
 sites — standalone `/changelog`, epic post-completion, and single-ticket
 post-completion — share one write path.
 
-1. Read the ticket file's YAML frontmatter (the file is at its `99_done/`
-   path). Extract:
+1. Read the ticket file's YAML frontmatter. Extract:
    - `title` → entry `title` (suffix with " complete" to mirror epic
      wording, e.g. `"<frontmatter title> complete"`).
    - `components` → entry `components` (use directly; if missing, fall back
@@ -323,29 +285,15 @@ treated (warn-and-continue, never re-open the ticket).
 
 **Failure path (supervisor returns `blocked` or `failed`):**
 
-Because Step 3 pre-moved the ticket to `99_done/`, a failed drive leaves
-the ticket in the wrong directory. Revert the rename so future re-drives
-find it where they expect:
-
-```bash
-git -C "$WORKTREE_PATH" mv \
-    "tickets/99_done/<basename>" \
-    "tickets/01_todo/<basename>"
-```
-
-If the supervisor's phase agents had already committed the rename
-(rare — only possible if the `commit` phase ran before the failure),
-add a corresponding revert commit instead of a working-tree mv.
-
-Then surface the supervisor's `payload` verbatim to the user and return
-non-zero so the user knows the drive did not complete.
+Because the ticket file was never pre-moved, no revert is needed on failure.
+Surface the supervisor's `payload` verbatim to the user and return non-zero.
 
 **Failure path return (supervisor returns `blocked` or `failed`):** return the
 supervisor's payload verbatim. Do not summarise, do not add a preamble.
 
-### Step 5c — End-of-run summary (success path)
+### Step 4c — End-of-run summary (success path)
 
-After the changelog commit in Step 5b succeeds, emit the following summary to the
+After the changelog commit in Step 4b succeeds, emit the following summary to the
 user (fill in the actual PR number from the `pull-request` phase payload):
 
 ---
@@ -374,11 +322,10 @@ Do not add any other preamble or summary text.
 - **Does not open the PR or commit the ticket implementation.** Those
   flow through the `commit` and `pull-request` phase agents under
   `ticket-supervisor`, with the commit-phase serialization lock from
-  `building-epics` §5. The pre-move in Step 3 stages a rename but never
-  commits it — the `commit` phase picks the staged rename up alongside
-  the regular implementation diff, so the move travels into the PR as
-  part of the normal commit, not as a follow-up bookkeeping commit.
-  The one exception is the post-completion changelog commit in Step 5b,
+  `building-epics` §5. The commit phase stages only sign-off edits and
+  implementation changes — no ticket file rename is staged because the
+  ticket file is never pre-moved on the branch.
+  The one exception is the post-completion changelog commit in Step 4b,
   which mirrors `epic-supervisor` Step 2 and lands on the same PR branch
   the `pull-request` phase opened.
 - **Does not bypass user escalation.** When the supervisor surfaces
@@ -397,3 +344,5 @@ Do not add any other preamble or summary text.
   the supervisor follows.
 - `.claude/skills/signoff/SKILL.md` — ticket-state schema the
   supervisor reads (and phase agents write).
+- EPIC-MoveOnMainOnly — the design decision that removed branch-side `git mv`; folder
+  reconciliation now happens on `main` after merge via `finalize-feature.js`.

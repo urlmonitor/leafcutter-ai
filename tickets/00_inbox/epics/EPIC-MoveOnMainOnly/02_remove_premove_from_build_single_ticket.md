@@ -14,14 +14,14 @@ requires_adr: false
 files_touched:
   - templates/skills/build-single-ticket/SKILL.md
 agents:
-  architect-review: needed
+  architect-review: signed_off
   test-writer: not_needed
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
-  documentation-expert: needed
-  pr-reviewer: needed
-  commit: needed
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -106,24 +106,63 @@ Then the "git mv 99_done/ → 01_todo/" revert instruction is absent
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] documentation-expert
-- [ ] pr-reviewer
-- [ ] commit
+- [x] architect-review — 2026-06-03 10:00
+- [x] documentation-expert — 2026-06-03 10:15
+- [x] pr-reviewer — 2026-06-03 10:20
+- [x] commit — 2026-06-03 10:25
 - [ ] pull-request
 
 ## Comments
+
+### 2026-06-03 10:25 — commit (status: ok)
+feedback-id: fb_2026-06-03_c4501542
+completion_manifest:
+  staged_files_correct: true
+  commit_created: true
+  no_cross_ticket_pollution: true
+Staged exactly 3 in-scope files: templates/skills/build-single-ticket/SKILL.md, the ticket file, and debugging/logs/feedback.jsonl. Ticket 04's modification and tests/test_check_ticket_no_branch_move.py were NOT staged (out-of-scope for this ticket). Commit to follow.
+
+### 2026-06-03 10:20 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-03_e3f48b81
+completion_manifest:
+  diff_reviewed: true
+  no_high_findings: true
+  scope_verified: true
+Reviewed diff of templates/skills/build-single-ticket/SKILL.md (35 insertions, 86 deletions, 1 file). Change is pure subtraction and renumbering: Step 3 pre-move entirely removed, Step 2 field name updated to `ticket_path_final`, old Steps 4/5 renumbered to 3/4, failure-path `git mv` revert removed, move-on-main-only note added, References updated. No high-confidence or medium-confidence findings. Scope matches `files_touched` exactly — no unexpected files touched.
+
+Escalation: none (0 medium findings, threshold >3).
+
+### 2026-06-03 10:15 — documentation-expert (status: ok)
+feedback-id: fb_2026-06-03_e07755ea
+completion_manifest:
+  doc_written: true
+  cross_links_added: true
+  diataxis_genre_correct: true
+Removed Step 3 (pre-move section) entirely from build-single-ticket/SKILL.md, updated Step 2 heading and JSON field name to `ticket_path_final`, renumbered Steps 4/5 → 3/4 with all internal cross-references (Step 5b → 4b, Step 5c → 4c), removed the failure-path `git mv` revert block and replaced with no-op explanation, added move-on-main-only note at top, and added EPIC-MoveOnMainOnly to References. Cross-link to `finalize-feature.js` Step 5 preserved in intro note. Diataxis genre: skill update (how-to/procedural). Glossary coverage: no new terms detected.
+
+### 2026-06-03 10:00 — architect-review (status: ok)
+feedback-id: fb_2026-06-03_577b0fc6
+completion_manifest:
+  blast_radius_assessed: true
+  impact_classified: true
+  architectural_note_written: true
+Single-file skill documentation change (templates/skills/build-single-ticket/SKILL.md). No always-large triggers (no migration, no hypertable, no public API, no ADR contract change). One file, one component (build_pipeline) — classified Small. The removal of the pre-move step and the failure-path revert block are logically sound: the revert exists only to undo the pre-move, so removing the pre-move makes the revert dead code. Step renumbering is contiguous. Coordination dependency on ticket 01 JSON field name is acknowledged in the ticket. No ADR needed. Suggested diagrams: none (documentation-only refactor).
+
+## Escalation
+
+Branch: none
+Reason: 1 file in 1 component (build_pipeline skill); no always-large trigger fired. Classification: Small.
 
 ## Implementation Tasks
 
 ### documentation-expert
 
-- [ ] In `templates/skills/build-single-ticket/SKILL.md`, remove the entire
+- [x] In `templates/skills/build-single-ticket/SKILL.md`, remove the entire
   `## Step 3 — Pre-move the ticket to 99_done/ (inside the worktree)` section
   including its `git mv` bash block and all explanatory paragraphs
   ("Rename tracking", "Why pre-move instead of post-move", "Why the move is
   safe before work is done", and the "If the worktree is dirty" guard).
-- [ ] Update `## Step 2 — Set up the worktree and promote the ticket` to:
+- [x] Update `## Step 2 — Set up the worktree and promote the ticket` to:
   - Remove "and promote the ticket" from the heading (rename to "Set up the
     worktree").
   - Update the JSON parsing instruction: replace `ticket_path_new →
@@ -134,10 +173,10 @@ Then the "git mv 99_done/ → 01_todo/" revert instruction is absent
     against). Simplify to: "The script creates and bootstraps the worktree.
     It does NOT move the ticket file — folder position is reconciled on main
     by `finalize-feature.js` after merge."
-- [ ] Renumber steps: old Step 4 becomes Step 3, old Step 5 becomes Step 4.
+- [x] Renumber steps: old Step 4 becomes Step 3, old Step 5 becomes Step 4.
   Update all internal cross-references ("see Step 3", "Step 5c", etc.) to
   the new numbers.
-- [ ] In the new Step 4 (old Step 5) failure path, remove the block:
+- [x] In the new Step 4 (old Step 5) failure path, remove the block:
   ```bash
   git -C "$WORKTREE_PATH" mv \
       "tickets/99_done/<basename>" \
@@ -146,13 +185,13 @@ Then the "git mv 99_done/ → 01_todo/" revert instruction is absent
   Replace with: "Because the ticket file was never pre-moved, no revert is
   needed on failure. Surface the supervisor's `payload` verbatim to the user
   and return non-zero."
-- [ ] Add a one-paragraph note at the top of the skill (after the frontmatter,
+- [x] Add a one-paragraph note at the top of the skill (after the frontmatter,
   before `## Input`) documenting the move-on-main-only change:
   "As of EPIC-MoveOnMainOnly, branches no longer move ticket files between
   lifecycle folders. The skill's job is to drive the ticket through phase
   agents. Folder reconciliation (inbox → done) happens on `main` after merge
   via `finalize-feature.js` Step 5."
-- [ ] Update the `## References` section to add:
+- [x] Update the `## References` section to add:
   `- EPIC-MoveOnMainOnly — the design decision that removed branch-side git mv.`
 
 ## Risk & Safety
