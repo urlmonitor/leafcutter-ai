@@ -122,6 +122,33 @@ def _matches_date_window(
     return True
 
 
+def _matches_resolution_filter(
+    entry: dict,
+    unresolved_only: bool,
+    resolved_only: bool,
+) -> bool:
+    """Return True if the entry passes the resolution state filter.
+
+    Entries without 'resolved_at' are treated as unresolved.
+    When neither flag is set, all entries pass.
+
+    Args:
+        entry: Feedback JSONL entry dict.
+        unresolved_only: When True, include only unresolved entries.
+        resolved_only: When True, include only resolved entries.
+
+    Returns:
+        bool: True when the entry should be included.
+    """
+    if not unresolved_only and not resolved_only:
+        return True
+    is_resolved = bool(entry.get("resolved_at"))
+    if unresolved_only:
+        return not is_resolved
+    # resolved_only
+    return is_resolved
+
+
 def _matches_scalar_filters(
     entry: dict,
     ticket: str | None,
@@ -168,11 +195,14 @@ def filter_entries(
     until: str | None = None,
     source: str | None = None,
     hook_name: str | None = None,
+    unresolved_only: bool = False,
+    resolved_only: bool = False,
 ) -> list[dict]:
     """Filter a list of feedback entries by the given criteria.
 
     All filters are AND-combined. Absent filters are not applied.
     Entries without a 'source' field are treated as source='agent'.
+    Entries without a 'resolved_at' field are treated as unresolved.
 
     Args:
         entries: List of parsed feedback entry dicts.
@@ -183,6 +213,8 @@ def filter_entries(
         until: ISO date string YYYY-MM-DD; include entries on or before this date.
         source: Filter by 'source' field ('agent' or 'hook'). None = all sources.
         hook_name: Filter by 'hook_name' field (only meaningful for source=hook).
+        unresolved_only: When True, include only entries where resolved_at is absent/null.
+        resolved_only: When True, include only entries where resolved_at is present/non-null.
 
     Returns:
         list[dict]: Filtered list of entries.
@@ -196,6 +228,8 @@ def filter_entries(
             continue
         if not _matches_date_window(entry, since_dt, until_dt):
             continue
+        if not _matches_resolution_filter(entry, unresolved_only, resolved_only):
+            continue
         result.append(entry)
     return result
 
@@ -205,22 +239,32 @@ def filter_entries(
 # ---------------------------------------------------------------------------
 
 
-def _build_summary(entries: list[dict]) -> dict:
+def _build_summary(
+    entries: list[dict],
+    unresolved_only: bool = False,
+    resolved_only: bool = False,
+) -> dict:
     """Build a summary dict with total count, per-category, and per-phase counts.
 
     Also builds per-hook-name counts when the filtered set contains hook entries.
+    When a resolution filter is active, adds a 'resolution_state' key with resolved
+    and unresolved counts over the filtered set.
 
     Args:
         entries: Filtered list of feedback entry dicts.
+        unresolved_only: Whether --unresolved filter was applied.
+        resolved_only: Whether --resolved filter was applied.
 
     Returns:
         dict: Summary with 'total', 'by_category', 'by_phase', and optionally
-              'by_hook_name' keys.
+              'by_hook_name' and 'resolution_state' keys.
     """
     by_category: dict[str, int] = {}
     by_phase: dict[str, int] = {}
     by_hook_name: dict[str, int] = {}
     has_hooks = False
+    resolved_count = 0
+    unresolved_count = 0
 
     for entry in entries:
         cat = entry.get("category", "unknown")
@@ -231,6 +275,10 @@ def _build_summary(entries: list[dict]) -> dict:
             has_hooks = True
             hn = entry.get("hook_name", "unknown")
             by_hook_name[hn] = by_hook_name.get(hn, 0) + 1
+        if entry.get("resolved_at"):
+            resolved_count += 1
+        else:
+            unresolved_count += 1
 
     summary: dict = {
         "total": len(entries),
@@ -239,6 +287,11 @@ def _build_summary(entries: list[dict]) -> dict:
     }
     if has_hooks:
         summary["by_hook_name"] = dict(sorted(by_hook_name.items()))
+    if unresolved_only or resolved_only:
+        summary["resolution_state"] = {
+            "resolved": resolved_count,
+            "unresolved": unresolved_count,
+        }
     return summary
 
 
@@ -264,7 +317,8 @@ def _format_table(entries: list[dict], summary: dict) -> str:
         cat = entry.get("category", "?")
         ph = entry.get("phase", "?")
         note = entry.get("note", "")[:60]
-        lines.append(f"  {ts}  {fid}  {cat:<22}  {ph:<20}  {note}")
+        resolved_suffix = "  [RESOLVED]" if entry.get("resolved_at") else ""
+        lines.append(f"  {ts}  {fid}  {cat:<22}  {ph:<20}  {note}{resolved_suffix}")
 
     lines.append("")
     lines.append(f"Total: {summary['total']}")
@@ -336,6 +390,19 @@ def main(argv: list[str] | None = None) -> int:
         default="table",
         help="Output format (default: table).",
     )
+    resolution_group = parser.add_mutually_exclusive_group()
+    resolution_group.add_argument(
+        "--unresolved",
+        action="store_true",
+        default=False,
+        help="Include only entries where resolved_at is absent or null.",
+    )
+    resolution_group.add_argument(
+        "--resolved",
+        action="store_true",
+        default=False,
+        help="Include only entries where resolved_at is present and non-null.",
+    )
 
     args = parser.parse_args(argv)
 
@@ -351,9 +418,11 @@ def main(argv: list[str] | None = None) -> int:
         until=args.until,
         source=args.source,
         hook_name=args.hook_name,
+        unresolved_only=args.unresolved,
+        resolved_only=args.resolved,
     )
 
-    summary = _build_summary(filtered)
+    summary = _build_summary(filtered, unresolved_only=args.unresolved, resolved_only=args.resolved)
 
     if args.format == "json":
         print(_format_json(filtered, summary))
@@ -369,6 +438,12 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-06-03 09:15 [TICKET-20260603-FeedbackResolutionTracking]: Add resolution filters. (#TICKET-20260603-FeedbackResolutionTracking)
+#   Added --unresolved and --resolved CLI flags (mutually exclusive) to filter_entries()
+#   and main(). Entries without resolved_at treated as unresolved (backward-compat).
+#   _build_summary() gains optional resolution_state key (omitted when no filter active,
+#   ensuring existing callers are unaffected). _format_table() shows [RESOLVED] suffix
+#   for resolved entries. _matches_resolution_filter() is the new helper function.
 # - 2026-05-18 12:45 [EPIC-AgentSystemFrictionReduction/04]: Convert _JSONL_DEFAULT to __file__-relative path. (#EPIC-AgentSystemFrictionReduction/04)
 #   CWD-relative Path("debugging/logs/feedback.jsonl") resolves incorrectly when
 #   invoked from a worktree. Fix: Path(__file__).resolve().parents[3] / "debugging" / "logs" / "feedback.jsonl".
