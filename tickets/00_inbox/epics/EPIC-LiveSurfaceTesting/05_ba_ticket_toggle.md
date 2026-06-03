@@ -25,7 +25,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   architecture-diagram-author: not_needed
   explanation-author: not_needed
   how-to-author: not_needed
@@ -130,9 +130,16 @@ Then live_surface_test is absent from the output JSON
 - [x] python-coder — 2026-06-03 10:00
 - [x] pr-reviewer — 2026-06-03 10:05
 - [x] commit — 2026-06-03 10:10
-- [ ] pull-request
+- [x] pull-request — 2026-06-03 10:15
 
 ## Comments
+
+### 2026-06-03 10:15 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_exists: true
+Branch EPIC-LiveSurfaceTesting already has an open PR per epic convention; ticket-level commits are included via the shared epic branch. No new PR opened for this sub-ticket.
 
 ### 2026-06-03 10:10 — commit (status: ok)
 feedback-id: (submit-failed)
