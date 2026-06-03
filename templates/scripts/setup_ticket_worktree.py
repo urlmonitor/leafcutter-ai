@@ -1,7 +1,7 @@
 """
 MODULE: setup_ticket_worktree.py
-GOAL: Canonical script for creating, bootstrapping, and ticket-promoting a git
-    worktree for a standalone ticket or a free-form feature branch.
+GOAL: Canonical script for creating and bootstrapping a git worktree for a
+    standalone ticket or a free-form feature branch.
 BUSINESS CONTEXT: Eliminates fragile multi-step worktree setup duplicated across
     build-single-ticket/SKILL.md, feature/SKILL.md, and worktree-agent.md. All
     three call sites delegate to this script so there is one place to fix when
@@ -9,12 +9,13 @@ BUSINESS CONTEXT: Eliminates fragile multi-step worktree setup duplicated across
     policy, poetry --no-root flag, etc.).
 ARCHITECTURE: Pure stdlib (pathlib, subprocess, shutil, json, argparse, re,
     sys). Two subcommands: ``setup-ticket`` (full flow: validate + slug + worktree
-    + bootstrap + ticket move) and ``create-only`` (worktree + bootstrap, no
-    ticket). Outputs a single-line JSON payload to stdout so callers can parse it
-    with any JSON tool. All subprocess calls use check=True to propagate non-zero
-    exits as Python exceptions, which are caught and printed to stderr before
-    sys.exit(1). No file output to project directories — the script itself is
-    idempotent and safe to re-run.
+    + bootstrap) and ``create-only`` (worktree + bootstrap, no ticket). Ticket
+    files are never moved by this script; folder reconciliation on main is handled
+    by ``finalize-feature.js`` after the branch merges. Outputs a single-line JSON
+    payload to stdout so callers can parse it with any JSON tool. All subprocess
+    calls use check=True to propagate non-zero exits as Python exceptions, which
+    are caught and printed to stderr before sys.exit(1). No file output to project
+    directories — the script itself is idempotent and safe to re-run.
 BRANCHING POLICY: New worktrees are branched from local ``main`` HEAD (not
     ``origin/main``).  This ensures that unpushed commits on local ``main`` —
     most commonly the ticket-creation commit produced by ``/create-ticket`` — are
@@ -225,6 +226,14 @@ def _derive_slug(ticket_path: Path) -> str:
 def _validate_ticket(ticket_path: Path) -> None:
     """Validate *ticket_path* for the setup-ticket subcommand.
 
+    Validates that the ticket file exists at a recognised lifecycle folder path
+    (``tickets/00_inbox/`` or ``tickets/01_todo/``) and is not nested under an
+    epic folder.  Both folder locations are accepted so that in-flight tickets
+    already in ``01_todo/`` can have worktrees created against them.  The
+    function does NOT constrain which folder is used after worktree creation —
+    ticket folder position is reconciled on main by ``finalize-feature.js``
+    after the branch is merged, not by this script.
+
     Exits with code 1 on any guard violation, printing a message to stderr.
 
     Args:
@@ -235,7 +244,6 @@ def _validate_ticket(ticket_path: Path) -> None:
         sys.exit(1)
 
     parts = ticket_path.parts
-    # Must be under tickets/00_inbox/ or tickets/01_todo/
     in_inbox = any(
         i + 1 < len(parts) and parts[i] == "tickets" and parts[i + 1] in ("00_inbox", "01_todo")
         for i in range(len(parts))
@@ -255,42 +263,6 @@ def _validate_ticket(ticket_path: Path) -> None:
             file=sys.stderr,
         )
         sys.exit(1)
-
-
-def _move_ticket(ticket_path: Path, worktree_path: Path) -> Path:
-    """Move *ticket_path* from 00_inbox/ to 01_todo/ via ``git mv`` inside the worktree.
-
-    If the ticket is already under 01_todo/, returns its path unchanged (idempotent).
-
-    Args:
-        ticket_path: Absolute Path to the ticket file (may be under 00_inbox/ or
-            01_todo/).
-        worktree_path: Absolute Path to the worktree root (cwd for git mv).
-
-    Returns:
-        Absolute Path to the ticket at its final location inside 01_todo/.
-    """
-    path_str = str(ticket_path)
-    if "00_inbox" not in path_str:
-        # Already in 01_todo/ or elsewhere — skip silently.
-        return ticket_path
-
-    basename = ticket_path.name
-    # Relative paths inside the worktree (git mv needs repo-relative paths)
-    old_rel = Path("tickets") / "00_inbox" / basename
-    new_rel = Path("tickets") / "01_todo" / basename
-
-    # Idempotency: if destination already exists, skip
-    destination = worktree_path / new_rel
-    if destination.exists():
-        return destination
-
-    subprocess.run(
-        ["git", "mv", str(old_rel), str(new_rel)],
-        cwd=worktree_path,
-        check=True,
-    )
-    return destination
 
 
 # ---------------------------------------------------------------------------
@@ -403,7 +375,11 @@ def _install_drift_hook(worktree_path: Path, repo_root: Path) -> None:
 
 
 def cmd_setup_ticket(args: argparse.Namespace) -> None:
-    """Full flow: validate + slug + worktree + bootstrap + ticket move.
+    """Full flow: validate + slug + worktree + bootstrap.
+
+    The ticket file is NOT moved — it remains in its original lifecycle folder.
+    Folder reconciliation on main is handled by ``finalize-feature.js`` after
+    the branch merges.
 
     Prints a single-line JSON payload to stdout on success and exits 0.
     Exits 1 on any validation or subprocess failure.
@@ -432,8 +408,6 @@ def cmd_setup_ticket(args: argparse.Namespace) -> None:
         _bootstrap(main_repo, worktree_path)
         created = True
 
-    ticket_path_new = _move_ticket(ticket_path, worktree_path)
-
     # Install post-checkout drift hook on the new worktree and on main.
     _install_drift_hook(worktree_path, main_repo)
     _install_drift_hook(main_repo, main_repo)
@@ -444,7 +418,7 @@ def cmd_setup_ticket(args: argparse.Namespace) -> None:
     payload = {
         "worktree_path": str(worktree_path),
         "branch": f"feature/{slug}",
-        "ticket_path_new": str(ticket_path_new),
+        "ticket_path_final": str(ticket_path),
         "created": created,
     }
     print(json.dumps(payload))
@@ -500,7 +474,7 @@ def _build_parser() -> argparse.ArgumentParser:
         prog="setup_ticket_worktree.py",
         description=(
             "Canonical worktree bootstrap script. Two subcommands:\n"
-            "  setup-ticket  Full flow: worktree + bootstrap + ticket move.\n"
+            "  setup-ticket  Full flow: validate ticket, create worktree, bootstrap.\n"
             "  create-only   Worktree + bootstrap only (no ticket)."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -510,7 +484,7 @@ def _build_parser() -> argparse.ArgumentParser:
     # setup-ticket subcommand
     p_setup = subparsers.add_parser(
         "setup-ticket",
-        help="Full flow: validate ticket, create worktree, bootstrap, move ticket to 01_todo/.",
+        help="Full flow: validate ticket, create worktree, bootstrap (no ticket move).",
     )
     p_setup.add_argument(
         "ticket_path",
@@ -556,6 +530,12 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-03 10:02 [EPIC-MoveOnMainOnly/01]: Removed _move_ticket() — branches
+  no longer move ticket files; finalize-feature.js reconciles folder
+  position on main after merge. The JSON output field was renamed from
+  ticket_path_new to ticket_path_final to make clear the file was not moved.
+  Updated _validate_ticket() docstring to clarify both lifecycle folders remain
+  valid for worktree creation without implying a move will occur.
 - 2026-06-03 08:30 [Agent/python-coder]: Changed .env handling in _bootstrap()
   from shutil.copy to os.symlink (TICKET-20260602-WorktreeEnvSymlink).
   Symlink ensures worktrees always see the current main-repo .env without
