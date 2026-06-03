@@ -1,6 +1,6 @@
 ---
 title: "Add resolution tracking to feedback.jsonl schema"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-03
@@ -23,7 +23,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   user-surface-smoker: not_needed
@@ -126,7 +126,7 @@ Then those pre-existing entries ARE included (absence of resolved_at = unresolve
 - [x] test-runner — 2026-06-03 09:25
 - [x] pr-reviewer — 2026-06-03 09:30
 - [x] commit — 2026-06-03 09:35
-- [ ] pull-request
+- [x] pull-request — 2026-06-03 09:40
 
 ## Comments
 
@@ -220,6 +220,13 @@ completion_manifest:
   files_staged: true
   commit_clean: true
 Staged scripts/feedback/resolve_feedback.py, scripts/feedback/aggregate.py, unit_tests/feedback/test_resolve_feedback.py, unit_tests/feedback/test_aggregate_resolution.py, tickets/00_inbox/TICKET-20260603-FeedbackResolutionTracking.md, debugging/logs/feedback.jsonl. Committed to feature/feedbackresolutiontracking.
+
+### 2026-06-03 09:40 — pull-request (status: ok)
+feedback-id: fb_2026-06-03_66e4c567
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+Branch feature/feedbackresolutiontracking pushed to origin. PR #41 opened at https://github.com/urlmonitor/leafcutter-ai/pull/41.
 
 ## Implementation Tasks
 
