@@ -1,6 +1,6 @@
 ---
 title: "Fix user-surface-smoker feedback submission failing silently in worktrees"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-03
