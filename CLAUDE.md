@@ -140,6 +140,30 @@ For deeper explanation of the Ruff rules, see:
 Run through these checks before invoking `/build-feature` or starting any epic drive.
 Skipping them risks silent failures that are hard to diagnose after the fact.
 
+### EMU account: open epic PR before drive (if applicable)
+
+**What to check:** If you are operating under an Enterprise Managed User (EMU)
+GitHub account, `gh pr create` is blocked at the CLI level. Before dispatching
+any tickets:
+
+```bash
+# Switch to the non-EMU account
+gh auth switch --user urlmonitor
+
+# Push the epic branch to origin first
+git push -u origin EPIC-<name>
+
+# Then open the PR manually at:
+# https://github.com/<org>/<repo>/compare/main...EPIC-<name>
+```
+
+Once the PR exists, the `pull-request` phase on each ticket should detect it via
+`gh pr list --head EPIC-<name>` and push to the existing branch without re-opening.
+
+**If you skip this:** The pull-request phase on the first ticket that tries `gh pr
+create` under the EMU account will fail with "Unauthorized: As an Enterprise Managed
+User, you cannot access this content (createPullRequest)".
+
 ### Feedback sink reachable
 
 **What to check:** Verify that `debugging/logs/agent_telemetry.jsonl` (or the configured
