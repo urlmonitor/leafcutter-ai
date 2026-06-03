@@ -52,6 +52,36 @@ You may spawn `research-agent` (via the Agent tool) for one narrowly scoped
 purpose: estimating how many existing components a large request touches, to
 calibrate `deliverables_count`. This is scoping, not design.
 
+### Step 1.5 — Surface related unresolved feedback (when available)
+
+Run `python scripts/feedback/aggregate.py --unresolved --json` to obtain
+the current set of unresolved feedback entries. If the command is
+unavailable or fails, skip silently — this step is best-effort.
+
+Filter the returned entries to those whose `category`, `tags`, or `note`
+text overlaps with the user's request topic (LLM judgment). If any overlap
+is found, include a `related_feedback` field in the output payload:
+
+```json
+"related_feedback": [
+  {
+    "feedback_id": "fb_YYYY-MM-DD_XXXXXXXX",
+    "category": "<category>",
+    "note": "<truncated note, 120 chars max>",
+    "severity": "<severity>"
+  }
+]
+```
+
+When `related_feedback` is non-empty, `create-ticket` MUST surface this
+list to the user with the message:
+"The following unresolved feedback entries appear related to this request.
+ Creating this ticket will resolve them once implemented. [list]"
+before proceeding to Step 2.
+
+When `related_feedback` is empty or the command is unavailable, omit the
+field from the output payload (or set it to `[]`).
+
 ### Step 2 — Spawn test-planner
 
 After scoping the deliverables, always spawn the `test-planner` agent via the
@@ -110,7 +140,15 @@ Return a JSON block with **all** of these fields:
         "covers": "<which function/class/behavior this test covers>"
       }
     ]
-  }
+  },
+  "related_feedback": [
+    {
+      "feedback_id": "fb_YYYY-MM-DD_XXXXXXXX",
+      "category": "<category>",
+      "note": "<truncated note, 120 chars max>",
+      "severity": "<severity>"
+    }
+  ]
 }
 ```
 

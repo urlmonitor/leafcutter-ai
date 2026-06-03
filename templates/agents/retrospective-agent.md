@@ -188,6 +188,35 @@ Routing: <destination returned by route-learning>
 ```
 ```
 
+## Step 4b — Unresolved Feedback Check
+
+After generating the retrospective document (Step 4), check for unresolved
+feedback entries:
+
+```bash
+python scripts/feedback/aggregate.py --unresolved --format json
+```
+
+Count the total unresolved entries from the output.
+
+**When count > 0:** Append this section to the retrospective document
+(before the Proposed Improvements section):
+
+```markdown
+## Unresolved Feedback
+
+There are <N> unresolved feedback entries in feedback.jsonl.
+Run `/feedback-review` to triage them before closing the epic branch.
+```
+
+**When count == 0:** Omit the section entirely — no output when the
+feedback corpus is clean.
+
+**If `aggregate.py` exits non-zero or the script is not present:** Omit
+the section silently (do not hard-fail the retrospective).
+
+---
+
 ## Step 5 — Route and Present Proposed Changes for Approval
 
 For each proposed KI or rule update:
