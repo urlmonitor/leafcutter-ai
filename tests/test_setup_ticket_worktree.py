@@ -172,5 +172,130 @@ class TestBootstrapMcpJsonStillCopied(unittest.TestCase):
         mock_copy.assert_any_call(main_repo / ".mcp.json", worktree / ".mcp.json")
 
 
+class TestSetupTicketDoesNotMoveTicketFile(unittest.TestCase):
+    """cmd_setup_ticket() never calls git mv — ticket stays in its original folder."""
+
+    def test_setup_ticket_does_not_move_ticket_file(self):
+        """
+        Given setup-ticket is called with a ticket in 00_inbox/,
+        When the script exits 0,
+        Then git mv was never called and the returned JSON contains the
+        original 00_inbox/ path in ticket_path_final.
+        """
+        mod = _load_setup_module()
+
+        # Fake ticket in 00_inbox/
+        ticket_path_str = "/fake/repo/tickets/00_inbox/TICKET-20260603-TestNoMove.md"
+
+        git_mv_calls: list = []
+
+        def fake_run(cmd, **kwargs):
+            # Intercept any git mv call
+            if isinstance(cmd, list) and "git" in cmd and "mv" in cmd:
+                git_mv_calls.append(cmd)
+                raise AssertionError  # git mv must not be called
+            mock_result = MagicMock()
+            if cmd[0] == "git" and cmd[1:3] == ["rev-parse", "--show-toplevel"]:
+                mock_result.stdout = "/fake/repo\n"
+                mock_result.returncode = 0
+            elif cmd[0] == "git" and cmd[1:3] == ["worktree", "list"]:
+                mock_result.stdout = ""
+                mock_result.returncode = 0
+            elif cmd[0] == "git" and cmd[1:3] == ["worktree", "add"]:
+                mock_result.returncode = 0
+            else:
+                mock_result.returncode = 0
+            return mock_result
+
+        import io
+        fake_stdout = io.StringIO()
+
+        with (
+            patch.object(mod.subprocess, "run", side_effect=fake_run),
+            patch("sys.stdout", fake_stdout),
+            patch.object(mod.Path, "mkdir"),
+            patch.object(mod, "_bootstrap"),
+            patch.object(mod, "_install_drift_hook"),
+            patch.object(mod, "_install_pre_commit_shims"),
+            patch.object(mod, "_worktree_exists", return_value=(False, None)),
+            patch.object(mod, "_create_worktree", return_value=Path("/fake/worktrees/testnomore")),
+            patch.object(mod, "_git_toplevel", return_value=Path("/fake/repo")),
+        ):
+            import argparse as ap
+            args = ap.Namespace(ticket_path=ticket_path_str, branch=None)
+            mod.cmd_setup_ticket(args)
+
+        # git mv must never have been called
+        self.assertEqual(git_mv_calls, [], "git mv must not be called by setup_ticket()")
+
+        # Returned JSON must contain original 00_inbox/ path
+        output = fake_stdout.getvalue().strip()
+        import json as _json
+        payload = _json.loads(output)
+        self.assertIn("ticket_path_final", payload)
+        self.assertIn("00_inbox", payload["ticket_path_final"])
+        # Must NOT contain 01_todo
+        self.assertNotIn("01_todo", payload["ticket_path_final"])
+
+    def test_setup_ticket_accepts_01_todo_ticket(self):
+        """
+        Given setup-ticket is called with a ticket already in 01_todo/,
+        When the script exits 0,
+        Then the ticket file remains in 01_todo/ and no git mv is issued.
+        """
+        mod = _load_setup_module()
+
+        ticket_path_str = "/fake/repo/tickets/01_todo/TICKET-20260603-AlreadyInTodo.md"
+
+        git_mv_calls: list = []
+
+        def fake_run(cmd, **kwargs):
+            if isinstance(cmd, list) and "git" in cmd and "mv" in cmd:
+                git_mv_calls.append(cmd)
+                raise AssertionError  # git mv must not be called
+            mock_result = MagicMock()
+            if cmd[0] == "git" and cmd[1:3] == ["rev-parse", "--show-toplevel"]:
+                mock_result.stdout = "/fake/repo\n"
+            return mock_result
+
+        import io
+        fake_stdout = io.StringIO()
+
+        with (
+            patch.object(mod.subprocess, "run", side_effect=fake_run),
+            patch("sys.stdout", fake_stdout),
+            patch.object(mod.Path, "mkdir"),
+            patch.object(mod, "_bootstrap"),
+            patch.object(mod, "_install_drift_hook"),
+            patch.object(mod, "_install_pre_commit_shims"),
+            patch.object(mod, "_worktree_exists", return_value=(False, None)),
+            patch.object(mod, "_create_worktree", return_value=Path("/fake/worktrees/alreadyintodo")),
+            patch.object(mod, "_git_toplevel", return_value=Path("/fake/repo")),
+        ):
+            import argparse as ap
+            args = ap.Namespace(ticket_path=ticket_path_str, branch=None)
+            mod.cmd_setup_ticket(args)
+
+        self.assertEqual(git_mv_calls, [], "git mv must not be called")
+
+        output = fake_stdout.getvalue().strip()
+        import json as _json
+        payload = _json.loads(output)
+        self.assertIn("ticket_path_final", payload)
+        self.assertIn("01_todo", payload["ticket_path_final"])
+
+    def test_move_ticket_function_absent(self):
+        """
+        Given setup_ticket_worktree.py is loaded,
+        When _move_ticket is searched for in the module,
+        Then the attribute does not exist (zero matches).
+        """
+        mod = _load_setup_module()
+        self.assertFalse(
+            hasattr(mod, "_move_ticket"),
+            "_move_ticket function must not exist in the module after removal",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
