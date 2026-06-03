@@ -21,7 +21,7 @@ agents:
   test-runner: not_needed
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -195,7 +195,7 @@ Then it contains a reference to finalize-feature.js as the primary dispatch path
 
 - [x] architect-review — 2026-06-03 10:30
 - [x] pr-reviewer — 2026-06-03 10:45
-- [ ] commit
+- [x] commit — 2026-06-03 11:15
 - [ ] pull-request
 - [x] user-surface-smoker — 2026-06-03 11:00
 
@@ -210,6 +210,14 @@ placeholder_signature: "Invoke the .finalize-feature. agent"
 ```
 
 ## Comments
+
+### 2026-06-03 11:15 — commit (status: ok)
+feedback-id: fb_2026-06-03_6f2e417d
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Committed SHA 7a5c9f7: "feat(workflows): add finalize-feature.js deterministic JS workflow". 4 files changed, 474 insertions(+), 12 deletions(-). Pre-commit hooks: .pre-commit-config.yaml absent in worktree (skipped cleanly via PRE_COMMIT_ALLOW_NO_CONFIG=1). Commit message follows repo style (present-tense imperative, feat scope).
 
 ### 2026-06-03 11:00 — user-surface-smoker (status: ok)
 feedback-id: (submit-failed)
