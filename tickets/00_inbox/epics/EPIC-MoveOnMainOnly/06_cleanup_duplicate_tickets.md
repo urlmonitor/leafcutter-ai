@@ -20,8 +20,8 @@ agents:
   sql-coder: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
-  commit: needed
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -106,11 +106,29 @@ Then it reports no duplicates for either ticket basename
 
 ## Sign-offs
 
-- [ ] pr-reviewer
-- [ ] commit
+- [x] pr-reviewer — 2026-06-03 12:00
+- [x] commit — 2026-06-03 12:05
 - [ ] pull-request
 
 ## Comments
+
+### 2026-06-03 12:00 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-03_fc0fefa7
+completion_manifest:
+  canonical_copies_verified: true
+  inbox_copies_are_stale: true
+  no_unique_content_in_inbox: true
+  deletion_is_safe: true
+Reviewed the two duplicate ticket pairs. The 99_done/ copies of both TICKET-20260527-WireVersionIntoBuild.md (226 lines, all agents signed_off/failed) and TICKET-20260602-ComponentsRegistryScaffold.md (313 lines, status: done) are canonical and more complete. The 00_inbox/ copies are strictly older versions (184 and 272 lines respectively) with no unique content not present in 99_done/. Git rm of the 00_inbox/ copies is safe — no content loss. Plan approved.
+
+### 2026-06-03 12:05 — commit (status: ok)
+feedback-id: fb_2026-06-03_9ea05ef5
+completion_manifest:
+  staged_explicit_paths_only: true
+  commit_created: true
+  no_unintended_files: true
+  two_deletions_only: true
+Executed git rm on both stale inbox copies (TICKET-20260527-WireVersionIntoBuild.md and TICKET-20260602-ComponentsRegistryScaffold.md). Staged explicitly by path. Committed with chore message — 2 file deletions only, no modifications to 99_done/ canonical copies.
 
 ## Implementation Tasks
 
