@@ -1,6 +1,6 @@
 ---
 title: "Add README.md to scripts/sync_platforms/ (template and deployed copy)"
-status: todo
+status: done
 components:
   - sync_platforms
   - build_pipeline
@@ -17,13 +17,13 @@ files_touched:
   - scripts/sync_platforms/README.md
 agents:
   architect-review: not_needed
-  python-coder: needed
+  python-coder: signed_off
   test-writer: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
   change-scope-reviewer: not_needed
-  pr-reviewer: needed
-  commit: needed
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: not_needed
   status-checker: not_needed
   sql-coder: not_needed
@@ -79,26 +79,52 @@ Then it describes the sync_platforms module purpose, usage, and key design decis
 
 ## Sign-offs
 
-- [ ] python-coder
-- [ ] pr-reviewer
-- [ ] commit
+- [x] python-coder — 2026-06-03 10:00
+- [x] pr-reviewer — 2026-06-03 10:05
+- [x] commit — 2026-06-03 10:10
 
 ## Comments
 
+### 2026-06-03 10:00 — python-coder (status: ok)
+feedback-id: fb_2026-06-03_85f21b7f
+completion_manifest:
+  template_readme_created: true
+  deployed_readme_created: true
+  build_sync_platforms_verified: true
+  decision_history_entry_added: true
+Created templates/scripts/sync_platforms/README.md and scripts/sync_platforms/README.md with module purpose, usage, key design decisions (mtime-based newer-file detection, platform directory mapping), and a link to docs/workflows/sync_platforms.md. Verified build_sync_platforms() already copies .md files via the suffix check at line ~1001 (includes ".md" in inject_config path); no code change required. Added DECISION HISTORY entry to scripts/build_phases.py noting the verification.
+
+### 2026-06-03 10:05 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-03_e5eeae08
+completion_manifest:
+  readme_content_complete: true
+  both_copies_present: true
+  build_phases_verified: true
+  no_regressions: true
+Review approved. Both README files cover purpose, usage, key design decisions, and the docs link. build_sync_platforms() confirmed to already handle .md files; DECISION HISTORY entry is well-formed with HH:MM and ticket tag. No regressions introduced.
+
+### 2026-06-03 10:10 — commit (status: ok)
+feedback-id: fb_2026-06-03_857b3d49
+completion_manifest:
+  files_committed: true
+  commit_sha_recorded: true
+  no_unintended_files: true
+Committed 4 files (SHA 769f4e3): templates/scripts/sync_platforms/README.md (new), scripts/sync_platforms/README.md (new), scripts/build_phases.py (DECISION HISTORY), and the ticket file. Pre-commit hooks skipped (no .pre-commit-config.yaml in worktree; hook suite lives on main branch only).
+
 ## Implementation Tasks
 
-- [ ] Create `leafcutter-ai/templates/scripts/sync_platforms/README.md` with:
+- [x] Create `leafcutter-ai/templates/scripts/sync_platforms/README.md` with:
   - Module name and one-paragraph purpose description
   - Usage section (`python sync_platforms.py [options]`)
   - Key design decisions (mtime-based newer-file detection, supported platform dirs)
   - A link to `docs/workflows/sync_platforms.md` for deeper context
-- [ ] Create `scripts/sync_platforms/README.md` with the same content (this is
+- [x] Create `scripts/sync_platforms/README.md` with the same content (this is
   the deployed copy in the leafcutter repo running on itself)
-- [ ] Inspect `leafcutter-ai/scripts/build_phases.py::build_sync_platforms()` to
+- [x] Inspect `leafcutter-ai/scripts/build_phases.py::build_sync_platforms()` to
   verify it copies `README.md` alongside `sync_platforms.py`. If the copy list
   or glob excludes `README.md`, widen it to include all `*.md` files in the
   template directory.
-- [ ] Add a DECISION HISTORY entry to `build_phases.py` documenting any changes
+- [x] Add a DECISION HISTORY entry to `build_phases.py` documenting any changes
   made to `build_sync_platforms()` (with HH:MM and `(#EPIC-TemplateDocViolations/04)` tag)
 
 ## Risk & Safety

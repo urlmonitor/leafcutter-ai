@@ -45,6 +45,7 @@ def get_staged_files() -> dict[str, str]:
             ["git", "diff", "--cached", "--name-status"],
             capture_output=True,
             text=True,
+            encoding="utf-8",
             check=True,
         )
     except subprocess.CalledProcessError:
@@ -99,39 +100,40 @@ def check_sql_header(filepath: str) -> tuple[bool, str]:
     """
     try:
         content = Path(filepath).read_text(encoding="utf-8")
-        reqs = SQL_REQUIRED_FIELDS
-        missing = [req for req in reqs if req.lower() not in content.lower()]
-        if missing:
-            return False, (
-                f"Missing required SQL header fields: {', '.join(missing)}\n"
-                "   FIX: Add a block comment at the very top of the file with ALL of these fields:\n"
-                "   /*\n"
-                "     Object Name: <procedure/function name>\n"
-                "     Goal: <what it does in one sentence>\n"
-                "     Business Context: <why this exists>\n"
-                "     Architecture: <Mermaid diagram OR 'Not needed.' if no Temp Tables/CTEs/CALLs>\n"
-                "   */\n"
-                "   📖 Rules: .agents/rules/documentation.md #4 (Mandatory Architectural Diagrams)\n"
-                "   🔧 Skill: .agents/skills/doc-enforcer/SKILL.md"
-            )
+    except OSError as e:
+        return False, f"Could not read file: {e}"
 
-        header_text = extract_header_text(content)
+    reqs = SQL_REQUIRED_FIELDS
+    missing = [req for req in reqs if req.lower() not in content.lower()]
+    if missing:
+        return False, (
+            f"Missing required SQL header fields: {', '.join(missing)}\n"
+            "   FIX: Add a block comment at the very top of the file with ALL of these fields:\n"
+            "   /*\n"
+            "     Object Name: <procedure/function name>\n"
+            "     Goal: <what it does in one sentence>\n"
+            "     Business Context: <why this exists>\n"
+            "     Architecture: <Mermaid diagram OR 'Not needed.' if no Temp Tables/CTEs/CALLs>\n"
+            "   */\n"
+            "   📖 Rules: .agents/rules/documentation.md #4 (Mandatory Architectural Diagrams)\n"
+            "   🔧 Skill: .agents/skills/doc-enforcer/SKILL.md"
+        )
 
-        # Validate architecture field
-        passed, err = _validate_architecture(content, header_text)
+    header_text = extract_header_text(content)
+
+    # Validate architecture field
+    passed, err = _validate_architecture(content, header_text)
+    if not passed:
+        return False, err
+
+    # Enforce DECISION HISTORY at the bottom for ALL SQL files
+    arch_line = [l for l in header_text.split('\n') if l.lower().strip().startswith("architecture:")]
+    if arch_line:
+        passed, err = verify_decision_history(filepath, content, file_type="sql")
         if not passed:
             return False, err
 
-        # Enforce DECISION HISTORY at the bottom for ALL SQL files
-        arch_line = [l for l in header_text.split('\n') if l.lower().strip().startswith("architecture:")]
-        if arch_line:
-            passed, err = verify_decision_history(filepath, content, file_type="sql")
-            if not passed:
-                return False, err
-
-        return True, ""
-    except Exception as e:
-        return False, f"Could not read file: {e}"
+    return True, ""
 
 
 def check_py_header(filepath: str) -> tuple[bool, str]:
@@ -148,30 +150,31 @@ def check_py_header(filepath: str) -> tuple[bool, str]:
 
     try:
         content = Path(filepath).read_text(encoding="utf-8")
-        reqs = PYTHON_REQUIRED_FIELDS
-        missing = [req for req in reqs if req not in content]
-        if missing:
-            return False, (
-                f"Missing required Python docstring fields: {', '.join(missing)}\n"
-                '   FIX: Add a module-level docstring at the top of the file with ALL of these fields:\n'
-                '   """\n'
-                '   MODULE: <module name>\n'
-                '   GOAL: <what it does in one sentence>\n'
-                '   BUSINESS CONTEXT: <why this exists>\n'
-                "   ARCHITECTURE: <'Not needed.' if simple, or a Mermaid diagram if it orchestrates 3+ systems>\n"
-                '   """\n'
-                '   📖 Rules: .agents/rules/documentation.md #4 (Mandatory Architectural Diagrams)\n'
-                '   🔧 Skill: .agents/skills/doc-enforcer/SKILL.md'
-            )
-
-        # Enforce DECISION HISTORY for all Python files
-        passed, err = verify_decision_history(filepath, content, file_type="python")
-        if not passed:
-            return False, err
-
-        return True, ""
-    except Exception as e:
+    except OSError as e:
         return False, f"Could not read file: {e}"
+
+    reqs = PYTHON_REQUIRED_FIELDS
+    missing = [req for req in reqs if req not in content]
+    if missing:
+        return False, (
+            f"Missing required Python docstring fields: {', '.join(missing)}\n"
+            '   FIX: Add a module-level docstring at the top of the file with ALL of these fields:\n'
+            '   """\n'
+            '   MODULE: <module name>\n'
+            '   GOAL: <what it does in one sentence>\n'
+            '   BUSINESS CONTEXT: <why this exists>\n'
+            "   ARCHITECTURE: <'Not needed.' if simple, or a Mermaid diagram if it orchestrates 3+ systems>\n"
+            '   """\n'
+            '   📖 Rules: .agents/rules/documentation.md #4 (Mandatory Architectural Diagrams)\n'
+            '   🔧 Skill: .agents/skills/doc-enforcer/SKILL.md'
+        )
+
+    # Enforce DECISION HISTORY for all Python files
+    passed, err = verify_decision_history(filepath, content, file_type="python")
+    if not passed:
+        return False, err
+
+    return True, ""
 
 
 def check_yaml_adr(filepath: str) -> tuple[bool, str]:
@@ -185,13 +188,14 @@ def check_yaml_adr(filepath: str) -> tuple[bool, str]:
     """
     try:
         content = Path(filepath).read_text(encoding="utf-8")
-        passed, err = verify_decision_history(filepath, content, file_type="yaml")
-        if not passed:
-            return False, err
-
-        return True, ""
-    except Exception as e:
+    except OSError as e:
         return False, f"Could not read file: {e}"
+
+    passed, err = verify_decision_history(filepath, content, file_type="yaml")
+    if not passed:
+        return False, err
+
+    return True, ""
 
 
 def process_staged_file(filepath: str, status: str, path: Path) -> list[str]:
@@ -412,5 +416,6 @@ DECISION HISTORY
   verification, DECISION HISTORY enforcement, architecture validation, complex
   construct detection) to doc_validators.py to stay under 400-line limit.
 - 2026-05-18 12:45 [python-coder]: Wired --report-legacy flag (advisory legacy entry count) and validate_tail_tags_in_diff call into main() for EPIC-DocTraceability ADR-033. (#EPIC-DocTraceability/03) (ADR-033)
+- 2026-06-03 [python-coder]: Added encoding="utf-8" to subprocess.run() in get_staged_files() to fix UnicodeDecodeError on Windows when git output contains non-cp1252 bytes. Refactored check_sql_header, check_py_header, check_yaml_adr to use OSError instead of bare Exception catch (BLE001/TRY300 compliance). (#EPIC-TemplateDocViolations/05)
 ====================================================================
 """

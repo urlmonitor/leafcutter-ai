@@ -1165,4 +1165,9 @@ def clean_stale_artifacts(
 #   templates/docs/components.json.template with unconditional write-if-absent
 #   semantics (force=False always passed to _write, ignoring caller flag).
 #   Follows the build_vision() pattern exactly. (#TICKET-20260602-ComponentsRegistryScaffold)
+# - 2026-06-03 10:00 [python-coder/EPIC-TemplateDocViolations/04]: Verified
+#   build_sync_platforms() already copies .md files (suffix check on line ~1001
+#   includes ".md" in the inject_config path). No code change required.
+#   README.md added to templates/scripts/sync_platforms/ and
+#   scripts/sync_platforms/ to satisfy check_documentation hook. (#EPIC-TemplateDocViolations/04)
 # ====================================================================

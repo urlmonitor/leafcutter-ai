@@ -13,7 +13,8 @@ ARCHITECTURE: Standalone script. Reads pyproject.toml and poetry.lock
 # DECISION HISTORY
 # - 2026-05-13 15:00 [epic-supervisor/ticket-23]: Initial implementation.
 #   pip-audit chosen over safety CLI because it uses PYSEC advisories,
-#   is stdlib-compatible, and doesn't require an API key.
+#   is stdlib-compatible, and doesn't require an API key. (#TICKETLESS reason=initial-skill-implementation)
+# - 2026-06-03 00:00 [ticket-supervisor]: Append tail-tag to initial-implementation DECISION HISTORY entry to satisfy check_documentation hook. (#EPIC-TemplateDocViolations/01)
 """
 
 from __future__ import annotations

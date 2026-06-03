@@ -1,6 +1,6 @@
 ---
 title: "Fix missing tail-tags in ticket-prioritizer skill DECISION HISTORY entries"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-26
@@ -15,13 +15,13 @@ files_touched:
   - leafcutter-ai/templates/skills/ticket-prioritizer/scripts/prioritize.py
 agents:
   architect-review: not_needed
-  python-coder: needed
+  python-coder: signed_off
   test-writer: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
   change-scope-reviewer: not_needed
-  pr-reviewer: needed
-  commit: needed
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: not_needed
   status-checker: not_needed
   sql-coder: not_needed
@@ -79,20 +79,43 @@ And the 2026-05-13 17:00 entry ends with (#TICKETLESS reason=99-done-dir-name-al
 
 ## Sign-offs
 
-- [ ] python-coder
-- [ ] pr-reviewer
-- [ ] commit
+- [x] python-coder — 2026-06-03 00:00
+- [x] pr-reviewer — 2026-06-03 00:00
+- [x] commit — 2026-06-03 00:00
 
 ## Comments
 
+### 2026-06-03 00:00 — python-coder (status: ok)
+feedback-id: fb_2026-06-03_ef0f2700
+completion_manifest:
+  tail_tag_entry1_appended: true
+  tail_tag_entry2_appended: true
+  decision_history_entry_added: true
+Appended `(#TICKETLESS reason=initial-dag-implementation)` to the 2026-05-13 13:00 entry and `(#TICKETLESS reason=99-done-dir-name-alignment)` to the 2026-05-13 17:00 entry in `templates/skills/ticket-prioritizer/scripts/prioritize.py`. Added a new DECISION HISTORY entry for this fix with `(#EPIC-TemplateDocViolations/02)` tail-tag.
+
+### 2026-06-03 00:00 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-03_3d03990e
+completion_manifest:
+  tail_tags_match_acceptance_criteria: true
+  no_scope_creep: true
+  decision_history_new_entry_valid: true
+Changes exactly match acceptance criteria: both DECISION HISTORY entries now carry valid tail-tags with reasons ≥ 10 chars; new entry documents the fix with correct `(#EPIC-TemplateDocViolations/02)` tail-tag. No logic changes, no scope creep. Approved.
+
+### 2026-06-03 00:00 — commit (status: ok)
+feedback-id: fb_2026-06-03_57f01344
+completion_manifest:
+  implementation_changes_committed: true
+  ticket_signoff_staged: true
+All implementation changes to `prioritize.py` were already committed in the tree (commit 769f4e3). Signing off commit phase with the ticket sign-off state commit.
+
 ## Implementation Tasks
 
-- [ ] In `leafcutter-ai/templates/skills/ticket-prioritizer/scripts/prioritize.py`,
+- [x] In `leafcutter-ai/templates/skills/ticket-prioritizer/scripts/prioritize.py`,
   append ` (#TICKETLESS reason=initial-dag-implementation)` to the end of the
   `2026-05-13 13:00 [Agent]: Created as part of ticket 17 ...` first-line of that entry
-- [ ] In the same file, append ` (#TICKETLESS reason=99-done-dir-name-alignment)` to
+- [x] In the same file, append ` (#TICKETLESS reason=99-done-dir-name-alignment)` to
   the end of the `2026-05-13 17:00 [Agent]: Ticket 19 — added 99_done ...` first-line
-- [ ] Add a DECISION HISTORY entry to the file documenting this fix
+- [x] Add a DECISION HISTORY entry to the file documenting this fix
   (with HH:MM and `(#EPIC-TemplateDocViolations/02)` tail-tag)
 
 ## Risk & Safety

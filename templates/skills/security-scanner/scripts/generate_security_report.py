@@ -12,7 +12,8 @@ ARCHITECTURE: Standalone script. Walks the project root, runs scan_secrets
 # DECISION HISTORY
 # - 2026-05-13 15:00 [epic-supervisor/ticket-23]: Initial implementation.
 #   Report is markdown (not JSON) because the /security-audit workflow
-#   renders it directly to the user. Machine-parseable summary at the top.
+#   renders it directly to the user. Machine-parseable summary at the top. (#TICKETLESS reason=initial-skill-implementation)
+# - 2026-06-03 00:00 [ticket-supervisor]: Append tail-tag to initial-implementation DECISION HISTORY entry to satisfy check_documentation hook. (#EPIC-TemplateDocViolations/01)
 """
 
 from __future__ import annotations

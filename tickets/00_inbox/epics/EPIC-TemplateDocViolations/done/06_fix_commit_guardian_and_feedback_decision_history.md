@@ -1,6 +1,6 @@
 ---
 title: "Fix missing HH:MM in check_glossary_coverage.py and submit_feedback.py DECISION HISTORY"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-26
@@ -16,13 +16,13 @@ files_touched:
   - scripts/feedback/submit_feedback.py
 agents:
   architect-review: not_needed
-  python-coder: needed
+  python-coder: signed_off
   test-writer: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
   change-scope-reviewer: not_needed
-  pr-reviewer: needed
-  commit: needed
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: not_needed
   status-checker: not_needed
   sql-coder: not_needed
@@ -107,15 +107,42 @@ Then the 2026-05-21 entry reads:
 
 ## Sign-offs
 
-- [ ] python-coder
-- [ ] pr-reviewer
-- [ ] commit
+- [x] python-coder — 2026-06-03 09:00
+- [x] pr-reviewer — 2026-06-03 09:00
+- [x] commit — 2026-06-03 09:00
 
 ## Comments
 
+### 2026-06-03 09:00 — python-coder (status: ok)
+feedback-id: fb_2026-06-03_b5e4e95b
+completion_manifest:
+  canonical_template_decision_history_fixed: true
+  canonical_template_tail_tag_added: true
+  deployed_submit_feedback_already_compliant: true
+  new_decision_history_entries_added: true
+  ruff_violations_resolved: true
+Fixed the 2026-05-22 DECISION HISTORY entry in `templates/scripts/commit_guardian/check_glossary_coverage.py` (inserted `09:00` time and `(#TICKETLESS reason=noqa-triage-stub-bypass)` tail-tag). Also fixed a pre-existing TRY300 ruff violation in that file (moved `return` into `else` block). The deployed `scripts/feedback/submit_feedback.py` 2026-05-21 entry already had `12:00` so no change was needed there; added an audit DECISION HISTORY entry for traceability. Added new DECISION HISTORY entries to both modified files.
+
+### 2026-06-03 09:00 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-03_a06a17b8
+completion_manifest:
+  acceptance_criteria_met: true
+  ruff_clean: true
+  change_scope_matches_plan: true
+  no_regressions_found: true
+Review passed. Both DECISION HISTORY fixes are correct and match the Acceptance Criteria exactly. The pre-existing TRY300 violation was properly fixed while touching the file. The `submit_feedback.py` deployed copy was already compliant; the audit entry is appropriate. All ruff checks pass. Scope is as planned — comment-only changes plus a semantically-equivalent TRY300 restructure.
+
+### 2026-06-03 09:00 — commit (status: ok)
+feedback-id: fb_2026-06-03_646c6950
+completion_manifest:
+  files_staged_correctly: true
+  commit_created: true
+  no_cross_ticket_contamination: true
+Staged only the 3 ticket-scope files; committed DECISION HISTORY fixes for check_glossary_coverage.py and submit_feedback.py.
+
 ## Implementation Tasks
 
-- [ ] In `leafcutter-ai/templates/scripts/commit_guardian/check_glossary_coverage.py`
+- [x] In `leafcutter-ai/templates/scripts/commit_guardian/check_glossary_coverage.py`
   (line 514), change:
   ```
   # - 2026-05-22 [AI]: Added noqa: default-path-smoke to bypass pre-commit hook (uses triage stub).
@@ -124,7 +151,7 @@ Then the 2026-05-21 entry reads:
   ```
   # - 2026-05-22 09:00 [AI]: Added noqa: default-path-smoke to bypass pre-commit hook (uses triage stub). (#TICKETLESS reason=noqa-triage-stub-bypass)
   ```
-- [ ] In `scripts/feedback/submit_feedback.py` (deployed copy in this repo, line 504),
+- [x] In `scripts/feedback/submit_feedback.py` (deployed copy in this repo, line 504),
   change:
   ```
   # - 2026-05-21 [python-coder/TICKET-20260519-deploy_feedback_scripts_via_build]:
@@ -134,7 +161,7 @@ Then the 2026-05-21 entry reads:
   # - 2026-05-21 12:00 [python-coder/TICKET-20260519-deploy_feedback_scripts_via_build]:
   ```
   (matching the clean source at `leafcutter-ai/scripts/feedback/submit_feedback.py`)
-- [ ] Add a DECISION HISTORY entry to each of the two modified files documenting
+- [x] Add a DECISION HISTORY entry to each of the two modified files documenting
   this fix (with today's date, HH:MM, and `(#EPIC-TemplateDocViolations/06)` tail-tag)
 
 ## Risk & Safety
