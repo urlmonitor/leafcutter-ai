@@ -1,6 +1,6 @@
 ---
 title: "Feedback review skill (/feedback-review) and feedback lifecycle architecture diagram"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-03
