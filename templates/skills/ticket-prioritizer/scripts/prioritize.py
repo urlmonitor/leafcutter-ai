@@ -539,11 +539,13 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
-- 2026-05-13 13:00 [Agent]: Created as part of ticket 17 (EPIC-PortableDevWorkflow).
+- 2026-05-13 13:00 [Agent]: Created as part of ticket 17 (EPIC-PortableDevWorkflow). (#TICKETLESS reason=initial-dag-implementation)
   Rewrote the previous priority-only script to resolve depends_on chains via
   a DAG with cycle detection. Kept dependency-free (stdlib only) so it can
   be copied into any project without Poetry/pip requirements.
 - 2026-05-13 17:00 [Agent]: Ticket 19 — added 99_done to DONE_DIR_NAMES to match
-  the renamed done folder (09_done → 99_done per ticket lifecycle manifest update).
+  the renamed done folder (09_done → 99_done per ticket lifecycle manifest update). (#TICKETLESS reason=99-done-dir-name-alignment)
+- 2026-06-03 00:00 [Agent]: Appended missing tail-tags to both DECISION HISTORY entries
+  so check_documentation pre-commit hook passes on downstream installs. (#EPIC-TemplateDocViolations/02)
 ====================================================================
 """
