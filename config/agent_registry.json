@@ -497,7 +497,7 @@
             ],
             "is_ticket_phase": true,
             "selection_criteria": {
-                "description": "Assign to every ticket that produces a code or documentation change — this is the final quality gate before commit.",
+                "description": "Assign to every ticket that produces a code or documentation change \u2014 this is the final quality gate before commit.",
                 "trigger_conditions": [
                     {
                         "type": "llm",
@@ -713,6 +713,25 @@
             "template_path": "templates/agents/retrospective-agent.md",
             "model": "sonnet",
             "skills_used": []
+        },
+        {
+            "id": "feedback-analyst",
+            "name": "Feedback Analyst",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/feedback-analyst.md",
+            "model": "sonnet",
+            "skills_used": [
+                "feedback-analysis"
+            ]
         },
         {
             "id": "refinement",
@@ -1369,5 +1388,4 @@
             ]
         }
     ]
-
 }
