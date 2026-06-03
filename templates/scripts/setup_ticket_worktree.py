@@ -5,7 +5,7 @@ GOAL: Canonical script for creating, bootstrapping, and ticket-promoting a git
 BUSINESS CONTEXT: Eliminates fragile multi-step worktree setup duplicated across
     build-single-ticket/SKILL.md, feature/SKILL.md, and worktree-agent.md. All
     three call sites delegate to this script so there is one place to fix when
-    the bootstrap recipe changes (Windows path-with-spaces quoting, .env copy
+    the bootstrap recipe changes (Windows path-with-spaces quoting, .env symlink
     policy, poetry --no-root flag, etc.).
 ARCHITECTURE: Pure stdlib (pathlib, subprocess, shutil, json, argparse, re,
     sys). Two subcommands: ``setup-ticket`` (full flow: validate + slug + worktree
@@ -141,22 +141,54 @@ def _create_worktree(slug: str, worktrees_dir: Path) -> Path:
 
 
 def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
-    """Copy .env and .mcp.json into *worktree_path* and run ``poetry install``.
+    """Symlink .env and copy .mcp.json into *worktree_path*, then run poetry install.
 
-    Missing source files are silently skipped (FileNotFoundError → pass).
+    `.env` is created as a symlink so that updates to the main repo's `.env`
+    are automatically visible inside every worktree — no manual re-copy needed.
+    On Windows without symlink privilege (OSError / WinError 1314 / EPERM),
+    the function falls back to ``shutil.copy`` and prints a warning to stderr.
+
+    `.mcp.json` is always copied (never symlinked) because its content is set
+    once at bootstrap time and is not expected to change after worktree creation.
+
+    Missing source files are silently skipped (FileNotFoundError → no action).
 
     Args:
         main_repo: Absolute Path to the main repository root where source
             ``.env`` and ``.mcp.json`` reside.
         worktree_path: Absolute Path to the worktree being bootstrapped.
     """
-    for filename in (".env", ".mcp.json"):
-        src = main_repo / filename
-        dst = worktree_path / filename
+    # --- .env: symlink-first, copy as fallback ---
+    env_src = main_repo / ".env"
+    env_dst = worktree_path / ".env"
+    try:
+        os.symlink(env_src, env_dst)
+    except FileNotFoundError:
+        # Source .env does not exist — skip silently.
+        pass
+    except OSError as exc:
+        # Windows without Developer Mode / UAC elevation raises OSError
+        # (WinError 1314 "A required privilege is not held by the client")
+        # or EPERM on some Linux configurations.  Fall back to a plain copy
+        # so the worktree still gets a usable .env.
+        print(
+            f"WARNING: os.symlink failed for .env ({exc}); "
+            "falling back to shutil.copy. "
+            "Enable Developer Mode or run as administrator to get symlink behaviour.",
+            file=sys.stderr,
+        )
         try:
-            shutil.copy(src, dst)
+            shutil.copy(env_src, env_dst)
         except FileNotFoundError:
             pass
+
+    # --- .mcp.json: always copy ---
+    mcp_src = main_repo / ".mcp.json"
+    mcp_dst = worktree_path / ".mcp.json"
+    try:
+        shutil.copy(mcp_src, mcp_dst)
+    except FileNotFoundError:
+        pass
 
     # Populate submodules (like leafcutter) in the new worktree
     subprocess.run(
@@ -524,6 +556,14 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-03 08:30 [Agent/python-coder]: Changed .env handling in _bootstrap()
+  from shutil.copy to os.symlink (TICKET-20260602-WorktreeEnvSymlink).
+  Symlink ensures worktrees always see the current main-repo .env without
+  manual re-copy; resolves silent stale-env failures after .env updates.
+  OSError fallback to shutil.copy preserves Windows compatibility when symlink
+  privilege is absent (WinError 1314 / EPERM). .mcp.json remains a plain copy
+  because its content is fixed at bootstrap time. Updated module docstring and
+  DECISION HISTORY.
 - 2026-05-19 12:00 [Agent/workflow-architect]: Promoted to leafcutter package as
   templates/scripts/setup_ticket_worktree.py. Added portability guard in
   _install_drift_hook(): early-return when
