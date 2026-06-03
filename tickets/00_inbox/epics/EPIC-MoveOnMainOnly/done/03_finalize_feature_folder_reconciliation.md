@@ -23,7 +23,7 @@ agents:
   test-runner: not_needed
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -144,7 +144,7 @@ Then the target folder is tickets/99_done/ for standalone tickets
 
 - [x] architect-review — 2026-06-03 12:00
 - [x] pr-reviewer — 2026-06-03 12:05
-- [ ] commit
+- [x] commit — 2026-06-03 12:10
 - [ ] pull-request
 
 ## Comments
@@ -165,6 +165,14 @@ completion_manifest:
   implementation_complete: true
   no_regressions: true
 All acceptance criteria satisfied. Sub-step 5b in `finalize-feature.js` adds idempotent folder reconciliation: (1) resumability probe via `git log --grep`, (2) status→folder mapping from `ticket_lifecycle.json`, (3) per-file idempotency (skip if already in correct folder), (4) duplicate collision guard with warning, (5) `chore(tickets): reconcile folder positions after merge` commit, (6) `tickets_reconciled` added to success return payload. Leaf-workflow constraint preserved (no `workflow()` call). Implementation is clean and follows existing Step 5 patterns.
+
+### 2026-06-03 12:10 — commit (status: ok)
+feedback-id: fb_2026-06-03_3bee652d
+completion_manifest:
+  commit_created: true
+  staged_files_match_scope: true
+  pre_commit_hooks_passed: true
+Commit 430d86a landed: "feat(finalize-feature): add folder reconciliation sub-step to Step 5 (EPIC-MoveOnMainOnly/03)". 3 files changed: finalize-feature.js (+93 lines), ticket file, feedback.jsonl. Lock acquired and released cleanly. No pre-commit config present — hooks skipped (PRE_COMMIT_ALLOW_NO_CONFIG=1).
 
 ## Implementation Tasks
 
