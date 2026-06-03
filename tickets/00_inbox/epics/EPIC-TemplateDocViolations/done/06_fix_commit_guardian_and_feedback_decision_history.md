@@ -1,6 +1,6 @@
 ---
 title: "Fix missing HH:MM in check_glossary_coverage.py and submit_feedback.py DECISION HISTORY"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-26
