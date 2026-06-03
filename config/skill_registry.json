@@ -211,6 +211,15 @@
       "template_path": "leafcutter/templates/skills/route-knowledge/",
       "dependencies": [],
       "description": "Knowledge routing classifier. Use when a user says 'remember this', 'capture this', or 'we should write this down'. Covers the full surface taxonomy (memory subtypes, CLAUDE.md inline/TOC, per-folder README, agent frontmatter, ADR, architecture doc, Diataxis docs, glossary, settings.json, ticket bodies, skills_config.json). Returns { target_surface, path, rationale }. Also used by documentation-expert as a pre-flight gate before Diataxis routing."
+    },
+    {
+      "id": "finalize-feature-archive-check",
+      "name": "Finalize Feature Archive Check",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/finalize-feature-archive-check/",
+      "dependencies": [],
+      "description": "Pre-archive validation gate invoked by finalize-feature.js Step 5 before moving an epic folder to tickets/99_done/. Scans every sub-ticket in the epic's done/ subfolder and verifies frontmatter status: done. Offers confirmation-gated auto-fix for missing entries."
     }
   ]
 }

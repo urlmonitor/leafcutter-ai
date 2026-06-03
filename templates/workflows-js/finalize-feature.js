@@ -321,8 +321,21 @@ async function run({ userInput, agent, parallel, prompt }) {
         "3. Determine if any ticket path is inside an EPIC-*/ folder — if so, this is epic-scoped.\n" +
         "4. For single-ticket branches: check if ticket status is already 'done'; if not, " +
         "   move the ticket file to tickets/99_done/ and flip status: todo → status: done.\n" +
-        "5. For epic-scoped branches: run the epic archival gate (verify all sub-tickets are done), " +
-        "   then git mv the epic folder to tickets/99_done/EPIC-<Name>/.\n" +
+        "5. For epic-scoped branches: before moving the epic folder, run the\n" +
+        "   finalize-feature-archive-check skill:\n" +
+        "   a. Find all *.md files under <epic_folder>/done/ (excluding Master_Plan.md).\n" +
+        "   b. For each file, parse the YAML frontmatter and read the `status:` field.\n" +
+        "   c. Build two lists: ok_tickets (status: done) and missing_tickets (any other value).\n" +
+        "   d. If missing_tickets is non-empty, surface the list to the user and ask:\n" +
+        "      'Auto-fix: set status: done in frontmatter for all listed tickets and commit? (yes / no)'\n" +
+        "   e. On 'yes': edit each missing ticket's frontmatter, git add, commit with message\n" +
+        "      'chore(tickets): fix frontmatter status on archived sub-tickets', then re-scan.\n" +
+        "   f. On 'no': HALT — return { status: 'halted', scope: 'epic',\n" +
+        "      reason: 'user declined archive status fix — epic folder move blocked',\n" +
+        "      missing_tickets: [...] }. Do NOT proceed to git mv.\n" +
+        "   g. Only when all sub-tickets have status: done: run the epic archival gate\n" +
+        "      (verify all sub-tickets are signed_off or not_needed), then\n" +
+        "      git mv the epic folder to tickets/99_done/EPIC-<Name>/.\n" +
         "6. Return a JSON object: " +
         '{ "scope": "single-ticket"|"epic"|"unknown", ' +
         '"tickets_closed": ["<path>", ...], ' +
