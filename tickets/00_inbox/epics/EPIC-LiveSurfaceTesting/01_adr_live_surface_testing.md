@@ -16,13 +16,13 @@ files_touched:
   - docs/architecture/adrs/ADR-NNN-live-surface-tester.md
 agents:
   architect-review: not_needed
-  adr-author: needed
+  adr-author: signed_off
   test-writer: not_needed
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   architecture-diagram-author: not_needed
@@ -82,27 +82,43 @@ Then the hook passes with no errors
 
 ## Sign-offs
 
-- [ ] adr-author
-- [ ] pr-reviewer
+- [x] adr-author — 2026-06-03 10:00
+- [x] pr-reviewer — 2026-06-03 10:05
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-06-03 10:00 — adr-author (status: ok)
+feedback-id: fb_2026-06-03_62768b53
+completion_manifest:
+  adr_file_created: true
+  all_sections_present: true
+  status_set: true
+Authored ADR-007-live-surface-tester.md at docs/architecture/adrs/. All five settled decisions recorded: read-only constraint, port registry (JSON keyed by worktree name, file-locked), project-level toggle (skills_config.json), ticket-level toggle (live_surface_test frontmatter), and phase priority 11.8. Three alternatives captured with rejection rationale. Handoff JSON written to tickets/00_inbox/epics/EPIC-LiveSurfaceTesting/.pending/adr_handoff.json.
+
+### 2026-06-03 10:05 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-03_b800ae0b
+completion_manifest:
+  diff_reviewed: true
+  no_high_findings: true
+  scope_verified: true
+Review Report — Base: HEAD. Diff: 22 lines changed across 2 files (ticket + feedback.jsonl), plus 2 untracked (ADR-007, handoff JSON). No high-confidence findings. No medium findings. Suppressed: 0 low nits, 0 medium dropped. ADR-007 is well-formed and covers all five settled decisions from Master_Plan. Scope matches files_touched goal. Escalation: none (medium count = 0, threshold > 3).
+
 ## Implementation Tasks
 
-- [ ] Inspect `docs/architecture/adrs/` to determine next ADR number
-- [ ] Write `docs/architecture/adrs/ADR-NNN-live-surface-tester.md` using the
+- [x] Inspect `docs/architecture/adrs/` to determine next ADR number
+- [x] Write `docs/architecture/adrs/ADR-NNN-live-surface-tester.md` using the
   standard ADR template (status: proposed → accepted after this ticket merges)
-- [ ] Record the five settled decisions as the `## Decision` section
-- [ ] Write `## Alternatives Considered`:
+- [x] Record the five settled decisions as the `## Decision` section
+- [x] Write `## Alternatives Considered`:
   - Extending `user-surface-smoker` with HTTP capabilities (rejected: couples
     two orthogonal concerns; smoker has no subprocess model)
   - Using a shared port range (8100–8199) without a registry (rejected: no
     collision detection across concurrent worktrees)
   - Giving the tester write access to self-repair issues (rejected: violates
     separation of concerns; tester must never fix its own findings)
-- [ ] Write `## Consequences`:
+- [x] Write `## Consequences`:
   - `live-surface-tester` can never self-repair; blocker payloads are the only
     escalation path
   - Port registry becomes a shared mutable state file; concurrent worktree

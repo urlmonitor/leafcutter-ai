@@ -1,0 +1,7 @@
+{
+  "adr_id": "ADR-007",
+  "affected_files": [
+    "docs/architecture/adrs/ADR-NNN-live-surface-tester.md"
+  ],
+  "one_line_summary": "live-surface-tester is read-only, discovers its server port via a file-locked JSON registry, and dispatches conditionally at phase priority 11.8 controlled by project-level and ticket-level toggles."
+}
