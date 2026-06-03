@@ -22,7 +22,7 @@ agents:
   documentation-expert: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 ---
@@ -110,9 +110,17 @@ Then the "git mv 99_done/ → 01_todo/" revert instruction is absent
 - [x] documentation-expert — 2026-06-03 10:15
 - [x] pr-reviewer — 2026-06-03 10:20
 - [x] commit — 2026-06-03 10:25
-- [ ] pull-request
+- [x] pull-request — 2026-06-03 10:30
 
 ## Comments
+
+### 2026-06-03 10:30 — pull-request (status: ok)
+feedback-id: fb_2026-06-03_e8aea0a8
+completion_manifest:
+  branch_pushed: true
+  pr_open: true
+  no_conflicts: true
+Pushed commit 1b98b3a to origin/EPIC-MoveOnMainOnly. Existing epic PR #36 ("EPIC-MoveOnMainOnly: stop branches from moving ticket files") is already open and covers this ticket's changes. No new PR needed — one PR per epic convention applies. No conflicts detected.
 
 ### 2026-06-03 10:25 — commit (status: ok)
 feedback-id: fb_2026-06-03_c4501542
