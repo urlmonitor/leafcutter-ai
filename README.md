@@ -117,6 +117,27 @@ pull the latest and run `build.py`. It auto-removes stale files at old locations
 (`scripts/commit_guardian/`, `.claude/agents/`, etc.) and writes everything
 into `.leafcutter/`.
 
+## How It Works — Daily Workflow
+
+Once installed, leafcutter exposes a set of slash commands that guide you
+through the full development lifecycle inside Claude Code:
+
+1. **`/create-ticket`** — describe what you want to build; the agent interviews
+   you and writes a ready-for-dev ticket (or a full epic with sub-tickets).
+2. **`/build-feature`** — the main execution command; dispatches the supervisor
+   pipeline (TDD, code review, commit, PR) and drives work to done.
+3. **`/finalize-feature`** — merges the PR, syncs main, closes tickets, removes
+   the worktree, and generates a changelog entry.
+4. **`/debug`** — spawns three parallel investigators, synthesizes findings,
+   creates a fix ticket, and builds it automatically.
+5. **`/feedback-report`** — reviews agent telemetry to show what went well and
+   what to improve across your agent runs.
+
+For the complete step-by-step guide with command flags, flowcharts, and
+troubleshooting: **[docs/how-to/working-with-leafcutter.md](docs/how-to/working-with-leafcutter.md)**
+
+---
+
 ## NEW_PROJECT_SETUP — Glossary Bootstrap
 
 After completing the Quick Start above, run the glossary bootstrap once to seed
