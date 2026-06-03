@@ -17,12 +17,12 @@ files_touched:
   - scripts/commit_guardian/check_documentation.py
 agents:
   architect-review: not_needed
-  python-coder: needed
+  python-coder: signed_off
   test-writer: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
   change-scope-reviewer: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: not_needed
   status-checker: not_needed
@@ -98,15 +98,34 @@ Then subprocess.run() contains encoding="utf-8"
 
 ## Sign-offs
 
-- [ ] python-coder
-- [ ] pr-reviewer
+- [x] python-coder — 2026-06-03 14:00
+- [x] pr-reviewer — 2026-06-03 14:05
 - [ ] commit
 
 ## Comments
 
+### 2026-06-03 14:05 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-03_3ed3105f
+completion_manifest:
+  encoding_fix_correct: true
+  all_three_copies_updated_identically: true
+  exception_handling_narrowed_correctly: true
+  logic_behavior_preserved: true
+  ruff_clean: true
+Changes approved. Primary fix (`encoding="utf-8"` in `subprocess.run()`) is correct and minimal. Secondary improvement (narrowing `except Exception` → `except OSError`, TRY300 restructure) is compliant with the error-handling policy and does not change observable behavior. All three copies are identical. No regressions found.
+
+### 2026-06-03 14:00 — python-coder (status: ok)
+feedback-id: fb_2026-06-03_ac5cfb1b
+completion_manifest:
+  encoding_utf8_added_to_subprocess: true
+  decision_history_entries_added: true
+  ruff_violations_fixed: true
+  all_three_copies_updated: true
+Added `encoding="utf-8"` to `subprocess.run()` in `get_staged_files()` in all three copies of `check_documentation.py`. Also fixed pre-existing BLE001/TRY300 ruff violations in `check_sql_header`, `check_py_header`, and `check_yaml_adr` by narrowing `except Exception` to `except OSError` and restructuring to satisfy TRY300. DECISION HISTORY entries added to all three files with tail-tag `(#EPIC-TemplateDocViolations/05)`. All ruff checks pass.
+
 ## Implementation Tasks
 
-- [ ] In all three copies of `check_documentation.py`, update `get_staged_files()`:
+- [x] In all three copies of `check_documentation.py`, update `get_staged_files()`:
 
   Change:
   ```python
@@ -133,7 +152,7 @@ Then subprocess.run() contains encoding="utf-8"
   - `leafcutter-ai/templates/scripts/commit_guardian/check_documentation.py`
   - `scripts/commit_guardian/check_documentation.py`
 
-- [ ] Add a DECISION HISTORY entry to each of the three files documenting this fix
+- [x] Add a DECISION HISTORY entry to each of the three files documenting this fix
   (with today's date, HH:MM, and `(#EPIC-TemplateDocViolations/05)` tail-tag)
 
 ## Risk & Safety
