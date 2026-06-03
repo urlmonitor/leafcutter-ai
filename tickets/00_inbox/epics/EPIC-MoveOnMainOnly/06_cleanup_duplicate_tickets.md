@@ -22,7 +22,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: failed
   adr-author: not_needed
   architecture-diagram-author: not_needed
 ---
@@ -108,7 +108,7 @@ Then it reports no duplicates for either ticket basename
 
 - [x] pr-reviewer — 2026-06-03 12:00
 - [x] commit — 2026-06-03 12:05
-- [ ] pull-request
+- [ ] pull-request — failed 2026-06-03 12:10
 
 ## Comments
 
@@ -129,6 +129,10 @@ completion_manifest:
   no_unintended_files: true
   two_deletions_only: true
 Executed git rm on both stale inbox copies (TICKET-20260527-WireVersionIntoBuild.md and TICKET-20260602-ComponentsRegistryScaffold.md). Staged explicitly by path. Committed with chore message — 2 file deletions only, no modifications to 99_done/ canonical copies.
+
+### 2026-06-03 12:10 — pull-request (status: blocker)
+feedback-id: fb_2026-06-03_78594f97
+Branch EPIC-MoveOnMainOnly pushed to origin successfully. `gh pr create` failed with: "Unauthorized: As an Enterprise Managed User, you cannot access this content (createPullRequest)". The EMU restriction prevents programmatic PR creation via the gh CLI. The commit is on the remote branch. Suggested remediation: open a PR manually at https://github.com/urlmonitor/leafcutter-ai/compare/main...EPIC-MoveOnMainOnly using the GitHub web UI.
 
 ## Implementation Tasks
 
