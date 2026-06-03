@@ -1,6 +1,6 @@
 ---
 title: "Author ADR: Live Surface Tester — port registry, read-only constraint, and conditional dispatch"
-status: todo
+status: done
 components:
   - build_pipeline
   - config_loader
@@ -23,8 +23,8 @@ agents:
   test-runner: not_needed
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   architecture-diagram-author: not_needed
   explanation-author: not_needed
   how-to-author: not_needed
@@ -84,8 +84,8 @@ Then the hook passes with no errors
 
 - [x] adr-author — 2026-06-03 10:00
 - [x] pr-reviewer — 2026-06-03 10:05
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-03 10:10
+- [x] pull-request — 2026-06-03 10:15
 
 ## Comments
 
@@ -104,6 +104,22 @@ completion_manifest:
   no_high_findings: true
   scope_verified: true
 Review Report — Base: HEAD. Diff: 22 lines changed across 2 files (ticket + feedback.jsonl), plus 2 untracked (ADR-007, handoff JSON). No high-confidence findings. No medium findings. Suppressed: 0 low nits, 0 medium dropped. ADR-007 is well-formed and covers all five settled decisions from Master_Plan. Scope matches files_touched goal. Escalation: none (medium count = 0, threshold > 3).
+
+### 2026-06-03 10:10 — commit (status: ok)
+feedback-id: fb_2026-06-03_b2601937
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Commit e09c88a landed on branch EPIC-LiveSurfaceTesting. 4 files changed, 279 insertions. Pre-commit config absent (no .pre-commit-config.yaml in worktree); hooks skipped with PRE_COMMIT_ALLOW_NO_CONFIG=1. Commit message follows imperative style matching repo log history.
+
+### 2026-06-03 10:15 — pull-request (status: ok)
+feedback-id: fb_2026-06-03_75fba73a
+completion_manifest:
+  pr_opened: true
+  branch_pushed: true
+  pr_url_recorded: true
+PR #42 opened at https://github.com/urlmonitor/leafcutter-ai/pull/42 on branch EPIC-LiveSurfaceTesting targeting main. Branch pushed to origin/EPIC-LiveSurfaceTesting successfully. PR title: "feat(adr): add ADR-007 live-surface-tester design [EPIC-LiveSurfaceTesting]".
 
 ## Implementation Tasks
 
