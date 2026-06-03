@@ -1,6 +1,6 @@
 ---
 title: "Fix missing tail-tags in security-scanner skill DECISION HISTORY entries"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-26
