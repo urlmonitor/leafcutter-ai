@@ -19,17 +19,17 @@ files_touched:
   - templates/workflows/feedback-report.md
 agents:
   architect-review: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
-  commit: needed
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
-  user-surface-smoker: needed
+  user-surface-smoker: signed_off
 ---
 
 # Create feedback-analysis skill, feedback-analyst agent, and /feedback-report command templates
@@ -151,13 +151,13 @@ Then only entries on or after 2026-05-01 appear in the report
 
 ## Sign-offs
 
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
-- [ ] pr-reviewer
-- [ ] commit
+- [x] test-writer — 2026-06-03 14:00
+- [x] python-coder — 2026-06-03 14:30
+- [x] test-runner — 2026-06-03 14:45
+- [x] pr-reviewer — 2026-06-03 15:00
+- [x] commit — 2026-06-03 15:30
 - [ ] pull-request
-- [ ] user-surface-smoker
+- [x] user-surface-smoker — 2026-06-03 15:15
 
 ## Smoke Fixture
 
@@ -171,11 +171,98 @@ placeholder_signature: "(?i)(TODO|PLACEHOLDER|not implemented)"
 
 ## Comments
 
+### 2026-06-03 14:00 — test-writer (status: ok)
+feedback-id: fb_2026-06-03_f787f206
+completion_manifest:
+  test_stubs_created: true
+  all_tests_red: true
+  red_baseline_captured: true
+red_baseline:
+  - test_name: test_script_file_exists
+    file: unit_tests/test_trend_report.py
+    error: "AssertionError: False is not true : trend_report.py not found at .../templates/skills/feedback-analysis/scripts/trend_report.py. python-coder must create it."
+  - test_name: test_absent_jsonl_exits_zero
+    file: unit_tests/test_trend_report.py
+    error: "AssertionError: 2 != 0 : Expected exit 0 for absent JSONL, got 2."
+  - test_name: test_empty_jsonl_prints_sentinel
+    file: unit_tests/test_trend_report.py
+    error: "AssertionError: '(no feedback data found)' not found in '' : Expected sentinel message, got:"
+  - test_name: test_correct_count_for_single_category
+    file: unit_tests/test_trend_report.py
+    error: "AssertionError: 'knowledge-gap' not found in '' : Expected 'knowledge-gap' in output:"
+  - test_name: test_highest_count_category_appears_before_lower
+    file: unit_tests/test_trend_report.py
+    error: "AssertionError: -1 not greater than -1 : Expected 'tooling-issue' in output"
+  - test_name: test_rising_trend_detected
+    file: unit_tests/test_trend_report.py
+    error: "AssertionError: 'rising' not found in '' : Expected 'rising' trend indicator."
+  - test_name: test_falling_trend_detected
+    file: unit_tests/test_trend_report.py
+    error: "AssertionError: 'falling' not found in '' : Expected 'falling' trend indicator."
+  - test_name: test_stable_trend_detected
+    file: unit_tests/test_trend_report.py
+    error: "AssertionError: 'stable' not found in '' : Expected 'stable' trend indicator."
+  - test_name: test_json_output_is_valid_json
+    file: unit_tests/test_trend_report.py
+    error: "AssertionError: Output is not valid JSON: Expecting value: line 1 column 1 (char 0)"
+  - test_name: test_high_severity_ranks_above_low_severity_same_count_text
+    file: unit_tests/test_trend_report.py
+    error: "AssertionError: -1 not greater than -1 : Expected 'blocker' in output"
+  - test_name: test_since_filter_excludes_old_entries
+    file: unit_tests/test_trend_report.py
+    error: "json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+Wrote 19 failing test stubs in unit_tests/test_trend_report.py covering: empty/absent JSONL sentinel, single-category count and tag extraction, multi-category descending ordering, --trend week direction (rising/falling/stable), --format json keys, priority score ordering (high vs low severity), and --since/--until pass-through filters. All 19 tests fail with exit code 1 as required — production code does not exist yet.
+
+### 2026-06-03 14:30 — python-coder (status: ok)
+feedback-id: fb_2026-06-03_361e00c5
+completion_manifest:
+  trend_report_py_created: true
+  skill_md_created: true
+  feedback_analyst_agent_created: true
+  feedback_report_workflow_created: true
+  ruff_clean: true
+  all_tests_green: true
+Created all four deliverables: templates/skills/feedback-analysis/scripts/trend_report.py (with full CLI, category analysis, trend detection, JSON output, priority scoring, and --since/--until pass-through), templates/skills/feedback-analysis/SKILL.md (6 sections), templates/agents/feedback-analyst.md, and templates/workflows/feedback-report.md. All 19 unit tests pass (19/19 green). Ruff E722/BLE001/TRY clean.
+
+### 2026-06-03 14:45 — test-runner (status: ok)
+feedback-id: fb_2026-06-03_c11b4dd2
+completion_manifest:
+  tests_executed: true
+  all_tests_green: true
+  no_regressions: true
+Ran unit_tests/test_trend_report.py: 19 passed in 8.07s. Exit code 0. No regressions in existing test suite.
+
+### 2026-06-03 15:00 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-03_11ca1031
+completion_manifest:
+  acceptance_criteria_verified: true
+  all_deliverables_present: true
+  tests_green: true
+  ruff_clean: true
+  no_naming_conflicts: true
+All 6 acceptance criteria verified: 4 template files present at correct paths, trend_report.py exits 0 on empty JSONL with sentinel message, --trend week emits rising/falling/stable correctly, --format json has required keys, --since filter correctly excludes pre-date entries, feedback-report.md has no naming conflict. 19/19 tests green. Ruff E722/BLE001/TRY clean.
+
+### 2026-06-03 15:15 — user-surface-smoker (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  smoke_assertion_empty_jsonl: true
+  smoke_assertion_with_data: true
+  no_placeholder_strings: true
+Smoke fixture assertions both pass: (1) empty JSONL path returns "(no feedback data found)" matching assertion regex; (2) JSONL with knowledge-gap and tooling-issue entries produces prioritized report matching regex; (3) no TODO/PLACEHOLDER/not-implemented strings detected in output. Note: submit_feedback.py returned "user-surface-smoker not in allowed_writers" — known limitation; feedback-id recorded as (submit-failed) per signoff §2a.
+
+### 2026-06-03 15:30 — commit (status: ok)
+feedback-id: fb_2026-06-03_81ebded1
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Committed all deliverables: templates/skills/feedback-analysis/SKILL.md, templates/skills/feedback-analysis/scripts/trend_report.py, templates/agents/feedback-analyst.md, templates/workflows/feedback-report.md, unit_tests/test_trend_report.py, and ticket rename from 00_inbox/ to 99_done/. 6 files, 1603 insertions. Stale .epic-commit-lock (PID 753212, dead) removed before acquiring fresh lock.
+
 ## Implementation Tasks
 
 ### python-coder — create trend_report.py
 
-- [ ] Create `templates/skills/feedback-analysis/scripts/trend_report.py` with
+- [x] Create `templates/skills/feedback-analysis/scripts/trend_report.py` with
   the following specification:
 
   **CLI interface:**
@@ -223,7 +310,7 @@ placeholder_signature: "(?i)(TODO|PLACEHOLDER|not implemented)"
 
 ### python-coder — create SKILL.md
 
-- [ ] Create `templates/skills/feedback-analysis/SKILL.md` with:
+- [x] Create `templates/skills/feedback-analysis/SKILL.md` with:
   - YAML frontmatter: `name: feedback-analysis`, `description`, `allowed-tools: Bash, Read`
   - **§1 Overview** — what the skill does, what scripts it provides
   - **§2 Quick Start** — three example invocations of `trend_report.py`
@@ -238,7 +325,7 @@ placeholder_signature: "(?i)(TODO|PLACEHOLDER|not implemented)"
 
 ### python-coder — create feedback-analyst agent template
 
-- [ ] Create `templates/agents/feedback-analyst.md` with:
+- [x] Create `templates/agents/feedback-analyst.md` with:
   - YAML frontmatter: `name: feedback-analyst`, `model: sonnet`,
     `tools: Bash, Read`, `portable: true`, `signoff: false`
   - `description` (in frontmatter): one-paragraph description for agent picker
@@ -263,7 +350,7 @@ placeholder_signature: "(?i)(TODO|PLACEHOLDER|not implemented)"
 
 ### python-coder — create /feedback-report command
 
-- [ ] Create `templates/workflows/feedback-report.md` with:
+- [x] Create `templates/workflows/feedback-report.md` with:
   - YAML frontmatter: `description` — one sentence suitable for Claude Code's
     command picker
   - Body: `Invoke the \`feedback-analyst\` agent with the user's arguments: $ARGUMENTS`
@@ -272,7 +359,7 @@ placeholder_signature: "(?i)(TODO|PLACEHOLDER|not implemented)"
 
 ### test-writer
 
-- [ ] Write unit tests for `trend_report.py` in
+- [x] Write unit tests for `trend_report.py` in
   `unit_tests/test_trend_report.py` covering:
   - Empty / absent JSONL: exits 0, prints `(no feedback data found)`.
   - Single-category data: correct count, correct top tags extracted.
