@@ -293,7 +293,23 @@ async function run({ userInput, agent, parallel, prompt }) {
 
   // -------------------------------------------------------------------------
   // Step 5 — Close tickets / archive epic (resumable)
+  //
+  // Sub-step 5a: detect scope and close tickets (flip status: done in frontmatter
+  //   + git mv to target folder).
+  // Sub-step 5b: reconcile folder positions for any ticket file whose physical
+  //   folder does not match its frontmatter `status:` after merge.
+  //   This is necessary because worktree branches no longer perform git mv —
+  //   the move-on-main-only pattern defers all moves to this post-merge step.
+  //
+  // Resumability: each sub-step probes state before acting.
+  //   - Sub-step 5a: if ticket is already `done` and in the correct folder, it is skipped.
+  //   - Sub-step 5b: if the reconciliation commit already exists (checked via
+  //     `git log --oneline --grep "reconcile folder positions"`), the entire sub-step
+  //     is skipped. If a ticket file is already in its target folder, git mv is skipped
+  //     for that file (idempotent per-file).
   // -------------------------------------------------------------------------
+
+  // Sub-step 5a: ticket closing / epic archival
   const closeResult = await agent({
     agentType: "status-checker",
     input: {
@@ -331,6 +347,78 @@ async function run({ userInput, agent, parallel, prompt }) {
     skippedSteps.push({ step: 5, reason: "All tickets already done — skipping step 5" });
   } else {
     completedSteps.push(5);
+  }
+
+  // Sub-step 5b: folder reconciliation (EPIC-MoveOnMainOnly/03)
+  //
+  // After tickets 01 and 02 land, worktree branches no longer perform git mv.
+  // Ticket files arrive on main in whatever folder the branch had them in
+  // (typically 00_inbox/ for new tickets). This sub-step reconciles each
+  // ticket file's physical folder position against its frontmatter `status:`.
+  //
+  // Status → target folder mapping (from ticket_lifecycle.json):
+  //   done, deferred  → tickets/99_done/
+  //   todo, in_progress, blocked → tickets/01_todo/
+  //   (epic sub-tickets with status: done → tickets/01_todo/EPIC-*/done/)
+  //
+  // Single-writer guarantee: this git mv runs on main inside finalize-feature.js,
+  // which is only invoked after the feature branch has been merged. No concurrent
+  // worktrees are active on the same ticket at this point.
+  const reconcileResult = await agent({
+    agentType: "status-checker",
+    input: {
+      instructions:
+        // Resumability probe: skip entire sub-step if reconciliation commit exists.
+        "1. Run: git log --oneline --grep 'reconcile folder positions' | head -1\n" +
+        "   If output is non-empty, the reconciliation commit already exists.\n" +
+        "   Log: 'Reconciliation commit already present — skipping.'\n" +
+        "   Return: { \"tickets_reconciled\": [], \"skipped\": true }\n" +
+        "\n" +
+        "2. Otherwise, read ticket_lifecycle.json from the repo root.\n" +
+        "   Build the status→folder map:\n" +
+        "   - done, deferred → tickets/99_done/\n" +
+        "   - todo, in_progress, blocked → tickets/01_todo/\n" +
+        "\n" +
+        "3. Find all ticket files in the repo (find tickets/ -name '*.md' -not -name 'Master_Plan.md').\n" +
+        "   For each ticket file:\n" +
+        "   a. Parse the frontmatter `status:` value (read lines between first and second '---' markers).\n" +
+        "   b. Determine the current folder (dirname of the file path).\n" +
+        "   c. Compute the target folder from the status→folder map.\n" +
+        "      - For epic sub-tickets (path contains /EPIC-*/): status: done → tickets/01_todo/EPIC-*/done/\n" +
+        "   d. If current folder == target folder: skip (already in correct position).\n" +
+        "   e. GUARD: if a file already exists at <target_folder>/<basename>, skip and log a warning:\n" +
+        "      'WARNING: target path <target_path> already exists — skipping to avoid collision.\n" +
+        "       Run the duplicate cleanup tool (EPIC-MoveOnMainOnly/06) to resolve.'\n" +
+        "   f. If current folder != target folder AND no collision: run git mv <current_path> <target_folder>/<basename>.\n" +
+        "      Accumulate the moved path in reconciled_paths.\n" +
+        "\n" +
+        "4. If any files were moved (reconciled_paths is non-empty):\n" +
+        "   Run: git add tickets/\n" +
+        "   Run: git commit -m 'chore(tickets): reconcile folder positions after merge'\n" +
+        "   Verify the commit contains only R (rename) entries — no A/D pairs.\n" +
+        "   Log: 'Folder reconciliation complete — <N> file(s) moved.'\n" +
+        "\n" +
+        "5. If no files needed moving:\n" +
+        "   Log: 'Folder positions already correct — skipping reconciliation commit.'\n" +
+        "\n" +
+        "6. Return a JSON object:\n" +
+        '{ "tickets_reconciled": ["<path1>", ...], "skipped": false|true, "warnings": ["<w1>", ...] }',
+    },
+  });
+
+  let reconcileInfo;
+  const ticketsReconciled = [];
+  try {
+    reconcileInfo =
+      typeof reconcileResult === "string"
+        ? JSON.parse(reconcileResult)
+        : reconcileResult;
+  } catch (_err) {
+    reconcileInfo = { tickets_reconciled: [], skipped: false, warnings: [] };
+  }
+
+  if (reconcileInfo.tickets_reconciled) {
+    ticketsReconciled.push(...reconcileInfo.tickets_reconciled);
   }
 
   // -------------------------------------------------------------------------
@@ -417,6 +505,7 @@ async function run({ userInput, agent, parallel, prompt }) {
     merge_result: mergeResult,
     test_result: testResult,
     tickets_closed: ticketsClosed,
+    tickets_reconciled: ticketsReconciled,
     worktree_removed: worktreeRemoved,
     completed_steps: completedSteps,
     skipped_steps: skippedSteps,
@@ -427,7 +516,10 @@ async function run({ userInput, agent, parallel, prompt }) {
         ? `Steps skipped (already done): [${skippedSteps.map((s) => s.step).join(", ")}]. `
         : "") +
       (ticketsClosed.length > 0
-        ? `Tickets closed: ${ticketsClosed.length}.`
+        ? `Tickets closed: ${ticketsClosed.length}. `
+        : "") +
+      (ticketsReconciled.length > 0
+        ? `Tickets folder-reconciled: ${ticketsReconciled.length}.`
         : ""),
   };
 }

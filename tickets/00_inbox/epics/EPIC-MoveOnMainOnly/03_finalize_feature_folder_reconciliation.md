@@ -16,13 +16,13 @@ files_touched:
   - templates/workflows-js/finalize-feature.js
   - tickets/ticket_lifecycle.json
 agents:
-  architect-review: needed
+  architect-review: signed_off
   test-writer: not_needed
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   adr-author: not_needed
@@ -142,12 +142,29 @@ Then the target folder is tickets/99_done/ for standalone tickets
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] pr-reviewer
+- [x] architect-review — 2026-06-03 12:00
+- [x] pr-reviewer — 2026-06-03 12:05
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
+
+### 2026-06-03 12:00 — architect-review (status: ok)
+feedback-id: fb_2026-06-03_402a02b0
+completion_manifest:
+  blast_radius_assessed: true
+  impact_classified: true
+  architectural_note_written: true
+Impact classification: SMALL. Files touched: `templates/workflows-js/finalize-feature.js` and `tickets/ticket_lifecycle.json` — 2 files in 1 component (build_pipeline). No always-large trigger fired (no Alembic migration, no hypertable, no public API change, no ADR contract change). Design is sound: `git mv` runs on main as a single-writer context per ticket risk analysis. The `reconcileFolderPositions` helper follows the existing resumable-step pattern in `finalize-feature.js`. No ADR or diagram needed (`requires_adr: false` confirmed). One implementation note: integrate folder reconciliation as a sub-step inside the existing Step 5 `status-checker` dispatch context, not as a separate `workflow()` call, to preserve the leaf-workflow constraint (ADR-006).
+
+### 2026-06-03 12:05 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-03_c64c5b33
+completion_manifest:
+  acceptance_criteria_met: true
+  files_touched_match_plan: true
+  implementation_complete: true
+  no_regressions: true
+All acceptance criteria satisfied. Sub-step 5b in `finalize-feature.js` adds idempotent folder reconciliation: (1) resumability probe via `git log --grep`, (2) status→folder mapping from `ticket_lifecycle.json`, (3) per-file idempotency (skip if already in correct folder), (4) duplicate collision guard with warning, (5) `chore(tickets): reconcile folder positions after merge` commit, (6) `tickets_reconciled` added to success return payload. Leaf-workflow constraint preserved (no `workflow()` call). Implementation is clean and follows existing Step 5 patterns.
 
 ## Implementation Tasks
 
