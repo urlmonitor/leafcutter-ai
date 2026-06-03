@@ -1,6 +1,6 @@
 ---
 title: "Write worktree startup helper (spin-up, health-check, teardown) callable by live-surface-tester"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-03
@@ -25,8 +25,8 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   architecture-diagram-author: not_needed
   explanation-author: not_needed
   how-to-author: not_needed
@@ -152,10 +152,27 @@ Then the script prints JSON with status: running
 - [x] python-coder — 2026-06-03 22:15
 - [x] test-runner — 2026-06-03 22:16
 - [x] pr-reviewer — 2026-06-03 22:17
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-03 22:18
+- [x] pull-request — 2026-06-03 22:19
 
 ## Comments
+
+### 2026-06-03 22:19 — pull-request (status: ok)
+feedback-id: fb_2026-06-03_ed0122fe
+completion_manifest:
+  branch_pushed: true
+  pr_exists: true
+  commits_visible_in_pr: true
+Pushed EPIC-LiveSurfaceTesting branch (8ea12b2..e398fc1) to origin. Epic PR #42 already open at https://github.com/urlmonitor/leafcutter-ai/pull/42; ticket-06 commits are now included.
+
+### 2026-06-03 22:18 — commit (status: ok)
+feedback-id: fb_2026-06-03_42d7f3c5
+completion_manifest:
+  commit_created: true
+  staged_explicit_paths_only: true
+  pre_commit_hooks_passed: true
+  lock_acquired_and_released: true
+Committed SHA e398fc1 on branch EPIC-LiveSurfaceTesting: 4 files changed (998 insertions). Staged scripts/live_surface_startup.py, tests/test_live_surface_startup.py, .gitignore, and ticket file by explicit path. Commit lock acquired and released cleanly. No pre-commit config in worktree; PRE_COMMIT_ALLOW_NO_CONFIG=1 used.
 
 ### 2026-06-03 22:17 — pr-reviewer (status: ok)
 feedback-id: fb_2026-06-03_20ef1672
