@@ -19,9 +19,9 @@ agents:
   architect-review: signed_off
   adr-author: not_needed
   test-writer: signed_off
-  python-coder: needed
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: needed
   commit: needed
@@ -141,8 +141,8 @@ Then each call receives a different port number
 
 - [x] architect-review — 2026-06-03 10:00
 - [x] test-writer — 2026-06-03 10:01
-- [ ] python-coder
-- [ ] test-runner
+- [x] python-coder — 2026-06-03 10:05
+- [x] test-runner — 2026-06-03 10:10
 - [ ] pr-reviewer
 - [ ] commit
 - [ ] pull-request
@@ -171,9 +171,28 @@ Reason: 2 files in 1 component (build_pipeline); no always-large trigger fired.
 ### 2026-06-03 10:01 — ticket-supervisor (status: ok)
 test_requirements empty — test-writer phase skipped (docs-only or config-only ticket). No `## Test Requirements` YAML block found. python-coder will implement both module and tests per Implementation Tasks.
 
+### 2026-06-03 10:05 — python-coder (status: ok)
+feedback-id: fb_2026-06-03_20aa7e28
+completion_manifest:
+  code_implemented: true
+  tests_passing: true
+  doc_enforcer_clean: true
+  complexity_check_clean: true
+
+Implemented `scripts/port_registry.py` with the `PortRegistry` class (allocate, release, set_pid, list_allocations, _probe_port_free, _lock context manager) and `main()` CLI entry point with subcommands: allocate, release, list, set-pid. Locking uses filelock with fcntl.flock POSIX fallback and raises NotImplementedError on Windows without filelock. All external I/O is wrapped per project error-handling policy (Rules 1, 3: specific exceptions, log+re-raise). Registry writes use atomic rename (os.replace). Tests written at `tests/test_port_registry.py`: 27 tests covering all CLI commands, idempotency, OS bind probe mocking, and concurrent allocation via ThreadPoolExecutor. All 27 tests pass (ruff clean).
+
+### 2026-06-03 10:10 — test-runner (status: ok)
+feedback-id: fb_2026-06-03_867af337
+completion_manifest:
+  tests_run: true
+  all_tests_green: true
+  coverage_adequate: true
+
+27/27 tests pass in `tests/test_port_registry.py`. Test suite covers: allocate (8 tests), release (3 tests), set_pid (2 tests), list_allocations (2 tests), _probe_port_free (2 tests), CLI allocate (4 tests), CLI release (2 tests), CLI list (1 test), CLI set-pid (2 tests), concurrent allocation (1 test). All Gherkin acceptance criteria are satisfied: range allocation, idempotency, range-full error, release idempotency, concurrent collision safety.
+
 ## Implementation Tasks
 
-- [ ] Create `scripts/port_registry.py`:
+- [x] Create `scripts/port_registry.py`:
   - `PortRegistry` class:
     - `__init__(config_path, registry_path)` — loads config from
       `skills_config.json`; determines registry file path
@@ -187,7 +206,7 @@ test_requirements empty — test-writer phase skipped (docs-only or config-only 
     `allocate`, `release`, `list`, `set-pid`
   - All external I/O wrapped per the project error-handling policy
     (Rule 1: wrap with specific exceptions; Rule 3: log + re-raise or wrap)
-- [ ] Write `leafcutter-ai/tests/test_port_registry.py`:
+- [x] Write `leafcutter-ai/tests/test_port_registry.py`:
   - Tests for all CLI commands (using `subprocess.run` to invoke the CLI)
   - Concurrent-allocation test using `concurrent.futures.ThreadPoolExecutor`
   - Idempotency tests for `allocate` and `release`

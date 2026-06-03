@@ -1,6 +1,6 @@
 ---
 title: "Write live-surface-tester agent template and register in agent_registry.json"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-03
@@ -24,8 +24,8 @@ agents:
   test-runner: not_needed
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   architecture-diagram-author: not_needed
   explanation-author: not_needed
   how-to-author: not_needed
@@ -138,8 +138,8 @@ Then live-surface-tester: not_needed (or absent) in the compiled agents map
 - [x] architect-review — 2026-06-03 12:00
 - [x] python-coder — 2026-06-03 12:10
 - [x] pr-reviewer — 2026-06-03 12:20
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-03 12:30
+- [x] pull-request — 2026-06-03 12:40
 
 ## Comments
 
@@ -155,6 +155,22 @@ Ticket is small-case (2 files, 1 component: build_pipeline). No always-large tri
 
 Branch: none
 Reason: 2 files in 1 component (build_pipeline); no always-large trigger fired. ADR-007 already accepted.
+
+### 2026-06-03 12:40 — pull-request (status: ok)
+feedback-id: fb_2026-06-03_18b2fd4a
+completion_manifest:
+  branch_pushed: true
+  pr_open: true
+  commits_landed: true
+Branch EPIC-LiveSurfaceTesting pushed to origin (commit 3d4c1bb). PR #42 (feat(adr): add ADR-007 live-surface-tester design) is already open and tracking this branch. Ticket 02 commit is now included in the PR.
+
+### 2026-06-03 12:30 — commit (status: ok)
+feedback-id: fb_2026-06-03_101f38ad
+completion_manifest:
+  commit_created: true
+  staged_files_match_plan: true
+  no_unscoped_files_staged: true
+Committed 3 files scoped to ticket 02: templates/agents/live-surface-tester.md (new), config/agent_registry.json (modified), tickets/00_inbox/epics/EPIC-LiveSurfaceTesting/02_agent_template.md (sign-off). Commit SHA: 3d4c1bb on branch EPIC-LiveSurfaceTesting. Pre-existing changes from tickets 03/04 (scripts/build.py, scripts/config_loader.py) were left unstaged as they belong to other tickets.
 
 ### 2026-06-03 12:20 — pr-reviewer (status: ok)
 feedback-id: fb_2026-06-03_c40b4084
