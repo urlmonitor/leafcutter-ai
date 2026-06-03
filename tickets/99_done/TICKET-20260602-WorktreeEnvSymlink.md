@@ -1,6 +1,6 @@
 ---
 title: "Symlink .env into worktrees instead of copying it"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-02
@@ -22,7 +22,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # Symlink .env into worktrees instead of copying it
@@ -97,7 +97,7 @@ Then worktree/.mcp.json is a file copy (not a symlink) as before
 - [x] test-runner — 2026-06-03 09:00
 - [x] pr-reviewer — 2026-06-03 09:15
 - [x] commit — 2026-06-03 09:30
-- [ ] pull-request
+- [x] pull-request — 2026-06-03 09:45
 
 ## Comments
 
@@ -154,7 +154,15 @@ completion_manifest:
   commit_created: true
   pre_commit_hooks_passed: true
 
-Staged 4 files explicitly: `templates/scripts/setup_ticket_worktree.py`, `tests/test_setup_ticket_worktree.py`, `tickets/00_inbox/TICKET-20260602-WorktreeEnvSymlink.md` (deleted), `tickets/01_todo/TICKET-20260602-WorktreeEnvSymlink.md`. Pre-commit hooks passed. Commit created on `feature/worktreeenvsymlink`.
+Staged 4 files explicitly: `templates/scripts/setup_ticket_worktree.py`, `tests/test_setup_ticket_worktree.py`, `tickets/00_inbox/TICKET-20260602-WorktreeEnvSymlink.md` (deleted), `tickets/01_todo/TICKET-20260602-WorktreeEnvSymlink.md`. Pre-commit hooks passed. Commit `d104a06` created on `feature/worktreeenvsymlink`.
+
+### 2026-06-03 09:45 — pull-request (status: ok)
+feedback-id: fb_2026-06-03_ffe5ef7c
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+
+Branch `feature/worktreeenvsymlink` pushed to origin. PR opened: https://github.com/urlmonitor/leafcutter-ai/pull/33
 
 ```json
 {
