@@ -114,6 +114,51 @@ class ConfigValidationError(ValueError):
 _VALID_SHIM_STRATEGIES = ("symlink", "copy", "auto")
 
 
+def _validate_live_surface_testing(config: dict[str, Any]) -> None:
+    """Validate the live_surface_testing config block when present.
+
+    Enforces four rules:
+    1. ``enabled`` must be a bool when present.
+    2. When ``enabled`` is True, ``startup_command`` must be a non-empty string.
+    3. When both ``port_range_start`` and ``port_range_end`` are present,
+       ``port_range_start`` must be less than ``port_range_end``.
+    4. Absence of the key is valid — it is treated as ``enabled: false``.
+
+    Args:
+        config: The top-level config dict (flat or nested); reads the nested
+            ``live_surface_testing`` key directly.
+
+    Raises:
+        ConfigValidationError: When any of the above rules are violated.
+    """
+    block = config.get("live_surface_testing")
+    if block is None:
+        return  # Optional block; absence is valid.
+
+    enabled = block.get("enabled")
+    if enabled is not None and not isinstance(enabled, bool):
+        raise ConfigValidationError(
+            "live_surface_testing.enabled must be a boolean (true or false)."
+        )
+
+    if enabled is True:
+        startup_command = block.get("startup_command", "")
+        if not startup_command or not str(startup_command).strip():
+            raise ConfigValidationError(
+                "live_surface_testing.startup_command must be a non-empty string "
+                "when live_surface_testing.enabled is true."
+            )
+
+    port_start = block.get("port_range_start")
+    port_end = block.get("port_range_end")
+    if port_start is not None and port_end is not None:
+        if port_start >= port_end:
+            raise ConfigValidationError(
+                f"live_surface_testing port_range_start ({port_start}) must be "
+                f"less than port_range_end ({port_end})."
+            )
+
+
 def validate_config(config: dict[str, Any]) -> list[str]:
     """Validate config against the package JSON schema and custom rules.
 
@@ -127,7 +172,8 @@ def validate_config(config: dict[str, Any]) -> list[str]:
         the schema file is not found.
 
     Raises:
-        ConfigValidationError: When shim_strategy has an invalid value.
+        ConfigValidationError: When shim_strategy or live_surface_testing
+            has an invalid value.
     """
     shim_strategy = config.get("shim_strategy", "auto")
     if shim_strategy not in _VALID_SHIM_STRATEGIES:
@@ -135,6 +181,8 @@ def validate_config(config: dict[str, Any]) -> list[str]:
             f"Invalid shim_strategy: {shim_strategy!r}. "
             f"Valid values: {', '.join(_VALID_SHIM_STRATEGIES)}"
         )
+
+    _validate_live_surface_testing(config)
 
     if not _JSONSCHEMA_AVAILABLE:
         return ["jsonschema not installed — skipping schema validation (pip install jsonschema)"]
@@ -154,4 +202,8 @@ def validate_config(config: dict[str, Any]) -> list[str]:
 #   during file-size refactor (build.py exceeded 400-line limit). Config
 #   loading and schema validation isolated here so build.py stays focused
 #   on orchestration.
+# - 2026-06-03 10:05 [python-coder]: Added _validate_live_surface_testing() and wired it
+#   into validate_config(). Validates enabled (bool), startup_command (non-empty when
+#   enabled=true), and port_range_start < port_range_end. Absence of the key is valid
+#   (treated as enabled: false). (#EPIC-LiveSurfaceTesting/03)
 # ====================================================================

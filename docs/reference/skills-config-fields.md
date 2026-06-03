@@ -222,6 +222,53 @@ Each value is an object with two required fields:
 
 ---
 
+## Live Surface Testing
+
+Controls the `user-surface-smoker` agent, which starts the project's HTTP server
+in a subprocess during the ticket lifecycle and runs smoke tests against it. This
+block is **optional** and defaults to disabled — pure library or CLI projects
+must not accidentally spin up servers during commits or CI runs.
+
+See [ADR-007: Live Surface Tester](../architecture/adrs/ADR-007-live-surface-tester.md)
+for the architectural decision.
+
+| Field | Type | Default | Validation | Description |
+|---|---|---|---|---|
+| `live_surface_testing.enabled` | boolean | `false` | Must be a bool when present. | Master on/off switch. Set to `true` only for projects with a running HTTP server. `false` is the safe default. |
+| `live_surface_testing.startup_command` | string | `"python -m uvicorn app.main:app --host 0.0.0.0 --port {port}"` | Required (non-empty) when `enabled: true`. | Shell command to start the server. Use `{port}` as a placeholder; the port registry substitutes the actual port at runtime, enabling concurrent worktrees to use separate ports. |
+| `live_surface_testing.health_check_path` | string | `"/health"` | — | HTTP path the startup helper polls to confirm readiness. The request is `GET http://localhost:{port}{health_check_path}`. |
+| `live_surface_testing.startup_timeout_seconds` | integer | `30` | — | Maximum seconds to wait for the health check to return 200 before declaring the startup failed. |
+| `live_surface_testing.port_range_start` | integer | `8200` | Must be less than `port_range_end` when both are present. | Lower bound of the port band. The port registry draws from `[port_range_start, port_range_end)`. |
+| `live_surface_testing.port_range_end` | integer | `8299` | Must be greater than `port_range_start` when both are present. | Upper bound (exclusive) of the port band. Default gives 100 ports (8200–8299), above the common dev range of 8000–8199. |
+
+### Validation rules enforced by `config_loader.py`
+
+1. `enabled` must be a boolean (`true` or `false`) when present.
+2. When `enabled: true`, `startup_command` must be a non-empty string. Omitting or leaving it blank raises `ConfigValidationError`.
+3. When both `port_range_start` and `port_range_end` are present, `port_range_start` must be strictly less than `port_range_end`. Violating this raises `ConfigValidationError` with a message containing `"port_range"`.
+4. Absence of the entire `live_surface_testing` block is valid — it is treated as `enabled: false`. Existing `skills_config.json` files that do not include this block continue to work unchanged.
+
+### Template injection
+
+`build.py` injects `live_surface_testing_enabled` as a flat string key (`"true"` or `"false"`) into the config dictionary, making it available as `{{config.live_surface_testing_enabled}}` in agent templates. This uses the existing single-level placeholder regex; dot-notation (`{{config.live_surface_testing.enabled}}`) is not supported by the template engine.
+
+### Example configuration (enabled)
+
+```json
+{
+  "live_surface_testing": {
+    "enabled": true,
+    "startup_command": "python -m uvicorn app.main:app --host 0.0.0.0 --port {port}",
+    "health_check_path": "/health",
+    "startup_timeout_seconds": 30,
+    "port_range_start": 8200,
+    "port_range_end": 8299
+  }
+}
+```
+
+---
+
 ## Metadata field
 
 | Field | Type | Description |

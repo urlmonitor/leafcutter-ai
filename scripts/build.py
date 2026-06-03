@@ -281,6 +281,27 @@ def _inject_changelogs_dir(config: dict, package_root: Path) -> None:
     config["changelog_folder"] = changelogs_dir
 
 
+def _inject_live_surface_testing_enabled(config: dict) -> None:
+    """Inject a flat live_surface_testing_enabled key into the config dict.
+
+    Reads the nested ``live_surface_testing.enabled`` value from the config
+    and adds ``live_surface_testing_enabled`` as a flat boolean-string key so
+    that agent templates can reference it as
+    ``{{config.live_surface_testing_enabled}}`` using the existing single-level
+    placeholder regex.
+
+    Defaults to ``"false"`` when the ``live_surface_testing`` block is absent
+    or ``enabled`` is not set — matching the safe-default described in ADR-007.
+
+    Args:
+        config: The mutable config dict returned by ``load_config``; modified
+            in-place with the new ``live_surface_testing_enabled`` key.
+    """
+    block = config.get("live_surface_testing", {})
+    enabled = block.get("enabled", False) if isinstance(block, dict) else False
+    config["live_surface_testing_enabled"] = str(enabled).lower()
+
+
 def _validate_all(config: dict, package_root: Path, validate_only: bool, dry_run: bool) -> int:
     """Run config and registry validation and return an exit code.
 
@@ -627,6 +648,7 @@ def main(argv: list[str] | None = None) -> int:
     package_root = Path(__file__).resolve().parent.parent
     _inject_file_size_limits(config, package_root)
     _inject_changelogs_dir(config, package_root)
+    _inject_live_surface_testing_enabled(config)
     if _validate_all(config, package_root, args.validate_only, args.dry_run):
         return 1
 
@@ -864,4 +886,10 @@ if __name__ == "__main__":
 #   build_components_registry from build_phases and added ("Components registry",
 #   build_components_registry) entry to scaffold_phases between ("Roadmap", build_roadmap)
 #   and ("Glossary", build_glossary). (#TICKET-20260602-ComponentsRegistryScaffold)
+# - 2026-06-03 [python-coder/EPIC-LiveSurfaceTesting/03]: Added _inject_live_surface_testing_enabled()
+#   helper and wired it into main() after _inject_changelogs_dir(). Reads
+#   live_surface_testing.enabled from config and injects flat key
+#   live_surface_testing_enabled (string "true"/"false") so agent templates
+#   can reference {{config.live_surface_testing_enabled}} via the existing
+#   single-level placeholder regex. Safe default: "false". (#EPIC-LiveSurfaceTesting/03)
 # ====================================================================
