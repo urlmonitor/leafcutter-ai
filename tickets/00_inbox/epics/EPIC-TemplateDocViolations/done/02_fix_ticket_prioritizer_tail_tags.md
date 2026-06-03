@@ -1,6 +1,6 @@
 ---
 title: "Fix missing tail-tags in ticket-prioritizer skill DECISION HISTORY entries"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-26
@@ -21,7 +21,7 @@ agents:
   documentation-expert: not_needed
   change-scope-reviewer: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: not_needed
   status-checker: not_needed
   sql-coder: not_needed
@@ -81,7 +81,7 @@ And the 2026-05-13 17:00 entry ends with (#TICKETLESS reason=99-done-dir-name-al
 
 - [x] python-coder — 2026-06-03 00:00
 - [x] pr-reviewer — 2026-06-03 00:00
-- [ ] commit
+- [x] commit — 2026-06-03 00:00
 
 ## Comments
 
@@ -100,6 +100,13 @@ completion_manifest:
   no_scope_creep: true
   decision_history_new_entry_valid: true
 Changes exactly match acceptance criteria: both DECISION HISTORY entries now carry valid tail-tags with reasons ≥ 10 chars; new entry documents the fix with correct `(#EPIC-TemplateDocViolations/02)` tail-tag. No logic changes, no scope creep. Approved.
+
+### 2026-06-03 00:00 — commit (status: ok)
+feedback-id: fb_2026-06-03_57f01344
+completion_manifest:
+  implementation_changes_committed: true
+  ticket_signoff_staged: true
+All implementation changes to `prioritize.py` were already committed in the tree (commit 769f4e3). Signing off commit phase with the ticket sign-off state commit.
 
 ## Implementation Tasks
 
