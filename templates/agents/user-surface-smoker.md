@@ -187,6 +187,36 @@ template's frontmatter) form the required manifest keys. For each key:
 See signoff §2b for the required format: bare `true` for passing items; a
 nested object with `result`, `reason`, and `remediation` for any `false` item.
 
+## Feedback Submission (signoff §2a)
+
+When calling `submit_feedback.py` during sign-off:
+
+- Use `--category complete` on success.
+- Use `--category blocker` when emitting a `(status: blocker)` comment.
+- Use `--category tooling-issue` if the smoke test failed due to harness infrastructure (not surface logic).
+
+**Worktree path note:** `submit_feedback.py` resolves its sink path relative to
+`__file__` (not CWD), walking up to find the `.claude/` directory. In an epic
+worktree, `.claude/` exists in the worktree root — the script will write to the
+worktree's `debugging/logs/feedback.jsonl`. No special `--jsonl` override is needed.
+
+Use the two-step capture pattern (stdout + sidecar fallback) from signoff §2a:
+
+```bash
+FB_ID=$(python scripts/feedback/submit_feedback.py \
+  --ticket <ticket_path> \
+  --phase user-surface-smoker \
+  --category complete \
+  --note "<one-sentence summary>" \
+  2>feedback_err.txt)
+if [ -z "$FB_ID" ]; then
+  SIDECAR=$(grep -o 'sidecar:[^ ]*feedback_id_[0-9]*.txt' feedback_err.txt \
+            | sed 's/sidecar://' | head -1)
+  [ -n "$SIDECAR" ] && FB_ID=$(cat "$SIDECAR")
+fi
+FB_ID="${FB_ID:-(submit-failed)}"
+```
+
 """
 ====================================================================
 DECISION HISTORY
@@ -195,5 +225,10 @@ DECISION HISTORY
   Layer 3 of 3 in the EPIC-UserSurfaceVerification defence-in-depth stack.
   Priority 11.5 — after pr-reviewer, before commit. Conditional on user_facing_surface != null.
   See ADR-036 for full rationale.
+- 2026-06-03 00:02 [python-coder/TICKET-20260603-SmokerFeedbackSinkWorktree]: Added Feedback Submission section. (#TICKET-20260603-SmokerFeedbackSinkWorktree)
+  Root cause fix: user-surface-smoker was absent from feedback_categories.yaml allowed_writers
+  lists, causing submit_feedback.py to exit code 1 before writing any entry. Added explicit
+  ## Feedback Submission section documenting the correct --category values, worktree path
+  behaviour (script is __file__-relative, not CWD-relative), and the two-step capture pattern.
 ====================================================================
 """
