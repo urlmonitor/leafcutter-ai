@@ -1,6 +1,6 @@
 ---
 title: "Fix build system to respect config-driven folder paths and inject them into agent prompts"
-status: todo
+status: done
 components:
   - build_pipeline
   - config_loader
@@ -23,8 +23,8 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 ---
@@ -161,8 +161,8 @@ Then the write-if-absent guard is bypassed and files are overwritten
 - [x] python-coder — 2026-06-03 12:30
 - [x] test-runner — 2026-06-03 12:45
 - [x] pr-reviewer — 2026-06-03 13:00
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-03 13:15
+- [x] pull-request — 2026-06-03 13:30
 
 ## Comments
 
@@ -193,6 +193,21 @@ completion_manifest:
   no_regressions: true
   code_quality_acceptable: true
 All 5 acceptance criteria verified: (1) self-hosting config prevents hardcoded tickets/ creation; (2) config-overridden paths appear in compiled agent prompts; (3) consumer-project defaults preserved; (4) skip guard fires on manifest exists+force=False; (5) force=True bypasses skip guard. Implementation is clean — backward-compatible parameter additions, DECISION HISTORY entries present, 7 tests green.
+
+### 2026-06-03 13:15 — commit (status: ok)
+feedback-id: fb_2026-06-03_7ed11c3d
+completion_manifest:
+  commit_landed: true
+  files_match_plan: true
+  pre_commit_clean: true
+Commit cf8f6f6 on branch ticket/config-driven-build-paths. 5 files, 611 insertions, 15 deletions. Note: PRE_COMMIT_ALLOW_NO_CONFIG=1 required (no .pre-commit-config.yaml in this worktree — consumer project convention).
+
+### 2026-06-03 13:30 — pull-request (status: ok)
+feedback-id: fb_2026-06-03_e03deb2a
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+PR #37 opened at https://github.com/urlmonitor/leafcutter-ai/pull/37 targeting main.
 
 ## Implementation Tasks
 
