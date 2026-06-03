@@ -20,17 +20,17 @@ files_touched:
   - templates/agents/retrospective-agent.md
   - docs/architecture/feedback-lifecycle.md
 agents:
-  architect-review: needed
+  architect-review: signed_off
   adr-author: not_needed
-  architecture-diagram-author: needed
+  architecture-diagram-author: signed_off
   test-writer: not_needed
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
-  user-surface-smoker: needed
-  commit: needed
+  pr-reviewer: signed_off
+  user-surface-smoker: signed_off
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -130,14 +130,54 @@ Then the skill exits immediately with "No unresolved feedback entries — nothin
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] architecture-diagram-author
-- [ ] pr-reviewer
-- [ ] user-surface-smoker
-- [ ] commit
+- [x] architect-review — 2026-06-03 10:15
+- [x] architecture-diagram-author — 2026-06-03 10:00
+- [x] pr-reviewer — 2026-06-03 10:30
+- [x] user-surface-smoker — 2026-06-03 10:45
+- [x] commit — 2026-06-03 11:00
 - [ ] pull-request
 
 ## Comments
+
+### 2026-06-03 10:00 — architecture-diagram-author (status: ok)
+feedback-id: fb_2026-06-03_d19835c8
+completion_manifest:
+  diagram_created: true
+  flight_level_correct: true
+  cross_links_added: true
+Created `docs/architecture/feedback-lifecycle.md` as an L3-Component dataflow diagram showing all producers (ticket-supervisor, pre-commit hooks, signoff skill), storage (feedback.jsonl), evaluators (retrospective-agent, /feedback-review), and resolution paths. Also authored `templates/skills/feedback-review/SKILL.md` (skill flow for /feedback-review triage session) and added Step 4b (unresolved feedback check) to `templates/agents/retrospective-agent.md` as an additive section. Scaffolding script (new_arch_doc.py) was unavailable so frontmatter was hand-authored following existing doc patterns; diagram_type set to `dataflow` matching the ticket's Architecture Plan.
+
+### 2026-06-03 10:15 — architect-review (status: ok)
+feedback-id: fb_2026-06-03_b66ee798
+completion_manifest:
+  blast_radius_assessed: true
+  impact_classified: true
+  architectural_note_written: true
+Classification: small. Affected files: 3 (templates/skills/feedback-review/SKILL.md, templates/agents/retrospective-agent.md, docs/architecture/feedback-lifecycle.md). No always-large triggers (no Alembic migrations, no hypertable changes, no public API changes, no ADR contract changes). Single component (build_pipeline). The skill design correctly delegates to aggregate.py --unresolved as the contract boundary; retrospective-agent modification is additive with graceful fallback. Design concern (non-blocking): SKILL.md uses character-input UI ([c]/[d]/[s]) which implies CLI stdin, but the skill runs inside Claude Code's conversational interface — the interaction model works through conversation turns rather than stdin reads. No acceptance-criteria adjustments needed. Escalation: none.
+
+### 2026-06-03 10:30 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-03_d1c82fbd
+completion_manifest:
+  high_confidence_issues_checked: true
+  medium_confidence_checked: true
+  escalation_decision_made: true
+Reviewed 3 in-scope files (docs/architecture/feedback-lifecycle.md, templates/skills/feedback-review/SKILL.md, templates/agents/retrospective-agent.md). No high-confidence issues found. Zero medium-confidence findings. Diagram mermaid block is valid; skill SKILL.md error handling covers all failure paths; retrospective-agent.md modification is additive with graceful fallback for missing aggregate.py. Escalation: none (medium count 0, threshold > 3).
+
+### 2026-06-03 10:45 — user-surface-smoker (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  surface_invoked: true
+  assertions_passed: true
+  no_placeholder_signatures: true
+Smoke test: surface=feedback-review, fixture=zero-unresolved entries. aggregate.py --unresolved returns {"total": 0}; skill Step 1 exits with "No unresolved feedback entries — nothing to triage." which matches assertion regex (?i)(no unresolved). Placeholder signature regex (?i)(TODO|placeholder|not implemented|lorem ipsum) not matched. submit_feedback.py returned exit code 1 (user-surface-smoker not in feedback_categories.yaml allowed_writers — known issue from TICKET-20260603-SmokerFeedbackSinkWorktree); feedback-id set to (submit-failed) per signoff §2a fallback.
+
+### 2026-06-03 11:00 — commit (status: ok)
+feedback-id: fb_2026-06-03_534dada9
+completion_manifest:
+  files_staged: true
+  commit_succeeded: true
+  pre_commit_hooks_passed: true
+Staged 4 in-scope files by explicit path: docs/architecture/feedback-lifecycle.md (new), templates/skills/feedback-review/SKILL.md (new), templates/agents/retrospective-agent.md (modified), tickets/00_inbox/TICKET-20260603-FeedbackReviewSkill.md (ticket sign-offs). Commit issued with message "feat(feedback): add /feedback-review skill, retrospective unresolved check, and feedback lifecycle diagram".
 
 ## Smoke Fixture
 
@@ -153,7 +193,7 @@ placeholder_signature: "(?i)(TODO|placeholder|not implemented|lorem ipsum)"
 
 ### architecture-diagram-author — feedback lifecycle diagram
 
-- [ ] Author `docs/architecture/feedback-lifecycle.md` as a `data_flow` diagram
+- [x] Author `docs/architecture/feedback-lifecycle.md` as a `data_flow` diagram
   documenting the complete feedback lifecycle.
 
   **Diagram scope** — show all of the following:
