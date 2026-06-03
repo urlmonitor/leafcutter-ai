@@ -1,6 +1,6 @@
 ---
 title: "Remove Step 3 pre-move and failure-path revert from build-single-ticket/SKILL.md"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-03
