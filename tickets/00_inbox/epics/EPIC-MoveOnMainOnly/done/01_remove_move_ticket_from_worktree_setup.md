@@ -1,6 +1,6 @@
 ---
 title: "Remove _move_ticket() call from setup_ticket_worktree.py"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-03
@@ -22,7 +22,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 ---
@@ -99,7 +99,7 @@ Then the function is absent (zero matches)
 - [x] test-runner — 2026-06-03 10:03
 - [x] pr-reviewer — 2026-06-03 10:04
 - [x] commit — 2026-06-03 10:05
-- [ ] pull-request
+- [x] pull-request — 2026-06-03 10:06
 
 ## Comments
 
@@ -151,6 +151,13 @@ completion_manifest:
   correct_files_staged: true
   lock_acquired_and_released: true
 4 files committed cleanly (SHA 5ce21d1): `setup_ticket_worktree.py`, `test_setup_ticket_worktree.py`, `01_remove_move_ticket_from_worktree_setup.md`, `feedback.jsonl`. Commit-phase lock acquired before staging and released after success. Pre-commit config absent in worktree (epic branch), hooks will apply on main after PR merge.
+
+### 2026-06-03 10:06 — pull-request (status: ok)
+feedback-id: fb_2026-06-03_2c9fdcee
+completion_manifest:
+  pr_opened: true
+  branch_pushed: true
+PR #36 opened at https://github.com/urlmonitor/leafcutter-ai/pull/36 for epic branch EPIC-MoveOnMainOnly → main. Branch pushed (SHA 1c72715). One PR per epic, covering all tickets in EPIC-MoveOnMainOnly.
 
 ## Implementation Tasks
 
