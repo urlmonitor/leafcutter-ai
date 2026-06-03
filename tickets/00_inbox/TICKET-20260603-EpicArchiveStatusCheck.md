@@ -1,6 +1,6 @@
 ---
 title: "Epic archive pre-flight: verify all sub-ticket statuses before archiving"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-03
@@ -22,7 +22,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 ---
@@ -82,7 +82,7 @@ tests: []
 - [x] test-runner — 2026-06-03 10:00
 - [x] pr-reviewer — 2026-06-03 10:10
 - [x] commit — 2026-06-03 10:20
-- [ ] pull-request
+- [x] pull-request — 2026-06-03 10:30
 
 ## Implementation Tasks
 
@@ -106,7 +106,7 @@ tests: []
 - [x] Commit all staged files
 
 ### pull-request
-- [ ] Push branch and open PR
+- [x] Push branch and open PR
 
 ## Comments
 
@@ -153,6 +153,14 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Staged: templates/skills/finalize-feature-archive-check/SKILL.md (new), templates/workflows-js/finalize-feature.js (updated Step 5), config/skill_registry.json (new registry entry), ticket file. Commit message: feat(finalize-feature): add archive status check skill and Step 5 integration.
+
+### 2026-06-03 10:30 — pull-request (status: ok)
+feedback-id: fb_2026-06-03_53dd05f7
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Pushed branch feature/epicarchivestatuscheck to origin and opened PR #40: https://github.com/urlmonitor/leafcutter-ai/pull/40. Last needed agent — also flipped status: todo → status: done in frontmatter.
 
 ## Escalation
 
