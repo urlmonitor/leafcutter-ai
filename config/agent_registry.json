@@ -520,6 +520,24 @@
             "requires_ticket_section": false
         },
         {
+            "id": "code-review-architect",
+            "name": "Code Review Architect",
+            "tier": "standalone",
+            "role": "review",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/code-review-architect.md",
+            "model": "opus",
+            "skills_used": [],
+            "requires_ticket_section": false
+        },
+        {
             "id": "commit",
             "name": "Commit",
             "tier": "phase",
