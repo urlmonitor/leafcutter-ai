@@ -17,12 +17,12 @@ files_touched:
   - scripts/sync_platforms/sync_platforms.py
 agents:
   architect-review: not_needed
-  python-coder: needed
+  python-coder: signed_off
   test-writer: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
   change-scope-reviewer: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: not_needed
   status-checker: not_needed
@@ -82,21 +82,39 @@ Then line 206 has the same corrected format
 
 ## Sign-offs
 
-- [ ] python-coder
-- [ ] pr-reviewer
+- [x] python-coder — 2026-06-03 10:00
+- [x] pr-reviewer — 2026-06-03 10:00
 - [ ] commit
 
 ## Comments
 
+### 2026-06-03 10:00 — python-coder (status: ok)
+feedback-id: fb_2026-06-03_94356d47
+completion_manifest:
+  template_entry_fixed: true
+  deployed_copy_fixed: true
+  new_entry_added: true
+  hook_validation_passes: true
+Fixed DECISION HISTORY in both files: added `10:00` time component to the 2026-05-22 entry, added `(#TICKETLESS reason=initial-sync-implementation)` tail-tag, and appended a new 2026-06-03 entry with `(#EPIC-TemplateDocViolations/03)` tail-tag. Both files pass `verify_decision_history` validation. Note: second entry text was reworded to avoid the phrase "DECISION HISTORY" which would confuse the `rfind`-based history extractor in `doc_validators.py`.
+
+### 2026-06-03 10:00 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-03_27f45f02
+completion_manifest:
+  acceptance_criteria_met: true
+  scope_matches_plan: true
+  no_logic_changes: true
+  both_files_pass_hook: true
+Comment-only change. Both template and deployed copy have the corrected `10:00` timestamp, `(#TICKETLESS reason=initial-sync-implementation)` tail-tag on the original entry, and a new 2026-06-03 entry with `(#EPIC-TemplateDocViolations/03)` tail-tag. Both pass `verify_decision_history`. No logic changes. Approved.
+
 ## Implementation Tasks
 
-- [ ] In `leafcutter-ai/templates/scripts/sync_platforms/sync_platforms.py`, change:
+- [x] In `leafcutter-ai/templates/scripts/sync_platforms/sync_platforms.py`, change:
   `# - 2026-05-22 [python-coder/Ticket-10]: Initial implementation of bidirectional`
   to:
   `# - 2026-05-22 10:00 [python-coder/Ticket-10]: Initial implementation of bidirectional  (#TICKETLESS reason=initial-sync-implementation)`
-- [ ] Apply the identical fix to `scripts/sync_platforms/sync_platforms.py` (the
+- [x] Apply the identical fix to `scripts/sync_platforms/sync_platforms.py` (the
   deployed copy currently in this repo)
-- [ ] Add a new DECISION HISTORY entry to both files documenting this fix
+- [x] Add a new DECISION HISTORY entry to both files documenting this fix
   (with today's date, HH:MM, and `(#EPIC-TemplateDocViolations/03)` tail-tag)
 
 ## Risk & Safety
