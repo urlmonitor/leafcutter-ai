@@ -23,7 +23,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 ---
@@ -97,7 +97,7 @@ tests: []
 - [x] Commit implementation changes
 
 ### pull-request
-- [ ] Open pull request
+- [x] Open pull request
 
 ## Sign-offs
 
@@ -107,7 +107,7 @@ tests: []
 - [x] test-runner — 2026-06-03 00:03
 - [x] pr-reviewer — 2026-06-03 13:00
 - [x] commit — 2026-06-03 13:05
-- [ ] pull-request
+- [x] pull-request — 2026-06-03 13:10
 
 ## Comments
 
@@ -174,3 +174,12 @@ Commit 58aec42 landed on branch feature/smokerfeedbacksinkworktree. 4 files, 151
 ## Anomalies
 
 The worktree lacks .pre-commit-config.yaml — pre-commit ran in allow-no-config mode. The workspace-level config at /home/henzeh/projects/leafcutter/.pre-commit-config.yaml is not symlinked into worktrees. This may be worth noting in a future ticket.
+
+### 2026-06-03 13:10 — pull-request (status: ok)
+feedback-id: fb_2026-06-03_b62a4cd9
+completion_manifest:
+  pr_opened: true
+  branch_pushed: true
+  pr_url_recorded: true
+
+Branch feature/smokerfeedbacksinkworktree pushed to origin. PR #38 opened at https://github.com/urlmonitor/leafcutter-ai/pull/38.
