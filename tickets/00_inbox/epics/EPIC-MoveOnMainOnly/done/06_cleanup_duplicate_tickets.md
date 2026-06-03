@@ -1,6 +1,6 @@
 ---
 title: "Remove stale 00_inbox copies of the 2 known duplicate tickets"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-03
