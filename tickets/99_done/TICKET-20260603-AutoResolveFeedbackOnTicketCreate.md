@@ -1,6 +1,6 @@
 ---
 title: "Auto-resolve feedback entries when a ticket is created from them"
-status: done
+status: todo
 components:
   - build_pipeline
 created: 2026-06-03
@@ -18,13 +18,13 @@ files_touched:
 agents:
   architect-review: not_needed
   test-writer: signed_off
-  python-coder: signed_off
+  python-coder: needed
   sql-coder: not_needed
-  test-runner: signed_off
+  test-runner: needed
   documentation-expert: not_needed
-  pr-reviewer: signed_off
-  commit: signed_off
-  pull-request: signed_off
+  pr-reviewer: needed
+  commit: needed
+  pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
   user-surface-smoker: not_needed
@@ -113,11 +113,11 @@ And the create-ticket orchestrator surfaces these to the user before proceeding 
 ## Sign-offs
 
 - [x] test-writer — 2026-06-03 10:30
-- [x] python-coder — 2026-06-03 11:00
-- [x] test-runner — 2026-06-03 11:15
-- [x] pr-reviewer — 2026-06-03 11:30
-- [x] commit — 2026-06-03 11:45
-- [x] pull-request — 2026-06-03 12:00
+- [ ] python-coder
+- [ ] test-runner
+- [ ] pr-reviewer
+- [ ] commit
+- [ ] pull-request
 
 ## Comments
 
@@ -152,59 +152,11 @@ red_baseline:
 ### Notes
 7 tests pass immediately (regression/contract tests for existing resolve_feedback.py and aggregate.py behaviour). 2 tests are correctly red for the new functionality to be implemented by python-coder.
 
-### 2026-06-03 11:00 — python-coder (status: ok)
-feedback-id: fb_2026-06-03_2fb8bba5
-completion_manifest:
-  link_feedback_resolve_call: true
-  ticket_wiring_step_3b: true
-  business_analyst_step_1_5: true
-  aggregate_json_flag: true
-  all_tests_green: true
-  ruff_clean: true
-
-Extended `link_feedback.py` with `_call_resolve_feedback()` helper and auto-resolve call gated on `--ticket` presence. Added `Step 3b` to `ticket-wiring/SKILL.md`. Added `Step 1.5` and `related_feedback` field to `business-analyst.md`. Added `--json` flag to `aggregate.py` (outputs plain JSON list, distinct from `--format json` which outputs wrapped object). All 27 tests pass, Ruff clean.
-
-### 2026-06-03 11:15 — test-runner (status: ok)
-feedback-id: fb_2026-06-03_148c1464
-completion_manifest:
-  full_suite_run: true
-  new_tests_green: true
-  no_new_regressions: true
-
-137 of 139 tests pass. 2 pre-existing failures in `test_build_workflow_phase.py` (missing `build-feature.js` in this environment — unrelated to this ticket's changes). All 9 new tests (`test_link_feedback_resolve.py` x5, `test_ticket_wiring_resolve.py` x4) pass. No regressions in `unit_tests/feedback/` (18 tests all pass).
-
-### 2026-06-03 11:30 — pr-reviewer (status: ok)
-feedback-id: fb_2026-06-03_1ba1ee5c
-completion_manifest:
-  acceptance_criteria_met: true
-  error_handling_policy_followed: true
-  tests_adequate: true
-  no_security_concerns: true
-
-All acceptance criteria met. `_call_resolve_feedback()` correctly implements the four-rule error policy (subprocess wrapped in try/except OSError, non-zero exit logged but not propagated). `--ticket`-only guard correctly prevents resolve call for --commit-only and --pr-only invocations. `ticket-wiring` Step 3b and `business-analyst` Step 1.5 match the ticket specification. The `--json` flag for aggregate.py is a clean addition that doesn't break existing `--format json` callers. Approved.
-
-### 2026-06-03 11:45 — commit (status: ok)
-feedback-id: fb_2026-06-03_e0e13308
-completion_manifest:
-  commit_created: true
-  files_staged_correctly: true
-  no_cross_ticket_pollution: true
-
-Committed as `339a75c feat(feedback): auto-resolve feedback entries when ticket is created from them`. 7 files changed (5 modified, 2 new test files). SHA: 339a75c.
-
-### 2026-06-03 12:00 — pull-request (status: ok)
-feedback-id: fb_2026-06-03_d264aef1
-completion_manifest:
-  branch_pushed: true
-  pr_updated: true
-
-Pushed to existing PR #41 (feature/feedbackresolutiontracking → main). PR URL: https://github.com/urlmonitor/leafcutter-ai/pull/41
-
 ## Implementation Tasks
 
 ### python-coder — extend link_feedback.py to call resolve_feedback.py
 
-- [x] After the `_write_jsonl` call in `link_feedback.py`'s `main()` (i.e. after
+- [ ] After the `_write_jsonl` call in `link_feedback.py`'s `main()` (i.e. after
   a ref was successfully added to `addressed_by`), call `resolve_feedback.py`
   on the same `feedback_id` and `--ticket` arg.
 
@@ -225,7 +177,7 @@ Pushed to existing PR #41 (feature/feedbackresolutiontracking → main). PR URL:
 
 ### python-coder — extend ticket-wiring SKILL.md to call resolve_feedback.py
 
-- [x] Add a new **Step 3b — Auto-resolve originating feedback** subsection to
+- [ ] Add a new **Step 3b — Auto-resolve originating feedback** subsection to
   `templates/skills/ticket-wiring/SKILL.md`, positioned immediately after
   the current "Step 3 — Error Recovery Path" section and before "Step 4 — Verify".
 
@@ -265,7 +217,7 @@ Pushed to existing PR #41 (feature/feedbackresolutiontracking → main). PR URL:
 
 ### python-coder — optional: surface related feedback in business-analyst.md
 
-- [x] In `templates/agents/business-analyst.md`, add a Step 1.5 after the
+- [ ] In `templates/agents/business-analyst.md`, add a Step 1.5 after the
   six-dimension scoping step and before spawning test-planner:
 
   ```markdown
