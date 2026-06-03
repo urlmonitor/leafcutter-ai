@@ -19,12 +19,12 @@ agents:
   architect-review: not_needed
   adr-author: not_needed
   test-writer: not_needed
-  python-coder: needed
+  python-coder: signed_off
   sql-coder: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
-  commit: needed
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: needed
   architecture-diagram-author: not_needed
   explanation-author: not_needed
@@ -127,16 +127,44 @@ Then live_surface_test is absent from the output JSON
 
 ## Sign-offs
 
-- [ ] python-coder
-- [ ] pr-reviewer
-- [ ] commit
+- [x] python-coder — 2026-06-03 10:00
+- [x] pr-reviewer — 2026-06-03 10:05
+- [x] commit — 2026-06-03 10:10
 - [ ] pull-request
 
 ## Comments
 
+### 2026-06-03 10:10 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  files_staged: true
+  commit_created: true
+Staged implementation files and ticket, created commit for ticket 05 BA live_surface_test heuristics.
+
+### 2026-06-03 10:05 — pr-reviewer (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  heuristics_section_correctly_placed: true
+  all_skip_rules_present: true
+  all_opt_in_rules_present: true
+  output_contract_field_documented: true
+  agent_registry_updated: true
+  acceptance_criteria_satisfied: true
+All 6 auto-skip rules and 5 opt-in rules are correctly documented. The `## Live Surface Test Heuristics` section is placed after `### Default agents map by ticket archetype` as specified. The Output Contract JSON and `### live_surface_test field` reference section are both present. The agent_registry.json business-analyst entry now has a `selection_criteria` description noting the heuristic evaluation. All 5 Gherkin acceptance criteria are covered by the implementation. No blockers.
+
+### 2026-06-03 10:00 — python-coder (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  live_surface_test_heuristics_section_added: true
+  output_contract_updated: true
+  agent_registry_comment_updated: true
+  auto_skip_rules_documented: true
+  opt_in_rules_documented: true
+Added `## Live Surface Test Heuristics` section to `templates/agents/business-analyst.md` with 6 auto-skip rules and 5 opt-in rules, plus an Output field subsection. Updated the Output Contract JSON example to include `live_surface_test: true | false | null` and added a `### live_surface_test field` reference section. Updated `config/agent_registry.json` business-analyst `selection_criteria` from `null` to a description noting the `live_surface_test` heuristic evaluation.
+
 ## Implementation Tasks
 
-- [ ] Edit `templates/agents/business-analyst.md`:
+- [x] Edit `templates/agents/business-analyst.md`:
   - Add a new `## Live Surface Test Heuristics` section (after the existing
     `## Default agents map by ticket archetype` section)
   - Document the 6 auto-skip rules and the 5 opt-in rules listed in Context
@@ -146,7 +174,7 @@ Then live_surface_test is absent from the output JSON
     "Before emitting the structured JSON, evaluate the live_surface_test
     heuristics. Emit the field when confident; emit an open question when
     ambiguous."
-- [ ] Update the output JSON schema in the BA template:
+- [x] Update the output JSON schema in the BA template:
   - Add `live_surface_test` to the `## Output Contract` section
   - Document it as optional: absent = false
 

@@ -110,7 +110,8 @@ Return a JSON block with **all** of these fields:
         "covers": "<which function/class/behavior this test covers>"
       }
     ]
-  }
+  },
+  "live_surface_test": true | false | null
 }
 ```
 
@@ -152,6 +153,55 @@ When you cannot determine the exact agents needed, use these defaults:
 > for a ticket that would otherwise route to the "New feature (code)" archetype, the DSL
 > result is authoritative.
 
+## Live Surface Test Heuristics
+
+After computing the `files_touched` and `agents` fields, evaluate whether the ticket
+warrants live HTTP or browser surface testing. Emit the `live_surface_test` field in
+your output JSON when you can make a confident determination; omit it and emit an open
+question when the ticket is ambiguous.
+
+### Auto-skip rules (set `live_surface_test: false` when ANY is true)
+
+1. **Docs-only.** All entries in `files_touched` are under `docs/` with no code files.
+2. **Config-only.** All entries in `files_touched` are JSON or YAML configuration files
+   with no executable code.
+3. **Internal refactor.** The ticket does not change any HTTP endpoint, route handler,
+   or UI component (BA judgment call — no `api/`, `app/`, `server/`, `frontend/`,
+   `views/`, or `routes/` paths appear in `files_touched` and the request prose does
+   not describe surface changes).
+4. **Test-files-only.** All entries in `files_touched` are under `unit_tests/` or match
+   `test_*.py`, with no corresponding application code changes.
+5. **No surface component.** The ticket's `components` list does not include any component
+   whose `primary_code` path suggests a running server (no `api/`, `app/`, `server/`,
+   `frontend/`, `views/`, or `routes/` prefixes).
+6. **Project opt-out.** `live_surface_testing.enabled: false` in `skills_config.json`
+   (project-wide opt-out). Read this field from the project context provided at invocation
+   time. When the field is absent, treat it as `true` (enabled).
+
+### Opt-in rules (set `live_surface_test: true` when ANY is true)
+
+- The ticket adds, modifies, or removes an HTTP endpoint (route handler, view, controller).
+- The ticket changes authentication or authorization middleware.
+- The ticket modifies CORS policy, rate limiting, or request validation.
+- The ticket changes a frontend page or component that renders to a real browser URL.
+- The ticket modifies the startup sequence, environment variable handling, or application
+  factory.
+
+### Evaluation output
+
+The field is **optional**. Emit it only when you can confidently set it.
+
+- When one or more **auto-skip rules** fire and none of the opt-in rules fire: emit
+  `"live_surface_test": false`.
+- When one or more **opt-in rules** fire (regardless of skip rules): emit
+  `"live_surface_test": true`.
+- When the ticket is ambiguous (e.g. a mixed refactor that might touch routes): **omit
+  the field** and add an open question asking the ticket author to decide.
+
+Rule 6 (project opt-out) always overrides opt-in rules: if
+`live_surface_testing.enabled: false`, emit `"live_surface_test": false` regardless of
+what the ticket touches.
+
 ### user_facing_surface and actuation_contract fields
 
 When the ticket introduces or modifies a user-facing surface, populate:
@@ -173,6 +223,25 @@ scripts, internal utilities, or documentation with no production entrypoint.
 
 Set `test-writer: not_needed` when `test_requirements.tests` is empty.
 Set `test-writer: needed` when `test_requirements.tests` has at least one entry.
+
+### live_surface_test field
+
+```json
+"live_surface_test": true | false | null
+```
+
+Optional boolean. Controls whether `ticket-supervisor` dispatches `live-surface-tester`
+(priority 11.8) for this ticket. See `## Live Surface Test Heuristics` for the full
+evaluation algorithm.
+
+| Value | Meaning |
+|---|---|
+| `true` | Ticket warrants live HTTP/browser surface testing. `live-surface-tester` will be dispatched. |
+| `false` | Ticket does not warrant live surface testing. `live-surface-tester` is skipped. |
+| `null` (absent) | BA could not determine; treated as `false` by `ticket-supervisor`. An open question is emitted so the ticket author can decide. |
+
+When `live_surface_testing.enabled: false` in `skills_config.json`, always emit
+`"live_surface_test": false` regardless of other heuristics.
 
 ### requires_diagram and requires_adr (REQUIRED tri-state fields, ADR-026)
 

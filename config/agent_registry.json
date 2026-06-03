@@ -119,7 +119,9 @@
                 "create-epic"
             ],
             "is_ticket_phase": false,
-            "selection_criteria": null,
+            "selection_criteria": {
+                "description": "Always spawned as the first stage of create-ticket and create-epic. Not a ticket phase agent — runs during ticket creation, not during ticket execution. Evaluates live_surface_test heuristics (6 auto-skip rules, 5 opt-in rules) to determine whether to emit live_surface_test: true/false/null in the output payload. See templates/agents/business-analyst.md §Live Surface Test Heuristics."
+            },
             "template_path": "templates/agents/business-analyst.md",
             "model": "sonnet",
             "skills_used": []
