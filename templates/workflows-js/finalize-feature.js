@@ -41,6 +41,7 @@ const meta = {
     "step-1: open PR if missing (pull-request agent)",
     "step-2: merge PR to main (prompt gate + pull-request agent)",
     "step-3: sync local main (status-checker shell)",
+    "step-3.5: merge origin/main into worktree --no-commit --no-ff (HALT on conflict)",
     "step-4: run post-merge tests (test-runner — HALT on failure)",
     "step-5: close tickets / archive epic (status-checker)",
     "step-6: remove worktree (worktree-agent — gate delegated)",
@@ -244,6 +245,84 @@ async function run({ userInput, agent, parallel, prompt }) {
   });
 
   completedSteps.push(3);
+
+  // -------------------------------------------------------------------------
+  // Step 3.5 — Merge origin/main into the feature worktree (no commit)
+  //
+  // Inserts the merged state into the worktree so that tests in step 4 run
+  // against the post-merge tree. Uses --no-commit --no-ff so no merge commit
+  // is written to the feature branch. On conflict, git merge --abort cleans up
+  // and the workflow halts with category merge_conflict.
+  //
+  // Resumability: probe git merge-base --is-ancestor to detect already-merged.
+  // -------------------------------------------------------------------------
+  const mergeMainResult = await agent({
+    agentType: "status-checker",
+    input: {
+      instructions:
+        "Run these commands inside the feature worktree to merge origin/main before tests:\n" +
+        "\n" +
+        "1. Check if the branch is already up-to-date with origin/main:\n" +
+        `   Run: git merge-base --is-ancestor origin/main HEAD\n` +
+        "   Exit code 0 means HEAD already contains all commits from origin/main.\n" +
+        "   If exit code 0: log 'Already up-to-date with origin/main.' and return\n" +
+        "   { \"status\": \"already_up_to_date\", \"merge_strategy\": \"already_up_to_date\" }\n" +
+        "\n" +
+        "2. If not up-to-date, fetch origin/main to ensure it is current:\n" +
+        "   Run: git fetch origin main\n" +
+        "\n" +
+        "3. Attempt the merge (no commit, no fast-forward):\n" +
+        "   Run: git merge origin/main --no-commit --no-ff\n" +
+        "   Capture the exit code.\n" +
+        "\n" +
+        "4. If exit code is 0 (clean merge):\n" +
+        "   Log: 'Merge clean — worktree reflects post-merge state.'\n" +
+        "   Return: { \"status\": \"merged\", \"merge_strategy\": \"merged_main\" }\n" +
+        "\n" +
+        "5. If exit code is non-zero (conflict detected):\n" +
+        "   Run: git merge --abort\n" +
+        "   Return: { \"status\": \"conflict\", \"merge_strategy\": null }",
+    },
+  });
+
+  let mergeMainInfo;
+  try {
+    mergeMainInfo =
+      typeof mergeMainResult === "string"
+        ? JSON.parse(mergeMainResult)
+        : mergeMainResult;
+  } catch (_err) {
+    mergeMainInfo = { status: "conflict", merge_strategy: null };
+  }
+
+  const mergeStatus = (mergeMainInfo.status || "conflict").toLowerCase();
+
+  if (mergeStatus === "conflict") {
+    return {
+      status: "halted",
+      halted_at_step: "3.5",
+      reason: "merge_conflict",
+      message:
+        "Feature branch has conflicts with main. Resolve conflicts and re-run.",
+      branch: BRANCH,
+      pr_number: prNumber,
+      pr_url: prUrl,
+      completed_steps: completedSteps,
+      skipped_steps: skippedSteps,
+    };
+  }
+
+  if (mergeStatus === "already_up_to_date") {
+    skippedSteps.push({
+      step: "3.5",
+      reason: "Already up-to-date with origin/main",
+    });
+  } else {
+    // merged_main path
+    completedSteps.push("3.5");
+  }
+
+  const mergeStrategy = mergeMainInfo.merge_strategy || "already_up_to_date";
 
   // -------------------------------------------------------------------------
   // Step 4 — Run post-merge tests (always runs; HALT on failure)
@@ -516,6 +595,7 @@ async function run({ userInput, agent, parallel, prompt }) {
     pr_number: prNumber,
     pr_url: prUrl,
     merge_result: mergeResult,
+    merge_strategy: mergeStrategy,
     test_result: testResult,
     tickets_closed: ticketsClosed,
     tickets_reconciled: ticketsReconciled,
