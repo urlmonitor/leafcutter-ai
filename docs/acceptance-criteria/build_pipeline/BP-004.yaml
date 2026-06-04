@@ -1,0 +1,19 @@
+id: BP-004
+title: "test_resolve_precommit_cmd_skips_nonexecutable_known_path covers broken known-path"
+component: build_pipeline
+status: active
+criteria: |
+  Given tests/test_install_hooks.py
+  When a new test class TestResolvePrecommitCmdKnownPaths is added
+  Then it contains test_resolve_precommit_cmd_skips_nonexecutable_known_path
+   Which patches shutil.which to return None
+   And patches importlib.util.find_spec to return None
+   And patches _precommit_known_paths to yield a Path that .is_file() returns True
+   And patches the executability probe to return non-zero (simulating broken binary)
+   And asserts _resolve_precommit_cmd() returns None
+origin_agent: "business-analyst-v2"
+created_by_ticket: "tickets/00_inbox/TICKET-20260604-PrecommitBinaryResolution.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

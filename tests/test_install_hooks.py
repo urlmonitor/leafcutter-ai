@@ -220,6 +220,40 @@ class TestInstallHooksHooksPathAbsentProceeds(unittest.TestCase):
         self.assertTrue(len(precommit_calls) >= 1, "pre-commit install was not called")
 
 
+class TestResolvePrecommitCmdKnownPaths(unittest.TestCase):
+    """_resolve_precommit_cmd() skips a known-path candidate whose --version probe fails."""
+
+    def test_resolve_precommit_cmd_skips_nonexecutable_known_path(self):
+        """When shutil.which and find_spec return None and the only known-path candidate
+        has is_file()=True but --version exits non-zero, _resolve_precommit_cmd returns None.
+
+        Patches:
+            - shutil.which -> None (tier 1 finds nothing)
+            - importlib.util.find_spec -> None (tier 2 finds nothing)
+            - _precommit_known_paths -> yields one fake path with is_file()=True
+            - subprocess.run -> returns CompletedProcess with returncode=1 (bad binary)
+
+        Asserts:
+            - _resolve_precommit_cmd() returns None (broken candidate is skipped)
+        """
+        install_hooks, mod = _get_install_hooks()
+
+        fake_path = MagicMock(spec=Path)
+        fake_path.is_file.return_value = True
+        fake_path.__str__ = lambda self: "/fake/.local/bin/pre-commit"
+
+        probe_result = MagicMock()
+        probe_result.returncode = 1
+
+        with patch("shutil.which", return_value=None):
+            with patch("importlib.util.find_spec", return_value=None):
+                with patch.object(mod, "_precommit_known_paths", return_value=iter([fake_path])):
+                    with patch("subprocess.run", return_value=probe_result):
+                        result = mod._resolve_precommit_cmd()
+
+        self.assertIsNone(result)
+
+
 class TestInstallHooksPrecommitFailureIsNonfatal(unittest.TestCase):
     """When pre-commit install raises CalledProcessError, install_hooks returns 'failed' without raising."""
 

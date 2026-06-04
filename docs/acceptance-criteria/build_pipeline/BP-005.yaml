@@ -1,0 +1,16 @@
+id: BP-005
+title: "All existing tests/test_install_hooks.py tests continue to pass after the fix"
+component: build_pipeline
+status: active
+criteria: |
+  Given the modified build_helpers.py with the executability-probe fix in _resolve_precommit_cmd()
+  When python -m pytest tests/test_install_hooks.py -v is run
+  Then all 5 existing test methods pass without modification
+   And the exit code is 0
+   And no test is skipped or xfailed due to the change
+origin_agent: "business-analyst-v2"
+created_by_ticket: "tickets/00_inbox/TICKET-20260604-PrecommitBinaryResolution.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []
