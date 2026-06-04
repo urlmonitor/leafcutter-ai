@@ -37,7 +37,8 @@
             "portable": true,
             "domain": null,
             "spawn_allowlist": [
-                "__ticket_phase_agents__"
+                "__ticket_phase_agents__",
+                "llm-expert"
             ],
             "spawned_by": [
                 "user",
@@ -1523,6 +1524,50 @@
             "priority_rationale": "Runs after architecture-diagram-author (3) and before architect-review (4); produces per-agent contracts that architect-review can validate before any coder starts",
             "requires_ticket_section": false,
             "description": "Opus-tier IT PO. Reads architecture docs only (never source files). Asks clarifying questions before producing contracts. Activates only for multi-coder tickets. Handles check_ac_limits split protocol."
+        },
+        {
+            "id": "llm-expert",
+            "name": "LLM Expert",
+            "tier": "phase",
+            "role": "authoring",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "research-agent"
+            ],
+            "spawned_by": [
+                "ticket-supervisor"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign when the ticket requires authoring, editing, or auditing agent templates, skill bodies, or slash-command markdown files.",
+                "trigger_conditions": [
+                    {
+                        "type": "dsl",
+                        "expression": "files_touched contains templates/agents/*.md OR files_touched contains templates/skills/*/SKILL.md OR files_touched contains templates/workflows/*.md"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket adds or modifies an agent template, skill body, or slash-command workflow file"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket requires applying the Prompt-Quality Checklist to an agent or skill"
+                    }
+                ],
+                "default_status": "not_needed"
+            },
+            "template_path": "templates/agents/llm-expert.md",
+            "model": "sonnet",
+            "skills_used": [
+                "add-agent-to-package",
+                "add-skill-to-package",
+                "signoff"
+            ],
+            "priority": 6,
+            "priority_rationale": "Authoring phase agent; runs after architectural review and before test-runner/pr-reviewer",
+            "requires_ticket_section": true,
+            "description": "Authors, edits, and audits agent templates, skill bodies, and slash-command markdown files. Applies the Prompt-Quality Checklist."
         }
     ]
 }
