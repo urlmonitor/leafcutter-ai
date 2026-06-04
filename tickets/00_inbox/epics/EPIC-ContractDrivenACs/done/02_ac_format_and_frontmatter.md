@@ -1,6 +1,6 @@
 ---
 title: "Update ticket format: numbered AC checklist, ac_coverage frontmatter, AC Coverage table"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-03
@@ -57,7 +57,7 @@ for linking ACs to tests and implementations.
 - [x] test-runner — 2026-06-04 00:10
 - [x] pr-reviewer — 2026-06-04 00:15
 - [x] commit — 2026-06-04 00:20
-- [ ] pull-request
+- [x] pull-request — 2026-06-04 00:25
 
 ## AC Coverage
 
@@ -115,3 +115,10 @@ completion_manifest:
   commit_clean: true
   no_cross_ticket_pollution: true
 Committed f21fc58. Staged 5 files: templates/skills/ticket-authoring/SKILL.md, templates/commit-guardian/commit_guardian.json, templates/scripts/commit_guardian/commit_guardian.json, scripts/commit_guardian/commit_guardian.json (tracked build output), ticket file. Unstaged unrelated files from other tickets before committing.
+
+### 2026-06-04 00:25 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_1cf47417
+completion_manifest:
+  pushed_to_branch: true
+  pr_updated: true
+Pushed commit f21fc58 to EPIC-ContractDrivenACs branch. Existing PR #43 (feat(epic): EPIC-ContractDrivenACs — contract-driven acceptance criteria) updated automatically.
