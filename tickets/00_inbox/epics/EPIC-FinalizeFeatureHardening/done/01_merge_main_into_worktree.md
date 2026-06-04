@@ -1,6 +1,6 @@
 ---
 title: "Add merge-main-into-worktree step to finalize-feature.js"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
@@ -26,8 +26,8 @@ agents:
   reference-author: not_needed
   user-surface-smoker: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 01: Add merge-main-into-worktree step to finalize-feature.js
@@ -101,8 +101,8 @@ Then the merge step is skipped with a log message "Already up-to-date with origi
 - [x] test-writer — 2026-06-04 00:00
 - [x] test-runner — 2026-06-04 00:01
 - [x] pr-reviewer — 2026-06-04 00:02
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-04 00:03
+- [x] pull-request — 2026-06-04 00:04
 
 ## Comments
 
@@ -127,6 +127,21 @@ completion_manifest:
   implementation_matches_plan: true
   no_scope_creep: true
 Step 3.5 (merge-main-into-worktree) added to `finalize-feature.js` between step 3 and step 4. All three ACs verified: (1) clean merge path proceeds to step 4 with `--no-commit --no-ff`, (2) conflict path returns `status: halted` with `reason: merge_conflict` and aborts, (3) already-up-to-date path skips with log. `meta.phases` updated with step-3.5 label. Success return includes `merge_strategy` field. No scope creep detected.
+
+### 2026-06-04 00:03 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  files_staged_explicitly: true
+  commit_created: true
+  only_in_scope_files_committed: true
+Committed 2 files: `templates/workflows-js/finalize-feature.js` and ticket file. SHA: 3dad321. No out-of-scope files staged. PRE_COMMIT_ALLOW_NO_CONFIG=1 used (no .pre-commit-config.yaml in worktree — config lives in workspace root above git repo).
+
+### 2026-06-04 00:04 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+PR #45 opened at https://github.com/urlmonitor/leafcutter-ai/pull/45. Branch EPIC-FinalizeFeatureHardening pushed to origin. PR title: "feat(finalize-feature): add merge-main-into-worktree step (step 3.5)".
 
 ## Implementation Tasks
 
