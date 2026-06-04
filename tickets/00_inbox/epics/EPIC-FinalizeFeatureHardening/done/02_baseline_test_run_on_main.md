@@ -1,6 +1,6 @@
 ---
 title: "Capture pre-merge test baseline on main HEAD"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
@@ -26,8 +26,8 @@ agents:
   reference-author: not_needed
   user-surface-smoker: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 02: Capture pre-merge test baseline on main HEAD
@@ -101,8 +101,8 @@ Then it logs a warning "Baseline run failed — triage will treat all failures a
 - [x] test-writer — 2026-06-04 00:00
 - [x] test-runner — 2026-06-04 00:01
 - [x] pr-reviewer — 2026-06-04 00:02
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-04 00:03
+- [x] pull-request — 2026-06-04 00:04
 
 ## Comments
 
@@ -124,9 +124,23 @@ completion_manifest:
   bug_found_and_fixed: true
 All three ACs verified: (1) step 0 dispatches test-runner against main HEAD, capturing baseline_sha and baseline_failures; (2) zero-failure baseline correctly sets baseline_failures: [] so post-merge failures are regressions; (3) failed baseline sets baseline_failures: null and workflow continues (no halt). Found and fixed one bug: baselineWorktreePath was declared but never set before cleanup calls — now set to baselineTmpPath immediately after it is computed, and cleared to null after successful step-D cleanup. JS syntax re-verified via node --check after fix. Implementation tasks and acceptance criteria all satisfied.
 
+### 2026-06-04 00:03 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  files_committed: true
+  lock_acquired_and_released: true
+Committed finalize-feature.js and ticket file as ccf7b54. Lock acquired before commit, released after. CLAUDE.md (unrelated modification) was excluded from the staged set. Pre-commit framework required PRE_COMMIT_ALLOW_NO_CONFIG=1 since no .pre-commit-config.yaml exists in this worktree.
+
+### 2026-06-04 00:04 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_exists: true
+Pushed EPIC-FinalizeFeatureHardening branch to origin (ccf7b54 → 411b995..ccf7b54). Existing PR #45 at https://github.com/urlmonitor/leafcutter-ai/pull/45 — no new PR needed.
+
 ## Implementation Tasks
 
-- [ ] Before step 1 in `finalize-feature.js`, add step 0:
+- [x] Before step 1 in `finalize-feature.js`, add step 0:
   - Create a temporary worktree at `/tmp/leafcutter-main-baseline-<timestamp>`
     via `git worktree add --detach origin/main <path>`.
   - Dispatch `test-runner` against that path. Capture the list of failing
@@ -136,11 +150,11 @@ All three ACs verified: (1) step 0 dispatches test-runner against main HEAD, cap
   - Remove the temp worktree with `git worktree remove <path> --force`.
   - On any error during worktree creation or test run: log a warning and set
     `baseline_failures: null`. Continue — do not halt.
-- [ ] Update the `const meta` phases array to include `"capture_baseline"` as
+- [x] Update the `const meta` phases array to include `"capture_baseline"` as
   the step 0 label.
-- [ ] Pass `baseline_failures` and `baseline_sha` forward to the triage agent
+- [x] Pass `baseline_failures` and `baseline_sha` forward to the triage agent
   dispatch in step 4 (wired in ticket 04).
-- [ ] Add a cleanup guard: if the workflow halts at any step after step 0,
+- [x] Add a cleanup guard: if the workflow halts at any step after step 0,
   ensure the temp worktree is removed (use a `finally`-equivalent pattern in JS).
 
 ## Risk & Safety
