@@ -1,6 +1,6 @@
 ---
 title: "Add complexity assessment and brainstorm escalation to BA"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-03
@@ -24,7 +24,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   architecture-diagram-author: not_needed
   user-surface-smoker: not_needed
 ---
@@ -51,7 +51,7 @@ features where multiple valid approaches exist.
 - [x] python-coder — 2026-06-04 09:15
 - [x] pr-reviewer — 2026-06-04 09:20
 - [x] commit — 2026-06-04 09:25
-- [ ] pull-request
+- [x] pull-request — 2026-06-04 09:30
 
 ## AC Coverage
 
@@ -98,3 +98,10 @@ completion_manifest:
   commit_created: true
   no_cross_ticket_pollution: true
 Staged templates/agents/business-analyst.md and ticket 03a; committed changes for §5 Complexity Assessment and §6 Brainstorm Escalation.
+
+### 2026-06-04 09:30 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_6e028af2
+completion_manifest:
+  commit_pushed_to_remote: true
+  pr_exists_or_created: true
+Pushed commit 1c56bd5 to EPIC-ContractDrivenACs branch. PR #43 (urlmonitor/leafcutter-ai) already open — no new PR needed.
