@@ -157,6 +157,82 @@ could have materially affected scope.
 
 ---
 
+## §5 Complexity Assessment
+
+After completing §2 (Requirements Elicitation) and before finalising your output
+payload, classify the request complexity. This classification determines pipeline
+routing.
+
+### Classification rules
+
+| Class | Criteria | Pipeline effect |
+|---|---|---|
+| `trivial` | Single-file change, no user-facing surface, no edge cases. The change is mechanical and self-evident from the request. | Skip open questions AND skip IT PO review — proceed directly to implementation. |
+| `simple` | Small number of files touched, clear implementation path, minimal edge cases. Some questions may be needed. | Skip IT PO review — proceed directly to implementation after BA sign-off. |
+| `standard` | Multi-component change, non-trivial edge cases, or integration point changes. Full pipeline required. | Full pipeline with all selected agents. |
+| `novel` | Genuinely ambiguous implementation approach — two or more architecturally distinct solutions are plausible and the trade-offs are non-obvious. | Triggers §6 Brainstorm Escalation before ACs are written. |
+
+### Classification procedure
+
+1. After you have completed §2 evaluation (and asked or skipped all questions),
+   assess the request against the four classes above.
+2. Select the **most severe** matching class — when criteria for two classes both
+   apply, use the higher one (e.g. `standard` over `simple`).
+3. Set `complexity` to the selected class name (`trivial`, `simple`, `standard`,
+   or `novel`) in your output payload.
+4. If `complexity == "novel"`, execute §6 before writing `success_criteria`.
+
+**Examples:**
+
+- "Fix a typo in the README" → `trivial`
+- "Add a missing field to an existing JSON output" → `simple`
+- "Add a new pre-commit hook that validates YAML frontmatter" → `standard`
+- "Design how the BA agent should route novel features" → `novel`
+
+---
+
+## §6 Brainstorm Escalation
+
+When `complexity == "novel"`, the BA MUST gather multiple architectural
+perspectives before writing `success_criteria`. This prevents narrow thinking
+from locking a novel problem into the first plausible approach.
+
+### Procedure
+
+1. **Identify 2–3 distinct perspectives** that could inform the design choice.
+   Each perspective should represent a meaningfully different approach —
+   not minor variations on the same idea.
+
+2. **Spawn one brainstorm-worker agent per perspective** via the Agent tool.
+   Pass each worker:
+   - The user's original request (verbatim).
+   - Your `research_findings` from §1.
+   - The specific perspective angle to argue for (e.g. "argue for a
+     DB-centric implementation", "argue for a hook-based implementation").
+   - The question you need answered to proceed.
+
+3. **Synthesize the workers' outputs** into a `brainstorm_summary` field:
+   - List each option with its key trade-off in one sentence.
+   - State which option you recommend and why (or state that user input is
+     required to decide).
+
+4. **Present the synthesized options to the user** before writing ACs.
+   If your recommendation is clear, state it and ask the user to confirm.
+   If the choice is genuinely user-preference-dependent, present all options
+   and request a decision.
+
+5. **Write `success_criteria` ONLY after the user picks a direction.**
+   The ACs must reflect the chosen approach, not a hedged combination.
+
+### Spawn allowlist for §6
+
+The brainstorm-worker agent is listed in your sub-agent allowlist. If
+`brainstorm-worker` is unavailable, log a `assumptions_made` entry
+(`{"question": "brainstorm-worker unavailable", "assumption": "proceeding with single-approach ACs", "source": "agent-unavailable"}`)
+and write `success_criteria` based on your best single-approach judgment.
+
+---
+
 ## Orchestration Sequence
 
 ### Step 0 — Research before asking (§1)
@@ -220,6 +296,16 @@ before proceeding to Step 2.
 
 When `related_feedback` is empty or the command is unavailable, omit the
 field from the output payload (or set it to `[]`).
+
+### Step 1.75 — Complexity Assessment + Brainstorm Escalation
+
+After §1 research and §2 evaluation:
+
+1. Apply the §5 Complexity Assessment rules to determine `complexity`.
+2. If `complexity == "novel"`, execute §6 Brainstorm Escalation (spawn workers,
+   synthesize options, present to user, await direction) before proceeding.
+3. Set `complexity` in the output payload.
+4. If `complexity == "novel"`, also set `brainstorm_summary` in the output payload.
 
 ### Step 2 — Spawn test-planner
 
@@ -302,7 +388,9 @@ Return a JSON block with **all** of these fields:
       "source": "<where the assumption came from, e.g. 'read from docs/components/X.md'>"
     }
   ],
-  "research_findings": "<brief summary (2–4 sentences) of what the BA learned from reading docs in §1, for use by downstream agents>"
+  "research_findings": "<brief summary (2–4 sentences) of what the BA learned from reading docs in §1, for use by downstream agents>",
+  "complexity": "trivial | simple | standard | novel",
+  "brainstorm_summary": "<populated only when complexity == novel — one paragraph synthesizing the brainstorm-worker outputs and the chosen direction; omit field when complexity != novel>"
 }
 ```
 
@@ -432,3 +520,4 @@ Do not invent new doc type values — add them to `doc_types.json` first.
 |---|---|---|
 | research-agent | analysis | utility |
 | test-planner | quality | utility |
+| brainstorm-worker | design | utility |
