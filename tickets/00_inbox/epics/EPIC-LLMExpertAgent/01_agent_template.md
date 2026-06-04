@@ -9,13 +9,13 @@ priority: high
 files_touched:
   - templates/agents/llm-expert.md
 agents:
-  architect-review: needed
+  architect-review: signed_off
   python-coder: not_needed
   test-writer: not_needed
   test-runner: not_needed
-  documentation-expert: needed
+  documentation-expert: signed_off
   sql-coder: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   status-checker: not_needed
@@ -98,30 +98,59 @@ Then it prohibits: editing Python/SQL/frontend files, editing registry or build 
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] documentation-expert
-- [ ] pr-reviewer
+- [x] architect-review — 2026-06-04 10:00
+- [x] documentation-expert — 2026-06-04 10:05
+- [x] pr-reviewer — 2026-06-04 10:10
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-06-04 10:00 — architect-review (status: ok)
+feedback-id: fb_2026-06-04_a934e6a5
+completion_manifest:
+  blast_radius_assessed: true
+  impact_classified: true
+  architectural_note_written: true
+Impact classification: SMALL. This ticket creates a single new file `templates/agents/llm-expert.md` with no Alembic migration, no public API change, no hypertable change, and no ADR contract change. The change touches 1 file in 1 component (build_pipeline). Tool allowlist (Bash, Read, Edit, Write, Agent) is consistent with existing phase agents. Domain: null (portable). Spawn_allowlist should be empty (the llm-expert invokes skills, not sub-agents directly). No ADR required. No diagrams required (documentation-only change).
+
+## Escalation
+
+Branch: none
+Reason: 1 file in 1 component (build_pipeline); no always-large trigger fired.
+
+### 2026-06-04 10:05 — documentation-expert (status: ok)
+feedback-id: fb_2026-06-04_9b6c5146
+completion_manifest:
+  doc_written: true
+  cross_links_added: true
+  diataxis_genre_correct: true
+Created `templates/agents/llm-expert.md` with all required sections per ticket ACs: frontmatter (name, description, model, tools, portable, signoff, requires_verification), Pre-Flight Reads (references PROJECT_CONTEXT.md and signoff SKILL.md), 6-item Prompt-Quality Checklist with violation examples, Stop-and-Ask Rule (defers registry/build-pipeline edits to workflow-architect), Skills table (add-agent-to-package, add-skill-to-package, signoff), Implementation Sequence, Response Payload, Completion Manifest, Sign-off, and Constraints sections. All 6 checklist items and all ACs satisfied.
+
+### 2026-06-04 10:10 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-04_a32680af
+completion_manifest:
+  diff_reviewed: true
+  no_high_findings: true
+  scope_verified: true
+All 7 ACs verified against `templates/agents/llm-expert.md`. Frontmatter fields all present and correct (name=llm-expert, model=sonnet, tools=Bash/Read/Edit/Write/Agent, portable=true, signoff=true, requires_verification=true). Pre-Flight Reads section names PROJECT_CONTEXT.md and signoff SKILL.md. Prompt-Quality Checklist has 6 items with concrete violation patterns. Stop-and-Ask Rule explicitly defers registry edits to workflow-architect. Skills section lists all three required skills with invocation guidance. Sign-off section follows signoff §2 recipe. Constraints section prohibits Python/SQL/frontend edits, registry edits, and compound bash. No high-confidence issues found. Scope matches files_touched (1 file: templates/agents/llm-expert.md).
+
 ## Implementation Tasks
 
 ### architect-review
 
-- [ ] Review frontmatter schema for alignment with existing agent templates
-- [ ] Verify spawn_allowlist and domain settings are correct for this agent's role
-- [ ] Confirm the tool allowlist (Bash, Read, Edit, Write, Agent) is sufficient for the agent's scope
+- [x] Review frontmatter schema for alignment with existing agent templates
+- [x] Verify spawn_allowlist and domain settings are correct for this agent's role
+- [x] Confirm the tool allowlist (Bash, Read, Edit, Write, Agent) is sufficient for the agent's scope
 
 ### documentation-expert
 
-- [ ] Author the Pre-Flight Reads section with clear references to PROJECT_CONTEXT.md location
-- [ ] Author the Prompt-Quality Checklist section with 6+ items and concrete examples of violations
-- [ ] Author the Skills section with clear descriptions of when to invoke each skill
-- [ ] Author the Implementation Sequence section with step-by-step guidance
-- [ ] Author the Response Payload section with required completion report format
-- [ ] Author the Constraints section establishing the single-command bash rule
+- [x] Author the Pre-Flight Reads section with clear references to PROJECT_CONTEXT.md location
+- [x] Author the Prompt-Quality Checklist section with 6+ items and concrete examples of violations
+- [x] Author the Skills section with clear descriptions of when to invoke each skill
+- [x] Author the Implementation Sequence section with step-by-step guidance
+- [x] Author the Response Payload section with required completion report format
+- [x] Author the Constraints section establishing the single-command bash rule
 
 ## Risk & Safety
 

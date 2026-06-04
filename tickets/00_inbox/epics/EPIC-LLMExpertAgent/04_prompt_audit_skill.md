@@ -9,13 +9,13 @@ priority: high
 files_touched:
   - templates/skills/prompt-audit/SKILL.md
 agents:
-  architect-review: needed
-  python-coder: needed
+  architect-review: signed_off
+  python-coder: signed_off
   test-writer: not_needed
   test-runner: not_needed
-  documentation-expert: needed
+  documentation-expert: signed_off
   sql-coder: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   status-checker: not_needed
@@ -119,41 +119,77 @@ And the report summary shows total_violations, total_errors, total_warnings
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] python-coder
-- [ ] documentation-expert
-- [ ] pr-reviewer
+- [x] architect-review — 2026-06-04 00:00
+- [x] python-coder — 2026-06-04 00:01
+- [x] documentation-expert — 2026-06-04 00:02
+- [x] pr-reviewer — 2026-06-04 00:03
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-06-04 00:00 — architect-review (status: ok)
+feedback-id: fb_2026-06-04_3fc9d92e
+completion_manifest:
+  blast_radius_assessed: true
+  impact_classified: true
+  architectural_note_written: true
+Blast-radius analysis: 1 new file (templates/skills/prompt-audit/SKILL.md), 1 component (build_pipeline). No always-large triggers (no Alembic, no TimescaleDB, no public API, no ADR contract change). Classification: Small. Architectural note: skill is audit-only with minimal allowed-tools (Bash, Read); responsibility boundary is correct; integration with llm-expert is clean via structured report output. No ADR needed, no diagrams needed. Escalation: none.
+
+### 2026-06-04 00:01 — python-coder (status: ok)
+feedback-id: fb_2026-06-04_f2f72e32
+completion_manifest:
+  code_implemented: true
+  tests_passing: true
+  doc_enforcer_clean: true
+  complexity_check_clean: true
+Created templates/skills/prompt-audit/SKILL.md with 6 audit checks: frontmatter schema validation, tool allowlist vs body usage, compound bash detection, signoff protocol validation, spawn_allowlist validation, and stop-and-ask rules. Each check is modular and independently invocable. Structured report format documented with JSON schema, examples, and severity reference. Skill is read-only (Bash, Read only).
+
+### 2026-06-04 00:02 — documentation-expert (status: ok)
+feedback-id: fb_2026-06-04_764c4b6b
+completion_manifest:
+  skill_remit_documented: true
+  audit_report_structure_documented: true
+  checks_documented: true
+  violation_examples_provided: true
+  severity_levels_documented: true
+All documentation requirements are embedded in SKILL.md itself: "When to Invoke" section documents the skill remit; "Audit Report Format" documents the structured report schema; Checks 1-6 each document detection logic, severity, and steps; "Examples" section provides two concrete violation examples; "Severity Reference" table documents error vs warning thresholds.
+
+### 2026-06-04 00:03 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-04_c4492138
+completion_manifest:
+  acs_satisfied: true
+  no_regressions: true
+  frontmatter_valid: true
+  no_compound_bash: true
+Reviewed templates/skills/prompt-audit/SKILL.md: all 6 ACs from ticket satisfied (frontmatter schema, 6 checks implemented, structured report format, violations sorted by line_number, summary totals). Frontmatter contains correct name/description/allowed-tools/portable fields. Skill body is well-structured with When-to-Invoke, Checks 1-6, Report Format, Examples, Severity Reference, and Constraints sections. No blockers.
+
 ## Implementation Tasks
 
 ### architect-review
 
-- [ ] Review the skill's responsibility boundary (audit-only, read-only, no edits)
-- [ ] Verify allowed-tools list is correct and minimal (Bash, Read only)
-- [ ] Confirm the skill's integration point with llm-expert agent (how llm-expert invokes and uses the findings)
+- [x] Review the skill's responsibility boundary (audit-only, read-only, no edits)
+- [x] Verify allowed-tools list is correct and minimal (Bash, Read only)
+- [x] Confirm the skill's integration point with llm-expert agent (how llm-expert invokes and uses the findings)
 
 ### python-coder
 
-- [ ] Implement the frontmatter schema validation routine
-- [ ] Implement the tool allowlist parser and cross-reference logic
-- [ ] Implement the compound bash detection logic with regex/string pattern matching
-- [ ] Implement the signoff protocol validation routine
-- [ ] Implement the spawn_allowlist validation routine
-- [ ] Implement the stop-and-ask rule detection routine
-- [ ] Implement structured report generation (JSON/dict format)
-- [ ] Ensure each check is modular so llm-expert can invoke individual checks or run full audit
+- [x] Implement the frontmatter schema validation routine
+- [x] Implement the tool allowlist parser and cross-reference logic
+- [x] Implement the compound bash detection logic with regex/string pattern matching
+- [x] Implement the signoff protocol validation routine
+- [x] Implement the spawn_allowlist validation routine
+- [x] Implement the stop-and-ask rule detection routine
+- [x] Implement structured report generation (JSON/dict format)
+- [x] Ensure each check is modular so llm-expert can invoke individual checks or run full audit
 
 ### documentation-expert
 
-- [ ] Document the skill's remit and when llm-expert should invoke it
-- [ ] Document the structure of the audit report
-- [ ] Document each check and what it detects
-- [ ] Provide examples of violations and how to fix them
-- [ ] Document the violation severity levels (error vs warning) and what triggers each
+- [x] Document the skill's remit and when llm-expert should invoke it
+- [x] Document the structure of the audit report
+- [x] Document each check and what it detects
+- [x] Provide examples of violations and how to fix them
+- [x] Document the violation severity levels (error vs warning) and what triggers each
 
 ## Risk & Safety
 
