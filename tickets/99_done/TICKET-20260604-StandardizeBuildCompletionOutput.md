@@ -1,6 +1,6 @@
 ---
 title: "Standardize completion output for build-ticket and build-epic workflows"
-status: todo
+status: done
 components:
   - infrastructure
 created: 2026-06-04
