@@ -18,11 +18,11 @@ files_touched:
 agents:
   architect-review: not_needed
   test-writer: not_needed
-  python-coder: needed
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   adr-author: not_needed
@@ -175,13 +175,66 @@ And all 5 tests in test_build_workflow_phase.py pass
 
 ## Sign-offs
 
-- [ ] python-coder
-- [ ] test-runner
-- [ ] pr-reviewer
+- [x] python-coder — 2026-06-04 14:00
+- [x] test-runner — 2026-06-04 14:05
+- [x] pr-reviewer — 2026-06-04 14:10
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
+
+### 2026-06-04 14:00 — python-coder (status: ok)
+feedback-id: fb_2026-06-04_2fdc1ede
+completion_manifest:
+  code_implemented: true
+  tests_passing: true
+  doc_enforcer_clean: true
+  complexity_check_clean: true
+Applied three fixes: (1) Added debug, feedback-analysis, and feedback-review entries to config/skill_registry.json in alphabetical order. (2) Fixed tests/test_install_hooks.py _get_install_hooks() to insert scripts/ into sys.path before exec_module, updated return to expose (fn, mod) tuple, and updated test_install_hooks_no_precommit_binary to patch _resolve_precommit_cmd directly (covering all three detection fallbacks). (3) Fixed build_workflow_scripts() in scripts/build_phases.py: output_dir changed from target_root/"workflows" to target_root/".claude"/"workflows". All 20 tests across three suites pass.
+
+### 2026-06-04 14:05 — test-runner (status: ok)
+feedback-id: fb_2026-06-04_eb2ec95f
+completion_manifest:
+  test_suite_executed: true
+  all_tests_passing: true
+  failure_report_structured: true
+
+## Test Results — build-pipeline
+
+Status: PASS
+Tests run: 20   Failures: 0   Errors: 0   Skipped: 0
+
+Suites: tests/test_skill_registry.py (9 passed), tests/test_install_hooks.py (6 passed), unit_tests/test_build_workflow_phase.py (5 passed). All acceptance criteria passing.
+
+### 2026-06-04 14:10 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-04_881a730a
+completion_manifest:
+  diff_reviewed: true
+  no_high_findings: true
+  scope_verified: true
+
+### Review Report
+
+**Base:** HEAD
+**Diff size:** ~58 lines changed across 3 implementation files + ticket
+
+#### High-Confidence Findings
+
+No high-confidence findings.
+
+#### Medium-Confidence Findings
+
+[M-1] tests/test_install_hooks.py — `mod` variable unpacked but unused in tests 2–6
+      Informational: the `_get_install_hooks()` function now returns a `(fn, mod)` tuple for forward compatibility. Tests 2–6 unpack `mod` but do not use it. This is not a bug — the patching in those tests works correctly via `shutil.which`. No correctness impact.
+
+#### Suppression Tally
+
+Suppressed: 0 low-confidence nits, 0 medium findings dropped by Opus.
+
+## Escalation
+
+Branch: none
+Reason: not escalated: medium count was 1 (threshold > 3)
 
 ## Implementation Tasks
 

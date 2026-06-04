@@ -20,11 +20,21 @@ _MODULE_PATH = _REPO_ROOT / "scripts" / "build_helpers.py"
 
 
 def _get_install_hooks():
-    """Late-load install_hooks so tests can fail at test-run time, not collection."""
+    """Late-load install_hooks so tests can fail at test-run time, not collection.
+
+    Returns:
+        Tuple of (install_hooks callable, module object).  The module is exposed
+        so callers can patch internal functions (e.g. _resolve_precommit_cmd)
+        via unittest.mock.patch.object(mod, ...) when shutil.which alone is not
+        sufficient to control all detection fallbacks.
+    """
+    _scripts_dir = str(_MODULE_PATH.parent)
+    if _scripts_dir not in sys.path:
+        sys.path.insert(0, _scripts_dir)
     spec = importlib.util.spec_from_file_location("build_helpers_ih", _MODULE_PATH)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    return getattr(mod, "install_hooks")
+    return getattr(mod, "install_hooks"), mod
 
 
 class TestInstallHooksNoPrecommitBinary(unittest.TestCase):
@@ -35,13 +45,18 @@ class TestInstallHooksNoPrecommitBinary(unittest.TestCase):
 
         Must implement:
             build_helpers.install_hooks(target_root: Path, dry_run: bool) -> str
-            - shutil.which("pre-commit") returns None → return "skipped (pre-commit not found)"
+            - _resolve_precommit_cmd() returns None → return "skipped (pre-commit not found)"
             - must NOT call subprocess.run with pre-commit install
+
+        Note: _resolve_precommit_cmd is patched directly (rather than shutil.which)
+        because it has three detection fallbacks: shutil.which, importlib find_spec,
+        and known install paths.  Patching the composed resolver is the correct
+        isolation boundary.
         """
-        install_hooks = _get_install_hooks()
+        install_hooks, mod = _get_install_hooks()
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp)
-            with patch("shutil.which", return_value=None) as mock_which:
+            with patch.object(mod, "_resolve_precommit_cmd", return_value=None):
                 with patch("subprocess.run") as mock_run:
                     result = install_hooks(target, dry_run=False)
 
@@ -59,7 +74,7 @@ class TestInstallHooksDryRun(unittest.TestCase):
             - if dry_run: print "[DRY-RUN] would run pre-commit install" and return "dry-run"
             - subprocess.run must NOT be called
         """
-        install_hooks = _get_install_hooks()
+        install_hooks, mod = _get_install_hooks()
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp)
             with patch("shutil.which", return_value="/usr/bin/pre-commit"):
@@ -83,7 +98,7 @@ class TestInstallHooksDefaultHooksPathIsUnset(unittest.TestCase):
             - pre-commit install is called
             - return value is "installed"
         """
-        install_hooks = _get_install_hooks()
+        install_hooks, mod = _get_install_hooks()
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp)
 
@@ -135,7 +150,7 @@ class TestInstallHooksCustomHooksPathIsSkipped(unittest.TestCase):
             - install_hooks does NOT call pre-commit install
             - return value is "skipped (custom hooksPath)"
         """
-        install_hooks = _get_install_hooks()
+        install_hooks, mod = _get_install_hooks()
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp)
 
@@ -174,7 +189,7 @@ class TestInstallHooksHooksPathAbsentProceeds(unittest.TestCase):
             - install_hooks calls pre-commit install
             - return value is "installed"
         """
-        install_hooks = _get_install_hooks()
+        install_hooks, mod = _get_install_hooks()
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp)
 
@@ -216,7 +231,7 @@ class TestInstallHooksPrecommitFailureIsNonfatal(unittest.TestCase):
             - install_hooks catches it and returns "failed"
             - no exception propagates to caller
         """
-        install_hooks = _get_install_hooks()
+        install_hooks, mod = _get_install_hooks()
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp)
 
