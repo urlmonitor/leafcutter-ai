@@ -62,6 +62,15 @@
       "dependencies": []
     },
     {
+      "id": "debug",
+      "name": "Debug",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/debug/",
+      "dependencies": [],
+      "description": "Multi-angle debugging workflow. Spawns three parallel investigative agents (database, backend, frontend/docs) to diagnose an issue from different perspectives, synthesizes findings, creates a fix ticket via create-ticket agent, and builds it via build-feature."
+    },
+    {
       "id": "doc-enforcer",
       "name": "Doc Enforcer",
       "portable": true,
@@ -77,6 +86,24 @@
       "domain": null,
       "template_path": "leafcutter/templates/skills/feature/",
       "dependencies": []
+    },
+    {
+      "id": "feedback-analysis",
+      "name": "Feedback Analysis",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/feedback-analysis/",
+      "dependencies": [],
+      "description": "Read-side analysis pipeline for the Central Feedback Collection System. Produces a prioritized report structure from accumulated feedback data across all categories."
+    },
+    {
+      "id": "feedback-review",
+      "name": "Feedback Review",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/feedback-review/",
+      "dependencies": [],
+      "description": "Triage unresolved feedback entries from feedback.jsonl. Presents each entry grouped by category and prompts the user to create a ticket, dismiss, or skip."
     },
     {
       "id": "frontend-design",
