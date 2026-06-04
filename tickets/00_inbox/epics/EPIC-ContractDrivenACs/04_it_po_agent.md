@@ -16,6 +16,8 @@ requires_adr: false
 user_facing_surface: null
 files_touched:
   - templates/agents/it-po.md
+  - config/agent_registry.json
+  - templates/skills/ticket-authoring/SKILL.md
 agents:
   architect-review: not_needed
   test-writer: not_needed
@@ -23,7 +25,7 @@ agents:
   sql-coder: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   architecture-diagram-author: not_needed
@@ -118,7 +120,7 @@ are covered by ticket 02_ac_format_and_frontmatter.md — not duplicated here.
 ## Sign-offs
 
 - [x] python-coder — 2026-06-04 10:00
-- [ ] pr-reviewer
+- [x] pr-reviewer — 2026-06-04 10:15
 - [ ] commit
 - [ ] pull-request
 
@@ -271,3 +273,11 @@ completion_manifest:
   doc_enforcer_clean: true
   complexity_check_clean: true
 Created `templates/agents/it-po.md` with all seven required sections (§0 scope classification, §1 question protocol, §2 knowledge acquisition, §3 contract output format, §4 precision rules, §5 integration ACs, §6 frontmatter update, §7 split protocol). Added `it-po` entry to `config/agent_registry.json` with `is_ticket_phase: true`, model: opus, priority 3.5. Added Agent Contracts Block documentation to `templates/skills/ticket-authoring/SKILL.md` with routing decision table and full contract format spec. All ACs AC-1 through AC-7 addressed.
+
+### 2026-06-04 10:15 — pr-reviewer (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  diff_reviewed: true
+  no_high_findings: true
+  scope_verified: true
+Reviewed working diff: templates/agents/it-po.md (new), config/agent_registry.json (+38 lines), templates/skills/ticket-authoring/SKILL.md (+66 lines). No high-confidence findings. No silent failures, no null-path bugs, no security smells. Scope matches ticket ACs AC-1 through AC-7. files_touched updated to include agent_registry.json and ticket-authoring SKILL.md. Suppressed: 0 low nits, 0 medium dropped. Escalation: none (medium count 0).

@@ -275,6 +275,72 @@ the `user-surface-smoker` agent itself) MUST include a Smoke Fixture block that 
 would pass once shipped. This prevents the "the new agent is exempt from its own gate"
 exception.
 
+### Agent Contracts Block (required for multi-coder tickets)
+
+When a ticket's `agents:` map has **more than one coder agent** (`python-coder`,
+`sql-coder`, or `frontend-coder`) with status `needed`, the ticket body MUST include
+an `## Agent Contracts` section instead of a plain `## Acceptance Criteria` section.
+The `it-po` phase agent authors this section; ticket authors SHOULD leave it blank and
+let `it-po` populate it.
+
+#### Routing decision: multi-coder vs single-coder
+
+| Ticket type | Routing | Who writes ACs |
+|---|---|---|
+| **Single-coder** (1 coder agent needed) | `it-po: not_needed`, `refinement` writes ACs | refinement agent |
+| **Multi-coder** (>1 coder agent needed) | `it-po: needed`, IT PO writes per-agent contracts | it-po agent (Opus) |
+
+`create-ticket` determines the routing at ticket-creation time based on the BA's output.
+For multi-coder tickets, `it-po` is added to the `agents:` map at priority 3.5 (after
+architecture-diagram-author, before architect-review).
+
+#### Agent Contracts section format
+
+```markdown
+## Agent Contracts
+
+### <agent-name>
+
+- [ ] AC-N: <single testable outcome — include specific data shapes, types, status codes>
+- [ ] AC-N+1: <another testable outcome>
+- [ ] AC-N+2: <integration AC> <!-- scope: integration -->
+
+**Delivers to <downstream-agent>:**
+\`\`\`json
+{
+  "endpoint": "POST /api/resource",
+  "content-type": "application/json",
+  "status_codes": [201, 400, 422, 500],
+  "request": {
+    "field_name": "string (required)",
+    "optional_field": "integer | null"
+  },
+  "response_201": {
+    "id": "uuid (non-null)",
+    "created_at": "ISO 8601 string"
+  },
+  "response_422": {
+    "error": "string",
+    "field": "string | null"
+  }
+}
+\`\`\`
+
+**Depends on <upstream-agent>:** <what must exist — table name, endpoint path, shared type>
+```
+
+#### Contract precision requirements
+
+1. **JSON shapes**: include field names, types, and nullability (`"id": "uuid (non-null)"`).
+2. **Endpoint specs**: include method, path, content-type, and all expected status codes.
+3. **DB column specs**: include type, nullability, default, and FK if applicable.
+4. **Error shapes**: include the exact shape the consumer parses (`response.error.field`).
+5. **Integration ACs**: at least one AC per agent boundary must be tagged `<!-- scope: integration -->`.
+6. **Limits**: max 7 ACs per agent (enforced by `check_ac_limits` pre-commit hook); max 20 ACs per ticket.
+
+When a ticket exceeds these limits, the `it-po` §7 Split Protocol splits the ticket into
+sibling tickets rather than exceeding the cap.
+
 ### Optional: Out-of-Repo Outputs Block
 
 If any file produced by this ticket must be written **outside** the git worktree (e.g. `~/.claude/projects/<hash>/memory/`, `~/.claude/hooks/`, `~/.claude/agents/`), add this block **after `## Risk & Safety`** and before any `## Comments` section:
