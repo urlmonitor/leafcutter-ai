@@ -1,6 +1,6 @@
 ---
 title: "Refactor /build-feature orchestration into a script-driven manifest system"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-05-30
