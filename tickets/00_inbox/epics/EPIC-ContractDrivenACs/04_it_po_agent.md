@@ -19,7 +19,7 @@ files_touched:
 agents:
   architect-review: not_needed
   test-writer: not_needed
-  python-coder: needed
+  python-coder: signed_off
   sql-coder: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
@@ -117,7 +117,7 @@ are covered by ticket 02_ac_format_and_frontmatter.md — not duplicated here.
 
 ## Sign-offs
 
-- [ ] python-coder
+- [x] python-coder — 2026-06-04 10:00
 - [ ] pr-reviewer
 - [ ] commit
 - [ ] pull-request
@@ -138,7 +138,7 @@ are covered by ticket 02_ac_format_and_frontmatter.md — not duplicated here.
 
 ### python-coder — create IT PO agent template
 
-- [ ] Create `templates/agents/it-po.md` with the following structure:
+- [x] Create `templates/agents/it-po.md` with the following structure:
 
   **Frontmatter:**
   ```yaml
@@ -240,9 +240,9 @@ are covered by ticket 02_ac_format_and_frontmatter.md — not duplicated here.
 
 ### python-coder — update ticket-authoring skill
 
-- [ ] Add "Agent Contracts" section documentation to `templates/skills/ticket-authoring/SKILL.md`
-- [ ] Document the multi-agent vs single-agent routing decision
-- [ ] Add contract format spec to the body structure template
+- [x] Add "Agent Contracts" section documentation to `templates/skills/ticket-authoring/SKILL.md`
+- [x] Document the multi-agent vs single-agent routing decision
+- [x] Add contract format spec to the body structure template
 
 ## Risk & Safety
 
@@ -260,3 +260,14 @@ are covered by ticket 02_ac_format_and_frontmatter.md — not duplicated here.
    touched components?
    → Recommendation: IT PO flags this as a blocker and suggests creating the arch
    doc first (which becomes a preceding ticket).
+
+## Comments
+
+### 2026-06-04 10:00 — python-coder (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  code_implemented: true
+  tests_passing: true
+  doc_enforcer_clean: true
+  complexity_check_clean: true
+Created `templates/agents/it-po.md` with all seven required sections (§0 scope classification, §1 question protocol, §2 knowledge acquisition, §3 contract output format, §4 precision rules, §5 integration ACs, §6 frontmatter update, §7 split protocol). Added `it-po` entry to `config/agent_registry.json` with `is_ticket_phase: true`, model: opus, priority 3.5. Added Agent Contracts Block documentation to `templates/skills/ticket-authoring/SKILL.md` with routing decision table and full contract format spec. All ACs AC-1 through AC-7 addressed.
