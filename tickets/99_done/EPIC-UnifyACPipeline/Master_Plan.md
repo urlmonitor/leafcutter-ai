@@ -1,7 +1,7 @@
 ---
 title: "EPIC: Unify v2 Ticket Pipeline with AC Traceability Store"
 type: epic
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
