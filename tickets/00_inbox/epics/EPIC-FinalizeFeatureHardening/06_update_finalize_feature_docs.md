@@ -25,14 +25,14 @@ agents:
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
-  documentation-expert: needed
+  documentation-expert: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   explanation-author: not_needed
-  how-to-author: needed
+  how-to-author: signed_off
   reference-author: not_needed
   user-surface-smoker: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 requires_documentation:
@@ -94,27 +94,53 @@ Then it contains a note stating "Merge-first and triage are JS-workflow-only fea
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] how-to-author
-- [ ] pr-reviewer
+- [x] documentation-expert — 2026-06-04 12:00
+- [x] how-to-author — 2026-06-04 12:01
+- [x] pr-reviewer — 2026-06-04 12:02
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-06-04 12:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-06-04_51ca667c
+completion_manifest:
+  workflow_doc_step_map_updated: true
+  halt_categories_documented: true
+  agent_template_context_note_added: true
+Updated `templates/workflows/finalize-feature.md` with the full 8-step table (steps 0, 1, 2, 3, 3.5, 4a, 4b, 4c, 5, 6) and a halt-categories table covering `user_declined_merge`, `merge_conflict`, `regressions_or_stale_tests`, and `worktree_conflict_pids`. Added a Context note to `templates/agents/finalize-feature.md` stating the legacy agent implements the 6-step flow and referencing `finalize-feature.js` as the source of truth for the hardened behaviour.
+
+### 2026-06-04 12:01 — how-to-author (status: ok)
+feedback-id: fb_2026-06-04_819509c9
+completion_manifest:
+  how_to_guide_created: true
+  step_map_section_included: true
+  halt_categories_covered: true
+  pre_existing_failures_section_included: true
+  version_notes_included: true
+Created `docs/how-to/finalize-feature.md` with sections covering all 8 steps, all four halt categories (`user_declined_merge`, `merge_conflict`, `regressions_or_stale_tests`, `worktree_conflict_pids`) with diagnosis steps and resolution guidance, pre-existing failure tracking ticket behaviour, and version notes for the JS vs legacy agent split.
+
+### 2026-06-04 12:02 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-04_94d8e375
+completion_manifest:
+  ac1_workflow_doc_step_map: true
+  ac2_how_to_guide_halt_category_coverage: true
+  ac3_agent_template_context_note: true
+All three Gherkin ACs pass. The workflow doc step map includes all required steps (0, 3.5, 4a, 4b, 4c) and both halt categories (`merge_conflict`, `regressions_or_stale_tests`). The how-to guide covers `regressions_or_stale_tests` with a diagnosis + resolution section. The agent template carries a Context note referencing `finalize-feature.js` as the current source of truth.
+
 ## Implementation Tasks
 
-- [ ] Update `templates/workflows/finalize-feature.md`:
+- [x] Update `templates/workflows/finalize-feature.md`:
   - Replace the step map table with the expanded 8-step version.
   - Add a "Halt categories" subsection documenting `merge_conflict`,
     `regressions_or_stale_tests`, and `user_declined_merge`.
   - Add a cross-reference to `docs/how-to/finalize-feature.md`.
-- [ ] Update `templates/agents/finalize-feature.md`:
+- [x] Update `templates/agents/finalize-feature.md`:
   - Add a Context note: "This legacy agent implements the 6-step flow.
     The hardened flow (merge-first, baseline, triage) is implemented
     in `templates/workflows-js/finalize-feature.js` and requires
     Claude Code >= 2.1.154."
-- [ ] Create or update `docs/how-to/finalize-feature.md`:
+- [x] Create or update `docs/how-to/finalize-feature.md`:
   - Section: "What the workflow does" — summary of all 8 steps.
   - Section: "When finalization halts" — one subsection per halt category
     with diagnosis steps and resolution guidance.
