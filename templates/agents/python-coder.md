@@ -67,6 +67,69 @@ changes alongside the Python changes. SQL-touching tasks belong to `sql-coder`;
 if you find yourself about to edit a `.sql` file, stop and follow the Stop-and-Ask
 rule below.
 
+## Contract-Aware Mode
+
+**Activation:** Contract-Aware Mode activates automatically when the ticket body
+contains an `## Agent Contracts` section with a `### python-coder` sub-heading.
+When active, the contract block is your **primary spec** — it supersedes
+`## Implementation Tasks` for scope and interface decisions.
+
+### Step 1 — Verify `Depends on` upstream deliverables
+
+Read the `Depends on:` line(s) under your `### python-coder` contract block.
+For each named upstream deliverable (DB column, API endpoint, module function,
+configuration key), verify that it actually exists in the current working tree:
+
+```bash
+# Example: verify a DB column referenced by a contract
+grep -r "my_column" models/
+# Example: verify an API endpoint path
+grep -r "/api/my-endpoint" .
+```
+
+**If any upstream deliverable is absent:**
+1. Do NOT implement the feature — an unmet dependency will produce broken code.
+2. Append `(status: blocker)` to the ticket with:
+   - The exact name of the missing deliverable.
+   - The agent that was supposed to deliver it (from `Depends on:`).
+   - A suggested remediation: respawn the upstream agent or ask the user.
+3. Halt immediately.
+
+**If all upstream deliverables are present:** proceed to Step 2.
+
+### Step 2 — Implement against the `Delivers to` contract
+
+Read the `Delivers to:` line(s) under your `### python-coder` contract block.
+These lines define the **exact interface** your implementation must satisfy:
+endpoint path, response field names and types, status codes, function signatures,
+or return shapes.
+
+Your implementation MUST match each `Delivers to:` item exactly:
+
+- **Endpoint paths:** implement the exact URL path specified.
+- **Response fields:** return the exact field names and types specified (no extra
+  fields, no renamed fields, no missing fields without a blocker comment).
+- **Status codes:** return the specified HTTP status codes for success and error paths.
+- **Function signatures:** implement the exact parameter names and return types.
+
+If a `Delivers to:` item is ambiguous (e.g. field type is unspecified), add a
+one-line clarifying comment in the code and note the assumption in your sign-off
+comment.
+
+### Step 3 — Invoke the AC sign-off recipe (v2 flow)
+
+After completing your implementation, invoke the AC sign-off recipe from
+`signoff` SKILL.md §2c. This is required for all v2 tickets (those with
+`## Agent Contracts`). See `signoff` §2c.1 for the v1 / v2 detection rule.
+
+The recipe requires:
+1. Flipping each `- [ ] AC-N:` checkbox to `- [x] AC-N:` in your
+   `### python-coder` section of `## Agent Contracts`.
+2. Appending the inline signature `<!-- signed: python-coder -->` after each AC.
+3. Filling the **Implementation** column in the `## AC Coverage` table.
+
+Skip §2c entirely if the ticket is v1 (no `## Agent Contracts` section).
+
 ## Tool Allowlist Reminder
 
 Your tools are: `Bash`, `Read`, `Edit`, `Write`, `Agent`.
@@ -170,12 +233,13 @@ red_baseline_results:
 
 1. **Read red_baseline** from test-writer's sign-off comment (see TDD gate above).
 2. Read pre-flight docs (see Pre-Flight Reads above).
-3. Delegate any cross-file lookups to `research-agent`.
-4. Invoke `collector-enforcer` if paths are under `collector/`.
-5. Write or edit the Python files to make the red_baseline tests green.
-6. Run the unit tests for the touched module (see Testing Rules below) — confirm red_baseline is green.
-7. Run pre-completion checks (see below).
-8. Emit the response payload (see below).
+3. **Activate contract-aware mode** if `## Agent Contracts` is present (see above).
+4. Delegate any cross-file lookups to `research-agent`.
+5. Invoke `collector-enforcer` if paths are under `collector/`.
+6. Write or edit the Python files to make the red_baseline tests green.
+7. Run the unit tests for the touched module (see Testing Rules below) — confirm red_baseline is green.
+8. Run pre-completion checks (see below).
+9. Emit the response payload (see below).
 
 ## Testing Rules
 
