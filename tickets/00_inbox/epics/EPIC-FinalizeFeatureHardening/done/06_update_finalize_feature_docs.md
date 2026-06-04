@@ -1,6 +1,6 @@
 ---
 title: "Update finalize-feature docs and skill references for the hardened flow"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
@@ -33,8 +33,8 @@ agents:
   reference-author: not_needed
   user-surface-smoker: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
 requires_documentation:
   - how_to
 ---
@@ -97,8 +97,8 @@ Then it contains a note stating "Merge-first and triage are JS-workflow-only fea
 - [x] documentation-expert — 2026-06-04 12:00
 - [x] how-to-author — 2026-06-04 12:01
 - [x] pr-reviewer — 2026-06-04 12:02
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-04 12:03
+- [x] pull-request — 2026-06-04 12:04
 
 ## Comments
 
@@ -127,6 +127,21 @@ completion_manifest:
   ac2_how_to_guide_halt_category_coverage: true
   ac3_agent_template_context_note: true
 All three Gherkin ACs pass. The workflow doc step map includes all required steps (0, 3.5, 4a, 4b, 4c) and both halt categories (`merge_conflict`, `regressions_or_stale_tests`). The how-to guide covers `regressions_or_stale_tests` with a diagnosis + resolution section. The agent template carries a Context note referencing `finalize-feature.js` as the current source of truth.
+
+### 2026-06-04 12:03 — commit (status: ok)
+feedback-id: fb_2026-06-04_92476a65
+completion_manifest:
+  commit_created: true
+  staged_files_explicit: true
+  no_unintended_files: true
+Committed 4 files (docs/how-to/finalize-feature.md added, templates/agents/finalize-feature.md + templates/workflows/finalize-feature.md modified, ticket file modified). SHA 6de4bcc. Pre-commit skipped (no .pre-commit-config.yaml in worktree — used PRE_COMMIT_ALLOW_NO_CONFIG=1).
+
+### 2026-06-04 12:04 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_11431757
+completion_manifest:
+  branch_pushed: true
+  pr_open: true
+Branch pushed to origin/EPIC-FinalizeFeatureHardening. PR #45 was already open at https://github.com/urlmonitor/leafcutter-ai/pull/45 — no new PR needed.
 
 ## Implementation Tasks
 
