@@ -28,7 +28,7 @@ agents:
   reference-author: not_needed
   user-surface-smoker: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -115,7 +115,7 @@ Then the hook runs in warn mode regardless of how it was invoked
 - [x] python-coder — 2026-06-04 10:15
 - [x] test-runner — 2026-06-04 10:30
 - [x] pr-reviewer — 2026-06-04 10:45
-- [ ] commit
+- [x] commit — 2026-06-04 11:00
 - [ ] pull-request
 
 ## Comments
@@ -170,6 +170,13 @@ completion_manifest:
   tests_green: true
   implementation_clean: true
 All 5 ACs verified against the implementation: warn-mode exits 0 with warning, error-mode exits 1, tagged functions pass, docstring tags accepted, non-test files skipped. Hook registered in commit_guardian.json with correct entry (pass_filenames: true). 60/60 tests green. Stdlib-only implementation within file size/complexity limits. Approved.
+
+### 2026-06-04 11:00 — commit (status: ok)
+feedback-id: fb_2026-06-04_3477044e
+completion_manifest:
+  commit_created: true
+  staged_files_match_scope: true
+Committed 4 files under SHA e6e8649: check_test_ac_tags.py (new), commit_guardian.json (updated), test_check_test_ac_tags.py (new), 03_precommit_hook_test_tagging.md (sign-offs). Unstaged non-ticket-03 files before committing to maintain scope discipline.
 
 ## Implementation Tasks
 
