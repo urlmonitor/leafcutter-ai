@@ -1,6 +1,6 @@
 ---
 title: "Add tests/fixtures/ directory and load_fixture() conftest helper"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
@@ -23,8 +23,8 @@ agents:
   test-runner: not_needed
   documentation-expert: signed_off
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   adr-author: signed_off
   architecture-diagram-author: not_needed
   explanation-author: not_needed
@@ -112,8 +112,8 @@ Then it documents the directory layout, the load_fixture() signature,
 - [x] python-coder — 2026-06-04 10:15
 - [x] documentation-expert — 2026-06-04 10:20
 - [x] pr-reviewer — 2026-06-04 10:25
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-04 10:30
+- [x] pull-request — 2026-06-04 10:35
 - [x] adr-author — 2026-06-04 10:00
 
 ## Comments
@@ -171,6 +171,21 @@ completion_manifest:
   documentation_reviewed: true
   no_regressions: true
 All four Acceptance Criteria are covered: load_fixture() returns parsed JSON (test_load_fixture_returns_parsed_json, test_load_fixture_slash_maps_to_subdir), slash-path maps to subdir (test_load_fixture_slash_maps_to_subdir), missing path raises FileNotFoundError (test_load_fixture_missing_raises_file_not_found), docs/testing/README.md has Fixture Convention section. Implementation is clean: no bare-except, FileNotFoundError unblocked per error-handling policy, encoding="utf-8" on open, type hint present. ADR-007 complete with all 5 sections. 3 unit tests green (pytest 3 passed in 0.18s). No regressions introduced.
+
+### 2026-06-04 10:30 — commit (status: ok)
+feedback-id: fb_2026-06-04_6473cda5
+completion_manifest:
+  files_staged_explicitly: true
+  commit_succeeded: true
+  lock_acquired_and_released: true
+Staged 7 files explicitly by path (no git add .). Committed as 773f4bf on branch EPIC-TestFixtureConvention: ADR-007, tests/conftest.py, tests/fixtures/_shared/.gitkeep, docs/testing/README.md, unit_tests/commit_guardian/test_load_fixture_helper.py, tickets/.pending/adr_handoff.json, ticket sign-offs. Lock acquired before staging and released after successful commit.
+
+### 2026-06-04 10:35 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_7f628a1a
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+Pushed EPIC-TestFixtureConvention branch to origin and opened PR #44 at https://github.com/urlmonitor/leafcutter-ai/pull/44. Title: "feat: add tests/fixtures/ convention and load_fixture() conftest helper (ADR-007)".
 
 ## Implementation Tasks
 
