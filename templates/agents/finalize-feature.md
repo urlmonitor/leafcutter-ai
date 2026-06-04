@@ -150,6 +150,56 @@ out of scope. Dispatch `status-checker` explicitly for each ticket here.
 
 ---
 
+## Step 5.5 — Stop live-surface-testing server (before worktree removal)
+
+Before removing the worktree, call:
+
+```bash
+python scripts/live_surface_startup.py stop $WORKTREE_NAME \
+  --config-path .claude/skills_config.json
+```
+
+where `$WORKTREE_NAME` is the last path segment of `WORKTREE_ROOT` (e.g. for
+`/home/user/projects/leafcutter/EPIC-Foo`, the name is `EPIC-Foo`).
+
+This command is idempotent: if the worktree has no live-surface-testing
+allocation, it exits 0 and prints `{"status": "stopped", ...}`. No action is
+needed in that case.
+
+**On non-zero exit (and the error is NOT "not allocated")**:
+Halt immediately:
+```
+Finalization halted at step 5.5: live_surface_startup.py stop failed.
+Worktree has NOT been removed (to avoid destroying evidence).
+Error: <error output>
+Action required: resolve the error, then re-run /finalize-feature.
+```
+Do NOT proceed to step 5.6 or step 6 if this command fails.
+
+## Step 5.6 — Scan and kill orphan processes (conditional)
+
+Read `skills_config.json` and check the value of
+`worktree_cleanup.kill_residual_processes`.
+
+**If `kill_residual_processes: true`**, run:
+
+```bash
+python scripts/live_surface_startup.py scan-orphans \
+  --config-path .claude/skills_config.json
+```
+
+This scans for any running processes matching the `live_surface_testing.startup_command`
+pattern (with `{port}` as a wildcard) that are NOT in the port registry, and
+kills them. The output JSON lists the killed PIDs:
+```json
+{"killed_pids": [12345, 67890]}
+```
+
+Report the killed PIDs to the user.
+
+**If `kill_residual_processes: false`** (or the key is absent), skip step 5.6
+and proceed directly to step 6.
+
 ## Step 6 — Close worktree (destructive, confirmation gate delegated)
 
 Dispatch `worktree-agent remove <worktree-path>`.

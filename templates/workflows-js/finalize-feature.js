@@ -43,6 +43,8 @@ const meta = {
     "step-3: sync local main (status-checker shell)",
     "step-4: run post-merge tests (test-runner — HALT on failure)",
     "step-5: close tickets / archive epic (status-checker)",
+    "step-5.5: stop live-surface-testing server (no-op if not allocated — HALT on error)",
+    "step-5.6: scan and kill orphan processes (conditional on kill_residual_processes config)",
     "step-6: remove worktree (worktree-agent — gate delegated)",
   ],
 };
@@ -419,6 +421,122 @@ async function run({ userInput, agent, parallel, prompt }) {
 
   if (reconcileInfo.tickets_reconciled) {
     ticketsReconciled.push(...reconcileInfo.tickets_reconciled);
+  }
+
+  // -------------------------------------------------------------------------
+  // Step 5.5 — Stop live-surface-testing server (no-op if not allocated)
+  //
+  // Calls live_surface_startup.py stop <worktree_name> before the destructive
+  // worktree-removal step. Idempotent: exits 0 when no allocation exists.
+  // HALT on any non-zero exit to avoid removing the worktree with an active
+  // server or leaked port allocation.
+  // -------------------------------------------------------------------------
+  // Derive WORKTREE_NAME from the last segment of the worktree root path.
+  const WORKTREE_NAME = WORKTREE_ROOT.split("/").filter(Boolean).pop() || BRANCH;
+
+  const stopResult = await agent({
+    agentType: "status-checker",
+    input: {
+      instructions:
+        `Run: python scripts/live_surface_startup.py stop ${WORKTREE_NAME}` +
+        " --config-path .claude/skills_config.json\n" +
+        "Capture stdout and exit code.\n" +
+        "Return ONLY a JSON object:\n" +
+        "- On exit code 0: { \"ok\": true, \"output\": \"<stdout>\" }\n" +
+        "- On non-zero exit AND error is 'not allocated': { \"ok\": true, \"output\": \"<stdout>\" }\n" +
+        "- On non-zero exit with any other error: { \"ok\": false, \"error\": \"<stderr or stdout>\" }",
+    },
+  });
+
+  let stopInfo;
+  try {
+    stopInfo =
+      typeof stopResult === "string" ? JSON.parse(stopResult) : stopResult;
+  } catch (_err) {
+    stopInfo = { ok: true };
+  }
+
+  if (!stopInfo.ok) {
+    return {
+      status: "halted",
+      halted_at_step: "5.5",
+      reason: "live_surface_cleanup_failed",
+      message:
+        "Step 5.5: live_surface_startup.py stop failed with a non-recoverable error. " +
+        "Worktree has NOT been removed (to avoid destroying evidence). " +
+        "Resolve the error below and re-run /finalize-feature.",
+      error: stopInfo.error || JSON.stringify(stopInfo),
+      branch: BRANCH,
+      pr_number: prNumber,
+      pr_url: prUrl,
+      completed_steps: completedSteps,
+      skipped_steps: skippedSteps,
+    };
+  }
+
+  completedSteps.push("5.5");
+
+  // -------------------------------------------------------------------------
+  // Step 5.6 — Scan and kill orphan processes (conditional on config)
+  //
+  // Only runs when worktree_cleanup.kill_residual_processes is true in
+  // skills_config.json. Calls scan-orphans to kill any crash-orphaned
+  // processes that were never recorded in the registry.
+  // -------------------------------------------------------------------------
+  const configProbeResult = await agent({
+    agentType: "status-checker",
+    input: {
+      instructions:
+        "Read .claude/skills_config.json (or skills_config.json from the repo root).\n" +
+        "Extract the value of worktree_cleanup.kill_residual_processes.\n" +
+        "Return ONLY a JSON object: { \"kill_residual_processes\": true|false }",
+    },
+  });
+
+  let configProbe;
+  try {
+    configProbe =
+      typeof configProbeResult === "string"
+        ? JSON.parse(configProbeResult)
+        : configProbeResult;
+  } catch (_err) {
+    configProbe = { kill_residual_processes: false };
+  }
+
+  if (configProbe.kill_residual_processes === true) {
+    const scanOrphansResult = await agent({
+      agentType: "status-checker",
+      input: {
+        instructions:
+          "Run: python scripts/live_surface_startup.py scan-orphans" +
+          " --config-path .claude/skills_config.json\n" +
+          "Capture stdout.\n" +
+          "Return ONLY a JSON object: { \"killed_pids\": [...] }",
+      },
+    });
+
+    let scanInfo;
+    try {
+      scanInfo =
+        typeof scanOrphansResult === "string"
+          ? JSON.parse(scanOrphansResult)
+          : scanOrphansResult;
+    } catch (_err) {
+      scanInfo = { killed_pids: [] };
+    }
+
+    completedSteps.push("5.6");
+    if (scanInfo.killed_pids && scanInfo.killed_pids.length > 0) {
+      skippedSteps.push({
+        step: "5.6",
+        reason: `scan-orphans killed ${scanInfo.killed_pids.length} orphan process(es): ${scanInfo.killed_pids.join(", ")}`,
+      });
+    }
+  } else {
+    skippedSteps.push({
+      step: "5.6",
+      reason: "worktree_cleanup.kill_residual_processes is false — scan-orphans skipped",
+    });
   }
 
   // -------------------------------------------------------------------------

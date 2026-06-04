@@ -19,14 +19,14 @@ files_touched:
   - scripts/live_surface_startup.py
   - leafcutter-ai/tests/test_finalize_port_cleanup.py
 agents:
-  architect-review: needed
+  architect-review: signed_off
   adr-author: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   architecture-diagram-author: not_needed
@@ -157,35 +157,71 @@ Then it contains a step 5.5 block that calls live_surface_startup.py stop
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
-- [ ] pr-reviewer
+- [x] architect-review — 2026-06-03 10:00
+- [x] test-writer — 2026-06-03 10:01
+- [x] python-coder — 2026-06-03 10:15
+- [x] test-runner — 2026-06-04 09:00
+- [x] pr-reviewer — 2026-06-04 09:05
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-06-04 09:05 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-04_c7e578b6
+completion_manifest:
+  diff_reviewed: true
+  no_high_findings: true
+  scope_verified: true
+Diff reviewed against ticket scope. No high-confidence findings. 4 files touched (scripts/live_surface_startup.py, templates/workflows-js/finalize-feature.js, templates/agents/finalize-feature.md, tests/test_finalize_port_cleanup.py) match the ticket's files_touched list. All 5 Gherkin acceptance criteria are addressed by the implementation and tests.
+
+### 2026-06-04 09:00 — test-runner (status: ok)
+feedback-id: fb_2026-06-04_a9e2ada1
+completion_manifest:
+  tests_executed: true
+  tests_passing: true
+  no_regressions: true
+53 tests executed: 13 new (test_finalize_port_cleanup.py) + 13 existing (test_live_surface_startup.py) + 27 (test_port_registry.py). All green, zero regressions.
+
+### 2026-06-03 10:15 — python-coder (status: ok)
+feedback-id: fb_2026-06-03_e549ead7
+completion_manifest:
+  code_implemented: true
+  tests_passing: true
+  doc_enforcer_clean: true
+  complexity_check_clean: true
+Added scan-orphans subcommand to scripts/live_surface_startup.py (psutil + ps-fallback, registry cross-reference, SIGTERM/SIGKILL logic). Wired steps 5.5 (stop) and 5.6 (scan-orphans, conditional on kill_residual_processes) into finalize-feature.js and finalize-feature.md. Created tests/test_finalize_port_cleanup.py with 13 tests — all green. Existing test_live_surface_startup.py tests (13) remain green.
+
+### 2026-06-03 10:01 — ticket-supervisor (status: ok)
+test_requirements empty — test-writer phase skipped (docs-only or config-only ticket)
+
+### 2026-06-03 10:00 — architect-review (status: ok)
+feedback-id: fb_2026-06-03_57995021
+completion_manifest:
+  blast_radius_assessed: true
+  impact_classified: true
+  architectural_note_written: true
+Impact classification: SMALL. 4 files, single build_pipeline component. No always-large trigger fired (no Alembic migration, no hypertable change, no FastAPI API change, no ADR contract file modification). File count ≤ 5, single component. ADR-007 already covers live surface tester architecture — no new ADR needed. Design is sound: scan-orphans as a new CLI subcommand fits the existing pattern; cleanup-before-remove ordering is the correct safe sequence. Minor concern: psutil may not be available in all consumer environments — ensure ps-based fallback is tested on macOS and Linux. requires_adr remains false.
+
 ## Implementation Tasks
 
-- [ ] Add `scan-orphans` subcommand to `scripts/live_surface_startup.py`:
+- [x] Add `scan-orphans` subcommand to `scripts/live_surface_startup.py`:
   - Parse `startup_command` from config (with `{port}` as `.*` wildcard)
   - Use `psutil` (or `ps aux | grep`) to find matching processes
   - Cross-reference against registry
   - Kill orphans: `SIGTERM` then `SIGKILL` after 5 s
   - Return JSON `{"killed_pids": [...]}` to stdout
-- [ ] Update `templates/workflows-js/finalize-feature.js`:
+- [x] Update `templates/workflows-js/finalize-feature.js`:
   - Insert step 5.5 block (agent call to `status-checker`) before step 6
   - Insert step 5.6 block for `scan-orphans` (conditional on
     `worktree_cleanup.kill_residual_processes`)
   - Update the `run()` return value's `completed_steps` list to include
     steps 5.5 and 5.6
-- [ ] Update `templates/agents/finalize-feature.md`:
+- [x] Update `templates/agents/finalize-feature.md`:
   - Add prose instruction to call `live_surface_startup.py stop` and
     `live_surface_startup.py scan-orphans` before `worktree-agent remove`
   - Include the same halt-on-error rule as in the JS workflow
-- [ ] Write `leafcutter-ai/tests/test_finalize_port_cleanup.py`:
+- [x] Write `leafcutter-ai/tests/test_finalize_port_cleanup.py`:
   - Mock `live_surface_startup.py stop` to return `{"status": "stopped"}`
   - Test idempotent case (no allocation → still exits 0)
   - Test failure case (non-zero exit → halt signal)

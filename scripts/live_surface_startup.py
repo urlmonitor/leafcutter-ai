@@ -1,16 +1,25 @@
 """
 Worktree startup helper for live-surface-tester.
 
-Provides start, stop, and status subcommands that manage the lifecycle of a
-development server subprocess for a given worktree. Called by the
-live-surface-tester agent via Bash; the agent itself never spawns or kills
-processes directly.
+Provides start, stop, status, and scan-orphans subcommands that manage the
+lifecycle of a development server subprocess for a given worktree. Called by
+the live-surface-tester agent and finalize-feature via Bash; the agent itself
+never spawns or kills processes directly.
 
 CLI contract::
 
     python scripts/live_surface_startup.py start <worktree_name> [--config-path PATH]
     python scripts/live_surface_startup.py stop  <worktree_name> [--config-path PATH]
     python scripts/live_surface_startup.py status <worktree_name> [--config-path PATH]
+    python scripts/live_surface_startup.py scan-orphans [--config-path PATH]
+
+The ``scan-orphans`` subcommand:
+  1. Lists all running processes matching the pattern from
+     ``live_surface_testing.startup_command`` (with ``{port}`` replaced by ``.*``).
+  2. Cross-references them against the registry.
+  3. Kills any PID that is NOT in the registry (orphans from crashes before
+     ``set-pid`` was called).
+  4. Returns JSON with the list of killed PIDs: ``{"killed_pids": [...]}``.
 
 ADR reference: docs/architecture/adrs/ADR-007-live-surface-tester.md
 """
@@ -21,6 +30,7 @@ import argparse
 import json
 import logging
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -32,6 +42,14 @@ try:
     import requests
 except ImportError:
     requests = None  # type: ignore[assignment]
+
+try:
+    import psutil as _psutil  # type: ignore[import-untyped]
+
+    _PSUTIL_AVAILABLE = True
+except ImportError:
+    _psutil = None  # type: ignore[assignment]
+    _PSUTIL_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -532,6 +550,138 @@ def _kill_process(pid: int) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Subcommand: scan-orphans
+# ---------------------------------------------------------------------------
+
+
+def _get_registered_pids(config_path: str | None) -> set[int]:
+    """
+    Return the set of PIDs that are currently registered in the port registry.
+
+    Returns an empty set when the registry cannot be read.
+    """
+    result = _run_registry(["list"], config_path=config_path)
+    if result.returncode != 0:
+        logger.warning(
+            "live_surface_startup: scan-orphans: could not list registry: %s",
+            result.stderr.strip(),
+        )
+        return set()
+    try:
+        data = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        logger.warning(
+            "live_surface_startup: scan-orphans: could not parse registry list: %s",
+            exc,
+        )
+        return set()
+    pids: set[int] = set()
+    for entry in data.get("allocations", {}).values():
+        pid = entry.get("pid")
+        if pid is not None:
+            try:
+                pids.add(int(pid))
+            except (TypeError, ValueError):
+                pass
+    return pids
+
+
+def _find_matching_pids_psutil(pattern: str) -> list[int]:
+    """
+    Return PIDs of processes whose command line matches *pattern* (via psutil).
+
+    Only available when the ``psutil`` package is installed.
+    """
+    matching: list[int] = []
+    try:
+        for proc in _psutil.process_iter(["pid", "cmdline"]):
+            try:
+                cmdline = " ".join(proc.info.get("cmdline") or [])
+                if re.search(pattern, cmdline):
+                    matching.append(proc.info["pid"])
+            except (_psutil.NoSuchProcess, _psutil.AccessDenied, OSError):
+                pass
+    except OSError as exc:
+        logger.warning(
+            "live_surface_startup: scan-orphans: psutil iteration error: %s", exc
+        )
+    return matching
+
+
+def _find_matching_pids_ps(pattern: str) -> list[int]:
+    """
+    Return PIDs of processes whose command line matches *pattern* via ``ps aux``.
+
+    Fallback for environments where ``psutil`` is not installed.
+    """
+    matching: list[int] = []
+    try:
+        result = subprocess.run(
+            ["ps", "aux"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError as exc:
+        logger.warning(
+            "live_surface_startup: scan-orphans: ps aux failed: %s", exc
+        )
+        return matching
+    for line in result.stdout.splitlines()[1:]:  # skip header
+        if re.search(pattern, line):
+            parts = line.split(None, 10)
+            if len(parts) >= 2:
+                try:
+                    matching.append(int(parts[1]))
+                except ValueError:
+                    pass
+    return matching
+
+
+def cmd_scan_orphans(config_path: str | None) -> int:
+    """
+    Scan for orphaned server processes and kill any that are not in the registry.
+
+    An orphan is a process whose command line matches the ``startup_command``
+    pattern (with ``{port}`` replaced by ``.*``) but whose PID is not recorded
+    in the port registry.
+
+    Returns:
+        Always 0.
+    """
+    config = _load_config(config_path)
+    startup_cmd_template = _startup_command(config)
+    if not startup_cmd_template:
+        # No startup command configured — nothing to scan.
+        _emit_json({"killed_pids": []})
+        return 0
+
+    # Build a regex pattern: replace {port} with .* to match any port value.
+    escaped = re.escape(startup_cmd_template)
+    pattern = escaped.replace(r"\{port\}", r".*")
+
+    # Discover candidate PIDs via psutil or ps fallback.
+    if _PSUTIL_AVAILABLE:
+        candidate_pids = _find_matching_pids_psutil(pattern)
+    else:
+        candidate_pids = _find_matching_pids_ps(pattern)
+
+    # Cross-reference against the registry.
+    registered_pids = _get_registered_pids(config_path)
+
+    killed_pids: list[int] = []
+    for pid in candidate_pids:
+        if pid in registered_pids:
+            continue
+        # This PID is not in the registry — treat as orphan and kill.
+        _kill_process(pid)
+        killed_pids.append(pid)
+
+    _emit_json({"killed_pids": killed_pids})
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # CLI entry point
 # ---------------------------------------------------------------------------
 
@@ -563,6 +713,14 @@ def _build_parser() -> argparse.ArgumentParser:
             help="Name of the worktree (used as the registry key).",
         )
 
+    subparsers.add_parser(
+        "scan-orphans",
+        help=(
+            "Scan for orphaned server processes not in the registry and kill them."
+            " Returns JSON: {\"killed_pids\": [...]}."
+        ),
+    )
+
     return parser
 
 
@@ -582,6 +740,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_stop(args.worktree_name, args.config_path)
     if args.command == "status":
         return cmd_status(args.worktree_name, args.config_path)
+    if args.command == "scan-orphans":
+        return cmd_scan_orphans(args.config_path)
     return 1
 
 
