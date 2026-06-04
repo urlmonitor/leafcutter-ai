@@ -44,7 +44,9 @@ const meta = {
     "step-2: merge PR to main (prompt gate + pull-request agent)",
     "step-3: sync local main (status-checker shell)",
     "step-3.5: merge origin/main into worktree --no-commit --no-ff (HALT on conflict)",
-    "step-4: run post-merge tests (test-runner — HALT on failure)",
+    "step-4a: run post-merge tests (test-runner — HALT on failure)",
+    "step-4b: triage_failures — dispatch test-failure-triage when failures exist",
+    "step-4c: halt-or-continue gate based on triage_report.blocks_finalization",
     "step-5: close tickets / archive epic (status-checker)",
     "step-6: remove worktree (worktree-agent — gate delegated)",
   ],
@@ -112,6 +114,8 @@ async function run({ userInput, agent, parallel, prompt }) {
   let testResult = null;
   const ticketsClosed = [];
   let worktreeRemoved = false;
+  // Triage report from step 4b; null means tests passed (no triage needed).
+  let triageReport = null;
 
   // Baseline state (populated by step 0; forwarded to step 4 triage).
   // null means the baseline run did not complete — triage treats all failures
@@ -462,10 +466,10 @@ async function run({ userInput, agent, parallel, prompt }) {
   const mergeStrategy = mergeMainInfo.merge_strategy || "already_up_to_date";
 
   // -------------------------------------------------------------------------
-  // Step 4 — Run post-merge tests (always runs; HALT on failure)
+  // Step 4a — Run post-merge tests (always runs)
   //
-  // The baseline captured in step 0 is forwarded here so the test-runner
-  // (or a downstream triage agent) can compute:
+  // The baseline captured in step 0 is forwarded here so the triage agent
+  // in step 4b can compute:
   //   regressions = post_merge_failures − baseline_failures
   // If baseline_failures is null, all failures are treated as regressions
   // (conservative classification).
@@ -485,54 +489,124 @@ async function run({ userInput, agent, parallel, prompt }) {
   });
 
   let testPassed;
+  let postMergeFailures;
   try {
     const parsed =
       typeof testResult === "string" ? JSON.parse(testResult) : testResult;
     testPassed = parsed && parsed.passed === true;
     testResult = parsed;
+    postMergeFailures = (testResult && Array.isArray(testResult.failing_tests))
+      ? testResult.failing_tests
+      : [];
   } catch (_err) {
     // If parsing fails, assume failure to be safe.
     testPassed = false;
+    postMergeFailures = [];
   }
 
-  if (!testPassed) {
-    // Compute regression list: failures not present in the baseline.
-    const postMergeFailures = (testResult && Array.isArray(testResult.failing_tests))
-      ? testResult.failing_tests
-      : [];
-    const regressions = (baselineFailures === null)
-      ? postMergeFailures   // conservative: all failures are potential regressions
-      : postMergeFailures.filter((t) => !baselineFailures.includes(t));
-    const preExisting = (baselineFailures === null)
-      ? []
-      : postMergeFailures.filter((t) => baselineFailures.includes(t));
+  if (testPassed) {
+    // Zero failures: skip 4b and 4c entirely, proceed to step 5.
+    completedSteps.push("4a");
+    // triageReport remains null — forwarded to step 5 as-is.
+  } else {
+    // -----------------------------------------------------------------------
+    // Step 4b — Dispatch test-failure-triage when failures exist
+    //
+    // Passes post_merge_failures, baseline_failures, baseline_sha,
+    // feature_branch, and changed_files (derived here via git diff) so the
+    // triage agent can classify each failure as regression or pre-existing.
+    // -----------------------------------------------------------------------
 
-    return {
-      status: "halted",
-      halted_at_step: 4,
-      reason: "post_merge_test_failure",
-      message:
-        "Post-merge tests failed on main. Tickets have NOT been closed. " +
-        "Worktree has NOT been removed.",
-      test_output:
-        (testResult && testResult.output) ||
-        JSON.stringify(testResult),
-      // Triage context — forwarded to test-failure-triage agent (ticket 03).
-      baseline_sha: baselineSha,
-      baseline_failures: baselineFailures,
-      regressions,
-      pre_existing_failures: preExisting,
-      action_required:
-        "Fix the regression on a new branch, then re-run /finalize-feature.",
-      branch: BRANCH,
-      pr_number: prNumber,
-      pr_url: prUrl,
-      completed_steps: completedSteps,
-      skipped_steps: skippedSteps,
-    };
+    // Derive changed_files: files touched by the feature branch relative to
+    // origin/main. Captured at this point (after the --no-commit merge) so
+    // the diff reflects the full feature delta including the merged state.
+    const changedFilesResult = await agent({
+      agentType: "status-checker",
+      input: {
+        instructions:
+          "Run: git diff --name-only origin/main HEAD\n" +
+          "Return ONLY a JSON object: { \"changed_files\": [\"<file1>\", \"<file2>\", ...] }\n" +
+          "If the command fails or returns no output, return: { \"changed_files\": [] }",
+      },
+    });
+
+    let changedFiles = [];
+    try {
+      const parsedCf =
+        typeof changedFilesResult === "string"
+          ? JSON.parse(changedFilesResult)
+          : changedFilesResult;
+      changedFiles = Array.isArray(parsedCf.changed_files) ? parsedCf.changed_files : [];
+    } catch (_err) {
+      // Default to empty list on parse failure — triage uses it as a hint only.
+      changedFiles = [];
+    }
+
+    const triageRaw = await agent({
+      agentType: "test-failure-triage",
+      input: {
+        post_merge_failures: postMergeFailures,
+        baseline_failures: baselineFailures,
+        baseline_sha: baselineSha,
+        feature_branch: BRANCH,
+        changed_files: changedFiles,
+        instructions:
+          "Classify each failing test as 'regression' (caused by this branch) or " +
+          "'pre_existing' (already failing on main). " +
+          "Return a JSON object with at minimum: { \"blocks_finalization\": true|false, " +
+          "\"regressions\": [\"<test_id>\", ...], \"pre_existing\": [\"<test_id>\", ...], " +
+          "\"summary\": \"<one sentence>\" }",
+      },
+    });
+
+    try {
+      triageReport =
+        typeof triageRaw === "string" ? JSON.parse(triageRaw) : triageRaw;
+    } catch (_err) {
+      // Parse failure: treat as blocking — cannot determine safety.
+      triageReport = {
+        blocks_finalization: true,
+        regressions: postMergeFailures,
+        pre_existing: [],
+        summary: "Triage report parse failed — treating all failures as regressions.",
+      };
+    }
+
+    // Log the triage report to the user for visibility.
+    console.log("[finalize-feature] step 4b triage report:", JSON.stringify(triageReport, null, 2));
+
+    // -----------------------------------------------------------------------
+    // Step 4c — Halt-or-continue gate based on triage_report.blocks_finalization
+    //
+    // If blocks_finalization is true: HARD EARLY RETURN. Steps 5 and 6 are
+    // structurally unreachable from this point — no escape hatch.
+    // If false: pass triage_report forward and continue to step 5.
+    // -----------------------------------------------------------------------
+    if (triageReport.blocks_finalization) {
+      await cleanupBaselineWorktree();
+      return {
+        status: "halted",
+        halted_at_step: "4c",
+        reason: "regressions_or_stale_tests",
+        triage_report: triageReport,
+        message:
+          "Fix regressions and stale tests before re-running /finalize-feature.",
+        test_output:
+          (testResult && testResult.output) ||
+          JSON.stringify(testResult),
+        branch: BRANCH,
+        pr_number: prNumber,
+        pr_url: prUrl,
+        completed_steps: completedSteps,
+        skipped_steps: skippedSteps,
+      };
+    }
+    // blocks_finalization is false: all failures are pre-existing.
+    // Store triage_report in workflow state and continue to step 5.
+    completedSteps.push("4a");
+    completedSteps.push("4b");
+    completedSteps.push("4c");
   }
-
-  completedSteps.push(4);
 
   // -------------------------------------------------------------------------
   // Step 5 — Close tickets / archive epic (resumable)
@@ -765,6 +839,8 @@ async function run({ userInput, agent, parallel, prompt }) {
     baseline_failures: baselineFailures,
     baseline_run_at: baselineRunAt,
     test_result: testResult,
+    // Triage report from step 4b; null means tests passed (no triage needed).
+    triage_report: triageReport,
     tickets_closed: ticketsClosed,
     tickets_reconciled: ticketsReconciled,
     worktree_removed: worktreeRemoved,
