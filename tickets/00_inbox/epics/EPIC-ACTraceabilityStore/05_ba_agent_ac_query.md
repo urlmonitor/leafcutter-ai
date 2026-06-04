@@ -1,6 +1,6 @@
 ---
 title: "Update BA agent to query existing ACs before writing new ones"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
@@ -28,7 +28,7 @@ agents:
   user-surface-smoker: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 05: Update BA agent to query existing ACs before writing new ones
@@ -113,7 +113,7 @@ Then the AC query step is skipped
 - [x] documentation-expert — 2026-06-04 14:30
 - [x] pr-reviewer — 2026-06-04 14:35
 - [x] commit — 2026-06-04 14:40
-- [ ] pull-request
+- [x] pull-request — 2026-06-04 14:45
 
 ## Comments
 
@@ -145,6 +145,14 @@ completion_manifest:
   files_staged: true
   commit_created: true
 Staged: templates/agents/business-analyst.md, tickets/00_inbox/epics/EPIC-ACTraceabilityStore/05_ba_agent_ac_query.md. Commit 50c5d30 created with PRE_COMMIT_ALLOW_NO_CONFIG=1.
+
+### 2026-06-04 14:45 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_837b9983
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Pushed commits 50c5d30 (feat: business-analyst Step 0.5) and 8ec6f67 (chore: finalize phase sign-offs) to origin/EPIC-ACTraceabilityStore. Existing PR #46 (feat(ac-store): AC YAML schema, validator hook, and ADR-007) at https://github.com/urlmonitor/leafcutter-ai/pull/46 now includes ticket 05 changes. One PR per epic — no new PR needed.
 
 ## Implementation Tasks
 
