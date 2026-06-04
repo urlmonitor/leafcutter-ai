@@ -11,7 +11,7 @@ roadmap_phase: phase_1
 advances_current_outcome: true
 requires_diagram: false
 requires_adr: false
-ac_coverage: 0/7
+ac_coverage: 0/12
 files_touched:
   - scripts/visualise_knowledge_graph.py
 agents:
@@ -121,7 +121,9 @@ Then calls `_kq.load_surfaces(...)`, `_kq.extract_nodes(...)`, and
 `_kq.extract_edges(...)` directly. No duplication of surface traversal or edge
 extraction.
 
-## Acceptance Criteria
+## Agent Contracts
+
+### python-coder
 
 - [ ] AC-1: Running `python scripts/visualise_knowledge_graph.py --no-open` writes a
   file to `/tmp/leafcutter_knowledge_graph.html` (or `--output` path) that is valid
@@ -144,36 +146,36 @@ extraction.
 - [ ] AC-7: When `knowledge_query.py` is not found (sibling module missing), the
   script exits with a clean error message `ERROR: knowledge_query.py not found at
   <expected_path>.` and no Python traceback.
+- [ ] AC-8: The script imports `knowledge_query.py` as a sibling module using
+  `importlib.util.spec_from_file_location` and `module_from_spec` — the same pattern
+  used by `roadmap_query.py`. No `sys.path` manipulation or relative imports.
+  <!-- scope: integration -->
 
-## AC Coverage
+**Delivers to test-writer:**
+```json
+{
+  "module_path": "scripts/visualise_knowledge_graph.py",
+  "public_constants": {
+    "SURFACE_COLORS": "dict[str, str] — maps surface name to hex color"
+  },
+  "cli_flags": ["--output", "--no-open", "--surface", "--project-root"],
+  "exit_codes": {"0": "success", "1": "knowledge_query.py not found or runtime error"}
+}
+```
 
-| AC   | Test | Implementation | Validated |
-|------|------|----------------|-----------|
-| AC-1 |      |                |           |
-| AC-2 |      |                |           |
-| AC-3 |      |                |           |
-| AC-4 |      |                |           |
-| AC-5 |      |                |           |
-| AC-6 |      |                |           |
-| AC-7 |      |                |           |
+**Delivers to documentation-expert:**
+```json
+{
+  "script_path": "scripts/visualise_knowledge_graph.py",
+  "doc_target": "docs/architecture/agent_knowledge_system.md (new ## Visualization section)",
+  "claude_md_table_entry": "Knowledge Graph Visualization",
+  "cli_flags": ["--output", "--no-open", "--surface", "--project-root"]
+}
+```
 
-## Sign-offs
+**Depends on:** ticket 01's `knowledge_query.py` public API (`load_surfaces`, `extract_nodes`, `extract_edges`).
 
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
-- [ ] documentation-expert
-- [ ] pr-reviewer
-- [ ] commit
-- [ ] pull-request
-
-## Comments
-
-## Implementation Tasks
-
-### python-coder
-
-**Deliverable — `scripts/visualise_knowledge_graph.py`**
+#### Implementation guidance
 
 Module-level docstring:
 ```python
@@ -191,7 +193,7 @@ ARCHITECTURE: Delegates surface traversal and edge extraction to knowledge_query
 """
 ```
 
-Key implementation blocks:
+Key implementation points:
 
 1. **Module loader** — use `importlib.util` pattern from `roadmap_query.py` to load
    `knowledge_query` as a sibling. On `FileNotFoundError`, exit cleanly per AC-7.
@@ -229,7 +231,22 @@ Key implementation blocks:
 7. **Error handling** — wrap all file I/O per repo rules. On empty graph (zero nodes),
    print a warning and still write the HTML (D3 handles empty data gracefully).
 
+---
+
 ### test-writer
+
+- [ ] AC-9: `unit_tests/test_visualise_knowledge_graph.py` exists with tests covering:
+  `test_writes_html_file`, `test_embedded_json_valid`, `test_nodes_have_color_field`,
+  `test_surface_filter_excludes_others`, `test_no_d3_download_in_script`,
+  `test_missing_kq_module_exits_cleanly`, and `test_project_root_flag_passed_to_kq`.
+- [ ] AC-10: All tests in `test_visualise_knowledge_graph.py` fail (RED) before
+  python-coder runs and pass (GREEN) after python-coder delivers.
+  <!-- scope: integration -->
+
+**Depends on python-coder:** public constants (`SURFACE_COLORS`), CLI flags, and exit
+codes from the Delivers-to block above.
+
+#### Test specification
 
 Create `unit_tests/test_visualise_knowledge_graph.py`.
 
@@ -252,15 +269,54 @@ needing a real project structure.
 - `test_project_root_flag_passed_to_kq`: mock `load_surfaces`, assert it is called
   with the value passed to `--project-root`.
 
+---
+
 ### documentation-expert
 
-After python-coder and test-runner sign off:
+- [ ] AC-11: `docs/architecture/agent_knowledge_system.md` contains a `## Visualization`
+  section that describes `visualise_knowledge_graph.py`, its output format, and how to
+  invoke it with at least one example command.
+- [ ] AC-12: The Architecture Reference table in `CLAUDE.md` contains a "Knowledge Graph
+  Visualization" row pointing to `scripts/visualise_knowledge_graph.py`.
+
+**Depends on python-coder:** script path and CLI flags from the Delivers-to block above.
+
+#### Tasks
 
 1. Add a one-paragraph note to `docs/architecture/agent_knowledge_system.md` under
    a new `## Visualization` section describing `visualise_knowledge_graph.py`,
    its output, and how to invoke it.
 2. Add the script to the Architecture Reference table in `CLAUDE.md` (same table
    that lists Agent Knowledge Plane, Agent Knowledge System, Agent Delivery Workflows).
+
+## AC Coverage
+
+| AC    | Test | Implementation | Validated |
+|-------|------|----------------|-----------|
+| AC-1  |      |                |           |
+| AC-2  |      |                |           |
+| AC-3  |      |                |           |
+| AC-4  |      |                |           |
+| AC-5  |      |                |           |
+| AC-6  |      |                |           |
+| AC-7  |      |                |           |
+| AC-8  |      |                |           |
+| AC-9  |      |                |           |
+| AC-10 |      |                |           |
+| AC-11 |      |                |           |
+| AC-12 |      |                |           |
+
+## Sign-offs
+
+- [ ] test-writer
+- [ ] python-coder
+- [ ] test-runner
+- [ ] documentation-expert
+- [ ] pr-reviewer
+- [ ] commit
+- [ ] pull-request
+
+## Comments
 
 ## Risk & Safety
 

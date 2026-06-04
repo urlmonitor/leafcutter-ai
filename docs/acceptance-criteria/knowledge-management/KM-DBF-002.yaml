@@ -1,0 +1,14 @@
+id: KM-DBF-002
+title: "Write mode inserts description into frontmatter preserving content"
+component: knowledge-management
+status: active
+criteria: |
+  Running `python scripts/backfill_descriptions.py --write` inserts
+  `description: "<value>"` into the YAML frontmatter of each target file that lacked the
+  field; all other frontmatter fields and the full body are unchanged.
+origin_agent: "create-ticket-v2"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/02_description_backfill_and_enforcement.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

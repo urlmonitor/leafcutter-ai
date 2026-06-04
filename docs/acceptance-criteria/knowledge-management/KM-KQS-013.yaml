@@ -1,0 +1,14 @@
+id: KM-KQS-013
+title: "SKILL.md documents exactly the implemented CLI flags with no drift"
+component: knowledge-management
+status: active
+criteria: |
+  `templates/skills/knowledge-query/SKILL.md` documents exactly the CLI flags
+  that `knowledge_query.py` implements — no undocumented flags, no documented flags that
+  do not exist in the script.
+origin_agent: "create-ticket-v2"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/01_knowledge_query_script.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

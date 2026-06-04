@@ -1,0 +1,13 @@
+id: KM-VIS-012
+title: "CLAUDE.md Architecture Reference table entry"
+component: knowledge-management
+status: active
+criteria: |
+  The Architecture Reference table in `CLAUDE.md` contains a "Knowledge Graph
+  Visualization" row pointing to `scripts/visualise_knowledge_graph.py`.
+origin_agent: "create-ticket-v2"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/03_knowledge_graph_visualization.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

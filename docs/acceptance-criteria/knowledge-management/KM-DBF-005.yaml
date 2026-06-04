@@ -1,0 +1,14 @@
+id: KM-DBF-005
+title: "Hook ignores ticket, skill, and agent template files"
+component: knowledge-management
+status: active
+criteria: |
+  `check_description_field.py` does NOT flag ticket files, skill SKILL.md
+  files, or agent template files — only files under `docs/`, `docs/architecture/adrs/`,
+  and `docs/architecture/components/`.
+origin_agent: "create-ticket-v2"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/02_description_backfill_and_enforcement.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

@@ -1,0 +1,14 @@
+id: KM-KQS-002
+title: "JSON output has valid schema with nodes and edges arrays"
+component: knowledge-management
+status: active
+criteria: |
+  Running with `--format json` produces valid JSON with top-level keys
+  `nodes` and `edges`; each node has `id`, `surface`, `title`, `description`, and
+  `path` fields; each edge has `source`, `target`, and `type` fields.
+origin_agent: "create-ticket-v2"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/01_knowledge_query_script.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

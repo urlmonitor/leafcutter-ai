@@ -1,0 +1,14 @@
+id: KM-VIS-002
+title: "Embedded JSON contains nodes and edges with required fields"
+component: knowledge-management
+status: active
+criteria: |
+  The embedded JSON contains `nodes` and `edges` arrays. Every node has
+  `id`, `surface`, `title`, and a `color` field derived from the surface-color mapping.
+  Every edge has `source`, `target`, and `type`.
+origin_agent: "create-ticket-v2"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/03_knowledge_graph_visualization.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

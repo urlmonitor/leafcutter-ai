@@ -1,0 +1,15 @@
+id: KM-VIS-003
+title: "Pure stdlib Python with CDN-only D3.js reference"
+component: knowledge-management
+status: active
+criteria: |
+  The script is pure stdlib Python; it does NOT attempt to download D3.js at
+  run time — the HTML references D3 from `https://d3js.org/d3.v7.min.js` (CDN).
+  Running the script in a network-isolated environment with `--no-open` succeeds
+  (writes the HTML file without error).
+origin_agent: "create-ticket-v2"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/03_knowledge_graph_visualization.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

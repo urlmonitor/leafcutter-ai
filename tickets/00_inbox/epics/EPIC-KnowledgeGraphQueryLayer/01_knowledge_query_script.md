@@ -10,7 +10,7 @@ roadmap_phase: phase_1
 advances_current_outcome: true
 requires_diagram: false
 requires_adr: false
-ac_coverage: 0/9
+ac_coverage: 0/14
 files_touched:
   - scripts/knowledge_query.py
   - templates/skills/knowledge-query/SKILL.md
@@ -116,7 +116,9 @@ After the script is written, a `/knowledge-query` skill must be registered:
 The skill wraps the CLI invocation pattern — same purpose as `/roadmap-query` but
 for cross-surface knowledge.
 
-## Acceptance Criteria
+## Agent Contracts
+
+### python-coder
 
 - [ ] AC-1: Running `python scripts/knowledge_query.py` without flags produces a
   human-readable index covering all eight surfaces, with at least one node per
@@ -135,45 +137,41 @@ for cross-surface knowledge.
 - [ ] AC-6: When `paths.json` is absent, the script exits with a clean error message
   (`ERROR: config/paths.json not found.`) and no Python traceback.
 - [ ] AC-7: The script is pure stdlib Python (no imports outside the standard library).
-  Running `python -c "import knowledge_query"` from the scripts directory succeeds
-  with only stdlib present.
 - [ ] AC-8: `templates/skills/knowledge-query/SKILL.md` exists, follows the same
   frontmatter schema as `templates/skills/roadmap-query/SKILL.md`, and documents all
   CLI flags with at least one example invocation per flag.
 - [ ] AC-9: An entry for `knowledge-query` is present in `config/skill_registry.json`
   with `portable: true` and `template_path: "leafcutter/templates/skills/knowledge-query/"`.
+- [ ] AC-10: `knowledge_query.py` exposes public functions `load_surfaces(project_root, paths_json)`,
+  `extract_nodes(surface, path)`, and `extract_edges(surface, record, raw_data)` that can be
+  imported by sibling scripts via `importlib.util`. <!-- scope: integration -->
 
-## AC Coverage
+**Delivers to test-writer:**
+```json
+{
+  "module_path": "scripts/knowledge_query.py",
+  "public_api": {
+    "load_surfaces": "(project_root: Path, paths_json: Path) -> dict[str, Path]",
+    "extract_nodes": "(surface: str, path: Path) -> Generator[NodeRecord]",
+    "extract_edges": "(surface: str, record: NodeRecord, raw_data: dict) -> Generator[EdgeRecord]",
+    "NodeRecord": "namedtuple('NodeRecord', ['id', 'surface', 'title', 'description', 'path'])",
+    "EdgeRecord": "namedtuple('EdgeRecord', ['source_id', 'target_id', 'edge_type'])"
+  },
+  "cli_flags": ["--query", "--surface", "--format", "--edges", "--project-root"],
+  "exit_codes": {"0": "success", "1": "paths.json not found or runtime error"}
+}
+```
 
-| AC   | Test | Implementation | Validated |
-|------|------|----------------|-----------|
-| AC-1 |      |                |           |
-| AC-2 |      |                |           |
-| AC-3 |      |                |           |
-| AC-4 |      |                |           |
-| AC-5 |      |                |           |
-| AC-6 |      |                |           |
-| AC-7 |      |                |           |
-| AC-8 |      |                |           |
-| AC-9 |      |                |           |
+**Delivers to documentation-expert:**
+```json
+{
+  "skill_template": "templates/skills/knowledge-query/SKILL.md",
+  "registry_entry": "config/skill_registry.json (key: knowledge-query)",
+  "cli_flags": ["--query", "--surface", "--format", "--edges", "--project-root"]
+}
+```
 
-## Sign-offs
-
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
-- [ ] documentation-expert
-- [ ] pr-reviewer
-- [ ] commit
-- [ ] pull-request
-
-## Comments
-
-## Implementation Tasks
-
-### python-coder
-
-**Deliverable 1 — `scripts/knowledge_query.py`**
+#### Implementation guidance
 
 Module-level docstring must follow the `roadmap_query.py` convention:
 ```python
@@ -189,92 +187,109 @@ ARCHITECTURE: ...
 
 Key implementation points:
 
-1. **Surface loader** — a `load_surfaces(project_root, paths_json)` function that
-   reads `paths.json`, resolves each surface root, and returns a dict of
-   `{surface_name: Path}`. Skip surfaces where the path does not exist and the
-   key has an `_optional: true` sibling (match the naming convention in paths.json,
-   e.g. `explanation_optional: true`).
+1. **Surface loader** — `load_surfaces(project_root, paths_json)` reads `paths.json`,
+   resolves each surface root, returns `{surface_name: Path}`. Skip surfaces where
+   path does not exist and key has `_optional: true` sibling.
 
-2. **Node extractor** — a `extract_nodes(surface, path)` generator that yields
-   `NodeRecord(id, surface, title, description, path)`. Description extraction
-   logic: read frontmatter `description:` field first; if absent, fall back to
-   the first non-blank, non-heading line of the body (replicating
-   `generate_doc_index.py`'s pattern). For JSON registries (agents, skills,
-   roadmap), extract from the list items directly.
+2. **Node extractor** — `extract_nodes(surface, path)` generator yields
+   `NodeRecord(id, surface, title, description, path)`. Description extraction:
+   frontmatter `description:` first; fallback to first non-blank, non-heading body line.
 
-3. **Edge extractor** — an `extract_edges(surface, record, raw_data)` generator
-   that yields `EdgeRecord(source_id, target_id, edge_type)`. Edge field mapping
-   is defined in the surface definitions table above.
+3. **Edge extractor** — `extract_edges(surface, record, raw_data)` generator yields
+   `EdgeRecord(source_id, target_id, edge_type)`. Edge field mapping per surface
+   definitions table above.
 
 4. **Argparse CLI** — flags: `--query`, `--surface`, `--format` (text/json),
    `--edges`, `--project-root`. Default: text output, all surfaces, no filter.
 
-5. **Error handling** — follow the repo's four error-handling rules (see CLAUDE.md):
-   all file I/O wrapped in `try/except` with specific exception types; no bare
-   excepts; no silently-swallowed exceptions.
+5. **Error handling** — repo's four error-handling rules: all file I/O in try/except
+   with specific exception types; no bare excepts; no silently-swallowed exceptions.
 
 6. **Output rendering** — `render_text(nodes, edges, query, show_edges)` and
-   `render_json(nodes, edges)` as separate functions. `render_text` groups nodes
-   by surface with a header line and indented edge list (see Output format section).
+   `render_json(nodes, edges)` as separate functions.
 
-**Deliverable 2 — `templates/skills/knowledge-query/SKILL.md`**
+**Skill template** — model on `templates/skills/roadmap-query/SKILL.md`. Required sections:
+YAML frontmatter, `## When to Use`, `## Invocation`, `## Output Modes`, `## Surfaces Queried`, `## Error Behaviour`.
 
-Model on `templates/skills/roadmap-query/SKILL.md`. Sections required:
-- YAML frontmatter with `name`, `description`, `portable: true`, `allowed-tools: Bash, Read`
-- `## When to Use`
-- `## Invocation` (one example per CLI flag)
-- `## Output Modes` (text and JSON)
-- `## Surfaces Queried` (table of all eight surfaces)
-- `## Error Behaviour`
+**Registry entry** — insert alphabetically between `glossary-bootstrap` and `package-audit`.
 
-**Deliverable 3 — `config/skill_registry.json` amendment**
-
-Add entry:
-```json
-{
-  "id": "knowledge-query",
-  "name": "Knowledge Query",
-  "portable": true,
-  "domain": null,
-  "template_path": "leafcutter/templates/skills/knowledge-query/",
-  "dependencies": []
-}
-```
-Insert alphabetically between `glossary-bootstrap` and `package-audit`.
+---
 
 ### test-writer
 
+- [ ] AC-11: `unit_tests/test_knowledge_query.py` exists with tests covering:
+  `load_surfaces` (all-present and optional-missing), `extract_nodes` (frontmatter
+  description and body-line fallback), `extract_edges` (spawn_allowlist edge type),
+  `--query` filter (case-insensitive), `--format json` (valid schema), missing
+  `paths.json` (clean exit), and stdlib-only import validation.
+- [ ] AC-12: All tests in `test_knowledge_query.py` fail (RED) before python-coder runs
+  and pass (GREEN) after python-coder delivers. <!-- scope: integration -->
+
+**Depends on python-coder:** public API signatures (`load_surfaces`, `extract_nodes`,
+`extract_edges`, `NodeRecord`, `EdgeRecord`) and CLI exit codes from the Delivers-to block above.
+
+#### Test specification
+
 Create `unit_tests/test_knowledge_query.py`:
 
-- `test_load_surfaces_returns_all_present_surfaces`: mock filesystem with all
-  surface directories present, assert all eight keys returned.
-- `test_load_surfaces_skips_optional_missing`: mark a surface optional, delete
-  its directory, assert it is absent from result.
-- `test_extract_nodes_uses_description_frontmatter`: file with `description:`
-  field, assert `record.description` equals the frontmatter value.
-- `test_extract_nodes_falls_back_to_first_body_line`: file with no `description:`
-  field but body text, assert `record.description` equals first non-blank line.
-- `test_extract_edges_spawn_allowlist`: agent entry with `spawn_allowlist`,
-  assert edges with `type="spawn_allowlist"` are yielded.
-- `test_query_filter_case_insensitive`: full index with mixed-case descriptions,
-  `--query "roadmap"`, assert only matching nodes returned.
-- `test_format_json_valid_schema`: render JSON output, parse with `json.loads`,
-  assert top-level keys and node/edge schemas.
-- `test_missing_paths_json_exits_cleanly`: no `paths.json` present, call main,
-  assert `SystemExit` and message contains "paths.json not found".
-- `test_stdlib_only`: introspect `knowledge_query` module's imports, assert no
-  third-party packages.
+- `test_load_surfaces_returns_all_present_surfaces`
+- `test_load_surfaces_skips_optional_missing`
+- `test_extract_nodes_uses_description_frontmatter`
+- `test_extract_nodes_falls_back_to_first_body_line`
+- `test_extract_edges_spawn_allowlist`
+- `test_query_filter_case_insensitive`
+- `test_format_json_valid_schema`
+- `test_missing_paths_json_exits_cleanly`
+- `test_stdlib_only`
+
+---
 
 ### documentation-expert
 
-After python-coder and test-runner sign off:
+- [ ] AC-13: `templates/skills/knowledge-query/SKILL.md` documents exactly the CLI flags
+  that `knowledge_query.py` implements — no undocumented flags, no documented flags that
+  do not exist in the script.
+- [ ] AC-14: A "Knowledge Query" row is present in the Architecture Reference table in
+  `CLAUDE.md` pointing to the skill doc path.
 
-1. Verify `templates/skills/knowledge-query/SKILL.md` is consistent with the
-   implemented CLI flags (no undocumented flags, no documented flags that do not exist).
-2. Add a row to `docs/INDEX.md` for the new skill if it is not auto-generated by
-   the next `generate_doc_index.py` run.
-3. Add a "Knowledge Query" entry to the Architecture Reference table in `CLAUDE.md`
-   pointing to the skill doc.
+**Depends on python-coder:** skill template path and CLI flags from the Delivers-to block above.
+
+#### Tasks
+
+1. Verify SKILL.md consistency with implemented CLI flags.
+2. Add row to `docs/INDEX.md` for the new skill if not auto-generated.
+3. Add "Knowledge Query" entry to CLAUDE.md Architecture Reference table.
+
+## AC Coverage
+
+| AC    | Test | Implementation | Validated |
+|-------|------|----------------|-----------|
+| AC-1  |      |                |           |
+| AC-2  |      |                |           |
+| AC-3  |      |                |           |
+| AC-4  |      |                |           |
+| AC-5  |      |                |           |
+| AC-6  |      |                |           |
+| AC-7  |      |                |           |
+| AC-8  |      |                |           |
+| AC-9  |      |                |           |
+| AC-10 |      |                |           |
+| AC-11 |      |                |           |
+| AC-12 |      |                |           |
+| AC-13 |      |                |           |
+| AC-14 |      |                |           |
+
+## Sign-offs
+
+- [ ] test-writer
+- [ ] python-coder
+- [ ] test-runner
+- [ ] documentation-expert
+- [ ] pr-reviewer
+- [ ] commit
+- [ ] pull-request
+
+## Comments
 
 ## Risk & Safety
 

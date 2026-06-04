@@ -11,7 +11,7 @@ roadmap_phase: phase_1
 advances_current_outcome: true
 requires_diagram: false
 requires_adr: false
-ac_coverage: 0/8
+ac_coverage: 0/13
 files_touched:
   - scripts/backfill_descriptions.py
   - scripts/commit_guardian/check_description_field.py
@@ -83,7 +83,9 @@ frontmatter, exits non-zero with a list of violations.
 The check is registered in the commit-guardian configuration. It does NOT block commits
 of ticket files, skill SKILL.md files, or agent template files.
 
-## Acceptance Criteria
+## Agent Contracts
+
+### python-coder
 
 - [ ] AC-1: Running `python scripts/backfill_descriptions.py --dry-run` prints every
   doc/ADR/component file that lacks a `description:` field and the proposed description
@@ -103,40 +105,40 @@ of ticket files, skill SKILL.md files, or agent template files.
 - [ ] AC-6: The backfill script is pure stdlib Python (no third-party imports).
 - [ ] AC-7: The backfill script accepts a `--project-root <path>` flag so it can be
   run from outside the project root (consistent with other scripts in this repo).
-- [ ] AC-8: After `--write` completes, `python scripts/generate_doc_index.py` runs
-  without error and its output contains zero fallback-derived descriptions (every entry
-  uses the frontmatter `description:` value).
+- [ ] AC-8: `check_description_field.py` is registered in the commit-guardian configuration
+  and runs on staged `.md` files following the `check_ac_schema.py` pattern.
 
-## AC Coverage
+**Delivers to test-writer:**
+```json
+{
+  "backfill_script": "scripts/backfill_descriptions.py",
+  "hook_script": "scripts/commit_guardian/check_description_field.py",
+  "backfill_cli": {
+    "flags": ["--dry-run", "--write", "--project-root"],
+    "exit_codes": {"0": "success", "1": "paths.json not found or runtime error"}
+  },
+  "hook_cli": {
+    "args": "file paths as positional arguments",
+    "exit_codes": {"0": "no violations", "1": "one or more violations"},
+    "output_format": "FAIL: <path> — missing description field"
+  },
+  "scope_rules": {
+    "targets": ["docs/", "docs/architecture/adrs/", "docs/architecture/components/"],
+    "excludes": ["tickets/", "templates/skills/", "templates/agents/"]
+  }
+}
+```
 
-| AC   | Test | Implementation | Validated |
-|------|------|----------------|-----------|
-| AC-1 |      |                |           |
-| AC-2 |      |                |           |
-| AC-3 |      |                |           |
-| AC-4 |      |                |           |
-| AC-5 |      |                |           |
-| AC-6 |      |                |           |
-| AC-7 |      |                |           |
-| AC-8 |      |                |           |
+**Delivers to documentation-expert:**
+```json
+{
+  "backfill_script": "scripts/backfill_descriptions.py",
+  "hook_script": "scripts/commit_guardian/check_description_field.py",
+  "integration_test": "run --dry-run after --write to confirm zero remaining files"
+}
+```
 
-## Sign-offs
-
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
-- [ ] documentation-expert
-- [ ] pr-reviewer
-- [ ] commit
-- [ ] pull-request
-
-## Comments
-
-## Implementation Tasks
-
-### python-coder
-
-**Deliverable 1 — `scripts/backfill_descriptions.py`**
+#### Implementation guidance
 
 Module-level docstring (follow `roadmap_query.py` convention):
 ```python
@@ -155,109 +157,99 @@ ARCHITECTURE: Walk target directories discovered from paths.json. For each .md
 """
 ```
 
-Implementation details:
+Key implementation points:
 
-1. **Target directories** — resolve from `paths.json` using the same surface
-   resolution logic as `knowledge_query.py` (do not hardcode paths). Targets:
-   `docs.root`, `docs.architecture_adrs`, `docs.architecture_components`.
+1. **Target directories** — resolve from `paths.json` (do not hardcode paths).
+2. **Frontmatter parsing** — `re` to split at `---` pairs; no `yaml` import.
+3. **Insertion position** — immediately after `title:` line; fallback: after opening `---`.
+4. **Description candidate** — first non-blank, non-heading body line, truncated at 120 chars.
+5. **Error handling** — per repo rules; malformed frontmatter prints warning and skips file.
 
-2. **Frontmatter parsing** — extract the YAML block between the first `---` pair.
-   Use `re` to split; do not import `yaml` (stdlib only). A minimal frontmatter
-   reader is acceptable since we only need to detect presence/absence of `description:`
-   and the position of `title:`.
+**Hook (`check_description_field.py`)** — follow `check_ac_schema.py` pattern. Accept file
+paths as CLI args, skip non-target paths silently, exit 1 with violation list on failure.
 
-3. **Insertion position** — insert `description: "<value>"` as the line immediately
-   after the `title:` line in the raw frontmatter string. If `title:` is absent,
-   insert as the first field after the opening `---`.
-
-4. **Description candidate** — iterate body lines (after the closing `---`), skip
-   blank lines and lines that start with `#`, return the first remaining line,
-   stripped. Truncate at 120 characters.
-
-5. **Dry-run output format**:
-   ```
-   [WOULD ADD] docs/architecture/adrs/ADR-001-self-hosting-boundary.md
-     description: "Defines the boundary between the leafcutter package root..."
-   
-   Total: 7 files would be updated.
-   ```
-
-6. **Write output format**:
-   ```
-   [UPDATED] docs/architecture/adrs/ADR-001-self-hosting-boundary.md
-   [SKIPPED] docs/architecture/agent_knowledge_system.md  (description already present)
-   
-   Total: 7 files updated, 4 skipped.
-   ```
-
-7. **Error handling** — wrap all `open()` calls per repo error-handling rules.
-   On parse error (malformed frontmatter), print a warning and skip the file
-   rather than aborting the entire run.
-
-**Deliverable 2 — `scripts/commit_guardian/check_description_field.py`**
-
-Follow the pattern of `check_ac_schema.py`. Accept file paths as CLI arguments.
-For each file:
-- If path is not under a target directory (`docs/`, `docs/architecture/adrs/`,
-  `docs/architecture/components/`), skip silently.
-- Parse YAML frontmatter.
-- If `description` key is absent or its value is blank/null, record a violation.
-
-Exit codes:
-- 0: no violations.
-- 1: one or more violations (print a list of `FAIL: <path> — missing description field`).
-
-**Deliverable 3 — Register the hook**
-
-Add `check_description_field.py` to the commit-guardian configuration so it runs
-on staged `.md` files. Follow the registration pattern used by `check_ac_schema.py`
-in `build_precommit.py` or the equivalent config file.
+---
 
 ### test-writer
 
-Create `unit_tests/test_backfill_descriptions.py`:
+- [ ] AC-9: `unit_tests/test_backfill_descriptions.py` exists with tests covering:
+  dry-run (no writes), write (inserts after title), skip (existing description unchanged),
+  idempotent (second write = zero changes), excludes tickets, excludes skill files,
+  description candidate skips headings, and missing paths.json exits cleanly.
+- [ ] AC-10: `unit_tests/test_check_description_field.py` exists with tests covering:
+  exits 0 when all staged docs have description, exits 1 when missing, ignores ticket
+  files, ignores skill files.
+- [ ] AC-11: All tests fail (RED) before python-coder runs and pass (GREEN) after. <!-- scope: integration -->
 
-- `test_dry_run_prints_files_without_writing`: create temp dir with a doc file
-  missing `description:`, run `--dry-run`, assert stdout contains file path and
-  proposed value, assert file is unchanged.
-- `test_write_inserts_description_after_title`: doc file with `title:` but no
-  `description:`, run `--write`, assert `description:` appears on the line after
-  `title:` in the written file.
-- `test_write_skips_files_with_existing_description`: doc file already has
-  `description:`, run `--write`, assert file is byte-for-byte unchanged.
-- `test_idempotent_second_write_makes_no_changes`: run `--write` twice, assert
-  output of second run shows zero updated files.
-- `test_excludes_ticket_files`: place a file under `tickets/`, run script, assert
-  it is not touched.
-- `test_excludes_skill_files`: place a file named `SKILL.md` under
-  `templates/skills/`, run script, assert it is not touched.
-- `test_description_candidate_skips_headings_and_blank_lines`: body starts with
-  blank line then `## Section`, then `Real sentence.`, assert candidate is
-  `"Real sentence."`.
-- `test_missing_paths_json_exits_cleanly`: no `paths.json`, assert `SystemExit`
-  with message containing "paths.json not found".
+**Depends on python-coder:** script paths, CLI flags, exit codes, scope rules, and output
+format from the Delivers-to block above.
 
-Create `unit_tests/test_check_description_field.py`:
+#### Test specification
 
-- `test_exits_0_when_all_staged_docs_have_description`: all input files have
-  `description:`, assert exit code 0.
-- `test_exits_1_when_staged_doc_missing_description`: one file missing `description:`,
-  assert exit code 1 and file path in output.
-- `test_ignores_ticket_files`: ticket file path passed as argument, assert exit 0
-  (silently skipped).
-- `test_ignores_skill_files`: SKILL.md path passed, assert exit 0.
+`unit_tests/test_backfill_descriptions.py`:
+- `test_dry_run_prints_files_without_writing`
+- `test_write_inserts_description_after_title`
+- `test_write_skips_files_with_existing_description`
+- `test_idempotent_second_write_makes_no_changes`
+- `test_excludes_ticket_files`
+- `test_excludes_skill_files`
+- `test_description_candidate_skips_headings_and_blank_lines`
+- `test_missing_paths_json_exits_cleanly`
+
+`unit_tests/test_check_description_field.py`:
+- `test_exits_0_when_all_staged_docs_have_description`
+- `test_exits_1_when_staged_doc_missing_description`
+- `test_ignores_ticket_files`
+- `test_ignores_skill_files`
+
+---
 
 ### documentation-expert
 
-After python-coder and test-runner sign off:
+- [ ] AC-12: After backfill `--write`, `python scripts/generate_doc_index.py` runs without
+  error and its output contains zero fallback-derived descriptions (every entry uses the
+  frontmatter `description:` value). <!-- scope: integration -->
+- [ ] AC-13: `docs/architecture/agent_knowledge_system.md` contains a `## Description Field
+  Convention` section explaining the requirement and pointing to `check_description_field.py`.
 
-1. Run `python scripts/backfill_descriptions.py --dry-run` and review the output.
-   Correct any generated descriptions that are inaccurate before the `--write` pass.
-2. Run `python scripts/backfill_descriptions.py --write` to apply.
-3. Verify `python scripts/generate_doc_index.py` runs cleanly after backfill.
-4. Add a one-paragraph note to `docs/architecture/agent_knowledge_system.md` under
-   a new `## Description Field Convention` section explaining the requirement and
-   pointing to `check_description_field.py`.
+**Depends on python-coder:** backfill script path and integration test command from the
+Delivers-to block above.
+
+#### Tasks
+
+1. Run `python scripts/backfill_descriptions.py --dry-run` and review output.
+2. Run `--write` to apply. Verify `generate_doc_index.py` runs cleanly after.
+3. Add `## Description Field Convention` section to `docs/architecture/agent_knowledge_system.md`.
+
+## AC Coverage
+
+| AC    | Test | Implementation | Validated |
+|-------|------|----------------|-----------|
+| AC-1  |      |                |           |
+| AC-2  |      |                |           |
+| AC-3  |      |                |           |
+| AC-4  |      |                |           |
+| AC-5  |      |                |           |
+| AC-6  |      |                |           |
+| AC-7  |      |                |           |
+| AC-8  |      |                |           |
+| AC-9  |      |                |           |
+| AC-10 |      |                |           |
+| AC-11 |      |                |           |
+| AC-12 |      |                |           |
+| AC-13 |      |                |           |
+
+## Sign-offs
+
+- [ ] test-writer
+- [ ] python-coder
+- [ ] test-runner
+- [ ] documentation-expert
+- [ ] pr-reviewer
+- [ ] commit
+- [ ] pull-request
+
+## Comments
 
 ## Risk & Safety
 

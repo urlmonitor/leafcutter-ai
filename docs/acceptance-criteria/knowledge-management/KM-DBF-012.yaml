@@ -1,0 +1,14 @@
+id: KM-DBF-012
+title: "generate_doc_index uses frontmatter descriptions with zero fallbacks"
+component: knowledge-management
+status: active
+criteria: |
+  After backfill `--write`, `python scripts/generate_doc_index.py` runs without
+  error and its output contains zero fallback-derived descriptions (every entry uses the
+  frontmatter `description:` value).
+origin_agent: "create-ticket-v2"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/02_description_backfill_and_enforcement.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

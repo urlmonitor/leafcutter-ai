@@ -1,0 +1,13 @@
+id: KM-KQS-012
+title: "Tests fail RED before implementation and pass GREEN after"
+component: knowledge-management
+status: active
+criteria: |
+  All tests in `test_knowledge_query.py` fail (RED) before python-coder runs
+  and pass (GREEN) after python-coder delivers.
+origin_agent: "create-ticket-v2"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/01_knowledge_query_script.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []
