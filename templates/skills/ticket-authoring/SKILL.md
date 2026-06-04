@@ -420,6 +420,58 @@ _(Append-only log — leave blank when authoring.)_
 - Touches data? Adds nullable column; reversible via downgrade.
 ~~~
 
+## AC Referencing Convention
+
+Tickets do **not own** acceptance criteria. They **reference** them. ACs are first-class
+entities stored in the AC store at `docs/acceptance-criteria/{component}/{id}.yaml`
+(see `ticket-wiring` §Step 2.5 and `ac-store-schema`).
+
+### Referencing format
+
+Use the format `implements AC-FIN-003` in the `## Context` section or a dedicated
+`## AC References` section:
+
+```markdown
+## AC References
+
+- Implements AC-FIN-003 (settlement amount validation)
+- Amends AC-FIN-001 (adds merge_conflict halt category)
+```
+
+When a ticket introduces a **new** AC, the BA proposes it via `ac_creations`; the
+wiring phase writes the YAML file. State the new AC in the ticket:
+
+```markdown
+## Context
+This ticket introduces AC-FIN-005 and amends AC-FIN-001.
+```
+
+When a ticket **amends** existing behaviour, state which AC is amended:
+
+```markdown
+amends AC-FIN-001 (adds merge_conflict halt category)
+```
+
+### Gherkin and AC YAML relationship
+
+The `## Acceptance Criteria` section in the ticket body retains its **Gherkin scenarios
+for human readability**. These mirror the AC YAML content but do not replace it.
+The AC YAML at `docs/acceptance-criteria/{component}/{id}.yaml` is the canonical
+source of truth:
+
+- Code review and CI tooling read the YAML.
+- The ticket body Gherkin is for developer/reviewer comprehension during the PR.
+- When Gherkin in the ticket body diverges from the YAML, the YAML wins.
+
+### Summary
+
+| Surface | Purpose | Source of truth? |
+|---|---|---|
+| `## Acceptance Criteria` (Gherkin) | Human readability, PR review context | No |
+| `docs/acceptance-criteria/{id}.yaml` | Machine-readable, canonical | **Yes** |
+
+---
+
 ## Architecture Plan diagram_type Validation (mandatory before Write)
 
 When a ticket being authored includes an `## Architecture Plan` section with one or more

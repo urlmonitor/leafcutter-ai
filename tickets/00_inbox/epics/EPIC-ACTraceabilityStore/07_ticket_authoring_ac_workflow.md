@@ -22,14 +22,14 @@ agents:
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
-  documentation-expert: needed
+  documentation-expert: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   explanation-author: not_needed
   how-to-author: not_needed
   reference-author: not_needed
   user-surface-smoker: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -103,16 +103,32 @@ Then it explains that Gherkin in ticket body is for human readability
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] pr-reviewer
+- [x] documentation-expert — 2026-06-04 10:00
+- [x] pr-reviewer — 2026-06-04 10:05
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-06-04 10:05 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-04_d803cd64
+completion_manifest:
+  diff_reviewed: true
+  no_high_findings: true
+  scope_verified: true
+Reviewed diff for templates/skills/ticket-authoring/SKILL.md and templates/skills/ticket-wiring/SKILL.md. No high-confidence findings. All four Gherkin ACs satisfied: ac_creations writes YAML at correct path with schema validation, ac_amendments updates criteria and amended_by while leaving other fields intact, empty case skips, and AC referencing convention section added. Suppressed: 0 nits. Escalation: none (medium count 0).
+
+### 2026-06-04 10:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-06-04_05077727
+completion_manifest:
+  doc_written: true
+  cross_links_added: true
+  diataxis_genre_correct: true
+Added "AC Referencing Convention" section to ticket-authoring/SKILL.md documenting that tickets reference (not own) ACs, the `implements AC-FIN-003` referencing format, and the Gherkin-vs-YAML relationship. Added Step 2.5 to ticket-wiring/SKILL.md covering AC YAML file creation (ac_creations) and amendment (ac_amendments) with schema validation guard, skip-when-empty rule, and conflict detection. Both skill files updated in templates/ and will be distributed on next build.
+
 ## Implementation Tasks
 
-- [ ] In `templates/skills/ticket-authoring/SKILL.md`:
+- [x] In `templates/skills/ticket-authoring/SKILL.md`:
   - Add a new section "AC Referencing Convention" (after the Frontmatter
     schema section):
     - Explain: "Tickets do not own ACs. They reference them. Use the format
@@ -122,7 +138,7 @@ Then it explains that Gherkin in ticket body is for human readability
       amended: `amends AC-FIN-001 (adds merge_conflict halt category)`."
     - The Gherkin in `## Acceptance Criteria` remains for human readability;
       it mirrors (does not replace) the AC YAML content.
-- [ ] In `templates/skills/ticket-wiring/SKILL.md`:
+- [x] In `templates/skills/ticket-wiring/SKILL.md`:
   - Add a new Step 2.5 between Step 2 (build ticket) and Step 3 (verify):
     - "If `ba_output.ac_creations` is non-empty: for each entry, write
       `docs/acceptance-criteria/{component}/{id}.yaml` populated from the
