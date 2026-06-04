@@ -1,7 +1,7 @@
 ---
 title: "EPIC: Finalize-Feature Hardening — Merge-First, Green-Gate, and Test Triage"
 type: epic
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
