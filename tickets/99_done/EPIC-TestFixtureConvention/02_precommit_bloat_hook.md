@@ -1,6 +1,6 @@
 ---
 title: "Implement check_test_fixture_bloat pre-commit hook"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
@@ -24,8 +24,8 @@ agents:
   test-runner: not_needed
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   explanation-author: not_needed
@@ -133,8 +133,8 @@ Then enabled is false
 - [x] test-writer — 2026-06-04 10:10
 - [x] python-coder — 2026-06-04 10:20
 - [x] pr-reviewer — 2026-06-04 10:30
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-04 10:45
+- [x] pull-request — 2026-06-04 10:50
 - [x] user-surface-smoker — 2026-06-04 10:35
 
 ## Comments
@@ -162,6 +162,22 @@ Blast-radius analysis: 3 files all within the `build_pipeline` / `commit_guardia
 
 Branch: none
 Reason: 3 files in one component (scripts/commit_guardian/); no always-large trigger fired.
+
+### 2026-06-04 10:50 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_a221e41d
+completion_manifest:
+  branch_pushed: true
+  pr_exists: true
+  one_pr_per_epic_followed: true
+Pushed commit 814a128 to origin EPIC-TestFixtureConvention branch (dc13167..814a128). PR #44 already exists: "feat: add tests/fixtures/ convention and load_fixture() conftest helper (ADR-007)" — one PR per epic convention followed; no new PR needed for ticket 02.
+
+### 2026-06-04 10:45 — commit (status: ok)
+feedback-id: fb_2026-06-04_56c0e53c
+completion_manifest:
+  files_committed: true
+  commit_sha_recorded: true
+  lock_acquired_and_released: true
+Committed 4 files as 814a128. Lock acquired (removed stale lock from dead PID 1361358), commit succeeded, lock released. Stale lock was from ticket 03 supervisor run (dead process). PRE_COMMIT_ALLOW_NO_CONFIG=1 used — no .pre-commit-config.yaml in this package development worktree (hooks are templates deployed to consumer projects). Commit: feat(EPIC-TestFixtureConvention/02): add check_test_fixture_bloat pre-commit hook.
 
 ### 2026-06-04 10:35 — user-surface-smoker (status: ok)
 feedback-id: fb_2026-06-04_d674f5a8
