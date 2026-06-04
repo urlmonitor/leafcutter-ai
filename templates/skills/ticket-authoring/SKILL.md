@@ -27,7 +27,7 @@ Authoring guide for everything under `tickets/`. The `ticket_frontmatter_guard` 
 - It has more than ~5 implementation tasks at the leaf level
 - It touches more than one component without a clear seam
 - It cannot be reviewed end-to-end in under 30 minutes
-- The acceptance criteria need more than 3 Gherkin scenarios
+- The acceptance criteria need more than 6 numbered AC items
 
 **Axes to split along:**
 - **By layer** — schema → SQL procedure → Python service → live trader integration → tests/docs
@@ -154,6 +154,7 @@ depends_on: []                     # epics are top-level
 | `roadmap_phase` | optional | Phase ID from `docs/roadmap.json` that this ticket belongs to (e.g. `phase_1`). The hook prints a **warning** (not a block) when the value is not a known phase ID. Omit on tickets predating the roadmap or when the phase is unclear. |
 | `advances_current_outcome` | optional | Boolean (`true` / `false`). Set `true` when this ticket directly advances the current must-achieve outcome in `docs/roadmap.json`. The hook prints a **warning** (not a block) when the value is not a boolean. Omit when not applicable. |
 | `artifact_checklist` | optional | Per-agent checklist overrides. Map of agent-name → list of item names. Merges with agent's default_artifact_checklist; ticket items extend defaults, same key overrides. |
+| `ac_coverage` | optional | Machine-readable AC completion ratio. Format: `N/M` where M = total AC count and N = number of validated ACs. Default `0/M` when first added. Updated by agents or the supervisor as ACs are confirmed green. Example: `ac_coverage: 3/6`. |
 
 ### `depends_on` Resolution
 
@@ -186,11 +187,29 @@ where analogous or duplicate logic exists so duplication risks are
 visible before implementation begins.
 
 ## Acceptance Criteria
-```gherkin
-Given <precondition>
-When <action>
-Then <observable outcome>
-```
+- [ ] AC-1: <description of first acceptance criterion>
+- [ ] AC-2: <description of second acceptance criterion>
+
+<!-- For multi-agent tickets, use the Agent Contracts section instead:
+
+## Agent Contracts
+
+### <agent-name>
+- [ ] AC-1: <deliverable this agent must produce>
+- [ ] AC-2: <deliverable this agent must produce>
+
+**Delivers to**: <next agent or "end user">
+**Depends on**: <prior agent or "none">
+
+-->
+
+## AC Coverage
+
+| AC | Test | Implementation | Validated |
+|----|------|----------------|-----------|
+| AC-1 | | | |
+| AC-2 | | | |
+
 ## Comments
 
 Append-only log. Each entry uses a parser-strict heading (three hashes):
@@ -311,11 +330,16 @@ First ticket of EPIC-CMEGapContext. Schema only — populator logic lives
 in 03_populate_ctx_cme_gaps.md. See [docs/logic/candle_context.md].
 
 ## Acceptance Criteria
-```gherkin
-Given the alembic head is upgraded
-When I describe candle_context
-Then ctx_cme_gaps exists as JSONB NULL
-```
+- [ ] AC-1: After alembic upgrade head, candle_context table has ctx_cme_gaps column of type JSONB NULL
+- [ ] AC-2: alembic downgrade reverses the migration without data loss
+
+## AC Coverage
+
+| AC | Test | Implementation | Validated |
+|----|------|----------------|-----------|
+| AC-1 | | | |
+| AC-2 | | | |
+
 ## Comments
 
 _(Append-only log — leave blank when authoring.)_
@@ -380,9 +404,9 @@ Before a `refinement` agent returns its payload, it MUST verify all of the follo
 
 - **files_touched completeness**: all affected files are listed; paths are correct relative to the project root; the list is not too broad.
 - **agent assignment accuracy**: the `agents` map reflects what the ticket actually requires; selection criteria from `agent_registry.json` are applied.
-- **Gherkin coverage check**: for each `Then` clause in the Acceptance Criteria Gherkin block, confirm that at least one Implementation Task explicitly addresses it. If a `Then` clause has no corresponding task, either add a task or narrow the Gherkin. A task list narrower than the Gherkin is a scope inconsistency — it will cause a Step 5 residual.
+- **AC coverage check**: for each `- [ ] AC-N:` item in the Acceptance Criteria block, confirm that at least one Implementation Task explicitly addresses it. If an AC has no corresponding task, either add a task or narrow the AC. A task list narrower than the AC list is a scope inconsistency — it will cause a Step 5 residual.
 
-  Lesson: TICKET-20260513's Gherkin demanded `git status --porcelain returns empty` but no Implementation Task explicitly covered the supervisor's `status: done` flip. The gap was not caught during refinement.
+  Lesson: TICKET-20260513's acceptance criteria demanded `git status --porcelain returns empty` but no Implementation Task explicitly covered the supervisor's `status: done` flip. The gap was not caught during refinement.
 
 - **dependency detection**: does this ticket depend on another ticket or epic being completed first? List any `depends_on` entries if applicable.
 - **risk identification**: any irreversible changes (schema migrations, data deletes, prod deploys)? Any shared contracts being modified?

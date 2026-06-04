@@ -290,7 +290,13 @@
         "allowed_types": [
             "epic"
         ],
-        "tickets_dir": "tickets"
+        "tickets_dir": "tickets",
+        "optional_fields": {
+            "ac_coverage": {
+                "_comment": "AC completion ratio. Format: N/M (e.g. '3/6'). N = validated ACs, M = total ACs.",
+                "pattern": "^\\d+/\\d+$"
+            }
+        }
     },
     "doc_links": {
         "_comment": "check_doc_links.py \u2014 Code-to-doc traceability link validation",
