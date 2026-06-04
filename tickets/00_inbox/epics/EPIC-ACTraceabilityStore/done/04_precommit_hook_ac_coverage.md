@@ -1,6 +1,6 @@
 ---
 title: "Pre-commit hook: every active AC must appear in at least one test's covers tag"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
@@ -30,7 +30,7 @@ agents:
   user-surface-smoker: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 04: Pre-commit hook: every active AC must appear in at least one test's covers tag
@@ -98,7 +98,7 @@ Then it exits 0 silently (hook degrades gracefully when store not yet installed)
 - [x] test-runner — 2026-06-04 14:20
 - [x] pr-reviewer — 2026-06-04 14:25
 - [x] commit — 2026-06-04 14:30
-- [ ] pull-request
+- [x] pull-request — 2026-06-04 14:35
 
 ## Comments
 
@@ -158,6 +158,13 @@ completion_manifest:
   files_staged_correctly: true
   commit_created: true
 Staged templates/commit-guardian/check_ac_coverage.py (new), templates/commit-guardian/commit_guardian.json (modified), unit_tests/commit_guardian/test_check_ac_coverage.py (new), tickets/00_inbox/epics/EPIC-ACTraceabilityStore/04_precommit_hook_ac_coverage.md (updated sign-offs). Committing.
+
+### 2026-06-04 14:35 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_168f40ae
+completion_manifest:
+  commits_pushed: true
+  pr_available: true
+Pushed commit b0feef5 to remote EPIC-ACTraceabilityStore branch. Existing PR #46 (feat(ac-store): AC YAML schema, validator hook, and ADR-007) updated with ticket-04 implementation. PR URL: https://github.com/urlmonitor/leafcutter-ai/pull/46
 
 ## Implementation Tasks
 
