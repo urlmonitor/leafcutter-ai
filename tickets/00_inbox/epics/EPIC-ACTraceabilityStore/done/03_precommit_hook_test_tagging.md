@@ -1,6 +1,6 @@
 ---
 title: "Pre-commit hook: every test function must have a # covers: XX-NNN tag"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
@@ -29,7 +29,7 @@ agents:
   user-surface-smoker: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 03: Pre-commit hook: every test function must have a # covers: XX-NNN tag
@@ -116,7 +116,7 @@ Then the hook runs in warn mode regardless of how it was invoked
 - [x] test-runner — 2026-06-04 10:30
 - [x] pr-reviewer — 2026-06-04 10:45
 - [x] commit — 2026-06-04 11:00
-- [ ] pull-request
+- [x] pull-request — 2026-06-04 11:10
 
 ## Comments
 
@@ -177,6 +177,13 @@ completion_manifest:
   commit_created: true
   staged_files_match_scope: true
 Committed 4 files under SHA e6e8649: check_test_ac_tags.py (new), commit_guardian.json (updated), test_check_test_ac_tags.py (new), 03_precommit_hook_test_tagging.md (sign-offs). Unstaged non-ticket-03 files before committing to maintain scope discipline.
+
+### 2026-06-04 11:10 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_abdf539a
+completion_manifest:
+  branch_pushed: true
+  pr_open: true
+Branch EPIC-ACTraceabilityStore pushed to origin. PR #46 (feat(ac-store): AC YAML schema, validator hook, and ADR-007) is already open for this epic — per epic convention, one PR per epic. This ticket's commits (e6e8649, 16429bf) are now on the PR branch.
 
 ## Implementation Tasks
 
