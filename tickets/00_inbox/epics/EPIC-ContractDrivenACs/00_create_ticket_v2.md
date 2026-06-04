@@ -26,7 +26,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   architecture-diagram-author: not_needed
   user-surface-smoker: signed_off
 ---
@@ -106,7 +106,7 @@ section). This means:
 - [x] python-coder — 2026-06-04 12:00
 - [x] pr-reviewer — 2026-06-04 12:05
 - [x] commit — 2026-06-04 12:20
-- [ ] pull-request
+- [x] pull-request — 2026-06-04 12:25
 - [x] user-surface-smoker — 2026-06-04 12:15
 
 ## Smoke Fixture
@@ -141,6 +141,14 @@ placeholder_signature: "(?i)(TODO|PLACEHOLDER|not implemented)"
   don't recognize. Sign-offs section still exists in the familiar format.
 
 ## Comments
+
+### 2026-06-04 12:25 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_exists: true
+  commits_landed: true
+Pushed 0b295f5..ab9fa42 to origin/EPIC-ContractDrivenACs. PR #43 already exists at https://github.com/urlmonitor/leafcutter-ai/pull/43 (OPEN). No new PR needed.
 
 ### 2026-06-04 12:20 — commit (status: ok)
 feedback-id: (submit-failed)
