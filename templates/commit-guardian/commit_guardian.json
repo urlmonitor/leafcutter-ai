@@ -723,6 +723,18 @@
                 ],
                 "pass_filenames": false,
                 "_comment": "EPIC-ACTraceabilityStore/04: Reverse-direction coverage check. Scans all active ACs in docs/acceptance-criteria/ and warns for each with no corresponding # covers: tag in any test file. Always exits 0 (warning-only, never blocks). Degrades gracefully when docs/acceptance-criteria/ is absent."
+            },
+            {
+                "id": "check-v2-ac-store-alignment",
+                "name": "Check V2 AC Store Alignment (ticket AC refs resolve to active store entries)",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_v2_ac_store_alignment.py",
+                "language": "system",
+                "files": "^tickets/.*\\.md$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "TICKET-20260604-ACStoreInlineAlignmentHook: Blocks commit when a staged ticket body references an AC store ID (implements/amends/introduces AC-XX-NNN) that does not resolve to an active YAML file in docs/acceptance-criteria/. Exits 0 silently when AC store absent or no references present."
             }
         ],
         "post_merge": [

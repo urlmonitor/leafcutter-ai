@@ -103,6 +103,30 @@ For each AC, search the test names and test file contents for:
 Record the match as: `{test_name: <name>, file: <path>}`.
 If no match is found, record `None`.
 
+### 2c. AC store alignment check (deterministic)
+
+Run the store-alignment script for the ticket file:
+
+```bash
+python scripts/commit_guardian/check_v2_ac_store_alignment.py --ticket <ticket_path>
+```
+
+Capture the exit code and full stdout output.
+
+- **Exit code 0:** No store-alignment violations. Continue.
+- **Exit code non-zero:** One or more AC store references in the ticket body are
+  invalid (file missing, status non-active, or unregistered prefix). Each ERROR
+  line in stdout describes a specific failure.
+
+When exit code is non-zero, record each ERROR line as a **store-alignment failure**.
+These failures are treated as **blocker** findings in Step 5 regardless of whether
+implementation or test evidence is present for those ACs.  Store-alignment failures
+mean the AC itself is not trustworthy — the ticket must be corrected before the
+commit proceeds.
+
+If the script file is absent (pre-store install or older worktrees), skip this
+sub-step silently and continue.
+
 ---
 
 ## Step 3 — Classify Coverage
@@ -256,3 +280,20 @@ A `false` value MUST expand to the nested object form (`result`, `reason`,
   do not infer coverage from descriptions or commit messages alone.
 - **Do not modify `## Comments` of other agents.** Append only to the end of the
   `## Comments` section per the signoff skill recipe.
+
+---
+
+<!--
+====================================================================
+DECISION HISTORY
+====================================================================
+- 2026-06-04 [TICKET-20260604-ACStoreInlineAlignmentHook]: Add Step 2c (AC store
+  alignment check). After collecting implementation and test evidence in Steps 2a
+  and 2b, ac-validator now runs
+  `python scripts/commit_guardian/check_v2_ac_store_alignment.py --ticket <ticket_path>`
+  and treats any non-zero exit as a blocker finding. This integrates the
+  deterministic store-alignment check into the LLM verdict so the agent surfaces
+  both coverage gaps (LLM-readable) and store mismatches (deterministic) in a
+  single verdict. Script absent -> silent skip (pre-store installs unaffected).
+====================================================================
+-->

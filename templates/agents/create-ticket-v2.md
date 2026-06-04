@@ -198,6 +198,79 @@ sections. Set `ac_coverage: 0/<count>` in frontmatter.
 
 ---
 
+## Step 2.5 — Write / Amend AC YAML Files
+
+This step runs **after** the ticket body is assembled (Step 3a or 3b) and **before**
+writing the ticket file (Step 4). It converts the BA v2 payload's AC-related fields
+into actual files in the AC store.
+
+This step replicates the semantics of `ticket-wiring` SKILL.md §Step 2.5. The v2
+pipeline implements it inline to avoid calling v1 skills, but the behaviour is
+**identical**: same schema validation, same file layout, same amendment semantics.
+
+### When to run
+
+Run this step when `ba_output.ac_creations` or `ba_output.ac_amendments` is non-empty.
+When both are empty (or absent), **skip this step entirely** — no AC files are written
+or modified.
+
+### Sub-step A — Write new AC YAML files (`ac_creations`)
+
+For each entry in `ba_output.ac_creations`:
+
+1. **Construct the target path**: `docs/acceptance-criteria/{component}/{proposed_id}.yaml`
+   where `{component}` is derived from the ticket's `components` field and `{proposed_id}`
+   comes from the entry.
+
+2. **Write the YAML content** with the following fields:
+   ```yaml
+   id: "{proposed_id}"
+   title: "{title}"
+   component: "{component}"
+   status: active
+   criteria: |
+     {criteria}
+   origin_agent: "{origin_agent}"
+   created_by_ticket: "{ticket_path}"
+   ```
+
+3. **Validate against the AC schema** by running:
+   ```bash
+   python scripts/commit_guardian/check_ac_schema.py <target_path>
+   ```
+   On validation failure: abort with an error listing the failing field(s).
+   Do NOT write the malformed file to the AC store. Return `status: blocker`.
+
+4. **Do not overwrite existing files**: if the target path already exists, treat it
+   as a conflict and surface to the user rather than silently overwriting.
+
+### Sub-step B — Amend existing AC YAML files (`ac_amendments`)
+
+For each entry in `ba_output.ac_amendments`:
+
+1. **Read the existing AC file** at `docs/acceptance-criteria/{component}/{ac_id}.yaml`.
+   If the file does not exist, abort with an error — amendments require a pre-existing record.
+
+2. **Update the `criteria` field** with `entry.new_criteria`.
+
+3. **Append the current ticket path** to the `amended_by` list in the YAML.
+   If `amended_by` is absent, create it as a list containing the ticket path.
+
+4. **Leave all other fields unchanged** (`id`, `title`, `component`, `status`, etc.).
+
+5. **Write the file back** to the same path.
+
+### What not to do
+
+- Do NOT write or modify any AC YAML file when `ac_creations` and `ac_amendments`
+  are both empty (or when both fields are absent from the BA v2 payload).
+- Do NOT silently overwrite an existing AC YAML via `ac_creations`.
+- Do NOT skip schema validation before writing new files.
+- Do NOT modify `templates/skills/ticket-wiring/SKILL.md` — this step is an inline
+  v2-only implementation; the v1 skill is unchanged.
+
+---
+
 ## Step 4 — Write the ticket file
 
 Write the ticket to `tickets/00_inbox/<YYYYMMDD>-<kebab-slug>.md`.
