@@ -29,7 +29,7 @@ agents:
   user-surface-smoker: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 08: Enhance test-failure-triage with AC status lookup for covers: tags
@@ -104,7 +104,7 @@ Then the AC lookup step is skipped for all failures
 - [x] documentation-expert — 2026-06-04 14:30
 - [x] pr-reviewer — 2026-06-04 14:35
 - [x] commit — 2026-06-04 14:40
-- [ ] pull-request
+- [x] pull-request — 2026-06-04 14:45
 
 ## Comments
 
@@ -153,6 +153,14 @@ completion_manifest:
   commit_created: true
   no_cross_worktree_pollution: true
 Staged templates/agents/test-failure-triage.md and ticket file. Committed as feat(EPIC-ACTraceabilityStore/08): add AC status lookup to test-failure-triage agent template.
+
+### 2026-06-04 14:45 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_0f8501f6
+completion_manifest:
+  branch_pushed: true
+  pr_open: true
+  commit_on_pr_branch: true
+Pushed commit 937bd3a to remote branch EPIC-ACTraceabilityStore. Existing PR #46 (feat(ac-store): AC YAML schema, validator hook, and ADR-007) is OPEN and now includes ticket 08's changes. No new PR needed — one PR per epic convention applies.
 
 ## Implementation Tasks
 
