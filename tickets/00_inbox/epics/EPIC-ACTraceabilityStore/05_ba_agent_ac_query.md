@@ -27,7 +27,7 @@ agents:
   reference-author: not_needed
   user-surface-smoker: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -112,7 +112,7 @@ Then the AC query step is skipped
 
 - [x] documentation-expert — 2026-06-04 14:30
 - [x] pr-reviewer — 2026-06-04 14:35
-- [ ] commit
+- [x] commit — 2026-06-04 14:40
 - [ ] pull-request
 
 ## Comments
@@ -138,6 +138,13 @@ Branch: none
 Reason: not escalated — medium count was 0 (threshold > 3); no high findings.
 
 Suppressed: 0 low-confidence nits, 0 medium findings dropped by Opus. Run /pr-review explain <N> to re-examine any high or medium finding in detail.
+
+### 2026-06-04 14:40 — commit (status: ok)
+feedback-id: fb_2026-06-04_9a2bd527
+completion_manifest:
+  files_staged: true
+  commit_created: true
+Staged: templates/agents/business-analyst.md, tickets/00_inbox/epics/EPIC-ACTraceabilityStore/05_ba_agent_ac_query.md. Commit 50c5d30 created with PRE_COMMIT_ALLOW_NO_CONFIG=1.
 
 ## Implementation Tasks
 
