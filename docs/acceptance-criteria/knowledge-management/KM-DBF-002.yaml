@@ -7,7 +7,7 @@ criteria: |
   `description: "<value>"` into the YAML frontmatter of each target file that lacked the
   field; all other frontmatter fields and the full body are unchanged.
 origin_agent: "create-ticket-v2"
-created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/02_description_backfill_and_enforcement.md"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/02a_description_backfill_migration.md"
 superseded_by: null
 amended_by: []
 covered_by: []

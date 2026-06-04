@@ -1,5 +1,5 @@
 ---
-title: "Backfill description: field on all docs/ADRs/components and add pre-commit enforcement"
+title: "Backfill description: field on all docs/ADRs/components (migration script)"
 status: todo
 components:
   - knowledge-management
@@ -11,10 +11,9 @@ roadmap_phase: phase_1
 advances_current_outcome: true
 requires_diagram: false
 requires_adr: false
-ac_coverage: 0/13
+ac_coverage: 0/9
 files_touched:
   - scripts/backfill_descriptions.py
-  - scripts/commit_guardian/check_description_field.py
   - docs/architecture/adrs/*.md
   - docs/architecture/components/*.md
   - docs/**/*.md
@@ -32,16 +31,14 @@ agents:
   architecture-diagram-author: not_needed
 ---
 
-# Backfill description: field on all docs/ADRs/components and add pre-commit enforcement
+# Backfill description: field on all docs/ADRs/components (migration script)
 
 ## Actor / Goal
 
 In order to make the `description:` frontmatter field consistently present on all
 structured doc files so that `knowledge_query.py` and `generate_doc_index.py` never
 fall back to parsing body text, we need a one-time migration script that adds a
-one-line `description:` field to every docs, ADR, and component file that lacks one,
-plus a lightweight pre-commit check that blocks future commits of such files without
-the field.
+one-line `description:` field to every docs, ADR, and component file that lacks one.
 
 ## Context
 
@@ -72,17 +69,6 @@ Description generation for each file: use the same heuristic as `generate_doc_in
 (first non-blank, non-heading line of the body). The human must review the dry-run
 output and correct any generated descriptions before running `--write`.
 
-### Enforcement strategy
-
-A new commit-guardian check (`check_description_field.py`) validates that all staged
-`.md` files in the three target directories have a non-empty `description:` frontmatter
-field. It follows the same pattern as `scripts/commit_guardian/check_ac_schema.py` and
-`check_paths_integrity.py`: reads staged files from stdin or as CLI args, parses YAML
-frontmatter, exits non-zero with a list of violations.
-
-The check is registered in the commit-guardian configuration. It does NOT block commits
-of ticket files, skill SKILL.md files, or agent template files.
-
 ## Agent Contracts
 
 ### python-coder
@@ -96,31 +82,17 @@ of ticket files, skill SKILL.md files, or agent template files.
 - [ ] AC-3: After `--write` completes, running `--dry-run` again reports zero files
   needing backfill (idempotent: re-running `--write` a second time makes no further
   changes).
-- [ ] AC-4: `scripts/commit_guardian/check_description_field.py` exits 0 when all
-  staged target files have a non-empty `description:` field and exits non-zero with a
-  per-file list of violations when any staged target file is missing the field.
-- [ ] AC-5: `check_description_field.py` does NOT flag ticket files, skill SKILL.md
-  files, or agent template files — only files under `docs/`, `docs/architecture/adrs/`,
-  and `docs/architecture/components/`.
-- [ ] AC-6: The backfill script is pure stdlib Python (no third-party imports).
-- [ ] AC-7: The backfill script accepts a `--project-root <path>` flag so it can be
+- [ ] AC-4: The backfill script is pure stdlib Python (no third-party imports).
+- [ ] AC-5: The backfill script accepts a `--project-root <path>` flag so it can be
   run from outside the project root (consistent with other scripts in this repo).
-- [ ] AC-8: `check_description_field.py` is registered in the commit-guardian configuration
-  and runs on staged `.md` files following the `check_ac_schema.py` pattern.
 
 **Delivers to test-writer:**
 ```json
 {
   "backfill_script": "scripts/backfill_descriptions.py",
-  "hook_script": "scripts/commit_guardian/check_description_field.py",
   "backfill_cli": {
     "flags": ["--dry-run", "--write", "--project-root"],
     "exit_codes": {"0": "success", "1": "paths.json not found or runtime error"}
-  },
-  "hook_cli": {
-    "args": "file paths as positional arguments",
-    "exit_codes": {"0": "no violations", "1": "one or more violations"},
-    "output_format": "FAIL: <path> — missing description field"
   },
   "scope_rules": {
     "targets": ["docs/", "docs/architecture/adrs/", "docs/architecture/components/"],
@@ -133,7 +105,6 @@ of ticket files, skill SKILL.md files, or agent template files.
 ```json
 {
   "backfill_script": "scripts/backfill_descriptions.py",
-  "hook_script": "scripts/commit_guardian/check_description_field.py",
   "integration_test": "run --dry-run after --write to confirm zero remaining files"
 }
 ```
@@ -165,28 +136,23 @@ Key implementation points:
 4. **Description candidate** — first non-blank, non-heading body line, truncated at 120 chars.
 5. **Error handling** — per repo rules; malformed frontmatter prints warning and skips file.
 
-**Hook (`check_description_field.py`)** — follow `check_ac_schema.py` pattern. Accept file
-paths as CLI args, skip non-target paths silently, exit 1 with violation list on failure.
-
 ---
 
 ### test-writer
 
-- [ ] AC-9: `unit_tests/test_backfill_descriptions.py` exists with tests covering:
+- [ ] AC-6: `unit_tests/test_backfill_descriptions.py` exists with tests covering:
   dry-run (no writes), write (inserts after title), skip (existing description unchanged),
   idempotent (second write = zero changes), excludes tickets, excludes skill files,
   description candidate skips headings, and missing paths.json exits cleanly.
-- [ ] AC-10: `unit_tests/test_check_description_field.py` exists with tests covering:
-  exits 0 when all staged docs have description, exits 1 when missing, ignores ticket
-  files, ignores skill files.
-- [ ] AC-11: All tests fail (RED) before python-coder runs and pass (GREEN) after. <!-- scope: integration -->
+- [ ] AC-7: All tests fail (RED) before python-coder runs and pass (GREEN) after. <!-- scope: integration -->
 
-**Depends on python-coder:** script paths, CLI flags, exit codes, scope rules, and output
+**Depends on python-coder:** script path, CLI flags, exit codes, scope rules, and output
 format from the Delivers-to block above.
 
 #### Test specification
 
-`unit_tests/test_backfill_descriptions.py`:
+Create `unit_tests/test_backfill_descriptions.py`:
+
 - `test_dry_run_prints_files_without_writing`
 - `test_write_inserts_description_after_title`
 - `test_write_skips_files_with_existing_description`
@@ -196,20 +162,14 @@ format from the Delivers-to block above.
 - `test_description_candidate_skips_headings_and_blank_lines`
 - `test_missing_paths_json_exits_cleanly`
 
-`unit_tests/test_check_description_field.py`:
-- `test_exits_0_when_all_staged_docs_have_description`
-- `test_exits_1_when_staged_doc_missing_description`
-- `test_ignores_ticket_files`
-- `test_ignores_skill_files`
-
 ---
 
 ### documentation-expert
 
-- [ ] AC-12: After backfill `--write`, `python scripts/generate_doc_index.py` runs without
+- [ ] AC-8: After backfill `--write`, `python scripts/generate_doc_index.py` runs without
   error and its output contains zero fallback-derived descriptions (every entry uses the
   frontmatter `description:` value). <!-- scope: integration -->
-- [ ] AC-13: `docs/architecture/agent_knowledge_system.md` contains a `## Description Field
+- [ ] AC-9: `docs/architecture/agent_knowledge_system.md` contains a `## Description Field
   Convention` section explaining the requirement and pointing to `check_description_field.py`.
 
 **Depends on python-coder:** backfill script path and integration test command from the
@@ -234,10 +194,6 @@ Delivers-to block above.
 | AC-7  |      |                |           |
 | AC-8  |      |                |           |
 | AC-9  |      |                |           |
-| AC-10 |      |                |           |
-| AC-11 |      |                |           |
-| AC-12 |      |                |           |
-| AC-13 |      |                |           |
 
 ## Sign-offs
 
@@ -259,6 +215,3 @@ Delivers-to block above.
   executed; all changes go through PR review.
 - Reversibility? High — all modified files are tracked in git. `git diff` shows every
   change. Any incorrect description can be corrected in a follow-up commit.
-- Risk of regressions: the enforcement check (AC-4, AC-5) must not block commits of
-  ticket or skill files. Scope-exclusion logic must be tested explicitly (see
-  `test_ignores_ticket_files` and `test_ignores_skill_files`).

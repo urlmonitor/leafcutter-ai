@@ -6,7 +6,7 @@ criteria: |
   A "Knowledge Query" row is present in the Architecture Reference table in
   `CLAUDE.md` pointing to the skill doc path.
 origin_agent: "create-ticket-v2"
-created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/01_knowledge_query_script.md"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/01b_knowledge_query_skill_registration.md"
 superseded_by: null
 amended_by: []
 covered_by: []

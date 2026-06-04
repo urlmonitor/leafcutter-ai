@@ -7,7 +7,7 @@ criteria: |
   file to `/tmp/leafcutter_knowledge_graph.html` (or `--output` path) that is valid
   HTML containing at least one `<script>` block with embedded node and edge JSON data.
 origin_agent: "create-ticket-v2"
-created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/03_knowledge_graph_visualization.md"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/03a_knowledge_graph_visualization_core.md"
 superseded_by: null
 amended_by: []
 covered_by: []

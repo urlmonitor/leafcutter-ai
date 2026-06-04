@@ -1,5 +1,5 @@
 ---
-title: "Write knowledge_query.py — unified cross-surface knowledge index script and /knowledge-query skill"
+title: "Write knowledge_query.py — cross-surface knowledge index script"
 status: todo
 components:
   - knowledge-management
@@ -10,18 +10,16 @@ roadmap_phase: phase_1
 advances_current_outcome: true
 requires_diagram: false
 requires_adr: false
-ac_coverage: 0/14
+ac_coverage: 0/11
 files_touched:
   - scripts/knowledge_query.py
-  - templates/skills/knowledge-query/SKILL.md
-  - config/skill_registry.json
 agents:
   architect-review: not_needed
   test-writer: needed
   python-coder: needed
   sql-coder: not_needed
   test-runner: needed
-  documentation-expert: needed
+  documentation-expert: not_needed
   pr-reviewer: needed
   commit: needed
   pull-request: needed
@@ -29,7 +27,7 @@ agents:
   architecture-diagram-author: not_needed
 ---
 
-# Write knowledge_query.py — unified cross-surface knowledge index script and /knowledge-query skill
+# Write knowledge_query.py — cross-surface knowledge index script
 
 ## Actor / Goal
 
@@ -39,6 +37,9 @@ reads `paths.json` for surface discovery, traverses tickets, ADRs, docs, agents,
 skills, components, roadmap, glossary, and feedback in a single pass, extracts a
 one-line description for every node, follows cross-surface edges, and dumps a flat
 index in both human-readable text and JSON format.
+
+Skill registration (SKILL.md, skill_registry.json entry, and documentation) is
+handled in ticket 01b.
 
 ## Context
 
@@ -61,7 +62,7 @@ for the build pipeline) — it is a separate query-time utility.
 | docs | `docs/**/*.md` (non-ticket) | `related_docs`, `related_code` |
 | ADRs | `docs/architecture/adrs/*.md` | `related_docs`, `related_code` |
 | components | `docs/architecture/components/*.md` | `related_docs`, `related_code` |
-| roadmap | `docs/roadmap.json` | phase → tickets (via `roadmap_phase` on tickets) |
+| roadmap | `docs/roadmap.json` | phase -> tickets (via `roadmap_phase` on tickets) |
 | glossary | `docs/glossary.md` | none (leaf surface) |
 
 `paths.json` is the single source of discovery. The script reads it to locate
@@ -107,22 +108,14 @@ python scripts/knowledge_query.py --project-root <path>   # run from outside pro
 
 Without `--query`, the script dumps the full index for all surfaces.
 
-### Skill registration
-
-After the script is written, a `/knowledge-query` skill must be registered:
-- Template at `templates/skills/knowledge-query/SKILL.md`
-- Entry added to `config/skill_registry.json`
-
-The skill wraps the CLI invocation pattern — same purpose as `/roadmap-query` but
-for cross-surface knowledge.
-
 ## Agent Contracts
 
 ### python-coder
 
 - [ ] AC-1: Running `python scripts/knowledge_query.py` without flags produces a
   human-readable index covering all eight surfaces, with at least one node per
-  surface that has a non-empty `description` field.
+  surface that has a non-empty `description` field. The script uses only stdlib
+  imports (no third-party dependencies).
 - [ ] AC-2: Running with `--format json` produces valid JSON with top-level keys
   `nodes` and `edges`; each node has `id`, `surface`, `title`, `description`, and
   `path` fields; each edge has `source`, `target`, and `type` fields.
@@ -136,13 +129,7 @@ for cross-surface knowledge.
   directory does not exist, the surface is skipped without error.
 - [ ] AC-6: When `paths.json` is absent, the script exits with a clean error message
   (`ERROR: config/paths.json not found.`) and no Python traceback.
-- [ ] AC-7: The script is pure stdlib Python (no imports outside the standard library).
-- [ ] AC-8: `templates/skills/knowledge-query/SKILL.md` exists, follows the same
-  frontmatter schema as `templates/skills/roadmap-query/SKILL.md`, and documents all
-  CLI flags with at least one example invocation per flag.
-- [ ] AC-9: An entry for `knowledge-query` is present in `config/skill_registry.json`
-  with `portable: true` and `template_path: "leafcutter/templates/skills/knowledge-query/"`.
-- [ ] AC-10: `knowledge_query.py` exposes public functions `load_surfaces(project_root, paths_json)`,
+- [ ] AC-7: `knowledge_query.py` exposes public functions `load_surfaces(project_root, paths_json)`,
   `extract_nodes(surface, path)`, and `extract_edges(surface, record, raw_data)` that can be
   imported by sibling scripts via `importlib.util`. <!-- scope: integration -->
 
@@ -159,15 +146,6 @@ for cross-surface knowledge.
   },
   "cli_flags": ["--query", "--surface", "--format", "--edges", "--project-root"],
   "exit_codes": {"0": "success", "1": "paths.json not found or runtime error"}
-}
-```
-
-**Delivers to documentation-expert:**
-```json
-{
-  "skill_template": "templates/skills/knowledge-query/SKILL.md",
-  "registry_entry": "config/skill_registry.json (key: knowledge-query)",
-  "cli_flags": ["--query", "--surface", "--format", "--edges", "--project-root"]
 }
 ```
 
@@ -208,21 +186,16 @@ Key implementation points:
 6. **Output rendering** — `render_text(nodes, edges, query, show_edges)` and
    `render_json(nodes, edges)` as separate functions.
 
-**Skill template** — model on `templates/skills/roadmap-query/SKILL.md`. Required sections:
-YAML frontmatter, `## When to Use`, `## Invocation`, `## Output Modes`, `## Surfaces Queried`, `## Error Behaviour`.
-
-**Registry entry** — insert alphabetically between `glossary-bootstrap` and `package-audit`.
-
 ---
 
 ### test-writer
 
-- [ ] AC-11: `unit_tests/test_knowledge_query.py` exists with tests covering:
+- [ ] AC-8: `unit_tests/test_knowledge_query.py` exists with tests covering:
   `load_surfaces` (all-present and optional-missing), `extract_nodes` (frontmatter
   description and body-line fallback), `extract_edges` (spawn_allowlist edge type),
   `--query` filter (case-insensitive), `--format json` (valid schema), missing
   `paths.json` (clean exit), and stdlib-only import validation.
-- [ ] AC-12: All tests in `test_knowledge_query.py` fail (RED) before python-coder runs
+- [ ] AC-9: All tests in `test_knowledge_query.py` fail (RED) before python-coder runs
   and pass (GREEN) after python-coder delivers. <!-- scope: integration -->
 
 **Depends on python-coder:** public API signatures (`load_surfaces`, `extract_nodes`,
@@ -242,24 +215,6 @@ Create `unit_tests/test_knowledge_query.py`:
 - `test_missing_paths_json_exits_cleanly`
 - `test_stdlib_only`
 
----
-
-### documentation-expert
-
-- [ ] AC-13: `templates/skills/knowledge-query/SKILL.md` documents exactly the CLI flags
-  that `knowledge_query.py` implements — no undocumented flags, no documented flags that
-  do not exist in the script.
-- [ ] AC-14: A "Knowledge Query" row is present in the Architecture Reference table in
-  `CLAUDE.md` pointing to the skill doc path.
-
-**Depends on python-coder:** skill template path and CLI flags from the Delivers-to block above.
-
-#### Tasks
-
-1. Verify SKILL.md consistency with implemented CLI flags.
-2. Add row to `docs/INDEX.md` for the new skill if not auto-generated.
-3. Add "Knowledge Query" entry to CLAUDE.md Architecture Reference table.
-
 ## AC Coverage
 
 | AC    | Test | Implementation | Validated |
@@ -275,16 +230,12 @@ Create `unit_tests/test_knowledge_query.py`:
 | AC-9  |      |                |           |
 | AC-10 |      |                |           |
 | AC-11 |      |                |           |
-| AC-12 |      |                |           |
-| AC-13 |      |                |           |
-| AC-14 |      |                |           |
 
 ## Sign-offs
 
 - [ ] test-writer
 - [ ] python-coder
 - [ ] test-runner
-- [ ] documentation-expert
 - [ ] pr-reviewer
 - [ ] commit
 - [ ] pull-request
@@ -296,7 +247,6 @@ Create `unit_tests/test_knowledge_query.py`:
 - Touches money? No.
 - Touches data? No — read-only traversal. No files are modified.
 - Reversibility? The script is additive. Removing it does not affect any existing
-  agent or build step. The skill entry in `skill_registry.json` can be removed
-  without breaking anything else.
+  agent or build step.
 - Risk of regressions: low. The script does not integrate into the build pipeline
   by default. `generate_doc_index.py` is unchanged.

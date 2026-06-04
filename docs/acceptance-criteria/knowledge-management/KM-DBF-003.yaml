@@ -7,7 +7,7 @@ criteria: |
   needing backfill (idempotent: re-running `--write` a second time makes no further
   changes).
 origin_agent: "create-ticket-v2"
-created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/02_description_backfill_and_enforcement.md"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/02a_description_backfill_migration.md"
 superseded_by: null
 amended_by: []
 covered_by: []

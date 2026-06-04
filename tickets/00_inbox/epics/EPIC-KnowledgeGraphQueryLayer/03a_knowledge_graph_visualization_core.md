@@ -1,19 +1,20 @@
 ---
-title: "Write visualise_knowledge_graph.py — D3.js force-directed graph from the knowledge index"
+title: "Write visualise_knowledge_graph.py — core HTML generation and D3.js data embedding"
 status: todo
 components:
   - knowledge-management
 created: 2026-06-04
 depends_on:
-  - tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/01_knowledge_query_script.md
+  - tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/01a_knowledge_query_script_core.md
 priority: medium
 roadmap_phase: phase_1
 advances_current_outcome: true
 requires_diagram: false
 requires_adr: false
-ac_coverage: 0/12
+ac_coverage: 0/10
 files_touched:
   - scripts/visualise_knowledge_graph.py
+  - docs/architecture/agent_knowledge_system.md
 agents:
   architect-review: not_needed
   test-writer: needed
@@ -28,7 +29,7 @@ agents:
   architecture-diagram-author: not_needed
 ---
 
-# Write visualise_knowledge_graph.py — D3.js force-directed graph from the knowledge index
+# Write visualise_knowledge_graph.py — core HTML generation and D3.js data embedding
 
 ## Actor / Goal
 
@@ -41,11 +42,10 @@ committed to the repo.
 
 ## Context
 
-This ticket is the "nice-to-have" visualization piece of the EPIC. It depends on
-`01_knowledge_query_script.md` because it reuses `knowledge_query.py`'s
-`load_surfaces`, `extract_nodes`, and `extract_edges` functions rather than
-reimplementing surface traversal. The two scripts must not duplicate surface
-discovery or edge extraction logic.
+This ticket covers the core functionality of the visualization script: loading data
+from `knowledge_query.py`, assembling the graph JSON, embedding it in an HTML
+template with D3.js, and writing the output file. CLI flags `--output` and `--no-open`
+are in scope; the `--surface` and `--project-root` flags are deferred to ticket 03b.
 
 ### Design constraints (settled)
 
@@ -82,7 +82,7 @@ lower-opacity version of the source node's surface color.
 - Node label shows on hover (the `title` field from the node record).
 - Legend in the top-right corner shows surface → color mapping.
 
-### Invocation
+### Invocation (this ticket)
 
 ```bash
 python scripts/visualise_knowledge_graph.py
@@ -93,12 +93,6 @@ python scripts/visualise_knowledge_graph.py --output /tmp/my_graph.html
 
 python scripts/visualise_knowledge_graph.py --no-open
 # Write the file but do not open the browser (useful in headless environments).
-
-python scripts/visualise_knowledge_graph.py --surface agents skills
-# Only include nodes and edges from the specified surfaces.
-
-python scripts/visualise_knowledge_graph.py --project-root <path>
-# Run from outside project root.
 ```
 
 ### Integration with knowledge_query.py
@@ -138,15 +132,10 @@ extraction.
 - [ ] AC-4: The script delegates surface traversal exclusively to `knowledge_query.py`
   (calls `load_surfaces`, `extract_nodes`, `extract_edges`). No surface path is
   hardcoded in `visualise_knowledge_graph.py` itself.
-- [ ] AC-5: Running with `--surface agents skills` produces a graph containing only
-  nodes from the `agents` and `skills` surfaces and edges between them; nodes from
-  all other surfaces are absent from the embedded JSON.
-- [ ] AC-6: The script accepts `--project-root <path>` and passes it to
-  `knowledge_query.py`'s surface loader without error.
-- [ ] AC-7: When `knowledge_query.py` is not found (sibling module missing), the
+- [ ] AC-5: When `knowledge_query.py` is not found (sibling module missing), the
   script exits with a clean error message `ERROR: knowledge_query.py not found at
   <expected_path>.` and no Python traceback.
-- [ ] AC-8: The script imports `knowledge_query.py` as a sibling module using
+- [ ] AC-6: The script imports `knowledge_query.py` as a sibling module using
   `importlib.util.spec_from_file_location` and `module_from_spec` — the same pattern
   used by `roadmap_query.py`. No `sys.path` manipulation or relative imports.
   <!-- scope: integration -->
@@ -158,7 +147,7 @@ extraction.
   "public_constants": {
     "SURFACE_COLORS": "dict[str, str] — maps surface name to hex color"
   },
-  "cli_flags": ["--output", "--no-open", "--surface", "--project-root"],
+  "cli_flags": ["--output", "--no-open"],
   "exit_codes": {"0": "success", "1": "knowledge_query.py not found or runtime error"}
 }
 ```
@@ -169,11 +158,11 @@ extraction.
   "script_path": "scripts/visualise_knowledge_graph.py",
   "doc_target": "docs/architecture/agent_knowledge_system.md (new ## Visualization section)",
   "claude_md_table_entry": "Knowledge Graph Visualization",
-  "cli_flags": ["--output", "--no-open", "--surface", "--project-root"]
+  "cli_flags": ["--output", "--no-open"]
 }
 ```
 
-**Depends on:** ticket 01's `knowledge_query.py` public API (`load_surfaces`, `extract_nodes`, `extract_edges`).
+**Depends on:** ticket 01a's `knowledge_query.py` public API (`load_surfaces`, `extract_nodes`, `extract_edges`).
 
 #### Implementation guidance
 
@@ -196,15 +185,14 @@ ARCHITECTURE: Delegates surface traversal and edge extraction to knowledge_query
 Key implementation points:
 
 1. **Module loader** — use `importlib.util` pattern from `roadmap_query.py` to load
-   `knowledge_query` as a sibling. On `FileNotFoundError`, exit cleanly per AC-7.
+   `knowledge_query` as a sibling. On `FileNotFoundError`, exit cleanly per AC-5.
 
 2. **Surface color map** — a module-level dict `SURFACE_COLORS` mapping each surface
    name to its hex color. Used for both node `color` field and edge rendering in D3.
 
 3. **Data assembly** — call `_kq.load_surfaces(project_root, paths_json)`, then
-   `_kq.extract_nodes()` and `_kq.extract_edges()` for each surface. Apply
-   `--surface` filter if specified. Add `color` field to each node record.
-   Serialize to JSON string.
+   `_kq.extract_nodes()` and `_kq.extract_edges()` for each surface. Add `color`
+   field to each node record. Serialize to JSON string.
 
 4. **HTML template** — an `HTML_TEMPLATE` module-level constant (multiline string)
    containing:
@@ -226,7 +214,7 @@ Key implementation points:
    `--no-open`, call `webbrowser.open(f"file://{output_path.resolve()}")`.
 
 6. **Argparse** — flags: `--output` (default `/tmp/leafcutter_knowledge_graph.html`),
-   `--no-open`, `--surface` (nargs=`+`), `--project-root`.
+   `--no-open`. (Note: `--surface` and `--project-root` are added in ticket 03b.)
 
 7. **Error handling** — wrap all file I/O per repo rules. On empty graph (zero nodes),
    print a warning and still write the HTML (D3 handles empty data gracefully).
@@ -235,11 +223,10 @@ Key implementation points:
 
 ### test-writer
 
-- [ ] AC-9: `unit_tests/test_visualise_knowledge_graph.py` exists with tests covering:
+- [ ] AC-7: `unit_tests/test_visualise_knowledge_graph.py` exists with tests covering:
   `test_writes_html_file`, `test_embedded_json_valid`, `test_nodes_have_color_field`,
-  `test_surface_filter_excludes_others`, `test_no_d3_download_in_script`,
-  `test_missing_kq_module_exits_cleanly`, and `test_project_root_flag_passed_to_kq`.
-- [ ] AC-10: All tests in `test_visualise_knowledge_graph.py` fail (RED) before
+  `test_no_d3_download_in_script`, and `test_missing_kq_module_exits_cleanly`.
+- [ ] AC-8: All tests in `test_visualise_knowledge_graph.py` fail (RED) before
   python-coder runs and pass (GREEN) after python-coder delivers.
   <!-- scope: integration -->
 
@@ -260,23 +247,19 @@ needing a real project structure.
   assert valid JSON with `nodes` and `edges` keys.
 - `test_nodes_have_color_field`: mock `extract_nodes` returning one agent node,
   assert embedded node has `color` matching `SURFACE_COLORS["agent"]`.
-- `test_surface_filter_excludes_others`: call with `--surface agents`, mock data
-  with agent and ticket nodes, assert only agent nodes in embedded JSON.
 - `test_no_d3_download_in_script`: read the source of `visualise_knowledge_graph.py`,
   assert `urllib` / `requests` / `http.client` are not imported.
 - `test_missing_kq_module_exits_cleanly`: rename/hide sibling module, call main,
   assert `SystemExit` and message contains "knowledge_query.py not found".
-- `test_project_root_flag_passed_to_kq`: mock `load_surfaces`, assert it is called
-  with the value passed to `--project-root`.
 
 ---
 
 ### documentation-expert
 
-- [ ] AC-11: `docs/architecture/agent_knowledge_system.md` contains a `## Visualization`
+- [ ] AC-9: `docs/architecture/agent_knowledge_system.md` contains a `## Visualization`
   section that describes `visualise_knowledge_graph.py`, its output format, and how to
   invoke it with at least one example command.
-- [ ] AC-12: The Architecture Reference table in `CLAUDE.md` contains a "Knowledge Graph
+- [ ] AC-10: The Architecture Reference table in `CLAUDE.md` contains a "Knowledge Graph
   Visualization" row pointing to `scripts/visualise_knowledge_graph.py`.
 
 **Depends on python-coder:** script path and CLI flags from the Delivers-to block above.
@@ -303,8 +286,6 @@ needing a real project structure.
 | AC-8  |      |                |           |
 | AC-9  |      |                |           |
 | AC-10 |      |                |           |
-| AC-11 |      |                |           |
-| AC-12 |      |                |           |
 
 ## Sign-offs
 
@@ -327,6 +308,6 @@ needing a real project structure.
 - Risk of regressions: low. The script is standalone and does not integrate into
   the build pipeline. The only coupling is the import of `knowledge_query.py` —
   if that module's public API changes, this script must be updated correspondingly.
-  The `depends_on` link ensures ticket 01 is complete before this ticket is driven.
+  The `depends_on` link ensures ticket 01a is complete before this ticket is driven.
 - Browser-open note: `webbrowser.open()` is a no-op in headless CI environments.
   The `--no-open` flag and the AC-3 test ensure the script does not fail in CI.

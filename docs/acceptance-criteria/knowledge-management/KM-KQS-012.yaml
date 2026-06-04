@@ -6,7 +6,7 @@ criteria: |
   All tests in `test_knowledge_query.py` fail (RED) before python-coder runs
   and pass (GREEN) after python-coder delivers.
 origin_agent: "create-ticket-v2"
-created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/01_knowledge_query_script.md"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/01a_knowledge_query_script_core.md"
 superseded_by: null
 amended_by: []
 covered_by: []

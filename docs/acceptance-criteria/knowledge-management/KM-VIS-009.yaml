@@ -8,7 +8,7 @@ criteria: |
   `test_surface_filter_excludes_others`, `test_no_d3_download_in_script`,
   `test_missing_kq_module_exits_cleanly`, and `test_project_root_flag_passed_to_kq`.
 origin_agent: "create-ticket-v2"
-created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/03_knowledge_graph_visualization.md"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/03a_knowledge_graph_visualization_core.md"
 superseded_by: null
 amended_by: []
 covered_by: []

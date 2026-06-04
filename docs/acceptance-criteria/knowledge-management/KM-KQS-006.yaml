@@ -6,7 +6,7 @@ criteria: |
   When `paths.json` is absent, the script exits with a clean error message
   (`ERROR: config/paths.json not found.`) and no Python traceback.
 origin_agent: "create-ticket-v2"
-created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/01_knowledge_query_script.md"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/01a_knowledge_query_script_core.md"
 superseded_by: null
 amended_by: []
 covered_by: []

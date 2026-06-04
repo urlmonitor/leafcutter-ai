@@ -6,7 +6,7 @@ criteria: |
   The script accepts `--project-root <path>` and passes it to
   `knowledge_query.py`'s surface loader without error.
 origin_agent: "create-ticket-v2"
-created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/03_knowledge_graph_visualization.md"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/03b_knowledge_graph_cli_flags.md"
 superseded_by: null
 amended_by: []
 covered_by: []

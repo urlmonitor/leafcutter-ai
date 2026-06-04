@@ -90,23 +90,35 @@ that time.
 
 | # | File | Description | Status |
 |---|------|-------------|--------|
-| 01 | [01_knowledge_query_script.md](./01_knowledge_query_script.md) | Write `knowledge_query.py` — unified cross-surface index script and `/knowledge-query` skill | `[ ]` |
-| 02 | [02_description_backfill_and_enforcement.md](./02_description_backfill_and_enforcement.md) | Backfill `description:` on all docs/ADRs/components and add pre-commit enforcement | `[ ]` |
-| 03 | [03_knowledge_graph_visualization.md](./03_knowledge_graph_visualization.md) | Write `visualise_knowledge_graph.py` — D3.js force-directed HTML from the knowledge index | `[ ]` |
+| 01a | [01a_knowledge_query_script_core.md](./01a_knowledge_query_script_core.md) | Write `knowledge_query.py` — cross-surface knowledge index script | `[ ]` |
+| 01b | [01b_knowledge_query_skill_registration.md](./01b_knowledge_query_skill_registration.md) | Register `/knowledge-query` skill — template and registry entry | `[ ]` |
+| 02a | [02a_description_backfill_migration.md](./02a_description_backfill_migration.md) | Backfill `description:` field on all docs/ADRs/components (migration script) | `[ ]` |
+| 02b | [02b_description_field_enforcement_hook.md](./02b_description_field_enforcement_hook.md) | Add `check_description_field.py` commit-guardian hook and register it | `[ ]` |
+| 03a | [03a_knowledge_graph_visualization_core.md](./03a_knowledge_graph_visualization_core.md) | Write `visualise_knowledge_graph.py` — core HTML generation and D3.js data embedding | `[ ]` |
+| 03b | [03b_knowledge_graph_cli_flags.md](./03b_knowledge_graph_cli_flags.md) | Add `--surface` and `--project-root` CLI flags to visualise_knowledge_graph.py | `[ ]` |
 
 ### Dependency order
 
 ```
-01_knowledge_query_script
+01a_knowledge_query_script_core
+        |
+        +---> 01b_knowledge_query_skill_registration
+        |
+        +---> 03a_knowledge_graph_visualization_core
+                      |
+                      v
+              03b_knowledge_graph_cli_flags
+
+02a_description_backfill_migration
         |
         v
-03_knowledge_graph_visualization   (depends on 01 — reuses edge extraction)
-
-02_description_backfill_and_enforcement   (independent — can run in parallel with 01)
+02b_description_field_enforcement_hook
 ```
 
-Tickets 01 and 02 can run in parallel. Ticket 03 must wait for ticket 01 to be
-signed off (it imports or reuses the index extraction logic from `knowledge_query.py`).
+Parallel batches:
+- **Batch 1**: 01a and 02a (independent, can run in parallel)
+- **Batch 2**: 01b, 02b, 03a (01b depends on 01a; 02b depends on 02a; 03a depends on 01a)
+- **Batch 3**: 03b (depends on 03a)
 
 ## Risk & Safety
 

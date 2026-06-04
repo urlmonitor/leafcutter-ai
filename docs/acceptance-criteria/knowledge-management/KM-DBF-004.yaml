@@ -7,7 +7,7 @@ criteria: |
   staged target files have a non-empty `description:` field and exits non-zero with a
   per-file list of violations when any staged target file is missing the field.
 origin_agent: "create-ticket-v2"
-created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/02_description_backfill_and_enforcement.md"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/02b_description_field_enforcement_hook.md"
 superseded_by: null
 amended_by: []
 covered_by: []
