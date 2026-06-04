@@ -19,14 +19,14 @@ agents:
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
-  documentation-expert: needed
+  documentation-expert: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   explanation-author: not_needed
   how-to-author: not_needed
   reference-author: not_needed
   user-surface-smoker: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -110,16 +110,38 @@ Then the AC query step is skipped
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] pr-reviewer
+- [x] documentation-expert — 2026-06-04 14:30
+- [x] pr-reviewer — 2026-06-04 14:35
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-06-04 14:30 — documentation-expert (status: ok)
+feedback-id: fb_2026-06-04_98b58534
+completion_manifest:
+  doc_written: true
+  cross_links_added: true
+  diataxis_genre_correct: true
+Added Step 0.5 (AC Store Query) to the Orchestration Sequence in `templates/agents/business-analyst.md`. The new step instructs the BA to check for `docs/acceptance-criteria/` before drafting ACs, load active ACs per component into `existing_acs`, and compare proposed ACs against them (reference, amend, or create). Fallback condition is explicit: when the directory is absent, set `ac_amendments: []` and `ac_creations: []` and skip the query. The output JSON block already contained `ac_amendments` and `ac_creations` fields from prior work. All Implementation Tasks completed.
+
+### 2026-06-04 14:35 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-04_1022ac4f
+completion_manifest:
+  diff_reviewed: true
+  no_high_findings: true
+  scope_verified: true
+Reviewed diff for ticket 05. The `templates/agents/business-analyst.md` change (+29 lines) matches the Implementation Tasks exactly: Step 0.5 AC Store Query added to the Orchestration Sequence with correct fallback, component-loop logic, and AC comparison rules. No high-confidence findings. The working diff also includes test-writer.md and other ticket changes from parallel epic work (tickets 02 and 06) — those are not in ticket 05's scope and will be committed by their respective commit phases. Scope verified for ticket 05's single deliverable.
+
+## Escalation
+Branch: none
+Reason: not escalated — medium count was 0 (threshold > 3); no high findings.
+
+Suppressed: 0 low-confidence nits, 0 medium findings dropped by Opus. Run /pr-review explain <N> to re-examine any high or medium finding in detail.
+
 ## Implementation Tasks
 
-- [ ] In `templates/agents/business-analyst.md`, add a new step before the
+- [x] In `templates/agents/business-analyst.md`, add a new step before the
   existing analysis steps:
   - **Step 0: AC Store Query** — "Check if `docs/acceptance-criteria/`
     exists in the target project. If it exists, for each component in
@@ -133,7 +155,7 @@ Then the AC query step is skipped
     `ac_amendments`; (c) if it is new, add to `ac_creations`."
   - Update the output JSON block to include `ac_amendments` and
     `ac_creations` (both optional, default `[]` when AC store is absent).
-- [ ] Ensure the fallback condition is explicit: "If
+- [x] Ensure the fallback condition is explicit: "If
   `docs/acceptance-criteria/` does not exist, set `ac_amendments: []` and
   `ac_creations: []` and skip the query."
 

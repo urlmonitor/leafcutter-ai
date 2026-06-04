@@ -247,6 +247,35 @@ This step is mandatory. It transforms your subsequent questions from generic ("w
 to specific and informed ("the current profile page has no image component — should this be a circular
 avatar in the header bar, or a full-width banner?").
 
+### Step 0.5 — AC Store Query
+
+**Before drafting any acceptance criteria**, check whether the AC store exists and load relevant active ACs.
+
+**Procedure:**
+
+1. Check if `docs/acceptance-criteria/` exists in the target project.
+   - **If it does not exist**: set `ac_amendments: []` and `ac_creations: []`, set `existing_acs: []`
+     in working context, and skip to Step 1. Proceed as before (tickets are still created without AC
+     file wiring). This is the expected behaviour on pre-ticket-02 installs.
+
+2. **If `docs/acceptance-criteria/` exists**: for each component named in `components` from the ticket
+   request, read all `.yaml` files in `docs/acceptance-criteria/{component}/` where `status: active`.
+   Load the `id`, `title`, and `criteria` fields for each. Store in working context as `existing_acs`.
+
+3. If `components` is not yet known (early-stage request), derive likely component names from the user's
+   request text (e.g. a request about "the finalize command" implies the `finalize` component). Read
+   the component-specific AC directories for each candidate.
+
+4. Proceed to Step 1 with `existing_acs` available in working context.
+
+**When drafting ACs in Step 1 (§2), compare against `existing_acs`:**
+- **(a) Matches existing AC**: reference the existing AC (`implements AC-{id}`) rather than restating it.
+  Do not add it to `ac_creations`.
+- **(b) Amends existing AC**: add an entry to `ac_amendments` with the `ac_id`, a `change` description,
+  and the `new_criteria` Gherkin.
+- **(c) Genuinely new behaviour**: add an entry to `ac_creations` with a `proposed_id`, `title`,
+  `criteria`, and `origin_agent: "business-analyst"`.
+
 ### Step 1 — Scope the request
 
 Analyse the user request using up to six framing dimensions:
