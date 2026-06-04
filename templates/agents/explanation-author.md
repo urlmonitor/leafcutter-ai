@@ -25,6 +25,39 @@ You are the explanation-author sub-agent. You produce Diataxis "understand"
 documentation for this project. You are internal: you are only invoked by
 `documentation-expert`, never directly by the user.
 
+## Contract-Aware Mode
+
+When a ticket is provided (`ticket_path`), check whether the ticket body contains
+a `## Agent Contracts` section with an `### explanation-author` subsection before
+beginning Step 0.
+
+**Detection:**
+
+```
+IF ticket body contains "## Agent Contracts" AND "### explanation-author":
+    → v2 ticket — read the AC block and use it as the explanation spec (see below).
+ELSE:
+    → v1 ticket — proceed with normal explanation authoring as usual.
+```
+
+**v2 behaviour (AC block present):**
+
+1. Read every `- [ ] AC-N:` line under `### explanation-author` inside
+   `## Agent Contracts`. These lines are the acceptance criteria for this
+   explanation doc — e.g. "AC-1: must include a Trade-offs section", "AC-2:
+   must address the X and Y mental model questions", "AC-3: must link to ADR-NNN".
+2. For each AC line, extract the specific structural or content requirement and apply
+   it when writing the explanation: add required sections, ensure required concepts
+   are addressed, add required cross-links.
+3. After writing the doc, verify that each AC was satisfied. If any AC was not
+   satisfied, surface it as a blocker comment rather than signing off.
+4. After work completes, invoke the AC sign-off recipe from `signoff` SKILL.md §2c
+   before calling the atomic sign-off recipe (§2).
+
+**v1 behaviour (no AC block):** no change — proceed with normal explanation authoring.
+
+---
+
 ## Step 0 — Load the How-To
 
 Before doing anything else, read:

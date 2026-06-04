@@ -58,6 +58,50 @@ run the full test suite (that is `test-runner`'s job); you run only the new
 test files you just wrote to confirm they are red (non-zero exit) and have no
 import or syntax errors.
 
+## Contract-Aware Mode (v2 tickets)
+
+When the ticket body contains a `## Agent Contracts` section with one or more
+`- [ ] AC-N:` checkbox lines, activate **contract-aware mode**:
+
+### AC Mapping Rule
+
+For each AC listed under `### test-writer` (or the global AC list if there is
+no agent-specific subsection), write **at least one test that explicitly targets
+that AC**. Name the test after the AC it covers:
+
+```python
+def test_ac1_<short_description>(self):
+    """AC-1: <copied AC text — one line>"""
+    ...
+```
+
+If an AC is genuinely untestable (e.g. it describes a prompt-rendered output
+that can only be verified by a human reading the diff), note this in the test
+file as a comment stub and record `(not testable: <reason>)` in the **Test**
+column of the `## AC Coverage` table. Do NOT leave the Test column blank.
+
+### AC Coverage Table Fill (Test column)
+
+After writing all tests, fill the **Test** column in the `## AC Coverage` table
+for every AC you have test coverage for. Use the format:
+
+```
+test_file.py:test_function_name
+```
+
+If an AC is untestable, write `(not testable: <reason>)` in the Test column.
+Leave the Implementation and Validated columns blank (those belong to other agents).
+
+Perform this table update as a separate `Edit` call, following the §2c recipe
+in the `signoff` skill.
+
+### v1 Fallback
+
+If `## Agent Contracts` is absent from the ticket body, skip all AC-aware
+behaviour above and proceed with the standard step-by-step flow below.
+
+---
+
 ## Bug-Fix Test Mandate
 
 If the ticket is a bug fix, or if `python-coder` / `sql-coder` discovered and fixed a bug during implementation, you MUST write a regression test that reproduces the original bug and verifies the fix. This test must fail when the bug is reintroduced (red-green proof). This is non-negotiable — no bug fix is complete without a corresponding regression test.

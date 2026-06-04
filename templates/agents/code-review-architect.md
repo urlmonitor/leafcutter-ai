@@ -12,7 +12,7 @@ name: code-review-architect
 tools: Bash, Read, Write
 portable: true
 signoff: false
-requires_verification: false
+requires_verification: true
 domain: null
 config_keys: {}
 default_artifact_checklist:
