@@ -298,6 +298,115 @@ Ran migration successfully; one test is red due to a stale endpoint path — see
 
 ---
 
+## §2c AC Coverage Sign-Off (runs AFTER work, BEFORE phase sign-off checkbox)
+
+### Overview
+
+When a ticket uses the v2 AC format (contains a `## Agent Contracts` section in its body),
+every phase agent MUST perform the AC Coverage Sign-Off steps below as the last act before
+calling the atomic sign-off recipe (§2). This step is **skipped silently** on v1 tickets
+(those without `## Agent Contracts`).
+
+This recipe is defined once here so that all phase agents inherit the behaviour without
+duplication. The canonical location for the AC protocol is this section — do not re-implement
+or override it in agent templates.
+
+### §2c.1 v1 / v2 Detection Rule
+
+Before doing anything else, check the ticket body:
+
+```
+IF ticket body contains "## Agent Contracts":
+    → v2 ticket — proceed with §2c.2
+ELSE:
+    → v1 ticket — skip §2c entirely; proceed directly to §2 (atomic sign-off)
+```
+
+This rule is backward-compatible: tickets authored before EPIC-ContractDrivenACs never
+contain `## Agent Contracts` and will silently skip the entire AC sign-off flow.
+
+### §2c.2 Per-AC Checkbox Protocol
+
+For v2 tickets, locate **your own agent's block** inside `## Agent Contracts`:
+
+1. Find the section heading `### <your-agent-name>` inside `## Agent Contracts`.
+   If no such heading exists for your agent name, skip §2c.2–§2c.3 (you have no ACs).
+2. For each checkbox line matching `- [ ] AC-N:` (where N is any integer):
+   a. Flip `- [ ]` → `- [x]`.
+   b. Append the inline signature `<!-- signed: <your-agent-name> -->` directly after the
+      checkbox text on the same line, separated by a single space.
+3. Perform all flips as a single `Edit` call so the update is atomic.
+
+**Format example** — before and after:
+
+```markdown
+# Before (v2 ticket, your section):
+### python-coder
+- [ ] AC-1: The skill must include §2c with the per-AC checkbox protocol.
+- [ ] AC-2: The AC Coverage table fill protocol is present.
+
+# After python-coder sign-off:
+### python-coder
+- [x] AC-1: The skill must include §2c with the per-AC checkbox protocol. <!-- signed: python-coder -->
+- [x] AC-2: The AC Coverage table fill protocol is present. <!-- signed: python-coder -->
+```
+
+### §2c.3 AC Coverage Table Protocol
+
+Every v2 ticket contains an `## AC Coverage` table in its body with columns:
+`AC | Test | Implementation | Validated`.
+
+After checking your AC checkboxes (§2c.2), fill **your column** in the table:
+
+| Your agent role | Column to fill | What to write |
+|---|---|---|
+| `python-coder`, `sql-coder`, `frontend-coder`, `documentation-expert`, `explanation-author`, `how-to-author`, `reference-author` | **Implementation** | One-sentence description of what was done (e.g. `Added §2c recipe to signoff SKILL.md`) |
+| `test-writer`, `test-runner` | **Test** | One-sentence description of what test was written or verified (e.g. `test_ac_checkbox_flipper.py::test_flip_checks all green`) |
+| `pr-reviewer`, `architect-review` | **Validated** | `ok — YYYY-MM-DD` or `fail — see blocker comment` |
+
+Do NOT fill columns that belong to other agents. Leave them blank if they have not been
+filled by a prior agent.
+
+Perform the table update as a separate `Edit` call from §2c.2 so the two writes are
+independently reviewable.
+
+**Format example** — before and after:
+
+```markdown
+# Before (blank table):
+## AC Coverage
+| AC | Test | Implementation | Validated |
+|----|------|----------------|-----------|
+| AC-1 | | | |
+| AC-2 | | | |
+
+# After python-coder fills Implementation column:
+## AC Coverage
+| AC | Test | Implementation | Validated |
+|----|------|----------------|-----------|
+| AC-1 | | Added §2c recipe to signoff SKILL.md | |
+| AC-2 | | Added AC Coverage table fill protocol | |
+```
+
+### §2c.4 Position in the Sign-off Flow
+
+The AC Coverage Sign-Off slots into the §1.5 → §2 → §3 sign-off sequence as follows:
+
+```
+§1.5  Task-section check (flip your ## Implementation Tasks checkboxes)
+§2c   AC Coverage Sign-Off  ← THIS SECTION (flip AC checkboxes; fill coverage table)
+§2    Atomic sign-off recipe (frontmatter + ## Sign-offs)
+§2a   submit_feedback.py call
+§2b   Completion manifest
+§3    Comment-append
+```
+
+A phase agent MUST complete §2c before calling the atomic sign-off (§2). Leaving AC
+checkboxes unchecked while marking `signed_off` in frontmatter is inconsistent and
+will be visible as an audit gap in the ticket history.
+
+---
+
 ## §3 Comment-Append Recipe
 
 Every phase agent appends one `## Comments` entry per invocation. The heading is parser-strict; the supervisor reads only the heading to decide its next move.

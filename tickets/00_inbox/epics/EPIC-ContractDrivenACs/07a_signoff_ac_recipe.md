@@ -24,7 +24,7 @@ agents:
   test-runner: not_needed
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
   architecture-diagram-author: not_needed
   user-surface-smoker: not_needed
@@ -51,7 +51,7 @@ rather than duplicated across 12 agent templates.
 
 - [x] python-coder — 2026-06-04 09:00
 - [x] pr-reviewer — 2026-06-04 09:05
-- [ ] commit
+- [x] commit — 2026-06-04 09:10
 - [ ] pull-request
 
 ## AC Coverage
@@ -88,3 +88,10 @@ completion_manifest:
   ac3_satisfied: true
   ac4_satisfied: true
 Reviewed §2c addition to signoff SKILL.md. All four ACs satisfied: per-AC checkbox protocol (§2c.2), AC Coverage table fill protocol (§2c.3), v1/v2 detection rule (§2c.1), and sign-off flow positioning (§2c.4) are all present and correct. No blockers.
+
+### 2026-06-04 09:10 — commit (status: ok)
+feedback-id: fb_2026-06-04_c50b419c
+completion_manifest:
+  files_staged_correctly: true
+  commit_created: true
+Staged templates/skills/signoff/SKILL.md and tickets/00_inbox/epics/EPIC-ContractDrivenACs/07a_signoff_ac_recipe.md. Committed §2c AC Coverage Sign-Off section addition to signoff SKILL.md on branch EPIC-ContractDrivenACs.
