@@ -1,6 +1,6 @@
 ---
 title: "Wire test-failure-triage into finalize-feature.js and add hard-halt enforcement"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
@@ -29,8 +29,8 @@ agents:
   reference-author: not_needed
   user-surface-smoker: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 04: Wire test-failure-triage into finalize-feature.js and add hard-halt enforcement
@@ -120,8 +120,8 @@ Then there is no "if not my files, skip" conditional or any other mechanism
 - [x] test-writer — 2026-06-04 10:00
 - [x] test-runner — 2026-06-04 10:05
 - [x] pr-reviewer — 2026-06-04 10:10
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-04 10:15
+- [x] pull-request — 2026-06-04 10:20
 
 ## Comments
 
@@ -143,6 +143,20 @@ completion_manifest:
   hard_halt_structural: true
   triage_dispatch_correct: true
 Reviewed finalize-feature.js step 4 rewrite against all 5 Gherkin ACs. (1) test-failure-triage dispatched with post_merge_failures, baseline_failures, baseline_sha, feature_branch, changed_files — confirmed. (2) blocks_finalization:true → hard early-return at 4c, steps 5/6 structurally unreachable — confirmed. (3) blocks_finalization:false → triage_report stored, flow continues to step 5 — confirmed. (4) Zero failures → 4b/4c skipped entirely — confirmed. (5) No "if not my files" conditional or prose-based escape hatch — old halt logic fully removed and replaced by triage dispatch. LGTM.
+
+### 2026-06-04 10:15 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  commit_created: true
+  correct_files_staged: true
+Committed as 509b6e3 — "feat(finalize-feature): wire test-failure-triage into step 4 with hard-halt enforcement". Staged: templates/workflows-js/finalize-feature.js and ticket file only. CLAUDE.md left unstaged (not in files_touched). 2 files changed, 144 insertions(+), 49 deletions(-).
+
+### 2026-06-04 10:20 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  pr_exists: true
+  commit_pushed: true
+PR #45 already open at https://github.com/urlmonitor/leafcutter-ai/pull/45 (one PR per epic). Pushed commit 509b6e3 to origin/EPIC-FinalizeFeatureHardening. Ticket 04 implementation is now visible in the PR.
 
 ## Implementation Tasks
 
