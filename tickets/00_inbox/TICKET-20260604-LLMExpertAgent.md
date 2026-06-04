@@ -12,6 +12,7 @@ requires_diagram: false
 requires_adr: false
 files_touched:
   - templates/agents/llm-expert.md
+  - docs/agents/llm-expert/PROJECT_CONTEXT.md
   - config/agent_registry.json
   - docs/agents/README.md
 agents:
@@ -200,7 +201,7 @@ And it appends a sign-off comment to the ticket
   config_keys:
     llm_expert.project_context_path:
       required: false
-      description: "Path to PROJECT_CONTEXT.md (default: .claude/agents/llm-expert/PROJECT_CONTEXT.md)"
+      description: "Path to PROJECT_CONTEXT.md (default: docs/agents/llm-expert/PROJECT_CONTEXT.md — leafcutter-internal, not deployed to consumer projects)"
   spawn_allowlist:
     - research-agent
   default_artifact_checklist:
@@ -277,8 +278,11 @@ And it appends a sign-off comment to the ticket
 
 ### workflow-architect — create PROJECT_CONTEXT.md
 
-- [ ] Create `templates/agents/llm-expert/PROJECT_CONTEXT.md` with the six
-  sections described in the Context section above:
+- [ ] Create `docs/agents/llm-expert/PROJECT_CONTEXT.md` (NOT under `templates/` —
+  this is leafcutter-internal knowledge, not a portable template deployed to
+  consumer projects). The agent template's Pre-Flight Reads section should
+  reference this path. Contents — the six sections described in the Context
+  section above:
   1. Shell convention (single-command rule; detection heuristics for `&&`, `;`)
   2. Agent frontmatter schema (required fields, build-injected vs hand-authored)
   3. Skill frontmatter schema
