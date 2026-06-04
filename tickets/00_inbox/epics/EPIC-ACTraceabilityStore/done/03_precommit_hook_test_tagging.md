@@ -1,6 +1,6 @@
 ---
 title: "Pre-commit hook: every test function must have a # covers: XX-NNN tag"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
@@ -16,10 +16,10 @@ files_touched:
   - templates/commit-guardian/commit_guardian.json
 agents:
   architect-review: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -27,9 +27,9 @@ agents:
   how-to-author: not_needed
   reference-author: not_needed
   user-surface-smoker: not_needed
-  pr-reviewer: needed
-  commit: needed
-  pull-request: needed
+  pr-reviewer: signed_off
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 03: Pre-commit hook: every test function must have a # covers: XX-NNN tag
@@ -111,19 +111,84 @@ Then the hook runs in warn mode regardless of how it was invoked
 
 ## Sign-offs
 
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
-- [ ] pr-reviewer
-- [ ] commit
-- [ ] pull-request
+- [x] test-writer — 2026-06-04 10:00
+- [x] python-coder — 2026-06-04 10:15
+- [x] test-runner — 2026-06-04 10:30
+- [x] pr-reviewer — 2026-06-04 10:45
+- [x] commit — 2026-06-04 11:00
+- [x] pull-request — 2026-06-04 11:10
 
 ## Comments
+
+### 2026-06-04 10:00 — test-writer (status: ok)
+feedback-id: fb_2026-06-04_e133575f
+completion_manifest:
+  test_stubs_created: true
+  all_tests_red: true
+  red_baseline_captured: true
+red_baseline:
+  - test_name: test_tagged_function_passes
+    file: unit_tests/commit_guardian/test_check_test_ac_tags.py
+    error: "AssertionError: 2 != 0 : /usr/bin/python: can't open file '…/check_test_ac_tags.py': [Errno 2] No such file or directory"
+  - test_name: test_untagged_function_warns_in_warn_mode
+    file: unit_tests/commit_guardian/test_check_test_ac_tags.py
+    error: "AssertionError: 2 != 0 : /usr/bin/python: can't open file '…/check_test_ac_tags.py': [Errno 2] No such file or directory"
+  - test_name: test_untagged_function_blocks_in_error_mode
+    file: unit_tests/commit_guardian/test_check_test_ac_tags.py
+    error: "AssertionError: 2 != 1 :"
+  - test_name: test_docstring_tag_accepted
+    file: unit_tests/commit_guardian/test_check_test_ac_tags.py
+    error: "AssertionError: 2 != 0 : /usr/bin/python: can't open file '…/check_test_ac_tags.py': [Errno 2] No such file or directory"
+  - test_name: test_non_test_file_skipped
+    file: unit_tests/commit_guardian/test_check_test_ac_tags.py
+    error: "AssertionError: 2 != 0 : /usr/bin/python: can't open file '…/check_test_ac_tags.py': [Errno 2] No such file or directory"
+  - test_name: test_no_test_functions_passes
+    file: unit_tests/commit_guardian/test_check_test_ac_tags.py
+    error: "AssertionError: 2 != 0 : /usr/bin/python: can't open file '…/check_test_ac_tags.py': [Errno 2] No such file or directory"
+Wrote 6 failing test stubs for check_test_ac_tags.py to unit_tests/commit_guardian/test_check_test_ac_tags.py. All 6 tests are red (exit 1) — hook file does not yet exist (No such file or directory). Red baseline captured. Handing to python-coder to implement the hook.
+
+### 2026-06-04 10:15 — python-coder (status: ok)
+feedback-id: fb_2026-06-04_4f344620
+completion_manifest:
+  code_implemented: true
+  tests_passing: true
+  doc_enforcer_clean: true
+  complexity_check_clean: true
+Implemented check_test_ac_tags.py (stdlib ast+re only): is_test_file, find_test_functions, has_covers_tag (checks line-above-def, first-body-line, docstring), read_enforcement_mode (env override > config file > default warn), and main entrypoint. Added test_ac_tag_enforcement: "warn" to commit_guardian.json and registered check-test-ac-tags in hooks_manifest. All 6 tests green (6/6 passed).
+
+### 2026-06-04 10:30 — test-runner (status: ok)
+feedback-id: fb_2026-06-04_21885c89
+completion_manifest:
+  tests_green: true
+  no_regressions: true
+Ran full commit_guardian test suite: 60 tests collected, 60 passed (6 new for check_test_ac_tags + 54 pre-existing). No regressions. Exit 0.
+
+### 2026-06-04 10:45 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-04_80d0e521
+completion_manifest:
+  acs_satisfied: true
+  tests_green: true
+  implementation_clean: true
+All 5 ACs verified against the implementation: warn-mode exits 0 with warning, error-mode exits 1, tagged functions pass, docstring tags accepted, non-test files skipped. Hook registered in commit_guardian.json with correct entry (pass_filenames: true). 60/60 tests green. Stdlib-only implementation within file size/complexity limits. Approved.
+
+### 2026-06-04 11:00 — commit (status: ok)
+feedback-id: fb_2026-06-04_3477044e
+completion_manifest:
+  commit_created: true
+  staged_files_match_scope: true
+Committed 4 files under SHA e6e8649: check_test_ac_tags.py (new), commit_guardian.json (updated), test_check_test_ac_tags.py (new), 03_precommit_hook_test_tagging.md (sign-offs). Unstaged non-ticket-03 files before committing to maintain scope discipline.
+
+### 2026-06-04 11:10 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_abdf539a
+completion_manifest:
+  branch_pushed: true
+  pr_open: true
+Branch EPIC-ACTraceabilityStore pushed to origin. PR #46 (feat(ac-store): AC YAML schema, validator hook, and ADR-007) is already open for this epic — per epic convention, one PR per epic. This ticket's commits (e6e8649, 16429bf) are now on the PR branch.
 
 ## Implementation Tasks
 
 ### python-coder
-- [ ] Write `templates/commit-guardian/check_test_ac_tags.py`:
+- [x] Write `templates/commit-guardian/check_test_ac_tags.py`:
   - Stdlib only (ast module for parsing test functions, re for tag search).
   - `is_test_file(path)` — returns True for `test_*.py` / `*_test.py`.
   - `find_test_functions(ast_tree)` — returns list of `(name, lineno)` for
@@ -135,12 +200,12 @@ Then the hook runs in warn mode regardless of how it was invoked
   - main: iterate staged files, filter test files, check each function.
     Emit warnings or errors per enforcement mode. Exit 0 in warn mode
     always; exit 1 in error mode when violations found.
-- [ ] Add `test_ac_tag_enforcement: "warn"` default to
+- [x] Add `test_ac_tag_enforcement: "warn"` default to
   `templates/commit-guardian/commit_guardian.json`.
-- [ ] Register `check_test_ac_tags.py` in `commit_guardian.json` hooks.
+- [x] Register `check_test_ac_tags.py` in `commit_guardian.json` hooks.
 
 ### test-writer
-- [ ] Write `unit_tests/commit_guardian/test_check_test_ac_tags.py`:
+- [x] Write `unit_tests/commit_guardian/test_check_test_ac_tags.py`:
   - `test_tagged_function_passes` — function with `# covers: FIN-001` passes.
   - `test_untagged_function_warns_in_warn_mode` — exit 0, warning printed.
   - `test_untagged_function_blocks_in_error_mode` — exit 1.

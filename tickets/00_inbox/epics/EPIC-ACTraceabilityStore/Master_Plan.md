@@ -99,13 +99,18 @@ is captured in ticket 08 of this epic.
 | 07 | [07_ticket_authoring_ac_workflow.md](./07_ticket_authoring_ac_workflow.md) | Update ticket-authoring skill: tickets reference ACs; BA creates/amends AC files | `[ ]` |
 | 08 | [08_triage_agent_ac_lookup.md](./08_triage_agent_ac_lookup.md) | Enhance test-failure-triage to look up AC status for covers: tags (requires FinalizeFeatureHardening 03) | `[ ]` |
 | 09 | [09_ac_store_docs.md](./09_ac_store_docs.md) | How-to and reference docs for the AC store | `[ ]` |
+| 10 | [10_ac_origin_tracking.md](./10_ac_origin_tracking.md) | Extend AC schema with origin_agent field; stamp in BA agent, debug skill, and manual workflow | `[ ]` |
+| 11 | [11_debug_skill_ac_lookup.md](./11_debug_skill_ac_lookup.md) | Add AC store query step to debug skill — inject active ACs into investigator prompts | `[ ]` |
 
 ## Execution Order
 
 Ticket 01 (schema) must complete first. Tickets 02, 03, and 04 depend on 01.
 Tickets 05, 06, 07 depend on 02 (store exists in a target project). Ticket 08
 depends on 05, 06, and EPIC-FinalizeFeatureHardening ticket 03 (triage agent).
-Ticket 09 depends on all prior tickets.
+Ticket 09 depends on all prior tickets. Ticket 10 (AC origin tracking) depends
+on 01 (schema must exist to amend it) and can run in parallel with 05–09.
+Ticket 11 (debug skill AC lookup) depends on 02 and 05 (store scaffold and BA
+query pattern must be established); it can run in parallel with 06–10.
 
 ## Risk & Safety
 

@@ -1,0 +1,96 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "config/ac_store_schema.json",
+    "title": "AC Store — Acceptance Criterion YAML Schema",
+    "description": "JSON Schema (draft-07) for acceptance criterion files stored under docs/acceptance-criteria/. See ADR-007 for rationale and ID format specification.",
+    "type": "object",
+    "required": [
+        "id",
+        "title",
+        "component",
+        "status",
+        "created_by",
+        "criteria"
+    ],
+    "additionalProperties": false,
+    "properties": {
+        "id": {
+            "type": "string",
+            "description": "Stable AC identifier in the format COMPONENT_PREFIX-NNN (e.g. FIN-001). Assigned at creation time; never changes.",
+            "pattern": "^[A-Z]{2,6}-[0-9]{3}$"
+        },
+        "title": {
+            "type": "string",
+            "description": "One-line human-readable description of the criterion.",
+            "minLength": 1
+        },
+        "component": {
+            "type": "string",
+            "description": "Component name matching a key in docs/components.json.",
+            "minLength": 1
+        },
+        "status": {
+            "type": "string",
+            "description": "Lifecycle status of the criterion.",
+            "enum": [
+                "active",
+                "deprecated",
+                "superseded_by"
+            ]
+        },
+        "created_by": {
+            "type": "string",
+            "description": "Path to the ticket (relative to repo root) that first introduced this criterion.",
+            "minLength": 1
+        },
+        "criteria": {
+            "type": "string",
+            "description": "Multi-line Gherkin scenario body (Given/When/Then/And).",
+            "minLength": 1
+        },
+        "superseded_by": {
+            "oneOf": [
+                {
+                    "type": "string",
+                    "pattern": "^[A-Z]{2,6}-[0-9]{3}$",
+                    "description": "AC ID of the replacement criterion (set when status is superseded_by)."
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "amended_by": {
+            "type": "array",
+            "description": "Ticket paths that subsequently amended this criterion.",
+            "items": {
+                "type": "string"
+            },
+            "uniqueItems": true,
+            "default": []
+        },
+        "covered_by": {
+            "type": "array",
+            "description": "Test file paths (optionally with ::test_function) that verify this criterion.",
+            "items": {
+                "type": "string"
+            },
+            "uniqueItems": true,
+            "default": []
+        },
+        "implemented_by": {
+            "type": "array",
+            "description": "Source file paths (optionally with #anchor) that implement this criterion.",
+            "items": {
+                "type": "string"
+            },
+            "uniqueItems": true,
+            "default": []
+        },
+        "origin_agent": {
+            "type": "string",
+            "description": "Identity of the agent or workflow that created this AC file. Enum: business-analyst | debug | human | ticket-wiring. Free-form string to allow future agents.",
+            "minLength": 1
+        }
+    }
+}

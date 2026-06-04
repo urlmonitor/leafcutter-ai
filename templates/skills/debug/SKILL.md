@@ -21,20 +21,76 @@ investigated and stop.
 This skill orchestrates a three-pronged investigation of a reported issue,
 then automatically creates and drives a fix ticket. The workflow:
 
-1. **Investigate** — spawn 3 parallel agents, each examining the issue from
+1. **AC Lookup** — query the AC store for declared expected behaviour of the
+   components implied by the issue description
+2. **Investigate** — spawn 3 parallel agents, each examining the issue from
    a different angle
-2. **Synthesize** — merge findings, identify agreement and uncertainty
-3. **Clarify** — if agents disagree or are uncertain, ask the user
-4. **Ticket** — create a fix ticket via `create-ticket` agent
-5. **Build** — drive the ticket via `/build-feature`
+3. **Synthesize** — merge findings, identify agreement and uncertainty
+4. **Clarify** — if agents disagree or are uncertain, ask the user
+5. **Ticket** — create a fix ticket via `create-ticket` agent
+6. **Build** — drive the ticket via `/build-feature`
+
+---
+
+## Step 0 — AC Store Query
+
+Before spawning the investigative agents, perform a lightweight AC lookup to
+ground each investigator with the system's declared expected behaviour.
+
+1. **Check for the AC store.** Test whether `docs/acceptance-criteria/` exists
+   in the target project.
+   - If it does NOT exist: log the message below and skip to Step 1.
+     ```
+     AC store not found — investigators will work without declared expected behaviour.
+     ```
+   - If it exists: proceed to component inference (step 2 below).
+
+2. **Infer 1–3 component slugs** from the issue description:
+   - If the description contains a file path (e.g.
+     `templates/agents/business-analyst.md`), extract the enclosing directory or
+     module name and normalise to a lowercase-hyphenated slug
+     (e.g. `business-analyst`).
+   - If the description mentions a recognisable component name directly (e.g.
+     "finalize", "business-analyst"), use that slug.
+   - If the description is ambiguous and no specific component is identifiable:
+     - Log: "component inference ambiguous"
+     - Use all component slugs that have a directory under
+       `docs/acceptance-criteria/`.
+
+3. **Load active ACs.** For each inferred component slug, read all `.yaml` files
+   under `docs/acceptance-criteria/{slug}/` where `status: active`. Extract the
+   `id`, `title`, and `criteria` fields for each.
+
+4. **Cap and build the injection block.**
+   - If no ACs are found across all inferred components: set `AC_CONTEXT` to an
+     empty string and proceed — do NOT add the section to investigator prompts.
+   - If ACs are found: cap the total at **10 ACs** (take the first 10 by
+     filename sort if more exist). Build `AC_CONTEXT` using this format:
+
+     ```
+     ## Declared Expected Behaviour
+
+     The following active Acceptance Criteria govern the components most likely
+     involved in this issue. Use them as ground truth when evaluating whether
+     observed behaviour is a regression or an intended design:
+
+     AC-{ID}: {title}
+       {criteria (indented, verbatim from YAML)}
+
+     AC-{ID}: {title}
+       {criteria}
+     ```
+
+5. Store the result in `AC_CONTEXT`. Pass it to Step 1.
 
 ---
 
 ## Step 1 — Spawn Three Investigative Agents
 
 Spawn all three agents **in parallel** using the `Agent` tool. Each agent
-receives the issue description from `$ARGUMENTS` plus its specific
-investigation mandate below.
+receives the issue description from `$ARGUMENTS`, the `AC_CONTEXT` built in
+Step 0 (empty string when the AC store was absent or no ACs were found), plus
+its specific investigation mandate below.
 
 ### Agent 1: Database & Data Layer Investigator
 
@@ -45,6 +101,8 @@ You are investigating a reported issue from the DATABASE and DATA LAYER
 perspective.
 
 **Issue:** {$ARGUMENTS}
+
+{AC_CONTEXT}
 
 Your investigation mandate:
 1. Search for relevant database models, schemas, migrations, SQL files,
@@ -78,6 +136,8 @@ You are investigating a reported issue from the BACKEND and BUSINESS LOGIC
 perspective.
 
 **Issue:** {$ARGUMENTS}
+
+{AC_CONTEXT}
 
 Your investigation mandate:
 1. Search for relevant Python/backend code — functions, classes, API
@@ -114,6 +174,8 @@ and DOCUMENTATION perspective.
 
 **Issue:** {$ARGUMENTS}
 
+{AC_CONTEXT}
+
 Your investigation mandate:
 1. Search for relevant frontend code — components, templates, styles,
    client-side logic, API calls from the UI layer.
@@ -149,7 +211,7 @@ read-only search capability. Label them clearly:
 
 ## Step 2 — Synthesize Findings
 
-After all three agents return, synthesize their reports:
+After all three agents from Step 1 return, synthesize their reports:
 
 1. **Collect all findings** — merge the numbered lists from all three agents.
 2. **Identify agreement** — where do 2+ agents point to the same root cause
@@ -210,6 +272,10 @@ Include in the prompt to `create-ticket`:
 - The specific files that need changes (from the investigation)
 - Any documentation discrepancies that should be fixed in the same ticket
 - The suggested fix approach
+- **AC origin tracking instruction:** "Instruct the BA/wiring step to set
+  `origin_agent: debug` on any AC YAML files created as part of this fix
+  ticket." This ensures compliance auditing can identify debug-workflow-
+  generated ACs (which differ from BA-generated or human-authored ACs).
 
 ---
 

@@ -229,6 +229,29 @@ Before writing any file:
    directory is flagged `"new directory needed"`, create it by adding a
    `__init__.py` file before writing tests.
 
+5. **AC Store pre-flight (run before writing any test function):**
+   1. Check whether `docs/acceptance-criteria/` exists in the repo root
+      (via `Bash ls docs/acceptance-criteria/`).
+   2. If the directory exists, scan the ticket body for AC ID references using
+      the regex `AC-[A-Z]{2,6}-[0-9]{3}` (e.g. `AC-FIN-001`, `AC-AUTH-007`).
+   3. For each matched AC ID, read the corresponding YAML file at
+      `docs/acceptance-criteria/<domain>/<ID>.yaml` where `<domain>` is the
+      lowercase component prefix (e.g. `FIN` → `finalize`, or match by searching
+      the directory tree for a file named `<ID>.yaml`).
+   4. Load the `id`, `status`, and `criteria` fields from each YAML.
+   5. **Skip deprecated / superseded ACs:** if `status` is `deprecated` or
+      starts with `superseded_by`, do NOT write a test for that AC. Log a
+      warning in `## Comments`:
+      ```
+      AC <ID> is deprecated — skipping test generation for this AC
+      ```
+   6. Use the `criteria` field from each non-skipped AC YAML as the primary
+      source for the test scenario (authoritative over the Gherkin in the ticket
+      body). The ticket body Gherkin remains for human readability only.
+   7. **If the AC store does not exist** or the ticket references no AC IDs:
+      fall back to the existing Gherkin-from-ticket-body approach. In this
+      fallback case, use `# covers: UNKNOWN` as the tag (see Step 2i below).
+
 ## Step 2 — Write Test Files
 
 For each entry in the `## Test Requirements` table:
@@ -326,6 +349,40 @@ functions or parametrize decorators.
 
 See `docs/testing/README.md` §Fixture Convention for the full layout and
 `load_fixture()` signature.
+
+### 2i — `# covers:` tag placement (mandatory for every test function)
+
+For every test function you write, add a `# covers: <AC-ID>` comment as the
+**first line of the function body** (immediately after the `def` line, before
+any other code or docstring):
+
+```python
+def test_merge_executes_before_test_runner():
+    # covers: FIN-001
+    # Verify that git merge origin/main runs before test-runner dispatch.
+    ...
+```
+
+**Sourcing rules (in priority order):**
+
+1. **AC store hit (Step 1 pre-flight found a matching YAML):** use the AC ID
+   from the YAML (e.g. `# covers: FIN-001`).
+2. **No AC store / no match found:** use the placeholder
+   `# covers: UNKNOWN`. The pre-commit test-tagging hook (ticket 03) will
+   emit a warning (not a block) for `UNKNOWN` tags, prompting the author to
+   link the test to a real AC when one becomes available.
+
+The tag MUST be on a single line, exactly as `# covers: <ID>`, with no
+trailing whitespace and no additional text on the same line. One tag per test
+function. If a test covers multiple ACs, add one `# covers:` line per AC,
+each on its own line immediately after the `def` line.
+
+```python
+def test_multi_ac_scenario():
+    # covers: FIN-001
+    # covers: FIN-002
+    ...
+```
 
 ## Step 3 — Delegate Codebase Questions
 
@@ -450,6 +507,27 @@ Your sign-off comment MUST include a `completion_manifest:` block immediately af
 - `test_stubs_created` — one or more failing test stubs were written to disk.
 - `all_tests_red` — the verification run returned a non-zero exit (all new tests are red).
 - `red_baseline_captured` — a `red_baseline:` YAML block appears in the comment body with at least one entry containing the actual error output from the verification run.
+- `ac_ids_covered` — list the AC IDs that were explicitly covered by `# covers:` tags in the written tests (e.g. `[FIN-001, FIN-002]`). Use `[UNKNOWN]` if no AC store was found or the ticket referenced no AC IDs. This field aids the bidirectional coverage check (ticket 04) by making the mapping from test file to AC ID auditable at sign-off time.
+
+Example completion manifest for a test-writer sign-off that covered two ACs:
+
+```yaml
+completion_manifest:
+  test_stubs_created: true
+  all_tests_red: true
+  red_baseline_captured: true
+  ac_ids_covered: [FIN-001, FIN-002]
+```
+
+Example when AC store was absent (fallback path):
+
+```yaml
+completion_manifest:
+  test_stubs_created: true
+  all_tests_red: true
+  red_baseline_captured: true
+  ac_ids_covered: [UNKNOWN]
+```
 
 ## Architectural Context Enforcement
 You are an execution agent. You MUST strictly follow the architectural context and diagrams provided within your assigned ticket. If the ticket lacks sufficient architectural context for you to understand how your changes impact the surrounding system, DO NOT guess or operate blindly. You must ask the ticket supervisor or architect for clarification before implementing.

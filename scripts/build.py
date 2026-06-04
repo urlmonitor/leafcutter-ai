@@ -41,6 +41,7 @@ from build_phases import (
     build_components_registry,
     build_antigravity_instructions,
     build_sync_platforms,
+    build_ac_store_docs,
     reset_uptodate_count,
     get_uptodate_count,
     clean_stale_artifacts,
@@ -64,6 +65,7 @@ from build_roadmap_phase import build_roadmap
 from build_placeholder_detection import scan_for_placeholders, format_placeholder_report
 from build_referential_integrity import check_referential_integrity, format_integrity_report
 from build_config_scaffolds import build_config_scaffolds
+from build_ac_store_scaffold import build_ac_store_scaffold
 from build_halt_guard import (
     check_halt_guard,
     format_migration_notice,
@@ -435,6 +437,8 @@ def _run_phases(
         ("Components registry", build_components_registry),
         ("Glossary", build_glossary),
         ("Config scaffolds", build_config_scaffolds),
+        ("AC store scaffold", build_ac_store_scaffold),
+        ("AC store docs", build_ac_store_docs),
         ("Doc index", build_doc_index),
     ]
 
@@ -911,4 +915,9 @@ if __name__ == "__main__":
 #   build_components_registry from build_phases and added ("Components registry",
 #   build_components_registry) entry to scaffold_phases between ("Roadmap", build_roadmap)
 #   and ("Glossary", build_glossary). (#TICKET-20260602-ComponentsRegistryScaffold)
+# - 2026-06-04 13:10 [documentation-expert/EPIC-ACTraceabilityStore/09]: Imported
+#   build_ac_store_docs from build_phases and added ("AC store docs",
+#   build_ac_store_docs) entry to scaffold_phases after ("AC store scaffold",
+#   build_ac_store_scaffold). Installs how-to and reference docs for the AC
+#   Traceability Store into target projects. (#EPIC-ACTraceabilityStore/09)
 # ====================================================================

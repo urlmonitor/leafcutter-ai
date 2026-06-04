@@ -1,6 +1,6 @@
 ---
 title: "Update test-writer to read AC files and emit covers: tags in tests"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
@@ -20,16 +20,16 @@ agents:
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
-  documentation-expert: needed
+  documentation-expert: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   explanation-author: not_needed
   how-to-author: not_needed
   reference-author: not_needed
   user-surface-smoker: not_needed
-  pr-reviewer: needed
-  commit: needed
-  pull-request: needed
+  pr-reviewer: signed_off
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 06: Update test-writer to read AC files and emit covers: tags in tests
@@ -93,12 +93,49 @@ Then it logs a warning "AC FIN-001 is deprecated — skipping test generation fo
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] pr-reviewer
-- [ ] commit
-- [ ] pull-request
+- [x] documentation-expert — 2026-06-04 12:00
+- [x] pr-reviewer — 2026-06-04 12:05
+- [x] commit — 2026-06-04 12:10
+- [x] pull-request — 2026-06-04 12:15
 
 ## Comments
+
+### 2026-06-04 12:15 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_11b072eb
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Pushed commit 536476f to origin/EPIC-ACTraceabilityStore. Existing PR #46 (feat(ac-store): AC YAML schema, validator hook, and ADR-007) now includes this commit. No new PR created — one PR per epic convention. Branch is ahead of remote by 0 commits after push.
+
+### 2026-06-04 12:10 — commit (status: ok)
+feedback-id: fb_2026-06-04_2a77f16b
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Staged `templates/agents/test-writer.md` and `tickets/.../06_test_writer_ac_integration.md`. Commit 536476f created: "feat(EPIC-ACTraceabilityStore/06): update test-writer with AC store integration". 2 files changed, 103 insertions(+), 4 deletions(-). Pre-commit hook absent (PRE_COMMIT_ALLOW_NO_CONFIG=1 used per repo convention).
+
+### 2026-06-04 12:05 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-04_4fcd43cb
+completion_manifest:
+  diff_reviewed: true
+  no_high_findings: true
+  scope_verified: true
+Reviewed diff for ticket 06. Base: EPIC-ACTraceabilityStore. Diff size: 78 lines added to `templates/agents/test-writer.md`. No high-confidence findings. Step 1 sub-step 5 (AC store pre-flight), Step 2i (`# covers:` tag placement), and `ac_ids_covered` manifest item are all correct, well-structured, and match the ticket requirements. Scope matches `files_touched: [templates/agents/test-writer.md]`. Suppressed: 0 low-confidence nits.
+
+## Escalation
+
+Branch: none
+Reason: not escalated: medium count was 0 (threshold > 3)
+
+### 2026-06-04 12:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-06-04_7d746428
+completion_manifest:
+  doc_written: true
+  cross_links_added: true
+  diataxis_genre_correct: true
+Updated `templates/agents/test-writer.md` with three additions: (1) Step 1 pre-flight sub-step 5 — AC store lookup that reads `docs/acceptance-criteria/` YAML files, loads criteria as the authoritative test source, and skips deprecated/superseded ACs with a warning; (2) Step 2i — mandatory `# covers: <AC-ID>` tag placement on the first line of every test function body, with sourcing rules and fallback to `# covers: UNKNOWN`; (3) expanded completion manifest section with `ac_ids_covered` field and two examples (AC store hit and fallback path). All three implementation tasks from the ticket are complete. No cross-repo links added (template is self-contained; the ticket-04 bidirectional coverage check is referenced inline). Diataxis genre: reference (agent template update).
 
 ## Implementation Tasks
 

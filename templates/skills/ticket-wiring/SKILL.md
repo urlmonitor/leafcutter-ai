@@ -238,6 +238,69 @@ is `—` (U+2014), not a hyphen. See
 Place immediately after `## Sign-offs`. Emit only the heading followed by
 a single blank line. Do NOT add a placeholder, italic note, or comment entry.
 
+## Step 2.5 — Write / Amend AC YAML Files
+
+This step runs **after** the ticket body is built (Step 2) and **before** verification
+(Step 4). It converts the BA's AC-related fields into actual files in the AC store.
+
+### When to run
+
+Run this step when `ba_output.ac_creations` or `ba_output.ac_amendments` is non-empty.
+When both are empty (or absent), **skip this step entirely** — no AC files are written
+or modified and the wiring proceeds as before.
+
+### Sub-step A — Write new AC YAML files (`ac_creations`)
+
+For each entry in `ba_output.ac_creations`:
+
+1. **Construct the target path**: `docs/acceptance-criteria/{component}/{id}.yaml`
+   where `{component}` and `{id}` come from the entry's fields.
+
+2. **Validate against the AC schema** by running:
+   ```bash
+   python scripts/commit_guardian/check_ac_schema.py <target_path_draft>
+   ```
+   Write the YAML content to a temporary location first, run the validator, then move
+   to the final path only when the validator exits 0.
+
+   **On validation failure**: abort this sub-step with an error listing the failing
+   field(s). Do NOT write the malformed file to the AC store. Surface the error to the
+   user or return `status: blocker`.
+
+3. **Write the validated file** to `docs/acceptance-criteria/{component}/{id}.yaml`.
+
+4. **Reference the new AC in the ticket body**: ensure the ticket's `## Context` or
+   `## AC References` section (per `ticket-authoring` §AC Referencing Convention)
+   names the new AC ID.
+
+### Sub-step B — Amend existing AC YAML files (`ac_amendments`)
+
+For each entry in `ba_output.ac_amendments`:
+
+1. **Read the existing AC file** at `docs/acceptance-criteria/{component}/{id}.yaml`.
+   If the file does not exist, abort with an error — amendments require a pre-existing
+   record.
+
+2. **Update the `criteria` field** with the new value from the entry.
+
+3. **Append the current ticket path** to the `amended_by` list. If the `amended_by`
+   key is absent, create it as a list containing the ticket path.
+
+4. **Leave all other fields unchanged**: `id`, `title`, `component`, `status`, and any
+   other keys MUST NOT be modified by the amendment step.
+
+5. **Write the file back** to the same path.
+
+### What not to do
+
+- Do NOT write or modify any AC YAML file when `ac_creations` and `ac_amendments`
+  are both empty.
+- Do NOT silently overwrite an existing AC YAML via `ac_creations` — if the target
+  path already exists, treat it as a conflict and surface to the user.
+- Do NOT skip schema validation before writing new files.
+
+---
+
 ## Step 3 — Error Recovery Path
 
 **When this fires:** BA always runs before this skill, and refinement always
