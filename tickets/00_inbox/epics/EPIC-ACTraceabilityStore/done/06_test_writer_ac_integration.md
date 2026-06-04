@@ -1,6 +1,6 @@
 ---
 title: "Update test-writer to read AC files and emit covers: tags in tests"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
