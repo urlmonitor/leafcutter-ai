@@ -24,8 +24,8 @@ agents:
   test-runner: not_needed
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 out_of_scope:
@@ -113,8 +113,8 @@ confirm the output matches the four-section format.
 
 - [x] python-coder — 2026-06-04 00:00
 - [x] pr-reviewer — 2026-06-04 00:01
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-04 00:02
+- [x] pull-request — 2026-06-04 00:03
 
 ## Comments
 
@@ -139,3 +139,19 @@ Review Report — Base: HEAD, Diff: ~134 insertions, 17 deletions across 3 imple
 
 Branch: none
 Reason: not escalated: medium count was 1 (threshold > 3).
+
+### 2026-06-04 00:02 — commit (status: ok)
+feedback-id: fb_2026-06-04_caad47c8
+completion_manifest:
+  files_staged: true
+  commit_created: true
+  head_advanced: true
+Staged 4 files (build-epic.js, build-single-ticket/SKILL.md, build-feature.md, ticket file) and committed as sha 4491a7e on branch feature/standardizebuildcompletionoutput. PRE_COMMIT_ALLOW_NO_CONFIG=1 required (no .pre-commit-config.yaml in worktree). HEAD verified advanced via git log -1.
+
+### 2026-06-04 00:03 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_c303b542
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+  pr_url_captured: true
+Branch feature/standardizebuildcompletionoutput pushed to origin. PR #51 opened at https://github.com/urlmonitor/leafcutter-ai/pull/51. No existing PR found before creation.
