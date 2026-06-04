@@ -1,6 +1,6 @@
 ---
 title: "Add contract-aware mode to coder agents (python-coder, frontend-coder, sql-coder)"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-03
@@ -26,7 +26,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   architecture-diagram-author: not_needed
   user-surface-smoker: not_needed
 ---
@@ -54,7 +54,7 @@ and use the AC sign-off recipe from the signoff skill.
 - [x] python-coder — 2026-06-04 12:00
 - [x] pr-reviewer — 2026-06-04 12:05
 - [x] commit — 2026-06-04 12:15
-- [ ] pull-request
+- [x] pull-request — 2026-06-04 12:20
 
 ## AC Coverage
 
@@ -73,6 +73,14 @@ and use the AC sign-off recipe from the signoff skill.
 - Reversibility? Fully reversible — v1 behavior preserved via detection check.
 
 ## Comments
+
+### 2026-06-04 12:20 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_f95e7b2d
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Pushed 07b commits to existing PR #43 (https://github.com/urlmonitor/leafcutter-ai/pull/43). Branch EPIC-ContractDrivenACs was already tracked. All 4 commits for this ticket are now in the PR. Ticket marked done (status: done; all agents signed_off or not_needed).
 
 ### 2026-06-04 12:15 — commit (status: ok)
 feedback-id: fb_2026-06-04_7f3150a0
