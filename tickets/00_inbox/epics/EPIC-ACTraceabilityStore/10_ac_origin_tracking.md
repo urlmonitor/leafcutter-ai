@@ -29,7 +29,7 @@ agents:
   reference-author: not_needed
   user-surface-smoker: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -147,7 +147,7 @@ Then check_ac_schema.py still exits 0 (field is optional)
 - [x] python-coder — 2026-06-04 12:10
 - [x] test-runner — 2026-06-04 12:15
 - [x] pr-reviewer — 2026-06-04 12:20
-- [ ] commit
+- [x] commit — 2026-06-04 12:30
 - [ ] pull-request
 
 ## Comments
@@ -186,6 +186,14 @@ completion_manifest:
   no_blockers_found: true
   tests_verified_green: true
 All four changes reviewed and approved: (1) config/ac_store_schema.json — optional origin_agent property added to properties only, not required, backward compatible; (2) templates/agents/business-analyst.md — ac_creations block with origin_agent correctly included, prose clear and accurate; (3) templates/skills/debug/SKILL.md — Step 4 instruction added, clear and correctly identifies debug as the origin value; (4) unit_tests — three new test classes cover the three ACs, _write_ac_file schema copy fix enables jsonschema path, pre-existing test assertion updated correctly. No concerns.
+
+### 2026-06-04 12:30 — commit (status: ok)
+feedback-id: fb_2026-06-04_417a42cc
+completion_manifest:
+  files_staged_correctly: true
+  commit_created: true
+  pre_commit_hooks_passed: true
+Committed 74b9474 — 5 files, 174 insertions, 17 deletions. Stale commit lock from PID 1419010 (dead) was removed before lock acquisition. Out-of-scope files (scripts/build.py, tickets 02 and 03) were explicitly unstaged before commit. PRE_COMMIT_ALLOW_NO_CONFIG=1 required (no .pre-commit-config.yaml in worktree).
 
 ## Implementation Tasks
 
