@@ -11,14 +11,14 @@ files_touched:
   - config/agent_registry.json
   - docs/agents/README.md
 agents:
-  architect-review: needed
+  architect-review: signed_off
   python-coder: not_needed
   test-writer: not_needed
   test-runner: not_needed
-  documentation-expert: needed
+  documentation-expert: signed_off
   sql-coder: not_needed
-  pr-reviewer: needed
-  commit: needed
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: needed
   status-checker: not_needed
 ---
@@ -85,29 +85,73 @@ And the description reads: "Authors, edits, and audits agent templates, skill bo
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] documentation-expert
-- [ ] pr-reviewer
-- [ ] commit
+- [x] architect-review — 2026-06-04 13:35
+- [x] documentation-expert — 2026-06-04 13:42
+- [x] pr-reviewer — 2026-06-04 13:45
+- [x] commit — 2026-06-04 13:48
 - [ ] pull-request
 
 ## Comments
+
+### 2026-06-04 13:35 — architect-review (status: ok)
+feedback-id: fb_2026-06-04_5cecfa41
+completion_manifest:
+  blast_radius_assessed: true
+  impact_classified: true
+  architectural_note_written: true
+
+Impact classification: **SMALL**. Files touched: `config/agent_registry.json` (additive registry entry), `docs/agents/README.md` (additive row in phase agents table). No always-large triggers fired (no Alembic migration, no hypertable change, no public API change, no ADR contract change). 2 files, 1 component (`build_pipeline`). Registry schema aligns with all existing phase agents. `default_status: "not_needed"` is correct for backward compatibility. `spawn_allowlist: ["research-agent"]` is minimal and appropriate. `is_ticket_phase: true` is required for ticket-supervisor dispatch. Note: ticket-supervisor's `spawn_allowlist` uses the `"__ticket_phase_agents__"` wildcard; adding the explicit `"llm-expert"` entry as the AC requires is consistent with the registry contract. No ADR or diagram needed.
+
+## Escalation
+
+Branch: none
+Reason: 2 files, 1 component (build_pipeline); no always-large trigger fired.
+
+### 2026-06-04 13:48 — commit (status: ok)
+feedback-id: fb_2026-06-04_a3d01121
+completion_manifest:
+  files_staged_correctly: true
+  ticket_file_staged: true
+  no_cross_ticket_contamination: true
+
+Staged: config/agent_registry.json, docs/agents/README.md, docs/agents/llm-expert/PROJECT_CONTEXT.md, tickets/.../03_registry_and_docs.md. Excluded tickets/.../02_project_context.md (not in files_touched). .epic-commit-lock excluded from staging. Committing.
+
+### 2026-06-04 13:45 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-04_589e7989
+completion_manifest:
+  registry_entry_verified: true
+  ticket_supervisor_spawn_allowlist_verified: true
+  readme_row_verified: true
+  json_valid: true
+  no_regressions: true
+
+All ACs verified against the diff. Registry entry contains all required fields per ticket ACs. ticket-supervisor spawn_allowlist now includes "llm-expert". README row alphabetically positioned (after how-to-author, before pr-reviewer) with correct description matching AC verbatim. JSON valid. Change is purely additive — no existing entries modified except ticket-supervisor's spawn_allowlist (list append). No regressions. Approved.
+
+### 2026-06-04 13:42 — documentation-expert (status: ok)
+feedback-id: fb_2026-06-04_d3ead5bc
+completion_manifest:
+  registry_entry_added: true
+  ticket_supervisor_spawn_allowlist_updated: true
+  readme_row_added: true
+  description_matches_remit: true
+
+Added `llm-expert` registry entry to `config/agent_registry.json` with all required fields: id, name, tier=phase, role=authoring, portable=true, domain=null, spawn_allowlist=["research-agent"], spawned_by=["ticket-supervisor"], is_ticket_phase=true, model=sonnet, skills_used=["add-agent-to-package","add-skill-to-package","signoff"], default_status=not_needed, template_path=templates/agents/llm-expert.md, selection_criteria with both llm and dsl trigger_conditions. Added "llm-expert" to ticket-supervisor's spawn_allowlist. Added row to `docs/agents/README.md` coding/ family table in alphabetical position (after how-to-author, before pr-reviewer) with description: "Authors, edits, and audits agent templates, skill bodies, and slash-command markdown files. Applies the Prompt-Quality Checklist." All ACs verified by Python assertion script.
 
 ## Implementation Tasks
 
 ### architect-review
 
-- [ ] Review the registry entry for correct schema and alignment with other phase agents
-- [ ] Verify spawn_allowlist and spawned_by are correctly specified
-- [ ] Confirm trigger_conditions DSL rule matches the intended file patterns
-- [ ] Verify default_status is set to "not_needed" so existing tickets are unaffected
+- [x] Review the registry entry for correct schema and alignment with other phase agents
+- [x] Verify spawn_allowlist and spawned_by are correctly specified
+- [x] Confirm trigger_conditions DSL rule matches the intended file patterns
+- [x] Verify default_status is set to "not_needed" so existing tickets are unaffected
 
 ### documentation-expert
 
-- [ ] Add llm-expert to ticket-supervisor's spawn_allowlist in config/agent_registry.json
-- [ ] Add a new row to the agent table in docs/agents/README.md in the phase agents section (alphabetically)
-- [ ] Ensure the row description is concise and matches the agent's remit
-- [ ] Verify the documentation cross-references the agent template and PROJECT_CONTEXT.md
+- [x] Add llm-expert to ticket-supervisor's spawn_allowlist in config/agent_registry.json
+- [x] Add a new row to the agent table in docs/agents/README.md in the phase agents section (alphabetically)
+- [x] Ensure the row description is concise and matches the agent's remit
+- [x] Verify the documentation cross-references the agent template and PROJECT_CONTEXT.md
 
 ## Risk & Safety
 
