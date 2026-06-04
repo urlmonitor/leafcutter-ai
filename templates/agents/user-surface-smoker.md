@@ -200,22 +200,14 @@ When calling `submit_feedback.py` during sign-off:
 worktree, `.claude/` exists in the worktree root — the script will write to the
 worktree's `debugging/logs/feedback.jsonl`. No special `--jsonl` override is needed.
 
-Use the two-step capture pattern (stdout + sidecar fallback) from signoff §2a:
+Run a single command (per the shell convention — no chaining):
 
 ```bash
-FB_ID=$(python scripts/feedback/submit_feedback.py \
-  --ticket <ticket_path> \
-  --phase user-surface-smoker \
-  --category complete \
-  --note "<one-sentence summary>" \
-  2>feedback_err.txt)
-if [ -z "$FB_ID" ]; then
-  SIDECAR=$(grep -o 'sidecar:[^ ]*feedback_id_[0-9]*.txt' feedback_err.txt \
-            | sed 's/sidecar://' | head -1)
-  [ -n "$SIDECAR" ] && FB_ID=$(cat "$SIDECAR")
-fi
-FB_ID="${FB_ID:-(submit-failed)}"
+python3 scripts/feedback/submit_feedback.py --ticket <ticket_path> --phase user-surface-smoker --category complete --note "<one-sentence summary>" 2>/tmp/feedback_err.txt
 ```
+
+Read the feedback ID from the Bash tool result (stdout). If stdout is empty, use
+`(submit-failed)` as the fallback value.
 
 """
 ====================================================================

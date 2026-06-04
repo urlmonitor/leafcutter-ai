@@ -379,42 +379,23 @@ in `building-epics` §3 in order; pick the FIRST matching case:
    the same agent with the blocker comment as input. Cap: 1 respawn per
    phase per ticket (§4).
 
-   After determining this is a §3.1 case, emit CFCS feedback (non-blocking):
+   After determining this is a §3.1 case, emit CFCS feedback (non-blocking, single command):
    ```bash
-   FB_ID=$(python scripts/feedback/submit_feedback.py \
-     --ticket "<ticket_path>" --phase ticket-supervisor \
-     --category subagent-quality \
-     --tags "agent-<failing_agent>,retry-<count>,mechanical-retry" \
-     --note "Mechanical retry: <failing_agent> failed with a single-file concrete fix on <ticket_basename>." \
-     --jsonl debugging/logs/feedback.jsonl \
-     2>feedback_err_mechanical-retry.txt)
-   if [ -z "$FB_ID" ]; then
-     SIDECAR=$(grep -o 'sidecar:[^ ]*feedback_id_[0-9]*.txt' feedback_err_mechanical-retry.txt | sed 's/sidecar://' | head -1)
-     [ -n "$SIDECAR" ] && FB_ID=$(cat "$SIDECAR")
-   fi
-   FB_ID="${FB_ID:-(submit-failed)}"
+   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,retry-<count>,mechanical-retry" --note "Mechanical retry: <failing_agent> failed with a single-file concrete fix on <ticket_basename>." --jsonl debugging/logs/feedback.jsonl 2>/tmp/feedback_err_mechanical-retry.txt
    ```
-   Include `feedback_id: $FB_ID` in the structured payload returned to `epic-supervisor`.
+   Read the feedback ID from the Bash tool result (stdout). If stdout is empty,
+   use `(submit-failed)` as the fallback. Include `feedback_id:` in the structured
+   payload returned to the caller.
 
 2. **Cross-agent rework** (§3.2) — review-class agent names a sibling.
    Flip the named sibling to `needed`, respawn it with the reviewer's
    comment as input. Cap: 1 respawn per phase pair per ticket (§4).
 
-   After determining this is a §3.2 case, emit CFCS feedback (non-blocking):
+   After determining this is a §3.2 case, emit CFCS feedback (non-blocking, single command):
    ```bash
-   FB_ID=$(python scripts/feedback/submit_feedback.py \
-     --ticket "<ticket_path>" --phase ticket-supervisor \
-     --category subagent-quality \
-     --tags "agent-<failing_agent>,retry-<count>,cross-agent-rework" \
-     --note "Cross-agent rework: <reviewer_agent> sent <failing_agent> back on <ticket_basename>." \
-     --jsonl debugging/logs/feedback.jsonl \
-     2>feedback_err_cross-agent-rework.txt)
-   if [ -z "$FB_ID" ]; then
-     SIDECAR=$(grep -o 'sidecar:[^ ]*feedback_id_[0-9]*.txt' feedback_err_cross-agent-rework.txt | sed 's/sidecar://' | head -1)
-     [ -n "$SIDECAR" ] && FB_ID=$(cat "$SIDECAR")
-   fi
-   FB_ID="${FB_ID:-(submit-failed)}"
+   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,retry-<count>,cross-agent-rework" --note "Cross-agent rework: <reviewer_agent> sent <failing_agent> back on <ticket_basename>." --jsonl debugging/logs/feedback.jsonl 2>/tmp/feedback_err_cross-agent-rework.txt
    ```
+   Read the feedback ID from the Bash tool result (stdout). If empty, use `(submit-failed)`.
 
 3. **Open-ended design choice** (§3.3) — architectural ambiguity. Spawn
    `brainstorm-lead` (shipped by ticket 09 of this epic; if not yet
@@ -422,42 +403,22 @@ in `building-epics` §3 in order; pick the FIRST matching case:
    comment with the recommendation, surface via the §6 payload. Cap: 1
    brainstorm-lead invocation per ticket (§4).
 
-   After determining this is a §3.3 case, emit CFCS feedback (non-blocking):
+   After determining this is a §3.3 case, emit CFCS feedback (non-blocking, single command):
    ```bash
-   FB_ID=$(python scripts/feedback/submit_feedback.py \
-     --ticket "<ticket_path>" --phase ticket-supervisor \
-     --category subagent-quality \
-     --tags "agent-<failing_agent>,brainstorm-escalation" \
-     --note "Brainstorm escalation: <failing_agent> triggered open-ended design question on <ticket_basename>." \
-     --jsonl debugging/logs/feedback.jsonl \
-     2>feedback_err_brainstorm-escalation.txt)
-   if [ -z "$FB_ID" ]; then
-     SIDECAR=$(grep -o 'sidecar:[^ ]*feedback_id_[0-9]*.txt' feedback_err_brainstorm-escalation.txt | sed 's/sidecar://' | head -1)
-     [ -n "$SIDECAR" ] && FB_ID=$(cat "$SIDECAR")
-   fi
-   FB_ID="${FB_ID:-(submit-failed)}"
+   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,brainstorm-escalation" --note "Brainstorm escalation: <failing_agent> triggered open-ended design question on <ticket_basename>." --jsonl debugging/logs/feedback.jsonl 2>/tmp/feedback_err_brainstorm-escalation.txt
    ```
+   Read the feedback ID from the Bash tool result (stdout). If empty, use `(submit-failed)`.
 
 4. **Otherwise / cap exhausted** (§3.4) — verify the failed agent already
    set `agents.<phase>: failed` via `signoff` §4; build the §6 payload;
    return `{status: "blocked", payload: ...}`.
 
-   After determining this is a §3.4 case, emit CFCS feedback (non-blocking):
+   After determining this is a §3.4 case, emit CFCS feedback (non-blocking, single command):
    ```bash
-   FB_ID=$(python scripts/feedback/submit_feedback.py \
-     --ticket "<ticket_path>" --phase ticket-supervisor \
-     --category subagent-quality \
-     --tags "agent-<failing_agent>,halt,<cap_kind>" \
-     --note "Halt: <failing_agent> exhausted adjudication ladder (<cap_kind>) on <ticket_basename>." \
-     --jsonl debugging/logs/feedback.jsonl \
-     2>feedback_err_halt.txt)
-   if [ -z "$FB_ID" ]; then
-     SIDECAR=$(grep -o 'sidecar:[^ ]*feedback_id_[0-9]*.txt' feedback_err_halt.txt | sed 's/sidecar://' | head -1)
-     [ -n "$SIDECAR" ] && FB_ID=$(cat "$SIDECAR")
-   fi
-   FB_ID="${FB_ID:-(submit-failed)}"
+   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,halt,<cap_kind>" --note "Halt: <failing_agent> exhausted adjudication ladder (<cap_kind>) on <ticket_basename>." --jsonl debugging/logs/feedback.jsonl 2>/tmp/feedback_err_halt.txt
    ```
-   Include `feedback_id: $FB_ID` in the blocked payload returned to `epic-supervisor`.
+   Read the feedback ID from the Bash tool result (stdout). If empty, use `(submit-failed)`.
+   Include `feedback_id:` in the blocked payload returned to the caller.
 
 **CFCS emit contract:** All four emit calls are **non-blocking side-effects**. A failed
 `submit_feedback.py` call (non-zero exit) MUST NOT abort the adjudication routing. Log

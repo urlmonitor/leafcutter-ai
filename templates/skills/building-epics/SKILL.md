@@ -579,16 +579,25 @@ The commit and pull-request phases mutate the git index and `HEAD`; they cannot 
 
 ### §5.2 Acquire recipe (atomic-create)
 
-The supervisor MUST use an atomic create-if-not-exists primitive. Two pragmatic equivalents:
+The supervisor MUST use an atomic create-if-not-exists primitive.
 
-**Bash (POSIX, portable)**:
+**Important — Shell Convention**: Each Bash tool call must be a single simple
+command. Do NOT chain with `&&`, `||`, `;`, or use subshells. The lock
+acquisition requires a dedicated helper script that encapsulates the atomic
+logic in one invocable command.
+
+**Bash — single-command invocation**:
 ```bash
-# Atomic: succeeds iff the file did not exist; never overwrites.
-# `set -C` (noclobber) makes `> file` fail if file exists.
-( set -C; printf '%s %s %s\n' "$TICKET_PATH" "$$" "$(date -Iseconds)" \
-    > "$WORKTREE_ROOT/.epic-commit-lock" ) 2>/dev/null \
-  && acquired=1 || acquired=0
+python3 scripts/epic_lock.py --acquire --ticket "$TICKET_PATH" --worktree "$WORKTREE_ROOT"
 ```
+The script exits 0 and prints `acquired=1` on success, or exits 0 and prints
+`acquired=0` if the lock already exists. On error it exits non-zero.
+
+If `epic_lock.py` is not yet available, use this single-command form:
+```bash
+bash -c 'set -C; printf "%s %s %s\n" "'"$TICKET_PATH"'" "$$" "$(date -Iseconds)" > "'"$WORKTREE_ROOT"'/.epic-commit-lock"'
+```
+Check the exit code from the Bash tool result: exit 0 = acquired, non-zero = not acquired.
 
 **Python (when supervisor is implemented in code, not bash)**:
 ```python
@@ -598,7 +607,7 @@ os.write(fd, f"{ticket_path} {os.getpid()} {datetime.now().isoformat()}\n".encod
 os.close(fd)
 ```
 
-If acquisition fails (`acquired=0` / `FileExistsError`), the supervisor MUST sleep briefly (exponential backoff starting at 250ms, capped at 8s) and retry. After 60 seconds total wait, fall through to §3.4 with blocker `commit-lock-stuck`.
+If acquisition fails, the supervisor MUST sleep briefly (exponential backoff starting at 250ms, capped at 8s) and retry. After 60 seconds total wait, fall through to §3.4 with blocker `commit-lock-stuck`.
 
 ### §5.3 Release recipe
 

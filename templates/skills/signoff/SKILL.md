@@ -171,30 +171,28 @@ capture the returned `feedback_id`.
 2. **Choose `--tags`** (optional): 1–3 kebab-case tags describing the specific instance.
    Run `list_tags.py --category <your-category> --top 5` to see current common tags.
 
-3. **Shell out using the two-step fallback pattern** (prevents empty-capture races under
-   concurrent epic drives — see TICKET-20260528-FeedbackCorrelationIDLoss):
-   ```bash
-   FB_ID=$(python scripts/feedback/submit_feedback.py \
-     --ticket <ticket_path> \
-     --phase <agent_name> \
-     --category <category> \
-     --tags <tags_or_omit_flag> \
-     --note "<one-sentence note>" \
-     2>feedback_err.txt)
-   if [ -z "$FB_ID" ]; then
-     # stdout was empty — read from sidecar written by submit_feedback.py
-     # submit_feedback.py prints "sidecar:<path>" to stderr on success
-     SIDECAR=$(grep -o 'sidecar:[^ ]*feedback_id_[0-9]*.txt' feedback_err.txt \
-               | sed 's/sidecar://' | head -1)
-     [ -n "$SIDECAR" ] && FB_ID=$(cat "$SIDECAR")
-   fi
-   ```
+3. **Shell out using separate Bash calls** (each call must be a single command —
+   never chain with `&&`, `||`, `;`, or pipes. The Bash tool result contains stdout
+   directly, so variable capture like `FB_ID=$(...)` is unnecessary):
 
-   Stderr is captured into `feedback_err.txt` rather than discarded with
-   `2>/dev/null`. This preserves diagnostic output (including the sidecar path)
-   for troubleshooting. The sidecar file (written by `submit_feedback.py` on
-   every successful run) is the fallback source of truth when stdout capture
-   returns empty due to concurrent output interleaving.
+   **Call 1** — run the submit script:
+   ```bash
+   python3 scripts/feedback/submit_feedback.py --ticket <ticket_path> --phase <agent_name> --category <category> --tags <tags_or_omit_flag> --note "<one-sentence note>" 2>/tmp/feedback_err.txt
+   ```
+   Read the feedback ID directly from the Bash tool result (stdout).
+
+   **Call 2** (only if Call 1 stdout was empty) — check the sidecar fallback:
+   ```bash
+   grep -o 'sidecar:[^ ]*feedback_id_[0-9]*.txt' /tmp/feedback_err.txt
+   ```
+   If this returns a path like `sidecar:/tmp/feedback_id_12345.txt`, read that
+   file in a third call to retrieve the ID.
+
+   **Why separate calls**: The shell convention (CLAUDE.md) requires each Bash
+   tool call to be a single simple command. Compound commands with `$()`, `if`,
+   `&&`, or pipes do not match the permission allow-list and trigger confirmation
+   prompts. The Bash tool result already provides stdout, making shell variable
+   capture redundant.
 
 4. **Capture stdout → `feedback_id`** using the recipe above. If the script
    exits non-zero, `FB_ID` will be empty after both the stdout and sidecar
