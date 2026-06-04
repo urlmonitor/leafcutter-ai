@@ -1047,6 +1047,7 @@
             "spawn_allowlist": [
                 "pull-request",
                 "test-runner",
+                "test-failure-triage",
                 "status-checker",
                 "worktree-agent"
             ],
@@ -1360,6 +1361,23 @@
             "selection_criteria": null,
             "template_path": "templates/agents/onboard-config-section.md",
             "model": "haiku"
+        },
+        {
+            "id": "test-failure-triage",
+            "name": "Test Failure Triage",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "finalize-feature"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/test-failure-triage.md",
+            "model": "sonnet",
+            "skills_used": []
         },
         {
             "id": "product-owner-agent",

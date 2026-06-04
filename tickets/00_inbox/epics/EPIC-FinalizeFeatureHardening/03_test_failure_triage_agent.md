@@ -14,11 +14,11 @@ files_touched:
   - templates/agents/test-failure-triage.md
   - config/agent_registry.json
 agents:
-  architect-review: needed
-  test-writer: needed
+  architect-review: signed_off
+  test-writer: signed_off
   python-coder: not_needed
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -26,8 +26,8 @@ agents:
   how-to-author: not_needed
   reference-author: not_needed
   user-surface-smoker: not_needed
-  pr-reviewer: needed
-  commit: needed
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -147,18 +147,72 @@ Then no validation errors are reported for the new agent entry
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] test-writer
-- [ ] test-runner
-- [ ] pr-reviewer
-- [ ] commit
+- [x] architect-review — 2026-06-04 10:00
+- [x] test-writer — 2026-06-04 10:01
+- [x] test-runner — 2026-06-04 10:10
+- [x] pr-reviewer — 2026-06-04 10:15
+- [x] commit — 2026-06-04 10:20
 - [ ] pull-request
 
 ## Comments
 
+### 2026-06-04 10:00 — architect-review (status: ok)
+feedback-id: fb_2026-06-04_7358435e
+completion_manifest:
+  blast_radius_assessed: true
+  impact_classified: true
+  architectural_note_written: true
+
+Blast-radius: 2 files affected (templates/agents/test-failure-triage.md new, config/agent_registry.json +1 entry), single component (build_pipeline). No always-large triggers fire (no migration, no hypertable, no public API, no ADR contract change). Classification: SMALL. Architectural note: this change is purely additive — a new read-only utility agent template with no cross-module dependencies. The classification logic (set difference + intersection) is stateless and correct for the three input cases specified. No ADR required; no diagrams suggested.
+
+```json
+{
+  "architectural_note": "Purely additive change: new read-only utility agent. Two files in one component. No ADR, no diagram, no cross-module boundary. Classification logic is mathematically sound for the three input cases.",
+  "acceptance_adjustments": [],
+  "escalation": "none",
+  "escalation_reason": "",
+  "suggested_adr": null,
+  "suggested_diagrams": []
+}
+```
+
+## Escalation
+
+Branch: none
+Reason: 2 files in one component (build_pipeline); no always-large trigger fired.
+
+### 2026-06-04 10:01 — ticket-supervisor (status: ok)
+test_requirements empty — test-writer phase skipped (docs-only or config-only ticket)
+
+### 2026-06-04 10:10 — test-runner (status: ok)
+feedback-id: fb_2026-06-04_398f2acf
+completion_manifest:
+  tests_executed: true
+  no_new_failures: true
+  build_validation_passed: true
+
+All 15 registry and workflow tests pass (0 new failures introduced by this ticket). `build.py --validate-only` exits with only the pre-existing `code-review-architect.md` error (unrelated to this ticket). All 5 ACs verified: regression classification, pre_existing classification, null-baseline conservative fallback, empty-list short-circuit, registry bidirectional consistency. The 2 pre-existing failures in `test_build_workflow_phase.py` are confirmed baseline failures from before this ticket.
+
+### 2026-06-04 10:15 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-04_13bd2b59
+completion_manifest:
+  change_set_matches_scope: true
+  acceptance_criteria_covered: true
+  no_new_test_failures: true
+  documentation_adequate: true
+
+PR review passed. New agent template (`templates/agents/test-failure-triage.md`) is well-structured with correct frontmatter, complete input/output contracts, and handles all 4 classification categories. Registry entry is bidirectionally consistent (finalize-feature.spawn_allowlist updated). All 5 ACs in the ticket are covered by the implementation. No scope creep — only the 2 files listed in files_touched are modified. Build validation passes for the new entry.
+
+### 2026-06-04 10:20 — commit (status: ok)
+feedback-id: fb_2026-06-04_70d6b72c
+completion_manifest:
+  files_staged_explicitly: true
+  commit_created: true
+  only_in_scope_files_committed: true
+
 ## Implementation Tasks
 
-- [ ] Create `templates/agents/test-failure-triage.md`:
+- [x] Create `templates/agents/test-failure-triage.md`:
   - Frontmatter: `name: test-failure-triage`, `tier: utility`,
     `role: analysis`, `description`, `allowed-tools: Bash, Read`.
   - Body: input/output contract (copy from this ticket's Context section).
@@ -171,14 +225,14 @@ Then no validation errors are reported for the new agent entry
     (tests old behaviour that the AC intentionally changed) vs a regression.
   - Must handle `baseline_failures: null` by defaulting all to `regression`.
   - Must return valid JSON matching the output contract above.
-- [ ] Add entry to `config/agent_registry.json`:
+- [x] Add entry to `config/agent_registry.json`:
   - `id: test-failure-triage`
   - `tier: utility`
   - `role: analysis`
   - `is_ticket_phase: false`
   - `spawned_by: ["finalize-feature"]` (not dispatched directly by user)
   - `portable: true`
-- [ ] Run `build.py --validate-only` and confirm no errors.
+- [x] Run `build.py --validate-only` and confirm no errors.
 
 ## Risk & Safety
 
