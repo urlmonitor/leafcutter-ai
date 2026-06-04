@@ -14,10 +14,10 @@ agents:
   python-coder: not_needed
   test-writer: not_needed
   test-runner: not_needed
-  documentation-expert: needed
+  documentation-expert: signed_off
   sql-coder: not_needed
-  pr-reviewer: needed
-  commit: needed
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: needed
   status-checker: not_needed
 ---
@@ -103,26 +103,50 @@ And each item includes detection heuristics and concrete examples of violations
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] pr-reviewer
-- [ ] commit
+- [x] documentation-expert — 2026-06-04 14:00
+- [x] pr-reviewer — 2026-06-04 14:05
+- [x] commit — 2026-06-04 14:10
 - [ ] pull-request
 
 ## Comments
+
+### 2026-06-04 14:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-06-04_cb58d7a7
+completion_manifest:
+  doc_written: true
+  cross_links_added: true
+  diataxis_genre_correct: true
+Created docs/agents/llm-expert/PROJECT_CONTEXT.md with all six required sections: (1) Shell convention with detection heuristics and wrong/right examples, (2) Agent frontmatter schema with required vs build-injected fields table, (3) Skill frontmatter schema including allowed-tools purpose, (4) Signoff protocol referencing signoff SKILL.md §2 and §4 with parity guard explanation, (5) Nesting/spawn-allowlist rules with depth-3 cap table and spawn_allowlist/spawned_by contract, (6) Expanded Prompt-Quality Checklist with concrete violation examples for all 6 items. Cross-references to CLAUDE.md, signoff SKILL.md, building-epics SKILL.md, agent registry, conventions.md, and ADR-006 included.
+
+### 2026-06-04 14:05 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-04_153f3a5b
+completion_manifest:
+  diff_reviewed: true
+  no_high_findings: true
+  scope_verified: true
+Reviewed diff: 1 new file (docs/agents/llm-expert/PROJECT_CONTEXT.md, 566 lines) + ticket sign-off edits. All 6 ACs satisfied — all sections present with detection heuristics and concrete violation examples. files_touched matches plan. No high-confidence findings. Medium count: 0. Escalation: none.
+
+### 2026-06-04 14:10 — commit (status: ok)
+feedback-id: fb_2026-06-04_c34cbc4b
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Committing ticket 02 sign-off edits (documentation-expert + pr-reviewer signoffs). docs/agents/llm-expert/PROJECT_CONTEXT.md was already committed in HEAD via ticket 03 (65602f9). Ticket file staged and committed with all parity-guard requirements met.
 
 ## Implementation Tasks
 
 ### documentation-expert
 
-- [ ] Create the directory `docs/agents/llm-expert/` if it does not exist
-- [ ] Author section 1: Shell convention — rule, detection heuristics, examples of wrong/right patterns
-- [ ] Author section 2: Agent frontmatter schema — required fields, build-injected vs hand-authored, field purposes
-- [ ] Author section 3: Skill frontmatter schema — required fields and purposes
-- [ ] Author section 4: Signoff protocol — reference to SKILL.md, parity guard, timestamps, ticket-supervisor choreography
-- [ ] Author section 5: Nesting / spawn-allowlist rules — depth-3 cap, spawn_allowlist contract, spawned_by usage
-- [ ] Author section 6: Prompt-quality checklist (expanded) — 6+ items with detection heuristics and concrete violation examples
-- [ ] Verify all examples are concrete and clearly demonstrate good vs bad patterns
-- [ ] Ensure cross-references to signoff SKILL.md, CLAUDE.md, and agent registry are included
+- [x] Create the directory `docs/agents/llm-expert/` if it does not exist
+- [x] Author section 1: Shell convention — rule, detection heuristics, examples of wrong/right patterns
+- [x] Author section 2: Agent frontmatter schema — required fields, build-injected vs hand-authored, field purposes
+- [x] Author section 3: Skill frontmatter schema — required fields and purposes
+- [x] Author section 4: Signoff protocol — reference to SKILL.md, parity guard, timestamps, ticket-supervisor choreography
+- [x] Author section 5: Nesting / spawn-allowlist rules — depth-3 cap, spawn_allowlist contract, spawned_by usage
+- [x] Author section 6: Prompt-quality checklist (expanded) — 6+ items with detection heuristics and concrete violation examples
+- [x] Verify all examples are concrete and clearly demonstrate good vs bad patterns
+- [x] Ensure cross-references to signoff SKILL.md, CLAUDE.md, and agent registry are included
 
 ## Risk & Safety
 
