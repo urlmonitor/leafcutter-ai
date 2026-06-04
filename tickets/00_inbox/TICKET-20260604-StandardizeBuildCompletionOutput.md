@@ -19,11 +19,11 @@ files_touched:
 agents:
   architect-review: not_needed
   test-writer: not_needed
-  python-coder: needed
+  python-coder: signed_off
   sql-coder: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   adr-author: not_needed
@@ -111,9 +111,31 @@ confirm the output matches the four-section format.
 
 ## Sign-offs
 
-- [ ] python-coder
-- [ ] pr-reviewer
+- [x] python-coder — 2026-06-04 00:00
+- [x] pr-reviewer — 2026-06-04 00:01
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
+
+### 2026-06-04 00:00 — python-coder (status: ok)
+feedback-id: fb_2026-06-04_ab7e5c5b
+completion_manifest:
+  code_implemented: true
+  tests_passing: true
+  doc_enforcer_clean: true
+  complexity_check_clean: true
+Updated three files to standardize build completion output to a four-section format. build-epic.js Step 6 now returns worktree_path and manual_tests fields and builds a structured completion_message string. build-feature.md "On ok" block renders result.message verbatim (with inline fallback template). build-single-ticket SKILL.md Step 4c template now includes all four sections with BRANCH pre-filled in the finalize command. All ACs 1–6 addressed; no automated tests required (prose/template-only changes).
+
+### 2026-06-04 00:01 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-04_fbe3a7c8
+completion_manifest:
+  diff_reviewed: true
+  no_high_findings: true
+  scope_verified: true
+Review Report — Base: HEAD, Diff: ~134 insertions, 17 deletions across 3 implementation files + ticket. No high-confidence findings. One medium finding: gitInfo.worktree_path in build-epic.js Step 6 will always be undefined (key not in worktreeCheck agent response); fallback process.cwd() is correct for worktree context. Scope matches files_touched exactly. All 6 ACs verified in the diff.
+
+## Escalation
+
+Branch: none
+Reason: not escalated: medium count was 1 (threshold > 3).
