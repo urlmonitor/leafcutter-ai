@@ -65,7 +65,9 @@
                 "business-analyst",
                 "refinement",
                 "architect-review",
-                "create-epic"
+                "create-epic",
+                "it-po",
+                "brainstorm-lead"
             ],
             "spawned_by": [
                 "user",
@@ -1458,7 +1460,7 @@
             "skills_used": [
                 "signoff"
             ],
-            "priority": 11,
+            "priority": 11.5,
             "priority_rationale": "Final AC coverage gate; runs after pr-reviewer (11) and before commit (12) to verify all ACs are evidenced before the worktree is locked",
             "requires_ticket_section": false,
             "description": "Reads ticket ACs, the working diff, and test output; produces a coverage verdict (ok / blocker / question). Never implements — read-only on code files, edits only the ticket file."

@@ -363,6 +363,24 @@ After checking your AC checkboxes (§2c.2), fill **your column** in the table:
 | `python-coder`, `sql-coder`, `frontend-coder`, `documentation-expert`, `explanation-author`, `how-to-author`, `reference-author` | **Implementation** | One-sentence description of what was done (e.g. `Added §2c recipe to signoff SKILL.md`) |
 | `test-writer`, `test-runner` | **Test** | One-sentence description of what test was written or verified (e.g. `test_ac_checkbox_flipper.py::test_flip_checks all green`) |
 | `pr-reviewer`, `architect-review` | **Validated** | `ok — YYYY-MM-DD` or `fail — see blocker comment` |
+| `ac-validator` | **Validated** | `covered — YYYY-MM-DD` (all channels satisfied) or `partial — <AC-N list>` or `missing — <AC-N list>` |
+
+**`ac-validator` sign-off protocol (mandatory when running as the AC coverage gate):**
+
+When `ac-validator` runs, it is responsible for filling the **Validated** column for
+every row in the `## AC Coverage` table (not just its own ACs). It does this as part
+of its Step 4 procedure (see `ac-validator.md`). The format rules are:
+
+- `covered — YYYY-MM-DD` — both implementation and test evidence found.
+- `partial — YYYY-MM-DD` — one evidence channel found; human judgment required.
+- `missing — YYYY-MM-DD` — neither channel found; blocker verdict.
+
+Additionally, `ac-validator` MUST update the `ac_coverage:` frontmatter key to
+reflect its findings:
+```yaml
+ac_coverage: N/M
+```
+where `N` is the count of ACs classified as **covered** and `M` is the total AC count.
 
 Do NOT fill columns that belong to other agents. Leave them blank if they have not been
 filled by a prior agent.

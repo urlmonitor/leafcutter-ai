@@ -61,7 +61,8 @@ request verbatim. It returns a structured JSON block with at minimum:
   "files_touched": ["<path 1>", "..."],
   "agents": {
     "<agent-id>": "needed | not_needed"
-  }
+  },
+  "complexity": "trivial | simple | standard | novel"
 }
 ```
 
@@ -69,13 +70,31 @@ If `business-analyst` returns open questions and `routing_decision == "standard_
 surface those questions to the user before proceeding to Step 2. Wait for the
 user's answers, then continue with the enriched context.
 
-### Step 2a — Small path (routing_decision == "standard_ticket")
+### Step 1b — Complexity-based routing (reads `complexity` from BA payload)
 
-Spawn `refinement` and `architect-review` **in a single parallel Agent batch**
-(two simultaneous Agent tool calls). Pass each the original user request plus
+After the BA returns, read the `complexity` field and route as follows:
+
+| `complexity` | Pipeline path |
+|---|---|
+| `trivial` | Skip Step 2a **and** Step 2b. Go directly to Step 3 (ticket-wiring). No intermediate agent runs. |
+| `simple` | Step 2a — spawn `refinement` only (single-agent, no IT PO). Then Step 3. |
+| `standard` | Step 2c — spawn IT PO (see below). Then Step 3. |
+| `novel` | Step 2d — brainstorm-lead, then IT PO. Then Step 3. |
+
+When `routing_decision == "epic"`, this routing still applies — the epic path is
+handled in Step 2b and the complexity routing determines what runs before the
+epic fanout.
+
+> **AC-1 contract**: The dispatch MUST read the BA output's `complexity` field and
+> route accordingly. A missing or unrecognised `complexity` value is treated as
+> `standard` (safe default).
+
+### Step 2a — Refinement path (complexity == "simple")
+
+Spawn `refinement` via the Agent tool. Pass it the original user request plus
 the business-analyst output.
 
-Collect both responses, merge findings, then proceed to Step 3.
+Collect the refinement response, then proceed to Step 3.
 
 ### Step 2b — Large path (routing_decision == "epic")
 
@@ -90,6 +109,40 @@ Return create-epic's output to the user verbatim. Do NOT yourself spawn
 refinement or architect-review — create-epic owns the fanout.
 
 Stop here; do not proceed to Step 3.
+
+### Step 2c — IT PO path (complexity == "standard")
+
+Spawn the `it-po` agent via the Agent tool. Pass it:
+- The original user request.
+- The business-analyst output payload (full JSON).
+
+`it-po` returns a structured payload containing per-agent AC blocks and
+interface contracts. Pass that payload to ticket-wiring in Step 3.
+
+Then proceed to Step 3.
+
+### Step 2d — Brainstorm + IT PO path (complexity == "novel")
+
+> **AC-2 contract**: when `complexity == "novel"`, brainstorm-lead MUST run
+> BEFORE IT PO. The user must pick a direction; IT PO uses the chosen direction
+> as input.
+
+1. Spawn `brainstorm-lead` via the Agent tool. Pass it:
+   - The original user request.
+   - The BA's `brainstorm_summary` (from the BA payload's §6 output).
+   - The question whose answer is blocking AC authoring.
+
+2. Present `brainstorm-lead`'s synthesized recommendation to the user.
+   Wait for the user to choose a direction.
+
+3. Once the user picks a direction, spawn `it-po` via the Agent tool. Pass it:
+   - The original user request.
+   - The business-analyst output payload.
+   - The user's chosen direction (from step 2).
+
+4. `it-po` returns per-agent AC blocks and interface contracts.
+
+5. Proceed to Step 3, passing the `it-po` output to ticket-wiring.
 
 ### Step 3 — Finalise the ticket (small path only)
 
@@ -198,6 +251,8 @@ default: tickets/00_inbox/epics)
 | refinement | analysis | utility |
 | architect-review | review | phase |
 | create-epic | orchestration | supervisor |
+| it-po | analysis | utility |
+| brainstorm-lead | analysis | utility |
 
 ## Grand Scheme & Architectural Context
 As an upstream planning/review agent, you MUST consult docs/vision.md and docs/components.json to understand the broader system architecture. When generating or reviewing tickets, you MUST extract the relevant architectural context (including mermaid diagrams and module dependencies) and embed them directly into the ticket description or gents: map. Do NOT force downstream execution agents to read global architecture documents; pass them the exact local context they need to succeed.

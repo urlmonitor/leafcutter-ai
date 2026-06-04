@@ -339,8 +339,38 @@ every ticket-supervisor that ran until a cleanup commit removed them.
                       by canonical phase ordering — architect-review,
                       test-writer (priority 5, before coders),
                       python-coder (priority 6), sql-coder (priority 7),
-                      test-runner, pr-reviewer, commit, pull-request,
+                      test-runner, pr-reviewer (priority 11),
+                      ac-validator (priority 11.5, after pr-reviewer and before commit),
+                      user-surface-smoker (priority 11.5, concurrent with ac-validator),
+                      commit (priority 12), pull-request (priority 13),
                       status-checker, documentation-expert).
+
+    # ac-validator skip rule (for tickets without ## Agent Contracts)
+    IF next_agent == "ac-validator":
+      READ ticket body. Check for the `## Agent Contracts` section.
+      IF `## Agent Contracts` section is absent OR has no `- [ ] AC-N:` lines:
+        → SKIP ac-validator: do NOT spawn it.
+           Mark agents["ac-validator"] = "signed_off" in frontmatter.
+           Append comment to `## Comments`:
+             ### <today> <time> — ticket-supervisor (status: ok)
+             ac-validator phase skipped — no ## Agent Contracts section or AC lines in ticket
+           GOTO top of loop (pick next pending agent from updated map).
+    # If ## Agent Contracts is present with at least one AC line, dispatch normally.
+
+    # ac_coverage done-gate (AC-7)
+    IF pending is empty AND frontmatter has `ac_coverage:`:
+      LET coverage = parse frontmatter["ac_coverage"]   # format: "N/M"
+      IF coverage != "M/M" (i.e. N < M):
+        → BLOCK done transition:
+           do NOT move ticket to done/ folder.
+           do NOT flip status: done.
+           Return {status: "blocked", payload: {
+             ticket_path: <path>,
+             phase: "ticket-supervisor",
+             blocker_summary: "ac_coverage is <N/M> — not all ACs validated before done",
+             suggested_remediation: "Respawn ac-validator to complete coverage, or manually mark remaining ACs covered if evidence exists outside the diff."
+           }}
+      # When coverage == "M/M": proceed with normal done-marking recipe.
 
     # requires_adr pre-flight override
     IF frontmatter.requires_adr == true
