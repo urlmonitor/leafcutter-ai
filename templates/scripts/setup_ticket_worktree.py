@@ -204,6 +204,28 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
         check=True,
     )
 
+    # Populate .leafcutter/ build outputs so named workflow resolution works.
+    build_script = main_repo / "scripts" / "build.py"
+    if not build_script.exists():
+        print(
+            "WARNING: scripts/build.py not found in main_repo; "
+            ".leafcutter/ build outputs will be absent from the worktree.",
+            file=sys.stderr,
+        )
+    else:
+        try:
+            subprocess.run(
+                [sys.executable, str(build_script), "--target-dir", "."],
+                cwd=worktree_path,
+                check=True,
+            )
+        except subprocess.CalledProcessError as exc:
+            print(
+                f"WARNING: build.py exited {exc.returncode}; "
+                ".leafcutter/ build outputs may be incomplete.",
+                file=sys.stderr,
+            )
+
 
 def _derive_slug(ticket_path: Path) -> str:
     """Derive a kebab-case slug from a ticket basename.
@@ -530,6 +552,14 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-04 00:00 [Agent/python-coder]: Added build.py invocation in _bootstrap()
+  after poetry install --no-root (TICKET-20260604-WorktreeBuildOutputs). Runs
+  `python scripts/build.py --target-dir .` in the worktree so that .leafcutter/
+  build outputs (including .leafcutter/.claude/workflows/) are present after
+  creation. When build.py is absent from main_repo, prints a single WARNING to
+  stderr and continues. When build.py exits non-zero, catches CalledProcessError,
+  prints a single WARNING to stderr, and continues — graceful degradation per AC-2
+  and AC-3.
 - 2026-06-03 10:02 [EPIC-MoveOnMainOnly/01]: Removed _move_ticket() — branches
   no longer move ticket files; finalize-feature.js reconciles folder
   position on main after merge. The JSON output field was renamed from

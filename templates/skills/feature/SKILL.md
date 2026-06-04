@@ -77,6 +77,19 @@ Same as the Feature Workflow bootstrap (step 5 below):
 - `cd "$WORKTREE_PATH" && poetry install --no-root`
 - Verify: `poetry run python -c "import settings; print('Settings OK')"`
 
+#### Build outputs (mandatory)
+
+After `poetry install --no-root` completes, run:
+
+```bash
+python scripts/build.py --target-dir .
+```
+
+This populates `.leafcutter/` (gitignored build outputs) including
+`.leafcutter/.claude/workflows/` required for named workflow resolution.
+A non-zero exit is a warning only — record it and continue; the worktree
+is usable but some workflow lookups may fail.
+
 ### 5. Switch working directory & confirm
 
 ```bash
