@@ -16,13 +16,13 @@ files_touched:
   - docs/architecture/adrs/ADR-NNN-contract-driven-acs.md
 agents:
   architect-review: not_needed
-  adr-author: needed
+  adr-author: signed_off
   test-writer: not_needed
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   architecture-diagram-author: not_needed
@@ -55,17 +55,17 @@ this epic. Key decisions to record:
 
 ### adr-author
 
-- [ ] AC-1: ADR file exists at `docs/architecture/adrs/ADR-NNN-contract-driven-acs.md` with correct next-free ADR number
-- [ ] AC-2: Status section is "Accepted"
-- [ ] AC-3: Context section covers the integration failure problem (agents building incompatible code due to vague ACs)
-- [ ] AC-4: Decision section documents the two-phase creation pipeline (BA → IT PO), the per-agent AC format, and the ac-validator gate
-- [ ] AC-5: Consequences section covers both benefits (eliminated integration mismatches) and costs (longer ticket creation, Opus cost)
-- [ ] AC-6: Alternatives section covers and rejects: sidecar JSON files, one-AC-per-ticket, per-agent sign-off without validator
+- [x] AC-1: ADR file exists at `docs/architecture/adrs/ADR-NNN-contract-driven-acs.md` with correct next-free ADR number
+- [x] AC-2: Status section is "Accepted"
+- [x] AC-3: Context section covers the integration failure problem (agents building incompatible code due to vague ACs)
+- [x] AC-4: Decision section documents the two-phase creation pipeline (BA → IT PO), the per-agent AC format, and the ac-validator gate
+- [x] AC-5: Consequences section covers both benefits (eliminated integration mismatches) and costs (longer ticket creation, Opus cost)
+- [x] AC-6: Alternatives section covers and rejects: sidecar JSON files, one-AC-per-ticket, per-agent sign-off without validator
 
 ## Sign-offs
 
-- [ ] adr-author
-- [ ] pr-reviewer
+- [x] adr-author — 2026-06-04 12:00
+- [x] pr-reviewer — 2026-06-04 12:05
 - [ ] commit
 - [ ] pull-request
 
@@ -85,3 +85,26 @@ this epic. Key decisions to record:
 - Touches money? No.
 - Touches data? No.
 - Reversibility? Fully reversible — single new doc file.
+
+## Comments
+
+### 2026-06-04 12:00 — adr-author (status: ok)
+feedback-id: fb_2026-06-04_42a49c49
+completion_manifest:
+  adr_file_created: true
+  all_sections_present: true
+  status_set: true
+Authored ADR-007-contract-driven-acs.md covering all six ACs: per-agent contract format, numbered checklist over Gherkin, two-phase BA/IT PO pipeline, Opus for IT PO, ac-validator gate, and three rejected alternatives (sidecar JSON, one-AC-per-ticket, per-agent sign-off without validator). All sections (Status, Context, Decision, Consequences, Alternatives) present with Accepted status. Handoff file written to .pending/adr_handoff.json.
+
+### 2026-06-04 12:05 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-04_b4ccb93a
+completion_manifest:
+  diff_reviewed: true
+  no_high_findings: true
+  scope_verified: true
+Pure documentation change (ADR-007 + ticket sign-off). 0 high-confidence findings, 0 medium findings, 0 low nits. Scope matches files_touched (docs/architecture/adrs/ADR-007-contract-driven-acs.md). No escalation needed. Approved for commit.
+
+## Escalation
+
+Branch: none
+Reason: not escalated: medium count was 0 (threshold > 3)
