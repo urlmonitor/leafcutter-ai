@@ -12,12 +12,14 @@
  *
  * Architecture:
  *   Pre-flight: status-checker reads current branch and worktree root
+ *   Step 0: capture baseline test run on main HEAD (test-runner — graceful on failure)
  *   Step 1: probe for open PR (gh pr list); dispatch pull-request if missing
- *   Step 2: probe PR state (gh pr view); prompt() merge gate if not merged
- *   Step 3: dispatch status-checker to sync main (git checkout main && git pull)
- *   Step 4: dispatch test-runner; HALT if tests fail (do not proceed to 5/6)
- *   Step 5: dispatch status-checker to detect scope and close tickets/archive epic
- *   Step 6: probe worktree list; dispatch worktree-agent remove if worktree exists
+ *   Step 2: merge origin/main into worktree --no-commit --no-ff (HALT on conflict)
+ *   Step 3: run post-merge tests + triage; HALT if regressions detected
+ *   Step 4: merge PR to main — only if tests pass (confirmation-gated)
+ *   Step 5: sync local main (git checkout main && git pull)
+ *   Step 6: create tracking tickets + close tickets / archive epic
+ *   Step 7: probe worktree list; dispatch worktree-agent remove if worktree exists
  *
  * Resumability: each step probes observable state before dispatching. Re-running
  * /finalize-feature after a mid-run crash resumes from the first incomplete step.
@@ -33,23 +35,21 @@ export const meta = {
   name: "finalize-feature",
   description:
     "Post-merge feature finalization: capture pre-merge test baseline on main, " +
-    "open PR if missing, merge to main, sync local main, run post-merge tests " +
-    "(with triage baseline), close tickets/archive epic, remove worktree. " +
-    "Prompt gates on all destructive steps. HALT on test failure before ticket " +
-    "closing. Returns { status: ok } with per-step summary on full success.",
+    "open PR if missing, merge origin/main into worktree, run post-merge tests " +
+    "(with triage baseline), merge PR to main only when tests pass, " +
+    "sync local main, close tickets/archive epic, remove worktree. " +
+    "Prompt gates on all destructive steps. HALT on test regression before PR merge. " +
+    "Returns { status: ok } with per-step summary on full success.",
   phases: [
     "pre-flight (status-checker reads branch + worktree root)",
     "step-0: capture baseline test run on main HEAD (test-runner — graceful on failure)",
     "step-1: open PR if missing (pull-request agent)",
-    "step-2: merge PR to main (prompt gate + pull-request agent)",
-    "step-3: sync local main (status-checker shell)",
-    "step-3.5: merge origin/main into worktree --no-commit --no-ff (HALT on conflict)",
-    "step-4a: run post-merge tests (test-runner — HALT on failure)",
-    "step-4b: triage_failures — dispatch test-failure-triage when failures exist",
-    "step-4c: halt-or-continue gate based on triage_report.blocks_finalization",
-    "step-5: create_pre_existing_tickets — dispatch create-ticket for each pre_existing/flaky triage entry",
-    "step-5b: close tickets / archive epic (status-checker)",
-    "step-6: remove worktree (worktree-agent — gate delegated)",
+    "step-2: merge origin/main into worktree --no-commit --no-ff (HALT on conflict)",
+    "step-3: run post-merge tests + triage (test-runner + test-failure-triage — HALT on regressions)",
+    "step-4: merge PR to main — only if tests pass (prompt gate + pull-request agent)",
+    "step-5: sync local main (status-checker shell)",
+    "step-6: create_pre_existing_tickets + close tickets / archive epic (status-checker)",
+    "step-7: remove worktree (worktree-agent — gate delegated)",
   ],
 };
 
@@ -116,10 +116,10 @@ async function run({ userInput, agent, parallel, prompt }) {
   const ticketsClosed = [];
   const createdTrackingTickets = [];
   let worktreeRemoved = false;
-  // Triage report from step 4b; null means tests passed (no triage needed).
+  // Triage report from step 3; null means tests passed (no triage needed).
   let triageReport = null;
 
-  // Baseline state (populated by step 0; forwarded to step 4 triage).
+  // Baseline state (populated by step 0; forwarded to step 3 triage).
   // null means the baseline run did not complete — triage treats all failures
   // as regressions in that case (conservative classification).
   let baselineFailures = null; // string[] | null
@@ -158,7 +158,7 @@ async function run({ userInput, agent, parallel, prompt }) {
   //
   // Creates a temporary worktree at origin/main, runs test-runner against it,
   // and stores the list of failing test IDs as the baseline. This baseline is
-  // passed to the triage agent in step 4 so regressions can be distinguished
+  // passed to the triage agent in step 3 so regressions can be distinguished
   // from pre-existing failures.
   //
   // Graceful degradation: if the worktree creation or test run fails for any
@@ -307,94 +307,15 @@ async function run({ userInput, agent, parallel, prompt }) {
   }
 
   // -------------------------------------------------------------------------
-  // Step 2 — Merge PR to main (destructive — prompt gate required)
-  // -------------------------------------------------------------------------
-  // First probe current PR state to support crash-resume.
-  const prStateResult = await agent({
-    agentType: "status-checker",
-    input: {
-      instructions:
-        `Run: gh pr view ${prNumber} --json state --jq '.state'\n` +
-        "Return ONLY a JSON object: { \"state\": \"OPEN\"|\"MERGED\"|\"CLOSED\" }",
-    },
-  });
-
-  let prState;
-  try {
-    prState =
-      typeof prStateResult === "string"
-        ? JSON.parse(prStateResult)
-        : prStateResult;
-  } catch (_err) {
-    prState = { state: "OPEN" };
-  }
-
-  if ((prState.state || "").toUpperCase() === "MERGED") {
-    // PR already merged — skip the merge gate and proceed.
-    skippedSteps.push({ step: 2, reason: "PR already merged — skipping step 2" });
-  } else {
-    // Present merge summary and ask for confirmation.
-    const mergeConfirm = await prompt(
-      `Merge PR #${prNumber} (\`${BRANCH}\` → main)? (yes / no)`
-    );
-
-    if (!mergeConfirm || mergeConfirm.trim().toLowerCase() !== "yes") {
-      await cleanupBaselineWorktree();
-      return {
-        status: "halted",
-        halted_at_step: 2,
-        reason: "user_declined_merge",
-        message: "Finalization halted at merge step. No changes made.",
-        branch: BRANCH,
-        pr_number: prNumber,
-        pr_url: prUrl,
-        completed_steps: completedSteps,
-        skipped_steps: skippedSteps,
-      };
-    }
-
-    // Dispatch pull-request agent for the merge operation.
-    mergeResult = await agent({
-      agentType: "pull-request",
-      input: {
-        branch: BRANCH,
-        pr_number: prNumber,
-        action: "merge",
-        instructions:
-          `Merge PR #${prNumber} to main using: gh pr merge ${prNumber} --merge --auto\n` +
-          "Wait for the merge to complete, then return a JSON object: " +
-          "{ \"merged\": true, \"sha\": \"<merge-commit-sha>\" }",
-      },
-    });
-
-    completedSteps.push(2);
-  }
-
-  // -------------------------------------------------------------------------
-  // Step 3 — Sync local main (resumable)
-  // -------------------------------------------------------------------------
-  const syncResult = await agent({
-    agentType: "status-checker",
-    input: {
-      instructions:
-        "Run these commands in sequence:\n" +
-        "1. `git checkout main`\n" +
-        "2. `git pull`\n" +
-        "3. `git log -1 --oneline`\n" +
-        "Report the final HEAD SHA and commit message. " +
-        "Return a JSON object: { \"head_sha\": \"<sha>\", \"head_message\": \"<message>\" }",
-    },
-  });
-
-  completedSteps.push(3);
-
-  // -------------------------------------------------------------------------
-  // Step 3.5 — Merge origin/main into the feature worktree (no commit)
+  // Step 2 — Merge origin/main into the feature worktree (no commit)
   //
-  // Inserts the merged state into the worktree so that tests in step 4 run
+  // Inserts the merged state into the worktree so that tests in step 3 run
   // against the post-merge tree. Uses --no-commit --no-ff so no merge commit
   // is written to the feature branch. On conflict, git merge --abort cleans up
   // and the workflow halts with category merge_conflict.
+  //
+  // Running this BEFORE the PR merge gate (step 4) ensures the test safety
+  // gate (step 3) can catch regressions before the feature lands on main.
   //
   // Resumability: probe git merge-base --is-ancestor to detect already-merged.
   // -------------------------------------------------------------------------
@@ -443,7 +364,7 @@ async function run({ userInput, agent, parallel, prompt }) {
     await cleanupBaselineWorktree();
     return {
       status: "halted",
-      halted_at_step: "3.5",
+      halted_at_step: 2,
       reason: "merge_conflict",
       message:
         "Feature branch has conflicts with main. Resolve conflicts and re-run.",
@@ -457,24 +378,28 @@ async function run({ userInput, agent, parallel, prompt }) {
 
   if (mergeStatus === "already_up_to_date") {
     skippedSteps.push({
-      step: "3.5",
+      step: 2,
       reason: "Already up-to-date with origin/main",
     });
   } else {
     // merged_main path
-    completedSteps.push("3.5");
+    completedSteps.push(2);
   }
 
   const mergeStrategy = mergeMainInfo.merge_strategy || "already_up_to_date";
 
   // -------------------------------------------------------------------------
-  // Step 4a — Run post-merge tests (always runs)
+  // Step 3 — Run post-merge tests + triage (always runs)
   //
   // The baseline captured in step 0 is forwarded here so the triage agent
-  // in step 4b can compute:
+  // can compute:
   //   regressions = post_merge_failures − baseline_failures
   // If baseline_failures is null, all failures are treated as regressions
   // (conservative classification).
+  //
+  // If tests pass: skip triage sub-steps and continue to step 4 (PR merge).
+  // If tests fail: triage classifies failures; HALT here if any are regressions.
+  // Only when blocks_finalization === false does the workflow proceed to step 4.
   // -------------------------------------------------------------------------
   testResult = await agent({
     agentType: "test-runner",
@@ -507,12 +432,12 @@ async function run({ userInput, agent, parallel, prompt }) {
   }
 
   if (testPassed) {
-    // Zero failures: skip 4b and 4c entirely, proceed to step 5.
-    completedSteps.push("4a");
-    // triageReport remains null — forwarded to step 5 as-is.
+    // Zero failures: skip triage sub-steps entirely, proceed to step 4 (PR merge).
+    completedSteps.push(3);
+    // triageReport remains null — forwarded to step 6 as-is.
   } else {
     // -----------------------------------------------------------------------
-    // Step 4b — Dispatch test-failure-triage when failures exist
+    // Step 3 (triage sub-step) — Dispatch test-failure-triage when failures exist
     //
     // Passes post_merge_failures, baseline_failures, baseline_sha,
     // feature_branch, and changed_files (derived here via git diff) so the
@@ -575,24 +500,25 @@ async function run({ userInput, agent, parallel, prompt }) {
     }
 
     // Log the triage report to the user for visibility.
-    console.log("[finalize-feature] step 4b triage report:", JSON.stringify(triageReport, null, 2));
+    console.log("[finalize-feature] step 3 triage report:", JSON.stringify(triageReport, null, 2));
 
     // -----------------------------------------------------------------------
-    // Step 4c — Halt-or-continue gate based on triage_report.blocks_finalization
+    // Step 3 (halt gate) — Halt-or-continue based on triage_report.blocks_finalization
     //
-    // If blocks_finalization is true: HARD EARLY RETURN. Steps 5 and 6 are
+    // If blocks_finalization is true: HARD EARLY RETURN. Step 4 (PR merge) is
     // structurally unreachable from this point — no escape hatch.
-    // If false: pass triage_report forward and continue to step 5.
+    // If false: pass triage_report forward and continue to step 4.
     // -----------------------------------------------------------------------
     if (triageReport.blocks_finalization) {
       await cleanupBaselineWorktree();
       return {
         status: "halted",
-        halted_at_step: "4c",
-        reason: "regressions_or_stale_tests",
+        halted_at_step: 3,
+        reason: "test_regression",
         triage_report: triageReport,
         message:
-          "Fix regressions and stale tests before re-running /finalize-feature.",
+          "Fix regressions before re-running /finalize-feature. " +
+          "The PR has NOT been merged to main.",
         test_output:
           (testResult && testResult.output) ||
           JSON.stringify(testResult),
@@ -604,26 +530,135 @@ async function run({ userInput, agent, parallel, prompt }) {
       };
     }
     // blocks_finalization is false: all failures are pre-existing.
-    // Store triage_report in workflow state and continue to step 5.
-    completedSteps.push("4a");
-    completedSteps.push("4b");
-    completedSteps.push("4c");
+    // Store triage_report in workflow state and continue to step 4.
+    completedSteps.push(3);
   }
 
   // -------------------------------------------------------------------------
-  // Step 5 — Create tracking tickets for pre-existing / flaky failures
+  // Step 4 — Merge PR to main (destructive — prompt gate required)
   //
-  // Before closing tickets and archiving the epic, dispatch create-ticket for
-  // each entry in the triage report where category is "pre_existing" or "flaky".
-  // This ensures every known breakage on main has a corresponding inbox ticket
-  // before the feature branch is considered finalized.
-  //
-  // Failure policy: ticket creation failure is non-fatal. Log a warning and
-  // continue. Finalization must not be blocked by a failed create-ticket call.
-  //
-  // Only runs when triageReport is non-null (tests had failures in step 4b).
-  // When triageReport is null (all tests passed), this sub-step is a no-op.
+  // This step runs AFTER the worktree merge (step 2) and test + triage (step 3).
+  // The gate only shows the confirmation prompt when blocks_finalization === false
+  // (ensured by the halt in step 3). A defensive guard is included to catch any
+  // edge case where blocks_finalization is truthy at this point.
   // -------------------------------------------------------------------------
+  // Defensive guard: blocks_finalization should never be true here (step 3 halts),
+  // but guard against edge cases (e.g. triageReport set by a code path that skipped
+  // the halt gate).
+  if (triageReport !== null && triageReport.blocks_finalization) {
+    await cleanupBaselineWorktree();
+    return {
+      status: "halted",
+      halted_at_step: 4,
+      reason: "test_regression",
+      triage_report: triageReport,
+      message:
+        "Defensive guard triggered: blocks_finalization is true at step 4. " +
+        "The PR has NOT been merged. Fix regressions and re-run /finalize-feature.",
+      branch: BRANCH,
+      pr_number: prNumber,
+      pr_url: prUrl,
+      completed_steps: completedSteps,
+      skipped_steps: skippedSteps,
+    };
+  }
+
+  // First probe current PR state to support crash-resume.
+  const prStateResult = await agent({
+    agentType: "status-checker",
+    input: {
+      instructions:
+        `Run: gh pr view ${prNumber} --json state --jq '.state'\n` +
+        "Return ONLY a JSON object: { \"state\": \"OPEN\"|\"MERGED\"|\"CLOSED\" }",
+    },
+  });
+
+  let prState;
+  try {
+    prState =
+      typeof prStateResult === "string"
+        ? JSON.parse(prStateResult)
+        : prStateResult;
+  } catch (_err) {
+    prState = { state: "OPEN" };
+  }
+
+  if ((prState.state || "").toUpperCase() === "MERGED") {
+    // PR already merged — skip the merge gate and proceed.
+    skippedSteps.push({ step: 4, reason: "PR already merged — skipping step 4" });
+  } else {
+    // Present merge summary and ask for confirmation.
+    const mergeConfirm = await prompt(
+      `Merge PR #${prNumber} (\`${BRANCH}\` → main)? (yes / no)`
+    );
+
+    if (!mergeConfirm || mergeConfirm.trim().toLowerCase() !== "yes") {
+      await cleanupBaselineWorktree();
+      return {
+        status: "halted",
+        halted_at_step: 4,
+        reason: "user_declined_merge",
+        message: "Finalization halted at merge step. No changes made to main.",
+        branch: BRANCH,
+        pr_number: prNumber,
+        pr_url: prUrl,
+        completed_steps: completedSteps,
+        skipped_steps: skippedSteps,
+      };
+    }
+
+    // Dispatch pull-request agent for the merge operation.
+    mergeResult = await agent({
+      agentType: "pull-request",
+      input: {
+        branch: BRANCH,
+        pr_number: prNumber,
+        action: "merge",
+        instructions:
+          `Merge PR #${prNumber} to main using: gh pr merge ${prNumber} --merge --auto\n` +
+          "Wait for the merge to complete, then return a JSON object: " +
+          "{ \"merged\": true, \"sha\": \"<merge-commit-sha>\" }",
+      },
+    });
+
+    completedSteps.push(4);
+  }
+
+  // -------------------------------------------------------------------------
+  // Step 5 — Sync local main (resumable)
+  // -------------------------------------------------------------------------
+  const syncResult = await agent({
+    agentType: "status-checker",
+    input: {
+      instructions:
+        "Run these commands in sequence:\n" +
+        "1. `git checkout main`\n" +
+        "2. `git pull`\n" +
+        "3. `git log -1 --oneline`\n" +
+        "Report the final HEAD SHA and commit message. " +
+        "Return a JSON object: { \"head_sha\": \"<sha>\", \"head_message\": \"<message>\" }",
+    },
+  });
+
+  completedSteps.push(5);
+
+  // -------------------------------------------------------------------------
+  // Step 6 — Create tracking tickets for pre-existing / flaky failures,
+  //          then close tickets / archive epic (resumable)
+  //
+  // Sub-step 6a: create inbox tracking tickets for pre_existing/flaky triage entries.
+  //   Failure policy: ticket creation failure is non-fatal. Log and continue.
+  //   Only runs when triageReport is non-null (tests had failures in step 3).
+  //
+  // Sub-step 6b: detect scope and close tickets / archive epic.
+  //
+  // Sub-step 6c: reconcile folder positions for any ticket file whose physical
+  //   folder does not match its frontmatter `status:` after merge.
+  //   This is necessary because worktree branches no longer perform git mv —
+  //   the move-on-main-only pattern defers all moves to this post-merge step.
+  // -------------------------------------------------------------------------
+
+  // Sub-step 6a: create tracking tickets for pre-existing / flaky triage entries.
   if (triageReport !== null) {
     const triageEntries = Array.isArray(triageReport.triage_report)
       ? triageReport.triage_report
@@ -675,19 +710,19 @@ async function run({ userInput, agent, parallel, prompt }) {
         if (ticketPath) {
           createdTrackingTickets.push(ticketPath);
           console.log(
-            `[finalize-feature] step 5: created tracking ticket for ${testId}: ${ticketPath}`
+            `[finalize-feature] step 6a: created tracking ticket for ${testId}: ${ticketPath}`
           );
         } else {
           // create-ticket succeeded but did not return a path — push null as sentinel.
           createdTrackingTickets.push(null);
           console.warn(
-            `[finalize-feature] step 5: create-ticket for ${testId} returned no ticket_path`
+            `[finalize-feature] step 6a: create-ticket for ${testId} returned no ticket_path`
           );
         }
       } catch (createErr) {
         // Non-fatal: log warning and continue.
         console.warn(
-          `[finalize-feature] step 5: create-ticket dispatch failed for ${testId}: ${createErr && createErr.message}`
+          `[finalize-feature] step 6a: create-ticket dispatch failed for ${testId}: ${createErr && createErr.message}`
         );
         createdTrackingTickets.push(null);
       }
@@ -695,30 +730,12 @@ async function run({ userInput, agent, parallel, prompt }) {
 
     if (preExistingEntries.length === 0) {
       console.log(
-        "[finalize-feature] step 5: no pre_existing or flaky entries in triage report — skipping create-ticket sub-step"
+        "[finalize-feature] step 6a: no pre_existing or flaky entries in triage report — skipping create-ticket sub-step"
       );
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Step 5b — Close tickets / archive epic (resumable)
-  //
-  // Sub-step 5a: detect scope and close tickets (flip status: done in frontmatter
-  //   + git mv to target folder).
-  // Sub-step 5b: reconcile folder positions for any ticket file whose physical
-  //   folder does not match its frontmatter `status:` after merge.
-  //   This is necessary because worktree branches no longer perform git mv —
-  //   the move-on-main-only pattern defers all moves to this post-merge step.
-  //
-  // Resumability: each sub-step probes state before acting.
-  //   - Sub-step 5a: if ticket is already `done` and in the correct folder, it is skipped.
-  //   - Sub-step 5b: if the reconciliation commit already exists (checked via
-  //     `git log --oneline --grep "reconcile folder positions"`), the entire sub-step
-  //     is skipped. If a ticket file is already in its target folder, git mv is skipped
-  //     for that file (idempotent per-file).
-  // -------------------------------------------------------------------------
-
-  // Sub-step 5a: ticket closing / epic archival
+  // Sub-step 6b: ticket closing / epic archival
   const closeResult = await agent({
     agentType: "status-checker",
     input: {
@@ -766,12 +783,12 @@ async function run({ userInput, agent, parallel, prompt }) {
   }
 
   if (closeInfo.skipped) {
-    skippedSteps.push({ step: 5, reason: "All tickets already done — skipping step 5" });
+    skippedSteps.push({ step: 6, reason: "All tickets already done — skipping step 6" });
   } else {
-    completedSteps.push(5);
+    completedSteps.push(6);
   }
 
-  // Sub-step 5b: folder reconciliation (EPIC-MoveOnMainOnly/03)
+  // Sub-step 6c: folder reconciliation (EPIC-MoveOnMainOnly/03)
   //
   // After tickets 01 and 02 land, worktree branches no longer perform git mv.
   // Ticket files arrive on main in whatever folder the branch had them in
@@ -844,7 +861,7 @@ async function run({ userInput, agent, parallel, prompt }) {
   }
 
   // -------------------------------------------------------------------------
-  // Step 6 — Remove worktree (resumable; confirmation gate delegated to agent)
+  // Step 7 — Remove worktree (resumable; confirmation gate delegated to agent)
   // -------------------------------------------------------------------------
   const worktreeProbeResult = await agent({
     agentType: "status-checker",
@@ -868,7 +885,7 @@ async function run({ userInput, agent, parallel, prompt }) {
 
   if (!worktreeProbe.exists) {
     worktreeRemoved = false;
-    skippedSteps.push({ step: 6, reason: "Worktree already absent — skipping step 6" });
+    skippedSteps.push({ step: 7, reason: "Worktree already absent — skipping step 7" });
   } else {
     // Dispatch worktree-agent (it owns its own confirmation gate).
     const worktreeResult = await agent({
@@ -897,7 +914,7 @@ async function run({ userInput, agent, parallel, prompt }) {
       // Surface conflict PIDs verbatim and stop — user must resolve manually.
       return {
         status: "halted",
-        halted_at_step: 6,
+        halted_at_step: 7,
         reason: "worktree_conflict_pids",
         message:
           "Worktree removal blocked by conflicting processes. " +
@@ -913,11 +930,11 @@ async function run({ userInput, agent, parallel, prompt }) {
     }
 
     worktreeRemoved = wResult.removed === true;
-    completedSteps.push(6);
+    completedSteps.push(7);
   }
 
   // -------------------------------------------------------------------------
-  // Step 7 — Return success summary
+  // Final — Return success summary
   // -------------------------------------------------------------------------
   return {
     status: "ok",
@@ -931,10 +948,10 @@ async function run({ userInput, agent, parallel, prompt }) {
     baseline_failures: baselineFailures,
     baseline_run_at: baselineRunAt,
     test_result: testResult,
-    // Triage report from step 4b; null means tests passed (no triage needed).
+    // Triage report from step 3; null means tests passed (no triage needed).
     triage_report: triageReport,
     tickets_closed: ticketsClosed,
-    // Tracking tickets created in step 5 for pre_existing and flaky triage entries.
+    // Tracking tickets created in step 6a for pre_existing and flaky triage entries.
     // Each entry is the ticket_path returned by create-ticket, or null on failure.
     created_tracking_tickets: createdTrackingTickets,
     tickets_reconciled: ticketsReconciled,

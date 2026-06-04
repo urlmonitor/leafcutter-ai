@@ -20,8 +20,8 @@ agents:
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
-  documentation-expert: needed
-  pr-reviewer: needed
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   adr-author: not_needed
@@ -130,26 +130,45 @@ Then step numbers and step descriptions in the guide match the corrected sequenc
 
 | AC   | Test | Implementation | Validated |
 |------|------|----------------|-----------|
-| AC-1 |      |                |           |
-| AC-2 |      |                |           |
-| AC-3 |      |                |           |
-| AC-4 |      |                |           |
-| AC-5 |      |                |           |
+| AC-1 |      | Step 2=merge_main_into_worktree, step 3=tests+triage, step 4=merge_pr (gated on blocks_finalization===false) | ok — 2026-06-04 |
+| AC-2 |      | step 3 halts with status:"halted", reason:"test_regression" when blocks_finalization===true; step 4 unreachable | ok — 2026-06-04 |
+| AC-3 |      | Step 4 prompt shows exactly once when blocks_finalization===false; merges on yes | ok — 2026-06-04 |
+| AC-4 |      | templates/workflows/finalize-feature.md step table updated to 0–7 sequence | ok — 2026-06-04 |
+| AC-5 |      | docs/how-to/finalize-feature.md step table and halt sections updated to 0–7 sequence | ok — 2026-06-04 |
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] pr-reviewer
+- [x] documentation-expert — 2026-06-04 12:00
+- [x] pr-reviewer — 2026-06-04 12:01
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-06-04 12:01 — pr-reviewer (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  ac1_verified: true
+  ac2_verified: true
+  ac3_verified: true
+  ac4_verified: true
+  ac5_verified: true
+All 5 ACs verified against the implementation: step order is correct (merge-main→tests→triage→PR merge), regression halt path returns test_regression before PR merge, confirmation prompt is single-gated, both doc files updated with 0–7 sequence. No defects found.
+
+### 2026-06-04 12:00 — documentation-expert (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  js_steps_reordered: true
+  js_syntax_valid: true
+  workflow_md_updated: true
+  how_to_md_updated: true
+Reordered finalize-feature.js so that step 2 is merge-main-into-worktree (was 3.5), step 3 is post-merge tests + triage with halt gate (was 4a/4b/4c), step 4 is merge PR to main gated on blocks_finalization===false (was step 2), step 5 is sync local main (was step 3), step 6 is create-tickets + close (was step 5), step 7 is remove worktree (was step 6). All three files updated; node --check confirmed exit 0.
+
 ## Implementation Tasks
 
 ### documentation-expert
 
-- [ ] In `templates/workflows-js/finalize-feature.js`, reorder the step blocks
+- [x] In `templates/workflows-js/finalize-feature.js`, reorder the step blocks
   as follows (read the full file first to locate exact block boundaries):
 
   1. Keep step 0 (baseline test capture) in place.
@@ -174,15 +193,15 @@ Then step numbers and step descriptions in the guide match the corrected sequenc
   10. Update any success return object fields that reference step numbers
       (e.g. `halted_at_step`, `merge_strategy`) so they reflect the new numbers.
 
-- [ ] In `templates/workflows/finalize-feature.md`, update all step numbers and
+- [x] In `templates/workflows/finalize-feature.md`, update all step numbers and
   step descriptions in the body so they match the corrected 0–7 sequence.
   Do not change any prose that does not reference step numbers or ordering.
 
-- [ ] In `docs/how-to/finalize-feature.md`, update all step numbers and step
+- [x] In `docs/how-to/finalize-feature.md`, update all step numbers and step
   descriptions in the body so they match the corrected 0–7 sequence.
   Do not change any prose that does not reference step numbers or ordering.
 
-- [ ] Verify `finalize-feature.js` is syntactically valid JavaScript (no parse
+- [x] Verify `finalize-feature.js` is syntactically valid JavaScript (no parse
   errors) by running: `node --check templates/workflows-js/finalize-feature.js`
   and confirming exit 0.
 
