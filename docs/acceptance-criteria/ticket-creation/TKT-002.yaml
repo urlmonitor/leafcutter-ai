@@ -1,0 +1,16 @@
+id: TKT-002
+title: "BA-v2 output includes ac_creations and ac_amendments arrays"
+component: ticket-creation
+status: active
+created_by: "tickets/00_inbox/epics/EPIC-UnifyACPipeline/01_v2_pipeline_ac_store_alignment.md"
+criteria: |
+  Given business-analyst-v2.md output contract
+  When the BA produces its JSON payload
+  Then ac_creations array is present with fields: proposed_id, title, criteria, origin_agent
+   And ac_amendments array is present with fields: ac_id, change, new_criteria
+   And field shapes match those in business-analyst.md (v1)
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []
+origin_agent: "human"

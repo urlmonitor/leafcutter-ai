@@ -1,0 +1,14 @@
+id: TKT-012
+title: "Hook exits 0 silently when AC store directory does not exist"
+component: ticket-creation
+status: active
+created_by: "tickets/00_inbox/epics/EPIC-UnifyACPipeline/02_ac_store_inline_alignment_hook.md"
+criteria: |
+  Given docs/acceptance-criteria/ does not exist in the target project
+  When the check_v2_ac_store_alignment hook runs on a staged ticket
+  Then it exits 0 silently (graceful degradation)
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []
+origin_agent: "human"

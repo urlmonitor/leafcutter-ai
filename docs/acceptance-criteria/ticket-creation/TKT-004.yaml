@@ -1,0 +1,16 @@
+id: TKT-004
+title: "create-ticket-v2 writes AC YAML files when ac_creations is non-empty"
+component: ticket-creation
+status: active
+created_by: "tickets/00_inbox/epics/EPIC-UnifyACPipeline/01_v2_pipeline_ac_store_alignment.md"
+criteria: |
+  Given create-ticket-v2.md assembles a ticket body
+  When ba_output.ac_creations or ba_output.ac_amendments is non-empty
+  Then the AC YAML write logic from ticket-wiring Step 2.5 is invoked
+   And new AC files are written to docs/acceptance-criteria/{component}/{proposed_id}.yaml
+   And amended AC files have their criteria and amended_by fields updated
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []
+origin_agent: "human"

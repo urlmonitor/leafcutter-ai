@@ -1,0 +1,15 @@
+id: TKT-005
+title: "AC YAML files pass schema validation after v2 pipeline creates them"
+component: ticket-creation
+status: active
+created_by: "tickets/00_inbox/epics/EPIC-UnifyACPipeline/01_v2_pipeline_ac_store_alignment.md"
+criteria: |
+  Given /create-ticket-v2 runs on a request introducing genuinely new behaviour
+  When ac_creations is non-empty and the pipeline completes
+  Then a corresponding docs/acceptance-criteria/{component}/{proposed_id}.yaml file exists
+   And it passes python scripts/commit_guardian/check_ac_schema.py validation
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []
+origin_agent: "human"

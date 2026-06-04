@@ -1,0 +1,15 @@
+id: TKT-007
+title: "Template-level test verifies BA-v2 AC store wiring is present"
+component: ticket-creation
+status: active
+created_by: "tickets/00_inbox/epics/EPIC-UnifyACPipeline/01_v2_pipeline_ac_store_alignment.md"
+criteria: |
+  Given a test in unit_tests/
+  When it reads templates/agents/business-analyst-v2.md
+  Then it asserts the file contains all of: ac_creations, ac_amendments, origin_agent, docs/acceptance-criteria
+   And the test verifies wiring is present without requiring a live agent invocation
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []
+origin_agent: "human"

@@ -1,0 +1,16 @@
+id: TKT-001
+title: "BA-v2 queries AC store before elicitation"
+component: ticket-creation
+status: active
+created_by: "tickets/00_inbox/epics/EPIC-UnifyACPipeline/01_v2_pipeline_ac_store_alignment.md"
+criteria: |
+  Given business-analyst-v2.md is invoked on a ticket request
+  When docs/acceptance-criteria/index.yaml exists
+  Then the BA reads the AC store and loads active ACs for the relevant component(s)
+   And classifies each proposed AC as "covered by existing", "amends existing", or "genuinely new behaviour"
+   And this step runs before §1 elicitation
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []
+origin_agent: "human"

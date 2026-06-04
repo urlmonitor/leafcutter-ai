@@ -1,0 +1,15 @@
+id: TKT-003
+title: "BA-v2 stamps origin_agent as business-analyst-v2"
+component: ticket-creation
+status: active
+created_by: "tickets/00_inbox/epics/EPIC-UnifyACPipeline/01_v2_pipeline_ac_store_alignment.md"
+criteria: |
+  Given business-analyst-v2.md creates an ac_creations entry
+  When the entry is populated
+  Then origin_agent is set to "business-analyst-v2" (not "business-analyst")
+   And compliance auditing can distinguish v1 vs v2 machine-generated ACs
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []
+origin_agent: "human"

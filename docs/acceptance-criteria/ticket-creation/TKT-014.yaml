@@ -1,0 +1,15 @@
+id: TKT-014
+title: "ac-validator runs store alignment script and surfaces blocker on failure"
+component: ticket-creation
+status: active
+created_by: "tickets/00_inbox/epics/EPIC-UnifyACPipeline/02_ac_store_inline_alignment_hook.md"
+criteria: |
+  Given ac-validator.md template has a Step 2c
+  When it runs check_v2_ac_store_alignment.py --ticket <ticket_path>
+   And the script exits non-zero
+  Then the ac-validator includes each stderr/stdout ERROR line as a blocker finding in its verdict
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []
+origin_agent: "human"

@@ -1,0 +1,15 @@
+id: TKT-008
+title: "Hook exits 0 when ticket references a valid active AC"
+component: ticket-creation
+status: active
+created_by: "tickets/00_inbox/epics/EPIC-UnifyACPipeline/02_ac_store_inline_alignment_hook.md"
+criteria: |
+  Given a staged ticket file contains "implements AC-FIN-001"
+   And docs/acceptance-criteria/finalize/FIN-001.yaml exists with status: active
+  When the check_v2_ac_store_alignment hook runs
+  Then it exits 0 with no output
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []
+origin_agent: "human"

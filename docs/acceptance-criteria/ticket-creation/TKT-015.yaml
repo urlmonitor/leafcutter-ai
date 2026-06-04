@@ -1,0 +1,17 @@
+id: TKT-015
+title: "Hook is registered in commit_guardian.json hooks_manifest"
+component: ticket-creation
+status: active
+created_by: "tickets/00_inbox/epics/EPIC-UnifyACPipeline/02_ac_store_inline_alignment_hook.md"
+criteria: |
+  Given templates/commit-guardian/commit_guardian.json hooks_manifest
+  When the manifest is read
+  Then it contains an entry with id "check-v2-ac-store-alignment"
+   And files pattern is "^tickets/.*\\.md$"
+   And pass_filenames is false
+   And stages is ["pre-commit"]
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []
+origin_agent: "human"

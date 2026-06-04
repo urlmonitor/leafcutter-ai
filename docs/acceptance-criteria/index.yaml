@@ -1,0 +1,23 @@
+# docs/acceptance-criteria/index.yaml
+#
+# Component registry for the AC store.
+# Each entry declares one component namespace for acceptance criteria.
+#
+# Fields:
+#   id          — machine-readable identifier (kebab-case, unique)
+#   prefix      — short ALL-CAPS prefix used in AC file names (e.g. FIN-001.yaml)
+#   description — human-readable description of what this component's ACs cover
+#   owner       — component owner identifier; null means ownership is unassigned
+#
+# Add a new entry for each component that has its own AC namespace.
+# Run check_ac_schema.py (installed by build.py) to validate this file.
+
+components:
+  - id: finalize
+    prefix: FIN
+    description: "ACs for the finalize-feature workflow"
+    owner: build_pipeline
+  - id: ticket-creation
+    prefix: TKT
+    description: "ACs for the ticket-creation pipeline (v1 and v2)"
+    owner: build_pipeline

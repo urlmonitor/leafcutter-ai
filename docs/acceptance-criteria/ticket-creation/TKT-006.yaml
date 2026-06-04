@@ -1,0 +1,17 @@
+id: TKT-006
+title: "BA-v2 gracefully degrades when AC store does not exist"
+component: ticket-creation
+status: active
+created_by: "tickets/00_inbox/epics/EPIC-UnifyACPipeline/01_v2_pipeline_ac_store_alignment.md"
+criteria: |
+  Given docs/acceptance-criteria/ does not exist in the target project
+  When business-analyst-v2.md runs
+  Then ac_creations is set to []
+   And ac_amendments is set to []
+   And the AC query step is skipped without hard-failing
+   And the pipeline continues normally
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []
+origin_agent: "human"
