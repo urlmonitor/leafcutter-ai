@@ -1,6 +1,6 @@
 ---
 title: "Author test-failure-triage agent template"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
@@ -28,7 +28,7 @@ agents:
   user-surface-smoker: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 03: Author test-failure-triage agent template
@@ -152,7 +152,7 @@ Then no validation errors are reported for the new agent entry
 - [x] test-runner — 2026-06-04 10:10
 - [x] pr-reviewer — 2026-06-04 10:15
 - [x] commit — 2026-06-04 10:20
-- [ ] pull-request
+- [x] pull-request — 2026-06-04 10:25
 
 ## Comments
 
@@ -209,6 +209,14 @@ completion_manifest:
   files_staged_explicitly: true
   commit_created: true
   only_in_scope_files_committed: true
+Committed 3 files: templates/agents/test-failure-triage.md (new), config/agent_registry.json, ticket file. SHA: 63cc2a6. Staged by explicit path only. PRE_COMMIT_ALLOW_NO_CONFIG=1 used (no .pre-commit-config.yaml in worktree).
+
+### 2026-06-04 10:25 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_92efbc5e
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+Branch EPIC-FinalizeFeatureHardening pushed to origin (commit 63cc2a6). Existing PR #45 (https://github.com/urlmonitor/leafcutter-ai/pull/45) covers this epic branch — one PR per epic per convention. Ticket 03 commits are included in the PR.
 
 ## Implementation Tasks
 
