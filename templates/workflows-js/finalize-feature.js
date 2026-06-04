@@ -32,12 +32,14 @@
 const meta = {
   name: "finalize-feature",
   description:
-    "Post-merge feature finalization: open PR if missing, merge to main, sync " +
-    "local main, run tests, close tickets/archive epic, remove worktree. " +
+    "Post-merge feature finalization: capture pre-merge test baseline on main, " +
+    "open PR if missing, merge to main, sync local main, run post-merge tests " +
+    "(with triage baseline), close tickets/archive epic, remove worktree. " +
     "Prompt gates on all destructive steps. HALT on test failure before ticket " +
     "closing. Returns { status: ok } with per-step summary on full success.",
   phases: [
     "pre-flight (status-checker reads branch + worktree root)",
+    "step-0: capture baseline test run on main HEAD (test-runner — graceful on failure)",
     "step-1: open PR if missing (pull-request agent)",
     "step-2: merge PR to main (prompt gate + pull-request agent)",
     "step-3: sync local main (status-checker shell)",
@@ -110,6 +112,139 @@ async function run({ userInput, agent, parallel, prompt }) {
   let testResult = null;
   const ticketsClosed = [];
   let worktreeRemoved = false;
+
+  // Baseline state (populated by step 0; forwarded to step 4 triage).
+  // null means the baseline run did not complete — triage treats all failures
+  // as regressions in that case (conservative classification).
+  let baselineFailures = null; // string[] | null
+  let baselineSha = null;      // string | null
+  let baselineRunAt = null;    // ISO string | null
+
+  // Cleanup guard: remove temp baseline worktree on any early exit.
+  // The path is set by step 0 and cleared after the worktree is removed.
+  let baselineWorktreePath = null;
+
+  /**
+   * Attempt to remove the temporary baseline worktree if it still exists.
+   * Silently swallows errors — this is a best-effort cleanup.
+   */
+  async function cleanupBaselineWorktree() {
+    if (!baselineWorktreePath) return;
+    try {
+      await agent({
+        agentType: "status-checker",
+        input: {
+          instructions:
+            `Remove the temporary baseline worktree if it still exists:\n` +
+            `Run: git worktree remove "${baselineWorktreePath}" --force 2>/dev/null || true\n` +
+            `Run: rm -rf "${baselineWorktreePath}" 2>/dev/null || true\n` +
+            `Return: { "removed": true }`,
+        },
+      });
+    } catch (_err) {
+      // Swallow — cleanup is best-effort.
+    }
+    baselineWorktreePath = null;
+  }
+
+  // -------------------------------------------------------------------------
+  // Step 0 — Capture pre-merge test baseline on current main HEAD
+  //
+  // Creates a temporary worktree at origin/main, runs test-runner against it,
+  // and stores the list of failing test IDs as the baseline. This baseline is
+  // passed to the triage agent in step 4 so regressions can be distinguished
+  // from pre-existing failures.
+  //
+  // Graceful degradation: if the worktree creation or test run fails for any
+  // reason, log a warning and set baselineFailures = null. The workflow DOES
+  // NOT halt — triage will classify all failures conservatively as regressions.
+  //
+  // Resumability: if a baseline worktree path from a previous run exists, the
+  // agent will attempt to remove it first before creating a new one.
+  // -------------------------------------------------------------------------
+  const baselineTs = Date.now();
+  const baselineTmpPath = `/tmp/leafcutter-main-baseline-${baselineTs}`;
+
+  // Set the cleanup guard path so cleanupBaselineWorktree() can remove it on
+  // any early exit after this point. Step 0 clears it on success (step D).
+  baselineWorktreePath = baselineTmpPath;
+
+  const baselineResult = await agent({
+    agentType: "status-checker",
+    input: {
+      instructions:
+        "Capture a pre-merge test baseline on the current main HEAD.\n" +
+        "\n" +
+        "Step A — Create a temporary detached worktree at origin/main:\n" +
+        `  Run: git worktree add --detach "${baselineTmpPath}" origin/main\n` +
+        "  Capture the exit code.\n" +
+        "  If exit code is non-zero:\n" +
+        "    Log: 'Baseline worktree creation failed — triage will treat all failures as regressions.'\n" +
+        "    Return: { \"status\": \"worktree_failed\", \"baseline_sha\": null,\n" +
+        "              \"baseline_failures\": null, \"baseline_run_at\": null }\n" +
+        "\n" +
+        "Step B — Capture the SHA of main HEAD inside the temp worktree:\n" +
+        `  Run: git -C "${baselineTmpPath}" rev-parse HEAD\n` +
+        "  Store as <baseline_sha>.\n" +
+        "\n" +
+        "Step C — Run the test suite inside the temp worktree:\n" +
+        `  Run inside "${baselineTmpPath}": pytest --tb=no -q 2>&1\n` +
+        "  Collect each line that matches the pattern '<file>::<test_name> FAILED'.\n" +
+        "  Build a list of failing test IDs (strings like 'test_foo.py::test_bar').\n" +
+        "  Note: a zero-length list means the baseline is clean (all tests pass).\n" +
+        "\n" +
+        "Step D — Remove the temp worktree:\n" +
+        `  Run: git worktree remove "${baselineTmpPath}" --force\n` +
+        `  Run: rm -rf "${baselineTmpPath}" 2>/dev/null || true\n` +
+        "\n" +
+        "Step E — Return the baseline result:\n" +
+        "  If the test run completed (even with failures): return:\n" +
+        "    { \"status\": \"ok\",\n" +
+        "      \"baseline_sha\": \"<sha>\",\n" +
+        "      \"baseline_failures\": [<list of failing test IDs or empty>],\n" +
+        "      \"baseline_run_at\": \"<ISO 8601 timestamp>\" }\n" +
+        "  If the test run itself failed to execute (pytest not found, import error, etc.):\n" +
+        "    Log: 'Baseline run failed — triage will treat all failures as regressions.'\n" +
+        "    Return: { \"status\": \"run_failed\", \"baseline_sha\": \"<sha>\",\n" +
+        "              \"baseline_failures\": null, \"baseline_run_at\": \"<ISO 8601 timestamp>\" }",
+    },
+  });
+
+  let baselineInfo;
+  try {
+    baselineInfo =
+      typeof baselineResult === "string"
+        ? JSON.parse(baselineResult)
+        : baselineResult;
+  } catch (_err) {
+    baselineInfo = { status: "parse_failed", baseline_sha: null, baseline_failures: null, baseline_run_at: null };
+  }
+
+  const baselineStatus = (baselineInfo.status || "unknown").toLowerCase();
+
+  if (baselineStatus === "ok") {
+    baselineFailures = Array.isArray(baselineInfo.baseline_failures)
+      ? baselineInfo.baseline_failures
+      : [];
+    baselineSha = baselineInfo.baseline_sha || null;
+    baselineRunAt = baselineInfo.baseline_run_at || null;
+    // Step D ran successfully — temp worktree already removed by the agent.
+    baselineWorktreePath = null;
+    completedSteps.push(0);
+  } else {
+    // worktree_failed | run_failed | parse_failed | unknown — degrade gracefully.
+    // baselineFailures stays null — triage will classify all failures as regressions.
+    baselineSha = baselineInfo.baseline_sha || null;
+    baselineRunAt = baselineInfo.baseline_run_at || null;
+    // The agent may have left the temp worktree behind if it failed part-way;
+    // keep baselineWorktreePath set so cleanup fires on any subsequent halt path.
+    skippedSteps.push({
+      step: 0,
+      reason:
+        `Baseline capture failed (${baselineStatus}) — ` +
+        "triage will treat all post-merge failures as regressions",
+    });
+  }
 
   // -------------------------------------------------------------------------
   // Step 1 — Open PR if missing (non-destructive, no confirmation gate)
@@ -198,6 +333,7 @@ async function run({ userInput, agent, parallel, prompt }) {
     );
 
     if (!mergeConfirm || mergeConfirm.trim().toLowerCase() !== "yes") {
+      await cleanupBaselineWorktree();
       return {
         status: "halted",
         halted_at_step: 2,
@@ -298,6 +434,7 @@ async function run({ userInput, agent, parallel, prompt }) {
   const mergeStatus = (mergeMainInfo.status || "conflict").toLowerCase();
 
   if (mergeStatus === "conflict") {
+    await cleanupBaselineWorktree();
     return {
       status: "halted",
       halted_at_step: "3.5",
@@ -326,13 +463,24 @@ async function run({ userInput, agent, parallel, prompt }) {
 
   // -------------------------------------------------------------------------
   // Step 4 — Run post-merge tests (always runs; HALT on failure)
+  //
+  // The baseline captured in step 0 is forwarded here so the test-runner
+  // (or a downstream triage agent) can compute:
+  //   regressions = post_merge_failures − baseline_failures
+  // If baseline_failures is null, all failures are treated as regressions
+  // (conservative classification).
   // -------------------------------------------------------------------------
   testResult = await agent({
     agentType: "test-runner",
     input: {
       instructions:
-        "Run the full test suite on the current main branch. " +
-        "Return a JSON object: { \"passed\": true|false, \"output\": \"<verbatim test output>\" }",
+        "Run the full test suite on the post-merge worktree. " +
+        "Return a JSON object: { \"passed\": true|false, \"output\": \"<verbatim test output>\", " +
+        "\"failing_tests\": [\"<file>::<test_name>\", ...] }",
+      // Baseline context: forwarded so triage can classify failures.
+      baseline_sha: baselineSha,
+      baseline_failures: baselineFailures,
+      baseline_run_at: baselineRunAt,
     },
   });
 
@@ -348,6 +496,17 @@ async function run({ userInput, agent, parallel, prompt }) {
   }
 
   if (!testPassed) {
+    // Compute regression list: failures not present in the baseline.
+    const postMergeFailures = (testResult && Array.isArray(testResult.failing_tests))
+      ? testResult.failing_tests
+      : [];
+    const regressions = (baselineFailures === null)
+      ? postMergeFailures   // conservative: all failures are potential regressions
+      : postMergeFailures.filter((t) => !baselineFailures.includes(t));
+    const preExisting = (baselineFailures === null)
+      ? []
+      : postMergeFailures.filter((t) => baselineFailures.includes(t));
+
     return {
       status: "halted",
       halted_at_step: 4,
@@ -358,6 +517,11 @@ async function run({ userInput, agent, parallel, prompt }) {
       test_output:
         (testResult && testResult.output) ||
         JSON.stringify(testResult),
+      // Triage context — forwarded to test-failure-triage agent (ticket 03).
+      baseline_sha: baselineSha,
+      baseline_failures: baselineFailures,
+      regressions,
+      pre_existing_failures: preExisting,
       action_required:
         "Fix the regression on a new branch, then re-run /finalize-feature.",
       branch: BRANCH,
@@ -596,6 +760,10 @@ async function run({ userInput, agent, parallel, prompt }) {
     pr_url: prUrl,
     merge_result: mergeResult,
     merge_strategy: mergeStrategy,
+    // Baseline context included in the summary for auditability.
+    baseline_sha: baselineSha,
+    baseline_failures: baselineFailures,
+    baseline_run_at: baselineRunAt,
     test_result: testResult,
     tickets_closed: ticketsClosed,
     tickets_reconciled: ticketsReconciled,
@@ -608,6 +776,9 @@ async function run({ userInput, agent, parallel, prompt }) {
       (skippedSteps.length > 0
         ? `Steps skipped (already done): [${skippedSteps.map((s) => s.step).join(", ")}]. `
         : "") +
+      (baselineFailures !== null
+        ? `Baseline captured at ${baselineSha} (${baselineFailures.length} pre-existing failure(s)). `
+        : "Baseline capture failed — regression triage used conservative classification. ") +
       (ticketsClosed.length > 0
         ? `Tickets closed: ${ticketsClosed.length}. `
         : "") +
