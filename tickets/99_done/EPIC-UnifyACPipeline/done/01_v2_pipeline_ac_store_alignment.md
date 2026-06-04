@@ -1,6 +1,6 @@
 ---
 title: "Wire AC store query and ac_creations/ac_amendments into the v2 ticket-creation pipeline"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
@@ -23,8 +23,8 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   user-surface-smoker: not_needed
@@ -196,8 +196,8 @@ within the v2 files and must not modify `templates/agents/business-analyst.md`,
 - [x] python-coder — 2026-06-04 10:15
 - [x] test-runner — 2026-06-04 10:20
 - [x] pr-reviewer — 2026-06-04 10:25
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-04 10:30
+- [x] pull-request — 2026-06-04 10:35
 
 ## Comments
 
@@ -262,3 +262,19 @@ completion_manifest:
   v1_templates_untouched: true
   tests_green: true
 Reviewed changes to business-analyst-v2.md (§0 AC Store Query added before §1, output contract extended with ac_creations/ac_amendments including origin_agent: "business-analyst-v2"), create-ticket-v2.md (Step 2.5 added inline with identical semantics to ticket-wiring Step 2.5), and tests/test_v2_pipeline_ac_store_wiring.py (5 tests, all green). Critical constraint preserved: v1 templates (business-analyst.md, create-ticket.md, ticket-wiring/SKILL.md) are NOT modified. All 7 ACs satisfied. Approving.
+
+### 2026-06-04 10:30 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  commit_created: true
+  files_staged_by_path: true
+  no_force_push: true
+Committed SHA d554ba9: "feat(v2-pipeline): wire AC store query and ac_creations/ac_amendments into v2 ticket-creation pipeline". 4 files changed, 334 insertions(+), 20 deletions(-). Pre-commit allowed with PRE_COMMIT_ALLOW_NO_CONFIG=1 (no .pre-commit-config.yaml in this worktree). Commit lock acquired before staging, released after commit.
+
+### 2026-06-04 10:35 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_url_captured: true
+Pushed branch EPIC-UnifyACPipeline to origin (git@github.com-urlmonitor:urlmonitor/leafcutter-ai.git). PR created at https://github.com/urlmonitor/leafcutter-ai/pull/52 — "feat(v2-pipeline): wire AC store query into v2 ticket-creation pipeline".
