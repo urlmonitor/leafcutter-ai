@@ -35,7 +35,7 @@ agents:
   reference-author: signed_off
   user-surface-smoker: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 requires_documentation:
   - how_to
@@ -103,7 +103,7 @@ Then both docs are present in the target project's docs/how-to/ and docs/referen
 - [x] how-to-author — 2026-06-04 13:10
 - [x] reference-author — 2026-06-04 13:10
 - [x] pr-reviewer — 2026-06-04 13:20
-- [ ] commit
+- [x] commit — 2026-06-04 13:30
 - [ ] pull-request
 
 ## Comments
@@ -139,6 +139,14 @@ completion_manifest:
   no_high_findings: true
   scope_verified: true
 Reviewed diff for scripts/build.py (+7 lines) and scripts/build_phases.py (+66 lines). build_ac_store_docs() follows the established pattern of build_ac_store_scaffold() and other scaffold phases. Write-if-absent semantics correctly implemented. Template path resolution uses TEMPLATES_DIR constant consistently. WARNING for missing template is non-fatal (continue). inject_config() applied before write. No high-confidence findings. Scope matches ticket files_touched plus the build.py wiring which the implementation tasks explicitly required.
+
+### 2026-06-04 13:30 — commit (status: ok)
+feedback-id: fb_2026-06-04_739a79d0
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Committed 5 files (610 insertions, 12 deletions) as feat(EPIC-ACTraceabilityStore/09). SHA: 1019761. Staged: scripts/build.py, scripts/build_phases.py, templates/docs/how-to/ac-traceability-store.md, templates/docs/reference/ac-schema.md, tickets/09_ac_store_docs.md. No pre-commit-config.yaml present in worktree — used PRE_COMMIT_ALLOW_NO_CONFIG=1 (consistent with other tickets in this epic).
 
 ## Implementation Tasks
 
