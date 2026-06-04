@@ -1,0 +1,15 @@
+id: BP-003
+title: "_resolve_precommit_cmd() returns a valid command when pre-commit is on PATH"
+component: build_pipeline
+status: active
+criteria: |
+  Given _resolve_precommit_cmd() is called
+  When shutil.which("pre-commit") returns a non-empty path string
+  Then _resolve_precommit_cmd() returns ["pre-commit"] without probing further fallbacks
+   And install_hooks() proceeds to run "pre-commit install" via subprocess
+origin_agent: "business-analyst-v2"
+created_by_ticket: "tickets/00_inbox/TICKET-20260604-PrecommitBinaryResolution.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

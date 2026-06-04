@@ -1,0 +1,19 @@
+id: BP-001
+title: "_resolve_precommit_cmd() validates executability of known-path candidates"
+component: build_pipeline
+status: active
+criteria: |
+  Given _resolve_precommit_cmd() is called
+  When shutil.which("pre-commit") returns None
+  And importlib.util.find_spec("pre_commit") returns None
+  And _precommit_known_paths() yields a path that exists as a file
+  But that file is not executable (or returns non-zero on --version probe)
+  Then _resolve_precommit_cmd() does NOT return that path
+   And returns None instead
+   And install_hooks() returns "skipped (pre-commit not found)"
+origin_agent: "business-analyst-v2"
+created_by_ticket: "tickets/00_inbox/TICKET-20260604-PrecommitBinaryResolution.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

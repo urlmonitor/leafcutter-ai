@@ -1,0 +1,18 @@
+id: BP-002
+title: "install_hooks() emits a single WARNING when pre-commit binary is unresolvable"
+component: build_pipeline
+status: active
+criteria: |
+  Given install_hooks(target_root, dry_run=False) is called
+  When _resolve_precommit_cmd() returns None (all three detection tiers fail)
+  Then install_hooks() prints exactly one WARNING line to output (not an ERROR)
+   And the warning text includes the pip install remedy instruction
+   And install_hooks() returns "skipped (pre-commit not found)"
+   And no CalledProcessError is raised
+   And no subprocess.run call for "pre-commit install" is made
+origin_agent: "business-analyst-v2"
+created_by_ticket: "tickets/00_inbox/TICKET-20260604-PrecommitBinaryResolution.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []
