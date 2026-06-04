@@ -17,10 +17,10 @@ files_touched:
   - templates/commit-guardian/commit_guardian.json
 agents:
   architect-review: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -93,19 +93,61 @@ Then it exits 0 silently (hook degrades gracefully when store not yet installed)
 
 ## Sign-offs
 
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
+- [x] test-writer — 2026-06-04 14:00
+- [x] python-coder — 2026-06-04 14:15
+- [x] test-runner — 2026-06-04 14:20
 - [ ] pr-reviewer
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-06-04 14:00 — test-writer (status: ok)
+feedback-id: fb_2026-06-04_4be81ad6
+completion_manifest:
+  test_stubs_created: true
+  all_tests_red: true
+  red_baseline_captured: true
+red_baseline:
+  - test_name: TestEndToEndCheckAcCoverage::test_missing_ac_dir_exits_0
+    file: unit_tests/commit_guardian/test_check_ac_coverage.py
+    error: "AssertionError: 2 != 0 : Expected exit 0, got 2 — check_ac_coverage.py script not yet implemented"
+  - test_name: TestEndToEndCheckAcCoverage::test_uncovered_active_ac_warns_exits_0
+    file: unit_tests/commit_guardian/test_check_ac_coverage.py
+    error: "AssertionError: 2 != 0 : Expected exit 0, got 2 — check_ac_coverage.py script not yet implemented"
+  - test_name: TestEndToEndCheckAcCoverage::test_covered_ac_exits_0_no_warning
+    file: unit_tests/commit_guardian/test_check_ac_coverage.py
+    error: "AssertionError: 2 != 0 : Expected exit 0, got 2 — check_ac_coverage.py script not yet implemented"
+  - test_name: TestEndToEndCheckAcCoverage::test_deprecated_ac_no_warning
+    file: unit_tests/commit_guardian/test_check_ac_coverage.py
+    error: "AssertionError: 2 != 0 : Expected exit 0, got 2 — check_ac_coverage.py script not yet implemented"
+  - test_name: TestEndToEndCheckAcCoverage::test_multiple_uncovered_acs_all_warned
+    file: unit_tests/commit_guardian/test_check_ac_coverage.py
+    error: "AssertionError: 2 != 0 : Expected exit 0, got 2 — check_ac_coverage.py script not yet implemented"
+Wrote 17 test stubs for check_ac_coverage.py in unit_tests/commit_guardian/test_check_ac_coverage.py. All subprocess tests are RED (exit 2 because script does not exist). Unit-level tests are properly skipped pending import. Red baseline captured above. Handoff to python-coder.
+
+### 2026-06-04 14:15 — python-coder (status: ok)
+feedback-id: fb_2026-06-04_eab6e992
+completion_manifest:
+  check_ac_coverage_written: true
+  hook_registered_in_commit_guardian_json: true
+  stdlib_only_no_dependencies: true
+  graceful_degradation_on_missing_ac_dir: true
+  always_exits_0: true
+  all_tests_green: true
+Implemented templates/commit-guardian/check_ac_coverage.py with load_active_ac_ids(), collect_covered_ids(), and report_uncovered() functions using stdlib only (re, pathlib, argparse). Registered as check-ac-coverage hook in commit_guardian.json hooks_manifest with pass_filenames: false. Also fixed test import mechanism to use importlib.util for robust path resolution. All 17 tests green; ruff E722/BLE001/TRY checks pass on both files.
+
+### 2026-06-04 14:20 — test-runner (status: ok)
+feedback-id: fb_2026-06-04_8d208ca0
+completion_manifest:
+  target_tests_all_green: true
+  broader_suite_regression_free: true
+Ran unit_tests/commit_guardian/test_check_ac_coverage.py: 17/17 passed. Ran the full unit_tests/commit_guardian/ suite: 97/97 passed. No regressions introduced.
+
 ## Implementation Tasks
 
 ### python-coder
-- [ ] Write `templates/commit-guardian/check_ac_coverage.py`:
+- [x] Write `templates/commit-guardian/check_ac_coverage.py`:
   - Stdlib only (re, yaml if available; manual YAML parse for `id:` and
     `status:` if yaml not installed).
   - `load_active_ac_ids(ac_dir)` — recursively glob `*.yaml`, parse `id`
@@ -117,11 +159,11 @@ Then it exits 0 silently (hook degrades gracefully when store not yet installed)
   - Graceful degradation: if `docs/acceptance-criteria/` does not exist,
     exit 0 with no output.
   - Always exit 0 (warnings only, never block).
-- [ ] Register `check_ac_coverage.py` in `commit_guardian.json` hooks
+- [x] Register `check_ac_coverage.py` in `commit_guardian.json` hooks
   (pass_filenames: false, no file filter — runs on every commit).
 
 ### test-writer
-- [ ] Write `unit_tests/commit_guardian/test_check_ac_coverage.py`:
+- [x] Write `unit_tests/commit_guardian/test_check_ac_coverage.py`:
   - `test_uncovered_active_ac_warns` — active AC with no test coverage prints warning.
   - `test_covered_ac_passes_silently` — active AC with coverage emits no warning.
   - `test_deprecated_ac_ignored` — deprecated AC with no coverage emits no warning.
