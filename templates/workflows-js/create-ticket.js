@@ -12,7 +12,7 @@
  * Fallback: for older installs, create-ticket.md invokes the agent directly.
  */
 
-const meta = {
+export const meta = {
   name: "create-ticket",
   description:
     "Create a well-formed ticket by sequentially running business-analyst, " +

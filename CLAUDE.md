@@ -2,6 +2,26 @@
 
 This file provides guidance to Claude Code when working in this repository.
 
+## Shell Convention — MANDATORY
+
+Every Bash tool call MUST be a single, simple command. Never chain with `&&`, `;`, `||`, pipes to other commands, or multi-line scripts. Never use `cd` — use absolute paths or `git -C` instead.
+
+**Wrong** (triggers permission prompt, breaks auto-allow):
+```
+cd /some/project && python script.py --flag "value"
+```
+
+**Right** (single command, auto-allowed):
+```
+python /some/project/script.py --flag "value"
+```
+
+Rules:
+1. Use absolute paths for the script AND its arguments.
+2. Use `git -C <path>` instead of `cd <path> && git`.
+3. Redirect stderr to `/tmp/` (not a relative path).
+4. If a command needs environment variables, use `ENV=val command` syntax — that is a single command, not a chain.
+
 ## Repository Structure
 
 This repo IS the leafcutter-ai package. Origin: `git@github.com-urlmonitor:urlmonitor/leafcutter-ai.git`

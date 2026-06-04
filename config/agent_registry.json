@@ -577,7 +577,8 @@
             "template_path": "templates/agents/code-review-architect.md",
             "model": "opus",
             "skills_used": [],
-            "requires_ticket_section": false
+            "requires_ticket_section": false,
+            "requires_verification": true
         },
         {
             "id": "commit",
