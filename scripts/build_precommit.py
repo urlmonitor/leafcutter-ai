@@ -237,6 +237,39 @@ def _build_output_lines(clean_lines: list[str], hook_yaml_blocks: list[str]) -> 
     return "\n".join(output_lines) + "\n"
 
 
+def _check_hook_script_integrity(
+    hooks: list[dict[str, Any]], cg_dir: Path
+) -> None:
+    """Warn for every registered hook whose script is absent at ``cg_dir``.
+
+    Iterates the raw (pre-template-var-substitution) ``hooks`` list from
+    ``hooks_manifest.hooks``.  For each entry, the script filename is the
+    last whitespace-delimited token of the ``entry`` field; ``Path(...).name``
+    strips any path prefix (including ``{{config.output_root}}``).
+
+    Emits a ``_log.warning`` for each missing script; does **not** raise or
+    return an error — the build continues normally.  When all scripts are
+    present, the function returns silently.
+
+    Args:
+        hooks: List of raw hook dicts before template-variable resolution.
+        cg_dir: Canonical template directory that should contain each script.
+    """
+    for hook in hooks:
+        entry = hook.get("entry", "")
+        tokens = entry.split()
+        if not tokens:
+            continue
+        script_name = Path(tokens[-1]).name
+        if script_name.endswith(".py") and not (cg_dir / script_name).exists():
+            _log.warning(
+                "Hook '%s': script '%s' not found at canonical path %s",
+                hook.get("id", "?"),
+                script_name,
+                cg_dir / script_name,
+            )
+
+
 def _resolve_template_vars(
     hooks: list[dict[str, Any]], config: dict[str, Any]
 ) -> list[dict[str, Any]]:
@@ -296,6 +329,11 @@ def build_precommit_config(target_root: Path, config: dict[str, Any],
     if not hooks:
         return 0
 
+    # Integrity check: warn when a registered hook script is absent at cg_dir.
+    # Runs on raw hooks (before template-var substitution) so the filename
+    # extraction via Path(tokens[-1]).name works regardless of template vars.
+    _check_hook_script_integrity(hooks, cg_dir)
+
     hooks = _resolve_template_vars(hooks, config)
 
     output_path = target_root / "pre-commit-config.yaml"
@@ -336,4 +374,5 @@ def build_precommit_config(target_root: Path, config: dict[str, Any],
 # - 2026-05-14 02:30 [epic-supervisor]: Added test fixtures for _strip_package_managed_blocks / _build_output_lines; four YAML scenarios covered. (#TICKETLESS reason=build-precommit-test)
 # - 2026-05-14 00:40 [epic-supervisor]: Fixed _build_output_lines to insert package-managed hooks BEFORE DECISION HISTORY sentinel. (#TICKETLESS reason=build-precommit-fix)
 # - 2026-05-18 11:15 [EPIC-PortableInstallHardening/T03]: Updated cg_dir to canonical templates/scripts/commit_guardian/ with backward-compat fallback. (#EPIC-PortableInstallHardening/T03)
+# - 2026-06-04 12:00 [EPIC-BuildPathCorrectness/T02]: Added _check_hook_script_integrity() helper and call in build_precommit_config() to warn on missing hook scripts at canonical cg_dir. (#EPIC-BuildPathCorrectness/T02)
 # ===========================================================================
