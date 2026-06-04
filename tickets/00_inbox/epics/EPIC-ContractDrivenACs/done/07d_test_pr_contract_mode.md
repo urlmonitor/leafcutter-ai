@@ -1,6 +1,6 @@
 ---
 title: "Add contract-aware mode to test-writer and pr-reviewer"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-03
