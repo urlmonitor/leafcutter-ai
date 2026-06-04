@@ -26,6 +26,12 @@ HOOK_SCRIPT = (
     / "check_ac_schema.py"
 )
 
+SCHEMA_FILE = (
+    Path(__file__).parent.parent.parent
+    / "config"
+    / "ac_store_schema.json"
+)
+
 # Minimal valid AC YAML content used as a baseline in multiple tests.
 _VALID_AC_YAML = textwrap.dedent("""\
     id: FIN-001
@@ -43,6 +49,10 @@ _VALID_AC_YAML = textwrap.dedent("""\
 def _write_ac_file(directory: Path, filename: str, content: str) -> Path:
     """Write a YAML file under directory/docs/acceptance-criteria/ and return its path.
 
+    Also copies the project schema file to directory/config/ac_store_schema.json so
+    that jsonschema-based validation (including optional-field minLength checks) is
+    active for every test that uses this helper.
+
     Args:
         directory: Temporary root directory to write into.
         filename: Filename for the AC YAML file (e.g. "FIN-001.yaml").
@@ -51,6 +61,14 @@ def _write_ac_file(directory: Path, filename: str, content: str) -> Path:
     Returns:
         Path to the written file.
     """
+    import shutil
+
+    # Copy schema so the hook finds it and uses jsonschema validation.
+    if SCHEMA_FILE.is_file():
+        config_dir = directory / "config"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(SCHEMA_FILE, config_dir / "ac_store_schema.json")
+
     ac_dir = directory / "docs" / "acceptance-criteria"
     ac_dir.mkdir(parents=True, exist_ok=True)
     path = ac_dir / filename
@@ -132,7 +150,9 @@ class TestInvalidStatus(unittest.TestCase):
             _write_ac_file(root, "FIN-001.yaml", content)
             result = _run_hook(root)
         self.assertEqual(result.returncode, 1)
-        self.assertIn("status", result.stderr)
+        # jsonschema produces "'unknown' is not one of ..." or manual path produces
+        # "invalid status 'unknown'..." — both contain "unknown".
+        self.assertIn("unknown", result.stderr)
 
 
 class TestInvalidIdFormat(unittest.TestCase):
@@ -192,6 +212,66 @@ class TestNoAcDirectory(unittest.TestCase):
             # Do not create the AC directory.
             result = _run_hook(root)
         self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+
+class TestOriginAgentOptional(unittest.TestCase):
+    """AC YAML without origin_agent should pass validation (field is optional)."""
+
+    def test_origin_agent_optional(self) -> None:
+        """A valid AC YAML without origin_agent exits 0 (field is optional)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-001.yaml", _VALID_AC_YAML)
+            result = _run_hook(root)
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+
+class TestOriginAgentValidString(unittest.TestCase):
+    """AC YAML with a valid origin_agent string should pass validation."""
+
+    def test_origin_agent_valid_string(self) -> None:
+        """A YAML file with origin_agent: business-analyst exits 0."""
+        content = textwrap.dedent("""\
+            id: FIN-001
+            title: "With origin agent"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            origin_agent: "business-analyst"
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-001.yaml", content)
+            result = _run_hook(root)
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+
+class TestOriginAgentEmptyStringBlocked(unittest.TestCase):
+    """AC YAML with origin_agent: "" should fail validation (minLength: 1)."""
+
+    def test_origin_agent_empty_string_blocked(self) -> None:
+        """A YAML file with origin_agent: empty string exits 1 (minLength violation)."""
+        content = textwrap.dedent("""\
+            id: FIN-001
+            title: "Empty origin agent"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            origin_agent: ""
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-001.yaml", content)
+            result = _run_hook(root)
+        self.assertEqual(result.returncode, 1)
 
 
 if __name__ == "__main__":

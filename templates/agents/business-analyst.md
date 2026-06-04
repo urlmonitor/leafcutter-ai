@@ -148,9 +148,42 @@ Return a JSON block with **all** of these fields:
       "note": "<truncated note, 120 chars max>",
       "severity": "<severity>"
     }
+  ],
+  "ac_amendments": [
+    {
+      "ac_id": "<existing AC ID e.g. FIN-001>",
+      "change": "<one-sentence description of what changes>",
+      "new_criteria": "<full Gherkin scenario body after the amendment>"
+    }
+  ],
+  "ac_creations": [
+    {
+      "proposed_id": "<proposed AC ID e.g. FIN-004>",
+      "title": "<one-line AC description>",
+      "criteria": "<full Gherkin Given/When/Then scenario body>",
+      "origin_agent": "business-analyst"
+    }
   ]
 }
 ```
+
+### ac_creations and ac_amendments fields
+
+Both fields are **optional** — include them only when you have compared the
+ticket's proposed criteria against the existing AC store and found new or
+amended entries.
+
+- `ac_amendments: []` — default when no existing ACs need to change.
+- `ac_creations: []` — default when no new ACs need to be created.
+
+**Each `ac_creations` entry must include an `origin_agent` field set to
+`"business-analyst"`.** This enables compliance auditing of machine-generated
+ACs (which should be reviewed before entering the store). The ticket-wiring
+skill reads `origin_agent` from each `ac_creations` entry and writes it into
+the YAML file alongside the other fields.
+
+When `docs/acceptance-criteria/` does not exist in the target project (pre-AC
+store install), set both fields to `[]` and skip the AC query step.
 
 ### routing_decision logic
 

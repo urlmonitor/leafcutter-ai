@@ -86,6 +86,11 @@
             },
             "uniqueItems": true,
             "default": []
+        },
+        "origin_agent": {
+            "type": "string",
+            "description": "Identity of the agent or workflow that created this AC file. Enum: business-analyst | debug | human | ticket-wiring. Free-form string to allow future agents.",
+            "minLength": 1
         }
     }
 }

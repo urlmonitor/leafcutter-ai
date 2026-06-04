@@ -210,6 +210,10 @@ Include in the prompt to `create-ticket`:
 - The specific files that need changes (from the investigation)
 - Any documentation discrepancies that should be fixed in the same ticket
 - The suggested fix approach
+- **AC origin tracking instruction:** "Instruct the BA/wiring step to set
+  `origin_agent: debug` on any AC YAML files created as part of this fix
+  ticket." This ensures compliance auditing can identify debug-workflow-
+  generated ACs (which differ from BA-generated or human-authored ACs).
 
 ---
 
