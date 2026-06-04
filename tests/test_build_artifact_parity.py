@@ -202,6 +202,7 @@ class TestTemplateDirectoriesHaveCategories(unittest.TestCase):
         known_categories = {cat for cat, _, _ in _USER_FACING_CATEGORIES + _INTERNAL_CATEGORIES}
         # Also allow non-artifact template dirs that don't produce shimmed outputs
         non_artifact_dirs = {
+            "acceptance-criteria",
             "commit-guardian",
             "scripts",
             "doc-compliance",
