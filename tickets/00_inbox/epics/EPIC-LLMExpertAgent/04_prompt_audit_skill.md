@@ -16,7 +16,7 @@ agents:
   documentation-expert: signed_off
   sql-coder: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
   status-checker: not_needed
 ---
@@ -123,7 +123,7 @@ And the report summary shows total_violations, total_errors, total_warnings
 - [x] python-coder — 2026-06-04 00:01
 - [x] documentation-expert — 2026-06-04 00:02
 - [x] pr-reviewer — 2026-06-04 00:03
-- [ ] commit
+- [x] commit — 2026-06-04 00:04
 - [ ] pull-request
 
 ## Comments
@@ -163,6 +163,14 @@ completion_manifest:
   frontmatter_valid: true
   no_compound_bash: true
 Reviewed templates/skills/prompt-audit/SKILL.md: all 6 ACs from ticket satisfied (frontmatter schema, 6 checks implemented, structured report format, violations sorted by line_number, summary totals). Frontmatter contains correct name/description/allowed-tools/portable fields. Skill body is well-structured with When-to-Invoke, Checks 1-6, Report Format, Examples, Severity Reference, and Constraints sections. No blockers.
+
+### 2026-06-04 00:04 — commit (status: ok)
+feedback-id: fb_2026-06-04_733c58fd
+completion_manifest:
+  files_staged: true
+  commit_created: true
+  ticket_staged: true
+Staged templates/skills/prompt-audit/SKILL.md (368 lines, new file) and ticket file. Committing all in-scope changes.
 
 ## Implementation Tasks
 
