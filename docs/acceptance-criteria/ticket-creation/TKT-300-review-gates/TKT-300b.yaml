@@ -1,0 +1,27 @@
+id: TKT-300b
+title: "Sign-off with artifact proof"
+component: ticket-creation
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given any phase agent completes its work,
+  When it signs off,
+  Then the sign-off IS the structured JSON artifact (schema-validated by orchestrator).
+  And the artifact includes: phase identifier, list of files produced (paths + SHA256),
+    confidence level (high/medium/low), and completion manifest (checklist of required outputs).
+  And sign-off without a valid artifact is rejected by the orchestrator (no empty sign-offs).
+  And each phase's schema defines minimum required non-empty fields.
+depends_on: [ACS-100a]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: human
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

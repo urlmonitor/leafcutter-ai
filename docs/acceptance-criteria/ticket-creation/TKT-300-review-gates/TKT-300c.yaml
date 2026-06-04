@@ -1,0 +1,28 @@
+id: TKT-300c
+title: "User confirmation gates after analysis and review"
+component: ticket-creation
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the pipeline runs through multiple phases,
+  When Phase 1 (BA) completes its AC files,
+  Then the user is shown all ACs and must explicitly confirm before Phase 2 proceeds.
+  And when Phase 4 (IT PO) completes enrichment,
+  Then the user is shown the enriched ACs with agent assignments and contracts
+    and must explicitly confirm before build dispatch begins.
+  And Phases 2-3 (diagram classification + production) do NOT require user gates
+    unless the classifier returns "ambiguous".
+depends_on: [TKT-100a, TKT-300a]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: human
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,24 @@
+id: TKT-300
+title: "Human checkpoints at every critical decision point"
+component: ticket-creation
+level: L0
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Every critical decision in the specification pipeline has a human checkpoint:
+  technical enrichment by an IT Product Owner adds constraints, security, and
+  observability requirements without overwriting business intent. Sign-off requires
+  structured artifact proof — no empty approvals. Users explicitly confirm after
+  analysis and after review before build dispatch begins. Epics serve as goal
+  containers for filtering and reporting, not as execution units.
+depends_on: [TKT-100]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: human
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
