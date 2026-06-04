@@ -1,6 +1,6 @@
 ---
 title: "Create prompt-audit skill (templates/skills/prompt-audit/SKILL.md)"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
