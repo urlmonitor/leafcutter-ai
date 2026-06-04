@@ -1,6 +1,6 @@
 ---
 title: "Deterministic pre-commit hook: verify every inline AC-N in a v2 ticket maps to a store entry"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
@@ -26,7 +26,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   explanation-author: not_needed
@@ -204,7 +204,7 @@ placeholder_signature: "No such file or directory|AttributeError|ImportError"
 - [x] test-runner — 2026-06-04 11:50
 - [x] pr-reviewer — 2026-06-04 11:55
 - [x] commit — 2026-06-04 12:05
-- [ ] pull-request
+- [x] pull-request — 2026-06-04 12:10
 - [x] user-surface-smoker — 2026-06-04 12:00
 
 ## Comments
@@ -293,6 +293,14 @@ completion_manifest:
   pre_commit_hooks_passed: true
 
 All 5 implementation files staged and committed on EPIC-UnifyACPipeline branch.
+
+### 2026-06-04 12:10 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_4e694612
+completion_manifest:
+  branch_pushed: true
+  pr_exists: true
+
+Pushed commit 406135e to `EPIC-UnifyACPipeline` branch. Existing PR #52 (https://github.com/urlmonitor/leafcutter-ai/pull/52) auto-updated — ticket-02 commit is included in the PR's diff.
 
 ## Implementation Tasks
 
