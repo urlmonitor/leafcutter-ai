@@ -28,7 +28,7 @@ agents:
   test-runner: not_needed
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
   architecture-diagram-author: not_needed
   user-surface-smoker: not_needed
@@ -81,7 +81,7 @@ The routing decision is based on the BA's `complexity` field in its output paylo
 
 - [x] python-coder — 2026-06-04 10:30
 - [x] pr-reviewer — 2026-06-04 10:35
-- [ ] commit
+- [x] commit — 2026-06-04 10:40
 - [ ] pull-request
 
 ## AC Coverage
@@ -109,6 +109,14 @@ The routing decision is based on the BA's `complexity` field in its output paylo
   fall through to refinement if no boundary crossing exists.
 
 ## Comments
+
+### 2026-06-04 10:40 — commit (status: ok)
+feedback-id: fb_2026-06-04_a2963b1f
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Committed 6 files (5 implementation + ticket) as SHA b2a55a4. Pre-commit required PRE_COMMIT_ALLOW_NO_CONFIG=1 since the worktree has no .pre-commit-config.yaml (not a hook failure — mechanical no-config environment). All in-scope files staged by explicit path; no unrelated files included.
 
 ### 2026-06-04 10:35 — pr-reviewer (status: ok)
 feedback-id: fb_2026-06-04_76a67312
