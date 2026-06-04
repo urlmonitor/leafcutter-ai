@@ -1,6 +1,6 @@
 ---
 title: "Add pre-commit hook for bidirectional spawn validation on agent_registry.json"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
@@ -22,7 +22,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 ---
@@ -124,7 +124,7 @@ both should remain registered.
 - [x] test-runner — 2026-06-04 12:19
 - [x] pr-reviewer — 2026-06-04 12:26
 - [x] commit — 2026-06-04 12:30
-- [ ] pull-request
+- [x] pull-request — 2026-06-04 12:35
 
 ## Comments
 
@@ -204,6 +204,13 @@ completion_manifest:
   commit_succeeded: true
   lock_released: true
 Staged 5 files explicitly (no git add .): hooks/__init__.py, check_agent_spawn_consistency.py, test_check_agent_spawn_consistency.py, commit_guardian.json, ticket. Committed on branch feature/agentregistryspawnvalidationhook, SHA 5f102e3. Note: scripts/commit_guardian/ is .gitignored so new files required git add -f. Commit-phase lock acquired and released cleanly.
+
+### 2026-06-04 12:35 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_272c9f45
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+PR #48 opened at https://github.com/urlmonitor/leafcutter-ai/pull/48 on branch feature/agentregistryspawnvalidationhook targeting main.
 
 ## Implementation Tasks
 
