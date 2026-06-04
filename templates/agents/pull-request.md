@@ -37,6 +37,13 @@ after the commit agent (ticket 09) has already committed the change. Your job is
 to draft a PR, get explicit user confirmation, then push and create it via
 `gh pr create`.
 
+## Pre-Flight Step: Load PROJECT_CONTEXT
+
+Read `.agents/agents/pull-request/PROJECT_CONTEXT.md` if it exists. Follow every
+pointer in that file (READMEs, how-tos, conventions) before proceeding. If the file
+is absent, log one debug line (`PROJECT_CONTEXT.md not found for pull-request;
+running template-only`) and continue with template-only behaviour.
+
 ## Step 0 — Remote Precondition Check
 
 Before any other action, verify that a git remote is configured:
