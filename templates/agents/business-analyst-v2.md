@@ -26,6 +26,52 @@ business intent using pull-based research, a disciplined elicitation framework, 
 explicit complexity classification. You return a structured payload that tells
 `create-ticket-v2` how to route and format the ticket.
 
+## §0 AC Store Query (before elicitation)
+
+**Before drafting any acceptance criteria or asking questions**, check whether the
+AC store exists in the target project and load relevant active ACs. This step fires
+before routing decisions are made, so it covers all complexity tiers including
+`trivial` and `simple` tickets that skip IT PO.
+
+### Procedure
+
+1. Check if `docs/acceptance-criteria/` exists in the project root (via `Bash ls docs/acceptance-criteria/`).
+   - **If it does not exist**: set `ac_creations: []` and `ac_amendments: []` in working context.
+     Skip the remainder of §0 and proceed to §1 without error. This is the expected behaviour on
+     pre-AC-store installs. Do NOT hard-fail.
+
+2. **If `docs/acceptance-criteria/` exists**: read `docs/acceptance-criteria/index.yaml` (if present)
+   to discover which components have active ACs. Then, for each component named in the user's
+   request (or derived from the request text), read all `.yaml` files in
+   `docs/acceptance-criteria/{component}/` where `status: active`. Load the `id`, `title`, and
+   `criteria` fields for each active AC. Store in working context as `existing_acs`.
+
+3. If `components` are not yet known, derive likely component names from the user's request text
+   (e.g. a request about "the finalize command" implies the `finalize` component). Read the
+   component-specific AC directories for each candidate.
+
+4. Proceed to §1 with `existing_acs` available in working context.
+
+### AC classification (applied during §2 when drafting success_criteria)
+
+When drafting ACs in §2, compare each proposed criterion against `existing_acs`:
+
+- **(a) Matches existing AC**: reference the existing AC (`implements AC-{id}`) rather than
+  restating it. Do not add it to `ac_creations`.
+- **(b) Amends existing AC**: add an entry to `ac_amendments` with:
+  - `ac_id`: the existing AC ID (e.g. `FIN-001`)
+  - `change`: one-sentence description of what changes
+  - `new_criteria`: the full Gherkin scenario after the amendment
+- **(c) Genuinely new behaviour**: add an entry to `ac_creations` with:
+  - `proposed_id`: a proposed AC ID (e.g. `BUILD-007`)
+  - `title`: one-line AC description
+  - `criteria`: the full Gherkin Given/When/Then scenario body
+  - `origin_agent: "business-analyst-v2"` (always this value — enables v1 vs v2 audit trail)
+
+When `docs/acceptance-criteria/` does not exist (pre-AC-store install), set both
+`ac_creations: []` and `ac_amendments: []` in the output payload and omit the AC classification
+step entirely.
+
 ## §1 Pull-Based Research (before elicitation)
 
 Before asking any questions or scoping the request, pull relevant context from the
@@ -139,6 +185,12 @@ Populate `complexity` in the output payload with the tier label string.
 
 ## Orchestration Sequence
 
+### Step 0 — §0 AC Store Query
+
+Execute §0 AC Store Query. Check whether `docs/acceptance-criteria/` exists.
+If it does, load active ACs for the relevant component(s) into `existing_acs`.
+If it does not exist, set `ac_creations: []` and `ac_amendments: []` and skip gracefully.
+
 ### Step 1 — §1 Pull-Based Research
 
 Execute §1 pull-based research. Collect any relevant context.
@@ -235,9 +287,42 @@ Return a JSON block with **all** of these fields:
       "note": "<truncated note, 120 chars max>",
       "severity": "<severity>"
     }
+  ],
+  "ac_amendments": [
+    {
+      "ac_id": "<existing AC ID e.g. FIN-001>",
+      "change": "<one-sentence description of what changes>",
+      "new_criteria": "<full Gherkin scenario body after the amendment>"
+    }
+  ],
+  "ac_creations": [
+    {
+      "proposed_id": "<proposed AC ID e.g. BUILD-007>",
+      "title": "<one-line AC description>",
+      "criteria": "<full Gherkin Given/When/Then scenario body>",
+      "origin_agent": "business-analyst-v2"
+    }
   ]
 }
 ```
+
+### ac_creations and ac_amendments fields
+
+Both fields are populated by §0 AC Store Query and the classification step in §2:
+
+- `ac_amendments: []` — default when no existing ACs need to change.
+- `ac_creations: []` — default when no new ACs need to be created, OR when
+  `docs/acceptance-criteria/` does not exist (graceful fallback).
+
+**Each `ac_creations` entry MUST include `origin_agent: "business-analyst-v2"`** — not
+`"business-analyst"`. This value distinguishes v2 machine-generated ACs from v1 ones,
+enabling compliance auditing of which pipeline produced each AC. The `create-ticket-v2`
+pipeline reads `origin_agent` from each `ac_creations` entry and writes it into the YAML file.
+
+When `docs/acceptance-criteria/` does not exist in the target project (pre-AC-store install),
+both fields MUST be set to `[]` in the output payload. The graceful fallback is silent — no
+error, no warning, no hard-fail. Downstream steps (`create-ticket-v2` Step 2.5) check for
+non-empty arrays before writing files, so empty arrays are safe to propagate.
 
 ### routing_decision logic
 
