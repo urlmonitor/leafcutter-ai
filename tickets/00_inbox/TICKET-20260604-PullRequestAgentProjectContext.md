@@ -1,6 +1,6 @@
 ---
 title: "Add PROJECT_CONTEXT.md for pull-request agent with EMU guard and PR writing standards"
-status: todo
+status: done
 components:
   - infrastructure
 created: 2026-06-04
@@ -25,7 +25,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   user-surface-smoker: not_needed
@@ -159,7 +159,7 @@ Repo path: `/home/henzeh/projects/leafcutter/leafcutter-ai/`.
 - [x] test-runner — 2026-06-04 12:15
 - [x] pr-reviewer — 2026-06-04 12:20
 - [x] commit — 2026-06-04 12:25
-- [ ] pull-request
+- [x] pull-request — 2026-06-04 12:30
 
 ## Comments
 
@@ -196,3 +196,11 @@ completion_manifest:
   commit_created: true
   staged_files_match_plan: true
 Committed sha 29b2158 on branch feature/pullrequestagentprojectcontext. 4 files changed, 267 insertions(+). Staged by explicit path only (no git add .).
+
+### 2026-06-04 12:30 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Pushed feature/pullrequestagentprojectcontext to origin. PR created at https://github.com/urlmonitor/leafcutter-ai/pull/50. urlmonitor account was already active — no account switch needed. Ticket status flipped to done (all agents signed_off or not_needed).
