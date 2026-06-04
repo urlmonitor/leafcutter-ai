@@ -297,5 +297,90 @@ class TestSetupTicketDoesNotMoveTicketFile(unittest.TestCase):
         )
 
 
+class TestBootstrapRunsBuildPy(unittest.TestCase):
+    """_bootstrap() runs build.py when present, skips with warning when absent."""
+
+    def test_bootstrap_runs_build_py_when_present(self):
+        """
+        Given scripts/build.py exists in main_repo,
+        When _bootstrap() is called,
+        Then subprocess.run is called with a command list containing 'build.py'
+        and '--target-dir'.
+        """
+        # covers: UNKNOWN
+        mod = _load_setup_module()
+
+        main_repo = Path("/fake/main")
+        worktree = Path("/fake/worktree")
+
+        def fake_path_exists(self_path):
+            """Return True for any path — including build.py."""
+            return True
+
+        with (
+            patch.object(mod.os, "symlink"),
+            patch.object(mod.shutil, "copy"),
+            patch.object(mod.subprocess, "run") as mock_run,
+            patch.object(mod.Path, "exists", fake_path_exists),
+        ):
+            mod._bootstrap(main_repo, worktree)
+
+        # Collect all cmd lists passed to subprocess.run
+        all_cmds = [str(c) for c in mock_run.call_args_list]
+        build_calls = [c for c in all_cmds if "build.py" in c and "--target-dir" in c]
+        self.assertTrue(
+            len(build_calls) > 0,
+            f"subprocess.run was not called with build.py and --target-dir. "
+            f"All calls: {all_cmds}",
+        )
+
+    def test_bootstrap_skips_build_py_when_absent(self):
+        """
+        Given scripts/build.py does NOT exist in main_repo,
+        When _bootstrap() is called,
+        Then no subprocess.run call containing 'build.py' is made,
+        and a warning is emitted to stderr.
+        """
+        # covers: UNKNOWN
+        mod = _load_setup_module()
+
+        main_repo = Path("/fake/main")
+        worktree = Path("/fake/worktree")
+
+        import io
+        fake_stderr = io.StringIO()
+
+        def fake_path_exists(self_path):
+            """Return False for build.py, True for everything else."""
+            return "build.py" not in str(self_path)
+
+        with (
+            patch.object(mod.os, "symlink"),
+            patch.object(mod.shutil, "copy"),
+            patch.object(mod.subprocess, "run") as mock_run,
+            patch.object(mod.Path, "exists", fake_path_exists),
+            patch("sys.stderr", fake_stderr),
+        ):
+            mod._bootstrap(main_repo, worktree)
+
+        # No subprocess.run call for build.py
+        all_cmds = [str(c) for c in mock_run.call_args_list]
+        build_calls = [c for c in all_cmds if "build.py" in c]
+        self.assertEqual(
+            build_calls,
+            [],
+            f"subprocess.run must not be called with build.py when it is absent. "
+            f"All calls: {all_cmds}",
+        )
+
+        # A warning must have been written to stderr
+        warning_output = fake_stderr.getvalue()
+        self.assertIn(
+            "WARNING",
+            warning_output,
+            "A WARNING must be printed to stderr when build.py is absent",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
