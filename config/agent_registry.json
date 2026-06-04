@@ -1426,6 +1426,42 @@
             "invocation_surface": [
                 "/po-review"
             ]
+        },
+        {
+            "id": "ac-validator",
+            "name": "AC Validator",
+            "tier": "phase",
+            "role": "quality",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "ticket-supervisor"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign to any ticket that has an ## Agent Contracts or ## Acceptance Criteria section with AC-N lines, to gate commit on verified AC coverage.",
+                "trigger_conditions": [
+                    {
+                        "type": "llm",
+                        "expression": "ticket body contains an ## Agent Contracts or ## Acceptance Criteria section with at least one - [ ] AC-N: line"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket requires proof that every acceptance criterion has implementation and test evidence before commit"
+                    }
+                ],
+                "default_status": "not_needed"
+            },
+            "template_path": "templates/agents/ac-validator.md",
+            "model": "sonnet",
+            "skills_used": [
+                "signoff"
+            ],
+            "priority": 11,
+            "priority_rationale": "Final AC coverage gate; runs after pr-reviewer (11) and before commit (12) to verify all ACs are evidenced before the worktree is locked",
+            "requires_ticket_section": false,
+            "description": "Reads ticket ACs, the working diff, and test output; produces a coverage verdict (ok / blocker / question). Never implements — read-only on code files, edits only the ticket file."
         }
     ]
 }
