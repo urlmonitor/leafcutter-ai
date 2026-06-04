@@ -1,6 +1,6 @@
 ---
 title: "Wire port release and orphan-process cleanup into /finalize-feature"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-03
@@ -27,8 +27,8 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   architecture-diagram-author: not_needed
   explanation-author: not_needed
   how-to-author: not_needed
@@ -162,10 +162,25 @@ Then it contains a step 5.5 block that calls live_surface_startup.py stop
 - [x] python-coder — 2026-06-03 10:15
 - [x] test-runner — 2026-06-04 09:00
 - [x] pr-reviewer — 2026-06-04 09:05
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-04 09:10
+- [x] pull-request — 2026-06-04 09:15
 
 ## Comments
+
+### 2026-06-04 09:15 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_0b05aa8f
+completion_manifest:
+  branch_pushed: true
+  pr_open: true
+Pushed cae5bc9 to origin/EPIC-LiveSurfaceTesting. PR #42 already open at https://github.com/urlmonitor/leafcutter-ai/pull/42 and updated with this commit.
+
+### 2026-06-04 09:10 — commit (status: ok)
+feedback-id: fb_2026-06-04_3da143f8
+completion_manifest:
+  files_staged_explicitly: true
+  commit_succeeded: true
+  no_stray_files: true
+Commit cae5bc9 landed on EPIC-LiveSurfaceTesting branch. 5 files staged explicitly by path (scripts/live_surface_startup.py, templates/agents/finalize-feature.md, templates/workflows-js/finalize-feature.js, tests/test_finalize_port_cleanup.py, ticket file). No stray files included.
 
 ### 2026-06-04 09:05 — pr-reviewer (status: ok)
 feedback-id: fb_2026-06-04_c7e578b6
