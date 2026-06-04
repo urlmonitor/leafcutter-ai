@@ -21,7 +21,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -123,7 +123,7 @@ both should remain registered.
 - [x] python-coder — 2026-06-04 12:11
 - [x] test-runner — 2026-06-04 12:19
 - [x] pr-reviewer — 2026-06-04 12:26
-- [ ] commit
+- [x] commit — 2026-06-04 12:30
 - [ ] pull-request
 
 ## Comments
@@ -196,6 +196,14 @@ completion_manifest:
   implementation_matches_spec: true
   no_regressions: true
 Reviewed all 8 ACs against implementation. AC-1 through AC-8 all satisfied. Hook is a standalone script (no leafcutter package imports), two-pass bidirectional check is correct, __ticket_phase_agents__ token handled in both directions (AC-4 edge case verified), "user" skipped in spawned_by (AC-5), JSON/OSError handled with clear stderr messages (AC-6), registration in commit_guardian.json is correct with files and pass_filenames fields (AC-7), module docstring and DECISION HISTORY present (AC-8). 12/12 tests green. No blockers.
+
+### 2026-06-04 12:30 — commit (status: ok)
+feedback-id: fb_2026-06-04_8371c269
+completion_manifest:
+  staged_files_correct: true
+  commit_succeeded: true
+  lock_released: true
+Staged 5 files explicitly (no git add .): hooks/__init__.py, check_agent_spawn_consistency.py, test_check_agent_spawn_consistency.py, commit_guardian.json, ticket. Committed on branch feature/agentregistryspawnvalidationhook, SHA 5f102e3. Note: scripts/commit_guardian/ is .gitignored so new files required git add -f. Commit-phase lock acquired and released cleanly.
 
 ## Implementation Tasks
 
