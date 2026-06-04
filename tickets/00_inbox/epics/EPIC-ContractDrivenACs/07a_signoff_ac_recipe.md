@@ -25,7 +25,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   architecture-diagram-author: not_needed
   user-surface-smoker: not_needed
 ---
@@ -52,7 +52,7 @@ rather than duplicated across 12 agent templates.
 - [x] python-coder — 2026-06-04 09:00
 - [x] pr-reviewer — 2026-06-04 09:05
 - [x] commit — 2026-06-04 09:10
-- [ ] pull-request
+- [x] pull-request — 2026-06-04 09:15
 
 ## AC Coverage
 
@@ -95,3 +95,10 @@ completion_manifest:
   files_staged_correctly: true
   commit_created: true
 Staged templates/skills/signoff/SKILL.md and tickets/00_inbox/epics/EPIC-ContractDrivenACs/07a_signoff_ac_recipe.md. Committed §2c AC Coverage Sign-Off section addition to signoff SKILL.md on branch EPIC-ContractDrivenACs.
+
+### 2026-06-04 09:15 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_0bbc0d18
+completion_manifest:
+  branch_pushed: true
+  pr_exists: true
+Pushed commit f2884c9 to existing epic PR #43 (EPIC-ContractDrivenACs). Branch pushed from 2a83e22 to f2884c9.
