@@ -20,14 +20,14 @@ agents:
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
-  documentation-expert: needed
+  documentation-expert: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   explanation-author: not_needed
   how-to-author: not_needed
   reference-author: not_needed
   user-surface-smoker: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -166,16 +166,35 @@ Then the skill notes "component inference ambiguous" in its log
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] pr-reviewer
+- [x] documentation-expert — 2026-06-04 14:00
+- [x] pr-reviewer — 2026-06-04 14:05
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-06-04 14:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-06-04_ba9a024d
+completion_manifest:
+  step0_ac_store_query_added: true
+  ac_context_injected_all_three_agents: true
+  overview_numbering_updated: true
+  step_cross_references_updated: true
+Added Step 0 (AC Store Query) to templates/skills/debug/SKILL.md immediately before the existing Step 1; updated the Overview to list AC Lookup as step 1 of the workflow; injected `{AC_CONTEXT}` into all three investigator prompt templates after the `**Issue:**` line; updated Step 1 header to document the AC_CONTEXT parameter; updated Step 2 header to reference Step 1 explicitly. All implementation tasks complete.
+
+### 2026-06-04 14:05 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-04_9d99d4e2
+completion_manifest:
+  all_acs_verified: true
+  fallback_log_message_present: true
+  ac_context_injected_all_three_prompts: true
+  file_path_slug_inference_documented: true
+  ambiguous_inference_cap_at_10: true
+All 5 ACs are satisfied. Step 0 correctly handles the absent-store fallback (logs exact message from AC 2), empty-AC omission (AC 3), file-path slug inference using the business-analyst example (AC 4), and ambiguous-inference with a 10-AC cap (AC 5). All three investigator prompts have {AC_CONTEXT} injected after the Issue line (AC 1). No rework required.
+
 ## Implementation Tasks
 
-- [ ] In `templates/skills/debug/SKILL.md`, add a new **Step 0 — AC Store
+- [x] In `templates/skills/debug/SKILL.md`, add a new **Step 0 — AC Store
   Query** immediately before the existing Step 1:
 
   **Step 0 — AC Store Query**
@@ -201,13 +220,13 @@ Then the skill notes "component inference ambiguous" in its log
   6. Store the block in a variable `AC_CONTEXT`. It is injected into each
      investigator prompt in Step 1.
 
-- [ ] In Step 1 of `templates/skills/debug/SKILL.md`, update each of the
+- [x] In Step 1 of `templates/skills/debug/SKILL.md`, update each of the
   three investigator prompt templates to include `{AC_CONTEXT}` immediately
   after the `**Issue:** {$ARGUMENTS}` line. When `AC_CONTEXT` is empty or
   the AC store was absent, `{AC_CONTEXT}` expands to an empty string (no
   visible section added).
 
-- [ ] Ensure the existing Step numbering in the skill shifts: current Step 1
+- [x] Ensure the existing Step numbering in the skill shifts: current Step 1
   becomes Step 2, Step 2 → Step 3, and so on. Update all cross-references
   within the skill file (e.g., "Proceed to Step 2" → "Proceed to Step 3").
 
