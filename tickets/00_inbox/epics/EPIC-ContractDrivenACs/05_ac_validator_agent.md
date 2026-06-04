@@ -26,7 +26,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   architecture-diagram-author: not_needed
   user-surface-smoker: not_needed
 ---
@@ -77,7 +77,7 @@ hallucinate coverage if it must cite a real artifact.
 - [x] python-coder — 2026-06-04 00:00
 - [x] pr-reviewer — 2026-06-04 00:05
 - [x] commit — 2026-06-04 00:10
-- [ ] pull-request
+- [x] pull-request — 2026-06-04 00:15
 
 ## AC Coverage
 
@@ -100,6 +100,14 @@ hallucinate coverage if it must cite a real artifact.
   rather than hard-blocking.
 
 ## Comments
+
+### 2026-06-04 00:15 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_49e78b61
+completion_manifest:
+  branch_pushed: true
+  pr_open_or_exists: true
+  commits_included: true
+Branch EPIC-ContractDrivenACs pushed to origin (c360816..72b783a). PR #43 "feat(epic): EPIC-ContractDrivenACs — contract-driven acceptance criteria" already exists and is OPEN. Ticket 05 commits (e814f0c, 72b783a) are included in the push.
 
 ### 2026-06-04 00:10 — commit (status: ok)
 feedback-id: fb_2026-06-04_ca3eccfb
