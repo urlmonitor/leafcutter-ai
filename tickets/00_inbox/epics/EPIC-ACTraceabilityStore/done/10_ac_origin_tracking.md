@@ -1,6 +1,6 @@
 ---
 title: "AC origin tracking — ACs must record which agent created them"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
@@ -30,7 +30,7 @@ agents:
   user-surface-smoker: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 10: AC origin tracking — ACs must record which agent created them
@@ -148,7 +148,7 @@ Then check_ac_schema.py still exits 0 (field is optional)
 - [x] test-runner — 2026-06-04 12:15
 - [x] pr-reviewer — 2026-06-04 12:20
 - [x] commit — 2026-06-04 12:30
-- [ ] pull-request
+- [x] pull-request — 2026-06-04 12:40
 
 ## Comments
 
@@ -194,6 +194,13 @@ completion_manifest:
   commit_created: true
   pre_commit_hooks_passed: true
 Committed 74b9474 — 5 files, 174 insertions, 17 deletions. Stale commit lock from PID 1419010 (dead) was removed before lock acquisition. Out-of-scope files (scripts/build.py, tickets 02 and 03) were explicitly unstaged before commit. PRE_COMMIT_ALLOW_NO_CONFIG=1 required (no .pre-commit-config.yaml in worktree).
+
+### 2026-06-04 12:40 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_a0c50185
+completion_manifest:
+  branch_pushed: true
+  pr_open: true
+PR #46 already open for EPIC-ACTraceabilityStore branch (urlmonitor/leafcutter-ai#46). Commits 74b9474 and b2f8360 pushed to origin/EPIC-ACTraceabilityStore. Ticket 10 changes are now part of the PR.
 
 ## Implementation Tasks
 
