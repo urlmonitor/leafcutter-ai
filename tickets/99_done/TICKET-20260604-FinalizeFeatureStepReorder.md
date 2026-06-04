@@ -1,6 +1,6 @@
 ---
 title: "Fix finalize-feature step ordering: move merge-main + test-triage before PR merge"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
@@ -22,8 +22,8 @@ agents:
   test-runner: not_needed
   documentation-expert: signed_off
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   user-surface-smoker: not_needed
@@ -140,10 +140,25 @@ Then step numbers and step descriptions in the guide match the corrected sequenc
 
 - [x] documentation-expert — 2026-06-04 12:00
 - [x] pr-reviewer — 2026-06-04 12:01
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-04 12:02
+- [x] pull-request — 2026-06-04 12:03
 
 ## Comments
+
+### 2026-06-04 12:03 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+PR #55 opened at https://github.com/urlmonitor/leafcutter-ai/pull/55 for branch feature/finalize-feature-step-reorder targeting main.
+
+### 2026-06-04 12:02 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  commit_created: true
+  only_in_scope_files_staged: true
+  pre_commit_hooks_passed: true
+Committed 4 files (finalize-feature.js, finalize-feature.md workflow, finalize-feature.md how-to, ticket). SHA efcf105. Staged only in-scope files; did not stage docs/INDEX.md, scripts/*, or untracked files. Pre-commit hooks passed.
 
 ### 2026-06-04 12:01 — pr-reviewer (status: ok)
 feedback-id: (submit-failed)
