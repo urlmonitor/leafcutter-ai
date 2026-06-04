@@ -1,7 +1,7 @@
 ---
 title: "EPIC: Contract-Driven Acceptance Criteria"
 type: epic
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-03
