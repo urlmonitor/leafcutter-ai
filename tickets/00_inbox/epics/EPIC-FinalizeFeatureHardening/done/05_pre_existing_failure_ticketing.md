@@ -1,6 +1,6 @@
 ---
 title: "Auto-create tracking tickets for pre-existing failures discovered during triage"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
@@ -30,7 +30,7 @@ agents:
   user-surface-smoker: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 05: Auto-create tracking tickets for pre-existing failures discovered during triage
@@ -102,7 +102,7 @@ Then created_tracking_tickets lists the paths of any tickets created during step
 - [x] test-runner — 2026-06-04 09:10
 - [x] pr-reviewer — 2026-06-04 09:15
 - [x] commit — 2026-06-04 09:20
-- [ ] pull-request
+- [x] pull-request — 2026-06-04 09:25
 
 ## Comments
 
@@ -133,9 +133,16 @@ completion_manifest:
   pre_commit_hooks_passed: true
 Staged templates/workflows-js/finalize-feature.js, templates/agents/test-failure-triage.md, and ticket file. Commit created for ticket 05: auto-ticketing for pre-existing failures in finalize-feature.js step 5.
 
+### 2026-06-04 09:25 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_open: true
+Branch EPIC-FinalizeFeatureHardening pushed to origin. PR #45 already open at https://github.com/urlmonitor/leafcutter-ai/pull/45 — no new PR needed.
+
 ## Implementation Tasks
 
-- [ ] In `templates/workflows-js/finalize-feature.js`, in the step 5 block,
+- [x] In `templates/workflows-js/finalize-feature.js`, in the step 5 block,
   before the existing "close tickets / archive epic" logic:
   - Check if `triage_report` is non-null and has entries where
     `category === "pre_existing" || category === "flaky"`.
@@ -144,8 +151,8 @@ Staged templates/workflows-js/finalize-feature.js, templates/agents/test-failure
   - Collect resulting ticket filenames (or errors) into `created_tracking_tickets`.
   - On per-entry error: log warning, push `null` to `created_tracking_tickets`,
     continue.
-- [ ] Add `created_tracking_tickets` to the `status: "ok"` return value.
-- [ ] Update the `const meta` phases entry for step 5 to include
+- [x] Add `created_tracking_tickets` to the `status: "ok"` return value.
+- [x] Update the `const meta` phases entry for step 5 to include
   `"create_pre_existing_tickets"` as a sub-label.
 
 ## Risk & Safety
