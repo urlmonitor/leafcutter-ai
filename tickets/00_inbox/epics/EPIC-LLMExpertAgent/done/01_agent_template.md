@@ -1,6 +1,6 @@
 ---
 title: "Create llm-expert agent template (templates/agents/llm-expert.md)"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
@@ -16,8 +16,8 @@ agents:
   documentation-expert: signed_off
   sql-coder: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   status-checker: not_needed
 ---
 
@@ -101,8 +101,8 @@ Then it prohibits: editing Python/SQL/frontend files, editing registry or build 
 - [x] architect-review — 2026-06-04 10:00
 - [x] documentation-expert — 2026-06-04 10:05
 - [x] pr-reviewer — 2026-06-04 10:10
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-04 10:15
+- [x] pull-request — 2026-06-04 10:20
 
 ## Comments
 
@@ -134,6 +134,22 @@ completion_manifest:
   no_high_findings: true
   scope_verified: true
 All 7 ACs verified against `templates/agents/llm-expert.md`. Frontmatter fields all present and correct (name=llm-expert, model=sonnet, tools=Bash/Read/Edit/Write/Agent, portable=true, signoff=true, requires_verification=true). Pre-Flight Reads section names PROJECT_CONTEXT.md and signoff SKILL.md. Prompt-Quality Checklist has 6 items with concrete violation patterns. Stop-and-Ask Rule explicitly defers registry edits to workflow-architect. Skills section lists all three required skills with invocation guidance. Sign-off section follows signoff §2 recipe. Constraints section prohibits Python/SQL/frontend edits, registry edits, and compound bash. No high-confidence issues found. Scope matches files_touched (1 file: templates/agents/llm-expert.md).
+
+### 2026-06-04 10:15 — commit (status: ok)
+feedback-id: fb_2026-06-04_65078fcd
+completion_manifest:
+  commit_created: true
+  staged_files_correct: true
+  no_cross_ticket_pollution: true
+Committed as 11a6693 on branch EPIC-LLMExpertAgent. Staged only ticket-01 files (templates/agents/llm-expert.md, ticket file). Unstaged foreign files from ticket-04 (templates/skills/prompt-audit/SKILL.md, 04_prompt_audit_skill.md) before committing. 3 files changed, 358 insertions.
+
+### 2026-06-04 10:20 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_8181eb09
+completion_manifest:
+  pr_opened: true
+  branch_pushed: true
+  pr_description_complete: true
+Opened PR #49 at https://github.com/urlmonitor/leafcutter-ai/pull/49 targeting main from branch EPIC-LLMExpertAgent. Branch pushed to origin successfully. Subsequent sub-ticket commits will accumulate on the same branch and PR.
 
 ## Implementation Tasks
 
