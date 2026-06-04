@@ -140,6 +140,15 @@
       "dependencies": []
     },
     {
+      "id": "prompt-audit",
+      "name": "Prompt Audit",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/prompt-audit/",
+      "dependencies": [],
+      "description": "Systematically audits agent templates and skill files against the Prompt-Quality Checklist. Detects compound bash commands, missing signoff protocol, tool allowlist mismatches, and other convention violations."
+    },
+    {
       "id": "roadmap-query",
       "name": "Roadmap Query",
       "portable": true,
