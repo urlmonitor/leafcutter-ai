@@ -70,6 +70,18 @@ Implementation Tasks for the complete recipe):
 Existing tests live in `tests/test_setup_ticket_worktree.py`; new tests must be
 appended to that file following the same `unittest.mock.patch` pattern.
 
+## AC References
+
+| Ticket AC | Store AC | Component |
+|-----------|----------|-----------|
+| AC-1 | [WT-001](../../docs/acceptance-criteria/worktree/WT-001.yaml) | worktree |
+| AC-2 | [WT-002](../../docs/acceptance-criteria/worktree/WT-002.yaml) | worktree |
+| AC-3 | [WT-003](../../docs/acceptance-criteria/worktree/WT-003.yaml) | worktree |
+| AC-4 | [WT-004](../../docs/acceptance-criteria/worktree/WT-004.yaml) | worktree |
+| AC-5 | [WT-005](../../docs/acceptance-criteria/worktree/WT-005.yaml) | worktree |
+| AC-6 | [WT-006](../../docs/acceptance-criteria/worktree/WT-006.yaml) | worktree |
+| AC-7 | [WT-007](../../docs/acceptance-criteria/worktree/WT-007.yaml) | worktree |
+
 ## Acceptance Criteria
 
 - [ ] AC-1: After `_bootstrap()` runs, `python scripts/build.py --target-dir .` is
