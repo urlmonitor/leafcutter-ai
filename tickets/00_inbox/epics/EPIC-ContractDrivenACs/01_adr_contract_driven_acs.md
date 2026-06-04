@@ -1,6 +1,6 @@
 ---
 title: "ADR: Contract-Driven Acceptance Criteria"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-03
@@ -24,7 +24,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   architecture-diagram-author: not_needed
   user-surface-smoker: not_needed
 ---
@@ -67,7 +67,7 @@ this epic. Key decisions to record:
 - [x] adr-author — 2026-06-04 12:00
 - [x] pr-reviewer — 2026-06-04 12:05
 - [x] commit — 2026-06-04 12:10
-- [ ] pull-request
+- [x] pull-request — 2026-06-04 12:15
 
 ## AC Coverage
 
@@ -116,3 +116,11 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Committed 3 files (SHA: 7e2d5b3): ADR-007-contract-driven-acs.md (229 lines), .pending/adr_handoff.json, and ticket sign-off. Pre-commit ran with PRE_COMMIT_ALLOW_NO_CONFIG=1 due to missing .pre-commit-config.yaml in this worktree (known worktree setup gap, not a quality issue). No hook failures.
+
+### 2026-06-04 12:15 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_c91e678b
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Branch pushed to origin/EPIC-ContractDrivenACs. PR #43 created at https://github.com/urlmonitor/leafcutter-ai/pull/43. All 3 prior commits included in branch. Pre-push sweep committed pr-reviewer and commit sign-offs (SHA: e1c1472). Ticket status set to done.
