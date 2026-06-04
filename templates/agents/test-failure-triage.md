@@ -18,6 +18,11 @@ adopter_notes: |
   post-merge test run produces failures. Not a ticket-phase agent;
   does not sign off on tickets. Read-only — never writes files or
   modifies branches.
+
+  When blocks_finalization is false (all failures are pre_existing or flaky),
+  finalize-feature.js step 5 consumes the triage_report to dispatch
+  create-ticket for each pre_existing/flaky entry. The triage agent does NOT
+  create tickets itself — it only produces the structured report.
 ---
 
 You are the test-failure triage agent. Your only job is to classify

@@ -47,7 +47,8 @@ const meta = {
     "step-4a: run post-merge tests (test-runner — HALT on failure)",
     "step-4b: triage_failures — dispatch test-failure-triage when failures exist",
     "step-4c: halt-or-continue gate based on triage_report.blocks_finalization",
-    "step-5: close tickets / archive epic (status-checker)",
+    "step-5: create_pre_existing_tickets — dispatch create-ticket for each pre_existing/flaky triage entry",
+    "step-5b: close tickets / archive epic (status-checker)",
     "step-6: remove worktree (worktree-agent — gate delegated)",
   ],
 };
@@ -113,6 +114,7 @@ async function run({ userInput, agent, parallel, prompt }) {
   let mergeResult = null;
   let testResult = null;
   const ticketsClosed = [];
+  const createdTrackingTickets = [];
   let worktreeRemoved = false;
   // Triage report from step 4b; null means tests passed (no triage needed).
   let triageReport = null;
@@ -609,7 +611,97 @@ async function run({ userInput, agent, parallel, prompt }) {
   }
 
   // -------------------------------------------------------------------------
-  // Step 5 — Close tickets / archive epic (resumable)
+  // Step 5 — Create tracking tickets for pre-existing / flaky failures
+  //
+  // Before closing tickets and archiving the epic, dispatch create-ticket for
+  // each entry in the triage report where category is "pre_existing" or "flaky".
+  // This ensures every known breakage on main has a corresponding inbox ticket
+  // before the feature branch is considered finalized.
+  //
+  // Failure policy: ticket creation failure is non-fatal. Log a warning and
+  // continue. Finalization must not be blocked by a failed create-ticket call.
+  //
+  // Only runs when triageReport is non-null (tests had failures in step 4b).
+  // When triageReport is null (all tests passed), this sub-step is a no-op.
+  // -------------------------------------------------------------------------
+  if (triageReport !== null) {
+    const triageEntries = Array.isArray(triageReport.triage_report)
+      ? triageReport.triage_report
+      : [];
+
+    const preExistingEntries = triageEntries.filter(
+      (entry) =>
+        entry.category === "pre_existing" || entry.category === "flaky"
+    );
+
+    for (const entry of preExistingEntries) {
+      const testId = entry.test_id || "<unknown test>";
+      const category = entry.category || "pre_existing";
+
+      let requestText =
+        `Tracked pre-existing test failure: ${testId}. ` +
+        `Failing on main at SHA ${baselineSha || "unknown"}. ` +
+        `Triage category: ${category}. ` +
+        `See finalize-feature triage report from ${baselineRunAt || new Date().toISOString()}.`;
+
+      if (category === "flaky") {
+        requestText +=
+          " Intermittent failure detected. Failing in some runs but not others." +
+          " Needs investigation to determine root cause before adding a known-flaky marker.";
+      }
+
+      try {
+        const createTicketResult = await agent({
+          agentType: "create-ticket",
+          input: {
+            request: requestText,
+          },
+        });
+
+        let ticketInfo;
+        try {
+          ticketInfo =
+            typeof createTicketResult === "string"
+              ? JSON.parse(createTicketResult)
+              : createTicketResult;
+        } catch (_parseErr) {
+          ticketInfo = { ticket_path: null };
+        }
+
+        const ticketPath =
+          ticketInfo &&
+          (ticketInfo.ticket_path || ticketInfo.path || ticketInfo.filename);
+
+        if (ticketPath) {
+          createdTrackingTickets.push(ticketPath);
+          console.log(
+            `[finalize-feature] step 5: created tracking ticket for ${testId}: ${ticketPath}`
+          );
+        } else {
+          // create-ticket succeeded but did not return a path — push null as sentinel.
+          createdTrackingTickets.push(null);
+          console.warn(
+            `[finalize-feature] step 5: create-ticket for ${testId} returned no ticket_path`
+          );
+        }
+      } catch (createErr) {
+        // Non-fatal: log warning and continue.
+        console.warn(
+          `[finalize-feature] step 5: create-ticket dispatch failed for ${testId}: ${createErr && createErr.message}`
+        );
+        createdTrackingTickets.push(null);
+      }
+    }
+
+    if (preExistingEntries.length === 0) {
+      console.log(
+        "[finalize-feature] step 5: no pre_existing or flaky entries in triage report — skipping create-ticket sub-step"
+      );
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Step 5b — Close tickets / archive epic (resumable)
   //
   // Sub-step 5a: detect scope and close tickets (flip status: done in frontmatter
   //   + git mv to target folder).
@@ -842,6 +934,9 @@ async function run({ userInput, agent, parallel, prompt }) {
     // Triage report from step 4b; null means tests passed (no triage needed).
     triage_report: triageReport,
     tickets_closed: ticketsClosed,
+    // Tracking tickets created in step 5 for pre_existing and flaky triage entries.
+    // Each entry is the ticket_path returned by create-ticket, or null on failure.
+    created_tracking_tickets: createdTrackingTickets,
     tickets_reconciled: ticketsReconciled,
     worktree_removed: worktreeRemoved,
     completed_steps: completedSteps,
@@ -857,6 +952,9 @@ async function run({ userInput, agent, parallel, prompt }) {
         : "Baseline capture failed — regression triage used conservative classification. ") +
       (ticketsClosed.length > 0
         ? `Tickets closed: ${ticketsClosed.length}. `
+        : "") +
+      (createdTrackingTickets.length > 0
+        ? `Tracking tickets created for pre-existing failures: ${createdTrackingTickets.filter(Boolean).length}. `
         : "") +
       (ticketsReconciled.length > 0
         ? `Tickets folder-reconciled: ${ticketsReconciled.length}.`
