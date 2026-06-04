@@ -64,6 +64,7 @@ from build_roadmap_phase import build_roadmap
 from build_placeholder_detection import scan_for_placeholders, format_placeholder_report
 from build_referential_integrity import check_referential_integrity, format_integrity_report
 from build_config_scaffolds import build_config_scaffolds
+from build_ac_store_scaffold import build_ac_store_scaffold
 from build_halt_guard import (
     check_halt_guard,
     format_migration_notice,
@@ -389,6 +390,7 @@ def _run_phases(
         ("Components registry", build_components_registry),
         ("Glossary", build_glossary),
         ("Config scaffolds", build_config_scaffolds),
+        ("AC store scaffold", build_ac_store_scaffold),
     ]
 
     total = 0
