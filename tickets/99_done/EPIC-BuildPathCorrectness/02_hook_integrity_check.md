@@ -1,6 +1,6 @@
 ---
 title: "Add build-time hook referential integrity check and fix check_contract_shrinking false-positive"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04

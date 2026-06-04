@@ -1,7 +1,7 @@
 ---
 title: "EPIC: Build Path Correctness — config-driven output paths and hook integrity"
 type: epic
-status: in_progress
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
