@@ -712,6 +712,17 @@
                 ],
                 "pass_filenames": false,
                 "_comment": "EPIC-ContractDrivenACs/02b: Blocks commits when any staged ticket file has >7 ACs for a single agent block or >20 ACs total. Integration ACs (<!-- scope: integration -->) excluded from per-agent counts. Emits structured JSON ({hook, fix_agent, violations}) for precommit-autofix routing to IT PO. Override: ac_limit_override: true in frontmatter warns but does not block. v1 tickets (no ## Agent Contracts) skipped silently."
+            },
+            {
+                "id": "check-ac-coverage",
+                "name": "Check AC Coverage (active ACs must have test coverage)",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_ac_coverage.py",
+                "language": "system",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "EPIC-ACTraceabilityStore/04: Reverse-direction coverage check. Scans all active ACs in docs/acceptance-criteria/ and warns for each with no corresponding # covers: tag in any test file. Always exits 0 (warning-only, never blocks). Degrades gracefully when docs/acceptance-criteria/ is absent."
             }
         ],
         "post_merge": [

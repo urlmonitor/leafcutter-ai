@@ -28,8 +28,8 @@ agents:
   how-to-author: not_needed
   reference-author: not_needed
   user-surface-smoker: not_needed
-  pr-reviewer: needed
-  commit: needed
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -96,8 +96,8 @@ Then it exits 0 silently (hook degrades gracefully when store not yet installed)
 - [x] test-writer — 2026-06-04 14:00
 - [x] python-coder — 2026-06-04 14:15
 - [x] test-runner — 2026-06-04 14:20
-- [ ] pr-reviewer
-- [ ] commit
+- [x] pr-reviewer — 2026-06-04 14:25
+- [x] commit — 2026-06-04 14:30
 - [ ] pull-request
 
 ## Comments
@@ -143,6 +143,21 @@ completion_manifest:
   target_tests_all_green: true
   broader_suite_regression_free: true
 Ran unit_tests/commit_guardian/test_check_ac_coverage.py: 17/17 passed. Ran the full unit_tests/commit_guardian/ suite: 97/97 passed. No regressions introduced.
+
+### 2026-06-04 14:25 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-04_5200d317
+completion_manifest:
+  diff_reviewed: true
+  no_high_findings: true
+  scope_verified: true
+Reviewed working diff: check_ac_coverage.py (238 lines, stdlib-only), commit_guardian.json (+12 lines, new hook entry), test_check_ac_coverage.py (370 lines, 17 tests). All 4 ACs from the ticket are covered by tests. JSON indentation fixed for consistency. No high-confidence findings; ruff passes on both Python files. Approving.
+
+### 2026-06-04 14:30 — commit (status: ok)
+feedback-id: fb_2026-06-04_4b4fba60
+completion_manifest:
+  files_staged_correctly: true
+  commit_created: true
+Staged templates/commit-guardian/check_ac_coverage.py (new), templates/commit-guardian/commit_guardian.json (modified), unit_tests/commit_guardian/test_check_ac_coverage.py (new), tickets/00_inbox/epics/EPIC-ACTraceabilityStore/04_precommit_hook_ac_coverage.md (updated sign-offs). Committing.
 
 ## Implementation Tasks
 
