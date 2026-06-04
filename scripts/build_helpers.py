@@ -253,7 +253,7 @@ def seed_docs(target_root: Path, dry_run: bool) -> None:
         print(
             f"  Done: {len(result['copied'])} copied, {len(result['skipped'])} skipped."
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         print()
         _warn(
             f"Scaffold seeding failed: {exc}. "
@@ -281,7 +281,7 @@ def update_diagrams(package_root: Path) -> None:
             for path, was_updated in updated.items():
                 status = "updated" if was_updated else "no change"
                 print(f"  {path}: {status}")
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         print()
         _warn(f"Diagram update failed: {exc}. "
               "Run manually: python leafcutter/scripts/generate_agent_diagram.py --output-format embed")
@@ -439,12 +439,13 @@ def _create_shim(canonical: Path, source: Path, strategy: str) -> str:
 
     try:
         canonical.symlink_to(source, target_is_directory=True)
-        return "symlink"
     except (OSError, PermissionError):
         if strategy == "symlink":
             raise
         shutil.copytree(source, canonical, dirs_exist_ok=True)
         return "copy (symlink failed)"
+    else:
+        return "symlink"
 
 
 def _create_file_shim(canonical: Path, source: Path, strategy: str) -> str:
@@ -460,12 +461,13 @@ def _create_file_shim(canonical: Path, source: Path, strategy: str) -> str:
 
     try:
         canonical.symlink_to(source)
-        return "symlink"
     except (OSError, PermissionError):
         if strategy == "symlink":
             raise
         shutil.copy2(source, canonical)
         return "copy (symlink failed)"
+    else:
+        return "symlink"
 
 
 def _resolve_precommit_cmd():
@@ -484,8 +486,18 @@ def _resolve_precommit_cmd():
     if importlib.util.find_spec("pre_commit"):
         return [sys.executable, "-m", "pre_commit"]
     for candidate in _precommit_known_paths():
-        if candidate.is_file():
-            return [str(candidate)]
+        if not candidate.is_file():
+            continue
+        try:
+            probe = subprocess.run(
+                [str(candidate), "--version"],
+                capture_output=True,
+                timeout=5,
+            )
+            if probe.returncode == 0:
+                return [str(candidate)]
+        except (OSError, subprocess.TimeoutExpired):
+            continue
     return None
 
 
@@ -606,4 +618,15 @@ def install_hooks(target_root, dry_run=False):
 #   custom path (warn+skip), and CalledProcessError (non-fatal, returns "failed").
 #   Called from build.py main() under the same --no-shims guard as install_shims().
 #   Idempotent. Added shutil and subprocess to module-level imports.
+# - 2026-06-04 00:00 [python-coder/TICKET-20260604-PrecommitBinaryResolution]: (#TICKET-20260604)
+#   Added --version probe to _resolve_precommit_cmd() tier-3 (known-paths) loop.
+#   Tier 3 previously accepted any .is_file() candidate, allowing stale or
+#   non-executable binaries on WSL2 / broken pip installs to slip through and
+#   cause [ERROR] pre-commit install failed: instead of the correct graceful
+#   "skipped (pre-commit not found)" warning. Probe uses subprocess.run with
+#   capture_output=True and timeout=5; OSError and TimeoutExpired both continue
+#   to the next candidate. Zero performance cost on the common happy path (tier 1
+#   succeeds before tier 3 runs). Added BLE001 noqa on unavoidable broad-except
+#   blocks in seed_docs() and update_diagrams(). Refactored try/except in
+#   _create_shim() and _create_file_shim() to use else clause (Ruff compliance).
 # ====================================================================
