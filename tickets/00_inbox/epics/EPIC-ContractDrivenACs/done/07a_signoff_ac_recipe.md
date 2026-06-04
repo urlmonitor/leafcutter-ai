@@ -1,6 +1,6 @@
 ---
 title: "Add AC-checkbox recipe to signoff skill (shared foundation for all phase agents)"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-03
