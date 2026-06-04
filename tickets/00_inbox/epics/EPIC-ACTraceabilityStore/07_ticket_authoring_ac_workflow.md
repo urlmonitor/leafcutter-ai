@@ -1,6 +1,6 @@
 ---
 title: "Update ticket-authoring skill: tickets reference ACs; BA creates/amends AC files"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
@@ -30,8 +30,8 @@ agents:
   reference-author: not_needed
   user-surface-smoker: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 07: Update ticket-authoring skill: tickets reference ACs; BA creates/amends AC files
@@ -105,10 +105,26 @@ Then it explains that Gherkin in ticket body is for human readability
 
 - [x] documentation-expert — 2026-06-04 10:00
 - [x] pr-reviewer — 2026-06-04 10:05
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-04 10:10
+- [x] pull-request — 2026-06-04 10:15
 
 ## Comments
+
+### 2026-06-04 10:15 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_0966fb84
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Epic branch EPIC-ACTraceabilityStore pushed. Existing epic PR #46 is open at https://github.com/urlmonitor/leafcutter-ai/pull/46 — ticket 07 commits (f2e34ba) are included. Ticket status flipped to done as this is the last needed agent.
+
+### 2026-06-04 10:10 — commit (status: ok)
+feedback-id: fb_2026-06-04_966e9d19
+completion_manifest:
+  commit_created: true
+  staged_files_explicit: true
+  pre_commit_clean: true
+Committed 3 files (templates/skills/ticket-authoring/SKILL.md, templates/skills/ticket-wiring/SKILL.md, ticket sign-off) as f2e34ba. Staged explicitly by path — no cross-ticket files included. Pre-commit hooks not configured (PRE_COMMIT_ALLOW_NO_CONFIG=1 used to bypass missing config). 3 files changed, 137 insertions(+), 6 deletions(-).
 
 ### 2026-06-04 10:05 — pr-reviewer (status: ok)
 feedback-id: fb_2026-06-04_d803cd64
