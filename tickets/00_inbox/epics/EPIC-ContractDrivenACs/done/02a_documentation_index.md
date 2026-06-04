@@ -1,6 +1,6 @@
 ---
 title: "Create auto-updating documentation index for BA and IT PO knowledge acquisition"
-status: todo
+status: done
 components:
   - build_pipeline
   - documentation_system
@@ -26,7 +26,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   architecture-diagram-author: not_needed
   user-surface-smoker: not_needed
 ---
@@ -122,7 +122,7 @@ Deleted docs automatically disappear. No manual maintenance.
 - [x] test-runner — 2026-06-04 06:31
 - [x] pr-reviewer — 2026-06-04 06:32
 - [x] commit — 2026-06-04 09:30
-- [ ] pull-request
+- [x] pull-request — 2026-06-04 09:31
 
 ## AC Coverage
 
@@ -186,3 +186,11 @@ completion_manifest:
   commit_created: true
   pre_commit_hooks_passed: true
 Committed ticket sign-off updates for 02a_documentation_index.md. Implementation files (scripts/generate_doc_index.py, docs/INDEX.md, scripts/build.py) were already committed in a prior commit (edce460). Staged and committed the ticket file with all prior phase sign-offs.
+
+### 2026-06-04 09:31 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  pr_exists: true
+  commits_pushed: true
+  branch_up_to_date: true
+PR #43 (feat(epic): EPIC-ContractDrivenACs — contract-driven acceptance criteria) already exists on the EPIC-ContractDrivenACs branch. Pushed commit d8e5976 to remote. Branch is current with all implementation and sign-off commits.
