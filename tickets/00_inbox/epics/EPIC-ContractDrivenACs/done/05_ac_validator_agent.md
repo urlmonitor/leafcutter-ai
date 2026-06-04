@@ -1,6 +1,6 @@
 ---
 title: "Create ac-validator agent — final AC coverage gate before commit"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-03

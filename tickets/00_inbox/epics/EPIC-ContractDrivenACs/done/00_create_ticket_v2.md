@@ -1,6 +1,6 @@
 ---
 title: "Create parallel /create-ticket-v2 command for testing new AC pipeline"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-03
