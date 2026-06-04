@@ -315,6 +315,18 @@ noise. Failing imports are real signal that the implementation does not exist ye
 Do NOT add `@pytest.mark.xfail` or `@pytest.skip` to hide failures — the tests
 MUST be truly red (non-zero exit) when you hand off to coders.
 
+### 2h — Fixture Extraction Rule (mandatory)
+
+If any test needs a dict with more than 5 keys or a parametrize table with
+more than 3 rows, extract the data to `tests/fixtures/<module>/<descriptive_name>.json`
+where `<module>` is this test file's stem minus the `test_` prefix.
+Load it via `load_fixture('<module>/<descriptive_name>')` (imported from
+`tests/conftest.py`). Do not inline large data structures directly in test
+functions or parametrize decorators.
+
+See `docs/testing/README.md` §Fixture Convention for the full layout and
+`load_fixture()` signature.
+
 ## Step 3 — Delegate Codebase Questions
 
 If you need to know the current signature of a function, which module to import,

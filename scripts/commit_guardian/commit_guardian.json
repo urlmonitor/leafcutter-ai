@@ -654,6 +654,18 @@
                 "_comment": "EPIC-TDDWorkflowEnforcement/04: Blocks commits when test-weakening changes (test deletion, pytest.skip, pytest.mark.xfail, @unittest.skip, @unittest.expectedFailure) are staged concurrent with production code changes. Exits 0 when only test changes or only production changes are staged. See docs/how-to/writing-a-tdd-ticket.md."
             },
             {
+                "id": "check-test-fixture-bloat",
+                "name": "Check Test Fixture Bloat",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_test_fixture_bloat.py",
+                "language": "system",
+                "files": "test_.*\\.py$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "EPIC-TestFixtureConvention/02: Scans staged test_*.py files for oversized inline data (line count, inline dict keys, parametrize rows). Warn-only by default (enabled: false in test_fixture_bloat config). Flip enabled: true once migration to fixture JSON files is complete. Files annotated with # noqa: fixture-bloat are always skipped."
+            },
+            {
                 "id": "check-exception-handling",
                 "name": "Check Exception Handling (AST I/O Boundary Guard)",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_exception_handling.py",
@@ -697,6 +709,14 @@
             "cursor.callproc"
         ],
         "blind_exception_names": ["Exception", "BaseException"]
+    },
+    "test_fixture_bloat": {
+        "_comment": "check_test_fixture_bloat.py — Inline-data bloat detection for staged test_*.py files. Ships enabled: false (warn-only) until migration to fixture JSON files is complete. Flip enabled: true to enforce. Files annotated with # noqa: fixture-bloat are skipped. Paths in grandfathered_paths are skipped with a [grandfathered] note.",
+        "max_test_file_lines": 500,
+        "max_inline_dict_keys": 5,
+        "max_parametrize_rows": 3,
+        "grandfathered_paths": [],
+        "enabled": false
     },
     "mermaid_complexity": {
         "_comment": "check_mermaid_complexity.py \u2014 Structural complexity limits for mermaid diagrams in .md files. Warn-only by default; set strict: true to block commits.",
