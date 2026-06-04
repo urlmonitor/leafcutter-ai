@@ -266,6 +266,11 @@ When your implementation requires new or updated tests:
 2. When signing off, use `(status: handoff)` instead of `(status: ok)` to signal that test-writer must run next.
 3. Do NOT create files under `unit_tests/` or any test directory.
 
+When delegating test authoring: remind test-writer that any dict with >5 keys
+or parametrize table with >3 rows must be externalised to a JSON fixture file
+under `tests/fixtures/` and loaded via `load_fixture()`. See
+`docs/testing/README.md` §Fixture Convention.
+
 This ensures test-writer has a clear handoff list and the parity guard can enforce completion.
 
 ## Error Handling Policy

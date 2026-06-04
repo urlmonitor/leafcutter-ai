@@ -22,9 +22,9 @@ agents:
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
-  documentation-expert: needed
-  pr-reviewer: needed
-  commit: needed
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -107,28 +107,52 @@ Then it contains a note that agents are required to read this section
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] pr-reviewer
-- [ ] commit
+- [x] documentation-expert — 2026-06-04 10:15
+- [x] pr-reviewer — 2026-06-04 10:18
+- [x] commit — 2026-06-04 10:22
 - [ ] pull-request
 
 ## Comments
 
+### 2026-06-04 10:15 — documentation-expert (status: ok)
+feedback-id: fb_2026-06-04_46159175
+completion_manifest:
+  doc_written: true
+  cross_links_added: true
+  diataxis_genre_correct: true
+Updated all three target files: added §2h Fixture Extraction Rule to `templates/agents/test-writer.md` after the failing-stubs section; appended fixture-extraction reminder to the Test Delegation section of `templates/agents/python-coder.md` with a reference to `docs/testing/README.md §Fixture Convention`; added agent-required callout at the top of the Fixture Convention section in `docs/testing/README.md`. All Acceptance Criteria satisfied.
+
+### 2026-06-04 10:18 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-04_6e5f6595
+completion_manifest:
+  diff_reviewed: true
+  no_high_findings: true
+  scope_verified: true
+Reviewed 24-line diff across 3 files. All Acceptance Criteria satisfied. No high-confidence or medium-confidence findings. Scope matches `files_touched` exactly — only `templates/agents/test-writer.md`, `templates/agents/python-coder.md`, and `docs/testing/README.md` were modified. Escalation: none (medium count was 0, threshold >3).
+
+### 2026-06-04 10:22 — commit (status: ok)
+feedback-id: fb_2026-06-04_c8376710
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Staged 4 files: templates/agents/test-writer.md, templates/agents/python-coder.md, docs/testing/README.md, and the ticket file. Committed as feat(agents): add fixture extraction rule to test-writer and python-coder prompts.
+
 ## Implementation Tasks
 
 ### documentation-expert
-- [ ] Update `templates/agents/test-writer.md`:
+- [x] Update `templates/agents/test-writer.md`:
   - Locate the test authoring rules section (search for "rule" or "when to"
     near test-writing guidelines)
   - Insert the fixture extraction rule immediately after the section header:
     dict threshold (>5 keys), parametrize threshold (>3 rows), target path
     `tests/fixtures/<module>/<name>.json`, load via `load_fixture()`.
   - Do not alter any other section or the agent's frontmatter.
-- [ ] Update `templates/agents/python-coder.md`:
+- [x] Update `templates/agents/python-coder.md`:
   - Locate the "Test Delegation" section
   - Append the reminder to pass the fixture-extraction constraint to test-writer
   - Reference `docs/testing/README.md §Fixture Convention`
-- [ ] Update `docs/testing/README.md`:
+- [x] Update `docs/testing/README.md`:
   - In the Fixture Convention section (written by ticket 01), add a bold callout:
     "Agents are required to read this section" with the names test-writer and
     python-coder, and instructions on how to file a ticket if agent drift is

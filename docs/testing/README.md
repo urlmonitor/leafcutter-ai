@@ -228,6 +228,13 @@ correct framework and setUp pattern.
 
 ## Fixture Convention (ADR-007)
 
+**Agents are required to read this section.** `test-writer` and `python-coder`
+are instructed in their system prompts to consult this file before authoring
+tests. If you observe an agent inlining large data blobs (dicts with more than
+5 keys, or parametrize tables with more than 3 rows) instead of using
+`load_fixture()`, the agent prompt may have drifted — file a ticket to update
+`templates/agents/test-writer.md` or `templates/agents/python-coder.md`.
+
 Large test data blobs (dicts, expected-output structures, parametrize tables) MUST be
 externalised to JSON files under `tests/fixtures/` and loaded via the `load_fixture()`
 helper in `tests/conftest.py`. This keeps test files under the 500-line ceiling and
