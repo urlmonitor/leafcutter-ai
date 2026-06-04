@@ -54,7 +54,8 @@ def build_ac_store_scaffold(
     Returns:
         Count of files written (or that would be written in dry-run mode).
     """
-    ac_dir = target_root / "docs" / "acceptance-criteria"
+    docs_dir = config.get("docs_root", "docs/").rstrip("/")
+    ac_dir = target_root / docs_dir / "acceptance-criteria"
     written = 0
 
     template_files = [

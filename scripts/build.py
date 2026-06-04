@@ -355,7 +355,8 @@ def build_doc_index(target_root: Path, config: dict, dry_run: bool, force: bool)
     """
     from generate_doc_index import generate_index
 
-    output_path = target_root / "docs" / "INDEX.md"
+    docs_dir = config.get("docs_root", "docs/").rstrip("/")
+    output_path = target_root / docs_dir / "INDEX.md"
     content = generate_index(target_root)
 
     if dry_run:

@@ -1098,16 +1098,17 @@ def build_ac_store_docs(target_root: Path, config: dict[str, Any],
     #   Both files are write-if-absent so user-edited versions are preserved.
     #   (#EPIC-ACTraceabilityStore/09)
     """
+    docs_dir = config.get("docs_root", "docs/").rstrip("/")
     docs_template_dir = TEMPLATES_DIR / "docs"
     doc_files = [
         (
             docs_template_dir / "how-to" / "ac-traceability-store.md",
-            target_root / "docs" / "how-to" / "ac-traceability-store.md",
+            target_root / docs_dir / "how-to" / "ac-traceability-store.md",
             "how-to/ac-traceability-store.md",
         ),
         (
             docs_template_dir / "reference" / "ac-schema.md",
-            target_root / "docs" / "reference" / "ac-schema.md",
+            target_root / docs_dir / "reference" / "ac-schema.md",
             "reference/ac-schema.md",
         ),
     ]
