@@ -1,6 +1,6 @@
 ---
 title: "Wire llm-expert into registry and docs (config/agent_registry.json, docs/agents/README.md)"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
@@ -19,7 +19,7 @@ agents:
   sql-coder: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   status-checker: not_needed
 ---
 
@@ -89,7 +89,7 @@ And the description reads: "Authors, edits, and audits agent templates, skill bo
 - [x] documentation-expert — 2026-06-04 13:42
 - [x] pr-reviewer — 2026-06-04 13:45
 - [x] commit — 2026-06-04 13:48
-- [ ] pull-request
+- [x] pull-request — 2026-06-04 13:52
 
 ## Comments
 
@@ -106,6 +106,14 @@ Impact classification: **SMALL**. Files touched: `config/agent_registry.json` (a
 
 Branch: none
 Reason: 2 files, 1 component (build_pipeline); no always-large trigger fired.
+
+### 2026-06-04 13:52 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_81c0b929
+completion_manifest:
+  branch_pushed: true
+  pr_exists: true
+
+Pushed commit 65602f9 to EPIC-LLMExpertAgent branch (5fc51da..65602f9). PR #49 (EPIC-LLMExpertAgent: introduce llm-expert agent) was already open — no new PR needed. Ticket 03 changes are now on the PR.
 
 ### 2026-06-04 13:48 — commit (status: ok)
 feedback-id: fb_2026-06-04_a3d01121
