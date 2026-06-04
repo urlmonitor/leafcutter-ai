@@ -1,0 +1,54 @@
+id: ACS-300j
+title: "Component dependency graph in the registry"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a component entry exists in docs/components.json,
+  When the IT PO receives a ticket whose ACs span multiple components,
+  Then the component entry includes a depends_on field containing
+    a list of component IDs (from the same components.json) that
+    this component requires at runtime or build time.
+  And depends_on captures component-to-component dependencies,
+    not agent-to-agent or file-to-file dependencies.
+  And the IT PO uses depends_on to detect when a ticket's ACs
+    touch both a component and one of its dependencies, signaling
+    that the ACs may need splitting into separate tickets to avoid
+    circular or tightly-coupled changes.
+  And the dependency graph is acyclic -- check_ac_schema.py (or a
+    new component-schema validator) rejects any components.json
+    that contains a dependency cycle.
+  And if a component has no dependencies on other components,
+    depends_on is set to an empty array [] rather than omitted.
+  And dependencies are directional: if component A depends_on
+    component B, that means A consumes an interface exposed by B,
+    not the reverse.
+  And the following known dependencies are captured (at minimum):
+    - ticket_creation_pipeline depends_on: [agent_registry, ac_store]
+    - supervisor_system depends_on: [agent_registry, ticket_creation_pipeline, git_vcs_operations]
+    - python_coding depends_on: [testing_quality]
+    - sql_coding depends_on: [testing_quality]
+    - frontend_coding depends_on: [testing_quality]
+    - review_system depends_on: [agent_registry]
+    - documentation_system depends_on: [ac_store]
+    - build_pipeline depends_on: [config_loader, agent_registry, skills_system]
+    - precommit_hooks depends_on: [config_loader]
+    - llm_authoring depends_on: [agent_registry, skills_system]
+    - product_ownership depends_on: [agent_registry, ac_store]
+depends_on: [ACS-300g]
+doc_links:
+  - path: docs/components.json
+    relationship: extends
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

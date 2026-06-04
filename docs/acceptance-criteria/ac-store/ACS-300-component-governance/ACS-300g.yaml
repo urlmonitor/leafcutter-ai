@@ -1,0 +1,54 @@
+id: ACS-300g
+title: "Complete component coverage in the registry"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the leafcutter-ai project contains multiple distinct subsystems
+    (as evidenced by agent_registry.json listing 60+ agents across
+    orchestration, coding, review, documentation, quality, and analysis roles),
+  When the IT PO needs to assign work on ANY area of the codebase,
+  Then docs/components.json contains an entry for every distinct subsystem,
+    each with at minimum: id, name, type, description, primary_code paths,
+    and detail_ref (or null if no architecture doc exists yet).
+  And the following subsystems (derived from agent_registry.json analysis)
+    each have a dedicated component entry:
+    - supervisor_system (epic-supervisor, ticket-supervisor, finalize-feature, workflow-architect)
+    - ticket_creation_pipeline (create-ticket, create-epic, business-analyst, refinement, it-po)
+    - python_coding (python-coder implementation)
+    - sql_coding (sql-coder + sub-agents: table, procedure, function, index, view, query)
+    - frontend_coding (frontend-coder implementation)
+    - testing_quality (test-planner, test-writer, test-runner, ac-validator, user-surface-smoker)
+    - review_system (architect-review, pr-reviewer, change-scope-reviewer, code-review-architect)
+    - documentation_system (documentation-expert, adr-author, diagram-author, explanation/how-to/reference authors)
+    - git_vcs_operations (commit, pull-request, conflict-resolver, worktree-agent, changelog-agent)
+    - research_analysis (research-agent, brainstorm-lead/worker, retrospective-agent, feedback-analyst)
+    - onboarding (onboard, onboard-config-section)
+    - precommit_hooks (commit_guardian.json, hook scripts, precommit-autofix)
+    - llm_authoring (llm-expert, prompt-audit)
+    - product_ownership (product-owner-agent, roadmap-steward, roadmap.json)
+    - ac_store (acceptance-criteria system, check_ac_schema.py, index.yaml)
+    - agent_registry (agent_registry.json, agent_registry.schema.json, selection logic)
+    - skills_system (skills_config.json, skill templates, skill loader)
+  And the existing entries (sync_platforms, build_pipeline, config_loader) are preserved.
+  And no subsystem that owns 2+ files or has a dedicated agent is left unrepresented.
+depends_on: []
+doc_links:
+  - path: docs/components.json
+    relationship: governs
+    status: exists
+  - path: config/agent_registry.json
+    relationship: derives-from
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

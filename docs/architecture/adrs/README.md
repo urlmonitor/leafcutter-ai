@@ -15,3 +15,8 @@ are the way they are.
 | [ADR-004](ADR-004-consolidated-output-root.md) | Active | Consolidated Output Root — All build.py Artifacts Under .leafcutter/ | 2026-05-27 |
 | [ADR-004b](ADR-004-tdd-workflow-enforcement.md) | Active | Test-First Workflow Enforcement in the Agentic Build Pipeline | 2026-05-27 |
 | [ADR-005](ADR-005-frontend-coder-agent.md) | Active | frontend-coder as a First-Class Sibling Implementation Agent | 2026-05-28 |
+| [ADR-006](ADR-006-flatten-supervisor-chain.md) | Accepted | Flatten the Supervisor Chain — ticket-supervisor at Depth 0 | 2026-05-29 |
+| [ADR-007](ADR-007-contract-driven-acs.md) | Accepted | Contract-Driven Acceptance Criteria | 2026-06-04 |
+| [ADR-007b](ADR-007-ac-store-schema-id-format-enforcement.md) | Accepted | AC Store — YAML Schema, ID Format, and Bidirectional Enforcement Model | 2026-06-04 |
+| [ADR-007c](ADR-007-test-fixture-convention.md) | Active | Test Fixture Convention | 2026-06-04 |
+| [ADR-009](ADR-009-itpo-no-source-code-access.md) | Accepted | IT Product Owner v3 — Source Code Access Restriction | 2026-06-05 |

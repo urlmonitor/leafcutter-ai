@@ -1,0 +1,46 @@
+id: ACS-300i
+title: "Exposed interfaces field documents component boundaries"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a component entry exists in docs/components.json,
+  When the IT PO needs to write delivers_to or expects_from contracts
+    for a ticket that crosses component boundaries,
+  Then the component entry includes an exposed_interfaces field
+    containing a list of interface descriptors, each with:
+    - name: human-readable interface name (e.g. "agent dispatch protocol")
+    - type: one of "file_contract", "json_schema", "function_signature",
+      "cli_command", "hook_protocol", "event", or "data_shape"
+    - path: file path or endpoint where the interface is defined
+      (e.g. "config/agent_registry.json", "scripts/build.py --validate")
+    - shape: brief description of the data shape or contract
+      (e.g. "JSON object with agents[].id, agents[].spawn_allowlist")
+  And interfaces are documented at the shape level (what data flows
+    across the boundary and in what format), not at the implementation
+    level (no function bodies, no line numbers).
+  And the IT PO can derive delivers_to and expects_from values for
+    any ticket by looking up the source component's exposed_interfaces
+    and matching them to the consuming component's expected inputs.
+  And if a component has no external interfaces (purely internal),
+    exposed_interfaces is set to an empty array [] rather than omitted.
+  And shape descriptions are stable enough that they do not change
+    on every commit -- they describe the contract, not the current
+    implementation detail.
+depends_on: [ACS-300g]
+doc_links:
+  - path: docs/components.json
+    relationship: extends
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
