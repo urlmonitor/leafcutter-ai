@@ -1,9 +1,0 @@
-{
-  "adr_id": "ADR-007",
-  "affected_files": [
-    "tests/conftest.py",
-    "tests/fixtures/_shared/.gitkeep",
-    "docs/testing/README.md"
-  ],
-  "one_line_summary": "Tests MUST externalise large data blobs to tests/fixtures/<module>/ JSON files and load them via the load_fixture() helper defined in tests/conftest.py."
-}
