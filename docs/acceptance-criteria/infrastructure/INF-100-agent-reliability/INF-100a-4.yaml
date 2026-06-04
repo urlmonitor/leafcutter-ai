@@ -1,0 +1,32 @@
+id: INF-100a-4
+title: "Wiring tests verify template Pre-Flight section and PROJECT_CONTEXT.md content"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260604-PullRequestAgentProjectContext.md"
+criteria: |
+  Given a wiring verification test file exists for the pull-request agent,
+  When the test suite runs,
+  Then one test asserts that the pull-request agent template contains a section named "Pre-Flight" that references "PROJECT_CONTEXT.md",
+  And one test asserts that the file .agents/agents/pull-request/PROJECT_CONTEXT.md exists on disk at a path resolved relative to the repository root,
+  And one test asserts that the PROJECT_CONTEXT.md file body contains the string "urlmonitor",
+  And one test asserts that the PROJECT_CONTEXT.md file body contains the string "70".
+depends_on: [INF-100a, INF-100a-1, INF-100a-2, INF-100a-3]
+doc_links:
+  - path: docs/conventions/PROJECT_CONTEXT-injection.md
+    relationship: describes
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: INF-100a-1
+  contract: "Template with Pre-Flight section and PROJECT_CONTEXT.md with EMU guard and PR standards"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

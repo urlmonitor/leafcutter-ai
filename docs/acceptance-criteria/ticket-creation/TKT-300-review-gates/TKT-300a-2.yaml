@@ -1,0 +1,28 @@
+id: TKT-300a-2
+title: "IT PO adds policy-level requirements without implementation prescriptions"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an L2 AC with criteria describing a behavior that has latency sensitivity
+    and handles external input,
+  When the IT PO enriches the AC,
+  Then the it_requirements field contains at least one entry,
+  And every entry states a testable policy constraint
+    (e.g., "must complete within 2 seconds for typical input sizes"),
+  And no entry prescribes a specific exception type, exit code,
+    design pattern, or function name.
+depends_on: [TKT-300a]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

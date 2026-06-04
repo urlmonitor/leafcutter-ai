@@ -1,28 +1,17 @@
 id: TKT-400i
-title: "PO and BA file access enforced by PreToolUse hooks"
+title: "Business agents cannot accidentally read or modify source code"
 component: ticket-creation
 level: L1
 status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given the PO and BA agents have restricted file access scopes,
-  When either agent attempts to Read or Write a file,
-  Then a PreToolUse hook validates the path against the agent's allowlist:
-    - PO allowlist: Read/Write .md and .yaml in docs/, docs/acceptance-criteria/,
-      docs/vision.md, docs/roadmap.json
-    - BA allowlist: Read .md and .yaml in docs/, docs/acceptance-criteria/;
-      Write .yaml in docs/acceptance-criteria/ only
-  And attempts to Read .py, .ts, .sql, .js, .sh files are blocked
-    with exit code 2 and a message: "BA/PO cannot read source code.
-    Use a skill to load component context instead."
-  And the hook is defined in the agent's frontmatter hooks section,
-    not in global settings.json (per-agent scoping).
-  And this is defense-in-depth: the prompt already instructs the agent
-    not to read source, the hook structurally prevents it even if
-    the prompt instruction is ignored.
-  And the hook script is portable — shipped via build.py to consumer projects.
-depends_on: [TKT-100l, TKT-100k]
+  Structural guardrails prevent business-focused agents from touching implementation files.
+  The product owner and analyst agents can only access documentation and requirement
+  files — any attempt to read or write source code is blocked automatically. This is
+  defense-in-depth: even if an instruction is misunderstood, the guardrail prevents
+  scope violations. The protection travels with the package to every project.
+depends_on: [TKT-100l]
 doc_links: []
 assigned_agent: python-coder
 estimated_complexity: M

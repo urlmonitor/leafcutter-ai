@@ -34,6 +34,23 @@ agents:
   pull-request: needed
   explanation-author: needed
   how-to-author: needed
+ac_traceability:
+  l1: BP-100b
+  l2:
+    - BP-100b-1
+    - BP-100b-2
+    - BP-100b-3
+    - BP-100b-4
+    - BP-100b-5
+    - BP-100b-6
+    - BP-100b-7
+    - BP-100b-8
+    - BP-100b-9
+    - BP-100b-10
+  l3:
+    - BP-100b-5-i
+    - BP-100b-6-i
+  ac_path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/
 ---
 
 # Wire workflow scripts into build infrastructure and add template-category parity test
@@ -114,6 +131,25 @@ Then a .claude/workflows/ row is present
 - [ ] pull-request
 - [ ] explanation-author
 - [ ] how-to-author
+
+## AC Traceability
+
+| AC ID | Level | Title | Agent |
+|-------|-------|-------|-------|
+| BP-100b-1 | L2 | Build creates a symlink so agents reach compiled workflows at .claude/workflows/ | python-coder |
+| BP-100b-2 | L2 | Output mappings track workflow source-to-destination pairs for compare-before-write | python-coder |
+| BP-100b-3 | L2 | Stale workflow artifacts are removed during build cleanup | python-coder |
+| BP-100b-4 | L2 | Source manifests include workflows for content fingerprinting | python-coder |
+| BP-100b-5 | L2 | Drift detection scans .claude/workflows/ for compiled workflow changes | python-coder |
+| BP-100b-6 | L2 | Parity test cross-validates all four infrastructure layers against each other | test-writer |
+| BP-100b-7 | L2 | Pre-commit drift hook triggers on compiled workflow files | python-coder |
+| BP-100b-8 | L2 | Build pipeline diagram includes the workflow scripts phase | documentation-expert |
+| BP-100b-9 | L2 | Consolidated output root doc lists .claude/workflows/ as a shimmed output | documentation-expert |
+| BP-100b-10 | L2 | Drift hook docs include a developer checklist for adding new template categories | documentation-expert |
+| BP-100b-5-i | L3 | Drift detection does not false-positive on the legacy .agents/workflows/ path | python-coder |
+| BP-100b-6-i | L3 | Parity test failure message names the missing layer and category | test-writer |
+
+AC files: `docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100b-*.yaml`
 
 ## Comments
 

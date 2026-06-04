@@ -1,0 +1,30 @@
+id: TKT-200c
+title: "Everything a reviewer needs is in one place"
+component: ticket-creation
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Specs, diagrams, and docs are assembled into a single reviewable package.
+
+  Instead of hunting across scattered files, the technical reviewer receives a
+  complete package: the spec files, the generated diagrams, the component docs,
+  and any relevant existing documentation — all cross-referenced and ready for
+  a single review pass.
+depends_on: [TKT-200, TKT-200a, TKT-200b]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to:
+  agent: llm-expert
+  contract: "Complete reviewable package: AC files + diagram files + component docs all available"
+expects_from:
+  ac_id: TKT-200a
+  contract: "Generated architecture diagrams for each touched component"
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -21,3 +21,11 @@ components:
     prefix: TKT
     description: "ACs for the ticket-creation pipeline (v1 and v2)"
     owner: build_pipeline
+  - id: build-pipeline
+    prefix: BP
+    description: "ACs for the build system: phase orchestration, artifact wiring, drift detection, and config-driven path resolution"
+    owner: build_pipeline
+  - id: infrastructure
+    prefix: INF
+    description: "ACs for cross-cutting infrastructure: agent context injection, pre-commit hooks, and project conventions"
+    owner: null

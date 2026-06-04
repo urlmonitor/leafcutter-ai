@@ -1,0 +1,27 @@
+id: TKT-300a-4
+title: "IT PO never modifies the BA's criteria field"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an L2 AC file written by the BA with a criteria field containing
+    a three-clause Gherkin scenario,
+  When the IT PO enriches that AC file,
+  Then the criteria field in the enriched file is byte-identical
+    to the criteria field in the original BA output,
+  And the IT PO logs a caveat instead of rewriting
+    when criteria are ambiguous for implementation purposes.
+depends_on: [TKT-300a]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

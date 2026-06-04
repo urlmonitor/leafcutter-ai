@@ -1,22 +1,15 @@
 id: BO-200a
-title: "Work envelope captures all metadata needed for an atomic commit"
+title: "Every commit knows exactly what it contains and why"
 component: build-orchestration
 level: L1
 status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given a ticket-supervisor has completed all implementation and review phases,
-  When the commit phase agent prepares the commit,
-  Then a work envelope is constructed as a JSON payload containing:
-    ticket_path (absolute path to the ticket file),
-    files_changed (list of paths modified by the implementation),
-    commit_message (conventional-commit formatted string referencing the ticket),
-    agents_signed_off (list of agent names that signed off),
-    epic_name (name of the parent epic or null for standalone tickets),
-  And every field in the envelope is validated before the commit proceeds,
-  And a missing or malformed field causes the commit phase to halt with a
-    blocker comment naming the invalid field.
+  Before committing, all the context about what changed and who approved it is bundled together.
+  The commit package includes the ticket reference, changed files, formatted message,
+  sign-off records, and parent context — all validated upfront so incomplete
+  deliveries are caught before they reach the repository.
 depends_on: [BO-200]
 doc_links: []
 assigned_agent: python-coder

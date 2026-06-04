@@ -1,0 +1,29 @@
+id: TKT-300c-2
+title: "User reviews enriched plan before implementation dispatch"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the IT PO has enriched all L2 ACs with agent assignments,
+    complexity estimates, and cross-agent contracts,
+  When the pipeline reaches the transition between technical review and build dispatch,
+  Then the system presents a summary table showing each AC's assigned agent,
+    estimated complexity, and any integration contracts,
+  And the system waits for explicit user confirmation
+    before any implementation agent is dispatched,
+  And if the user modifies an agent assignment or contract,
+    the change is applied before dispatch proceeds.
+depends_on: [TKT-300c, TKT-300a]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

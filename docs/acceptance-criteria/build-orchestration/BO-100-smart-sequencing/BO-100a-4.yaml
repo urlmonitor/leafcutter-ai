@@ -8,12 +8,11 @@ work_status: todo
 criteria: |
   Given an epic contains tickets A, B, C where A.depends_on=[C],
     B.depends_on=[A], and C.depends_on=[B] (cycle A->B->C->A),
-  When detect_cycle(graph) is called,
-  Then it returns a non-None list containing at least the nodes [A, B, C]
-    forming the cycle path,
-  And the returned list starts and ends with the same node (closed path),
-  And /build-feature halts with exit code 1,
-  And the error message written to stderr contains the string "CYCLE DETECTED"
+  When the cycle detection logic analyzes the dependency graph,
+  Then it identifies the cycle containing at least the nodes [A, B, C],
+  And the reported cycle forms a closed path (starts and ends with the same node),
+  And the build system halts with a blocking error,
+  And the error message contains "CYCLE DETECTED"
     followed by the arrow-separated cycle path (e.g. "A -> B -> C -> A"),
   And no ticket-supervisor is dispatched (dispatch step is never reached).
 depends_on: [BO-100a]

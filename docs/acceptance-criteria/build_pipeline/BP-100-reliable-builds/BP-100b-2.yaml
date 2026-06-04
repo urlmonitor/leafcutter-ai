@@ -1,0 +1,31 @@
+id: BP-100b-2
+title: "Output mappings track workflow source-to-destination pairs for compare-before-write"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
+criteria: |
+  Given the build system computes output mappings for all template categories
+  When the mappings for the workflows-js category are resolved
+  Then each .js file in templates/scripts/workflows/ has a corresponding
+    source-to-destination entry mapping it to the workflows output directory
+  And the compare-before-write mechanism uses these mappings to skip unchanged
+    workflow files (identical content produces no file write)
+depends_on:
+  - BP-100b
+doc_links:
+  - path: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

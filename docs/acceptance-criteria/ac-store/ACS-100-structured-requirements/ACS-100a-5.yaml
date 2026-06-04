@@ -7,7 +7,7 @@ req_status: active
 work_status: todo
 criteria: |
   Given a YAML file has status "superseded_by",
-  When check_ac_schema.py validates the superseded_by field,
+  When the schema validator checks the superseded_by field,
   Then a non-null value matching ^[A-Z]{2,6}-[0-9]{3}$ passes
     (e.g. superseded_by: "FIN-002"),
   And a null value fails because superseded_by must reference the replacement AC,

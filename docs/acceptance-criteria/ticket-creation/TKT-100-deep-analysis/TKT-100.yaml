@@ -19,9 +19,9 @@ doc_links:
     status: exists
 delivers_to: null
 expects_from: null
-origin_agent: human
+origin_agent: BrainCandy
 created: 2026-06-04
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by: [TKT-100a, TKT-100e, TKT-100f, TKT-100g, TKT-100l]
 implemented_by: []

@@ -1,0 +1,38 @@
+id: INF-100a-3
+title: "PROJECT_CONTEXT.md contains PR writing standards for title and description"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260604-PullRequestAgentProjectContext.md"
+criteria: |
+  Given the file .agents/agents/pull-request/PROJECT_CONTEXT.md exists,
+  When the agent reads the PR writing standards section of that file,
+  Then the file specifies that PR titles must use imperative mood and present tense,
+  And the file specifies that PR titles must be 70 characters or fewer,
+  And the file specifies that PR titles must not end with a period,
+  And the file specifies that the PR description must contain a "## Summary" section with up to 3 bullet points,
+  And the file specifies that the PR description must contain a "## Test plan" section with a checkbox list,
+  And the file specifies that the PR description must end with a "Generated with [Claude Code](https://claude.com/claude-code)" footer.
+depends_on:
+  - INF-100a
+  - INF-100a-1
+doc_links:
+  - path: docs/conventions/PROJECT_CONTEXT-injection.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to:
+  agent: test-writer
+  contract: "A PROJECT_CONTEXT.md file containing the string 70 in a PR title standards section"
+expects_from:
+  ac_id: INF-100a-1
+  contract: "Template Pre-Flight section that loads this file at agent startup"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

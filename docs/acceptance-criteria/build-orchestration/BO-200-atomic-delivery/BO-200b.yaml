@@ -1,26 +1,16 @@
 id: BO-200b
-title: "Bundle management ensures atomic commits with rollback on partial failure"
+title: "Failed commits roll back cleanly instead of leaving a mess"
 component: build-orchestration
 level: L1
 status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given the work envelope is valid and the commit-phase serialization lock
-    has been acquired,
-  When the commit agent stages and commits the changes,
-  Then all files in the envelope are staged atomically via git add,
-  And the commit is created with a message following the conventional-commit
-    format: "feat|fix|chore(<scope>): <summary> (#<ticket-ref>)",
-  And if any pre-commit hook fails the staged changes remain intact for
-    the precommit-autofix retry loop,
-  And if the commit fails after hook retries are exhausted the commit agent
-    rolls back by running git reset HEAD to unstage without losing working-tree
-    changes,
-  And the serialization lock is released in all exit paths (success, hook failure,
-    rollback),
-  And the commit message includes a Co-Authored-By trailer when the work was
-    produced by an AI agent.
+  Commits either succeed completely or leave your working directory untouched.
+  All changes are committed as a single unit with a properly formatted message
+  referencing the ticket. If something goes wrong mid-commit, the system retries
+  automatically and rolls back cleanly if retries are exhausted — no half-committed
+  states, no lost work.
 depends_on: [BO-200a]
 doc_links: []
 assigned_agent: python-coder

@@ -1,19 +1,16 @@
 id: TKT-100a
-title: "Deep-understanding analysis with structured requirements output"
+title: "The system truly understands what you want before writing specs"
 component: ticket-creation
 level: L1
 status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given a user request arrives at /create-ticket-v3,
-  When the BA v3 agent runs,
-  Then it reads existing ACs and component docs BEFORE asking questions,
-    iterates with the user until requirements are fully understood,
-    and produces at minimum 1 AC YAML file per business requirement.
-  And AC production is mandatory (never empty) — if the BA cannot produce ACs,
-    it returns status:blocked with the specific gap.
-  And each AC file uses the v3 schema with valid Gherkin criteria.
+  The analyst reads what already exists before asking you a single question.
+  Your request is analyzed in the context of existing requirements and project
+  documentation. The analyst iterates with you until every requirement is
+  understood, then produces complete specification files — never leaving you
+  with an empty result or an unexplained gap.
 depends_on: [ACS-100a, ACS-100b]
 doc_links:
   - path: docs/architecture/components/create-ticket-v2-pipeline.md
@@ -25,7 +22,7 @@ delivers_to:
   agent: diagram-classifier
   contract: "AC YAML files in feature subfolder + structured BA payload JSON"
 expects_from: null
-origin_agent: human
+origin_agent: BrainCandy
 created: 2026-06-04
 amended_by: []
 superseded_by: null

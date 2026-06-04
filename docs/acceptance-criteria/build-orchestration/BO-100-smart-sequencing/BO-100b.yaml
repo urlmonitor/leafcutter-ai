@@ -1,20 +1,15 @@
 id: BO-100b
-title: "Batch concurrency cap limits parallel ticket-supervisor dispatches"
+title: "Work runs in parallel up to a safe limit you control"
 component: build-orchestration
 level: L1
 status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given the ready set from the DAG resolver contains N tickets,
-  When /build-feature computes the next batch at step 3 of the epic-level algorithm,
-  Then the batch size is capped at a configurable maximum (default: 3),
-  And the cap is read from the epic's configuration or a project-level default,
-  And tickets beyond the cap are deferred to the next loop iteration,
-  And the selection within the cap respects the ascending NN execution-order
-    prefix tiebreaker (lower-numbered tickets are dispatched first),
-  And the cap applies independently per loop iteration (a new batch of up to
-    cap-size tickets is computed on each pass through step 3).
+  Multiple tickets run simultaneously without overwhelming the system.
+  A configurable cap limits how many tickets are in flight at once, so you
+  get parallelism without resource exhaustion. Lower-numbered tickets take
+  priority when more are ready than the cap allows.
 depends_on: [BO-100a]
 doc_links: []
 assigned_agent: python-coder

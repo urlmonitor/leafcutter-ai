@@ -1,0 +1,30 @@
+id: BP-100b-3
+title: "Stale workflow artifacts are removed during build cleanup"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
+criteria: |
+  Given the workflows output directory contains a file named "obsolete-script.js"
+    that is NOT present in the current source templates
+  When the build system runs its stale-artifact removal phase
+  Then "obsolete-script.js" is deleted from the workflows output directory
+  And files that ARE still present in the source templates are retained
+depends_on:
+  - BP-100b
+doc_links:
+  - path: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

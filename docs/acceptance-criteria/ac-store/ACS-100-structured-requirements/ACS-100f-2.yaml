@@ -1,0 +1,28 @@
+id: ACS-100f-2
+title: "Parent chain traversal returns ancestors up to L0"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an L3 AC "ACS-100a-1-i" exists with depends_on: [ACS-100a-1],
+  And "ACS-100a-1" has depends_on: [ACS-100a],
+  And "ACS-100a" has depends_on: [ACS-100],
+  When an agent queries for AC ID "ACS-100a-1-i" with include_parents: true,
+  Then the result includes the matched AC plus its full ancestor chain:
+    ACS-100a-1 (L2 parent), ACS-100a (L1 grandparent), ACS-100 (L0 root),
+  And ancestors are ordered from immediate parent to root,
+  And each ancestor includes its full YAML content.
+depends_on: [ACS-100f]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -7,9 +7,9 @@ req_status: active
 work_status: todo
 criteria: |
   Given a YAML file has an id field,
-  When check_ac_schema.py validates the id value,
+  When the schema validator checks the id value,
   Then ids matching ^[A-Z]{2,6}-[0-9]{3}$ pass validation (e.g. "FIN-001", "ACS-042"),
-  And ids that violate the pattern fail with exit code 1
+  And ids that violate the pattern cause validation to fail with a diagnostic error
     (e.g. "fin-001" lowercase, "FIN-1" too few digits, "TOOLONG-001" prefix > 6 chars,
     "F-001" prefix < 2 chars, "FIN001" missing hyphen),
   And the error message includes the invalid id value and the expected pattern.

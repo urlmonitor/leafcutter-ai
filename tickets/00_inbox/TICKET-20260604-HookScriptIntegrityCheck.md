@@ -1,5 +1,5 @@
 ---
-title: "Add build-time hook referential integrity check and fix check_contract_shrinking false-positive"
+title: "Add build-time hook referential integrity check"
 status: todo
 components:
   - build_pipeline
@@ -12,8 +12,6 @@ requires_diagram: false
 requires_adr: false
 files_touched:
   - scripts/build_precommit.py
-  - templates/scripts/commit_guardian/check_contract_shrinking.py
-  - templates/commit-guardian/check_contract_shrinking.py
 agents:
   architect-review: not_needed
   test-writer: needed
@@ -26,18 +24,25 @@ agents:
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
+ac_traceability:
+  l1: BP-100a
+  l2:
+    - BP-100a-1
+    - BP-100a-2
+    - BP-100a-4
+    - BP-100a-5
+  l3: []
+  ac_path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/
 ---
 
-# Add build-time hook referential integrity check and fix check_contract_shrinking false-positive
+# Add build-time hook referential integrity check
 
 ## Actor / Goal
 
 In order to prevent the class of silent failure where hooks are registered in
 `commit_guardian.json` but their `.py` scripts are absent at the canonical
 template path, we need a build-time integrity check that emits a WARNING listing
-any gaps, so the problem is surfaced before runtime. Additionally, we need to fix
-a false-positive in `check_contract_shrinking.py` that flags its own source code
-patterns when it is staged alongside production files.
+any gaps, so the problem is surfaced before runtime.
 
 ## Context
 
@@ -98,20 +103,6 @@ entry: "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{conf
 → script filename: "check_contract_shrinking.py"
 ```
 
-### Problem 2: `check_contract_shrinking.py` false-positive
-
-`_PRODUCTION_FILE_RE` matches any `.py` diff header that is not in a test path.
-The `_TEST_PATH_RE` exclusion list covers `unit_tests/`, `tests/`, `test_*.py`,
-`conftest.py` — but not `commit_guardian/` or `scripts/commit_guardian/`. When
-the hook script itself is staged (e.g. when adding the self-exclusion fix),
-`check_contract_shrinking.py` at `templates/scripts/commit_guardian/` is
-classified as a production file. If any `_WEAKENING_PATTERNS` appear in the diff
-(including the hook's own source containing those pattern strings), the hook
-blocks itself.
-
-Fix: extend `_TEST_PATH_RE` to also exclude paths matching
-`commit_guardian/` — hook infrastructure is not production application code.
-
 ### Files not to modify
 
 - `scripts/build_phases.py` line 781 legacy fallback — do NOT remove the
@@ -125,10 +116,8 @@ Fix: extend `_TEST_PATH_RE` to also exclude paths matching
 
 - [ ] AC-1: After `build_precommit_config()` reads `hooks_manifest.hooks`, it iterates every hook entry, extracts the script filename from the `entry` field, and checks for `<cg_dir>/<filename>`. For any script not found at `cg_dir`, a `_log.warning(...)` is emitted listing the hook id and the expected path. The build does NOT fail — it continues and returns its normal count.
 - [ ] AC-2: When all hook scripts exist at `cg_dir`, no warning is emitted and the function behaves identically to before the change.
-- [ ] AC-3: `check_contract_shrinking.py`'s `_TEST_PATH_RE` is extended to exclude paths containing `commit_guardian/` (covering both `scripts/commit_guardian/check_*.py` and `templates/scripts/commit_guardian/check_*.py`). The same change is applied to both the canonical template (`templates/scripts/commit_guardian/check_contract_shrinking.py`) and the legacy copy (`templates/commit-guardian/check_contract_shrinking.py`).
 - [ ] AC-4: Unit test `test_hook_script_integrity_check_warns_on_missing` — given a mock `hooks_manifest` referencing `check_missing.py` and a `cg_dir` that does not contain it, calling `build_precommit_config()` (or an extracted helper) emits a warning and does not raise.
 - [ ] AC-5: Unit test `test_hook_script_integrity_check_silent_when_all_present` — given a `cg_dir` that contains all referenced scripts, no warning is emitted.
-- [ ] AC-6: Unit test `test_contract_shrinking_excludes_commit_guardian_paths` — a diff that modifies `templates/scripts/commit_guardian/check_contract_shrinking.py` alongside a `pytest.mark.xfail` removal is NOT classified as contract-shrinking (because the commit_guardian path is excluded from production file classification).
 
 ## AC Coverage
 
@@ -136,10 +125,8 @@ Fix: extend `_TEST_PATH_RE` to also exclude paths matching
 |----|------|----------------|-----------|
 | AC-1 | AC-4 | build_precommit.py — post-hooks-load integrity loop | |
 | AC-2 | AC-5 | same loop — no-op when all present | |
-| AC-3 | AC-6 | check_contract_shrinking.py _TEST_PATH_RE update | |
 | AC-4 | unit_tests/commit_guardian/test_build_precommit.py | build_precommit.py | |
 | AC-5 | unit_tests/commit_guardian/test_build_precommit.py | build_precommit.py | |
-| AC-6 | unit_tests/commit_guardian/test_check_contract_shrinking.py | check_contract_shrinking.py | |
 
 ## Sign-offs
 
@@ -149,6 +136,17 @@ Fix: extend `_TEST_PATH_RE` to also exclude paths matching
 - [ ] pr-reviewer
 - [ ] commit
 - [ ] pull-request
+
+## AC Traceability
+
+| AC ID | Level | Title | Agent |
+|-------|-------|-------|-------|
+| BP-100a-1 | L2 | Build emits a warning for each registered hook whose script file is absent | python-coder |
+| BP-100a-2 | L2 | Build emits no integrity warnings when all hook scripts are present | python-coder |
+| BP-100a-4 | L2 | Test verifies warning is emitted when a hook script is missing | test-writer |
+| BP-100a-5 | L2 | Test verifies no warning is emitted when all hook scripts exist | test-writer |
+
+AC files: `docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100a-*.yaml`
 
 ## Comments
 
@@ -183,45 +181,6 @@ regardless of template vars.
 Note: `Path(tokens[-1]).name` safely extracts the filename even if the token is
 `{{config.output_root}}/scripts/commit_guardian/check_foo.py`.
 
-**Deliverable 2 — False-positive fix in `check_contract_shrinking.py`**
-
-In both:
-- `templates/scripts/commit_guardian/check_contract_shrinking.py`
-- `templates/commit-guardian/check_contract_shrinking.py`
-
-Update `_TEST_PATH_RE`:
-
-```python
-# Before:
-_TEST_PATH_RE = re.compile(
-    r"(unit_tests/|tests/|test_[^/]+\.py$|[^/]+_test\.py$|conftest\.py$)",
-    re.IGNORECASE,
-)
-
-# After:
-_TEST_PATH_RE = re.compile(
-    r"(unit_tests/|tests/|test_[^/]+\.py$|[^/]+_test\.py$|conftest\.py$"
-    r"|commit_guardian/)",
-    re.IGNORECASE,
-)
-```
-
-The `commit_guardian/` segment matches any path containing that directory,
-covering `scripts/commit_guardian/`, `templates/scripts/commit_guardian/`,
-and `templates/commit-guardian/` (the latter contains `commit_guardian/`
-as a substring via `commit-guardian/`). If a stricter match is preferred to
-avoid false-negatives (e.g. some production file coincidentally containing
-"commit_guardian" in its path), use:
-
-```python
-r"|(?:scripts/|templates/(?:scripts/)?)?commit[_-]guardian/"
-```
-
-Use whichever form is consistent with the codebase's pattern for exclusion
-regexes in this file.
-
-Also update the module docstring to note the self-exclusion logic was added.
-
 ### test-writer
 
 Add tests to:
@@ -237,13 +196,6 @@ Add tests to:
      create `check_missing.py` in `tmp_path`. Assert `_log.warning` is NOT called
      for the integrity check (other warnings unrelated to integrity are allowed).
 
-2. `unit_tests/commit_guardian/test_check_contract_shrinking.py` (existing file):
-
-   - `test_contract_shrinking_excludes_commit_guardian_paths`: Build a diff where
-     `templates/scripts/commit_guardian/check_contract_shrinking.py` is modified
-     (includes a `+pytest.mark.xfail` line). Assert `_scan_diff(diff).has_production_changes`
-     is `False` (the commit_guardian file is excluded).
-
 ## Out of Scope
 
 - Removing the legacy fallback in `build_phases.py` line 781 or
@@ -256,18 +208,17 @@ Add tests to:
 - Adding a schema-validation check that `entry` fields in `commit_guardian.json`
   follow the expected `run_hook.py <script.py>` two-argument pattern — this is a
   separate linting concern.
+- The false-positive fix for `check_contract_shrinking.py` — this is now tracked
+  separately in TICKET-20260605-ContractShrinkingSelfExclusion (L1: BP-100d).
 
 ## Risk & Safety
 
 - Touches money? No.
 - Touches data? No — build phase emits warnings only; no user data affected.
 - Reversibility? The integrity check is a non-blocking warning. Removing it
-  requires only deleting the added loop. The `_TEST_PATH_RE` change is a safe
-  regex extension; reverting it restores the previous (false-positive) behaviour.
+  requires only deleting the added loop.
 - Risk of regressions: low. The integrity check loop runs after hooks are loaded
   and before `_resolve_template_vars` — it cannot affect the generated
-  `.pre-commit-config.yaml`. The `_TEST_PATH_RE` change only broadens the
-  exclusion set; it cannot cause a previously-blocked commit to pass unless the
-  staged diff touches only commit_guardian paths.
+  `.pre-commit-config.yaml`.
 - 295 tests pass before this change. The copied hook scripts are template files
   not imported by tests; no test coverage gap is introduced.

@@ -1,0 +1,26 @@
+id: TKT-300b-3
+title: "Assertion-only sign-offs without evidence are rejected"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a phase agent attempts sign-off with a payload that contains
+    only a status field (e.g., "signed_off") and no artifact references,
+  When the sign-off validator evaluates the payload,
+  Then it rejects the sign-off with an error stating
+    that at least one artifact reference is required,
+  And the ticket's sign-off status remains unchanged at "needed".
+depends_on: [TKT-300b, TKT-300b-1]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

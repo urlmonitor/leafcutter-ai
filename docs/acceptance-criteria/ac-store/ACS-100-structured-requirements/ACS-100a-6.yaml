@@ -1,0 +1,32 @@
+id: ACS-100a-6
+title: "Dangling depends_on and expects_from references blocked at commit time"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a staged AC YAML file contains a depends_on list with one or more AC IDs,
+  When any referenced AC ID does not correspond to an existing YAML file
+    under docs/acceptance-criteria/,
+  Then the commit is blocked with a diagnostic error,
+  And the error message names each dangling reference and the file that contains it.
+
+  Given a staged AC YAML file contains an expects_from mapping whose ac_id field
+    references an AC ID,
+  When that AC ID does not correspond to an existing YAML file
+    under docs/acceptance-criteria/,
+  Then the commit is blocked with a diagnostic error,
+  And the error message names the dangling expects_from.ac_id and the file that contains it.
+depends_on: [ACS-100a]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -6,18 +6,10 @@ status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given an AC file is created,
-  When the origin_agent field is set,
-  Then it contains either:
-    (a) the name of the human who authored the requirement (e.g., "BrainCandy",
-        "Jane Smith", "Product Team"), or
-    (b) the name of the agent that auto-generated it (e.g., "business-analyst-v3",
-        "product-owner", "auto-triage").
-  And origin_agent is a required non-empty string — never "human" or "unknown".
-  And the field is immutable after creation (amendments are tracked in amended_by,
-    not by changing origin_agent).
-  And the value is traceable outside the codebase: a stakeholder can search
-    "who wrote this requirement?" and get a name, not a role.
+  You can always see who requested each requirement by name.
+  Every requirement records the specific person or agent that authored it, so
+  stakeholders can trace any requirement back to its source. The author is
+  locked at creation and never changes — amendments are tracked separately.
 depends_on: [ACS-100a]
 doc_links: []
 assigned_agent: python-coder

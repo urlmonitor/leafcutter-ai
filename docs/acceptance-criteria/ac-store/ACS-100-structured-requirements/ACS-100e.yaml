@@ -1,27 +1,16 @@
 id: ACS-100e
-title: "Configurable authorship identity for customer projects"
+title: "Your team's names appear on requirements automatically"
 component: ac-store
 level: L1
 status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given a customer project uses leafcutter,
-  When they configure their AC authorship,
-  Then skills_config.json supports an "ac_authorship" section with:
-    - default_human_author: the name used when a human creates ACs interactively
-      (e.g., "Jane Smith", "Product Team"). Prompted during /onboard if not set.
-    - require_named_author: boolean (default: false). When true, the BA and PO agents
-      ask "Who is the business owner of this requirement?" and record the answer
-      as origin_agent instead of the agent's own name.
-    - author_directory: optional list of valid human author names. When set,
-      origin_agent is validated against this list (catches typos).
-  And the /onboard wizard asks: "Do you want to track who requested each requirement
-    by name? This helps with traceability and audit."
-  And when require_named_author is true, the BA/PO prompt includes:
-    "Ask the user: who is the business owner of this requirement?
-    Record their answer as origin_agent. Do not default to your own agent name."
-depends_on: [ACS-100d, ACS-500a]
+  Projects configure who gets credited on requirements during onboarding.
+  The setup wizard asks whether to track individual names on requirements. When
+  enabled, agents ask who owns each requirement and record the answer, with an
+  optional team directory to catch typos. No manual setup beyond the initial prompt.
+depends_on: [ACS-100d]
 doc_links: []
 assigned_agent: python-coder
 estimated_complexity: M

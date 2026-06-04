@@ -7,11 +7,11 @@ req_status: active
 work_status: todo
 criteria: |
   Given a YAML file under docs/acceptance-criteria/ is staged for commit,
-  When check_ac_schema.py runs and any of the six required fields
+  When the schema validator runs and any of the six required fields
     (id, title, component, status, created_by, criteria) is absent or empty,
-  Then the hook exits with code 1,
+  Then the commit is blocked with a diagnostic error,
   And the error message names the missing field and the file path,
-  And the commit is blocked.
+  And no partial commit occurs.
 depends_on: [ACS-100a]
 doc_links: []
 assigned_agent: python-coder

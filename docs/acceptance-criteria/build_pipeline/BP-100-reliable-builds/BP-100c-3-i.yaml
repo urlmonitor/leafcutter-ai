@@ -1,0 +1,32 @@
+id: BP-100c-3-i
+title: "Partial config overlay leaves unspecified paths at their defaults"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260603-ConfigDrivenBuildPaths.md"
+criteria: |
+  Given a project config containing only tickets_inbox_path = "custom/tickets/00_inbox" and no other path overrides
+  And paths.json contains defaults for all keys (tickets.inbox, tickets.todo, tickets.done, tickets.rejected, tickets.inbox_epics, docs.root)
+  When the build system generates the project paths table
+  Then the "tickets.inbox" row shows "custom/tickets/00_inbox"
+  And the "tickets.todo" row shows the paths.json default value (not modified)
+  And the "docs.root" row shows the paths.json default value (not modified)
+  And only the keys with corresponding non-empty config entries are overridden
+depends_on:
+  - BP-100c-3
+doc_links:
+  - path: docs/architecture/components/build-pipeline.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,32 @@
+id: BP-100c-1
+title: "Ticket lifecycle scaffold uses config-driven inbox path instead of hardcoded default"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260603-ConfigDrivenBuildPaths.md"
+criteria: |
+  Given a project config containing tickets_inbox_path = "leafcutter-ai/tickets/00_inbox"
+  When the build system scaffolds the ticket lifecycle directories
+  Then it derives the tickets root as the parent of the configured inbox path ("leafcutter-ai/tickets/")
+  And creates directories under "leafcutter-ai/tickets/" (not under "tickets/" at the workspace root)
+  And the directory "tickets/" at the workspace root is NOT created
+depends_on:
+  - BP-100c
+doc_links:
+  - path: docs/architecture/components/build-pipeline.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "build_ticket_lifecycle() derives tickets_root from config['tickets_inbox_path'] parent"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

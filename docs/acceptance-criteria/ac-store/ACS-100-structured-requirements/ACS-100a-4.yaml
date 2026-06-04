@@ -8,8 +8,8 @@ work_status: todo
 criteria: |
   Given a YAML file contains all required fields plus an unknown field
     (e.g. "priority: high" or "foo: bar"),
-  When check_ac_schema.py validates the file,
-  Then the hook exits with code 1,
+  When the schema validator checks the file,
+  Then validation fails with a diagnostic error,
   And the error message identifies the unknown field name,
   And the commit is blocked,
   And the file is not partially accepted (all-or-nothing validation).

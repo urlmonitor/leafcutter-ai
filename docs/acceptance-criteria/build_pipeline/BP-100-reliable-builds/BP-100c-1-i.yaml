@@ -1,0 +1,36 @@
+id: BP-100c-1-i
+title: "Folder remap applies config overrides to all lifecycle subdirectories"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260603-ConfigDrivenBuildPaths.md"
+criteria: |
+  Given a project config containing:
+    - tickets_inbox_path = "leafcutter-ai/tickets/00_inbox"
+    - tickets_todo_path = "leafcutter-ai/tickets/01_todo"
+    - tickets_done_path = "leafcutter-ai/tickets/99_done"
+    - tickets_rejected_path = "leafcutter-ai/tickets/99_rejected"
+  When the build system scaffolds the ticket lifecycle directories
+  Then it creates "leafcutter-ai/tickets/00_inbox/" (not "tickets/00_inbox/")
+  And it creates "leafcutter-ai/tickets/01_todo/" (not "tickets/01_todo/")
+  And it creates "leafcutter-ai/tickets/99_done/" (not "tickets/99_done/")
+  And it creates "leafcutter-ai/tickets/99_rejected/" (not "tickets/99_rejected/")
+  And no directories are created under "tickets/" at the workspace root
+depends_on:
+  - BP-100c-1
+doc_links:
+  - path: docs/architecture/components/build-pipeline.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

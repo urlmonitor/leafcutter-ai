@@ -1,0 +1,24 @@
+id: TKT-400
+title: "Agents do better work when they only see what matters to their job"
+component: ticket-creation
+level: L0
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Focused agents produce higher-quality, more predictable results.
+
+  Each agent in the pipeline sees only the files and context relevant to its role —
+  nothing more. This prevents accidental changes to unrelated parts of the project,
+  eliminates confusion from irrelevant information, and makes autonomous work reliable
+  enough to trust without constant supervision. The narrower the view, the sharper the output.
+depends_on: []
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [TKT-400i]
+implemented_by: []

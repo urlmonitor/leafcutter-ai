@@ -1,0 +1,20 @@
+id: BP-100d
+title: "Hooks never block their own source code changes"
+component: build-pipeline
+level: L1
+status: active
+criteria: |
+  Hook scripts can be staged and committed without triggering false self-detection.
+
+  When a pre-commit hook's own source file is staged alongside production files,
+  the hook does not misclassify its own patterns as violations. Developers can
+  modify hook infrastructure without being blocked by the very hook they are fixing.
+depends_on:
+  - BP-100
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -9,7 +9,7 @@ criteria: |
   Given docs/INDEX.md exists in the project root,
   When the BA v3 begins domain-model construction for the "ticket-creation" component,
   Then it reads docs/INDEX.md to locate user flows, component pages, and how-to guides
-    relevant to ticket-creation,
+    whose path prefix matches the target component name,
   And it reads at most 3 documents from the discovered paths,
   And it produces a research_findings summary of 2-4 sentences
     describing the component's current behavior from the user's perspective,

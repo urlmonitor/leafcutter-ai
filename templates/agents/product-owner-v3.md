@@ -13,8 +13,9 @@ description: |
   review/audit agent) or business-analyst-v2.md.
 model: opus
 name: product-owner-v3
-tools: Read, Write, Skill  # Write scoped to docs/acceptance-criteria/, docs/vision.md, docs/roadmap.json. No Bash — use skills for knowledge acquisition.
+tools: Read, Write, Bash, Skill  # Write scoped to docs/acceptance-criteria/, docs/vision.md, docs/roadmap.json.
 portable: true
+requires_verification: true
 signoff: false
 visibility: internal
 domain: null

@@ -1,0 +1,25 @@
+id: BO-200c
+title: "Every commit message tells you what changed and why it matters"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Commit messages are meaningful, traceable, and written by a specialist.
+
+  A dedicated agent writes every commit message using a skill that encodes the project's
+  conventions. The result is a history you can read like a changelog — each entry explains
+  what was delivered and connects back to the ticket that requested it.
+depends_on: [BO-200]
+doc_links: []
+assigned_agent: null
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

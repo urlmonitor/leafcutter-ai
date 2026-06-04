@@ -1,0 +1,21 @@
+id: INF-100
+title: "Agents work without manual intervention"
+component: infrastructure
+level: L0
+status: active
+criteria: |
+  Every agent has the context it needs to do its job without human handholding.
+
+  When an agent is dispatched, it arrives with the right project conventions,
+  account credentials, and writing standards already loaded. You never have
+  to babysit an agent through setup steps it should handle on its own, and
+  you never discover after the fact that it used the wrong account or
+  ignored project norms.
+depends_on: []
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

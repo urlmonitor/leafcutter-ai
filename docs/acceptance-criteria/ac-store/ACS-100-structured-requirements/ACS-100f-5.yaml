@@ -1,0 +1,28 @@
+id: ACS-100f-5
+title: "Children lookup returns all ACs that depend on a given AC"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given AC "ACS-100a" exists at L1,
+  And ACs "ACS-100a-1", "ACS-100a-2", "ACS-100a-3" have depends_on: [ACS-100a],
+  When an agent queries for AC ID "ACS-100a" with include_children: true,
+  Then the result includes the matched AC plus all ACs whose depends_on
+    contains "ACS-100a" (direct children only, not transitive),
+  And when include_children: "recursive" is specified,
+    all descendants at all levels below are returned,
+  And children are grouped by level (L2s first, then L3s within each L2).
+depends_on: [ACS-100f]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,36 @@
+id: BP-100a-4
+title: "Test verifies warning is emitted when a hook script is missing"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260604-HookScriptIntegrityCheck.md"
+criteria: |
+  Given a test that sets up:
+    - A temporary directory acting as the canonical template path
+    - A hook manifest list with one entry whose entry field references "check_missing.py"
+    - The temporary directory does NOT contain "check_missing.py"
+  When the test invokes the integrity check logic
+  Then the test asserts that a warning was emitted
+  And the warning message contains the hook identifier and the missing script name
+  And no exception was raised during the check
+depends_on:
+  - BP-100a
+  - BP-100a-1
+doc_links:
+  - path: "tickets/00_inbox/TICKET-20260604-HookScriptIntegrityCheck.md"
+    relationship: implements
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-100a-1
+  contract: "Integrity check loop that emits warnings for missing scripts"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

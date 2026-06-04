@@ -1,0 +1,36 @@
+id: INF-100a-2
+title: "PROJECT_CONTEXT.md contains EMU identity guard that switches GitHub account before PR creation"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260604-PullRequestAgentProjectContext.md"
+criteria: |
+  Given the file .agents/agents/pull-request/PROJECT_CONTEXT.md exists,
+  When the agent reads the EMU account restriction section of that file,
+  Then the file instructs the agent to run gh auth status before any gh pr create call,
+  And the file instructs the agent to compare the active GitHub user to "urlmonitor",
+  And if the active user differs from "urlmonitor" the file instructs the agent to run gh auth switch --user urlmonitor,
+  And the file instructs the agent to warn the user that the account was switched.
+depends_on:
+  - INF-100a
+  - INF-100a-1
+doc_links:
+  - path: docs/conventions/PROJECT_CONTEXT-injection.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to:
+  agent: test-writer
+  contract: "A PROJECT_CONTEXT.md file containing the string urlmonitor in an EMU guard section"
+expects_from:
+  ac_id: INF-100a-1
+  contract: "Template Pre-Flight section that loads this file at agent startup"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

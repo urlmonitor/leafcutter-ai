@@ -1,0 +1,28 @@
+id: ACS-300
+title: "Every requirement lives in one place and connects to a bigger picture"
+component: ac-store
+level: L0
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  One source of truth for every component in the system — no duplicates, instant retrieval.
+
+  When you need to find out who owns a subsystem, what it connects to, or which agent
+  works on it, that answer lives in a single registry. Nothing is defined twice, nothing
+  is scattered across tribal knowledge or stale documents. This structure also lays the
+  groundwork for a navigable knowledge graph — once every component knows its neighbors
+  and interfaces, you can traverse the system's architecture as easily as following links.
+depends_on: []
+doc_links:
+  - path: docs/components.json
+    relationship: governs
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACS-300g, ACS-300h, ACS-300i, ACS-300j]
+implemented_by: []

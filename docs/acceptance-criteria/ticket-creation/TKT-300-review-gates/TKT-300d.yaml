@@ -1,30 +1,22 @@
 id: TKT-300d
-title: "Epics as goal containers"
+title: "Large initiatives group related work for tracking, not for execution"
 component: ticket-creation
 level: L1
 status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given the v3 pipeline is in use,
-  When an "epic" is referenced,
-  Then it is treated as a goal container — a label applied to a set of related
-    ACs for filtering, reporting, and roadmap alignment only
-  And epics own no execution semantics: no supervisor dispatch, no ticket
-    ordering, and no worktree creation
-  And the L0 AC IS the epic goal statement; L1 ACs grouped under it ARE
-    the epic's scope
-  And the build-orchestration system dispatches work by AC dependency graph,
-    not by epic membership
-  And the old epic-supervisor dispatch model (read Master_Plan.md, batch
-    tickets by depends_on) is deprecated for all v3-created work.
+  Epics are labels for filtering and reporting, not execution boundaries.
+  Related requirements are grouped under a shared goal for visibility and
+  roadmap alignment, but the system dispatches work based on actual dependencies
+  between requirements — not based on which group they belong to.
 depends_on: [ACS-100, BO-100a]
 doc_links: []
 assigned_agent: llm-expert
 estimated_complexity: S
 delivers_to: null
 expects_from: null
-origin_agent: human
+origin_agent: BrainCandy
 created: 2026-06-04
 amended_by: []
 superseded_by: null

@@ -1,0 +1,36 @@
+id: ACS-300k
+title: "Agents use components.json as the single source of component knowledge"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an agent template references component information
+    (component names, ownership, agent affinity, interfaces, or dependencies),
+  When the template is compiled by build.py,
+  Then the agent reads component knowledge exclusively from docs/components.json
+    (or its compiled equivalent injected via {{components_table}} or similar placeholder).
+  And no compiled agent template contains a hard-coded reference to
+    docs/acceptance-criteria/index.yaml for component lookup purposes.
+  And index.yaml remains scoped solely to AC-prefix assignment
+    (mapping component IDs to their AC file-naming prefix),
+    not as a source of component metadata for agents.
+depends_on: [ACS-300g]
+doc_links:
+  - path: docs/components.json
+    relationship: governs
+    status: exists
+  - path: docs/acceptance-criteria/index.yaml
+    relationship: scopes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

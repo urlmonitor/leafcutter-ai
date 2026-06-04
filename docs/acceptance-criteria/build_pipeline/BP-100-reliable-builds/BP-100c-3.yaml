@@ -1,0 +1,33 @@
+id: BP-100c-3
+title: "Project paths table overlays config values onto paths.json defaults"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260603-ConfigDrivenBuildPaths.md"
+criteria: |
+  Given a project config containing tickets_inbox_path = "leafcutter-ai/tickets/00_inbox"
+  And a paths.json file containing the default value tickets.inbox = "tickets/00_inbox/"
+  When the build system generates the project paths table for agent prompt injection
+  Then the rendered table row for "tickets.inbox" shows "leafcutter-ai/tickets/00_inbox"
+  And the rendered table does NOT show "tickets/00_inbox/" for that row
+  And all config keys in the mapping (tickets_inbox_path, tickets_inbox_epics_path, tickets_todo_path, tickets_done_path, tickets_rejected_path, docs_root) override their corresponding paths.json entries when present
+depends_on:
+  - BP-100c
+doc_links:
+  - path: docs/architecture/components/build-pipeline.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "build_project_paths_table(config=config) returns a markdown table with config-overlaid paths"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

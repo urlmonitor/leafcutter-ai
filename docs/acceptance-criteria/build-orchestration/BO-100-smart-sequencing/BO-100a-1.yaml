@@ -8,11 +8,11 @@ work_status: todo
 criteria: |
   Given an epic folder contains zero non-done ticket files
     (only Master_Plan.md and/or tickets already in done/ subfolder),
-  When build_graph() is called with the discovered tickets list,
-  Then the returned graph dict is empty (length 0),
-  And detect_cycle() returns None (no cycle in an empty graph),
-  And compute_ready() returns two empty lists (ready=[], blocked=[]),
-  And /build-feature reports "epic complete" without dispatching any
+  When the dependency resolver constructs the graph from the discovered tickets,
+  Then the resulting graph is empty (zero nodes),
+  And cycle detection finds no cycle in the empty graph,
+  And the ready-set computation returns no ready tickets and no blocked tickets,
+  And the build system reports "epic complete" without dispatching any
     ticket-supervisor.
 depends_on: [BO-100a]
 doc_links: []

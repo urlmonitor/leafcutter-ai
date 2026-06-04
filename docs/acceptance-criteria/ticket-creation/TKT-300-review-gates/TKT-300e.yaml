@@ -1,22 +1,16 @@
 id: TKT-300e
-title: "IT PO can split ACs when technical boundaries emerge"
+title: "Complex requirements are split into buildable pieces automatically"
 component: ticket-creation
 level: L1
 status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given the IT PO enriches ACs with technical requirements,
-  When it discovers that a single AC requires work from multiple agents
-    due to technical boundaries the BA couldn't see
-    (e.g., DB migration + API change + frontend update),
-  Then the IT PO splits the AC into one AC per agent, each with
-    a single assigned_agent, testable outcome, and depends_on ordering.
-  And the IT PO preserves the original AC's criteria as the parent reference
-    in each child AC's depends_on.
-  And the IT PO applies the same splitting rule as the BA:
-    "if it needs multiple agents, split it."
-  And the split is visible to the user at the Phase 4 confirmation gate.
+  When a requirement needs multiple specialists, it becomes separate deliverable pieces.
+  During technical review, if a single requirement spans multiple implementation
+  boundaries (e.g., database + API + frontend), it is automatically split into
+  one focused piece per specialist. Each piece has a clear deliverable and
+  ordering, and the split is visible to you at the confirmation step.
 depends_on: [TKT-300a, TKT-100f]
 doc_links: []
 assigned_agent: llm-expert

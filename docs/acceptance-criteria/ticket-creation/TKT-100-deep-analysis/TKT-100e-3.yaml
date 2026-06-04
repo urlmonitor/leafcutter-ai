@@ -12,7 +12,7 @@ criteria: |
     at the start of any line (case-insensitive),
   And the criteria text describes observable behavior in 2-5 sentences
     using natural language (e.g., "The system reads active ACs for the
-    relevant component and classifies each proposed AC"),
+    target component and classifies each proposed AC"),
   And the criteria text names specific artifacts where possible
     (file paths, field names, agent names) rather than abstract references.
 depends_on: [TKT-100e]

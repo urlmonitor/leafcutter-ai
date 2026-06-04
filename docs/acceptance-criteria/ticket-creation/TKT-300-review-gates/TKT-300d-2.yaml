@@ -1,0 +1,27 @@
+id: TKT-300d-2
+title: "Work dispatch is based on dependency order, not epic grouping"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an epic folder contains L1 ACs labeled "A", "B", and "C"
+    where "B" depends_on "A" and "C" has no dependencies,
+  When the supervisor determines the next work to dispatch,
+  Then it dispatches "A" and "C" as ready (their dependencies are satisfied),
+  And it does not dispatch "B" until "A" is complete,
+  And the dispatch order is determined by the depends_on graph,
+    not by the alphabetical or positional order of files in the epic folder.
+depends_on: [TKT-300d]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

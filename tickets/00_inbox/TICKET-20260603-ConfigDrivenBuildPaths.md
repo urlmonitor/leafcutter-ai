@@ -27,6 +27,19 @@ agents:
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
+ac_traceability:
+  l1: BP-100c
+  l2:
+    - BP-100c-1
+    - BP-100c-2
+    - BP-100c-3
+    - BP-100c-4
+    - BP-100c-5
+  l3:
+    - BP-100c-1-i
+    - BP-100c-2-i
+    - BP-100c-3-i
+  ac_path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/
 ---
 
 # Fix build system to respect config-driven folder paths and inject them into agent prompts
@@ -163,6 +176,21 @@ Then the write-if-absent guard is bypassed and files are overwritten
 - [ ] pr-reviewer
 - [ ] commit
 - [ ] pull-request
+
+## AC Traceability
+
+| AC ID | Level | Title | Agent |
+|-------|-------|-------|-------|
+| BP-100c-1 | L2 | Ticket lifecycle scaffold uses config-driven inbox path instead of hardcoded default | python-coder |
+| BP-100c-2 | L2 | Ticket lifecycle skips scaffold when manifest already exists | python-coder |
+| BP-100c-3 | L2 | Project paths table overlays config values onto paths.json defaults | python-coder |
+| BP-100c-4 | L2 | Template compiler threads config to project paths table generation | python-coder |
+| BP-100c-5 | L2 | Consumer project with no config override gets standard default paths | python-coder |
+| BP-100c-1-i | L3 | Folder remap applies config overrides to all lifecycle subdirectories | python-coder |
+| BP-100c-2-i | L3 | Force flag bypasses the skip guard and overwrites existing manifest | python-coder |
+| BP-100c-3-i | L3 | Partial config overlay leaves unspecified paths at their defaults | python-coder |
+
+AC files: `docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100c-*.yaml`
 
 ## Comments
 

@@ -9,11 +9,11 @@ criteria: |
   Given an agent template does not declare a default_origin_agent field,
   When the agent creates a new AC file without explicitly setting origin_agent,
   Then the AC file's origin_agent field is populated with the agent's own
-    template file name (e.g. an agent loaded from "business-analyst.md"
+    identity name (e.g. an agent named "business-analyst"
     produces origin_agent: "business-analyst"),
-  And the fallback derivation strips the .md extension and uses the stem,
+  And the fallback derivation uses the agent's registered name,
   And the resulting origin_agent value is always non-empty,
-  And check_ac_schema.py validation passes.
+  And schema validation passes.
 depends_on: [ACS-100e]
 doc_links: []
 assigned_agent: python-coder

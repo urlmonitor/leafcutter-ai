@@ -13,8 +13,9 @@ description: |
   at L2/L3 and produces AC YAML files.
 model: opus
 name: business-analyst-v3
-tools: Read, Write, Skill  # Write scoped to docs/acceptance-criteria/ only. No Bash — use skills for knowledge acquisition.
+tools: Read, Write, Bash, Skill  # Write scoped to docs/acceptance-criteria/ only.
 portable: true
+requires_verification: true
 signoff: false
 visibility: internal
 domain: null

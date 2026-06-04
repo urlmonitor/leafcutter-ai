@@ -7,7 +7,7 @@ req_status: active
 work_status: todo
 criteria: |
   Given an epic contains ticket A with depends_on=["nonexistent-ticket.md"],
-  When build_graph() constructs the graph and compute_ready() is called,
+  When the dependency resolver constructs the graph and computes the ready set,
   Then "nonexistent-ticket.md" is not present as a node in the graph,
   And the dependency edge from A to the unknown node is silently ignored,
   And ticket A appears in the ready list (the unknown dep is treated as

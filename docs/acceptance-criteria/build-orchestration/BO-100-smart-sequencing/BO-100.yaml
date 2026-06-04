@@ -1,5 +1,5 @@
 id: BO-100
-title: "Smart ticket sequencing resolves dependency order and parallelism automatically"
+title: "Ship changes in the right order without thinking about it"
 component: build-orchestration
 level: L0
 status: active

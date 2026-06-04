@@ -1,0 +1,40 @@
+id: BP-100a-2
+title: "Build emits no integrity warnings when all hook scripts are present"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260604-HookScriptIntegrityCheck.md"
+criteria: |
+  Given the hook manifest contains 3 hook entries:
+    - hook "check_alpha" referencing script "check_alpha.py"
+    - hook "check_beta" referencing script "check_beta.py"
+    - hook "check_gamma" referencing script "check_gamma.py"
+  And the canonical template directory contains all three files:
+    "check_alpha.py", "check_beta.py", "check_gamma.py"
+  When the build system loads and processes the hook manifest
+  Then no integrity-check warnings are emitted
+  And the build returns its normal hook count (3)
+  And the function behaves identically to the pre-change version
+depends_on:
+  - BP-100a
+  - BP-100a-1
+doc_links:
+  - path: "tickets/00_inbox/TICKET-20260604-HookScriptIntegrityCheck.md"
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: test-writer
+  contract: "No-op path through the integrity check loop when all scripts exist"
+expects_from:
+  ac_id: BP-100a-1
+  contract: "The same integrity check loop — this AC verifies its silent path"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

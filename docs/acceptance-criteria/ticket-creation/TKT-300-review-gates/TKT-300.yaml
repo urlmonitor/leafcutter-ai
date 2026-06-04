@@ -16,9 +16,9 @@ depends_on: [TKT-100]
 doc_links: []
 delivers_to: null
 expects_from: null
-origin_agent: human
+origin_agent: BrainCandy
 created: 2026-06-04
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by: [TKT-300a, TKT-300b, TKT-300c, TKT-300d, TKT-300e]
 implemented_by: []

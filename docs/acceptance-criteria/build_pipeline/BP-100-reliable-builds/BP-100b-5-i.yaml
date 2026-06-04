@@ -1,0 +1,31 @@
+id: BP-100b-5-i
+title: "Drift detection does not false-positive on the legacy .agents/workflows/ path"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
+criteria: |
+  Given a project where the legacy path .agents/workflows/ does not exist
+    and compiled workflows are deployed only at .claude/workflows/
+  When the output-drift detection hook runs
+  Then it does not emit an error or warning about the absent .agents/workflows/ path
+  And it does not skip drift checking for workflows due to a missing directory
+  And drift checking proceeds using only the .claude/workflows/ path
+depends_on:
+  - BP-100b-5
+doc_links:
+  - path: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

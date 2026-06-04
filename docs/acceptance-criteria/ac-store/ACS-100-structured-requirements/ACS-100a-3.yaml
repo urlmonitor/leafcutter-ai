@@ -7,9 +7,10 @@ req_status: active
 work_status: todo
 criteria: |
   Given a YAML file has a status field,
-  When check_ac_schema.py validates the status value,
+  When the schema validator checks the status value,
   Then "active", "deprecated", and "superseded_by" each pass validation,
-  And any other string (e.g. "draft", "done", "inactive", "") fails with exit code 1,
+  And any other string (e.g. "draft", "done", "inactive", "") causes validation
+    to fail with a diagnostic error,
   And the error message names the invalid value and lists the allowed enum members.
 depends_on: [ACS-100a]
 doc_links: []

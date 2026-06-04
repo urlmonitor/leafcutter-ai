@@ -1,0 +1,29 @@
+id: TKT-200a
+title: "Architecture is visible before anyone asks for it"
+component: ticket-creation
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Diagrams showing component relationships and data flow are generated automatically from specs.
+
+  When detailed specifications are complete, the system reads the requirements and
+  produces architecture diagrams that show how the new work connects to existing
+  components. Reviewers see the design visually without requesting it separately.
+depends_on: [TKT-200]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to:
+  agent: llm-expert
+  contract: "Architecture diagrams (C4 mermaid) for each component touched by the feature"
+expects_from:
+  ac_id: TKT-100a
+  contract: "Completed L2/L3 AC YAML files identifying components and their relationships"
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

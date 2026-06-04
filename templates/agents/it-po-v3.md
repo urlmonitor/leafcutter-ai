@@ -17,8 +17,9 @@ description: |
   sections in ticket bodies). This agent operates on AC YAML files directly.
 model: opus
 name: it-po-v3
-tools: Read, Write, Skill  # No source code access — uses architecture docs and registries only.
+tools: Read, Write, Bash, Skill  # No source code access — uses architecture docs and registries only.
 portable: true
+requires_verification: true
 signoff: false
 visibility: internal
 domain: null

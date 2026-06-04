@@ -1,0 +1,37 @@
+id: BP-100b-6
+title: "Parity test cross-validates all four infrastructure layers against each other"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
+criteria: |
+  Given the build system defines template categories across four infrastructure
+    layers (shim map, output mappings, managed artifact dirs, source manifests)
+  When the parity test suite executes
+  Then it asserts that every category present in any one layer is also present
+    in all other three layers
+  And if all four layers agree on the set of categories, the test passes
+  And the test covers at minimum the "workflows" category alongside all
+    pre-existing categories (commit_guardian, doc_compliance, etc.)
+depends_on:
+  - BP-100b
+  - BP-100b-1
+  - BP-100b-2
+  - BP-100b-3
+  - BP-100b-4
+doc_links:
+  - path: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
+    relationship: implements
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

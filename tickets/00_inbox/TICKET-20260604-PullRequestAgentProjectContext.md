@@ -29,7 +29,17 @@ agents:
   adr-author: not_needed
   architecture-diagram-author: not_needed
   user-surface-smoker: not_needed
-ac_coverage: 0/6
+ac_traceability:
+  l1: INF-100a
+  l2:
+    - INF-100a-1
+    - INF-100a-2
+    - INF-100a-3
+    - INF-100a-4
+  l3:
+    - INF-100a-1-i
+    - INF-100a-2-i
+  ac_path: docs/acceptance-criteria/infrastructure/INF-100-agent-reliability/
 ---
 
 # Add PROJECT_CONTEXT.md for pull-request agent with EMU guard and PR writing standards
@@ -151,6 +161,19 @@ Repo path: `/home/henzeh/projects/leafcutter/leafcutter-ai/`.
 - Convention: `docs/conventions/PROJECT_CONTEXT-injection.md`
 - How-to: `docs/how-to/inject-project-knowledge-into-agents.md`
 - CLAUDE.md Pre-Drive Checklist (EMU account section)
+
+## AC Traceability
+
+| AC ID | Level | Title | Agent |
+|-------|-------|-------|-------|
+| INF-100a-1 | L2 | Pre-Flight section in template loads PROJECT_CONTEXT.md before Step 0 | llm-expert |
+| INF-100a-2 | L2 | EMU identity guard: check gh auth, switch to urlmonitor if different | python-coder |
+| INF-100a-3 | L2 | PR writing standards: title and description conventions | python-coder |
+| INF-100a-4 | L2 | Wiring tests: template has Pre-Flight, context file exists, contains required keywords | test-writer |
+| INF-100a-1-i | L3 | Graceful degradation when PROJECT_CONTEXT.md is absent | llm-expert |
+| INF-100a-2-i | L3 | No-op case: already authenticated as urlmonitor | python-coder |
+
+AC files: `docs/acceptance-criteria/infrastructure/INF-100-agent-reliability/INF-100a-*.yaml`
 
 ## Sign-offs
 

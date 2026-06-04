@@ -1,0 +1,31 @@
+id: BP-100c-2
+title: "Ticket lifecycle skips scaffold when manifest already exists"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260603-ConfigDrivenBuildPaths.md"
+criteria: |
+  Given a project where ticket_lifecycle.json already exists in the tickets root directory
+  And the build system is invoked without the --force flag
+  When the ticket lifecycle scaffold phase is reached
+  Then it prints a message containing "exists (skipped)"
+  And it writes 0 files to disk
+  And it returns early without modifying any existing ticket directories
+depends_on:
+  - BP-100c
+doc_links:
+  - path: docs/architecture/components/build-pipeline.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,19 +1,15 @@
 id: ACS-100b
-title: "Feature folders with hierarchical IDs"
+title: "Find any requirement instantly by its ID"
 component: ac-store
 level: L1
 status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given a component directory in docs/acceptance-criteria/,
-  When a feature is scoped,
-  Then ACs are organized as {component}/{PREFIX-NNN-feature-slug}/ subdirectories
-  And L0 gets a round number ID (e.g. ACS-100)
-  And L1s get letter suffixes (ACS-100a, ACS-100b)
-  And L2s get letter suffixes on L1 (ACS-100a-1, ACS-100a-2)
-  And L3s get roman suffixes on L2 (ACS-100a-1-i)
-  And the tree structure is reconstructable from IDs alone.
+  Requirements are organized by feature and numbered so you always know where to look.
+  IDs follow a predictable hierarchy — goals, features, behaviors, and edge cases
+  each get a distinct suffix pattern, so the full requirement tree is navigable
+  from the ID alone without searching through folders.
 depends_on: [ACS-100a]
 doc_links:
   - path: docs/acceptance-criteria/README.md
@@ -23,7 +19,7 @@ assigned_agent: python-coder
 estimated_complexity: S
 delivers_to: null
 expects_from: null
-origin_agent: human
+origin_agent: BrainCandy
 created: 2026-06-04
 amended_by: []
 superseded_by: null

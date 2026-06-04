@@ -1,29 +1,16 @@
 id: TKT-100e
-title: "Product Owner agent for L0/L1 strategic requirements"
+title: "Your product vision shapes every requirement from the top down"
 component: ticket-creation
 level: L1
 status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given a user describes a product need,
-  When the PO agent is invoked (before the BA),
-  Then it operates at the L0/L1 flight level:
-    1. Reads the project roadmap (docs/roadmap.json) and vision (docs/vision.md)
-    2. Reads existing L0/L1 ACs across all components to understand current capabilities
-    3. Reads customer-facing docs (README, landing page content if available)
-    4. Frames the user's request as a customer value proposition (L0 title + tagline)
-    5. Decomposes into L1 feature benefit statements (what the user gets, not how it works)
-    6. Assigns each L1 to a component (existing or proposed new)
-    7. Sets urgency at the L0 level if business context warrants it
-  And all L0/L1 titles are written in benefit language — no engineering jargon.
-  And the PO asks the user: "Is this what you want to achieve?" before the BA begins.
-  And the PO never writes Gherkin — that is the BA's job at L2/L3.
-  And the PO prompt includes:
-    - One few-shot example of a good L0 + L1 decomposition
-    - Explicit instruction to read roadmap first
-    - The closed vocabulary for component names (from index.yaml)
-    - The tagline format: one sentence, under 80 chars, benefit-oriented
+  A product-minded agent frames your request as customer value before detailed analysis begins.
+  It reads your roadmap and vision, understands what already exists, and translates your
+  idea into benefit-oriented goals and feature statements. You confirm the framing before
+  detailed specification work starts — ensuring nothing gets built that doesn't serve
+  your product direction.
 depends_on: [TKT-100a, ACS-100c]
 doc_links:
   - path: docs/roadmap.json
@@ -38,7 +25,7 @@ delivers_to:
   agent: business-analyst-v3
   contract: "L0 + L1 AC YAML files with customer-facing titles, taglines, component assignments"
 expects_from: null
-origin_agent: human
+origin_agent: BrainCandy
 created: 2026-06-04
 amended_by: []
 superseded_by: null

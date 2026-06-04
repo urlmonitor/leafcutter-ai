@@ -6,12 +6,11 @@ status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given a skill file (e.g. templates/skills/ticket-wiring/SKILL.md) declares
-    default_origin_agent: "ticket-wiring" in its frontmatter,
+  Given a skill declares default_origin_agent: "ticket-wiring" in its frontmatter,
   When the skill creates AC files during its execution,
   Then each AC file's origin_agent is set to "ticket-wiring",
   And the configuration is read from the skill's own metadata
-    (not from ac_store_schema.json, not from a global config file),
+    (not from the AC schema, not from a global config file),
   And the skill-level default follows the same override rule as agent templates:
     an explicit per-AC value takes precedence.
 depends_on: [ACS-100e]

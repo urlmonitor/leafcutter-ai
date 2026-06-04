@@ -1,0 +1,27 @@
+id: TKT-300e-1
+title: "Split is triggered when criteria cross agent boundaries"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an L2 AC whose criteria describe a behavior that requires
+    changes to file types owned by two different agents
+    (e.g., backend logic and frontend rendering),
+  When the IT PO evaluates the AC for enrichment,
+  Then it determines that a single assigned_agent cannot implement
+    the full criteria,
+  And it initiates the split procedure to produce one child AC per agent.
+depends_on: [TKT-300e]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

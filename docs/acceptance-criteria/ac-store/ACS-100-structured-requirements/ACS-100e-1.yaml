@@ -6,13 +6,13 @@ status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given an agent template (e.g. templates/agents/business-analyst.md) contains
-    a metadata field "default_origin_agent: business-analyst",
+  Given an agent template contains a metadata field
+    "default_origin_agent: business-analyst",
   When the agent creates a new AC YAML file and does not explicitly set origin_agent,
   Then the AC file's origin_agent field is populated with the template's
     default_origin_agent value ("business-analyst"),
   And the value is written to the YAML file before commit,
-  And the AC passes check_ac_schema.py validation.
+  And the AC passes schema validation.
 depends_on: [ACS-100e]
 doc_links: []
 assigned_agent: python-coder

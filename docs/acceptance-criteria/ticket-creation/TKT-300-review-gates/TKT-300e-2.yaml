@@ -1,0 +1,27 @@
+id: TKT-300e-2
+title: "Split preserves original criteria distributed across children"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an L2 AC with id "X-1" is split into children "X-1a" and "X-1b",
+  When the split is complete,
+  Then the union of criteria text in the children covers
+    every clause from the original AC's criteria field,
+  And no behavioral requirement from the original is lost or omitted,
+  And each child's criteria describe only the portion
+    relevant to that child's assigned_agent.
+depends_on: [TKT-300e, TKT-300e-1]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
