@@ -1,0 +1,31 @@
+id: TKT-100g-2
+title: "Router classifies L1 when criteria describe feature behavior with a single assigned_agent"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an AC enters the pipeline with criteria text:
+    "The BA v3 agent reads the AC store for the target component
+    and loads active ACs into working context before drafting L2 scenarios"
+    and assigned_agent is set to "llm-expert",
+  When the flight-level router evaluates the text,
+  Then it assigns level: L1,
+  And the classification signal is: natural-language behavioral statement,
+    names a specific agent or component, has a single assigned_agent,
+    but does not use Given/When/Then syntax,
+  And it dispatches the AC to the PO agent for validation
+    (L1s are owned by PO even when received from other sources).
+depends_on: [TKT-100g]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

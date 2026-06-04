@@ -1,0 +1,49 @@
+id: TKT-100f
+title: "Business Analyst agent for L2/L3 behavioral specifications"
+component: ticket-creation
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the PO has produced L0/L1 ACs,
+  When the BA v3 agent is invoked for each L1,
+  Then it operates at the L2/L3 flight level:
+    1. Reads the L1 AC and its parent L0 for business context
+    2. Reads ALL standing ACs for the component (and parent components via traversal)
+    3. Reads existing L2 ACs in the same feature folder to avoid duplication
+    4. Reads component docs, diagrams, and architecture references from doc_links
+    5. Reads project rules (CLAUDE.md, pre-commit hooks, skills_config.json)
+    6. Iterates with the user until each behavior is fully understood
+    7. Writes one L2 AC per testable behavior (Gherkin Given/When/Then)
+    8. Identifies edge cases and writes L3 ACs for non-obvious failure modes
+  And every L2 AC has:
+    - Valid Gherkin with specific inputs, actions, and observable outputs
+    - No weasel words (quickly, properly, correctly, etc.)
+    - A single assigned_agent (if multiple needed, split into two L2s with contracts)
+    - depends_on referencing other L2s where ordering matters
+  And every L3 AC references its parent L2 in depends_on.
+  And the BA prompt includes:
+    - Chain-of-thought scratchpad before structured output
+    - One few-shot example of L1 → L2/L3 decomposition
+    - Explicit weasel-word checklist to self-review before sign-off
+    - The standing AC inheritance rule: "read parents, don't contradict them"
+    - Max 5 L2s per L1 before checkpointing (batch cap)
+  And the BA never modifies L0/L1 titles — those are the PO's domain.
+  And if the BA discovers the L1 is ambiguous, it asks the user, not the PO agent.
+depends_on: [TKT-100e, ACS-300b, ACS-300c]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: L
+delivers_to:
+  agent: diagram-classifier
+  contract: "L2/L3 AC YAML files with Gherkin criteria, assigned_agent, depends_on"
+expects_from:
+  ac_id: TKT-100e
+  contract: "L0 + L1 AC files with customer-facing titles, component assignments"
+origin_agent: human
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

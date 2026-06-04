@@ -1,0 +1,32 @@
+id: ACS-100d
+title: "Named authorship on every requirement"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an AC file is created,
+  When the origin_agent field is set,
+  Then it contains either:
+    (a) the name of the human who authored the requirement (e.g., "BrainCandy",
+        "Jane Smith", "Product Team"), or
+    (b) the name of the agent that auto-generated it (e.g., "business-analyst-v3",
+        "product-owner", "auto-triage").
+  And origin_agent is a required non-empty string — never "human" or "unknown".
+  And the field is immutable after creation (amendments are tracked in amended_by,
+    not by changing origin_agent).
+  And the value is traceable outside the codebase: a stakeholder can search
+    "who wrote this requirement?" and get a name, not a role.
+depends_on: [ACS-100a]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

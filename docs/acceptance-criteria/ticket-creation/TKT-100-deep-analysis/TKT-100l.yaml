@@ -1,0 +1,41 @@
+id: TKT-100l
+title: "BA writes behavior, never implementation details"
+component: ticket-creation
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the BA v3 writes L2/L3 Gherkin criteria,
+  When it describes a behavior,
+  Then the criteria specify WHAT happens and WHY (observable behavior),
+    never HOW it is implemented (file paths, script names, exit codes,
+    specific tools, class names, function signatures).
+  And the BA never reads source code (.py, .ts, .sql, .js files) —
+    it reads only: ACs, component docs, architecture docs, standing rules,
+    diagrams, and INDEX.md.
+  And the BA never specifies which file implements a behavior —
+    that is the IT PO's job via assigned_agent and it_requirements.
+  And Gherkin uses domain language, not code language:
+    GOOD: "Then the file is rejected with an error naming the unknown field"
+    BAD: "Then check_ac_schema.py exits with code 1"
+    GOOD: "When the schema validator runs"
+    BAD: "When check_ac_schema.py validates the file"
+  And the IT PO later enriches the AC with:
+    - assigned_agent (who implements)
+    - it_requirements (technical constraints: file paths, exit codes, tools)
+    - doc_links to source files with relationship: implements
+  And the BA prompt's few-shot examples must demonstrate this separation
+    (examples use domain language, never reference specific scripts).
+depends_on: [TKT-100f, TKT-100i]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

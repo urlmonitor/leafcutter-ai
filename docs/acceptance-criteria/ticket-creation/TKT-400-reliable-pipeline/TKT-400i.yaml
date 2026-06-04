@@ -1,0 +1,36 @@
+id: TKT-400i
+title: "PO and BA file access enforced by PreToolUse hooks"
+component: ticket-creation
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the PO and BA agents have restricted file access scopes,
+  When either agent attempts to Read or Write a file,
+  Then a PreToolUse hook validates the path against the agent's allowlist:
+    - PO allowlist: Read/Write .md and .yaml in docs/, docs/acceptance-criteria/,
+      docs/vision.md, docs/roadmap.json
+    - BA allowlist: Read .md and .yaml in docs/, docs/acceptance-criteria/;
+      Write .yaml in docs/acceptance-criteria/ only
+  And attempts to Read .py, .ts, .sql, .js, .sh files are blocked
+    with exit code 2 and a message: "BA/PO cannot read source code.
+    Use a skill to load component context instead."
+  And the hook is defined in the agent's frontmatter hooks section,
+    not in global settings.json (per-agent scoping).
+  And this is defense-in-depth: the prompt already instructs the agent
+    not to read source, the hook structurally prevents it even if
+    the prompt instruction is ignored.
+  And the hook script is portable — shipped via build.py to consumer projects.
+depends_on: [TKT-100l, TKT-100k]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

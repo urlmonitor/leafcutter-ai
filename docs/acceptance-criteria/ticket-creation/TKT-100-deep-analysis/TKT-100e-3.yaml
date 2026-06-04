@@ -1,0 +1,29 @@
+id: TKT-100e-3
+title: "PO agent L1 criteria use natural-language behavioral statements, not Gherkin"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the PO agent produces an L1 AC for a feature behavior,
+  When the criteria field is written,
+  Then the criteria text does not contain the keywords "Given", "When", or "Then"
+    at the start of any line (case-insensitive),
+  And the criteria text describes observable behavior in 2-5 sentences
+    using natural language (e.g., "The system reads active ACs for the
+    relevant component and classifies each proposed AC"),
+  And the criteria text names specific artifacts where possible
+    (file paths, field names, agent names) rather than abstract references.
+depends_on: [TKT-100e]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

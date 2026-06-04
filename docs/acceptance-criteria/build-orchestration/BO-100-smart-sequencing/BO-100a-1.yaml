@@ -1,0 +1,28 @@
+id: BO-100a-1
+title: "Empty epic folder produces an empty graph and immediate completion"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an epic folder contains zero non-done ticket files
+    (only Master_Plan.md and/or tickets already in done/ subfolder),
+  When build_graph() is called with the discovered tickets list,
+  Then the returned graph dict is empty (length 0),
+  And detect_cycle() returns None (no cycle in an empty graph),
+  And compute_ready() returns two empty lists (ready=[], blocked=[]),
+  And /build-feature reports "epic complete" without dispatching any
+    ticket-supervisor.
+depends_on: [BO-100a]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

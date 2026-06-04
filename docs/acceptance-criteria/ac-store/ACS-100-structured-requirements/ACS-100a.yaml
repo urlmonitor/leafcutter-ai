@@ -1,0 +1,32 @@
+id: ACS-100a
+title: "Rich requirement schema with status tracking and dependency links"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the AC store exists,
+  When an AC YAML file is written,
+  Then it supports the full v3 schema: id, title, component, level (L0/L1/L2/L3),
+    req_status (draft/active/superseded), work_status (todo/assigned/implemented/validated/committed),
+    criteria (Gherkin), it_requirements (constraints/security/observability),
+    assigned_agent, depends_on, doc_links (path/relationship/status),
+    delivers_to, expects_from, origin_agent, and verification fields
+  And check_ac_schema.py validates both the existing v2 schema and the new v3 schema
+    (backward-compatible — old files still validate).
+depends_on: [ACS-100]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: human
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

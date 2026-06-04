@@ -1,0 +1,37 @@
+id: ACS-100c
+title: "Role-based ownership of AC levels"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the AC hierarchy has levels L0, L1, L2, L3,
+  When roles are assigned to levels,
+  Then the ownership model is:
+    - L0 (Goal): Product Owner writes the title and tagline in customer-facing language.
+      The L0 title answers "why does this exist?" and could appear on a sales page.
+    - L1 (Feature): Product Owner writes the title as a feature benefit statement.
+      The L1 title answers "what do you get?" and could appear on a feature card.
+    - L2 (Behavior): Business Analyst decomposes L1 into testable Gherkin behaviors.
+      The L2 criteria answer "how exactly does it work?" with Given/When/Then.
+    - L3 (Edge case): Business Analyst identifies failure modes and edge cases.
+      The L3 criteria answer "what could go wrong?"
+    - IT requirements: IT PO enriches L2/L3 with technical constraints.
+      The it_requirements answer "how do we build it safely?"
+  And L0/L1 titles are written in benefit language (no jargon).
+  And L2/L3 criteria are written in specification language (Gherkin).
+  And the PO can modify L0/L1 titles without affecting L2/L3 criteria.
+  And the BA can add/modify L2/L3 without changing the L0/L1 value proposition.
+depends_on: [ACS-100a]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: human
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

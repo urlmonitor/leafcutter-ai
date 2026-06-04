@@ -1,0 +1,29 @@
+id: TKT-100a-3
+title: "BA v3 reads component documentation via INDEX.md before drafting L2s"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given docs/INDEX.md exists in the project root,
+  When the BA v3 begins domain-model construction for the "ticket-creation" component,
+  Then it reads docs/INDEX.md to locate user flows, component pages, and how-to guides
+    relevant to ticket-creation,
+  And it reads at most 3 documents from the discovered paths,
+  And it produces a research_findings summary of 2-4 sentences
+    describing the component's current behavior from the user's perspective,
+  And the research_findings are included in the BA v3's working context
+    before any L2 Gherkin scenario is drafted.
+depends_on: [TKT-100a]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

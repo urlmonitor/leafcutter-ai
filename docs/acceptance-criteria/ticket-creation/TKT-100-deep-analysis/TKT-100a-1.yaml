@@ -1,0 +1,29 @@
+id: TKT-100a-1
+title: "BA v3 reads AC store for the target component before decomposition"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the BA v3 agent receives L1 ACs for component "ticket-creation",
+  When docs/acceptance-criteria/index.yaml exists
+    and docs/acceptance-criteria/ticket-creation/ contains active YAML files,
+  Then the BA v3 reads index.yaml to discover the component prefix "TKT",
+  And reads all .yaml files in docs/acceptance-criteria/ticket-creation/
+    where the status field equals "active",
+  And loads the id, title, criteria, and depends_on fields from each file
+    into a working-context list named existing_acs,
+  And the existing_acs list is available before any L2 Gherkin is drafted.
+depends_on: [TKT-100a]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

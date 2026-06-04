@@ -1,0 +1,29 @@
+id: ACS-100d-3
+title: "amended_by array accumulates ticket paths for each modification"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an existing AC with id "FIN-001" was created by ticket A,
+  When ticket B amends the AC's criteria or other fields,
+  Then the amended_by array is appended with ticket B's relative path
+    (e.g. amended_by: ["tickets/00_inbox/fix-fin-001.md"]),
+  And when ticket C later amends the same AC,
+  Then amended_by contains both paths in chronological order
+    (e.g. amended_by: ["tickets/00_inbox/fix-fin-001.md", "tickets/00_inbox/update-fin-001.md"]),
+  And the array enforces uniqueItems (duplicate ticket paths are rejected),
+  And the original created_by field is never modified.
+depends_on: [ACS-100d]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

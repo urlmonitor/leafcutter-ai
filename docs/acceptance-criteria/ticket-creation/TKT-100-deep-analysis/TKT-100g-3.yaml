@@ -1,0 +1,31 @@
+id: TKT-100g-3
+title: "Router classifies L2 when criteria contain Given/When/Then with concrete inputs"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an AC enters the pipeline with criteria text containing:
+    "Given docs/acceptance-criteria/index.yaml exists,
+    When the BA v3 reads the file,
+    Then it extracts the component prefix 'TKT'",
+  When the flight-level router evaluates the text,
+  Then it assigns level: L2,
+  And the classification signal is: contains "Given" at line start
+    followed by "When" at line start followed by "Then" at line start,
+    and the Given/When/Then clauses reference specific file paths,
+    field names, or literal values (not abstract placeholders),
+  And it dispatches the AC to the BA v3 agent for validation and L3 assessment.
+depends_on: [TKT-100g]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

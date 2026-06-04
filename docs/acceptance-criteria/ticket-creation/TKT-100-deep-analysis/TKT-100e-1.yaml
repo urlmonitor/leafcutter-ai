@@ -1,0 +1,31 @@
+id: TKT-100e-1
+title: "PO agent produces exactly one L0 AC per feature request"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a user submits a feature request with text
+    "Add a dark mode toggle to the settings page",
+  When the PO agent processes the request after flight-level routing,
+  Then it produces exactly one AC with level: L0,
+  And the L0 AC criteria field describes the business outcome in 1-3 sentences
+    without mentioning implementation details (no file paths, no agent names,
+    no technical patterns),
+  And the L0 AC has assigned_agent: null
+    (L0 outcomes are not directly implementable by a single agent),
+  And the L0 AC has depends_on: []
+    (it is the root of its decomposition tree).
+depends_on: [TKT-100e]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

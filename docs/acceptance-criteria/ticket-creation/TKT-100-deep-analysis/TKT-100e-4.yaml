@@ -1,0 +1,28 @@
+id: TKT-100e-4
+title: "PO agent enforces level boundary -- never produces L2 or L3 ACs"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the PO agent has completed its decomposition pass,
+  When the output AC set is validated,
+  Then no AC in the output has level: L2 or level: L3,
+  And no AC in the output contains Given/When/Then Gherkin syntax
+    in its criteria field,
+  And if the PO agent's internal reasoning produces a Gherkin-level
+    scenario, it is discarded with a logged note:
+    "L2 scenario suppressed -- will be produced by BA v3 during decomposition".
+depends_on: [TKT-100e, TKT-100e-3]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

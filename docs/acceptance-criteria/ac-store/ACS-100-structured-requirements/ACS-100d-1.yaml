@@ -1,0 +1,26 @@
+id: ACS-100d-1
+title: "origin_agent field records the creating agent's identity"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an agent (e.g. business-analyst, ticket-wiring, debug) creates a new AC YAML file,
+  When the file is written to the AC store,
+  Then the origin_agent field contains the agent's string identifier
+    (e.g. "business-analyst", "ticket-wiring", "debug", "human"),
+  And the field is a non-empty string (minLength: 1),
+  And the value is set exactly once at creation time and never modified afterward.
+depends_on: [ACS-100d]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

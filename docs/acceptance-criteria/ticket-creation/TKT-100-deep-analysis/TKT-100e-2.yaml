@@ -1,0 +1,28 @@
+id: TKT-100e-2
+title: "PO agent decomposes L0 into 3-7 L1 ACs with single agent ownership"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the PO agent has produced an L0 AC with id "TKT-100",
+  When it decomposes the L0 into L1 feature behaviors,
+  Then it produces between 3 and 7 L1 ACs (inclusive),
+  And each L1 AC has exactly one assigned_agent value
+    selected from the agent_registry.json entries where is_ticket_phase: true,
+  And each L1 AC has depends_on containing at minimum the parent L0 AC ID,
+  And the union of all L1 ACs covers the full scope of the L0 outcome
+    (no L0 behavior is left unaddressed by any L1).
+depends_on: [TKT-100e, TKT-100e-1]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

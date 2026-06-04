@@ -1,0 +1,28 @@
+id: ACS-100e-3
+title: "Skill metadata can declare a default origin_agent for skill-created ACs"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a skill file (e.g. templates/skills/ticket-wiring/SKILL.md) declares
+    default_origin_agent: "ticket-wiring" in its frontmatter,
+  When the skill creates AC files during its execution,
+  Then each AC file's origin_agent is set to "ticket-wiring",
+  And the configuration is read from the skill's own metadata
+    (not from ac_store_schema.json, not from a global config file),
+  And the skill-level default follows the same override rule as agent templates:
+    an explicit per-AC value takes precedence.
+depends_on: [ACS-100e]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

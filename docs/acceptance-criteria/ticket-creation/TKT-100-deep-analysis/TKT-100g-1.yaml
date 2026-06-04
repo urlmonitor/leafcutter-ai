@@ -1,0 +1,29 @@
+id: TKT-100g-1
+title: "Router classifies L0 when criteria describe business outcome without implementation detail"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an AC enters the pipeline with criteria text:
+    "Users can switch between light and dark themes
+    and their preference persists across sessions",
+  When the flight-level router evaluates the text,
+  Then it assigns level: L0,
+  And the classification signal is: no file paths, no agent names,
+    no technical patterns, no Given/When/Then syntax, and the text
+    describes a user-observable outcome rather than a system behavior,
+  And it dispatches the AC to the PO agent for L1 decomposition.
+depends_on: [TKT-100g]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

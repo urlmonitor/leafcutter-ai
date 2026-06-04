@@ -1,0 +1,30 @@
+id: BO-100c
+title: "Code-surface batching prevents parallel tickets from touching the same files"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the ready set contains tickets that have passed the dependency check,
+  When /build-feature selects a batch at step 3a of the epic-level algorithm,
+  Then no two tickets in the batch share any entry in their files_touched
+    frontmatter arrays,
+  And if an overlap is detected the overlapping ticket is removed from the batch
+    and serialized into a subsequent pass,
+  And tickets with missing or empty files_touched are treated as conflicting with
+    every other ticket and run serially (default-conservative),
+  And the file-touch intersection check is case-sensitive and uses exact path
+    matching (no glob expansion).
+depends_on: [BO-100a]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

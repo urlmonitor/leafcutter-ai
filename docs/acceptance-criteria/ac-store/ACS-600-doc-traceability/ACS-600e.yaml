@@ -1,0 +1,34 @@
+id: ACS-600e
+title: "Stale diagrams and ADRs get flagged automatically"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a new AC is created or an existing AC is amended,
+  When the AC touches a component that has registered diagrams or ADRs
+    (found via components.json diagrams field or doc_links reverse lookup),
+  Then the system checks whether the AC introduces structural changes
+    that invalidate the existing diagram or contradict the existing ADR.
+  And if a diagram is invalidated: the system auto-creates a follow-up AC
+    titled "Update {diagram_name} to reflect {AC-ID}",
+    assigned to diagram-specialist, with depends_on: [{AC-ID}].
+  And if an ADR is contradicted: the system surfaces a warning to the user:
+    "{AC-ID} conflicts with {ADR-NNN}. Amend the ADR or revise the AC?"
+    and blocks until the user decides.
+  And the detection runs as part of the diagram classifier (Phase 2) —
+    it fires on EVERY AC batch, not just during initial ticket creation.
+  And follow-up ACs appear in the same feature folder as the triggering AC.
+depends_on: [ACS-600b, ACS-300f]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,26 @@
+id: ACS-100d-4
+title: "origin_agent accepts any string value without closed enum restriction"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the ac_store_schema.json defines origin_agent as type "string",
+  When a new agent type not yet seen in the codebase writes an AC
+    (e.g. origin_agent: "business-analyst-v3" or origin_agent: "custom-pipeline"),
+  Then check_ac_schema.py accepts the value without error,
+  And no code change to the JSON schema is required to support the new agent name,
+  And the only constraint is minLength: 1 (empty string is rejected).
+depends_on: [ACS-100d]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

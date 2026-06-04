@@ -1,0 +1,38 @@
+id: TKT-100a-4
+title: "BA v3 degrades gracefully when AC store or INDEX.md is absent"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given docs/acceptance-criteria/ does not exist in the project root,
+  When the BA v3 attempts domain-model construction,
+  Then it sets existing_acs to an empty list,
+  And it logs an assumption entry with:
+    inference: "AC store absent -- proceeding without existing AC comparison",
+    why: "docs/acceptance-criteria/ directory not found",
+    risk_if_wrong: "L2 ACs may duplicate existing behaviors that live outside the AC store",
+  And it proceeds to L2 decomposition without error.
+
+  Given docs/INDEX.md does not exist in the project root,
+  When the BA v3 attempts to read component documentation,
+  Then it sets research_findings to
+    "INDEX.md not found; proceeding with L1 AC text and agent templates only",
+  And it logs an assumption entry with:
+    inference: "No project documentation index available",
+    why: "docs/INDEX.md not found",
+    risk_if_wrong: "L2 scenarios may miss existing component behaviors not described in L1 ACs",
+  And it proceeds to L2 decomposition without error.
+depends_on: [TKT-100a, TKT-100a-1, TKT-100a-3]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

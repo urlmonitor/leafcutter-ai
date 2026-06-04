@@ -1,0 +1,28 @@
+id: TKT-100a-2
+title: "BA v3 reads agent templates referenced in L1 ACs"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an L1 AC has assigned_agent set to "llm-expert",
+  When the BA v3 begins domain-model construction,
+  Then it reads templates/agents/llm-expert.md (or the resolved agent template path)
+    to extract the agent's responsibilities, output contract fields, and spawn allowlist,
+  And it reads at most 3 agent templates per L1 decomposition batch
+    (the assigned_agent template plus up to 2 templates referenced in depends_on ACs),
+  And the extracted responsibilities are stored as agent_capabilities
+    in the working context for use during L2 Gherkin drafting.
+depends_on: [TKT-100a]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

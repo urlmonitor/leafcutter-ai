@@ -1,0 +1,27 @@
+id: BO-100a-2
+title: "Linear dependency chain produces one-at-a-time sequential dispatch"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an epic contains tickets A, B, C where B.depends_on=[A] and C.depends_on=[B],
+  When build_graph() constructs the dependency graph,
+  Then the graph contains three nodes with edges A->B and B->C,
+  And compute_ready() on the initial state returns ready=[A], blocked=[B, C],
+  And after A transitions to done, compute_ready() returns ready=[B], blocked=[C],
+  And after B transitions to done, compute_ready() returns ready=[C], blocked=[],
+  And at no point are B or C dispatched before their predecessor is done.
+depends_on: [BO-100a]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

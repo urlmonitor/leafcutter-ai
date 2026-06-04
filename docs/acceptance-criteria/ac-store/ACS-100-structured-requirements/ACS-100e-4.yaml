@@ -1,0 +1,28 @@
+id: ACS-100e-4
+title: "Missing default_origin_agent falls back to the agent's own name"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an agent template does not declare a default_origin_agent field,
+  When the agent creates a new AC file without explicitly setting origin_agent,
+  Then the AC file's origin_agent field is populated with the agent's own
+    template file name (e.g. an agent loaded from "business-analyst.md"
+    produces origin_agent: "business-analyst"),
+  And the fallback derivation strips the .md extension and uses the stem,
+  And the resulting origin_agent value is always non-empty,
+  And check_ac_schema.py validation passes.
+depends_on: [ACS-100e]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

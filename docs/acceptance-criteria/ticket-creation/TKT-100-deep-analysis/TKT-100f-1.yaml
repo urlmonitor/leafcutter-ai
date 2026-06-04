@@ -1,0 +1,33 @@
+id: TKT-100f-1
+title: "BA v3 produces 3-5 L2 ACs per L1 with concrete Gherkin scenarios"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the BA v3 agent receives an L1 AC with id "TKT-100e"
+    and criteria describing "PO agent owns L0 business outcomes and L1 feature-level ACs",
+  When it performs L2 decomposition,
+  Then it produces between 3 and 5 L2 ACs (inclusive),
+  And each L2 AC criteria field starts with a "Given" clause
+    followed by at least one "When" clause and at least one "Then" clause,
+  And each "Given" clause names specific preconditions
+    (e.g., "Given docs/acceptance-criteria/index.yaml exists"
+    rather than "Given the system is configured"),
+  And each "Then" clause describes an observable, verifiable outcome
+    with named fields or file paths
+    (e.g., "Then the output contains a level field set to L0"
+    rather than "Then the output is valid").
+depends_on: [TKT-100f]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

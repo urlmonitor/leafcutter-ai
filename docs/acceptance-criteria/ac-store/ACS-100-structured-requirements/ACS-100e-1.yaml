@@ -1,0 +1,27 @@
+id: ACS-100e-1
+title: "Agent template can declare a default origin_agent value"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an agent template (e.g. templates/agents/business-analyst.md) contains
+    a metadata field "default_origin_agent: business-analyst",
+  When the agent creates a new AC YAML file and does not explicitly set origin_agent,
+  Then the AC file's origin_agent field is populated with the template's
+    default_origin_agent value ("business-analyst"),
+  And the value is written to the YAML file before commit,
+  And the AC passes check_ac_schema.py validation.
+depends_on: [ACS-100e]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

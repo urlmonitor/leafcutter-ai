@@ -1,0 +1,28 @@
+id: BO-100
+title: "Smart ticket sequencing resolves dependency order and parallelism automatically"
+component: build-orchestration
+level: L0
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an epic contains tickets with depends_on relationships and files_touched declarations,
+  When /build-feature dispatches ticket-supervisors,
+  Then tickets execute in a valid topological order respecting dependency chains,
+  And tickets with disjoint file-touch sets run in parallel within a batch,
+  And batches never exceed a configurable concurrency cap,
+  And cycle detection halts the epic before any dispatch occurs.
+depends_on: []
+doc_links:
+  - docs/architecture/agent_delivery_workflows.md
+  - templates/skills/building-epics/SKILL.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: [BO-100a, BO-100b, BO-100c]
+implemented_by: []

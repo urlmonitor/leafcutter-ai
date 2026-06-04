@@ -1,0 +1,30 @@
+id: BO-100a
+title: "DAG resolver computes valid topological order from depends_on edges"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an epic folder contains ticket files with depends_on frontmatter arrays,
+  When /build-feature builds the dependency graph at step 2 of the epic-level algorithm,
+  Then a directed acyclic graph is constructed with one node per non-done ticket,
+  And edges are derived from the depends_on field (ticket A depends_on ticket B
+    creates edge B -> A),
+  And the graph is checked for cycles via DFS before any dispatch,
+  And if a cycle is detected the epic halts immediately with a diagnostic
+    naming every node in the cycle path,
+  And the ready set is computed as all nodes whose predecessors are either
+    done or absent from the graph (treated as satisfied).
+depends_on: [BO-100]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,35 @@
+id: ACS-100e
+title: "Configurable authorship identity for customer projects"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a customer project uses leafcutter,
+  When they configure their AC authorship,
+  Then skills_config.json supports an "ac_authorship" section with:
+    - default_human_author: the name used when a human creates ACs interactively
+      (e.g., "Jane Smith", "Product Team"). Prompted during /onboard if not set.
+    - require_named_author: boolean (default: false). When true, the BA and PO agents
+      ask "Who is the business owner of this requirement?" and record the answer
+      as origin_agent instead of the agent's own name.
+    - author_directory: optional list of valid human author names. When set,
+      origin_agent is validated against this list (catches typos).
+  And the /onboard wizard asks: "Do you want to track who requested each requirement
+    by name? This helps with traceability and audit."
+  And when require_named_author is true, the BA/PO prompt includes:
+    "Ask the user: who is the business owner of this requirement?
+    Record their answer as origin_agent. Do not default to your own agent name."
+depends_on: [ACS-100d, ACS-500a]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

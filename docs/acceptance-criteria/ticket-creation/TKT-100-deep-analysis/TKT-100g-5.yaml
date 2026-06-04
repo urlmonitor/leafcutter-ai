@@ -1,0 +1,36 @@
+id: TKT-100g-5
+title: "Router rejects ACs that span multiple flight levels with a structured error"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an AC enters the pipeline with criteria text:
+    "Users can toggle dark mode.
+    Given the user clicks the toggle,
+    When the theme-service writes to localStorage,
+    Then the page re-renders with dark CSS variables",
+  When the flight-level router evaluates the text,
+  Then it rejects the AC (does not assign a level or dispatch to any agent),
+  And it returns a structured error object with fields:
+    error_type: "multi_level_violation",
+    segments: [
+      {text: "Users can toggle dark mode.", detected_level: "L0"},
+      {text: "Given the user clicks...", detected_level: "L2"}
+    ],
+    recommendation: "Split into one L0 AC for the business outcome
+      and one or more L2 ACs for the Gherkin scenarios",
+  And the rejection is surfaced to the calling agent (not silently dropped).
+depends_on: [TKT-100g, TKT-100g-1, TKT-100g-3]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
