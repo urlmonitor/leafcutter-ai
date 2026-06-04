@@ -19,11 +19,11 @@ files_touched:
 agents:
   architect-review: not_needed
   test-writer: not_needed
-  python-coder: needed
+  python-coder: signed_off
   sql-coder: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   architecture-diagram-author: not_needed
@@ -42,16 +42,16 @@ validates contracts without filling the table.
 
 ### python-coder
 
-- [ ] AC-1: test-writer.md includes contract-aware mode: when ticket has `## Agent Contracts`, write tests mapped to specific ACs and fill the **Test** column in the AC Coverage table (format: `test_file.py:test_function_name`)
-- [ ] AC-2: test-writer maps each AC to at least one test — if an AC is untestable, it notes this in the Test column as `(not testable: <reason>)` rather than leaving it blank
-- [ ] AC-3: pr-reviewer.md includes contract-aware mode: validates that `Delivers to` contracts in the ticket match the actual implementation in the diff — checks field names, types, status codes, endpoint paths
-- [ ] AC-4: pr-reviewer flags contract mismatches as high-confidence findings (e.g., "contract specifies `avatar_url` but implementation returns `url`")
-- [ ] AC-5: Both agents fall back to v1 behavior when ticket has no `## Agent Contracts` section
+- [x] AC-1: test-writer.md includes contract-aware mode: when ticket has `## Agent Contracts`, write tests mapped to specific ACs and fill the **Test** column in the AC Coverage table (format: `test_file.py:test_function_name`) <!-- signed: python-coder -->
+- [x] AC-2: test-writer maps each AC to at least one test — if an AC is untestable, it notes this in the Test column as `(not testable: <reason>)` rather than leaving it blank <!-- signed: python-coder -->
+- [x] AC-3: pr-reviewer.md includes contract-aware mode: validates that `Delivers to` contracts in the ticket match the actual implementation in the diff — checks field names, types, status codes, endpoint paths <!-- signed: python-coder -->
+- [x] AC-4: pr-reviewer flags contract mismatches as high-confidence findings (e.g., "contract specifies `avatar_url` but implementation returns `url`") <!-- signed: python-coder -->
+- [x] AC-5: Both agents fall back to v1 behavior when ticket has no `## Agent Contracts` section <!-- signed: python-coder -->
 
 ## Sign-offs
 
-- [ ] python-coder
-- [ ] pr-reviewer
+- [x] python-coder — 2026-06-04 00:00
+- [x] pr-reviewer — 2026-06-04 00:15
 - [ ] commit
 - [ ] pull-request
 
@@ -59,14 +59,51 @@ validates contracts without filling the table.
 
 | AC | Test | Implementation | Validated |
 |----|------|----------------|-----------|
-| AC-1 | | | |
-| AC-2 | | | |
-| AC-3 | | | |
-| AC-4 | | | |
-| AC-5 | | | |
+| AC-1 | | Added `## Contract-Aware Mode` section to test-writer.md with AC Mapping Rule and AC Coverage Table Fill (Test column) | ok — 2026-06-04 |
+| AC-2 | | AC Mapping Rule requires test per AC; `(not testable: <reason>)` stub for untestable ACs in Test column | ok — 2026-06-04 |
+| AC-3 | | Added `## Contract-Aware Mode` section to pr-reviewer.md with Contract Validation Pass (field names, types, status codes, paths) | ok — 2026-06-04 |
+| AC-4 | | Contract mismatch formatted as high-confidence finding `[H-N] contract mismatch — <field>` with declared vs actual | ok — 2026-06-04 |
+| AC-5 | | `### v1 Fallback` section in both templates: skip AC-aware behaviour when `## Agent Contracts` absent | ok — 2026-06-04 |
 
 ## Risk & Safety
 
 - Touches money? No.
 - Touches data? No — modifies agent templates only.
 - Reversibility? Fully reversible — additive prompt sections, v1 behavior preserved.
+
+## Comments
+
+### 2026-06-04 09:00 — python-coder (status: ok)
+feedback-id: fb_2026-06-04_09c5b6c3
+completion_manifest:
+  test_writer_contract_mode_added: true
+  pr_reviewer_contract_mode_added: true
+  v1_fallback_preserved: true
+  ac_coverage_implementation_filled: true
+Added `## Contract-Aware Mode (v2 tickets)` section to both templates. test-writer.md now maps ACs to test functions and fills the Test column; pr-reviewer.md now validates Delivers-to contracts and flags mismatches as high-confidence findings. Both templates retain v1 fallback when `## Agent Contracts` is absent. AC Coverage Implementation column filled for all 5 ACs.
+
+### 2026-06-04 09:15 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-04_55920289
+completion_manifest:
+  diff_reviewed: true
+  no_high_findings: true
+  scope_verified: true
+Reviewed diff (+57 lines to pr-reviewer.md, +44 lines to test-writer.md). Both additions are purely additive; existing v1 behavior is preserved via explicit v1 fallback sections. Contract-aware mode in pr-reviewer.md validates field names, types, status codes, and endpoint paths from `## Agent Contracts` and flags mismatches as high-confidence findings. No high-confidence issues found. Change set matches `files_touched` list exactly.
+
+## Review Report
+
+**Base:** HEAD
+**Diff size:** +57 lines to pr-reviewer.md, +44 lines to test-writer.md (3 files total including ticket)
+
+#### High-Confidence Findings
+
+No high-confidence findings.
+
+#### Suppression Tally
+
+Suppressed: 0 low-confidence nits, 0 medium findings dropped by Opus. Run /pr-review explain <N> to re-examine any high or medium finding in detail.
+
+## Escalation
+
+Branch: none
+Reason: not escalated: medium count was 0 (threshold > 3)

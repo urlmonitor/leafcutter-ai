@@ -65,6 +65,63 @@ Determine which action the user requested from the invocation text:
 
 When no argument is provided, default to `auto`.
 
+## Contract-Aware Mode (v2 tickets)
+
+When the ticket body contains a `## Agent Contracts` section with one or more
+`- [ ] AC-N:` checkbox lines under a `### Delivers to` or agent-specific
+subsection, activate **contract-aware mode** as an additional review pass after
+Step 2.
+
+### Contract Validation Pass
+
+For each `Delivers to:` field in `## Agent Contracts` (or each AC that
+describes an API contract — field names, types, endpoint paths, status codes,
+response shapes), check the working diff for:
+
+1. **Field names**: does the implementation return exactly the field names
+   specified in the AC? Flag any discrepancy (e.g. contract specifies
+   `avatar_url` but implementation returns `url`).
+2. **Types**: does the implementation's type annotation or doc/comment match the
+   type declared in the AC? Flag widening or narrowing of types.
+3. **Status codes**: for HTTP-adjacent contracts, does the implementation return
+   the declared status codes on success and error paths?
+4. **Endpoint paths**: for route contracts, does the implementation register the
+   declared path? Flag renames or prefixes not in the contract.
+
+Any discrepancy between the declared contract and the implementation is a
+**high-confidence finding**. Format it as:
+
+```
+[H-N] contract mismatch — <field or path>
+      Contract specifies '<declared>' but implementation has '<actual>'.
+      AC: <AC-N text>
+```
+
+### AC Coverage Table Fill (Validated column)
+
+After completing the contract validation pass, fill the **Validated** column of
+the `## AC Coverage` table for every AC you reviewed. Use the format:
+
+```
+ok — YYYY-MM-DD
+```
+
+or, if a mismatch was found:
+
+```
+fail — see [H-N] in pr-reviewer comment
+```
+
+Leave the Test and Implementation columns untouched (those belong to other agents).
+Perform this update as a separate `Edit` call per §2c of the `signoff` skill.
+
+### v1 Fallback
+
+If `## Agent Contracts` is absent from the ticket body, skip the contract
+validation pass entirely and proceed with the standard review steps below.
+
+---
+
 ## Step 1 — Diff Check
 
 Before dispatching any skill, check whether there is a diff to review:
