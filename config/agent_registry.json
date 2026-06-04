@@ -125,6 +125,46 @@
             "skills_used": []
         },
         {
+            "id": "business-analyst-v2",
+            "name": "Business Analyst V2",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "create-ticket-v2"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/business-analyst-v2.md",
+            "model": "opus",
+            "skills_used": [],
+            "description": "Enhanced Opus BA for v2 ticket-creation pipeline. Parallel test path — does not replace business-analyst.md."
+        },
+        {
+            "id": "create-ticket-v2",
+            "name": "Create Ticket V2",
+            "tier": "supervisor",
+            "role": "orchestration",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "business-analyst-v2"
+            ],
+            "spawned_by": [
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/create-ticket-v2.md",
+            "model": "sonnet",
+            "skills_used": [
+                "ticket-authoring"
+            ],
+            "description": "V2 parallel ticket-creation pipeline orchestrator. Routes by complexity (trivial/simple → refinement, standard/novel → it-po). Does not modify v1 templates."
+        },
+        {
             "id": "brainstorm-lead",
             "name": "Brainstorm Lead",
             "tier": "utility",
