@@ -24,7 +24,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -158,7 +158,7 @@ Repo path: `/home/henzeh/projects/leafcutter/leafcutter-ai/`.
 - [x] python-coder — 2026-06-04 12:10
 - [x] test-runner — 2026-06-04 12:15
 - [x] pr-reviewer — 2026-06-04 12:20
-- [ ] commit
+- [x] commit — 2026-06-04 12:25
 - [ ] pull-request
 
 ## Comments
@@ -189,3 +189,10 @@ completion_manifest:
   no_scope_drift: true
   tests_green: true
 All 6 ACs verified: Pre-Flight section present in pull-request.md (AC-1); PROJECT_CONTEXT.md contains EMU guard with urlmonitor account switch (AC-2); PR writing standards present with title ≤70 chars and body structure (AC-3); test assertions confirm wiring (AC-4, AC-5, AC-6 — 8/8 pass). No scope drift. Implementation is minimal and focused.
+
+### 2026-06-04 12:25 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  commit_created: true
+  staged_files_match_plan: true
+Committed sha 29b2158 on branch feature/pullrequestagentprojectcontext. 4 files changed, 267 insertions(+). Staged by explicit path only (no git add .).
