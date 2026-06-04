@@ -152,7 +152,8 @@
             "portable": true,
             "domain": null,
             "spawn_allowlist": [
-                "business-analyst-v2"
+                "business-analyst-v2",
+                "it-po"
             ],
             "spawned_by": [
                 "user"
@@ -177,7 +178,8 @@
                 "brainstorm-worker"
             ],
             "spawned_by": [
-                "ticket-supervisor"
+                "ticket-supervisor",
+                "create-ticket"
             ],
             "is_ticket_phase": false,
             "selection_criteria": null,
