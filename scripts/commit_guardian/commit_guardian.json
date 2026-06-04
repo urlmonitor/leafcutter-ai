@@ -477,6 +477,18 @@
                 "pass_filenames": false
             },
             {
+                "id": "check-agent-spawn-consistency",
+                "name": "Check Agent Spawn Bidirectionality (registry edit guard)",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/hooks/check_agent_spawn_consistency.py",
+                "language": "system",
+                "files": "^config/agent_registry\\.json$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "TICKET-20260604-AgentRegistrySpawnValidationHook: fires only when config/agent_registry.json is staged. Runs the bidirectional spawn consistency check inline (no registry_validator import) and exits 1 with named mismatched pairs if any are found. Companion to check-agent-registry, which targets the consumer-project install path."
+            },
+            {
                 "id": "check-mermaid-drift",
                 "name": "Check Mermaid Diagram Drift",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_mermaid_drift.py",

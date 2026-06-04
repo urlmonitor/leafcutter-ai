@@ -1,6 +1,6 @@
 ---
 title: "Add pre-commit hook for bidirectional spawn validation on agent_registry.json"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
@@ -15,14 +15,14 @@ files_touched:
   - scripts/commit_guardian/commit_guardian.json
 agents:
   architect-review: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
-  commit: needed
-  pull-request: needed
+  pr-reviewer: signed_off
+  commit: signed_off
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 ---
@@ -119,14 +119,98 @@ both should remain registered.
 
 ## Sign-offs
 
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
-- [ ] pr-reviewer
-- [ ] commit
-- [ ] pull-request
+- [x] test-writer — 2026-06-04 12:07
+- [x] python-coder — 2026-06-04 12:11
+- [x] test-runner — 2026-06-04 12:19
+- [x] pr-reviewer — 2026-06-04 12:26
+- [x] commit — 2026-06-04 12:30
+- [x] pull-request — 2026-06-04 12:35
 
 ## Comments
+
+### 2026-06-04 12:07 — test-writer (status: ok)
+feedback-id: fb_2026-06-04_bed58288
+completion_manifest:
+  test_stubs_created: true
+  all_tests_red: true
+  red_baseline_captured: true
+red_baseline:
+  - test_name: test_exits_0_when_registry_not_staged
+    file: unit_tests/commit_guardian/test_check_agent_spawn_consistency.py
+    error: "ImportError: Hook script not found at .../scripts/commit_guardian/hooks/check_agent_spawn_consistency.py. Implement it (python-coder phase)."
+  - test_name: test_exits_0_when_registry_consistent
+    file: unit_tests/commit_guardian/test_check_agent_spawn_consistency.py
+    error: "ImportError: Hook script not found at .../scripts/commit_guardian/hooks/check_agent_spawn_consistency.py. Implement it (python-coder phase)."
+  - test_name: test_exits_1_on_allowlist_mismatch
+    file: unit_tests/commit_guardian/test_check_agent_spawn_consistency.py
+    error: "ImportError: Hook script not found at .../scripts/commit_guardian/hooks/check_agent_spawn_consistency.py. Implement it (python-coder phase)."
+  - test_name: test_exits_1_on_spawned_by_mismatch
+    file: unit_tests/commit_guardian/test_check_agent_spawn_consistency.py
+    error: "ImportError: Hook script not found at .../scripts/commit_guardian/hooks/check_agent_spawn_consistency.py. Implement it (python-coder phase)."
+  - test_name: test_error_message_format
+    file: unit_tests/commit_guardian/test_check_agent_spawn_consistency.py
+    error: "ImportError: Hook script not found at .../scripts/commit_guardian/hooks/check_agent_spawn_consistency.py. Implement it (python-coder phase)."
+  - test_name: test_skips_special_token
+    file: unit_tests/commit_guardian/test_check_agent_spawn_consistency.py
+    error: "ImportError: Hook script not found at .../scripts/commit_guardian/hooks/check_agent_spawn_consistency.py. Implement it (python-coder phase)."
+  - test_name: test_skips_user_in_spawned_by
+    file: unit_tests/commit_guardian/test_check_agent_spawn_consistency.py
+    error: "ImportError: Hook script not found at .../scripts/commit_guardian/hooks/check_agent_spawn_consistency.py. Implement it (python-coder phase)."
+  - test_name: test_exits_1_on_invalid_json
+    file: unit_tests/commit_guardian/test_check_agent_spawn_consistency.py
+    error: "ImportError: Hook script not found at .../scripts/commit_guardian/hooks/check_agent_spawn_consistency.py. Implement it (python-coder phase)."
+  - test_name: test_exits_1_on_os_error
+    file: unit_tests/commit_guardian/test_check_agent_spawn_consistency.py
+    error: "ImportError: Hook script not found at .../scripts/commit_guardian/hooks/check_agent_spawn_consistency.py. Implement it (python-coder phase)."
+  - test_name: test_hook_registered_in_commit_guardian_json
+    file: unit_tests/commit_guardian/test_check_agent_spawn_consistency.py
+    error: "ImportError: Hook script not found at .../scripts/commit_guardian/hooks/check_agent_spawn_consistency.py. Implement it (python-coder phase)."
+  - test_name: test_hook_has_module_docstring
+    file: unit_tests/commit_guardian/test_check_agent_spawn_consistency.py
+    error: "ImportError: Hook script not found at .../scripts/commit_guardian/hooks/check_agent_spawn_consistency.py. Implement it (python-coder phase)."
+  - test_name: test_hook_has_decision_history_block
+    file: unit_tests/commit_guardian/test_check_agent_spawn_consistency.py
+    error: "ImportError: Hook script not found at .../scripts/commit_guardian/hooks/check_agent_spawn_consistency.py. Implement it (python-coder phase)."
+Wrote 12 failing test stubs to unit_tests/commit_guardian/test_check_agent_spawn_consistency.py covering all 8 ACs. All 12 tests red on ImportError (hook not yet implemented). python-coder must create scripts/commit_guardian/hooks/check_agent_spawn_consistency.py and register it in commit_guardian.json.
+
+### 2026-06-04 12:11 — python-coder (status: ok)
+feedback-id: fb_2026-06-04_47c3bd9a
+completion_manifest:
+  hook_script_created: true
+  hook_registered_in_commit_guardian: true
+  all_tests_green: true
+Created scripts/commit_guardian/hooks/check_agent_spawn_consistency.py with two-pass bidirectional check, __ticket_phase_agents__ skip (AC-4), "user" skip (AC-5), JSON error handling (AC-6), and module docstring + DECISION HISTORY (AC-8). Registered in commit_guardian.json after check-agent-registry with files pattern "^config/agent_registry\\.json$" and pass_filenames: false (AC-7). All 12 tests now pass.
+
+### 2026-06-04 12:19 — test-runner (status: ok)
+feedback-id: fb_2026-06-04_5017df54
+completion_manifest:
+  unit_tests_all_pass: true
+  smoke_test_mismatch_detection: true
+Command: python3 -m pytest unit_tests/commit_guardian/test_check_agent_spawn_consistency.py -v
+Result: 12 passed in 0.18s (exit 0). Smoke test: introduced synthetic mismatch (_test_agent_A / _test_agent_B), confirmed hook exits 1 with both agent IDs in stderr output.
+
+### 2026-06-04 12:26 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-04_b59b500a
+completion_manifest:
+  all_acs_verified: true
+  implementation_matches_spec: true
+  no_regressions: true
+Reviewed all 8 ACs against implementation. AC-1 through AC-8 all satisfied. Hook is a standalone script (no leafcutter package imports), two-pass bidirectional check is correct, __ticket_phase_agents__ token handled in both directions (AC-4 edge case verified), "user" skipped in spawned_by (AC-5), JSON/OSError handled with clear stderr messages (AC-6), registration in commit_guardian.json is correct with files and pass_filenames fields (AC-7), module docstring and DECISION HISTORY present (AC-8). 12/12 tests green. No blockers.
+
+### 2026-06-04 12:30 — commit (status: ok)
+feedback-id: fb_2026-06-04_8371c269
+completion_manifest:
+  staged_files_correct: true
+  commit_succeeded: true
+  lock_released: true
+Staged 5 files explicitly (no git add .): hooks/__init__.py, check_agent_spawn_consistency.py, test_check_agent_spawn_consistency.py, commit_guardian.json, ticket. Committed on branch feature/agentregistryspawnvalidationhook, SHA 5f102e3. Note: scripts/commit_guardian/ is .gitignored so new files required git add -f. Commit-phase lock acquired and released cleanly.
+
+### 2026-06-04 12:35 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_272c9f45
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+PR #48 opened at https://github.com/urlmonitor/leafcutter-ai/pull/48 on branch feature/agentregistryspawnvalidationhook targeting main.
 
 ## Implementation Tasks
 
