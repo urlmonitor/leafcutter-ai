@@ -7,9 +7,10 @@ audience: developers
 # How to use /finalize-feature
 
 `/finalize-feature` finalizes a feature branch end-to-end: it captures a
-pre-merge test baseline, opens a PR if one is missing, merges the branch to
-main, runs post-merge tests with triage, auto-tickets any pre-existing failures,
-closes tracking tickets, and removes the feature worktree.
+pre-merge test baseline, opens a PR if one is missing, merges `origin/main`
+into the worktree, runs post-merge tests with triage, merges the PR to main
+only when tests pass, auto-tickets any pre-existing failures, closes tracking
+tickets, and removes the feature worktree.
 
 Run it from the feature branch:
 
@@ -29,29 +30,18 @@ incomplete step.
 |------|------|--------------|
 | 0 | Capture baseline | A temporary detached worktree is created at `origin/main`. The test suite runs there. The list of failing test IDs is stored as the **pre-merge baseline**. The temp worktree is then removed. If baseline capture fails for any reason, the workflow continues (graceful degradation) — triage will classify all post-merge failures conservatively as regressions. |
 | 1 | Open PR | If no open PR exists for the branch, the `pull-request` agent opens one. |
-| 2 | Merge PR | You are prompted: `Merge PR #N (<branch> → main)?`. On `yes`, the PR is merged via `gh pr merge`. On `no`, finalization halts with no changes made. |
-| 3 | Sync local main | `git checkout main && git pull`. The new HEAD SHA is reported. |
-| 3.5 | Merge main into worktree | `origin/main` is merged into the feature worktree with `--no-commit --no-ff`. This gives step 4 a realistic view of post-merge state. On conflict the merge is aborted and the workflow halts. |
-| 4a | Post-merge tests | The full test suite runs against the post-merge worktree. If all tests pass, steps 4b and 4c are skipped. |
-| 4b | Triage failures | The `test-failure-triage` agent classifies each failing test as `regression` (caused by this branch), `pre_existing` (already failing on main), or `flaky`. It sets `blocks_finalization` to `true` if any regressions exist. |
-| 4c | Halt or continue | If `blocks_finalization == true`, finalization halts hard — steps 5 and 6 are not reached. If `false` (all failures are pre-existing), the workflow continues. |
-| 5 | Create tracking tickets + close | A `create-ticket` call is dispatched for each `pre_existing` or `flaky` triage entry, producing inbox tracking tickets. Then `status-checker` closes the branch's tracking tickets and archives the epic (if applicable). |
-| 6 | Remove worktree | If the feature worktree still exists, `worktree-agent remove` is dispatched (with its own confirmation gate). |
+| 2 | Merge main into worktree | `origin/main` is merged into the feature worktree with `--no-commit --no-ff`. This gives step 3 a realistic view of the post-merge state. On conflict the merge is aborted and the workflow halts. |
+| 3 | Post-merge tests + triage | The full test suite runs against the post-merge worktree. If all tests pass, the triage sub-steps are skipped and the workflow proceeds to step 4. When failures exist, the `test-failure-triage` agent classifies each failing test as `regression` (caused by this branch), `pre_existing` (already failing on main), or `flaky`. If `blocks_finalization == true` (regressions found), finalization halts here — **the PR is not merged**. If `false` (all failures are pre-existing), the workflow continues to step 4. |
+| 4 | Merge PR | This step is only reached when `blocks_finalization === false`. You are prompted: `Merge PR #N (<branch> → main)?`. On `yes`, the PR is merged via `gh pr merge`. On `no`, finalization halts with no changes made to main. |
+| 5 | Sync local main | `git checkout main && git pull`. The new HEAD SHA is reported. |
+| 6 | Create tracking tickets + close | A `create-ticket` call is dispatched for each `pre_existing` or `flaky` triage entry, producing inbox tracking tickets. Then `status-checker` closes the branch's tracking tickets and archives the epic (if applicable). |
+| 7 | Remove worktree | If the feature worktree still exists, `worktree-agent remove` is dispatched (with its own confirmation gate). |
 
 ---
 
 ## When finalization halts
 
-### `user_declined_merge` (step 2)
-
-**What it means:** You answered `no` to the merge prompt.
-
-**What to do:** No changes were made. Re-run `/finalize-feature` when you are
-ready to merge.
-
----
-
-### `merge_conflict` (step 3.5)
+### `merge_conflict` (step 2)
 
 **What it means:** `git merge origin/main --no-commit --no-ff` produced
 conflicts. The merge was automatically aborted — your worktree is clean.
@@ -74,11 +64,12 @@ conflicts. The merge was automatically aborted — your worktree is clean.
 
 ---
 
-### `regressions_or_stale_tests` (step 4c)
+### `test_regression` (step 3)
 
 **What it means:** The triage agent found one or more failing tests classified
 as **regressions** — tests that pass on `main` but fail on the post-merge
-worktree, meaning this branch introduced a breakage.
+worktree, meaning this branch introduced a breakage. **The PR has not been
+merged to main.**
 
 The `triage_report` in the halted result shows:
 
@@ -108,7 +99,16 @@ a regression), you can:
 
 ---
 
-### `worktree_conflict_pids` (step 6)
+### `user_declined_merge` (step 4)
+
+**What it means:** You answered `no` to the merge prompt.
+
+**What to do:** No changes were made to main. Re-run `/finalize-feature` when
+you are ready to merge.
+
+---
+
+### `worktree_conflict_pids` (step 7)
 
 **What it means:** The `worktree-agent` reported processes holding locks on
 the worktree path, preventing removal.
@@ -124,7 +124,7 @@ the worktree path, preventing removal.
    ```bash
    kill <pid>
    ```
-4. Re-run `/finalize-feature`. The workflow resumes — steps 0–5 are
+4. Re-run `/finalize-feature`. The workflow resumes — steps 0–6 are
    already complete and will be skipped.
 
 ---
