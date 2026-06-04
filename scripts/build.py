@@ -334,6 +334,52 @@ def _compute_version_str(package_root: Path) -> str:
     return _bump_version(baseline, bump)
 
 
+def build_doc_index(target_root: Path, config: dict, dry_run: bool, force: bool) -> int:  # noqa: ARG001
+    """Generate docs/INDEX.md by walking the docs tree.
+
+    The index is regenerated on every build run (not write-if-absent) because
+    it is fully derived from the existing docs tree and must stay current.
+    Idempotent: if the content is byte-identical to what is already on disk,
+    no write is performed and 0 is returned.
+
+    Args:
+        target_root: Absolute path to the target project root directory.
+        config: Merged config dictionary (unused — index generation is
+            self-contained; kept for API parity with other phase functions).
+        dry_run: When True, logs intent but writes nothing.
+        force: Ignored — index is always regenerated (content-addressed write).
+
+    Returns:
+        1 if the file was written; 0 if the content was already up-to-date.
+    """
+    from generate_doc_index import generate_index
+
+    output_path = target_root / "docs" / "INDEX.md"
+    content = generate_index(target_root)
+
+    if dry_run:
+        _dry_run_msg(f"would write {output_path}")
+        return 1
+
+    if output_path.exists():
+        try:
+            existing = output_path.read_text(encoding="utf-8")
+            if existing == content:
+                return 0
+        except OSError:
+            pass
+
+    try:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(content, encoding="utf-8")
+    except OSError as exc:
+        _warn(f"Failed to write {output_path}: {exc}")
+        return 0
+    else:
+        _success(f"wrote {output_path.relative_to(target_root)}")
+        return 1
+
+
 def _run_phases(
     target_root: Path,
     output_root: Path,
@@ -391,6 +437,7 @@ def _run_phases(
         ("Glossary", build_glossary),
         ("Config scaffolds", build_config_scaffolds),
         ("AC store scaffold", build_ac_store_scaffold),
+        ("Doc index", build_doc_index),
     ]
 
     total = 0

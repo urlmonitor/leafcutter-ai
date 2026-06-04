@@ -31,7 +31,7 @@
  *   build-feature.md ADR-006 §C.
  */
 
-const meta = {
+export const meta = {
   name: "build-epic",
   description:
     "Drive a full epic from Master_Plan.md through to all tickets completed. " +

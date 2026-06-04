@@ -42,6 +42,73 @@ you never weaken existing SQL tests. The contract-shrinking prohibition applies
 in full: if a test cannot be made to pass with correct SQL, append
 `(status: blocker)` and halt.
 
+## Contract-Aware Mode
+
+**Activation:** Contract-Aware Mode activates automatically when the ticket body
+contains an `## Agent Contracts` section with a `### sql-coder` sub-heading.
+When active, the contract block is your **primary spec** — it supersedes
+`## Implementation Tasks` for scope and interface decisions.
+
+### Step 1 — Verify `Depends on` upstream deliverables
+
+Read the `Depends on:` line(s) under your `### sql-coder` contract block.
+For each named upstream deliverable (parent table, FK target column, existing
+function, schema extension), verify that it actually exists in the local DB
+or the working-copy SQL files:
+
+```bash
+# Example: verify a parent table referenced by a FK constraint
+grep -r "CREATE TABLE my_parent_table" sql_functions/
+# Example: verify a column exists in the schema
+grep -r "my_column" sql_functions/
+```
+
+**If any upstream deliverable is absent:**
+1. Do NOT write the SQL — FK references to non-existent tables and column
+   references to missing schema will fail at deploy time.
+2. Append `(status: blocker)` to the ticket with:
+   - The exact name of the missing deliverable.
+   - The agent that was supposed to deliver it (from `Depends on:`).
+   - A suggested remediation: respawn the upstream agent or ask the user.
+3. Halt immediately.
+
+**If all upstream deliverables are present:** proceed to Step 2.
+
+### Step 2 — Implement against the `Delivers to` contract
+
+Read the `Delivers to:` line(s) under your `### sql-coder` contract block.
+These lines define the **exact interface** your implementation must satisfy:
+column names and types, function signatures and return types, table names,
+index names, or stored procedure CALL signatures.
+
+Your implementation MUST match each `Delivers to:` item exactly:
+
+- **Column names and types:** create columns with the exact names and SQL types
+  specified (e.g. `symbol TEXT NOT NULL`, `open_time TIMESTAMPTZ`).
+- **Function signatures:** implement functions with the exact parameter names,
+  types, and return type specified.
+- **Table and object names:** use the exact names specified — downstream Python
+  and frontend code will reference them by literal name.
+- **Stored procedure CALL signatures:** expose the exact parameter signature
+  so callers do not need to be updated.
+
+If a `Delivers to:` item is ambiguous (e.g. type is unspecified), add a SQL
+comment explaining the assumption and note it in your sign-off comment.
+
+### Step 3 — Invoke the AC sign-off recipe (v2 flow)
+
+After completing your implementation, invoke the AC sign-off recipe from
+`signoff` SKILL.md §2c. This is required for all v2 tickets (those with
+`## Agent Contracts`). See `signoff` §2c.1 for the v1 / v2 detection rule.
+
+The recipe requires:
+1. Flipping each `- [ ] AC-N:` checkbox to `- [x] AC-N:` in your
+   `### sql-coder` section of `## Agent Contracts`.
+2. Appending the inline signature `<!-- signed: sql-coder -->` after each AC.
+3. Filling the **Implementation** column in the `## AC Coverage` table.
+
+Skip §2c entirely if the ticket is v1 (no `## Agent Contracts` section).
+
 ## Pre-flight (every run)
 
 1. **Load project context.** Read `.agents/agents/sql-coder/PROJECT_CONTEXT.md`.

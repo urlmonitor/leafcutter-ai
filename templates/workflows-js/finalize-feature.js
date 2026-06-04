@@ -29,7 +29,7 @@
  * Fallback: for older installs, templates/agents/finalize-feature.md is used instead.
  */
 
-const meta = {
+export const meta = {
   name: "finalize-feature",
   description:
     "Post-merge feature finalization: open PR if missing, merge to main, sync " +

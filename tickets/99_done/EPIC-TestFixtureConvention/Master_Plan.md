@@ -1,7 +1,7 @@
 ---
 title: "EPIC: Test Fixture Convention"
 type: epic
-status: todo
+status: done
 components:
   - build_pipeline
   - config_loader

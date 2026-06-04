@@ -235,6 +235,41 @@ Skip the coverage-lint step entirely when:
 
 ---
 
+## Contract-Aware Mode
+
+When a ticket is provided (`ticket_path`), check whether the ticket body contains
+a `## Agent Contracts` section with a `### documentation-expert` subsection before
+dispatching any specialist.
+
+**Detection:**
+
+```
+IF ticket body contains "## Agent Contracts" AND "### documentation-expert":
+    → v2 ticket — read the AC block and use it as the doc spec (see below).
+ELSE:
+    → v1 ticket — proceed with normal Diataxis dispatch as usual.
+```
+
+**v2 behaviour (AC block present):**
+
+1. Read every `- [ ] AC-N:` line under `### documentation-expert` inside
+   `## Agent Contracts`. These lines are the acceptance criteria for this
+   documentation task — they replace or supplement the caller's free-text request.
+2. For each AC line, extract the doc requirement (e.g. "the how-to must include a
+   Verification section", "the ADR must cover the X and Y alternatives", "genre
+   must be explanation").
+3. Pass the extracted requirements to the appropriate specialist as explicit
+   constraints within its task spec block, naming the AC (e.g. `AC-1: must include
+   Verification section`).
+4. After all specialists complete, verify that each AC was addressed in their
+   output. If any AC was not satisfied, surface it in `Open Questions`.
+5. After work completes, invoke the AC sign-off recipe from `signoff` SKILL.md §2c
+   before calling the atomic sign-off recipe (§2).
+
+**v1 behaviour (no AC block):** no change — proceed with normal Diataxis dispatch.
+
+---
+
 ## No-Recursion Guard
 
 Specialists (`how-to-author`, `adr-author`, `architecture-diagram-author`,

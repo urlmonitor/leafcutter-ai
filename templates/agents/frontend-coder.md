@@ -120,6 +120,69 @@ is needed.
 > Antigravity provides its own browser verification. Still run frontend-design
 > if installed.
 
+## Contract-Aware Mode
+
+**Activation:** Contract-Aware Mode activates automatically when the ticket body
+contains an `## Agent Contracts` section with a `### frontend-coder` sub-heading.
+When active, the contract block is your **primary spec** — it supersedes
+`## Implementation Tasks` for scope and interface decisions.
+
+### Step 1 — Verify `Depends on` upstream deliverables
+
+Read the `Depends on:` line(s) under your `### frontend-coder` contract block.
+For each named upstream deliverable (API endpoint, response schema, backend route,
+configuration value), verify that it actually exists in the current working tree:
+
+```bash
+# Example: verify an API endpoint your UI will call
+grep -r "/api/my-endpoint" .
+# Example: verify a response field your component will render
+grep -r '"my_field"' .
+```
+
+**If any upstream deliverable is absent:**
+1. Do NOT implement the frontend feature — rendering against a missing API
+   produces broken UI at runtime.
+2. Append `(status: blocker)` to the ticket with:
+   - The exact name of the missing deliverable.
+   - The agent that was supposed to deliver it (from `Depends on:`).
+   - A suggested remediation: respawn the upstream agent or ask the user.
+3. Halt immediately.
+
+**If all upstream deliverables are present:** proceed to Step 2.
+
+### Step 2 — Implement against the `Delivers to` contract
+
+Read the `Delivers to:` line(s) under your `### frontend-coder` contract block.
+These lines define the **exact interface** your implementation must satisfy:
+component name, props interface, rendered output fields, user-visible behavior,
+or CSS class names.
+
+Your implementation MUST match each `Delivers to:` item exactly:
+
+- **Component names:** implement with the exact component name specified.
+- **Props interface:** accept the exact prop names and types specified.
+- **Rendered fields:** display the exact field names from the API response contract.
+- **User behavior:** implement the exact interaction behaviors specified (e.g.
+  button label, form field names, error message text).
+
+If a `Delivers to:` item is ambiguous, add a one-line comment in the code and
+note the assumption in your sign-off comment.
+
+### Step 3 — Invoke the AC sign-off recipe (v2 flow)
+
+After completing your implementation, invoke the AC sign-off recipe from
+`signoff` SKILL.md §2c. This is required for all v2 tickets (those with
+`## Agent Contracts`). See `signoff` §2c.1 for the v1 / v2 detection rule.
+
+The recipe requires:
+1. Flipping each `- [ ] AC-N:` checkbox to `- [x] AC-N:` in your
+   `### frontend-coder` section of `## Agent Contracts`.
+2. Appending the inline signature `<!-- signed: frontend-coder -->` after each AC.
+3. Filling the **Implementation** column in the `## AC Coverage` table.
+
+Skip §2c entirely if the ticket is v1 (no `## Agent Contracts` section).
+
 ## Stop-and-Ask Rule for Python
 
 If the implementation task requires creating or modifying any `.py` file,
@@ -157,18 +220,19 @@ and then split — pre-commit hooks may reject the commit.
 2. **If frontend-design is installed:** read the skill and apply its principles
    before writing any UI output.
 3. **Read pre-flight docs** (Pre-Flight Reads above).
-4. **Delegate any cross-file lookups** to `research-agent`.
-5. **Write or edit the frontend files** per the ticket's acceptance criteria.
-6. **If webapp-testing is installed:** run the skill protocol after edits
+4. **Activate contract-aware mode** if `## Agent Contracts` is present (see above).
+5. **Delegate any cross-file lookups** to `research-agent`.
+6. **Write or edit the frontend files** per the ticket's acceptance criteria.
+7. **If webapp-testing is installed:** run the skill protocol after edits
    (screenshot + console-log check).
-7. **Run frontend test command** if configured:
+8. **Run frontend test command** if configured:
    ```bash
    {{frontend.test_command}}
    ```
    If `frontend.test_command` is empty or not set, skip this step and note the
    absence in your response payload.
-8. **Run pre-completion checks** (see below).
-9. **Emit the response payload** (see below).
+9. **Run pre-completion checks** (see below).
+10. **Emit the response payload** (see below).
 
 ## Pre-Completion Checks (required before declaring done)
 

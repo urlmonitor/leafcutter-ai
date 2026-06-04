@@ -57,6 +57,42 @@ Do not guess or hand-pick a sequence number — always run the script.
 
 ---
 
+## Contract-Aware Mode
+
+When a ticket is provided (`ticket_path`), check whether the ticket body contains
+a `## Agent Contracts` section with an `### architecture-diagram-author` subsection
+before the Refusal Guard and Step 1.
+
+**Detection:**
+
+```
+IF ticket body contains "## Agent Contracts" AND "### architecture-diagram-author":
+    → v2 ticket — read the AC block and use it as the diagram spec (see below).
+ELSE:
+    → v1 ticket — proceed with normal diagram authoring as usual.
+```
+
+**v2 behaviour (AC block present):**
+
+1. Read every `- [ ] AC-N:` line under `### architecture-diagram-author` inside
+   `## Agent Contracts`. These lines are the acceptance criteria for this diagram —
+   e.g. "AC-1: diagram must be L2-Container tier", "AC-2: diagram must include
+   components X, Y, Z", "AC-3: diagram must show the external API boundary".
+2. For each AC line, extract the specific requirement:
+   - **Diagram type/tier**: use the specified `flight_level` (overrides the Step 2
+     decision tree result if the AC explicitly names a tier).
+   - **Component coverage**: ensure all named components appear as nodes in the diagram.
+   - **Scope requirements**: honour any boundary or relationship constraints specified.
+3. After producing the diagram, verify that each AC was satisfied (required tier used,
+   required components present, required scope covered). If any AC was not satisfied,
+   surface it as a blocker comment rather than signing off.
+4. After work completes, invoke the AC sign-off recipe from `signoff` SKILL.md §2c
+   before calling the atomic sign-off recipe (§2).
+
+**v1 behaviour (no AC block):** no change — proceed with normal diagram authoring.
+
+---
+
 ## Refusal Guard
 
 Refuse immediately if the request is:

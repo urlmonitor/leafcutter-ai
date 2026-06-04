@@ -3,7 +3,7 @@ title: "Portable Testing Conventions"
 type: reference
 status: active
 created: 2026-05-13
-last_updated: 2026-05-13
+last_updated: 2026-06-04
 components:
   - infrastructure
 related_docs:
@@ -221,6 +221,99 @@ Edit `testing_context` in your `.claude/skills_config.json`:
 The `test-planner` agent reads this config at runtime and uses `directories`
 to produce valid `target_dir` values. The `test-writer` uses it to select the
 correct framework and setUp pattern.
+
+---
+
+---
+
+## Fixture Convention (ADR-007)
+
+**Agents are required to read this section.** `test-writer` and `python-coder`
+are instructed in their system prompts to consult this file before authoring
+tests. If you observe an agent inlining large data blobs (dicts with more than
+5 keys, or parametrize tables with more than 3 rows) instead of using
+`load_fixture()`, the agent prompt may have drifted — file a ticket to update
+`templates/agents/test-writer.md` or `templates/agents/python-coder.md`.
+
+Large test data blobs (dicts, expected-output structures, parametrize tables) MUST be
+externalised to JSON files under `tests/fixtures/` and loaded via the `load_fixture()`
+helper in `tests/conftest.py`. This keeps test files under the 500-line ceiling and
+separates data concerns from test logic.
+
+### Directory Layout
+
+```
+tests/
+  conftest.py            ← load_fixture() helper (sole canonical location)
+  fixtures/
+    _shared/             ← fixtures used by two or more test modules
+    <module>/            ← module = test file stem minus the test_ prefix
+```
+
+**Module-naming rule:** strip the `test_` prefix from the test file stem.
+
+| Test file | Fixture subdirectory |
+|---|---|
+| `tests/test_build_clean.py` | `tests/fixtures/build_clean/` |
+| `tests/test_build_pipeline.py` | `tests/fixtures/build_pipeline/` |
+| Any multi-module fixture | `tests/fixtures/_shared/` |
+
+### load_fixture() Signature
+
+```python
+from conftest import load_fixture
+
+def load_fixture(name: str) -> Any:
+    """Load a JSON fixture by slash-separated path relative to tests/fixtures/."""
+    path = Path(__file__).parent / "fixtures" / f"{name}.json"
+    with open(path, encoding="utf-8") as fh:
+        return json.load(fh)
+```
+
+**Usage examples:**
+
+```python
+# Module-specific fixture
+data = load_fixture("build_pipeline/valid_config")
+# → tests/fixtures/build_pipeline/valid_config.json
+
+# Shared fixture (used by multiple test modules)
+schema = load_fixture("_shared/common_schema")
+# → tests/fixtures/_shared/common_schema.json
+```
+
+The function raises `FileNotFoundError` naturally when the path does not exist —
+no try/except suppression.
+
+### When to Use _shared/ vs Module-Specific
+
+| Situation | Location |
+|---|---|
+| Fixture used by exactly one test file | `tests/fixtures/<module>/` |
+| Fixture used by two or more test files | `tests/fixtures/_shared/` |
+| Fixture mirrors a production schema shared across modules | `tests/fixtures/_shared/` |
+
+**Prefer module-specific locations.** Only move to `_shared/` when a second test file
+genuinely needs the same data blob. Premature sharing creates unnecessary coupling.
+
+### Agent Requirements
+
+**Agents authoring or migrating tests MUST:**
+
+1. Read this document before authoring or migrating test files.
+2. Use `load_fixture()` whenever a test data blob would push the file past 500 lines.
+3. Place new fixture files under `tests/fixtures/<module>/` (or `_shared/` when
+   appropriate) following the module-naming rule above.
+4. Every fixture file MUST be JSON with the `.json` extension.
+
+This requirement applies to `test-writer`, `python-coder`, and any agent that produces
+test files as part of its deliverable.
+
+### Cross-Reference
+
+- [docs/architecture/adrs/ADR-007-test-fixture-convention.md](../architecture/adrs/ADR-007-test-fixture-convention.md) — binding architectural decision
+- `tests/conftest.py` — canonical implementation of `load_fixture()`
+- `tests/fixtures/_shared/.gitkeep` — establishes the shared fixture directory in version control
 
 ---
 

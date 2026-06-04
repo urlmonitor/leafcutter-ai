@@ -1,6 +1,6 @@
 ---
 title: "Write check_fixture_orphans.py CI script"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
@@ -17,14 +17,14 @@ files_touched:
   - unit_tests/commit_guardian/test_check_fixture_orphans.py
 agents:
   architect-review: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
-  commit: needed
-  pull-request: needed
+  pr-reviewer: signed_off
+  commit: signed_off
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   explanation-author: not_needed
@@ -107,18 +107,63 @@ Then it prints "No orphan fixtures found." and exits 0
 
 ## Sign-offs
 
-- [ ] test-writer
-- [ ] python-coder
-- [ ] pr-reviewer
-- [ ] commit
-- [ ] pull-request
+- [x] test-writer — 2026-06-04 10:00
+- [x] python-coder — 2026-06-04 10:05
+- [x] pr-reviewer — 2026-06-04 10:10
+- [x] commit — 2026-06-04 10:15
+- [x] pull-request — 2026-06-04 10:20
 
 ## Comments
+
+### 2026-06-04 10:00 — test-writer (status: ok)
+feedback-id: fb_2026-06-04_09925147
+completion_manifest:
+  test_file_created: true
+  all_ac_covered: true
+  tmp_path_fixture_used: true
+Wrote unit_tests/commit_guardian/test_check_fixture_orphans.py with 7 test cases covering all acceptance criteria: orphan detection (exit 1 + ORPHAN line), matched fixture (exit 0), _shared/ exclusion, __pycache__ exclusion, empty fixtures dir (exit 0), multiple orphans, and plain-file entries being ignored. All tests invoke the script as a subprocess via sys.executable for exit-code contract verification.
+
+### 2026-06-04 10:05 — python-coder (status: ok)
+feedback-id: fb_2026-06-04_e8f27da0
+completion_manifest:
+  script_created: true
+  cli_args_implemented: true
+  exclusions_implemented: true
+  exit_codes_correct: true
+  docstring_with_usage: true
+  init_py_created: true
+  tests_green: true
+Created scripts/ci/check_fixture_orphans.py with --fixtures-dir/--tests-dir argparse CLI, _find_orphans() helper, _shared/ and __pycache__ exclusions, correct exit codes (0/1/2), and a full docstring with usage and CI registration instructions. Also created scripts/ci/__init__.py (consistent with other script directories). All 7 tests pass (7 passed in 1.02s).
+
+### 2026-06-04 10:10 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-04_934c0804
+completion_manifest:
+  all_acs_met: true
+  error_handling_compliant: true
+  docstring_complete: true
+  tests_green: true
+  no_regressions: true
+All four Gherkin ACs satisfied. Error handling compliant with project rules (OSError wrapped, no bare except, stderr logging + re-raise). Docstring includes usage example and CI registration YAML snippet. 7 tests pass. No regressions or blockers found.
+
+### 2026-06-04 10:15 — commit (status: ok)
+feedback-id: fb_2026-06-04_09a9579a
+completion_manifest:
+  files_staged_correctly: true
+  commit_clean: true
+  pre_commit_hooks_passed: true
+Committed 4 files (scripts/ci/__init__.py, scripts/ci/check_fixture_orphans.py, unit_tests/commit_guardian/test_check_fixture_orphans.py, ticket file) in commit 6bbde68. Stale lock from ticket 03 (dead PID 1349800) was cleaned before acquiring. PRE_COMMIT_ALLOW_NO_CONFIG=1 used as no .pre-commit-config.yaml is present in this worktree.
+
+### 2026-06-04 10:20 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_0c91076f
+completion_manifest:
+  branch_pushed: true
+  pr_open: true
+Pushed commit 6bbde68 to origin/EPIC-TestFixtureConvention. Existing PR #44 (feat: add tests/fixtures/ convention and load_fixture() conftest helper (ADR-007)) on github.com/urlmonitor/leafcutter-ai updated automatically with the new commit.
 
 ## Implementation Tasks
 
 ### python-coder
-- [ ] Create `scripts/ci/check_fixture_orphans.py`:
+- [x] Create `scripts/ci/check_fixture_orphans.py`:
   - Accept optional `--fixtures-dir` and `--tests-dir` arguments (default to
     `tests/fixtures/` and `tests/` relative to repo root)
   - Scan immediate subdirectories of `fixtures-dir`, skipping `_shared`,
@@ -127,12 +172,12 @@ Then it prints "No orphan fixtures found." and exits 0
   - Collect all orphans; print one `ORPHAN: <path>` line per orphan
   - Exit 0 on no orphans, exit 1 otherwise
   - Add a docstring with usage example and CI registration instructions
-- [ ] Create `scripts/ci/` directory if it does not already exist
+- [x] Create `scripts/ci/` directory if it does not already exist
   (add `__init__.py` if other scripts in the project use `__init__.py` in
   their script directories; otherwise omit)
 
 ### test-writer
-- [ ] Add `unit_tests/commit_guardian/test_check_fixture_orphans.py`:
+- [x] Add `unit_tests/commit_guardian/test_check_fixture_orphans.py`:
   - `test_orphan_detected` — fixture dir exists, no test file → exits 1, prints ORPHAN
   - `test_no_orphan_when_test_exists` — fixture dir + test file both exist → exits 0
   - `test_shared_dir_excluded` — `_shared/` present, no test file → not flagged

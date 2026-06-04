@@ -70,6 +70,39 @@ Perform these three steps before writing anything:
    `strategy_engine`). If uncertain which component applies, pick the closest
    registered ID and add a one-line rationale in the ADR prose.
 
+## Contract-Aware Mode
+
+When a ticket is provided (`ticket_path`), check whether the ticket body contains
+a `## Agent Contracts` section with an `### adr-author` subsection before writing
+anything.
+
+**Detection:**
+
+```
+IF ticket body contains "## Agent Contracts" AND "### adr-author":
+    → v2 ticket — read the AC block and use it as the ADR spec (see below).
+ELSE:
+    → v1 ticket — proceed with normal ADR authoring as usual.
+```
+
+**v2 behaviour (AC block present):**
+
+1. Read every `- [ ] AC-N:` line under `### adr-author` inside `## Agent Contracts`.
+   These lines are the acceptance criteria for this ADR — e.g. "AC-1: ADR must cover
+   alternatives X, Y, Z", "AC-2: Consequences section must address both benefits and costs".
+2. For each AC line, extract the specific section requirement and apply it when writing
+   the ADR: enumerate the required alternatives, ensure the required Consequences
+   coverage, apply any required decision language constraints.
+3. After writing the ADR, verify that each AC was satisfied (required alternatives
+   present, Consequences coverage complete, etc.). If any AC was not satisfied, surface
+   it as a blocker comment rather than signing off.
+4. After work completes, invoke the AC sign-off recipe from `signoff` SKILL.md §2c
+   before calling the atomic sign-off recipe (§2).
+
+**v1 behaviour (no AC block):** no change — proceed with normal ADR authoring.
+
+---
+
 ## Decision Specification
 
 `documentation-expert` passes a decision specification. Required fields:

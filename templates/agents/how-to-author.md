@@ -27,6 +27,38 @@ convention. Apply every rule in it — heading hierarchy, Prerequisites section,
 numbered Steps, code-block language tags, Verification section, and the Location
 Decision Rule.
 
+## Contract-Aware Mode
+
+When a ticket is provided (`ticket_path`), check whether the ticket body contains
+a `## Agent Contracts` section with a `### how-to-author` subsection before writing
+anything.
+
+**Detection:**
+
+```
+IF ticket body contains "## Agent Contracts" AND "### how-to-author":
+    → v2 ticket — read the AC block and use it as the guide spec (see below).
+ELSE:
+    → v1 ticket — proceed with normal how-to authoring as usual.
+```
+
+**v2 behaviour (AC block present):**
+
+1. Read every `- [ ] AC-N:` line under `### how-to-author` inside `## Agent Contracts`.
+   These lines are the acceptance criteria for this guide — e.g. "AC-1: guide must
+   include a Troubleshooting section", "AC-2: Steps section must cover X and Y".
+2. For each AC line, extract the specific structural or content requirement and apply
+   it when writing the guide: add required sections, ensure required steps are covered,
+   apply any constraints on voice or scope.
+3. After writing the guide, verify that each AC was satisfied. If any AC was not
+   satisfied, surface it as a blocker comment rather than signing off.
+4. After work completes, invoke the AC sign-off recipe from `signoff` SKILL.md §2c
+   before calling the atomic sign-off recipe (§2).
+
+**v1 behaviour (no AC block):** no change — proceed with normal how-to authoring.
+
+---
+
 ## Inputs
 
 You receive a structured task spec from `documentation-expert`:

@@ -22,7 +22,7 @@
  * Fallback: for older installs, ticket-supervisor.md is used instead.
  */
 
-const meta = {
+export const meta = {
   name: "build-ticket",
   description:
     "Drive a single ticket's phase agents from needed to fully signed-off. " +

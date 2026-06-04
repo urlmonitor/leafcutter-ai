@@ -1,0 +1,7 @@
+{
+  "adr_id": "ADR-007",
+  "affected_files": [
+    "docs/architecture/adrs/ADR-NNN-contract-driven-acs.md"
+  ],
+  "one_line_summary": "Acceptance criteria must be restructured as per-agent technical contracts with explicit interface boundaries, authored through a two-phase BA and IT PO creation pipeline."
+}

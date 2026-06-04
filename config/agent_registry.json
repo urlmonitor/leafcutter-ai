@@ -65,7 +65,9 @@
                 "business-analyst",
                 "refinement",
                 "architect-review",
-                "create-epic"
+                "create-epic",
+                "it-po",
+                "brainstorm-lead"
             ],
             "spawned_by": [
                 "user",
@@ -125,6 +127,47 @@
             "skills_used": []
         },
         {
+            "id": "business-analyst-v2",
+            "name": "Business Analyst V2",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "create-ticket-v2"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/business-analyst-v2.md",
+            "model": "opus",
+            "skills_used": [],
+            "description": "Enhanced Opus BA for v2 ticket-creation pipeline. Parallel test path — does not replace business-analyst.md."
+        },
+        {
+            "id": "create-ticket-v2",
+            "name": "Create Ticket V2",
+            "tier": "supervisor",
+            "role": "orchestration",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "business-analyst-v2",
+                "it-po"
+            ],
+            "spawned_by": [
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/create-ticket-v2.md",
+            "model": "sonnet",
+            "skills_used": [
+                "ticket-authoring"
+            ],
+            "description": "V2 parallel ticket-creation pipeline orchestrator. Routes by complexity (trivial/simple → refinement, standard/novel → it-po). Does not modify v1 templates."
+        },
+        {
             "id": "brainstorm-lead",
             "name": "Brainstorm Lead",
             "tier": "utility",
@@ -135,7 +178,8 @@
                 "brainstorm-worker"
             ],
             "spawned_by": [
-                "ticket-supervisor"
+                "ticket-supervisor",
+                "create-ticket"
             ],
             "is_ticket_phase": false,
             "selection_criteria": null,
@@ -535,7 +579,8 @@
             "template_path": "templates/agents/code-review-architect.md",
             "model": "opus",
             "skills_used": [],
-            "requires_ticket_section": false
+            "requires_ticket_section": false,
+            "requires_verification": true
         },
         {
             "id": "commit",
@@ -1386,6 +1431,80 @@
             "invocation_surface": [
                 "/po-review"
             ]
+        },
+        {
+            "id": "ac-validator",
+            "name": "AC Validator",
+            "tier": "phase",
+            "role": "quality",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "ticket-supervisor"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign to any ticket that has an ## Agent Contracts or ## Acceptance Criteria section with AC-N lines, to gate commit on verified AC coverage.",
+                "trigger_conditions": [
+                    {
+                        "type": "llm",
+                        "expression": "ticket body contains an ## Agent Contracts or ## Acceptance Criteria section with at least one - [ ] AC-N: line"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket requires proof that every acceptance criterion has implementation and test evidence before commit"
+                    }
+                ],
+                "default_status": "not_needed"
+            },
+            "template_path": "templates/agents/ac-validator.md",
+            "model": "sonnet",
+            "skills_used": [
+                "signoff"
+            ],
+            "priority": 11.5,
+            "priority_rationale": "Final AC coverage gate; runs after pr-reviewer (11) and before commit (12) to verify all ACs are evidenced before the worktree is locked",
+            "requires_ticket_section": false,
+            "description": "Reads ticket ACs, the working diff, and test output; produces a coverage verdict (ok / blocker / question). Never implements — read-only on code files, edits only the ticket file."
+        },
+        {
+            "id": "it-po",
+            "name": "IT Product Owner",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "create-ticket",
+                "create-ticket-v2",
+                "ticket-supervisor"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign when the ticket has more than one coder agent (python-coder, sql-coder, frontend-coder) in the agents map with status needed. For single-coder tickets, it-po signs off immediately as not_needed.",
+                "trigger_conditions": [
+                    {
+                        "type": "llm",
+                        "expression": "ticket agents map has more than one coder agent with status needed (python-coder, sql-coder, or frontend-coder)"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket requires per-agent technical contracts with explicit interface specifications between agents"
+                    }
+                ],
+                "default_status": "not_needed"
+            },
+            "template_path": "templates/agents/it-po.md",
+            "model": "opus",
+            "skills_used": [
+                "signoff"
+            ],
+            "priority": 3.5,
+            "priority_rationale": "Runs after architecture-diagram-author (3) and before architect-review (4); produces per-agent contracts that architect-review can validate before any coder starts",
+            "requires_ticket_section": false,
+            "description": "Opus-tier IT PO. Reads architecture docs only (never source files). Asks clarifying questions before producing contracts. Activates only for multi-coder tickets. Handles check_ac_limits split protocol."
         }
     ]
 }

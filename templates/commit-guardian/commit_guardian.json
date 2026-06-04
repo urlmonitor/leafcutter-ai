@@ -291,7 +291,13 @@
         "allowed_types": [
             "epic"
         ],
-        "tickets_dir": "tickets"
+        "tickets_dir": "tickets",
+        "optional_fields": {
+            "ac_coverage": {
+                "_comment": "AC completion ratio. Format: N/M (e.g. '3/6'). N = validated ACs, M = total ACs.",
+                "pattern": "^\\d+/\\d+$"
+            }
+        }
     },
     "doc_links": {
         "_comment": "check_doc_links.py — Code-to-doc traceability link validation",
@@ -694,6 +700,18 @@
                 ],
                 "pass_filenames": true,
                 "_comment": "EPIC-ACTraceabilityStore/03: Checks every staged test file (test_*.py / *_test.py) for # covers: XX-NNN tags on each def test_* function. Enforcement mode controlled by test_ac_tag_enforcement in commit_guardian.json: 'warn' (default, exit 0) or 'error' (exit 1). Grace-period default: warn."
+            },
+            {
+                "id": "check-ac-limits",
+                "name": "Check AC Limits (per-agent and total AC count guard)",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/hooks/check_ac_limits.py",
+                "language": "system",
+                "files": "^tickets/.*\\.md$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "EPIC-ContractDrivenACs/02b: Blocks commits when any staged ticket file has >7 ACs for a single agent block or >20 ACs total. Integration ACs (<!-- scope: integration -->) excluded from per-agent counts. Emits structured JSON ({hook, fix_agent, violations}) for precommit-autofix routing to IT PO. Override: ac_limit_override: true in frontmatter warns but does not block. v1 tickets (no ## Agent Contracts) skipped silently."
             }
         ],
         "post_merge": [

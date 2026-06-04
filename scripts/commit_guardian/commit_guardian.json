@@ -290,7 +290,13 @@
         "allowed_types": [
             "epic"
         ],
-        "tickets_dir": "tickets"
+        "tickets_dir": "tickets",
+        "optional_fields": {
+            "ac_coverage": {
+                "_comment": "AC completion ratio. Format: N/M (e.g. '3/6'). N = validated ACs, M = total ACs.",
+                "pattern": "^\\d+/\\d+$"
+            }
+        }
     },
     "doc_links": {
         "_comment": "check_doc_links.py \u2014 Code-to-doc traceability link validation",
@@ -648,6 +654,18 @@
                 "_comment": "EPIC-TDDWorkflowEnforcement/04: Blocks commits when test-weakening changes (test deletion, pytest.skip, pytest.mark.xfail, @unittest.skip, @unittest.expectedFailure) are staged concurrent with production code changes. Exits 0 when only test changes or only production changes are staged. See docs/how-to/writing-a-tdd-ticket.md."
             },
             {
+                "id": "check-test-fixture-bloat",
+                "name": "Check Test Fixture Bloat",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_test_fixture_bloat.py",
+                "language": "system",
+                "files": "test_.*\\.py$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "EPIC-TestFixtureConvention/02: Scans staged test_*.py files for oversized inline data (line count, inline dict keys, parametrize rows). Warn-only by default (enabled: false in test_fixture_bloat config). Flip enabled: true once migration to fixture JSON files is complete. Files annotated with # noqa: fixture-bloat are always skipped."
+            },
+            {
                 "id": "check-exception-handling",
                 "name": "Check Exception Handling (AST I/O Boundary Guard)",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_exception_handling.py",
@@ -658,6 +676,18 @@
                 ],
                 "pass_filenames": true,
                 "_comment": "EPIC-ErrorHandlingEnforcement/01: AST-based hook that flags bare except: (E722), blind except Exception: without reraise/log (BLE001), and calls to requests.get/open/cursor.execute not enclosed in try/except (IO-001). Runs on every staged .py file. Exit 1 on violations, 0 on clean."
+            },
+            {
+                "id": "check-ac-limits",
+                "name": "Check AC Limits (per-agent and total AC count guard)",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/hooks/check_ac_limits.py",
+                "language": "system",
+                "files": "^tickets/.*\\.md$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "EPIC-ContractDrivenACs/02b: Blocks commits when any staged ticket file has >7 ACs for a single agent block or >20 ACs total. Integration ACs (<!-- scope: integration -->) excluded from per-agent counts. Emits structured JSON ({hook, fix_agent, violations}) for precommit-autofix routing to IT PO. Override: ac_limit_override: true in frontmatter warns but does not block. v1 tickets (no ## Agent Contracts) skipped silently."
             }
         ]
     },
@@ -679,6 +709,14 @@
             "cursor.callproc"
         ],
         "blind_exception_names": ["Exception", "BaseException"]
+    },
+    "test_fixture_bloat": {
+        "_comment": "check_test_fixture_bloat.py — Inline-data bloat detection for staged test_*.py files. Ships enabled: false (warn-only) until migration to fixture JSON files is complete. Flip enabled: true to enforce. Files annotated with # noqa: fixture-bloat are skipped. Paths in grandfathered_paths are skipped with a [grandfathered] note.",
+        "max_test_file_lines": 500,
+        "max_inline_dict_keys": 5,
+        "max_parametrize_rows": 3,
+        "grandfathered_paths": [],
+        "enabled": false
     },
     "mermaid_complexity": {
         "_comment": "check_mermaid_complexity.py \u2014 Structural complexity limits for mermaid diagrams in .md files. Warn-only by default; set strict: true to block commits.",

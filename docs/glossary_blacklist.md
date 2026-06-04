@@ -30,3 +30,4 @@ the glossary-automation system (`check_glossary_coverage.py` / `glossary-triage`
 | manual_test_suffix | JSON config field name (testing_context sub-field), not a domain concept | 2026-05-27 |
 | db_connection_test | JSON config field name (testing_context sub-field), not a domain concept | 2026-05-27 |
 | test_output_rules | JSON config field name (testing_context sub-field), not a domain concept | 2026-05-27 |
+| agent_delivery_workflows | Document filename used as a cross-link path in frontmatter and prose, not a standalone domain concept | 2026-06-03 |

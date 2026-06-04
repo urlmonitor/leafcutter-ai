@@ -25,6 +25,9 @@ refinement_output:  structured JSON from refinement (may be absent — see
                     Error Recovery Path)
 architect_output:   structured JSON from architect-review (optional; may be
                     absent without triggering the error recovery path)
+it_po_output:       structured JSON from it-po (optional; present only when
+                    ba_output.complexity is "standard" or "novel"; may be
+                    absent without triggering the error recovery path)
 registry_table:     {{registry_phase_agents_table}}
                     (injected at build time — lists all is_ticket_phase agents
                     with default_status and trigger_conditions)
@@ -149,11 +152,62 @@ Omit the `### ADRs` subsection entirely when `suggested_adr` is empty.
 Omit the `### Documentation` subsection entirely when `requires_documentation` is empty.
 Omit `## Architecture Plan` entirely when all three are empty.
 
+### Agent Contracts Section (from IT PO output)
+
+When `it_po_output` is present and non-empty, insert a `## Agent Contracts`
+section **after `## Acceptance Criteria`** (or after `## Architecture Plan`
+when that section exists) and **before `## Sign-offs`**, using this structure:
+
+```markdown
+## Agent Contracts
+
+### <agent-name>
+
+- [ ] AC-1: <acceptance criterion from it_po_output.agent_contracts.<agent>.acs[0]>
+- [ ] AC-2: <acceptance criterion from it_po_output.agent_contracts.<agent>.acs[1]>
+```
+
+Rules:
+- One `### <agent-name>` subsection per agent entry in `it_po_output.agent_contracts`.
+- Each AC is a `- [ ] AC-N: <description>` checkbox line (unchecked at creation).
+- Number ACs globally (AC-1 through AC-N across all agent sections), not per-agent.
+- When `it_po_output` is absent, omit `## Agent Contracts` entirely — do not emit
+  an empty section.
+
+After inserting `## Agent Contracts`, also insert an `## AC Coverage` table
+(AC-4 wiring) immediately after it, before `## Sign-offs`:
+
+```markdown
+## AC Coverage
+
+| AC | Test | Implementation | Validated |
+|----|------|----------------|-----------|
+| AC-1 | | | |
+| AC-2 | | | |
+```
+
+Emit one table row per AC in the same global numbering as `## Agent Contracts`.
+
+### Frontmatter: `ac_coverage` field (AC-4)
+
+When `it_po_output` is present, also write the `ac_coverage:` key into the
+ticket frontmatter:
+
+```yaml
+ac_coverage: 0/N
+```
+
+where `N` is the total count of AC checkbox lines across all agent sections
+in `## Agent Contracts`. This initial value of `0/N` signals that no ACs
+have been validated yet; `ac-validator` will update it as it runs.
+
+When `it_po_output` is absent, omit the `ac_coverage:` frontmatter key.
+
 ### Sign-offs Section
 
-Place this section **after `## Acceptance Criteria`** (or after
-`## Architecture Plan` when that section exists) and **before `## Comments`**,
-matching the canonical skeleton.
+Place this section **after `## AC Coverage`** (when present) or **after
+`## Acceptance Criteria`** (or after `## Architecture Plan` when that section
+exists) and **before `## Comments`**, matching the canonical skeleton.
 
 - For every entry in the `agents` map whose status is `needed`, emit one
   line: `- [ ] <agent-name>` (bare unchecked checkbox; no timestamp, no
