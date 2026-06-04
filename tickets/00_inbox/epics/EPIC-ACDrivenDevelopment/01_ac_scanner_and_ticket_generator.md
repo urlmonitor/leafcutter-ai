@@ -18,8 +18,6 @@ files_touched:
   - tests/ac_store/test_generate_ticket_from_ac.py
   - templates/skills/ac-scanner/SKILL.md
   - docs/architecture/adrs/ADR-XXX-ac-store-as-authoritative-backlog.md
-  - scripts/commit_guardian/check_no_print.py
-  - tests/commit_guardian/test_check_no_print.py
 agents:
   architect-review: needed
   adr-author: needed
@@ -33,7 +31,7 @@ agents:
   pr-reviewer: needed
   commit: needed
   pull-request: needed
-ac_coverage: 0/9
+ac_coverage: 0/6
 ---
 
 # 01: AC scanner and ticket generator
@@ -161,42 +159,6 @@ Then the hook exits 0 (no validation errors),
 And requires_diagram and requires_adr fields are present in the frontmatter,
 And ## Sign-offs contains exactly the agents whose map value is needed.
 
-# AC-7: Leafcutter scripts use logging.debug, never print()
-
-Given any .py file under scripts/ or tests/ in the leafcutter-ai repo,
-When the file is staged for commit,
-Then the check_no_print pre-commit hook scans the file's AST for print() calls,
-And any print() call that is NOT inside a `if __name__ == "__main__":` block
-  OR inside a function named `main` causes the hook to exit non-zero,
-And the error message names the file, line number, and suggests using
-  `logger.debug(...)` instead,
-And the project documents the debug logging convention in CLAUDE.md under a
-  "## Logging Convention" section (use `logging.getLogger(__name__)` +
-  `logger.debug()`; never bare `print()` for diagnostic output).
-
-# AC-8: check_no_print pre-commit hook is registered and enforced
-
-Given scripts/commit_guardian/check_no_print.py exists,
-When a developer stages a .py file containing `print("some debug info")`
-  outside of a `main()` function or `if __name__ == "__main__":` guard,
-Then the pre-commit hook exits non-zero and blocks the commit,
-And the hook is registered in commit_guardian.json under hooks_manifest
-  with id "check-no-print" and files pattern "\.py$",
-And the hook has a corresponding config section in commit_guardian.json
-  with exempt_patterns (e.g. click.echo, sys.stdout.write for CLI tools)
-  and exempt_paths (e.g. scripts/commit_guardian/ itself for hook output).
-
-# AC-9: [Phase 2] Customer codebase print-convention detection and hook generation
-
-Given a consumer project has installed leafcutter-ai,
-When the user invokes a "detect logging convention" command (future skill),
-Then the system scans the customer's codebase for print/logging/debug patterns,
-And presents the detected convention to the user (e.g. "your project uses
-  structlog", "your project uses logging.getLogger", "your project uses print"),
-And asks which convention to enforce going forward,
-And on confirmation generates a project-specific pre-commit hook template
-  under templates/skills/ that enforces the chosen convention,
-And registers it in the consumer's .pre-commit-config.yaml via build.py.
 ```
 
 ## Agent Contracts
@@ -268,9 +230,6 @@ tickets that reference this architectural decision.
 | AC-4 | | | |
 | AC-5 | | | |
 | AC-6 | | | |
-| AC-7 | | | |
-| AC-8 | | | |
-| AC-9 | | | deferred to phase_2 |
 
 ## Sign-offs
 
