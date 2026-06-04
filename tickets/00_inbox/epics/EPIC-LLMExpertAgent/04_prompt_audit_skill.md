@@ -17,7 +17,7 @@ agents:
   sql-coder: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   status-checker: not_needed
 ---
 
@@ -124,7 +124,7 @@ And the report summary shows total_violations, total_errors, total_warnings
 - [x] documentation-expert — 2026-06-04 00:02
 - [x] pr-reviewer — 2026-06-04 00:03
 - [x] commit — 2026-06-04 00:04
-- [ ] pull-request
+- [x] pull-request — 2026-06-04 00:05
 
 ## Comments
 
@@ -170,7 +170,14 @@ completion_manifest:
   files_staged: true
   commit_created: true
   ticket_staged: true
-Staged templates/skills/prompt-audit/SKILL.md (368 lines, new file) and ticket file. Committing all in-scope changes.
+Staged templates/skills/prompt-audit/SKILL.md (368 lines, new file) and ticket file. Commit 2af9194 created successfully.
+
+### 2026-06-04 00:05 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_680cb7f6
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+Branch EPIC-LLMExpertAgent pushed to origin and PR opened. All agents signed off.
 
 ## Implementation Tasks
 
