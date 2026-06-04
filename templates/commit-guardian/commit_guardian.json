@@ -669,6 +669,18 @@
                 ],
                 "pass_filenames": false,
                 "_comment": "EPIC-MoveOnMainOnly/04: Blocks commits that stage a rename (R entry) of any file under tickets/ on a branch other than main or master. Enforces the move-on-main-only pattern at commit time. Exits 0 on main/master or when no ticket renames are staged."
+            },
+            {
+                "id": "check-ac-schema",
+                "name": "Check AC Store YAML Schema Compliance",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_ac_schema.py",
+                "language": "system",
+                "files": "^docs/acceptance-criteria/.*\\.yaml$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "EPIC-ACTraceabilityStore/01: Validates every staged .yaml file under docs/acceptance-criteria/ against config/ac_store_schema.json (ADR-007). Required fields: id, title, component, status, created_by, criteria. ID format: ^[A-Z]{2,6}-[0-9]{3}$. Status enum: active, deprecated, superseded_by. Uses jsonschema for full draft-07 validation; falls back to manual field checks when jsonschema is absent. Exits 1 with per-file error messages on validation failure."
             }
         ],
         "post_merge": [
