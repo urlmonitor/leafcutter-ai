@@ -1,6 +1,6 @@
 ---
 title: "Wire IT PO and ac-validator into ticket creation and execution pipelines"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-03
@@ -29,7 +29,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   architecture-diagram-author: not_needed
   user-surface-smoker: not_needed
 ---
@@ -82,7 +82,7 @@ The routing decision is based on the BA's `complexity` field in its output paylo
 - [x] python-coder — 2026-06-04 10:30
 - [x] pr-reviewer — 2026-06-04 10:35
 - [x] commit — 2026-06-04 10:40
-- [ ] pull-request
+- [x] pull-request — 2026-06-04 11:00
 
 ## AC Coverage
 
@@ -109,6 +109,13 @@ The routing decision is based on the BA's `complexity` field in its output paylo
   fall through to refinement if no boundary crossing exists.
 
 ## Comments
+
+### 2026-06-04 11:00 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_82aef2ec
+completion_manifest:
+  branch_pushed: true
+  pr_updated: true
+Pushed 2 commits (b2a55a4, f634a9f) to EPIC-ContractDrivenACs branch. PR #43 updated at https://github.com/urlmonitor/leafcutter-ai/pull/43.
 
 ### 2026-06-04 10:40 — commit (status: ok)
 feedback-id: fb_2026-06-04_a2963b1f
