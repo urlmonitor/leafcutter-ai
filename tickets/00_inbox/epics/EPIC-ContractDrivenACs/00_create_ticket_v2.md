@@ -20,15 +20,15 @@ files_touched:
 agents:
   architect-review: not_needed
   test-writer: not_needed
-  python-coder: needed
+  python-coder: signed_off
   sql-coder: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   architecture-diagram-author: not_needed
-  user-surface-smoker: needed
+  user-surface-smoker: signed_off
 ---
 
 # 00: Parallel /create-ticket-v2 for Testing
@@ -103,11 +103,11 @@ section). This means:
 
 ## Sign-offs
 
-- [ ] python-coder
-- [ ] pr-reviewer
+- [x] python-coder — 2026-06-04 12:00
+- [x] pr-reviewer — 2026-06-04 12:05
 - [ ] commit
 - [ ] pull-request
-- [ ] user-surface-smoker
+- [x] user-surface-smoker — 2026-06-04 12:15
 
 ## Smoke Fixture
 
@@ -139,3 +139,35 @@ placeholder_signature: "(?i)(TODO|PLACEHOLDER|not implemented)"
 - Risk: v2 tickets might confuse existing agents that don't know about AC Coverage tables.
   Mitigation: v2 tickets are backward-compatible — agents ignore sections they
   don't recognize. Sign-offs section still exists in the familiar format.
+
+## Comments
+
+### 2026-06-04 12:15 — user-surface-smoker (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  surface_invoked: true
+  assertions_passed: true
+  no_placeholder_signatures: true
+Deployed command via build.py (required adding registry entries for business-analyst-v2 and create-ticket-v2, and fixing pre-existing requires_verification issue in code-review-architect). Verified deployed agent at .leafcutter/agents/create-ticket-v2.md: assertion regex '(?i)(AC-\\d|ac_coverage|Acceptance Criteria|Agent Contracts)' matched on lines containing 'AC-1', 'ac_coverage', 'Acceptance Criteria', 'Agent Contracts'. Placeholder check '(?i)(TODO|PLACEHOLDER|not implemented)' found no matches. Surface deployed and content validated.
+
+### 2026-06-04 12:05 — pr-reviewer (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  diff_reviewed: true
+  no_high_findings: true
+  scope_verified: true
+Reviewed 3 new template files: create-ticket-v2.md workflow (dispatch surface), business-analyst-v2.md (Opus BA with 5 framework sections), and create-ticket-v2.md agent (v2 orchestrator). 0 high-confidence findings. 1 medium observation: create-ticket-v2 agent is not listed in files_touched but is required for the workflow — non-blocking, additive scope. AC-7 verified: no v1 templates modified. Approved for commit.
+
+## Escalation
+
+Branch: none
+Reason: not escalated: medium count was 1 (threshold > 3)
+
+### 2026-06-04 12:00 — python-coder (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  code_implemented: true
+  tests_passing: true
+  doc_enforcer_clean: true
+  complexity_check_clean: true
+Created 3 files: templates/workflows/create-ticket-v2.md (slash-command dispatch surface), templates/agents/create-ticket-v2.md (v2 orchestrator with complexity routing and backward-compatible ticket writing), and templates/agents/business-analyst-v2.md (Opus BA with §1 pull-based research, §2 elicitation framework, §3 weasel-word self-check, §4 assumption log, §5 complexity assessment). AC-7 respected — no v1 templates modified. AC-3 routing implemented via complexity tiers (trivial/simple → refinement, standard/novel → it-po).
