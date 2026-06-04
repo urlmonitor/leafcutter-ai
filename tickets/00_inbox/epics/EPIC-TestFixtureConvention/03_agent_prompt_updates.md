@@ -1,6 +1,6 @@
 ---
 title: "Update test-writer and python-coder agent prompts to enforce fixture convention"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
@@ -25,7 +25,7 @@ agents:
   documentation-expert: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   explanation-author: not_needed
@@ -110,7 +110,7 @@ Then it contains a note that agents are required to read this section
 - [x] documentation-expert — 2026-06-04 10:15
 - [x] pr-reviewer — 2026-06-04 10:18
 - [x] commit — 2026-06-04 10:22
-- [ ] pull-request
+- [x] pull-request — 2026-06-04 10:25
 
 ## Comments
 
@@ -137,6 +137,14 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Staged 4 files: templates/agents/test-writer.md, templates/agents/python-coder.md, docs/testing/README.md, and the ticket file. Committed as feat(agents): add fixture extraction rule to test-writer and python-coder prompts.
+
+### 2026-06-04 10:25 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_670f09fa
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+PR #44 (https://github.com/urlmonitor/leafcutter-ai/pull/44) already exists for branch EPIC-TestFixtureConvention. All commits including this ticket's fixture-convention prompt updates are in the remote HEAD. No push required. Ticket status flipped to done — all agents are signed_off or not_needed.
 
 ## Implementation Tasks
 
