@@ -278,12 +278,44 @@ JS layer. The workflow returns one of:
 - `{ status: "error", message: "..." }` — unrecoverable error (e.g. planner
   agent returned unparseable output). Surface the message and halt.
 
-On `ok`, print the completion message:
+On `ok`, print the completion message from `result.message` verbatim. The
+`build-epic.js` Step 6 return populates this field with all four sections:
 
 ```
-Epic <EPIC_NAME> complete.
-All sub-tickets signed off. Branch: <EPIC_NAME>.
-Next step: run /finalize-feature <EPIC_NAME> to open the PR and close the worktree.
+## Summary
+Epic <EPIC_NAME> complete. <N> batch(es) run, <M> ticket(s) completed.
+
+## Worktree path
+<WORKTREE_PATH>
+
+## Things to manually test
+- <smoke-test suggestion 1>
+- <smoke-test suggestion 2>
+- ...
+
+## Finalize command
+/finalize-feature <EPIC_NAME>
+```
+
+If `result.message` is absent (legacy or error path), fall back to printing
+the inline template below, filling in `WORKTREE_PATH` and `EPIC_NAME`:
+
+```
+## Summary
+Epic EPIC_NAME complete. All sub-tickets signed off.
+
+## Worktree path
+WORKTREE_PATH
+
+## Things to manually test
+- Verify the branch diff on GitHub matches the expected scope for EPIC_NAME.
+- Run the full test suite on the worktree to confirm no regressions.
+- Inspect each changed file listed in the completed tickets' files_touched frontmatter.
+- Confirm all acceptance criteria in the epic's sub-tickets are satisfied.
+- Run /finalize-feature EPIC_NAME in a clean shell and confirm it completes without errors.
+
+## Finalize command
+/finalize-feature EPIC_NAME
 ```
 
 On `blocked`, print the blocked summary using `result.halted_tickets`.
@@ -365,9 +397,21 @@ install versions.
 **Completion message** (print when all tickets are `done`):
 
 ```
-Epic <EPIC_NAME> complete.
-All sub-tickets signed off. Branch: <EPIC_NAME>.
-Next step: run /finalize-feature <EPIC_NAME> to open the PR and close the worktree.
+## Summary
+Epic <EPIC_NAME> complete. All sub-tickets signed off.
+
+## Worktree path
+<WORKTREE_PATH>
+
+## Things to manually test
+- Verify the branch diff on GitHub matches the expected scope for <EPIC_NAME>.
+- Run the full test suite on the worktree to confirm no regressions.
+- Inspect each changed file listed in the completed tickets' files_touched frontmatter.
+- Confirm all acceptance criteria in the epic's sub-tickets are satisfied.
+- Run /finalize-feature <EPIC_NAME> in a clean shell and confirm it completes without errors.
+
+## Finalize command
+/finalize-feature <EPIC_NAME>
 ```
 
 **Blocked summary format** (print when halting on blockers):

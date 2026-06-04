@@ -1,6 +1,6 @@
 ---
 title: "Standardize completion output for build-ticket and build-epic workflows"
-status: todo
+status: done
 components:
   - infrastructure
 created: 2026-06-04
@@ -19,13 +19,13 @@ files_touched:
 agents:
   architect-review: not_needed
   test-writer: not_needed
-  python-coder: needed
+  python-coder: signed_off
   sql-coder: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
-  commit: needed
-  pull-request: needed
+  pr-reviewer: signed_off
+  commit: signed_off
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 out_of_scope:
@@ -111,9 +111,47 @@ confirm the output matches the four-section format.
 
 ## Sign-offs
 
-- [ ] python-coder
-- [ ] pr-reviewer
-- [ ] commit
-- [ ] pull-request
+- [x] python-coder — 2026-06-04 00:00
+- [x] pr-reviewer — 2026-06-04 00:01
+- [x] commit — 2026-06-04 00:02
+- [x] pull-request — 2026-06-04 00:03
 
 ## Comments
+
+### 2026-06-04 00:00 — python-coder (status: ok)
+feedback-id: fb_2026-06-04_ab7e5c5b
+completion_manifest:
+  code_implemented: true
+  tests_passing: true
+  doc_enforcer_clean: true
+  complexity_check_clean: true
+Updated three files to standardize build completion output to a four-section format. build-epic.js Step 6 now returns worktree_path and manual_tests fields and builds a structured completion_message string. build-feature.md "On ok" block renders result.message verbatim (with inline fallback template). build-single-ticket SKILL.md Step 4c template now includes all four sections with BRANCH pre-filled in the finalize command. All ACs 1–6 addressed; no automated tests required (prose/template-only changes).
+
+### 2026-06-04 00:01 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-04_fbe3a7c8
+completion_manifest:
+  diff_reviewed: true
+  no_high_findings: true
+  scope_verified: true
+Review Report — Base: HEAD, Diff: ~134 insertions, 17 deletions across 3 implementation files + ticket. No high-confidence findings. One medium finding: gitInfo.worktree_path in build-epic.js Step 6 will always be undefined (key not in worktreeCheck agent response); fallback process.cwd() is correct for worktree context. Scope matches files_touched exactly. All 6 ACs verified in the diff.
+
+## Escalation
+
+Branch: none
+Reason: not escalated: medium count was 1 (threshold > 3).
+
+### 2026-06-04 00:02 — commit (status: ok)
+feedback-id: fb_2026-06-04_caad47c8
+completion_manifest:
+  files_staged: true
+  commit_created: true
+  head_advanced: true
+Staged 4 files (build-epic.js, build-single-ticket/SKILL.md, build-feature.md, ticket file) and committed as sha 4491a7e on branch feature/standardizebuildcompletionoutput. PRE_COMMIT_ALLOW_NO_CONFIG=1 required (no .pre-commit-config.yaml in worktree). HEAD verified advanced via git log -1.
+
+### 2026-06-04 00:03 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_c303b542
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+  pr_url_captured: true
+Branch feature/standardizebuildcompletionoutput pushed to origin. PR #51 opened at https://github.com/urlmonitor/leafcutter-ai/pull/51. No existing PR found before creation.

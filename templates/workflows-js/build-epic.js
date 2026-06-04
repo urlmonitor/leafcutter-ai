@@ -365,16 +365,47 @@ async function run({ userInput, agent, workflow, parallel }) {
     0
   );
 
+  const worktreePath = gitInfo.worktree_path || process.cwd();
+
+  // Build a flat list of all completed ticket paths for manual test hints.
+  const completedTicketPaths = completedBatches.flatMap(
+    (b) => b.tickets || []
+  );
+
+  // Derive manual test suggestions from the completed ticket set.
+  // The planner does not surface ACs or files_touched at this stage, so we
+  // produce generic smoke-test suggestions based on the ticket count and the
+  // epic name. Callers can enrich this list by reading individual tickets.
+  const manualTests = [
+    `Verify that all ${totalTickets} ticket change(s) for "${epicTitle}" are reflected on the branch.`,
+    `Run the full test suite on the worktree to confirm no regressions.`,
+    `Inspect each changed file listed in the completed tickets' files_touched frontmatter.`,
+    `Confirm the PR diff on GitHub matches the expected scope for "${epicTitle}".`,
+    `Run /finalize-feature ${epicTitle} in a clean shell and confirm it completes without errors.`,
+  ];
+
+  const epicName = epicPath.split("/").pop() || epicPath;
+
+  const completionMessage =
+    `## Summary\n` +
+    `Epic "${epicTitle}" complete. ` +
+    `${completedBatches.length} batch(es) run, ${totalTickets} ticket(s) completed.\n\n` +
+    `## Worktree path\n` +
+    `${worktreePath}\n\n` +
+    `## Things to manually test\n` +
+    manualTests.map((t) => `- ${t}`).join("\n") + "\n\n" +
+    `## Finalize command\n` +
+    `/finalize-feature ${epicName}`;
+
   return {
     status: "ok",
     epic_path: epicPath,
     title: epicTitle,
+    worktree_path: worktreePath,
+    manual_tests: manualTests,
     batches_run: completedBatches.length,
     tickets_completed: totalTickets,
     completed_batches: completedBatches,
-    message:
-      `Epic "${epicTitle}" complete. ` +
-      `${completedBatches.length} batch(es) run, ${totalTickets} ticket(s) completed. ` +
-      `Next step: run /finalize-feature ${epicPath} to open the PR and close the worktree.`,
+    message: completionMessage,
   };
 }

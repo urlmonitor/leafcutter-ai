@@ -294,13 +294,46 @@ supervisor's payload verbatim. Do not summarise, do not add a preamble.
 ### Step 4c — End-of-run summary (success path)
 
 After the changelog commit in Step 4b succeeds, emit the following summary to the
-user (fill in the actual PR number from the `pull-request` phase payload):
+user. Fill in all placeholders from context (PR number from the `pull-request`
+phase payload, BRANCH from Step 2, Goal section and files_touched from the ticket
+frontmatter, and ACs from the ticket body):
 
 ---
-**Ticket complete.** PR #<N> is open.
+## Summary
+<2–3 sentences derived from the ticket's `# Goal` section and `files_touched`
+frontmatter — describe what was built, not how. Example: "Updated build-epic.js
+Step 6 return to include worktree_path and manual_tests fields. Standardized the
+completion output in build-single-ticket/SKILL.md and build-feature.md to always
+show a four-section format.">
 
-Review it in GitHub (or skip review for trivial changes), then run `/finalize-feature`
-— it will:
+PR #<N> is open.
+
+## Worktree path
+<WORKTREE_PATH>
+
+## Things to manually test
+<3–5 concrete smoke-test suggestions derived from the ticket's Acceptance Criteria
+and files_touched. Example:>
+- Run /build-feature on a test ticket and confirm the completion output shows all
+  four sections: Summary, Worktree path, Things to manually test, and Finalize command.
+- Verify the finalize command in the output reads `/finalize-feature <BRANCH>` with
+  the branch name pre-filled (not a raw ticket path).
+- Inspect `templates/workflows-js/build-epic.js` Step 6 return object and confirm
+  it includes `worktree_path` and `manual_tests` fields.
+- Inspect `templates/skills/build-single-ticket/SKILL.md` Step 4c and confirm the
+  four-section template is present with `<BRANCH>` pre-filled.
+- Inspect `templates/workflows/build-feature.md` and confirm the inline fallback
+  completion message includes all four sections.
+
+## Finalize command
+/finalize-feature <BRANCH>
+
+---
+
+Fill in BRANCH with the actual branch name from Step 2 (e.g. `feature/standardizebuildcompletionoutput`).
+
+Review the PR in GitHub (or skip review for trivial changes), then run the finalize
+command above — it will:
 1. Gate on your confirmation before merging.
 2. Run `gh pr merge` (Step 2).
 3. Sync `main` and run tests (Steps 3–4).
@@ -309,8 +342,6 @@ Review it in GitHub (or skip review for trivial changes), then run `/finalize-fe
 Per `feedback_merge_before_worktree_remove.md`: the worktree will not be removed
 until the merge succeeds — `/finalize-feature` enforces this ordering internally;
 you do not need to merge manually first.
-
----
 
 Do not add any other preamble or summary text.
 
