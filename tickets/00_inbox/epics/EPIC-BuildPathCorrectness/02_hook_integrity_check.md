@@ -23,7 +23,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -148,7 +148,7 @@ Fix: extend `_TEST_PATH_RE` to also exclude paths matching
 - [x] python-coder — 2026-06-04 12:05
 - [x] test-runner — 2026-06-04 12:10
 - [x] pr-reviewer — 2026-06-04 12:15
-- [ ] commit
+- [x] commit — 2026-06-04 12:20
 - [ ] pull-request
 
 ## Comments
@@ -198,6 +198,14 @@ completion_manifest:
   no_out_of_scope_changes: true
   code_quality_acceptable: true
 All 6 ACs satisfied. _check_hook_script_integrity() is correctly non-blocking, pre-template-var, well-documented. commit[_-]guardian/ regex covers both hyphen and underscore path variants and is applied to both template files. Tests are properly isolated using extracted helper. DECISION HISTORY entries present. No out-of-scope files touched.
+
+### 2026-06-04 12:20 — commit (status: ok)
+feedback-id: fb_2026-06-04_254a783b
+completion_manifest:
+  commit_created: true
+  staged_files_explicit: true
+  lock_acquired_and_released: true
+Committed SHA 9fee6ef on branch EPIC-BuildPathCorrectness. 6 files staged by explicit path: scripts/build_precommit.py, templates/commit-guardian/check_contract_shrinking.py, templates/scripts/commit_guardian/check_contract_shrinking.py, unit_tests/commit_guardian/test_build_precommit.py, unit_tests/commit_guardian/test_check_contract_shrinking.py, ticket file. PRE_COMMIT_ALLOW_NO_CONFIG=1 required (no .pre-commit-config.yaml in this worktree). Commit lock acquired and released cleanly.
 
 ## Implementation Tasks
 
