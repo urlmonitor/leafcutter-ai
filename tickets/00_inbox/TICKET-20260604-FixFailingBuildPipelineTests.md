@@ -1,6 +1,6 @@
 ---
 title: "Fix three failing build-pipeline test suites"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
@@ -24,7 +24,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 ---
@@ -179,7 +179,7 @@ And all 5 tests in test_build_workflow_phase.py pass
 - [x] test-runner — 2026-06-04 14:05
 - [x] pr-reviewer — 2026-06-04 14:10
 - [x] commit — 2026-06-04 14:15
-- [ ] pull-request
+- [x] pull-request — 2026-06-04 14:20
 
 ## Comments
 
@@ -247,6 +247,14 @@ Committed 4b9418a: "fix(tests): fix three failing build-pipeline test suites". 4
 ## Anomalies
 
 None.
+
+### 2026-06-04 14:20 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_eb77b64e
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Pushed branch feature/fixfailingbuildpipelinetests and created PR #47: https://github.com/urlmonitor/leafcutter-ai/pull/47. All agents signed off; status flipped to done.
 
 ## Implementation Tasks
 
