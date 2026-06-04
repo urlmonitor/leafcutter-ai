@@ -25,7 +25,7 @@ agents:
   test-runner: not_needed
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
   architecture-diagram-author: not_needed
   user-surface-smoker: not_needed
@@ -76,7 +76,7 @@ hallucinate coverage if it must cite a real artifact.
 
 - [x] python-coder — 2026-06-04 00:00
 - [x] pr-reviewer — 2026-06-04 00:05
-- [ ] commit
+- [x] commit — 2026-06-04 00:10
 - [ ] pull-request
 
 ## AC Coverage
@@ -100,6 +100,14 @@ hallucinate coverage if it must cite a real artifact.
   rather than hard-blocking.
 
 ## Comments
+
+### 2026-06-04 00:10 — commit (status: ok)
+feedback-id: fb_2026-06-04_ca3eccfb
+completion_manifest:
+  files_staged_correctly: true
+  commit_created: true
+  sha_recorded: true
+Committed 3 files at e814f0c: templates/agents/ac-validator.md (new), config/agent_registry.json (registry entry added), 05_ac_validator_agent.md (sign-offs + AC coverage). Staged by explicit path only; no unrelated files included. Pre-commit hook absent (PRE_COMMIT_ALLOW_NO_CONFIG=1 used; no .pre-commit-config.yaml in worktree).
 
 ### 2026-06-04 00:05 — pr-reviewer (status: ok)
 feedback-id: fb_2026-06-04_426df4c7
