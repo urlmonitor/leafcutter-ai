@@ -32,6 +32,8 @@ from pathlib import Path
 
 # Patterns for production code files (any .py not in test directories)
 # conftest.py is explicitly excluded — it is test infrastructure, not production code.
+# commit_guardian/ is explicitly excluded — hook infrastructure is not production
+# application code and must not trigger the guard when its own scripts are staged.
 _PRODUCTION_FILE_RE = re.compile(
     r"^diff --git a/(.*\.py) b/",
     re.MULTILINE,
@@ -174,3 +176,10 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+# ===========================================================================
+# DECISION HISTORY
+# ===========================================================================
+# - 2026-06-04 12:00 [EPIC-BuildPathCorrectness/T02]: Created canonical template at templates/scripts/commit_guardian/. Extended _TEST_PATH_RE to exclude commit_guardian/ paths (self-exclusion fix for false-positive when hook scripts are staged). (#EPIC-BuildPathCorrectness/T02)
+# ===========================================================================

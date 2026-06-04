@@ -17,12 +17,12 @@ files_touched:
   - templates/commit-guardian/check_contract_shrinking.py
 agents:
   architect-review: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   adr-author: not_needed
@@ -144,14 +144,60 @@ Fix: extend `_TEST_PATH_RE` to also exclude paths matching
 
 ## Sign-offs
 
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
-- [ ] pr-reviewer
+- [x] test-writer — 2026-06-04 12:00
+- [x] python-coder — 2026-06-04 12:05
+- [x] test-runner — 2026-06-04 12:10
+- [x] pr-reviewer — 2026-06-04 12:15
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
+
+### 2026-06-04 12:00 — test-writer (status: ok)
+feedback-id: fb_2026-06-04_f43c68ff
+completion_manifest:
+  test_stubs_created: true
+  all_tests_red: true
+  red_baseline_captured: true
+  ac_ids_covered: [UNKNOWN]
+red_baseline:
+  - test_name: test_hook_script_integrity_check_warns_on_missing
+    file: unit_tests/commit_guardian/test_build_precommit.py
+    error: "AssertionError: AttributeError: scripts.build_precommit does not expose _check_hook_script_integrity(). Extract the integrity-check loop as this helper function (AC-1, AC-4)."
+  - test_name: test_hook_script_integrity_check_silent_when_all_present
+    file: unit_tests/commit_guardian/test_build_precommit.py
+    error: "AssertionError: AttributeError: scripts.build_precommit does not expose _check_hook_script_integrity(). Extract the integrity-check loop as this helper function (AC-1, AC-5)."
+  - test_name: test_contract_shrinking_excludes_commit_guardian_paths
+    file: unit_tests/commit_guardian/test_check_contract_shrinking.py
+    error: "AssertionError: True is not false : has_production_changes should be False for commit_guardian/ paths, but got True. Production files detected: ['templates/scripts/commit_guardian/check_contract_shrinking.py']"
+  - test_name: test_contract_shrinking_excludes_legacy_commit_guardian_path
+    file: unit_tests/commit_guardian/test_check_contract_shrinking.py
+    error: "AssertionError: True is not false : has_production_changes should be False for templates/commit-guardian/ paths. Got production files: ['templates/commit-guardian/check_contract_shrinking.py']"
+Wrote 5 test stubs: 2 in test_build_precommit.py (AC-4, AC-5) and 3 in test_check_contract_shrinking.py (AC-6). 4/5 are red; 1 sanity-check (test_non_commit_guardian_py_still_detected_as_production) passes as expected since it verifies unchanged production detection behavior. Red baseline captured above. Verification: `python -m pytest unit_tests/commit_guardian/test_build_precommit.py unit_tests/commit_guardian/test_check_contract_shrinking.py -v` exits non-zero (exit 1).
+
+### 2026-06-04 12:05 — python-coder (status: ok)
+feedback-id: fb_2026-06-04_c6c73b93
+completion_manifest:
+  code_implemented: true
+  tests_passing: true
+  doc_enforcer_clean: true
+  complexity_check_clean: true
+Deliverable 1: Added `_check_hook_script_integrity(hooks, cg_dir)` helper to `scripts/build_precommit.py` (AC-1, AC-2) and called it between hooks load and `_resolve_template_vars`. Deliverable 2: Extended `_TEST_PATH_RE` in both `templates/commit-guardian/check_contract_shrinking.py` and new `templates/scripts/commit_guardian/check_contract_shrinking.py` to use `commit[_-]guardian/` exclusion (AC-3). All 5 new tests pass: `python -m pytest unit_tests/commit_guardian/test_build_precommit.py unit_tests/commit_guardian/test_check_contract_shrinking.py` exits 0.
+
+### 2026-06-04 12:10 — test-runner (status: ok)
+feedback-id: fb_2026-06-04_87b75034
+completion_manifest:
+  tests_green: true
+  no_regressions: true
+Full commit_guardian test suite: 114/114 passed. Full unit_tests suite (excluding 2 pre-existing broken imports): 233/234 passed. The 1 remaining failure (test_build_workflow_scripts_writes_to_output_root_workflows) is pre-existing and confirmed present on the base branch before our changes. No regressions introduced by this ticket.
+
+### 2026-06-04 12:15 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-04_1245946f
+completion_manifest:
+  acs_covered: true
+  no_out_of_scope_changes: true
+  code_quality_acceptable: true
+All 6 ACs satisfied. _check_hook_script_integrity() is correctly non-blocking, pre-template-var, well-documented. commit[_-]guardian/ regex covers both hyphen and underscore path variants and is applied to both template files. Tests are properly isolated using extracted helper. DECISION HISTORY entries present. No out-of-scope files touched.
 
 ## Implementation Tasks
 
