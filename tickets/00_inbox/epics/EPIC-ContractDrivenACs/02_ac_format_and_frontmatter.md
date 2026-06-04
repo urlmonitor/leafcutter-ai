@@ -24,8 +24,8 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   architecture-diagram-author: not_needed
   user-surface-smoker: not_needed
 ---
@@ -56,7 +56,7 @@ for linking ACs to tests and implementations.
 - [x] python-coder — 2026-06-04 00:05
 - [x] test-runner — 2026-06-04 00:10
 - [x] pr-reviewer — 2026-06-04 00:15
-- [ ] commit
+- [x] commit — 2026-06-04 00:20
 - [ ] pull-request
 
 ## AC Coverage
@@ -107,3 +107,11 @@ completion_manifest:
   json_valid: true
   changes_additive: true
 All 6 ACs verified against the diff. ticket-authoring SKILL.md now uses numbered AC checklist format with AC Coverage table and Agent Contracts alternative. commit_guardian.json adds optional ac_coverage field with regex validation. 45 tests pass. Changes are fully additive and reversible.
+
+### 2026-06-04 00:20 — commit (status: ok)
+feedback-id: fb_2026-06-04_3632c1cb
+completion_manifest:
+  staged_correctly: true
+  commit_clean: true
+  no_cross_ticket_pollution: true
+Committed f21fc58. Staged 5 files: templates/skills/ticket-authoring/SKILL.md, templates/commit-guardian/commit_guardian.json, templates/scripts/commit_guardian/commit_guardian.json, scripts/commit_guardian/commit_guardian.json (tracked build output), ticket file. Unstaged unrelated files from other tickets before committing.
