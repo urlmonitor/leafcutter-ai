@@ -20,14 +20,14 @@ agents:
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
-  documentation-expert: needed
+  documentation-expert: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   explanation-author: not_needed
   how-to-author: not_needed
   reference-author: not_needed
   user-surface-smoker: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -93,12 +93,33 @@ Then it logs a warning "AC FIN-001 is deprecated — skipping test generation fo
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] pr-reviewer
+- [x] documentation-expert — 2026-06-04 12:00
+- [x] pr-reviewer — 2026-06-04 12:05
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
+
+### 2026-06-04 12:05 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-04_4fcd43cb
+completion_manifest:
+  diff_reviewed: true
+  no_high_findings: true
+  scope_verified: true
+Reviewed diff for ticket 06. Base: EPIC-ACTraceabilityStore. Diff size: 78 lines added to `templates/agents/test-writer.md`. No high-confidence findings. Step 1 sub-step 5 (AC store pre-flight), Step 2i (`# covers:` tag placement), and `ac_ids_covered` manifest item are all correct, well-structured, and match the ticket requirements. Scope matches `files_touched: [templates/agents/test-writer.md]`. Suppressed: 0 low-confidence nits.
+
+## Escalation
+
+Branch: none
+Reason: not escalated: medium count was 0 (threshold > 3)
+
+### 2026-06-04 12:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-06-04_7d746428
+completion_manifest:
+  doc_written: true
+  cross_links_added: true
+  diataxis_genre_correct: true
+Updated `templates/agents/test-writer.md` with three additions: (1) Step 1 pre-flight sub-step 5 — AC store lookup that reads `docs/acceptance-criteria/` YAML files, loads criteria as the authoritative test source, and skips deprecated/superseded ACs with a warning; (2) Step 2i — mandatory `# covers: <AC-ID>` tag placement on the first line of every test function body, with sourcing rules and fallback to `# covers: UNKNOWN`; (3) expanded completion manifest section with `ac_ids_covered` field and two examples (AC store hit and fallback path). All three implementation tasks from the ticket are complete. No cross-repo links added (template is self-contained; the ticket-04 bidirectional coverage check is referenced inline). Diataxis genre: reference (agent template update).
 
 ## Implementation Tasks
 
