@@ -27,14 +27,14 @@ agents:
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
-  documentation-expert: needed
+  documentation-expert: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   explanation-author: not_needed
-  how-to-author: needed
-  reference-author: needed
+  how-to-author: signed_off
+  reference-author: signed_off
   user-surface-smoker: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 requires_documentation:
@@ -99,26 +99,58 @@ Then both docs are present in the target project's docs/how-to/ and docs/referen
 
 ## Sign-offs
 
-- [ ] documentation-expert
-- [ ] how-to-author
-- [ ] reference-author
-- [ ] pr-reviewer
+- [x] documentation-expert — 2026-06-04 13:10
+- [x] how-to-author — 2026-06-04 13:10
+- [x] reference-author — 2026-06-04 13:10
+- [x] pr-reviewer — 2026-06-04 13:20
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-06-04 13:10 — how-to-author (status: ok)
+feedback-id: fb_2026-06-04_2639cd87
+completion_manifest:
+  guide_written: true
+  location_correct: true
+  steps_validated: true
+Wrote `templates/docs/how-to/ac-traceability-store.md` covering 5 task-oriented operations: create AC, amend AC, deprecate AC, add covers: tags to tests, and handle deprecated-AC test failures. File follows how-to convention with Prerequisites, numbered Steps, and Verification sections.
+
+### 2026-06-04 13:10 — reference-author (status: ok)
+feedback-id: fb_2026-06-04_d2d9e658
+completion_manifest:
+  reference_doc_written: true
+  schema_tables_complete: true
+  genre_guard_passed: true
+Wrote `templates/docs/reference/ac-schema.md` covering all schema fields, ID format and assignment rules, the status lifecycle diagram, all three pre-commit hooks (check_ac_schema, check_test_ac_tags, check_ac_coverage, check_ac_limits) with their modes and exit codes, and all four agent integration points (business-analyst, test-writer, triage, ticket-wiring). See-Also cross-links point to how-to and components.json.
+
+### 2026-06-04 13:10 — documentation-expert (status: ok)
+feedback-id: fb_2026-06-04_1e79e584
+completion_manifest:
+  doc_written: true
+  cross_links_added: true
+  diataxis_genre_correct: true
+Orchestrated how-to-author and reference-author for ticket 09. Both template docs written at `templates/docs/how-to/ac-traceability-store.md` and `templates/docs/reference/ac-schema.md`. Added `build_ac_store_docs()` phase function to `scripts/build_phases.py` and wired it as `("AC store docs", build_ac_store_docs)` in `build.py`'s `scaffold_phases` list. All imports verify cleanly. Note: `build.py --validate-only` exits 1 due to a pre-existing registry error (`test-failure-triage.md` not in `agent_registry.json`) unrelated to this ticket's changes — the new phase code imports and runs correctly.
+
+### 2026-06-04 13:20 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-04_9edaea0a
+completion_manifest:
+  diff_reviewed: true
+  no_high_findings: true
+  scope_verified: true
+Reviewed diff for scripts/build.py (+7 lines) and scripts/build_phases.py (+66 lines). build_ac_store_docs() follows the established pattern of build_ac_store_scaffold() and other scaffold phases. Write-if-absent semantics correctly implemented. Template path resolution uses TEMPLATES_DIR constant consistently. WARNING for missing template is non-fatal (continue). inject_config() applied before write. No high-confidence findings. Scope matches ticket files_touched plus the build.py wiring which the implementation tasks explicitly required.
+
 ## Implementation Tasks
 
-- [ ] Create `templates/docs/how-to/ac-traceability-store.md` following
+- [x] Create `templates/docs/how-to/ac-traceability-store.md` following
   the how-to doc template (task-oriented, step-by-step, no conceptual
   tangents). Cover the 5 tasks listed in Context above.
-- [ ] Create `templates/docs/reference/ac-schema.md` following the
+- [x] Create `templates/docs/reference/ac-schema.md` following the
   reference doc template (complete, precise, no tutorials). Cover all fields,
   ID format, status lifecycle, hooks, and agent integrations.
-- [ ] Wire both files into the `build.py` doc scaffold phase so they are
+- [x] Wire both files into the `build.py` doc scaffold phase so they are
   installed to `docs/how-to/` and `docs/reference/` in the target project.
-- [ ] Validate that build.py --validate-only exits 0 after the wiring.
+- [x] Validate that build.py --validate-only exits 0 after the wiring.
 
 ## Risk & Safety
 

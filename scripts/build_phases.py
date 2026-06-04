@@ -1069,6 +1069,72 @@ def build_sync_platforms(target_root: Path, config: dict[str, Any],
     return written
 
 
+def build_ac_store_docs(target_root: Path, config: dict[str, Any],
+                        dry_run: bool, force: bool) -> int:
+    """Install AC Traceability Store documentation into the target project.
+
+    Copies ``templates/docs/how-to/ac-traceability-store.md`` to
+    ``{target_root}/docs/how-to/ac-traceability-store.md`` and
+    ``templates/docs/reference/ac-schema.md`` to
+    ``{target_root}/docs/reference/ac-schema.md``.
+
+    Uses write-if-absent semantics — existing files are never overwritten,
+    regardless of the ``force`` parameter.  This preserves user-edited
+    documentation across subsequent build runs.
+
+    Args:
+        target_root: Absolute path to the target project root.
+        config: Build configuration dict (not used, accepted for interface
+            consistency).
+        dry_run: When True, logs intent but writes nothing.
+        force: Ignored — this phase always uses write-if-absent semantics.
+
+    Returns:
+        Count of files written (or that would be written in dry-run mode).
+
+    # DECISION HISTORY
+    # - 2026-06-04 13:10 [documentation-expert/EPIC-ACTraceabilityStore/09]:
+    #   Created to install how-to and reference docs for the AC store.
+    #   Both files are write-if-absent so user-edited versions are preserved.
+    #   (#EPIC-ACTraceabilityStore/09)
+    """
+    docs_template_dir = TEMPLATES_DIR / "docs"
+    doc_files = [
+        (
+            docs_template_dir / "how-to" / "ac-traceability-store.md",
+            target_root / "docs" / "how-to" / "ac-traceability-store.md",
+            "how-to/ac-traceability-store.md",
+        ),
+        (
+            docs_template_dir / "reference" / "ac-schema.md",
+            target_root / "docs" / "reference" / "ac-schema.md",
+            "reference/ac-schema.md",
+        ),
+    ]
+
+    written = 0
+    for template_path, dest_path, display_name in doc_files:
+        if not template_path.exists():
+            print(f"  [WARNING] AC store docs: template not found: {template_path}")
+            continue
+        if dest_path.exists():
+            print(f"  ac-store-docs: docs/{display_name} exists (skipped)")
+            continue
+        if dry_run:
+            print(f"  [DRY-RUN] would write docs/{display_name}")
+            written += 1
+        else:
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
+            content = inject_config(
+                template_path.read_text(encoding="utf-8"), config
+            )
+            dest_path.write_text(content, encoding="utf-8")
+            print(f"  docs/{display_name}")
+            written += 1
+
+    return written
+
+
 # ---------------------------------------------------------------------------
 # Clean-mode: remove stale artifacts
 # ---------------------------------------------------------------------------
