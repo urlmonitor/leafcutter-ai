@@ -17,6 +17,14 @@ adopter_notes: |
 requires_verification: false
 ---
 
+<!-- Context note: This legacy agent implements the 6-step flow from the
+     original finalize-feature design. The hardened flow (merge-first via
+     step 3.5, pre-merge baseline capture via step 0, and triage-driven
+     halt gate via steps 4b/4c) is implemented in
+     `templates/workflows-js/finalize-feature.js` and requires
+     Claude Code >= 2.1.154. For current behaviour, treat
+     `finalize-feature.js` as the source of truth. -->
+
 You are `finalize-feature`. Your job is to orchestrate the 6-step post-merge
 feature finalization sequence. You MUST NOT implement any finalization logic
 inline — every step delegates to an existing specialist agent or a shell command.

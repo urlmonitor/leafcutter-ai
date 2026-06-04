@@ -350,7 +350,7 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
         print("Workflow scripts: 0 installed (templates/workflows-js/ absent)")
         return 0
 
-    output_dir = target_root / "workflows"
+    output_dir = target_root / ".claude" / "workflows"
     written = 0
     unchanged = 0
 
@@ -1288,4 +1288,9 @@ def clean_stale_artifacts(
 #   exists guard (matches build_vision() pattern). Added _folder_remap dict so
 #   manifest canonical paths are rewritten to config-overridden actual paths.
 #   (#TICKET-20260603-ConfigDrivenBuildPaths)
+# - 2026-06-04 [python-coder/TICKET-20260604-FixFailingBuildPipelineTests]:
+#   Fixed build_workflow_scripts() output path from target_root/"workflows" to
+#   target_root/".claude"/"workflows" to match .claude/ layout convention and
+#   fix unit_tests/test_build_workflow_phase.py assertions.
+#   (#TICKET-20260604-FixFailingBuildPipelineTests)
 # ====================================================================
