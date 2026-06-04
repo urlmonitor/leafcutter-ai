@@ -1,6 +1,6 @@
 ---
 title: "Enhance test-failure-triage with AC status lookup for covers: tags"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
