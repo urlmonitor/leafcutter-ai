@@ -1,6 +1,6 @@
 ---
 title: "Run build.py in worktrees after creation to populate .leafcutter/ build outputs"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-04
@@ -23,8 +23,8 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 ac_coverage: 0/7
@@ -201,8 +201,8 @@ appended to that file following the same `unittest.mock.patch` pattern.
 - [x] python-coder — 2026-06-04 00:05
 - [x] test-runner — 2026-06-04 00:10
 - [x] pr-reviewer — 2026-06-04 00:15
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-04 00:20
+- [x] pull-request — 2026-06-04 00:25
 
 ## Comments
 
@@ -239,4 +239,19 @@ completion_manifest:
   tests_green: true
   scope_matches_plan: true
 All 7 ACs satisfied. Error handling follows CLAUDE.md policy: `subprocess.run` with `check=True` wrapped in `except subprocess.CalledProcessError`, warnings logged to stderr, no bare except, no silent swallowing. 9/9 tests green. Files touched match `files_touched` frontmatter. No scope drift.
+
+### 2026-06-04 00:20 — commit (status: ok)
+feedback-id: fb_2026-06-04_3b18a691
+completion_manifest:
+  commit_created: true
+  staged_files_match_plan: true
+  no_unintended_files: true
+Committed `03e332d` on branch `feature/worktreebuildoutputs`: 5 files changed, 225 insertions(+), 21 deletions(-). Staged only the 5 in-scope files from `files_touched`. Commit-phase lock acquired before staging and released after commit.
+
+### 2026-06-04 00:25 — pull-request (status: ok)
+feedback-id: fb_2026-06-04_92d7aa02
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+PR opened: https://github.com/urlmonitor/leafcutter-ai/pull/54 (branch `feature/worktreebuildoutputs` → `main`).
 
