@@ -610,6 +610,37 @@ def build_hooks(target_root: Path, config: dict[str, Any],
     return written
 
 
+def build_commands(target_root: Path, config: dict[str, Any],
+                   dry_run: bool, force: bool) -> int:
+    """Copy command templates to ``<target_root>/.claude/commands/``.
+
+    Args:
+        target_root: Absolute path to the target project root directory.
+        config: Merged config dictionary used for placeholder injection.
+        dry_run: When True, logs intent but writes nothing.
+        force: When True, overwrites existing files.
+
+    Returns:
+        Count of files written (or that would be written in dry-run mode).
+    """
+    commands_dir = TEMPLATES_DIR / "commands"
+    if not commands_dir.exists():
+        return 0
+
+    output_dir = target_root / "commands"
+    written = 0
+
+    for template_file in sorted(commands_dir.glob("*.md")):
+        output_path = output_dir / template_file.name
+        text = inject_config(template_file.read_text(encoding="utf-8"), config)
+        if _write(output_path, text, dry_run, force):
+            written += 1
+            if not dry_run:
+                print(f"  commands/{template_file.name}")
+
+    return written
+
+
 def build_rules(target_root: Path, config: dict[str, Any],
                 dry_run: bool, force: bool) -> int:
     """Copy rule templates to ``<target_root>/.agents/rules/``.
