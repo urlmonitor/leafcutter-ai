@@ -4,7 +4,7 @@ component: build-pipeline
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 created_by: "tickets/00_inbox/TICKET-20260604-HookScriptIntegrityCheck.md"
 criteria: |
   Given a test that constructs a unified diff where:
@@ -37,4 +37,5 @@ created: 2026-06-05
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - "unit_tests/commit_guardian/test_check_contract_shrinking.py"
