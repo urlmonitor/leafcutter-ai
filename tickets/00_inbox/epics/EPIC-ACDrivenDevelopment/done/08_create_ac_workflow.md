@@ -1,6 +1,6 @@
 ---
 title: "/create-ac workflow — triage, orchestrate, and gate AC authoring"
-status: todo
+status: done
 components:
   - ac-store
   - ticket-creation
@@ -29,8 +29,8 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
 source_acs:
   - ACD-300
   - ACD-300a
@@ -192,8 +192,8 @@ And it returns a JSON object with keys: route, existing_acs, parent_l1_id, ratio
 - [x] python-coder — 2026-06-05 09:15
 - [x] test-runner — 2026-06-05 09:20
 - [x] pr-reviewer — 2026-06-05 09:25
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-05 09:30
+- [x] pull-request — 2026-06-05 09:35
 
 ## Comments
 
@@ -236,6 +236,21 @@ completion_manifest:
   haiku_pin_confirmed: true
   no_ticket_writes_verified: true
 All 10 ACs verified. AC-1 (duplicate check via Jaccard similarity), AC-2/3/4 (routing paths), AC-5/6/7 (gates with approve/edit/cancel), AC-8 (no ticket/ writes — test confirmed), AC-9 (JS workflow pattern with agent dispatch + error handling), AC-10 (model: haiku in ac-triage.md). 13 tests green. No breaking changes to existing workflows.
+
+### 2026-06-05 09:30 — commit (status: ok)
+feedback-id: fb_2026-06-05_cf78b4a9
+completion_manifest:
+  files_staged_explicitly: true
+  commit_created: true
+  commit_message_accurate: true
+Committed SHA 49a9770 on branch EPIC-ACDrivenDevelopment. 11 files changed, 1717 insertions(+), 17 deletions(-). Staged only the in-scope paths (7 new files + 4 modified files). No pre-commit config present; used PRE_COMMIT_ALLOW_NO_CONFIG=1 per worktree convention. Lock acquired before commit, released immediately after.
+
+### 2026-06-05 09:35 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_87bad523
+completion_manifest:
+  branch_pushed: true
+  pr_open: true
+Branch EPIC-ACDrivenDevelopment pushed to origin (0c0a974..49a9770). PR #61 (https://github.com/urlmonitor/leafcutter-ai/pull/61) is already open for the epic. Ticket 08 commits (49a9770) are included in the branch.
 
 ## Implementation Tasks
 
