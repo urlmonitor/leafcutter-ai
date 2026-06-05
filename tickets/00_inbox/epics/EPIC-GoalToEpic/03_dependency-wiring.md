@@ -22,7 +22,7 @@ agents:
   test-runner: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ac_coverage: 0/3
 source_ac: ACD-1200c
 ---
@@ -136,7 +136,7 @@ tests:
 - [x] test-runner — 2026-06-05 15:00
 - [x] pr-reviewer — 2026-06-05 15:15
 - [x] commit — 2026-06-05 15:30
-- [ ] pull-request
+- [x] pull-request — 2026-06-05 15:45
 
 ## Comments
 
@@ -199,3 +199,9 @@ completion_manifest:
   files_staged_explicitly: true
   commit_created: true
 Staged scripts/goal_to_epic.py, unit_tests/ac_store/test_dependency_wiring.py, and tickets/00_inbox/epics/EPIC-GoalToEpic/03_dependency-wiring.md explicitly by path. Commit created on EPIC-GoalToEpic branch.
+
+### 2026-06-05 15:45 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_d3a0229e
+completion_manifest:
+  pushed_to_existing_pr: true
+Pushing to existing PR #69 on EPIC-GoalToEpic branch (no new PR created — PR already open).
