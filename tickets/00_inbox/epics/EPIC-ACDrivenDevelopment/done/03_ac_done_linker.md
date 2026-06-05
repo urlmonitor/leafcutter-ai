@@ -1,6 +1,6 @@
 ---
 title: "AC done-linker"
-status: todo
+status: done
 components:
   - ac-store
   - build-orchestration
@@ -29,7 +29,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 source_acs:
   - ACD-600
   - ACD-600a
@@ -144,9 +144,16 @@ And the hook exits 0 (non-fatal skip).
 - [x] test-runner — 2026-06-05 14:45
 - [x] pr-reviewer — 2026-06-05 15:00
 - [x] commit — 2026-06-05 15:15
-- [ ] pull-request
+- [x] pull-request — 2026-06-05 15:20
 
 ## Comments
+
+### 2026-06-05 15:20 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_0c27aa68
+completion_manifest:
+  branch_pushed: true
+  pr_available: true
+Branch EPIC-ACDrivenDevelopment pushed to origin. Epic PR #61 (EPIC-ACDrivenDevelopment: AC readiness gate and authoring pipeline) already open — ticket-03 commits (d0d4a92) are included. No new PR needed (one PR per epic convention).
 
 ### 2026-06-05 15:15 — commit (status: ok)
 feedback-id: fb_2026-06-05_277f0925
