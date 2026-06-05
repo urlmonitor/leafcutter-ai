@@ -1,6 +1,6 @@
 ---
 title: "Write visualise_knowledge_graph.py — core HTML generation and D3.js data embedding"
-status: todo
+status: done
 components:
   - knowledge-management
 created: 2026-06-04
@@ -23,8 +23,8 @@ agents:
   test-runner: signed_off
   documentation-expert: signed_off
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 ---
@@ -294,8 +294,8 @@ needing a real project structure.
 - [x] test-runner — 2026-06-05 14:40
 - [x] documentation-expert — 2026-06-05 14:45
 - [x] pr-reviewer — 2026-06-05 14:50
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-05 14:55
+- [x] pull-request — 2026-06-05 15:00
 
 ## Comments
 
@@ -391,6 +391,21 @@ completion_manifest:
   ruff_clean: true
   all_tests_green: true
 All 10 ACs satisfied. Ruff E722/BLE001/TRY: clean. 13/13 tests GREEN. `scripts/visualise_knowledge_graph.py` is ~150 lines, stdlib-only, uses importlib.util pattern (AC-6), SURFACE_COLORS public constant (AC-2), CDN D3 reference only (AC-3). `docs/architecture/agent_knowledge_system.md` has `## Visualization` section with invocation examples. `CLAUDE.md` Architecture Reference table updated.
+
+### 2026-06-05 14:55 — commit (status: ok)
+feedback-id: fb_2026-06-05_de0eb779
+completion_manifest:
+  files_staged_correctly: true
+  commit_succeeded: true
+  no_cross_ticket_files_included: true
+Committed 5 files (1031 insertions, 40 deletions) on branch `EPIC-KnowledgeGraphQueryLayer`. SHA: 425e55d. Files: `CLAUDE.md`, `docs/architecture/agent_knowledge_system.md`, `scripts/visualise_knowledge_graph.py`, `tickets/.../03a_knowledge_graph_visualization_core.md`, `unit_tests/test_visualise_knowledge_graph.py`. No cross-ticket files included.
+
+### 2026-06-05 15:00 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_114bd92f
+completion_manifest:
+  branch_pushed: true
+  pr_updated: true
+Pushed branch `EPIC-KnowledgeGraphQueryLayer` to origin (54684e3..425e55d). Existing PR #63 updated with commit 425e55d. No new PR created — epic uses one PR per epic convention.
 
 ## Risk & Safety
 
