@@ -1,0 +1,45 @@
+id: BO-520-3-i
+title: "Unknown change_type value is rejected with valid options listed"
+component: build-orchestration
+level: L3
+status: superseded
+req_status: superseded
+work_status: todo
+criteria: |
+  Given a ticket markdown file has YAML frontmatter containing
+    change_type: schema_change (a value not in the defined enum),
+  When ticket-supervisor validates the ticket before dispatch,
+  Then it rejects the ticket before spawning any phase agent
+  And the error message identifies the invalid value:
+    "Invalid change_type 'schema_change'"
+  And the error message lists all valid values:
+    "Valid values: flow_change, data_change, doc_change, prompt_change, config_change"
+  And no agents are spawned and no files are modified
+
+  Given the ticket_frontmatter_guard hook is enabled,
+  When a developer commits a ticket file with change_type: schema_change,
+  Then the hook rejects the commit with the same error message
+  And the commit is blocked until the value is corrected
+depends_on: [BO-520-3]
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Error messages must be actionable -- always list valid alternatives"
+  - "Validation must occur at both commit-time (hook) and dispatch-time (supervisor)"
+delivers_to: null
+expects_from:
+  ac_id: BO-520-3
+  contract: "The change_type enum is defined and the guardrails mapping only contains valid enum values"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: BO-610-5
+covered_by: []
+implemented_by: []

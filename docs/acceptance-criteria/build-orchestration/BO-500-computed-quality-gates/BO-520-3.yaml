@@ -1,0 +1,58 @@
+id: BO-520-3
+title: "Each change_type maps to a defined set of mandatory guardrail agents"
+component: build-orchestration
+level: L2
+status: superseded
+req_status: superseded
+work_status: todo
+criteria: |
+  Given a configuration mapping exists (in agent_registry.json or a dedicated
+    guardrails config) that associates each change_type with mandatory agents,
+  When the mapping is read,
+  Then it contains exactly these associations:
+    - flow_change: [architect-review, documentation-expert, test-writer, test-runner]
+    - data_change: [architect-review, test-writer, test-runner]
+    - doc_change: [pr-reviewer]
+    - prompt_change: [pr-reviewer]
+    - config_change: [test-writer, test-runner]
+  And each entry specifies whether the mandatory agent runs BEFORE or AFTER
+    the work agent:
+    - architect-review: before
+    - documentation-expert: before (for flow_change only)
+    - test-writer: before
+    - test-runner: after
+    - pr-reviewer: after
+
+  Given the mapping is updated to add a new mandatory agent for a change_type,
+  When the next ticket with that change_type enters the build system,
+  Then the new mandatory agent is included in the computed chain
+    without any ticket-level changes needed
+depends_on: [BO-520, BO-520-1, BO-510-1]
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Mapping must be machine-readable (JSON or YAML), not embedded in prose"
+  - "Mapping must be deterministic -- same input always produces same guardrail set"
+  - "Must be extensible without modifying the resolution engine"
+delivers_to:
+  agent: llm-expert
+  contract: "A machine-readable mapping from change_type to mandatory agents with before/after positioning"
+expects_from:
+  ac_id: BO-520-1
+  contract: "The five change_type enum values are defined and validated"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: BO-620
+covered_by: []
+implemented_by: []

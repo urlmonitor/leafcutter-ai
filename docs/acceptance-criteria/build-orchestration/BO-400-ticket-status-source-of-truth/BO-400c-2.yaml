@@ -1,0 +1,44 @@
+id: BO-400c-2
+title: "finalize-feature-archive-check scans by frontmatter, not folder position"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an epic folder at /worktree/tickets/01_todo/EPIC-Bar/ containing:
+    - Master_Plan.md
+    - 01_first_ticket.md  with frontmatter status: done
+    - 02_second_ticket.md with frontmatter status: done
+    - 03_third_ticket.md  with frontmatter status: done
+    (no done/ subfolder exists; all tickets are at the epic root),
+  When finalize-feature-archive-check is invoked with this epic_folder,
+  Then it finds all .md files recursively (excluding Master_Plan.md)
+  And it reads the `status:` field from each file's frontmatter
+  And it reports:
+    ok_count: 3, missing_count: 0, all_clear: true
+  And it does NOT require a done/ subfolder to exist
+  And the archive operation proceeds.
+depends_on: [BO-400c, BO-400a-3]
+doc_links:
+  - path: templates/skills/finalize-feature-archive-check/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Must scan recursively, not just at one folder depth"
+  - "Must exclude Master_Plan.md from validation"
+  - "Must report structured counts (ok_count, missing_count, all_clear) for downstream decision-making"
+  - "Must not require or check for the existence of a done/ subfolder"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

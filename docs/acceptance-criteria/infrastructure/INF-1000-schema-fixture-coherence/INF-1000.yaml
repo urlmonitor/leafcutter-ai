@@ -1,0 +1,30 @@
+id: INF-1000
+readiness: draft
+priority: medium
+title: "Schema changes never silently break test fixtures"
+component: infrastructure
+level: L0
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a JSON Schema file gains a new required field,
+  When test fixtures that conform to that schema are not updated to include the new field,
+  Then the gap is detected before the change lands on the main branch,
+  And the detection report names each stale fixture and the missing field,
+  And fixtures that already contain the new field are not flagged,
+  And schema changes that do not add required fields pass without fixture scanning.
+depends_on: []
+doc_links:
+  - config/ac_store_schema.json
+  - docs/reference/ac-schema.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [INF-1000a]
+implemented_by: []

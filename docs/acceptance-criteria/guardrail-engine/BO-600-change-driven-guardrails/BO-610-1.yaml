@@ -1,0 +1,48 @@
+id: BO-610-1
+title: "change_target enum definition with 10 canonical values"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the guardrail engine schema defines a change_target field,
+  When the schema is validated,
+  Then the change_target field accepts exactly these 10 enum values:
+    code, schema, ui, infra, pipeline, prompt, model, config, docs, dependency
+  And no other values are accepted by the schema validator
+  And each value is documented with a one-line definition:
+    - code: production application logic
+    - schema: database DDL, migration files, or seed data
+    - ui: user interface markup, styles, or client-side components
+    - infra: infrastructure-as-code, container definitions, or cloud resources
+    - pipeline: CI/CD workflows, build scripts, or deployment automation
+    - prompt: LLM prompt templates or system instructions
+    - model: ML/LLM model selection, parameters, or evaluation criteria
+    - config: application configuration files or environment variables
+    - docs: documentation, architecture guides, or README content
+    - dependency: third-party library versions or package manifest changes
+depends_on: [BO-610]
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-610.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Enum must be defined in a schema file, not hard-coded in validation logic"
+  - "Schema must be extensible -- adding a new enum value must not require modifying the validation engine"
+  - "Each enum value must have a documented one-line definition"
+delivers_to:
+  agent: python-coder
+  contract: "A schema definition file containing the change_target enum with 10 values and their descriptions"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

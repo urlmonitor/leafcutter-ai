@@ -1,0 +1,39 @@
+id: BO-900a-2
+readiness: draft
+priority: medium
+title: "User prompt with merge-or-continue choice when threshold exceeded"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the sync-checkpoint has been triggered
+    because the worktree is 25 commits ahead of origin/main
+    and the threshold is 20,
+  When the build-epic workflow presents the sync prompt to the user,
+  Then the prompt message includes:
+    - the exact commit count ahead (25),
+    - the threshold value (20),
+    - a warning that continuing without merging increases merge-conflict risk,
+  And the prompt offers exactly two choices:
+    - "Merge origin/main into the worktree now" (the recommended default),
+    - "Continue without merging",
+  And the workflow pauses until the user responds,
+  And if the user chooses to continue without merging,
+    the workflow resumes with the next batch without any merge operation.
+depends_on: [BO-900a, BO-900a-1]
+doc_links:
+  - templates/skills/building-epics/SKILL.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-900a-1
+  contract: "The commit_count_ahead integer that triggered the checkpoint"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

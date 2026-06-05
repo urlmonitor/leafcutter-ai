@@ -1,0 +1,49 @@
+id: BO-400c-1-i
+title: "Backward compatibility: old epics with done/ subfolder still work"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a legacy epic folder at /worktree/tickets/01_todo/EPIC-Legacy/ containing:
+    - Master_Plan.md (at root)
+    - 04_incomplete.md with status: todo (at root)
+    - done/01_first.md with status: done
+    - done/02_second.md with status: done
+    - done/03_third.md with status: done,
+  When /build-feature computes the dependency graph for this epic,
+  Then it scans ticket files in BOTH the epic root AND the done/ subfolder
+  And it reads `status:` from each ticket's frontmatter
+  And it correctly identifies done/01_first.md, done/02_second.md,
+    done/03_third.md as completed (status: done)
+  And it identifies 04_incomplete.md as the only remaining work
+  And the dependency resolver excludes the three done tickets
+    from the active graph
+  And no error or warning is emitted about the done/ subfolder existing.
+depends_on: [BO-400c-2]
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/finalize-feature-archive-check/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must scan recursively (including subdirectories) when building the ticket list"
+  - "Must not emit warnings about the existence of a done/ subfolder"
+  - "Must use frontmatter status as the sole completion signal, ignoring folder position"
+  - "Must handle tickets in done/ that lack a status field by treating them as status: done (backward compat)"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,44 @@
+id: BO-520-1-i
+title: "Ticket with missing change_type is rejected by the build system"
+component: build-orchestration
+level: L3
+status: superseded
+req_status: superseded
+work_status: todo
+criteria: |
+  Given a ticket markdown file has valid YAML frontmatter with status, priority,
+    agents map, and files_touched,
+  But the frontmatter does NOT contain a "change_type" field,
+  When ticket-supervisor attempts to dispatch this ticket,
+  Then it rejects the ticket before spawning any phase agent
+  And it returns status: blocker with the payload:
+    blocker_summary: "Ticket is missing required field 'change_type'"
+  And the error message lists the valid enum values:
+    "Valid values: flow_change, data_change, doc_change, prompt_change, config_change"
+  And no agents are spawned and no files are modified
+depends_on: [BO-520-1]
+doc_links:
+  - path: templates/agents/ticket-supervisor.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-ticket-workflow-dispatch.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Rejection must happen before any agent dispatch to avoid wasted computation"
+  - "Error message must be actionable -- list valid enum values"
+delivers_to: null
+expects_from:
+  ac_id: BO-520-1
+  contract: "Ticket frontmatter schema defines change_type as a required field for build dispatch"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: BO-610-3-i
+covered_by: []
+implemented_by: []

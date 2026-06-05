@@ -1,0 +1,41 @@
+id: BO-400b-3
+title: "Script stages the modified ticket file after a successful update"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket file at path /path/to/epic/03_some_ticket.md
+    tracked by git with no uncommitted changes,
+  When the script successfully updates the status field
+    (exit code 0),
+  Then it runs git add on the modified ticket file
+  And a subsequent git status --porcelain on that file path
+    shows the file in the staged-modified state
+    (the index column shows M).
+depends_on: [BO-400b, BO-400b-1]
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must only stage the single modified ticket file, not other changes in the working tree"
+  - "Must not stage when the transition is rejected (exit code 1)"
+  - "Must not stage when the transition is a no-op (file unmodified)"
+  - "Must handle the case where the file is not tracked by git gracefully"
+delivers_to: null
+expects_from:
+  ac_id: BO-400b-1
+  contract: "The base script structure (argument parsing, frontmatter read/write) that this AC extends with git-add staging after successful writes"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

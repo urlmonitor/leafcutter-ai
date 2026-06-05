@@ -1,0 +1,63 @@
+id: BO-560-2
+title: "Computed chain places mandatory agents in correct priority order"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket has change_type: flow_change
+    and work agent python-coder (produces: production_code),
+  When ticket-supervisor computes the agent chain,
+  Then the sequence respects these ordering invariants:
+    1. status-checker (priority 1) -- if needed
+    2. adr-author (priority 2) -- if needed
+    3. architecture-diagram-author (priority 3) -- if needed
+    4. architect-review (priority 4) -- mandatory for flow_change
+    5. test-writer (priority 5) -- mandatory for production_code
+    6. python-coder (priority 6) -- the work agent
+    7. test-runner (priority 9) -- mandatory for production_code
+    8. documentation-expert (priority 10) -- mandatory pre-coder for flow_change,
+       but also has post-coder documentation duties
+    9. pr-reviewer (priority 11) -- always present
+    10. ac-fulfillment-gate (priority 11.7) -- if ac_traceability present
+    11. commit (priority 12) -- always present
+    12. pull-request (priority 13) -- always present
+  And no agent appears more than once in the chain
+  And all mandatory agents for the change_type are present
+  And all TDD agents for the produces trait are present
+  And conditional agents (user-surface-smoker, ac-validator) are included
+    only when their conditional_field is set on the ticket
+
+  Given two agents share the same priority number
+    (e.g. sql-coder and sql-query both at priority 7),
+  When they are both required in the same chain,
+  Then they are ordered by their registry array position (stable sort)
+  And neither blocks the other (they could theoretically run in parallel)
+depends_on: [BO-560, BO-560-1]
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-ticket-workflow-dispatch.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Priority ordering must match agent_registry.json -- no hard-coded ordering"
+  - "Stable sort must be used for agents with equal priority to ensure determinism"
+  - "No agent may appear more than once in the computed chain"
+delivers_to: null
+expects_from:
+  ac_id: BO-560-1
+  contract: "Chain computation algorithm that needs to respect priority ordering"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

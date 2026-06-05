@@ -1,0 +1,56 @@
+id: BO-560-3-i
+title: "Pre-existing agents map is fully replaced, not merged, with audit trail"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket has a manually-authored agents map:
+    agents:
+      python-coder: needed
+      custom-review-agent: needed
+      commit: needed
+  And custom-review-agent is NOT a standard phase agent in agent_registry.json,
+  And the ticket has change_type: flow_change,
+  When ticket-supervisor computes and writes the replacement agents map,
+  Then custom-review-agent is NOT present in the new map
+    (it was not produced by the guardrails rules or registry)
+  And the ticket-supervisor appends a comment to the ticket's ## Comments section:
+    "Computed agent chain replaced manual agents map.
+     Removed: custom-review-agent (not in computed chain).
+     Added: architect-review, documentation-expert, test-writer, test-runner,
+       pr-reviewer, pull-request."
+  And the comment uses the standard signoff comment format
+
+  Given the ticket had agents with status: signed_off in the old map,
+  When the replacement occurs,
+  Then signed_off statuses are preserved for agents present in both maps
+  And the audit comment notes which agents retained their signed_off status:
+    "Preserved: python-coder (signed_off), commit (signed_off)"
+depends_on: [BO-560-3]
+doc_links:
+  - path: templates/agents/ticket-supervisor.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-ticket-workflow-dispatch.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Audit comment must use the standard signoff comment format from the signoff skill"
+  - "Must list all added and removed agents explicitly for traceability"
+delivers_to: null
+expects_from:
+  ac_id: BO-560-3
+  contract: "Map replacement logic that overwrites the manual agents map"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

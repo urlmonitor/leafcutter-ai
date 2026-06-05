@@ -1,0 +1,42 @@
+id: BO-620-2
+title: "Code-internal pair maps to standard TDD guardrail only"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket has change_target: code and risk_surface: internal,
+  When the guardrail engine resolves the applicable quality gates,
+  Then the resulting guardrail set contains exactly one mandatory gate:
+    - standard_tdd: tests are written before implementation and verified after
+  And no additional gates are included (no architecture review, no migration plan,
+    no consumer notification)
+  And the guardrail set is returned as a list containing one gate identifier
+
+  Given a second ticket also has change_target: code and risk_surface: internal,
+  When the guardrail engine resolves its quality gates,
+  Then it produces the identical guardrail set as the first ticket
+  And the mapping is deterministic for the same (target, surface) input
+depends_on: [BO-620, BO-610-1, BO-610-2]
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-620.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Mapping entry must be a single declarative configuration, not procedural logic"
+delivers_to: null
+expects_from:
+  ac_id: BO-610-1
+  contract: "The change_target enum including 'code' as a valid value"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

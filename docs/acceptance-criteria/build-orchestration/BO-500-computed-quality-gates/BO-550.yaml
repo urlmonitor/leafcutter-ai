@@ -1,0 +1,26 @@
+id: BO-550
+title: "Unusual testing needs are expressed as constraints, not agent assignments"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  The IT PO declares testing conditions without touching the agent sequence.
+
+  When a change requires special testing conditions (real database, staging
+  environment, integration coverage), the IT PO sets constraint fields that
+  the test-writer reads and respects. The IT PO never adds or removes agents
+  from the sequence -- only describes the conditions under which tests should
+  run. This keeps the IT PO focused on work breakdown and technical requirements
+  while the system handles agent orchestration.
+depends_on: [BO-530]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

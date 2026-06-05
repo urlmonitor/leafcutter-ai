@@ -1,0 +1,27 @@
+id: BO-630
+title: "Every agent's work is routed to the right model tier based on complexity"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Straightforward work uses a faster model; hard problems get heavier reasoning.
+
+  Every agent in the system -- architects, analysts, coders, reviewers -- has
+  its work routed to a model tier based on the estimated complexity of the task.
+  Low and medium complexity work goes to a faster, cheaper model that handles
+  known patterns well. High complexity work goes to a model with deeper
+  reasoning capability for novel or irreducible problems. The routing is
+  automatic and system-wide, so the right amount of compute is applied to every
+  task without anyone manually selecting models.
+depends_on: [BO-600]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

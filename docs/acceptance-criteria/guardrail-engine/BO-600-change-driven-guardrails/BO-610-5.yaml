@@ -1,0 +1,50 @@
+id: BO-610-5
+title: "Unrecognized change_target or risk_surface value is rejected at validation"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket file has change_target set to "database" (not in the enum),
+  When the frontmatter validation runs,
+  Then it rejects the ticket with an error message:
+    "Invalid change_target 'database'. Valid values: code, schema, ui, infra, pipeline, prompt, model, config, docs, dependency"
+  And the error names the invalid value and lists all valid alternatives
+
+  Given a ticket file has risk_surface set to "performance" (not in the enum),
+  When the frontmatter validation runs,
+  Then it rejects the ticket with an error message:
+    "Invalid risk_surface 'performance'. Valid values: internal, contract, auth, privacy, safety, cost"
+  And the error names the invalid value and lists all valid alternatives
+
+  Given a ticket file has change_target: [code, database] where one value is valid and one is not,
+  When the frontmatter validation runs,
+  Then it rejects the ticket identifying only the invalid value "database"
+  And it does not reject the valid value "code"
+depends_on: [BO-610, BO-610-1, BO-610-2]
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-610-1.yaml
+    relationship: depends_on
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-610-2.yaml
+    relationship: depends_on
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Error messages must be actionable -- always list valid alternatives"
+  - "Must identify only the invalid values in a mixed-valid list, not reject the entire list"
+delivers_to: null
+expects_from:
+  ac_id: BO-610-1
+  contract: "The canonical enum values for change_target and risk_surface"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,46 @@
+id: BO-620-1-i
+title: "Multi-value change_target unions all guardrails from each target's mapping"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket has change_target: [schema, code] and risk_surface: contract,
+  When the guardrail engine resolves the applicable quality gates,
+  Then it computes the guardrail set for (schema, contract):
+    migration_plan, backward_compat_check, consumer_notification, standard_tdd
+  And it computes the guardrail set for (code, contract):
+    standard_tdd, backward_compat_check, consumer_notification
+  And the final guardrail set is the UNION of both sets:
+    migration_plan, backward_compat_check, consumer_notification, standard_tdd
+  And duplicate gates (standard_tdd appears in both) are included only once
+  And the gate ordering follows the canonical sequence defined in the mapping
+
+  Given a ticket has change_target: [ui, prompt] and risk_surface: safety,
+  When the guardrail engine resolves the applicable quality gates,
+  Then the union includes gates from both (ui, safety) and (prompt, safety)
+  And no gate appears more than once in the final list
+depends_on: [BO-620-1, BO-610-3]
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-620-1.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-610-3.yaml
+    relationship: depends_on
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: M
+it_requirements:
+  - "Union must deduplicate gates that appear in multiple target mappings"
+  - "Gate ordering must follow a canonical sequence defined in the mapping"
+delivers_to: null
+expects_from:
+  ac_id: BO-620-1
+  contract: "The guardrail mapping that resolves (target, surface) pairs to gate sets"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

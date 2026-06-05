@@ -1,0 +1,46 @@
+id: BO-630-1
+title: "Low and medium complexity tasks route to the faster model tier"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket has estimated_complexity: S (low),
+  When the guardrail engine determines the model tier for any agent working on this ticket,
+  Then the agent is routed to the faster model tier (Sonnet-class)
+  And this routing applies to every agent in the ticket's agent chain:
+    architect, business-analyst, it-po, python-coder, test-writer, pr-reviewer
+
+  Given a ticket has estimated_complexity: M (medium),
+  When the guardrail engine determines the model tier,
+  Then the agent is also routed to the faster model tier (Sonnet-class)
+  And there is no difference in model tier between S and M complexity
+
+  Given two tickets, one with estimated_complexity: S and one with estimated_complexity: M,
+  When both are processed by the same agent type,
+  Then both agents run on the same model tier
+  And the model tier selection is recorded in the agent dispatch metadata
+depends_on: [BO-630]
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-630.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Routing logic must be deterministic for the same complexity input"
+  - "Model tier selection must be recorded in dispatch metadata for audit"
+delivers_to:
+  agent: python-coder
+  contract: "Model tier routing logic that maps S and M complexity to the faster tier"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

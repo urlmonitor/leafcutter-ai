@@ -1,0 +1,42 @@
+id: BO-400a-1-i
+title: "Ticket already in_progress from a previous failed run"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket file with frontmatter `status: in_progress`
+    and an `agents:` map containing entries with value `needed`
+    (indicating a prior supervisor run started but did not complete),
+  When ticket-supervisor begins driving this ticket
+    and invokes set_ticket_status.py with --status in_progress,
+  Then the script detects the existing `status: in_progress`
+  And it treats in_progress -> in_progress as an idempotent no-op
+  And it exits with code 0
+  And it prints: "status: in_progress -> in_progress (no change)"
+  And ticket-supervisor proceeds to spawn the first needed phase agent
+    without error or warning.
+depends_on: [BO-400a-1]
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Supervisor must treat exit code 0 from set_ticket_status.py as success regardless of whether the status actually changed"
+  - "Must not emit warnings or errors to the user when status is already in_progress"
+delivers_to: null
+expects_from:
+  ac_id: BO-400b-1
+  contract: "CLI script at scripts/set_ticket_status.py with idempotent same-status handling; exits 0 and prints '(no change)' suffix when old == new"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

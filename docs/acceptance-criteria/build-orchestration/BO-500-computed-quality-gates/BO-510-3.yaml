@@ -1,0 +1,56 @@
+id: BO-510-3
+title: "Validation test fails when any agent entry or template lacks the produces field"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a test file exists that scans all entries in agent_registry.json
+    and all .md files in templates/agents/,
+  When the test is executed against a registry where one agent entry
+    (e.g. "python-coder") has its "produces" field removed,
+  Then the test FAILS with an assertion error
+  And the error message names the agent ID missing the field:
+    "Agent 'python-coder' in agent_registry.json is missing the 'produces' field"
+
+  Given the same test is executed against a template file
+    (e.g. templates/agents/python-coder.md) where the "produces" frontmatter
+    key has been removed,
+  When the test scans all template files with non-null template_path in the registry,
+  Then the test FAILS with an assertion error
+  And the error message names the template file:
+    "Template 'templates/agents/python-coder.md' is missing the 'produces' frontmatter field"
+
+  Given all agent registry entries have "produces" populated
+    and all templates with non-null template_path have "produces" in frontmatter,
+  When the test runs,
+  Then it PASSES with zero errors
+  And it reports the count of agents validated:
+    "Validated N agents in registry, M templates on disk"
+depends_on: [BO-510, BO-510-1, BO-510-2]
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: M
+it_requirements:
+  - "Test must be deterministic -- no network or filesystem side-effects beyond reading"
+  - "Test must complete within 5 seconds for the full agent registry scan"
+  - "Must handle agents with template_path: null by skipping, not failing"
+delivers_to:
+  agent: python-coder
+  contract: "A failing test that the implementation must make pass by adding produces to all agents"
+expects_from:
+  ac_id: BO-510-1
+  contract: "Schema definition of the produces field and its enum values"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

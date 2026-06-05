@@ -1,0 +1,58 @@
+id: BO-550-1-i
+title: "IT PO modifying agents map for testing is rejected in favor of test_constraints"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the computed agent chain system (BO-560) derives the agents map
+    from change_type and produces traits,
+  And the IT PO attempts to manually add test-writer or test-runner
+    to the agents map with a non-standard status or position,
+  When the ticket enters the build system,
+  Then the manually-authored agents map is overwritten by the computed chain
+  And the IT PO's manual test-agent additions are discarded
+  And the system uses the change_type and produces trait to determine
+    whether TDD agents are needed (not the IT PO's manual additions)
+
+  Given the IT PO wants integration tests instead of unit tests,
+  When the IT PO sets test_constraints: { isolation: integration }
+    instead of manually adding agents,
+  Then the computed chain still includes test-writer (because the work agent
+    produces production_code)
+  And test-writer reads the test_constraints to write integration tests
+  And the IT PO's intent is honored without touching the agents map
+
+  Given a validation check runs on ticket frontmatter before dispatch,
+  When an agents map contains manually-added test-writer or test-runner
+    entries that conflict with the computed chain,
+  Then a warning is emitted:
+    "agents map will be recomputed -- manual test agent entries will be overridden.
+    Use test_constraints to control testing strategy."
+depends_on: [BO-550-1, BO-560-3]
+doc_links:
+  - path: templates/agents/it-po-v3.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/ticket-supervisor.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-009-itpo-no-source-code-access.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Warning must be informative, not blocking -- the computed chain takes precedence silently"
+  - "test_constraints is the ONLY channel for the IT PO to influence test strategy"
+delivers_to: null
+expects_from:
+  ac_id: BO-550-1
+  contract: "test_constraints is the sanctioned channel for the IT PO to influence testing"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

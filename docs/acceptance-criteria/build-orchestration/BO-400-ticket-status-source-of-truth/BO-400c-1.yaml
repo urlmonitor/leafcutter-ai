@@ -1,0 +1,41 @@
+id: BO-400c-1
+title: "ticket-supervisor does not move files to done/"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket at path /worktree/tickets/01_todo/EPIC-Foo/03_some_ticket.md
+    with all entries in the agents: map in {signed_off, not_needed}
+    and the set_ticket_status.py script available,
+  When ticket-supervisor completes the ticket (pending list is empty),
+  Then it invokes set_ticket_status.py with --status done
+  And it does NOT invoke git mv to move the file to a done/ subfolder
+  And it does NOT create a done/ subfolder if one does not exist
+  And the ticket file remains at its original path after completion:
+    /worktree/tickets/01_todo/EPIC-Foo/03_some_ticket.md
+depends_on: [BO-400c, BO-400b-1]
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Must remove any existing git mv instruction from the supervisor's completion path"
+  - "Must not create a done/ subfolder under any circumstance"
+  - "Must invoke set_ticket_status.py as the sole mechanism for expressing ticket completion"
+delivers_to: null
+expects_from:
+  ac_id: BO-400b-1
+  contract: "CLI script at scripts/set_ticket_status.py accepting --ticket <path> --status done; exits 0 on success after updating frontmatter and staging the file"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,33 @@
+id: INF-1000a
+readiness: draft
+priority: medium
+title: "Adding a required schema field surfaces all stale fixtures before merge"
+component: infrastructure
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  When a commit adds a new entry to the "required" array of a JSON Schema
+  file that test fixtures depend on, the commit pipeline detects every
+  fixture file that uses that schema but lacks the new required field.
+  The result is a blocking error that names the stale files and the
+  missing field, preventing the regression from reaching main.
+  This is the exact failure mode from EPIC-ACDrivenDevelopment: ticket 00
+  added "priority" and "readiness" as required fields to ac_store_schema.json,
+  but test fixtures were not updated, causing a test failure caught only
+  during finalization.
+depends_on: [INF-1000]
+doc_links:
+  - config/ac_store_schema.json
+  - docs/reference/ac-schema.md
+assigned_agent: null
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [INF-1000a-1, INF-1000a-2, INF-1000a-3]
+implemented_by: []

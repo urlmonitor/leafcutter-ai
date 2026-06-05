@@ -1,0 +1,54 @@
+id: BO-660-2-i
+title: "Change_target with no explicit mapping falls back to the risk_surface default guardrails"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the guardrail mapping contains explicit entries for these pairs:
+    (schema, contract), (code, internal), (infra, contract), (prompt, safety), (ui, internal)
+  And the guardrail mapping defines risk_surface defaults:
+    - internal default: [standard_tdd]
+    - contract default: [backward_compat_check, consumer_notification, standard_tdd]
+    - auth default: [negative_path_tests, privilege_escalation_check, standard_tdd]
+    - privacy default: [data_flow_audit, retention_check, standard_tdd]
+    - safety default: [red_team_eval, human_signoff, standard_tdd]
+    - cost default: [cost_projection, threshold_check, standard_tdd]
+  And no explicit mapping exists for (docs, internal),
+  When a ticket has change_target: docs and risk_surface: internal,
+  Then the guardrail engine applies the internal-surface default: [standard_tdd]
+  And no explicit mapping is required for this combination to be resolved
+
+  Given no explicit mapping exists for (dependency, cost),
+  When a ticket has change_target: dependency and risk_surface: cost,
+  Then the guardrail engine applies the cost-surface default:
+    [cost_projection, threshold_check, standard_tdd]
+  And the resolution log records: "Fallback applied: (dependency, cost) -> cost defaults"
+
+  Given a change_target value has BOTH an explicit mapping AND a risk_surface default
+    would apply (e.g., explicit (schema, contract) exists),
+  When a ticket has that exact (target, surface) pair,
+  Then the explicit mapping takes precedence over the risk_surface default
+  And the fallback is NOT used when an explicit rule exists
+depends_on: [BO-660-2]
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-660-2.yaml
+    relationship: parent
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: M
+it_requirements:
+  - "Must define risk_surface defaults for all 6 surfaces"
+  - "Explicit mappings must always take precedence over defaults"
+  - "Resolution log must record which path (explicit or fallback) was used"
+delivers_to: null
+expects_from:
+  ac_id: BO-660-2
+  contract: "The fallback resolution logic that this edge case exercises"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

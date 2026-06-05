@@ -1,0 +1,47 @@
+id: BO-610-3-i
+title: "Empty change_target or risk_surface field is rejected"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket file has change_target set to an empty list: [],
+  When the frontmatter validation runs,
+  Then it rejects the ticket with an error message:
+    "change_target must contain at least one value"
+  And the ticket cannot proceed to the guardrail engine
+
+  Given a ticket file has change_target set to null,
+  When the frontmatter validation runs,
+  Then it rejects the ticket with the same error:
+    "change_target must contain at least one value"
+
+  Given a ticket file has risk_surface set to an empty string: "",
+  When the frontmatter validation runs,
+  Then it rejects the ticket with an error message:
+    "risk_surface must be one of: internal, contract, auth, privacy, safety, cost"
+
+  Given a ticket file has risk_surface set to null,
+  When the frontmatter validation runs,
+  Then it rejects the ticket with the same risk_surface error
+depends_on: [BO-610-3]
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-610-3.yaml
+    relationship: parent
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+it_requirements:
+  - "Test must cover both null and empty-list cases for change_target"
+  - "Test must cover both null and empty-string cases for risk_surface"
+delivers_to: null
+expects_from:
+  ac_id: BO-610-4
+  contract: "Frontmatter validation logic for change_target and risk_surface fields"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

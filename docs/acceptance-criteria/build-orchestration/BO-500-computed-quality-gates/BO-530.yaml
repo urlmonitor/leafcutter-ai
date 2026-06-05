@@ -1,0 +1,26 @@
+id: BO-530
+title: "Code changes always get tests written first and verified after"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  When the change type implies production code, tests are mandatory and automatic.
+
+  The system injects test-writing before the implementation agent runs and
+  test-verification after it finishes. This is a system invariant -- no one
+  decides per ticket whether TDD applies. If tests fail after implementation,
+  the failure is handed back to the same implementation agent with the relevant
+  context to fix. The coder always has a failing test to code against, and
+  the build never completes with unverified code.
+depends_on: [BO-510, BO-610]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

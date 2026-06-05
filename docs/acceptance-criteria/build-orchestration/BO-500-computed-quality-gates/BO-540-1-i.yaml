@@ -1,0 +1,56 @@
+id: BO-540-1-i
+title: "Coder dispatch is blocked if architect-review has not signed off"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket has change_type: flow_change
+    and the computed agent chain includes architect-review before python-coder,
+  When ticket-supervisor evaluates the next agent to dispatch
+    and architect-review's status is still "needed" (not yet dispatched)
+    or "in_progress" (dispatched but not signed off),
+  Then ticket-supervisor does NOT dispatch python-coder
+  And it does NOT dispatch test-writer
+  And it reports the ordering dependency:
+    "Waiting on architect-review to sign off before dispatching test-writer"
+
+  Given architect-review returns status: blocker
+    (e.g. the design has unresolved concerns),
+  When ticket-supervisor processes the blocker,
+  Then the entire chain halts at the architect-review stage
+  And no downstream agents (test-writer, python-coder, test-runner) are dispatched
+  And the ticket escalates with the architect-review blocker payload
+
+  Given architect-review signs off with status: ok,
+  When ticket-supervisor evaluates the next agent,
+  Then it proceeds to documentation-expert (for flow_change)
+    or test-writer (for data_change)
+  And the ordering invariant is satisfied
+depends_on: [BO-540-1]
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/ticket-supervisor.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-ticket-workflow-dispatch.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Blocking must be enforced by the dispatch loop, not advisory"
+  - "Blocker escalation must follow the standard adjudication ladder in building-epics skill"
+delivers_to: null
+expects_from:
+  ac_id: BO-540-1
+  contract: "Computed chain places architect-review before coder with strict ordering"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

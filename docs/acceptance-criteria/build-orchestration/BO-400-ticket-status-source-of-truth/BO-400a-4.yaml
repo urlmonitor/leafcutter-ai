@@ -1,0 +1,45 @@
+id: BO-400a-4
+title: "Dependency graph uses frontmatter status to determine completed tickets"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an epic folder with 4 tickets (none in a done/ subfolder):
+    - T1.md with `status: done`
+    - T2.md with `status: in_progress`
+    - T3.md with `status: todo` and `depends_on: [T1]`
+    - T4.md with `status: todo` and `depends_on: [T2, T3]`,
+  When /build-feature computes the next_ready_batch,
+  Then T1 is excluded from the dependency graph (status: done)
+  And T3 is included in the ready set
+    (its dependency T1 has status: done, satisfying the depends_on)
+  And T4 is NOT in the ready set (T2 is not done)
+  And T2 is NOT in the ready set (status: in_progress, already being driven)
+  And the computation never checks whether any file is in a done/ subfolder.
+depends_on: [BO-400a, BO-100]
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must determine ticket completion solely from frontmatter status field, never from folder position"
+  - "Must exclude both 'done' and 'in_progress' tickets from the ready set"
+  - "Must complete dependency graph computation in <500ms for epics with up to 50 tickets"
+  - "Must handle tickets with missing status field by treating them as status: todo"
+delivers_to:
+  agent: llm-expert
+  contract: "ticket_prioritizer.py returns a ready-set list that excludes done and in_progress tickets; consumed by building-epics SKILL.md inline batching logic"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

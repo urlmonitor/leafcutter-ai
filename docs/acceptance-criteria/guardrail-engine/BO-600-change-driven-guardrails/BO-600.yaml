@@ -1,0 +1,33 @@
+id: BO-600
+title: "The system routes quality gates from what you are changing and how complex it is"
+component: build-orchestration
+level: L0
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Quality guardrails computed from two axes -- no manual curation needed.
+
+  Every unit of work is classified along two dimensions: what you are touching
+  (code, schema, UI, infrastructure, prompts, etc.) and where the blast radius
+  lands (internal, contract boundary, auth, privacy, safety, cost). The
+  combination of these two axes determines which quality gates fire -- migration
+  plans, security reviews, TDD, visual regression, red-team evals -- without
+  anyone hand-picking agents per ticket.
+
+  On top of this, the system routes each agent's work to the right model tier
+  based on complexity. Straightforward work uses a faster, cheaper model;
+  genuinely hard problems get heavier reasoning. Before accepting that something
+  is hard, the system challenges the team to simplify -- creating a built-in
+  incentive toward decomposition and simplicity.
+depends_on:
+  - BO-500
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [BO-610, BO-620, BO-630, BO-640, BO-650, BO-660]
+implemented_by: []

@@ -1,0 +1,45 @@
+id: BO-630-1-i
+title: "Task with no estimated_complexity field defaults to medium (faster model)"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket file has valid change_target and risk_surface fields
+    but the estimated_complexity field is entirely absent from frontmatter,
+  When the guardrail engine determines the model tier for agents on this ticket,
+  Then it defaults to M (medium) complexity
+  And the agent is routed to the faster model tier (Sonnet-class)
+  And no error or warning is raised about the missing field
+
+  Given a ticket file has estimated_complexity set to null,
+  When the guardrail engine determines the model tier,
+  Then it treats null identically to absent: defaults to M complexity
+  And routes to the faster model tier
+
+  Given a ticket file has estimated_complexity set to an unrecognized value "XL",
+  When the guardrail engine determines the model tier,
+  Then it rejects the ticket with an error:
+    "Invalid estimated_complexity 'XL'. Valid values: S, M, H"
+  And it does NOT fall back to a default -- invalid values are distinct from absent values
+depends_on: [BO-630-1]
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-630-1.yaml
+    relationship: parent
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+it_requirements:
+  - "Absent field must default to M, not error"
+  - "Invalid values (not in S/M/H) must error, not default"
+delivers_to: null
+expects_from:
+  ac_id: BO-630-1
+  contract: "Model tier routing logic that this edge case tests"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,25 @@
+id: BO-510
+title: "Every agent declares what it does, so the system knows what it is capable of"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Agents carry a machine-readable trait that tells the build system what they produce.
+
+  Each agent in the registry declares its class or production type (e.g., produces
+  production code, produces documentation, produces configuration). The build system
+  reads this trait to determine which guardrails the agent requires. New agents
+  inherit the correct quality gates just by declaring their trait -- no workflow
+  changes needed.
+depends_on: [BO-500]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

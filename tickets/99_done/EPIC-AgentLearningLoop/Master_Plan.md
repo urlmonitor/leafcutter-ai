@@ -1,7 +1,7 @@
 ---
 title: "EPIC: Agent Learning Loop — Agents That Get Smarter Over Time"
 type: epic
-status: todo
+status: done
 components:
   - infrastructure
 created: 2026-06-05

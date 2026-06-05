@@ -1,0 +1,47 @@
+id: BO-640-3
+title: "Challenge failure (irreducible complexity) accepts high and routes to deeper model"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the complexity challenge (BO-640-1) has been triggered for a ticket with
+    estimated_complexity: H,
+  When the IT PO responds that the complexity is irreducible with a justification:
+    "This ticket involves novel cross-cutting architecture that cannot be decomposed
+     without losing coherence",
+  Then the ticket's estimated_complexity remains H
+  And the ticket is routed to the deeper-reasoning model tier (Opus-class)
+  And a rationale field records why complexity was accepted:
+    "Irreducible: <IT PO's justification>"
+  And the challenge step is recorded as completed (not skipped) in the audit trail
+
+  Given the IT PO responds with "cannot decompose" but provides no justification,
+  When the challenge gate processes the response,
+  Then it requires a justification before accepting high complexity:
+    "A rationale is required to accept high complexity. Why can this not be decomposed?"
+  And the ticket does not proceed to agent dispatch until a justification is provided
+depends_on: [BO-640, BO-640-1]
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-640-1.yaml
+    relationship: depends_on
+    status: exists
+  - path: docs/architecture/adrs/ADR-009-itpo-no-source-code-access.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Justification must be required -- empty justification must not be accepted"
+  - "Rationale field must be human-readable for audit"
+delivers_to: null
+expects_from:
+  ac_id: BO-640-1
+  contract: "The challenge gate that produces the IT PO's irreducibility response"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

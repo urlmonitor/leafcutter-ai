@@ -1,0 +1,45 @@
+id: BO-610-4-i
+title: "Ticket with change_target but missing risk_surface is rejected"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket file has change_target: code (a valid value)
+    but the risk_surface field is entirely absent from the frontmatter,
+  When the frontmatter validation runs,
+  Then it rejects the ticket with an error message:
+    "Missing required field 'risk_surface'. Both change_target and risk_surface must be present."
+  And the ticket cannot proceed to the guardrail engine
+
+  Given a ticket file has risk_surface: internal (a valid value)
+    but the change_target field is entirely absent from the frontmatter,
+  When the frontmatter validation runs,
+  Then it rejects the ticket with an error message:
+    "Missing required field 'change_target'. Both change_target and risk_surface must be present."
+  And the ticket cannot proceed to the guardrail engine
+
+  Given a ticket file has both fields entirely absent from the frontmatter,
+  When the frontmatter validation runs,
+  Then it rejects the ticket listing both missing fields in a single error message
+depends_on: [BO-610-4]
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-610-4.yaml
+    relationship: parent
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+it_requirements:
+  - "Test must cover single-field-missing and both-fields-missing scenarios"
+  - "Error message must list all missing fields in a single message, not fail on the first"
+delivers_to: null
+expects_from:
+  ac_id: BO-610-4
+  contract: "Frontmatter validation logic that checks for field presence"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

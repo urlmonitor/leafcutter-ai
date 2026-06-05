@@ -1,0 +1,52 @@
+id: BO-640-1-i
+title: "Challenge produces a structured rationale regardless of outcome"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the complexity challenge has been triggered and the IT PO has responded,
+  When the challenge outcome is "decomposed" (complexity reduced),
+  Then the challenge record contains:
+    - challenge_outcome: decomposed
+    - original_complexity: H
+    - resulting_complexity: M
+    - rationale: "<the IT PO's decomposition explanation>"
+    - sub_tickets_created: [<list of new ticket IDs, if any>]
+  And this record is persisted as metadata on the ticket
+
+  Given the complexity challenge has been triggered and the IT PO has responded,
+  When the challenge outcome is "accepted" (complexity confirmed irreducible),
+  Then the challenge record contains:
+    - challenge_outcome: accepted
+    - original_complexity: H
+    - resulting_complexity: H
+    - rationale: "<the IT PO's irreducibility justification>"
+    - sub_tickets_created: []
+  And this record is persisted as metadata on the ticket
+
+  Given a ticket has been through the challenge gate,
+  When any agent or human queries the ticket's complexity history,
+  Then the challenge record is retrievable and shows whether the complexity
+    was challenged and what the outcome was
+depends_on: [BO-640-1]
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-640-1.yaml
+    relationship: parent
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+it_requirements:
+  - "Challenge record must be persisted as ticket metadata for audit"
+  - "Both decomposed and accepted outcomes must produce the same structured format"
+delivers_to: null
+expects_from:
+  ac_id: BO-640-1
+  contract: "The challenge gate that produces the structured outcome this AC verifies"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

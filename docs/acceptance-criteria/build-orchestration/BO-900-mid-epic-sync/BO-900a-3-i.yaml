@@ -1,0 +1,36 @@
+id: BO-900a-3-i
+readiness: draft
+priority: medium
+title: "Merge conflict halts the epic with actionable diagnostics"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the user has chosen "Merge origin/main into the worktree now"
+    and origin/main contains changes that conflict with the worktree
+    (e.g. both branches modified the same line of the same file),
+  When the build-epic workflow attempts the merge,
+  Then the merge operation detects the conflict,
+  And the workflow aborts the merge (leaving no half-merged state in the worktree),
+  And the workflow halts the epic drive with a blocker message that includes:
+    - the list of conflicting file paths,
+    - the instruction "Resolve the conflicts manually, commit, then re-run /build-feature",
+  And no further ticket batches are dispatched after the failed merge,
+  And the worktree is left in a clean state (no merge markers in tracked files).
+depends_on: [BO-900a-3]
+doc_links:
+  - templates/skills/building-epics/SKILL.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-900a-3
+  contract: "The merge attempt that may produce conflicts"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

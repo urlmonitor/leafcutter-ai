@@ -1,0 +1,32 @@
+id: BO-900a-1-i
+readiness: draft
+priority: medium
+title: "Unreachable remote is treated as zero divergence (safe default)"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given an epic drive is running in a worktree
+    and the remote origin is unreachable (network timeout or DNS failure),
+  When the build-epic workflow attempts to compute the divergence count
+    between the worktree HEAD and origin/main,
+  Then the divergence computation fails gracefully,
+  And the workflow treats the divergence as zero (no checkpoint triggered),
+  And the workflow logs a warning:
+    "Could not reach origin/main to check divergence -- skipping sync checkpoint",
+  And the next batch is dispatched without interruption.
+depends_on: [BO-900a-1]
+doc_links:
+  - templates/skills/building-epics/SKILL.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,51 @@
+id: BO-400b-1
+title: "set_ticket_status.py accepts a ticket path and target status"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket file at path /path/to/epic/03_some_ticket.md
+    with current frontmatter including `status: todo`,
+  When the script is invoked as:
+    python set_ticket_status.py --ticket /path/to/epic/03_some_ticket.md --status in_progress
+  Then the script reads the ticket file
+  And it locates the `status:` field in the YAML frontmatter block
+    (the content between the first and second `---` delimiters)
+  And it replaces the value with `in_progress`
+  And it writes the file back preserving all other frontmatter fields unchanged
+  And it preserves all content below the frontmatter closing `---` delimiter unchanged
+  And it exits with code 0
+  And it prints the old and new status to stdout:
+    "status: todo -> in_progress"
+depends_on: [BO-400b]
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must preserve all existing frontmatter fields and their ordering when writing back"
+  - "Must preserve all content below the frontmatter closing --- delimiter unchanged"
+  - "Must follow the same script patterns as existing scripts in scripts/commit_guardian/"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must be idempotent — setting status to the current value must exit 0 without modifying the file"
+  - "Must not corrupt YAML frontmatter on round-trip (targeted field update, not full yaml.dump)"
+delivers_to:
+  agent: llm-expert
+  contract: "CLI script at scripts/set_ticket_status.py; interface: --ticket <absolute-path> --status <todo|in_progress|done> [--force]; exit 0 on success with stdout 'status: <old> -> <new>'; exit 1 on rejection with stderr explaining the reason"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

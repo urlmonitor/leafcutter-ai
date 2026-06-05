@@ -1,0 +1,47 @@
+id: BO-610-4
+title: "Every ticket frontmatter includes change_target and risk_surface fields"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket file under tickets/ has YAML frontmatter,
+  When the ticket frontmatter validation runs,
+  Then it requires the presence of a change_target field
+  And it requires the presence of a risk_surface field
+  And the change_target value is one or more members of the change_target enum
+  And the risk_surface value is exactly one member of the risk_surface enum
+
+  Given a ticket file has both change_target and risk_surface populated with valid values,
+  When the guardrail engine reads the ticket,
+  Then it uses these two fields as the input to determine which quality gates apply
+  And no other manual guardrail selection is needed from the ticket author
+depends_on: [BO-610, BO-610-1, BO-610-2]
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-610-1.yaml
+    relationship: depends_on
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-610-2.yaml
+    relationship: depends_on
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must extend the existing ticket_frontmatter_guard hook"
+  - "Must not break existing tickets that do not have these fields during the transition period"
+delivers_to:
+  agent: test-writer
+  contract: "Frontmatter validation that enforces change_target and risk_surface presence and enum membership"
+expects_from:
+  ac_id: BO-610-1
+  contract: "The change_target enum definition"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

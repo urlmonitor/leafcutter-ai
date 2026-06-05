@@ -1,0 +1,28 @@
+id: BO-500
+title: "The right quality gates happen automatically based on what you are changing"
+component: build-orchestration
+level: L0
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Declare what kind of change you are making, and the system assembles the full
+  team of agents -- reviewers, testers, documenters -- without anyone curating
+  a list by hand.
+
+  When a unit of work enters the build system, the only human decisions are:
+  what agent does the work, and what type of change is this. From those two
+  inputs, the system derives every quality gate that applies -- TDD for code,
+  architecture review for flow changes, documentation-first for new capabilities,
+  validation for config. The result is a build workflow where nothing slips
+  through because someone forgot to add an agent to a list.
+depends_on: []
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [BO-510, BO-530, BO-540, BO-550, BO-560]
+implemented_by: []

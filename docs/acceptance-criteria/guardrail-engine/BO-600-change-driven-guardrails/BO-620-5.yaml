@@ -1,0 +1,40 @@
+id: BO-620-5
+title: "UI-internal pair maps to visual regression + a11y audit + TDD"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket has change_target: ui and risk_surface: internal,
+  When the guardrail engine resolves the applicable quality gates,
+  Then the resulting guardrail set contains these mandatory gates:
+    - visual_regression: before/after screenshots are compared for unintended visual changes
+    - a11y_audit: accessibility checks verify WCAG compliance of the changed UI
+    - standard_tdd: tests are written before implementation and verified after
+  And the visual_regression gate captures a baseline screenshot before the change
+    and a comparison screenshot after, flagging pixel differences above a threshold
+  And the a11y_audit gate checks contrast ratios, ARIA attributes, and keyboard navigation
+depends_on: [BO-620, BO-610-1, BO-610-2]
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-620.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "visual_regression must capture baseline and comparison screenshots"
+  - "a11y_audit must check WCAG compliance criteria"
+delivers_to: null
+expects_from:
+  ac_id: BO-610-1
+  contract: "The change_target enum including 'ui' as a valid value"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

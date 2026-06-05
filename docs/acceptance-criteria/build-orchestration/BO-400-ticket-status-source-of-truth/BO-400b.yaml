@@ -1,0 +1,32 @@
+id: BO-400b
+title: "A dedicated script manages all ticket status transitions"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given ticket lifecycle state changes happen at predictable points
+    (drive start, drive completion, force-reset after failure),
+  When any agent or supervisor needs to change a ticket's status,
+  Then it invokes a single script that performs the update atomically,
+  And the script validates the transition before applying it,
+  And the script handles frontmatter parsing and serialization
+    without corrupting other fields,
+  So that status changes are consistent, auditable, and testable
+    independent of LLM behavior.
+depends_on: [BO-400]
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [BO-400b-1, BO-400b-2, BO-400b-3]
+implemented_by: []

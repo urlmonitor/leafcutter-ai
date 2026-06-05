@@ -1,0 +1,26 @@
+id: BO-610
+title: "Every change is classified by what it touches and where the blast radius lands"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Two-axis classification that captures both the target and the risk.
+
+  Every unit of work carries two fields: what you are touching (code, schema,
+  UI, infrastructure, pipeline, prompt, model, config, docs, dependency) and
+  where the blast radius lands (internal, contract boundary, auth, privacy,
+  safety, cost). Together these two axes give the system enough information to
+  determine which guardrails apply -- without requiring anyone to think about
+  agents or quality gates directly.
+depends_on: [BO-600]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

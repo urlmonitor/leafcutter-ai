@@ -1,0 +1,48 @@
+id: BO-650-4
+title: "Architect asks PO/BA clarifying questions when intent is ambiguous"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the architect agent is processing a ticket whose acceptance criteria
+    reference a behavior that could be implemented in two or more architecturally
+    distinct ways,
+  When the architect cannot determine the intended approach from the existing
+    documentation and the ticket's criteria alone,
+  Then the architect produces a structured clarification request:
+    - question: "<the specific ambiguity>"
+    - context: "<what the architect has read and why it is insufficient>"
+    - options: ["<approach A with tradeoffs>", "<approach B with tradeoffs>"]
+    - addressed_to: "PO" or "BA" depending on whether the ambiguity is about
+      user intent (PO) or behavioral specification (BA)
+  And the architect pauses its artifact production until the question is answered
+  And the clarification request is recorded in the ticket's comments section
+
+  Given the architect has received a response to its clarification question,
+  When it resumes artifact production,
+  Then its ADRs, diagrams, and documentation reflect the answered direction
+  And the ADR's Context section references the clarification exchange
+depends_on: [BO-650]
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-650.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Clarification request must be structured with question, context, options, addressed_to"
+  - "Must pause artifact production until the question is answered"
+  - "Must record the clarification exchange in the ticket comments"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

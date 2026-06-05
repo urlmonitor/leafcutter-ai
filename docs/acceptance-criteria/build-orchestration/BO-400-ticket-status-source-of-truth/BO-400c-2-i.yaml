@@ -1,0 +1,46 @@
+id: BO-400c-2-i
+title: "Mixed state: some tickets in done/ folder, some with status: done at root"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an epic folder in a transitional state:
+    - done/01_ticket.md with status: done (legacy, already moved)
+    - 02_ticket.md with status: done (new convention, not moved)
+    - 03_ticket.md with status: in_progress (active work),
+  When finalize-feature-archive-check runs on this epic folder,
+  Then it scans both the epic root AND the done/ subfolder for .md files
+    (excluding Master_Plan.md)
+  And it reads frontmatter `status:` from all 3 tickets
+  And it reports:
+    ok_count: 2 (done/01_ticket.md and 02_ticket.md both have status: done)
+    missing_count: 1
+    missing_tickets: [{path: "03_ticket.md", current_status: "in_progress"}]
+    all_clear: false
+  And it blocks the archive operation
+    until 03_ticket.md reaches status: done.
+depends_on: [BO-400c-2, BO-400c-1-i]
+doc_links:
+  - path: templates/skills/finalize-feature-archive-check/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Must scan both epic root and done/ subfolder when the subfolder exists"
+  - "Must report the specific path and current_status of each non-done ticket"
+  - "Must block the archive operation (all_clear: false) when any ticket is not status: done"
+  - "Must not treat folder position as a status signal — only frontmatter counts"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

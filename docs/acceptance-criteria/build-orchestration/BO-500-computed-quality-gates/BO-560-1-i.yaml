@@ -1,0 +1,51 @@
+id: BO-560-1-i
+title: "Work agent with missing produces trait causes chain computation to fail gracefully"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket assigns work agent "new-experimental-agent"
+    and that agent's registry entry does NOT have a "produces" field
+    (e.g. because it was added before BO-510 was implemented),
+  When ticket-supervisor attempts to compute the agent chain,
+  Then it does NOT silently default to any produces value
+  And it does NOT dispatch any agents
+  And it rejects the ticket with status: blocker
+  And the blocker payload includes:
+    blocker_summary: "Work agent 'new-experimental-agent' is missing the 'produces' field in agent_registry.json"
+    resolution: "Add a 'produces' field with a valid enum value to the agent's registry entry"
+  And the ticket status is set to "blocked"
+
+  Given the produces field is then added to the agent's registry entry,
+  When ticket-supervisor retries the ticket,
+  Then it reads the newly-added produces value
+  And it computes the agent chain without error
+  And the ticket proceeds through the computed chain
+depends_on: [BO-560-1, BO-510-1]
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+  - path: templates/agents/ticket-supervisor.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-ticket-workflow-dispatch.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Must never silently default -- missing produces must be a hard blocker"
+  - "Blocker payload must include actionable resolution instructions"
+delivers_to: null
+expects_from:
+  ac_id: BO-560-1
+  contract: "Chain computation algorithm that reads the produces field"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

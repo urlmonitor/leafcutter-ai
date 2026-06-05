@@ -1,0 +1,28 @@
+id: BO-650
+title: "The architect actively produces design artifacts, not just reviews"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Architecture work happens before implementation and produces real artifacts.
+
+  The architect is an active producer, not a passive reviewer. It finds relevant
+  existing architecture documentation, notices when documentation is missing,
+  and produces decision records, system diagrams, and architecture guides. It
+  can ask the PO and BA clarifying questions when the intent is ambiguous. It
+  runs at the goal and feature level -- before implementation begins -- so that
+  coders start with a clear design rather than inventing architecture on the fly.
+  Like all agents, its model tier follows complexity: known patterns use the
+  faster model, novel architecture gets heavier reasoning.
+depends_on: [BO-620, BO-630]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

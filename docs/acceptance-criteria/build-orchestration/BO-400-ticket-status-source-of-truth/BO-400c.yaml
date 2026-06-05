@@ -1,0 +1,33 @@
+id: BO-400c
+title: "The done/ subfolder convention is deprecated and replaced by frontmatter queries"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the legacy convention moves completed tickets to an epic's done/ subfolder,
+  When the new frontmatter-driven lifecycle is active,
+  Then ticket-supervisor no longer performs git mv to done/,
+  And all gates and queries that previously checked done/ now check status: done,
+  And the parity guard mechanically prevents new done/ folder moves,
+  And existing epics with tickets already in done/ continue to work correctly
+    (backward compatibility during the transition period).
+depends_on: [BO-400, BO-400a, BO-400b]
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/finalize-feature-archive-check/SKILL.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [BO-400c-1, BO-400c-2, BO-400c-3, BO-400c-4]
+implemented_by: []

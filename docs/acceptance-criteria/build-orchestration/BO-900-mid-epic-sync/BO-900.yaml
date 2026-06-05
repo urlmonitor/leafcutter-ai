@@ -1,0 +1,30 @@
+id: BO-900
+readiness: draft
+priority: medium
+title: "Long-running epics stay synchronized with main automatically"
+component: build-orchestration
+level: L0
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given an epic drive accumulates commits on a feature branch while main advances,
+  When the divergence between the worktree and origin/main grows beyond a threshold,
+  Then the build-epic workflow pauses and prompts the user to merge main,
+  And the user can accept the automatic merge or continue without merging,
+  And merge conflicts are surfaced immediately with actionable diagnostics,
+  And the threshold is configurable per project.
+depends_on: []
+doc_links:
+  - docs/architecture/agent_delivery_workflows.md
+  - templates/skills/building-epics/SKILL.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [BO-900a]
+implemented_by: []

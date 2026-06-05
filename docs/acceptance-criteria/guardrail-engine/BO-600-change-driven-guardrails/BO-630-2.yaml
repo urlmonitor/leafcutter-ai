@@ -1,0 +1,46 @@
+id: BO-630-2
+title: "High complexity tasks route to the deeper-reasoning model tier"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket has estimated_complexity: H (high),
+  When the guardrail engine determines the model tier for any agent working on this ticket,
+  Then the agent is routed to the deeper-reasoning model tier (Opus-class)
+  And this routing applies to every agent in the ticket's agent chain
+
+  Given two tickets: one with estimated_complexity: M and one with estimated_complexity: H,
+  When both are processed by the same agent type (e.g., python-coder),
+  Then the M-complexity ticket's agent runs on Sonnet-class
+  And the H-complexity ticket's agent runs on Opus-class
+  And the difference in model tier is the ONLY routing distinction based on complexity
+
+  Given a ticket has estimated_complexity: H and has passed the complexity challenge gate (BO-640),
+  When the agent is dispatched,
+  Then the dispatch metadata records: model_tier: opus, reason: "irreducible_complexity"
+  And the complexity challenge outcome is preserved as audit trail
+depends_on: [BO-630, BO-630-1]
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-630.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must integrate with the complexity challenge gate (BO-640)"
+  - "Dispatch metadata must record model_tier and reason for audit"
+delivers_to: null
+expects_from:
+  ac_id: BO-630-1
+  contract: "The model tier routing logic that this AC extends to the H tier"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

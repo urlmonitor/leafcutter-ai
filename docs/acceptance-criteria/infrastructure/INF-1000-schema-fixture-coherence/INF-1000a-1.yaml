@@ -1,0 +1,34 @@
+id: INF-1000a-1
+readiness: draft
+priority: medium
+title: "Detect stale fixtures when a required field is added to a schema"
+component: infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a staged commit modifies config/ac_store_schema.json
+    and the diff adds "readiness" to the "required" array,
+  And a test fixture file contains a YAML document conforming to that schema
+    but the YAML document does not contain a "readiness" field,
+  When the fixture-coherence check runs against the staged files,
+  Then the check identifies the fixture file as stale,
+  And the check identifies "readiness" as the missing required field,
+  And the check exits with a non-zero status (blocking the commit).
+depends_on: [INF-1000a]
+doc_links:
+  - config/ac_store_schema.json
+  - docs/reference/ac-schema.md
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A list of (fixture_path, missing_field_name) tuples for all stale fixtures"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

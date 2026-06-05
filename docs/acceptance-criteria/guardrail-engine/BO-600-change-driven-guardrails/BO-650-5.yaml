@@ -1,0 +1,51 @@
+id: BO-650-5
+title: "Architect runs at L0/L1 level, before implementation tickets are created"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a new L0 (goal) or L1 (feature) AC has been created by the PO,
+  When the guardrail engine evaluates whether architecture work is needed,
+  Then it triggers the architect agent at the L0/L1 level --
+    BEFORE any L2 decomposition or implementation tickets are created
+  And the architect produces design artifacts (ADRs, C4 diagrams, documentation)
+    that inform the subsequent BA decomposition and IT PO technical enrichment
+
+  Given the architect has completed its work at the L0/L1 level,
+  When the BA agent subsequently decomposes the L1 into L2 behaviors,
+  Then the BA has access to the architect's produced artifacts
+  And the L2 ACs can reference the architect's ADRs and diagrams in their doc_links
+
+  Given a ticket is classified as an implementation-only change (change_target: code,
+    risk_surface: internal, estimated_complexity: S),
+  When the guardrail engine evaluates whether architecture work is needed,
+  Then the architect is NOT triggered --
+    architecture work is reserved for structural or high-risk changes
+depends_on: [BO-650]
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-650.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "Must trigger at L0/L1 level BEFORE any L2 decomposition begins"
+  - "Must NOT trigger for low-risk internal code changes"
+  - "Must use the guardrail mapping to determine when architecture work is needed"
+delivers_to:
+  agent: python-coder
+  contract: "Guardrail engine logic that triggers the architect at L0/L1 level based on change classification"
+expects_from:
+  ac_id: BO-620-1
+  contract: "The guardrail mapping that determines which combinations require architecture gates"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

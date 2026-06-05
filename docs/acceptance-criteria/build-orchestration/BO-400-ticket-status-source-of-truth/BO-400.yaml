@@ -1,0 +1,35 @@
+id: BO-400
+title: "Know exactly which tickets are in progress, done, or waiting — without moving files around"
+component: build-orchestration
+level: L0
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an epic with multiple sub-tickets at various stages of completion,
+  When a supervisor or operator needs to determine ticket state,
+  Then the ticket's own YAML frontmatter `status:` field is the single source of truth,
+  And no file-system operation (folder move) is required to express state transitions,
+  And the backlog, in-progress view, and archive check all derive state from the same field,
+  So that parallel worktree branches never conflict on folder structure.
+depends_on: []
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/finalize-feature-archive-check/SKILL.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [BO-400a, BO-400b, BO-400c]
+implemented_by: []

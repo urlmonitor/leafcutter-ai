@@ -1,0 +1,41 @@
+id: BO-620-4
+title: "Prompt-safety pair maps to red-team eval + human sign-off"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket has change_target: prompt and risk_surface: safety,
+  When the guardrail engine resolves the applicable quality gates,
+  Then the resulting guardrail set contains these mandatory gates:
+    - red_team_eval: adversarial prompts are tested against the changed prompt template
+    - human_signoff: a human reviewer must explicitly approve the change before merge
+    - standard_tdd: tests are written before implementation and verified after
+  And the human_signoff gate cannot be satisfied by an automated agent --
+    it requires a sign-off from an identity that is not an agent
+  And the red_team_eval gate runs BEFORE human_signoff so the reviewer
+    sees the evaluation results when deciding whether to approve
+depends_on: [BO-620, BO-610-1, BO-610-2]
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-620.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "human_signoff gate must not be satisfiable by an automated agent"
+  - "red_team_eval must run BEFORE human_signoff in the gate sequence"
+delivers_to: null
+expects_from:
+  ac_id: BO-610-1
+  contract: "The change_target enum including 'prompt' as a valid value"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

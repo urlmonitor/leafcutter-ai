@@ -1,0 +1,53 @@
+id: BO-650-2
+title: "Architect produces ADRs when a design decision is required"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the architect agent is processing a ticket that introduces a new
+    architectural pattern or changes an existing one,
+  When the architect determines that a design decision needs to be recorded,
+  Then it produces an Architecture Decision Record (ADR) file in
+    docs/architecture/decisions/ with the standard ADR structure:
+    - Title: a concise statement of the decision
+    - Status: proposed, accepted, deprecated, or superseded
+    - Context: the problem or situation that led to the decision
+    - Decision: what was decided and why
+    - Consequences: positive and negative effects of the decision
+  And the ADR file is named following the sequential numbering convention
+    in the decisions directory
+  And the ADR references the ticket ID that triggered its creation
+
+  Given the architect discovers an existing ADR that covers the same decision area,
+  When the new ticket contradicts or extends that decision,
+  Then the architect produces a NEW ADR that supersedes the old one
+  And updates the old ADR's status to "superseded" with a reference to the new ADR
+depends_on: [BO-650, BO-650-1]
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-650.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/adrs/
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "ADR production must follow the standard ADR structure in docs/architecture/adrs/"
+  - "Must use sequential numbering convention from the adrs directory"
+  - "Must reference the triggering ticket ID in the ADR"
+delivers_to: null
+expects_from:
+  ac_id: BO-650-1
+  contract: "The discovery output that tells the architect which existing ADRs already exist"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

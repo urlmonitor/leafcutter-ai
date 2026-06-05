@@ -1,0 +1,40 @@
+id: BO-400b-2-i
+title: "Script handles missing status field gracefully"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket file with valid YAML frontmatter
+    (delimited by opening and closing `---` lines)
+    but no `status:` field present in the frontmatter block,
+  When the script is invoked with --status in_progress,
+  Then it treats the missing field as equivalent to `status: todo`
+  And the transition todo -> in_progress is valid per the allow-list
+  And it inserts `status: in_progress` into the frontmatter
+    (after the opening `---` line, preserving existing field order)
+  And it exits with code 0
+  And it prints: "status: (absent, treated as todo) -> in_progress"
+  And a subsequent read of the file shows `status: in_progress`
+    in the frontmatter block.
+depends_on: [BO-400b-1]
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must not raise an error when the status field is missing"
+  - "Must insert the field cleanly into the frontmatter without disrupting existing fields"
+  - "Must preserve the file's line-ending style (LF vs CRLF)"
+  - "Must log the absent-field condition in stdout for auditability"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

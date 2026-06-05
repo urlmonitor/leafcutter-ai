@@ -1,0 +1,40 @@
+id: BO-400a-3
+title: "finalize-feature reads status from frontmatter, not folder position"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an epic folder where all sub-tickets have frontmatter `status: done`
+    but none have been moved to a done/ subfolder
+    (all ticket files remain at the epic folder root),
+  When finalize-feature-archive-check runs its pre-archive validation,
+  Then it scans ALL .md files in the epic folder recursively
+    (excluding Master_Plan.md)
+  And it reads the `status:` frontmatter field from each ticket
+  And it reports all_clear: true because every ticket has `status: done`
+  And it does NOT require the existence of a done/ subfolder.
+depends_on: [BO-400a]
+doc_links:
+  - path: templates/skills/finalize-feature-archive-check/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Must scan recursively, not just at one folder depth"
+  - "Must exclude Master_Plan.md from the validation set"
+  - "Must read the status field from YAML frontmatter, never infer from folder position"
+  - "Must be backward compatible with epics that have a done/ subfolder"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

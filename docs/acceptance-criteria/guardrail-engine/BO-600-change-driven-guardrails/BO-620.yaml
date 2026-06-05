@@ -1,0 +1,28 @@
+id: BO-620
+title: "Each combination of target and risk surface maps to a known set of guardrails"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  A guardrail map turns classification into action -- no guesswork.
+
+  A defined mapping exists from every (change_target, risk_surface) pair to the
+  set of mandatory quality gates. Schema changes at a contract boundary get
+  migration plans and backward-compatibility checks. Code changes with internal
+  risk get standard TDD. Infrastructure changes at a contract boundary get
+  blast-radius review. Prompt changes touching safety get red-team evaluation
+  and human sign-off. UI changes get visual regression and accessibility audit
+  alongside TDD. The mapping is the single source of truth for what guardrails
+  apply to any given combination.
+depends_on: [BO-610]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

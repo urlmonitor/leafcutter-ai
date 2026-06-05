@@ -1,0 +1,27 @@
+id: BO-640
+title: "The system challenges high complexity before accepting it"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  A built-in simplicity incentive -- only genuinely hard problems get heavy compute.
+
+  Before escalating a task to the higher-reasoning model tier, the system
+  challenges the assessment: can this be decomposed into simpler pieces? Can the
+  scope be narrowed? If the IT PO can split the ticket or simplify the approach,
+  complexity drops and the faster model handles it. Only work that is genuinely
+  irreducible in complexity -- novel architecture, cross-cutting concerns that
+  resist decomposition -- gets the heavier model. This creates a systemic
+  pressure toward smaller, simpler units of work.
+depends_on: [BO-630]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

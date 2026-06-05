@@ -1,0 +1,48 @@
+id: BO-650-5-i
+title: "Architect's model tier follows the same complexity routing as all other agents"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the architect agent is triggered for a ticket with estimated_complexity: M,
+  When the guardrail engine routes the architect to a model tier,
+  Then the architect runs on the faster model tier (Sonnet-class)
+  And the routing logic is the SAME logic that routes python-coder, test-writer,
+    and all other agents -- no special-case routing for the architect
+
+  Given the architect agent is triggered for a ticket with estimated_complexity: H
+    that has passed the complexity challenge gate,
+  When the guardrail engine routes the architect to a model tier,
+  Then the architect runs on the deeper-reasoning model tier (Opus-class)
+  And this is the same tier assignment any other agent would receive for H complexity
+
+  Given the architect is triggered at L0/L1 level where no estimated_complexity
+    field exists yet (because L0/L1 ACs do not carry that field),
+  When the guardrail engine determines the model tier for the architect,
+  Then it defaults to M complexity (faster model tier) per the same default
+    rule applied to all agents (BO-630-1-i)
+depends_on: [BO-650-5, BO-630-1]
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-630-1.yaml
+    relationship: depends_on
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-650-5.yaml
+    relationship: parent
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+it_requirements:
+  - "Model tier routing must apply uniformly to all agents including the architect"
+  - "L0/L1 level ACs without estimated_complexity must default to M (Sonnet-class)"
+delivers_to: null
+expects_from:
+  ac_id: BO-630-1
+  contract: "The model tier routing logic that applies uniformly to all agents"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

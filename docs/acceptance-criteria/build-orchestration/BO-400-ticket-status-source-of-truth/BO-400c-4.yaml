@@ -1,0 +1,42 @@
+id: BO-400c-4
+title: "status-checker close-out calls set_ticket_status.py instead of git mv"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket that has been driven to completion by ticket-supervisor
+    (all agents in {signed_off, not_needed})
+    and status-checker is dispatched for the two-pass close-out,
+  When status-checker verifies the ticket is done-eligible,
+  Then it invokes set_ticket_status.py with --ticket <path> --status done
+  And it does NOT invoke git mv to move the ticket into a done/ subfolder
+  And it flips pull-request: needed -> signed_off in the agents map
+    (per the existing epic convention: one PR per epic, not per ticket)
+  And the ticket file remains at its original path after close-out.
+depends_on: [BO-400c, BO-400b-1]
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Must invoke set_ticket_status.py as the sole mechanism for expressing ticket completion"
+  - "Must remove any existing git mv instruction from the close-out path"
+  - "Must handle non-zero exit from set_ticket_status.py gracefully and surface the error"
+  - "Must preserve the existing pull-request sign-off behavior for epic tickets"
+delivers_to: null
+expects_from:
+  ac_id: BO-400b-1
+  contract: "CLI script at scripts/set_ticket_status.py accepting --ticket <path> --status done; exits 0 on success after updating frontmatter and staging the file"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

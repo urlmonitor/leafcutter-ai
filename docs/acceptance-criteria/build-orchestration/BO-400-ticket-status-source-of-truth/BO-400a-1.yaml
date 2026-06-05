@@ -1,0 +1,44 @@
+id: BO-400a-1
+title: "ticket-supervisor sets status to in_progress at drive start"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket file with frontmatter `status: todo`
+    and an `agents:` map containing at least one entry with value `needed`,
+  When ticket-supervisor begins driving this ticket
+    (before spawning the first phase agent),
+  Then it invokes set_ticket_status.py with --ticket <path> --status in_progress
+  And the script updates the ticket's frontmatter to `status: in_progress`
+  And the script stages the modified ticket file via git add
+  And the status change is visible to any concurrent reader of the ticket file
+    (e.g., ticket-prioritizer scanning the backlog).
+depends_on: [BO-400a, BO-400b-1]
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Must invoke set_ticket_status.py before spawning any phase agent"
+  - "Must handle non-zero exit from set_ticket_status.py gracefully per the project error handling policy"
+  - "Must be idempotent — re-driving a ticket already in_progress must not fail"
+delivers_to: null
+expects_from:
+  ac_id: BO-400b-1
+  contract: "CLI script at scripts/set_ticket_status.py accepting --ticket <path> --status <value>; exits 0 on success, prints 'status: <old> -> <new>' to stdout"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

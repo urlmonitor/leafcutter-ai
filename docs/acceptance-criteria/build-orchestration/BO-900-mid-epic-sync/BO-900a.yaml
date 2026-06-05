@@ -1,0 +1,30 @@
+id: BO-900a
+readiness: draft
+priority: medium
+title: "The epic workflow warns you before your branch drifts too far from main"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  After each ticket batch completes, the build-epic workflow checks how far
+  the worktree has diverged from origin/main. If the count of commits ahead
+  exceeds a configurable threshold (default: 20), it pauses the epic drive,
+  warns the user about merge-conflict risk, and offers to merge main into
+  the worktree automatically. The user decides whether to merge now or
+  continue without syncing.
+depends_on: [BO-900]
+doc_links:
+  - docs/architecture/agent_delivery_workflows.md
+  - templates/skills/building-epics/SKILL.md
+assigned_agent: null
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [BO-900a-1, BO-900a-2, BO-900a-3, BO-900a-4]
+implemented_by: []

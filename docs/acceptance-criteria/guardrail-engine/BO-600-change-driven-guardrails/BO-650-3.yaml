@@ -1,0 +1,47 @@
+id: BO-650-3
+title: "Architect produces C4 diagrams for structural changes"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the architect agent is processing a ticket that changes the structure
+    of a component or introduces a new component,
+  When the architect determines that the change affects system structure
+    (new containers, new components, or changed relationships between them),
+  Then it produces or updates a C4 diagram using the write-c4-diagram skill
+  And the diagram covers the appropriate C4 level:
+    - L1 (System Context) for new external integrations
+    - L2 (Container) for new services, databases, or runtime boundaries
+    - L3 (Component) for new modules or significant internal restructuring
+  And the diagram file is written to docs/architecture/diagrams/
+
+  Given an existing C4 diagram covers the component being changed,
+  When the architect produces an updated diagram,
+  Then the update is made to the existing diagram file (not a duplicate)
+  And the diagram's metadata records the ticket ID that triggered the update
+depends_on: [BO-650, BO-650-1]
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-650.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Must use the existing write-c4-diagram skill for diagram production"
+  - "Must update existing diagrams rather than creating duplicates"
+  - "Diagram metadata must record the triggering ticket ID"
+delivers_to: null
+expects_from:
+  ac_id: BO-650-1
+  contract: "The discovery output that tells the architect which existing diagrams already exist"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

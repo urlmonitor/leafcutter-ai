@@ -1,0 +1,61 @@
+id: BO-550-2
+title: "test-writer reads test_constraints and adjusts its testing strategy"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket has test_constraints:
+    isolation: integration
+    environment: staging
+    coverage: 80,
+  When test-writer is dispatched for this ticket,
+  Then it reads the test_constraints from the ticket frontmatter
+  And it writes integration tests (not unit tests) that exercise
+    cross-component boundaries
+  And it configures test fixtures to target the staging environment
+  And it adds a coverage assertion that the changed files must reach
+    at least 80% line coverage
+  And its sign-off comment records which constraints it honored:
+    "Constraints applied: isolation=integration, environment=staging, coverage=80%"
+
+  Given a ticket has test_constraints:
+    isolation: end_to_end
+    environment: local,
+  When test-writer is dispatched,
+  Then it writes end-to-end tests that exercise the full user-facing surface
+  And it configures test fixtures for local execution
+  And it does NOT enforce a coverage threshold (coverage sub-field is absent)
+
+  Given a ticket has test_constraints: {} (empty object),
+  When test-writer is dispatched,
+  Then it uses all default values (unit, local, no coverage threshold)
+  And it proceeds with its standard test-writing strategy
+depends_on: [BO-550, BO-550-1, BO-530-1]
+doc_links:
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/ticket-authoring/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "test-writer template must read and honor ALL constraint sub-fields when present"
+  - "Must degrade gracefully when test_constraints is absent or empty -- use defaults"
+  - "Sign-off comment must record which constraints were applied for audit trail"
+delivers_to: null
+expects_from:
+  ac_id: BO-550-1
+  contract: "Ticket frontmatter contains a validated test_constraints structure"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

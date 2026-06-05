@@ -1,0 +1,57 @@
+id: BO-400c-3
+title: "Parity guard rejects commits that move ticket files into epic subfolders"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a staged commit that includes a git mv (or equivalent add+delete)
+    moving a ticket .md file from an epic folder root
+    into a subfolder named done/ within that epic folder
+    (e.g., from EPIC-Foo/03_ticket.md to EPIC-Foo/done/03_ticket.md),
+  When the pre-commit hook check_ticket_signoff_parity.py runs,
+  Then it detects the path change as a prohibited done-folder move
+  And it exits with code 1
+  And it prints an error message identifying the offending file:
+    "Prohibited: ticket file moved into done/ subfolder.
+     Use set_ticket_status.py --status done instead.
+     File: EPIC-Foo/done/03_ticket.md"
+  And the commit is blocked.
+
+  Given a staged commit that modifies a ticket's frontmatter
+    to set `status: done` without moving the file,
+  When the pre-commit hook check_ticket_signoff_parity.py runs,
+  Then the done-folder-move check passes (no path change detected)
+  And the hook evaluates the existing parity rules
+    (the new rule: tickets with `status: done` must not have
+     `needed` or `failed` entries in the agents: map)
+  And the commit proceeds if parity holds.
+depends_on: [BO-400c]
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must detect done-folder moves by comparing staged file paths (add+delete pattern or rename detection)"
+  - "Must run as part of the existing pre-commit hook, not as a separate hook"
+  - "Must not block legitimate file moves that are not into a done/ subfolder"
+  - "Must add a new parity rule: status: done implies no 'needed' or 'failed' in agents map"
+  - "Error messages must be actionable — suggest the correct alternative (set_ticket_status.py)"
+  - "Must complete within the existing pre-commit hook time budget (<5 seconds)"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

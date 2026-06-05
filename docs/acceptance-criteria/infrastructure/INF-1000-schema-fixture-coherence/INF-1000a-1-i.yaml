@@ -1,0 +1,30 @@
+id: INF-1000a-1-i
+readiness: draft
+priority: medium
+title: "Schema file with no required-field changes passes without scanning fixtures"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a staged commit modifies config/ac_store_schema.json
+    but the diff only changes a field description or adds an optional property
+    (no entries added to the "required" array),
+  When the fixture-coherence check runs,
+  Then the check determines that no new required fields were introduced,
+  And the check exits 0 without scanning any fixture files,
+  And no warnings or errors are emitted.
+depends_on: [INF-1000a-1]
+doc_links:
+  - config/ac_store_schema.json
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

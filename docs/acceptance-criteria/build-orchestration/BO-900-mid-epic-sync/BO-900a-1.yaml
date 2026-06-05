@@ -1,0 +1,35 @@
+id: BO-900a-1
+readiness: draft
+priority: medium
+title: "Commit-count divergence detection after each batch"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given an epic drive has completed a batch of 3 tickets
+    and the worktree branch is 25 commits ahead of origin/main,
+  When the build-epic workflow finishes the batch and evaluates the next batch,
+  Then it computes the commit count ahead of origin/main
+    by comparing the worktree HEAD to origin/main,
+  And the computed count is 25,
+  And this count is compared against the configured threshold (default: 20),
+  And because 25 exceeds 20, the workflow enters the sync-checkpoint state
+    before dispatching the next batch.
+depends_on: [BO-900a]
+doc_links:
+  - docs/architecture/agent_delivery_workflows.md
+  - templates/skills/building-epics/SKILL.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: "An integer commit_count_ahead value computed from the worktree state"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

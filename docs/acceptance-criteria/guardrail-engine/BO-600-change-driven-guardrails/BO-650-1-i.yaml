@@ -1,0 +1,48 @@
+id: BO-650-1-i
+title: "Architect notices missing architecture docs and flags the gap"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the architect agent is processing a ticket for a component
+    named "guardrail-engine",
+  And the docs/architecture/components/ directory contains NO file matching
+    "guardrail-engine.md" or any variant of that component name,
+  When the architect completes its discovery scan,
+  Then it flags the gap in its output:
+    "Missing architecture documentation: no component doc found for 'guardrail-engine'
+     in docs/architecture/components/"
+  And it produces a new component architecture document as part of its artifact output
+  And the new document is added to docs/architecture/components/guardrail-engine.md
+
+  Given the architect agent is processing a ticket for a component
+    named "build-orchestration",
+  And docs/architecture/components/build-orchestration.md exists but was last
+    updated more than 6 months before the ticket's created date,
+  When the architect completes its discovery scan,
+  Then it flags the staleness:
+    "Stale architecture documentation: docs/architecture/components/build-orchestration.md
+     last updated <date>. Consider refreshing."
+  And it reviews the existing doc for consistency with current system behavior
+depends_on: [BO-650-1]
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-650-1.yaml
+    relationship: parent
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: M
+it_requirements:
+  - "Must detect both missing docs and stale docs (>6 months)"
+  - "Staleness detection must compare dates, not file modification timestamps"
+delivers_to: null
+expects_from:
+  ac_id: BO-650-1
+  contract: "The architecture discovery logic that this edge case tests for gap detection"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

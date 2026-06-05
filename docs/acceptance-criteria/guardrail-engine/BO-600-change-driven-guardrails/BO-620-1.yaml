@@ -1,0 +1,43 @@
+id: BO-620-1
+title: "Schema-contract pair maps to migration plan + backward-compat check + consumer notification"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket has change_target: schema and risk_surface: contract,
+  When the guardrail engine resolves the applicable quality gates,
+  Then the resulting guardrail set contains exactly these mandatory gates:
+    - migration_plan: a migration script with rollback capability is required
+    - backward_compat_check: verification that existing consumers are not broken
+    - consumer_notification: downstream consumers are identified and notified
+    - standard_tdd: tests are written before implementation and verified after
+  And no gates from other (target, surface) pairs are included unless the ticket
+    has additional change_target values
+  And the guardrail set is returned as a list of gate identifiers in the order listed above
+depends_on: [BO-620, BO-610-1, BO-610-2]
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-620.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Mapping must be declarative and machine-readable (JSON or YAML)"
+  - "Must be deterministic -- same input always produces same gate set"
+delivers_to:
+  agent: python-coder
+  contract: "Guardrail mapping entry for (schema, contract) that returns the 4-gate set"
+expects_from:
+  ac_id: BO-610-1
+  contract: "The change_target enum including 'schema' as a valid value"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,50 @@
+id: BO-660-2
+title: "New change_target value inherits guardrails from its declared risk_surface"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the guardrail mapping defines explicit rules for (schema, contract) and
+    (code, internal) among other pairs,
+  And a new change_target value "wasm" is added to the change_target enum,
+  When a ticket has change_target: wasm and risk_surface: contract,
+  Then the guardrail engine resolves guardrails using the risk_surface "contract"
+    as the primary axis
+  And the ticket receives at minimum the contract-surface default guardrails:
+    backward_compat_check and consumer_notification
+  And standard_tdd is included because it applies to all change_targets
+
+  Given a new change_target value "webhook" is added to the enum,
+  And no explicit (webhook, internal) rule exists in the mapping,
+  When a ticket has change_target: webhook and risk_surface: internal,
+  Then the guardrail engine falls back to the internal-surface default:
+    standard_tdd only
+  And no error is raised about the missing explicit mapping
+  And the guardrail engine logs which fallback rule was applied:
+    "No explicit mapping for (webhook, internal); applied internal-surface defaults"
+depends_on: [BO-660, BO-610-1]
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-660.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Fallback must use the risk_surface as the primary axis when no explicit mapping exists"
+  - "Must log which fallback rule was applied for auditability"
+  - "Explicit mapping must take precedence over risk_surface defaults"
+delivers_to: null
+expects_from:
+  ac_id: BO-620-1
+  contract: "The guardrail mapping that this AC's fallback mechanism queries"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

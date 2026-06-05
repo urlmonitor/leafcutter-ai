@@ -1,0 +1,44 @@
+id: BO-400a-2
+title: "ticket-supervisor sets status to done when all agents complete"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket file with frontmatter `status: in_progress`
+    and every entry in the `agents:` map is in the set {signed_off, not_needed},
+  When ticket-supervisor determines the ticket is done-eligible
+    (the pending list of needed agents is empty),
+  Then it invokes set_ticket_status.py with --ticket <path> --status done
+  And the script updates the ticket's frontmatter to `status: done`
+  And the ticket file remains in its current folder
+    (it is NOT moved to a done/ subfolder)
+  And the script stages the modified ticket file via git add.
+depends_on: [BO-400a, BO-400b-1]
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Must invoke set_ticket_status.py only after confirming all agents are in {signed_off, not_needed}"
+  - "Must handle non-zero exit from set_ticket_status.py as a blocker and surface it to the user"
+  - "Must not perform any file-move operations (git mv) as part of completion"
+delivers_to: null
+expects_from:
+  ac_id: BO-400b-1
+  contract: "CLI script at scripts/set_ticket_status.py accepting --ticket <path> --status done; exits 0 on success, exits 1 with error message if agents-map parity check fails"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

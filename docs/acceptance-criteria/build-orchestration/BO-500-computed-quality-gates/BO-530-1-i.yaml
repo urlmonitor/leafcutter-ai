@@ -1,0 +1,53 @@
+id: BO-530-1-i
+title: "Ticket with change_type doc_change skips TDD injection entirely"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket has change_type: doc_change
+    and the assigned work agent is documentation-expert (produces: documentation),
+  When ticket-supervisor computes the agent chain,
+  Then the chain does NOT contain test-writer
+  And the chain does NOT contain test-runner
+  And the chain contains only: documentation-expert, pr-reviewer, commit, pull-request
+    (plus any standing agents like ac-fulfillment-gate)
+
+  Given a ticket has change_type: prompt_change
+    and the assigned work agent is llm-expert (produces: prompt),
+  When ticket-supervisor computes the agent chain,
+  Then the chain does NOT contain test-writer
+  And the chain does NOT contain test-runner
+  And the TDD invariant does not apply because the work agent does not
+    produce production_code
+
+  Given a ticket has change_type: doc_change but the work agent is
+    python-coder (produces: production_code) because it is editing
+    a documentation-generation script,
+  When ticket-supervisor computes the agent chain,
+  Then the TDD invariant DOES apply because the work agent produces
+    production_code regardless of change_type
+  And test-writer and test-runner are both injected
+depends_on: [BO-530-1]
+doc_links:
+  - path: templates/agents/ticket-supervisor.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-ticket-workflow-dispatch.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The produces trait must take precedence over change_type when they conflict for TDD decisions"
+delivers_to: null
+expects_from:
+  ac_id: BO-530-1
+  contract: "TDD injection logic that triggers on produces: production_code"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

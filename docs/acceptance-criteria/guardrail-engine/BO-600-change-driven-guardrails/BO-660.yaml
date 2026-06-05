@@ -1,0 +1,27 @@
+id: BO-660
+title: "New agent types and change targets inherit guardrails automatically"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  The guardrail system grows with the project without manual wiring.
+
+  When a new agent type is added to the system or a new change target value is
+  introduced, the guardrail engine routes it through existing rules based on its
+  declared traits and the classification it receives. No one needs to manually
+  update a guardrail mapping for each new addition. A new coder agent that
+  declares it produces production code inherits TDD. A new change target that
+  touches a contract boundary inherits backward-compatibility checks. The system
+  is open to extension without requiring modification of existing rules.
+depends_on: [BO-610, BO-620]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

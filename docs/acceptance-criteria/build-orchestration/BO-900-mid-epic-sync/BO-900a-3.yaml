@@ -1,0 +1,35 @@
+id: BO-900a-3
+readiness: draft
+priority: medium
+title: "Automatic merge execution when user accepts sync"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the user has chosen "Merge origin/main into the worktree now"
+    at the sync-checkpoint prompt,
+  When the build-epic workflow executes the merge,
+  Then it fetches origin/main to ensure the remote ref is current,
+  And it merges origin/main into the worktree branch,
+  And if the merge completes without conflicts,
+    the workflow logs "Sync merge completed: merged N commits from origin/main"
+    (where N is the number of new commits merged),
+  And the workflow resets the divergence counter,
+  And the next batch is dispatched immediately after the merge.
+depends_on: [BO-900a, BO-900a-2]
+doc_links:
+  - templates/skills/building-epics/SKILL.md
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-900a-2
+  contract: "User choice indicating merge-now was selected"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

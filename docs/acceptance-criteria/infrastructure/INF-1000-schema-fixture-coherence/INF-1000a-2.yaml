@@ -1,0 +1,36 @@
+id: INF-1000a-2
+readiness: draft
+priority: medium
+title: "Report identifies each stale fixture file and the missing field"
+component: infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the fixture-coherence check has found 3 stale fixture files:
+    - tests/fixtures/valid_ac.yaml (missing "readiness"),
+    - tests/fixtures/valid_ac.yaml (missing "priority"),
+    - tests/fixtures/minimal_ac.yaml (missing "readiness"),
+  When the check produces its error output,
+  Then the output contains one line per violation in the format:
+    "<fixture_path>: missing required field '<field_name>'",
+  And the output ends with a summary line:
+    "3 fixture violations found. Update fixtures to include the new required fields.",
+  And the output is written to stderr (not stdout),
+  And the exit code is 1.
+depends_on: [INF-1000a, INF-1000a-1]
+doc_links:
+  - config/ac_store_schema.json
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: INF-1000a-1
+  contract: "The list of (fixture_path, missing_field_name) tuples"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

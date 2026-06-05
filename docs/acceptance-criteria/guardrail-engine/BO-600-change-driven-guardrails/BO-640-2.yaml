@@ -1,0 +1,47 @@
+id: BO-640-2
+title: "Successful decomposition reduces complexity to medium and routes to faster model"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the complexity challenge (BO-640-1) has been triggered for a ticket with
+    estimated_complexity: H,
+  When the IT PO responds with a decomposition proposal that splits the ticket
+    into two or more sub-tickets each with estimated_complexity: S or M,
+  Then the original ticket's estimated_complexity is updated to M
+  And the sub-tickets are created with the proposed complexity values
+  And the original ticket is routed to the faster model tier (Sonnet-class)
+  And each sub-ticket is independently routed based on its own complexity
+
+  Given the IT PO responds with a scope-narrowing proposal that reduces
+    the ticket's scope without splitting it,
+  When the narrowed scope justifies a lower complexity assessment,
+  Then the ticket's estimated_complexity is updated from H to M
+  And the ticket proceeds to agent dispatch at the Sonnet-class tier
+  And a rationale field records why complexity was reduced:
+    "Scope narrowed: <IT PO's justification>"
+depends_on: [BO-640, BO-640-1]
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-640-1.yaml
+    relationship: depends_on
+    status: exists
+  - path: docs/architecture/adrs/ADR-009-itpo-no-source-code-access.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Sub-ticket creation must follow the ticket-authoring skill conventions"
+  - "Original ticket complexity must be updated atomically with sub-ticket creation"
+delivers_to: null
+expects_from:
+  ac_id: BO-640-1
+  contract: "The challenge gate that produces the IT PO's decomposition response"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

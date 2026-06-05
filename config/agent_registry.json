@@ -1687,7 +1687,8 @@
             "domain": null,
             "spawn_allowlist": [],
             "spawned_by": [
-                "create-ac"
+                "build-ac",
+                "user"
             ],
             "is_ticket_phase": false,
             "selection_criteria": null,

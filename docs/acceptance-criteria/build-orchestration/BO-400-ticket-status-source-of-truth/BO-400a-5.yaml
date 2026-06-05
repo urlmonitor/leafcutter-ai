@@ -1,0 +1,42 @@
+id: BO-400a-5
+title: "ticket-prioritizer excludes in_progress tickets from the ready set"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a tickets folder containing:
+    - ticket-A.md with `status: todo` and no unmet depends_on
+    - ticket-B.md with `status: in_progress` and no unmet depends_on
+    - ticket-C.md with `status: done`
+    - ticket-D.md with `status: todo` and `depends_on: [ticket-C]`,
+  When ticket-prioritizer scans the folder to produce the ready list,
+  Then ticket-A appears in the ready list (todo, unblocked)
+  And ticket-D appears in the ready list (todo, dependency satisfied)
+  And ticket-B does NOT appear in the ready list
+    (status: in_progress means it is already being driven)
+  And ticket-C does NOT appear in the ready list (status: done, completed).
+depends_on: [BO-400a, BO-100]
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must filter by frontmatter status field, not folder position"
+  - "Must treat 'in_progress' as actively-driven (excluded from ready set)"
+  - "Must treat 'done' as completed (excluded from ready set, satisfies depends_on)"
+  - "Must be backward compatible with tickets that lack a status field (treat as todo)"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

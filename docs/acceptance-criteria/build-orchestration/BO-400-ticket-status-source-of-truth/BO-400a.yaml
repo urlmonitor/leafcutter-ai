@@ -1,0 +1,31 @@
+id: BO-400a
+title: "Ticket frontmatter status drives all lifecycle decisions"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket exists in an epic folder,
+  When any supervisor, gate, or query needs to know the ticket's lifecycle state,
+  Then it reads the `status:` field from the ticket's YAML frontmatter,
+  And it never infers state from the ticket's folder position (root vs. done/),
+  And the status field supports at least: todo, in_progress, done.
+depends_on: [BO-400]
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [BO-400a-1, BO-400a-2, BO-400a-3, BO-400a-4, BO-400a-5]
+implemented_by: []

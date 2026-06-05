@@ -1,0 +1,45 @@
+id: BO-510-2
+title: "Agent template frontmatter carries the produces trait matching the registry"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an agent template file exists at templates/agents/<agent-id>.md,
+  When the template's YAML frontmatter is parsed,
+  Then it contains a "produces" field
+  And the value matches exactly the produces value in the corresponding
+    agent_registry.json entry for that agent ID
+  And the frontmatter field is positioned after the "domain" field
+    and before "config_keys" for consistency across all templates
+
+  Given an agent has template_path: null in the registry
+    (e.g. architect-review-deep, conflict-resolver-deep),
+  When the validation scans for template frontmatter,
+  Then it skips agents with no template file
+  And it does not report a missing-trait error for template-less agents
+depends_on: [BO-510, BO-510-1]
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Must preserve all existing frontmatter fields when adding the produces field"
+  - "Field positioning is a convention for consistency, not a hard enforcement requirement"
+  - "Must not modify templates for agents with template_path: null"
+delivers_to: null
+expects_from:
+  ac_id: BO-510-1
+  contract: "Defined produces enum values in agent_registry.schema.json that templates must conform to"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

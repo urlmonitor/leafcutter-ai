@@ -1,0 +1,49 @@
+id: BO-400b-2
+title: "Script validates status transitions against an allow-list"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the valid status transitions are:
+    - todo -> in_progress (normal drive start)
+    - in_progress -> done (all agents complete)
+    - in_progress -> todo (drive abandoned, ticket returned to backlog)
+    - todo -> done (requires --force flag: manual override)
+    - done -> todo (requires --force flag: reopen a completed ticket)
+    - in_progress -> in_progress (idempotent no-op, exits 0)
+    - todo -> todo (idempotent no-op, exits 0)
+    - done -> done (idempotent no-op, exits 0),
+  When the script is invoked with a transition NOT in this allow-list
+    (e.g., --ticket T.md --status todo when current status is done)
+    and the --force flag is NOT provided,
+  Then the script exits with code 1
+  And it prints an error message:
+    "Invalid transition: done -> todo (use --force to override)"
+  And the ticket file is NOT modified.
+depends_on: [BO-400b, BO-400b-1]
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Transition allow-list must be defined as data (not scattered conditionals) for maintainability"
+  - "Error messages must clearly state the attempted transition and suggest --force if applicable"
+  - "Must not modify the ticket file when rejecting a transition"
+  - "The --force flag must bypass transition validation for all disallowed transitions"
+delivers_to: null
+expects_from:
+  ac_id: BO-400b-1
+  contract: "The base script structure (argument parsing, frontmatter read/write) that this AC extends with transition validation logic"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

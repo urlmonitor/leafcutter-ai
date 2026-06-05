@@ -1,0 +1,56 @@
+id: BO-520-2
+title: "BA or IT PO sets change_type during ticket creation"
+component: build-orchestration
+level: L2
+status: superseded
+req_status: superseded
+work_status: todo
+criteria: |
+  Given a user invokes /create-ticket or /create-ticket-v2 for a new feature,
+  When the business-analyst or it-po agent produces the ticket frontmatter,
+  Then the agent classifies the work into one of the five change types:
+    - flow_change: adds or modifies control flow, agent sequences, or system behavior
+    - data_change: modifies database schema, data models, or data pipelines
+    - doc_change: adds or modifies documentation only, no runtime behavior change
+    - prompt_change: adds or modifies agent templates, skill files, or LLM instructions
+    - config_change: adds or modifies configuration files, registry entries, or hook settings
+  And the selected change_type is written into the ticket's YAML frontmatter
+  And the classification is based on the ticket's files_touched and description,
+    not on a manual user selection
+
+  Given a ticket touches both Python code and documentation,
+  When the agent classifies the change,
+  Then it selects the change_type that reflects the PRIMARY deliverable
+    (e.g. flow_change if the docs accompany a behavior change)
+  And it does NOT select doc_change when production code is also modified
+depends_on: [BO-520, BO-520-1]
+doc_links:
+  - path: templates/agents/business-analyst.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/it-po-v3.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/ticket-authoring/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Classification must be deterministic for the same files_touched and description input"
+  - "Must be backward-compatible with existing ticket creation -- tickets without change_type remain valid until BO-520-1-i enforcement activates"
+delivers_to:
+  agent: llm-expert
+  contract: "BA and IT PO templates include instructions to classify and emit change_type"
+expects_from:
+  ac_id: BO-520-1
+  contract: "Ticket frontmatter schema supports the change_type field with the defined enum"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: BO-610-4
+covered_by: []
+implemented_by: []

@@ -1,0 +1,26 @@
+id: BO-560
+title: "The build system computes the full agent chain -- no one hand-curates it"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  The agent sequence is derived, not authored.
+
+  Given the change type and the assigned work agent's traits, the ticket-supervisor
+  derives the complete ordered sequence of agents that must participate. The
+  manually-authored agents map becomes an output of this computation, not an
+  input that humans maintain. The IT PO assigns the work agent and classifies
+  the change; the system fills in reviewers, testers, and documenters based on
+  the rules defined by the trait registry and change-type taxonomy.
+depends_on: [BO-510, BO-610]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

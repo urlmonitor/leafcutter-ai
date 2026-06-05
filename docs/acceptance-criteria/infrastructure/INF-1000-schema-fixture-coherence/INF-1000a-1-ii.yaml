@@ -1,0 +1,32 @@
+id: INF-1000a-1-ii
+readiness: draft
+priority: medium
+title: "Fixture files that already contain the new field are not flagged"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a staged commit adds "priority" to the "required" array
+    in config/ac_store_schema.json,
+  And 5 fixture files exist that conform to that schema,
+  And 3 of those fixtures already contain a "priority" field with a valid value,
+  And 2 of those fixtures do not contain a "priority" field,
+  When the fixture-coherence check runs,
+  Then the check reports only the 2 fixtures that lack the "priority" field,
+  And the 3 fixtures that already have "priority" are not mentioned in the output,
+  And the exit code is 1 (because violations exist).
+depends_on: [INF-1000a-1]
+doc_links:
+  - config/ac_store_schema.json
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

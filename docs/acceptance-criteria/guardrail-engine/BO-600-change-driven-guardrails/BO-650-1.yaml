@@ -1,0 +1,48 @@
+id: BO-650-1
+title: "Architect discovers and reads existing architecture docs before producing artifacts"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket triggers the architect agent (because the guardrail mapping
+    includes an architecture gate for its change_target and risk_surface),
+  When the architect begins its work,
+  Then it searches the docs/architecture/ directory for existing documentation
+    related to the component named in the ticket's component field
+  And it searches for existing ADRs in the docs/architecture/decisions/ directory
+    that reference the same component or related components
+  And it reads all discovered documents before producing any new artifact
+  And the architect's output references which existing documents it found:
+    "Discovered: docs/architecture/components/X.md, docs/architecture/decisions/ADR-NNN.md"
+
+  Given the docs/architecture/ directory contains 3 relevant documents for
+    the component "build-orchestration",
+  When the architect processes a ticket for that component,
+  Then all 3 documents are listed in the architect's discovery output
+  And the architect's produced artifacts are consistent with the existing documentation
+    (no contradictions unless explicitly flagged as a design change)
+depends_on: [BO-650]
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/BO-600-change-driven-guardrails/BO-650.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Discovery must scan docs/architecture/ recursively"
+  - "Must match by component name, not by file path substring"
+delivers_to:
+  agent: python-coder
+  contract: "Architecture discovery logic that scans docs/architecture/ and returns relevant document paths"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

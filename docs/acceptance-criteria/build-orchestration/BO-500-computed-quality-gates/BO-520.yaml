@@ -1,0 +1,25 @@
+id: BO-520
+title: "Classify what kind of change this is, and the system handles the rest"
+component: build-orchestration
+level: L1
+status: superseded
+req_status: draft
+work_status: todo
+criteria: |
+  Each unit of work carries a change-type that determines which guardrails apply.
+
+  The person splitting the work selects from a defined set of change types (flow,
+  data, doc, prompt, config). Each type maps to a known set of mandatory and
+  optional quality gates. The build system reads this classification and assembles
+  the agent chain accordingly -- no further human input needed to determine which
+  reviewers, testers, or documenters participate.
+depends_on: [BO-500]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: BO-610
+covered_by: []
+implemented_by: []

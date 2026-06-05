@@ -1,0 +1,45 @@
+id: BO-520-1
+title: "Ticket frontmatter supports a change_type field with a defined enum"
+component: build-orchestration
+level: L2
+status: superseded
+req_status: superseded
+work_status: todo
+criteria: |
+  Given a ticket markdown file under tickets/,
+  When its YAML frontmatter is parsed,
+  Then it may contain a "change_type" field
+  And valid values for change_type are exactly:
+    flow_change, data_change, doc_change, prompt_change, config_change
+  And the ticket_frontmatter_guard hook validates change_type against this enum
+    when the field is present
+
+  Given the ticket-authoring skill produces a new ticket file,
+  When the skill writes frontmatter,
+  Then it includes a change_type field with a value from the enum
+  And the value is positioned after the "priority" field and before "depends_on"
+    in the frontmatter key order
+depends_on: [BO-520]
+doc_links:
+  - path: templates/skills/ticket-authoring/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Hook validation must complete within 2 seconds for typical ticket files"
+  - "Must not break existing tickets that do not have the change_type field"
+  - "Must extend the existing ticket_frontmatter_guard, not create a separate hook"
+delivers_to:
+  agent: llm-expert
+  contract: "ticket_frontmatter_guard recognizes and validates the change_type field; ticket-authoring skill emits it"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: BO-610-4
+covered_by: []
+implemented_by: []

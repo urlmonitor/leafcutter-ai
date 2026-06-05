@@ -1,0 +1,47 @@
+id: BO-400a-2-i
+title: "Parity violation: status done but agents map has needed entries"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket file where:
+    - frontmatter `status:` is currently `in_progress`
+    - the `agents:` map contains `python-coder: signed_off`
+      and `test-runner: needed` and `commit: needed`,
+  When ticket-supervisor invokes set_ticket_status.py
+    with --ticket <path> --status done (without --force),
+  Then the script parses the agents: map from the frontmatter
+  And it finds entries with value `needed`: [test-runner, commit]
+  And it rejects the transition with exit code 1
+  And it prints:
+    "Cannot set done - agents with status 'needed': test-runner, commit"
+  And the frontmatter `status:` field is NOT modified
+  And ticket-supervisor treats this as a parity violation
+    and returns {status: "failed"} with a blocker payload
+    naming the inconsistent agents.
+depends_on: [BO-400a-2]
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Supervisor must interpret non-zero exit from set_ticket_status.py as a parity violation"
+  - "Blocker payload must include the list of agent names that are still 'needed'"
+  - "Must follow the existing blocker-escalation protocol defined in building-epics SKILL.md"
+delivers_to: null
+expects_from:
+  ac_id: BO-400b-1
+  contract: "CLI script at scripts/set_ticket_status.py with agents-map parity check; exits 1 and prints 'Cannot set done - agents with status needed: <list>' when parity fails"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []
