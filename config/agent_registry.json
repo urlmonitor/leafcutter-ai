@@ -1490,6 +1490,42 @@
             "description": "Reads ticket ACs, the working diff, and test output; produces a coverage verdict (ok / blocker / question). Never implements — read-only on code files, edits only the ticket file."
         },
         {
+            "id": "ac-fulfillment-gate",
+            "name": "AC Fulfillment Gate",
+            "tier": "phase",
+            "role": "quality",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "ticket-supervisor"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign to any ticket that has an ac_traceability frontmatter key referencing L2/L3 AC YAML files, to gate commit on verified AC store field accuracy.",
+                "trigger_conditions": [
+                    {
+                        "type": "llm",
+                        "expression": "ticket frontmatter contains ac_traceability with l2 or l3 AC IDs referencing AC YAML files"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket requires verification that AC YAML store fields (work_status, implemented_by, covered_by) are accurate before commit"
+                    }
+                ],
+                "default_status": "not_needed"
+            },
+            "template_path": "templates/agents/ac-fulfillment-gate.md",
+            "model": "sonnet",
+            "skills_used": [
+                "signoff"
+            ],
+            "priority": 11.7,
+            "priority_rationale": "AC store fulfillment gate; runs after ac-validator (11.5) and before commit (12) to verify AC YAML store fields are accurate and up-to-date",
+            "requires_ticket_section": false,
+            "description": "Verifies AC YAML store fields (work_status, implemented_by, covered_by) are accurate before commit. Auto-fixes when diff evidence exists (append-only, idempotent). Returns ok if all ACs pass or ac_traceability absent; blocker with per-AC details if any AC fails after auto-fix."
+        },
+        {
             "id": "it-po",
             "name": "IT Product Owner",
             "tier": "utility",

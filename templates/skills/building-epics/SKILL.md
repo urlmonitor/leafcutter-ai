@@ -342,6 +342,7 @@ every ticket-supervisor that ran until a cleanup commit removed them.
                       test-runner, pr-reviewer (priority 11),
                       ac-validator (priority 11.5, after pr-reviewer and before commit),
                       user-surface-smoker (priority 11.5, concurrent with ac-validator),
+                      ac-fulfillment-gate (priority 11.7, after ac-validator and before commit),
                       commit (priority 12), pull-request (priority 13),
                       status-checker, documentation-expert).
 
@@ -450,6 +451,36 @@ every ticket-supervisor that ran until a cleanup commit removed them.
 5.  After routing, GOTO 1 unless routing produced a terminal outcome
     (done | halted-for-user | escalated-to-brainstorm-lead-and-waiting).
 ```
+
+### §2.1.1 Canonical Phase Ordering Table
+
+The priority column is the authoritative ordering for dispatch ties. Lower numbers run first.
+
+| Priority | Agent | Notes |
+|---|---|---|
+| 1 | `status-checker` | Runs first; verifies system state |
+| 2 | `adr-author` | ADR before coders |
+| 3 | `architecture-diagram-author` | Diagram before coders |
+| 3.5 | `it-po` | Per-agent contracts before architect-review |
+| 4 | `architect-review` | Shapes design before implementation |
+| 5 | `test-writer` | Writes failing tests before coders |
+| 6 | `python-coder` | Primary implementation |
+| 6 | `llm-expert` | Authoring phase agent |
+| 7 | `sql-coder` | Database implementation |
+| 7 | `sql-query` | Ad-hoc query authoring |
+| 8 | `frontend-coder` | Frontend implementation |
+| 9 | `test-runner` | Validates test suite |
+| 10 | `change-scope-reviewer` | Verifies change set scope |
+| 10 | `documentation-expert` | Documents changes |
+| 10 | `explanation-author` | Documentation specialist |
+| 10 | `how-to-author` | Documentation specialist |
+| 10 | `reference-author` | Documentation specialist |
+| 11 | `pr-reviewer` | Final quality gate |
+| 11.5 | `ac-validator` | AC coverage gate; runs after pr-reviewer (11) and before commit (12) |
+| 11.5 | `user-surface-smoker` | Surface end-to-end smoker; concurrent with ac-validator |
+| 11.7 | `ac-fulfillment-gate` | AC store fulfillment gate; runs after ac-validator (11.5) and before commit (12) |
+| 12 | `commit` | Atomic commit phase |
+| 13 | `pull-request` | Pushes branch and opens PR |
 
 ### §2.2 Routing table
 
