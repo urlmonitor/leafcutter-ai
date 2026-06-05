@@ -1,6 +1,6 @@
 ---
 title: "Add check_description_field.py commit-guardian hook and register it"
-status: todo
+status: done
 components:
   - knowledge-management
   - build_pipeline
@@ -12,7 +12,7 @@ roadmap_phase: phase_1
 advances_current_outcome: true
 requires_diagram: false
 requires_adr: false
-ac_coverage: 0/5
+ac_coverage: 5/5
 files_touched:
   - templates/scripts/commit_guardian/check_description_field.py
   - templates/scripts/commit_guardian/commit_guardian.json
@@ -25,8 +25,8 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 ---
@@ -135,10 +135,25 @@ Create `unit_tests/test_check_description_field.py`:
 - [x] python-coder — 2026-06-05 14:30
 - [x] test-runner — 2026-06-05 14:45
 - [x] pr-reviewer — 2026-06-05 15:00
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-05 15:15
+- [x] pull-request — 2026-06-05 15:30
 
 ## Comments
+
+### 2026-06-05 15:30 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_d679fce1
+completion_manifest:
+  branch_pushed: true
+  pr_exists: true
+Branch EPIC-KnowledgeGraphQueryLayer pushed to origin. Commit 121e69a added to existing PR #63 (https://github.com/urlmonitor/leafcutter-ai/pull/63). Epic uses one PR per branch; no new PR needed.
+
+### 2026-06-05 15:15 — commit (status: ok)
+feedback-id: fb_2026-06-05_ac6f42cc
+completion_manifest:
+  commit_created: true
+  files_staged_correctly: true
+  no_cross_ticket_contamination: true
+Commit 121e69a on EPIC-KnowledgeGraphQueryLayer branch. 4 files, 425 insertions, 5 deletions. Staged files: templates/scripts/commit_guardian/check_description_field.py (new), templates/scripts/commit_guardian/commit_guardian.json (modified), unit_tests/test_check_description_field.py (new), tickets/.../02b_description_field_enforcement_hook.md (ticket). No cross-ticket contamination. PRE_COMMIT_ALLOW_NO_CONFIG=1 used because .pre-commit-config.yaml is a build output in .gitignore.
 
 ### 2026-06-05 15:00 — pr-reviewer (status: ok)
 feedback-id: fb_2026-06-05_a4ce43da
