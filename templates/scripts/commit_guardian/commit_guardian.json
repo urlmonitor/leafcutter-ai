@@ -664,6 +664,21 @@
                 ],
                 "pass_filenames": true,
                 "_comment": "EPIC-ErrorHandlingEnforcement/01: AST-based hook that flags bare except: (E722), blind except Exception: without reraise/log (BLE001), and calls to requests.get/open/cursor.execute not enclosed in try/except (IO-001). Runs on every staged .py file. Exit 1 on violations, 0 on clean."
+            },
+            {
+                "id": "check-description-field",
+                "name": "Check Description Field (doc frontmatter enforcement)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_description_field.py",
+                "language": "system",
+                "types": [
+                    "markdown"
+                ],
+                "files": "^docs/.*\\.md$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": true,
+                "_comment": "EPIC-KnowledgeGraphQueryLayer/02b: Blocks commits when any staged docs/*.md file is missing a non-empty description: frontmatter field. Silently skips tickets/, templates/skills/, and templates/agents/ trees. Enforces the invariant established by the 02a backfill migration."
             }
         ]
     },
