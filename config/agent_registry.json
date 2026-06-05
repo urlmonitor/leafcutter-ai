@@ -1677,6 +1677,24 @@
             "invocation_surface": [
                 "/build-ac"
             ]
+        },
+        {
+            "id": "ac-triage",
+            "name": "AC Triage",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "create-ac"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/ac-triage.md",
+            "model": "haiku",
+            "skills_used": [],
+            "description": "Haiku-pinned AC store triage agent. Stage 0 of the /create-ac workflow. Reads active ACs for the relevant component, classifies the user's request as strategic / behavioral / technical / covered, and returns a structured JSON routing decision. Read-only — never writes files. Must complete in < 3s for ≤200 ACs."
         }
     ]
 }

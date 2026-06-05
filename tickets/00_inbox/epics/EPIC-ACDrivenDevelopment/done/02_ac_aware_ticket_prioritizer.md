@@ -1,6 +1,6 @@
 ---
 title: "AC-aware ticket prioritizer"
-status: todo
+status: done
 components:
   - ac-store
   - ticket-creation
@@ -28,7 +28,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 source_acs:
   - ACD-500
   - ACD-500a
@@ -134,7 +134,7 @@ And no JSON output is written.
 - [x] test-runner — 2026-06-05 10:20
 - [x] pr-reviewer — 2026-06-05 10:25
 - [x] commit — 2026-06-05 10:30
-- [ ] pull-request
+- [x] pull-request — 2026-06-05 10:35
 
 ## Comments
 
@@ -196,6 +196,13 @@ completion_manifest:
   only_in_scope_files_staged: true
   commit_message_accurate: true
 Committed SHA 098a1e6 on branch EPIC-ACDrivenDevelopment. 6 files changed, 1093 insertions(+), 21 deletions(-). Staged only the 5 in-scope paths (ac_prioritizer.py, prioritize.py, test_ac_prioritizer.py, test_prioritize_ac_integration.py, ticket file). No out-of-scope files included. Pre-commit config absent; used PRE_COMMIT_ALLOW_NO_CONFIG=1 per worktree convention.
+
+### 2026-06-05 10:35 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_69c4aa8a
+completion_manifest:
+  branch_pushed: true
+  pr_open: true
+Branch EPIC-ACDrivenDevelopment pushed to origin. PR #61 (https://github.com/urlmonitor/leafcutter-ai/pull/61) is already open for the epic. Ticket 02 commits (098a1e6, b39fd20) are included in the branch.
 
 ## Implementation Tasks
 
