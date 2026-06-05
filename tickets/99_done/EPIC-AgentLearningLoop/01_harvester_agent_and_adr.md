@@ -27,7 +27,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 source_acs:
   - INF-400c-1
@@ -117,7 +117,7 @@ And it does not crash or stop processing subsequent events.
 - [x] llm-expert — 2026-06-05 14:25
 - [x] test-runner — 2026-06-05 14:30
 - [x] pr-reviewer — 2026-06-05 14:35
-- [ ] commit
+- [x] commit — 2026-06-05 14:40
 - [ ] pull-request
 
 ## Comments
@@ -194,6 +194,14 @@ completion_manifest:
   code_quality_ok: true
   no_blockers: true
 All 4 ACs verified: AC-1 ADR-011 authored with all required sections before harvester; AC-2 routing confirmed by 3 test cases; AC-3 idempotency confirmed; AC-4 unknown entry_kind warning confirmed. Implementation ruff-clean (E722/BLE001/TRY), error handling policy followed, 7 tests green. ADR index updated. No quality blockers.
+
+### 2026-06-05 14:40 — commit (status: ok)
+feedback-id: fb_2026-06-05_1c55043f
+completion_manifest:
+  commit_created: true
+  all_files_staged: true
+  lock_acquired_and_released: true
+Commit b2a02f9: 8 files, 1369 insertions. Staged explicitly by path (no git add .): ADR-011, harvest_learnings.py, knowledge-harvester.md, test file, __init__.py, handoff JSON, ADR README, ticket file. Lock acquired before commit and released on success.
 
 ## Implementation Tasks
 
