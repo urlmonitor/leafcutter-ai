@@ -1,0 +1,28 @@
+id: INF-200a-2
+title: "check_no_print hook registered in commit_guardian.json with config section"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+criteria: |
+  Given scripts/commit_guardian/check_no_print.py exists,
+  When commit_guardian.json is read,
+  Then hooks_manifest contains an entry with id "check-no-print",
+  And the entry has files pattern "\.py$" and pass_filenames true,
+  And a top-level "no_print" config section exists with:
+    - exempt_patterns: list of allowed print-like calls (e.g. click.echo, sys.stdout.write),
+    - exempt_paths: list of path prefixes exempt from the check (e.g. scripts/commit_guardian/ for hook output).
+depends_on:
+  - INF-200a-1
+doc_links:
+  - path: scripts/commit_guardian/commit_guardian.json
+    relationship: configures
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

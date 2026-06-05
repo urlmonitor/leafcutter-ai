@@ -1,0 +1,22 @@
+id: INF-200a
+title: "Leafcutter uses debug logging, never print() — enforced by pre-commit hook"
+component: infrastructure
+level: L1
+status: active
+criteria: |
+  All diagnostic output in leafcutter scripts uses logger.debug(), not print().
+
+  When any Python file in the leafcutter-ai repo is committed, a pre-commit
+  hook blocks bare print() calls (outside of CLI entry points). The project
+  has a documented logging convention, and the hook enforces it mechanically
+  so agents and humans alike produce consistent, debuggable output instead
+  of scattered print statements that get left behind.
+depends_on:
+  - INF-200
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,67 @@
+id: INF-300a-1
+title: "Knowledge surface map documents all surfaces with when-to-use rules"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+criteria: |
+  Given a reference document listing all knowledge surfaces,
+  When a developer or agent reads it,
+  Then it enumerates at minimum these surfaces:
+
+  Claude-native surfaces:
+    - CLAUDE.md: project-wide conventions that apply regardless of file type
+      (shell rules, repo structure, build instructions). NOT language-specific
+      code conventions.
+    - Memory files (.claude/projects/*/memory/): user preferences, feedback,
+      project state, external references. Cross-session persistence for the
+      user-agent relationship.
+    - Rules (.claude/rules/ deployed from templates/rules/): language-specific
+      and file-type-specific conventions that trigger on glob patterns (e.g.
+      *.py, *.sql, *.tsx). This is where code style, logging conventions,
+      naming rules, and testing patterns live. Each rule pairs with a
+      pre-commit hook that enforces its mechanical subset.
+
+  Leafcutter surfaces:
+    - Glossary (docs/glossary.md): project-specific jargon and terminology.
+    - AC store (docs/acceptance-criteria/): structured requirements at L0-L3.
+    - ADRs (docs/architecture/adrs/): architectural decisions with context,
+      alternatives, and consequences.
+    - How-to docs (docs/how-to/): task-oriented procedural guides.
+    - Reference docs (docs/reference/): lookup-oriented tables and schemas.
+    - Skills (templates/skills/): agent instruction sets for repeatable workflows.
+    - Agent templates (templates/agents/): agent persona and tool definitions.
+    - Ticket files (tickets/): actionable work items with frontmatter.
+    - Architecture diagrams (docs/architecture/diagrams/): C4 mermaid diagrams.
+    - Pre-commit hooks (scripts/commit_guardian/): mechanical enforcement
+      scripts paired with rules. NOT a standalone knowledge surface — always
+      paired with a rule.
+
+  And for each surface, the document states:
+    - What kind of knowledge belongs there (with examples),
+    - What does NOT belong there (anti-patterns, with the routing correction),
+    - Who/what typically writes to it,
+    - How it is consumed (loaded into context, queried, pre-commit checked),
+    - Whether it is a Claude-native or leafcutter-provided surface.
+
+  Key routing rules the document must capture:
+    - Language-specific conventions → rules (NOT CLAUDE.md, NOT memory)
+    - Architectural decisions → ADRs (NOT CLAUDE.md, NOT ticket comments)
+    - Project jargon → glossary (NOT CLAUDE.md, NOT inline comments)
+    - User preferences → memory (NOT CLAUDE.md, NOT rules)
+    - Structured requirements → AC store (NOT ticket prose)
+    - Mechanical enforcement → pre-commit hook paired with its rule
+depends_on:
+  - INF-300a
+doc_links:
+  - path: docs/reference/knowledge-surfaces.md
+    relationship: implements
+    status: planned
+assigned_agent: documentation-expert
+estimated_complexity: M
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

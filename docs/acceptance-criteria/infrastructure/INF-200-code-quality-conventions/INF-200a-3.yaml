@@ -1,0 +1,30 @@
+id: INF-200a-3
+title: "No-print convention lives in the logging rule, not CLAUDE.md"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+criteria: |
+  Given the templates/rules/logging.md rule file (trigger: glob, globs: *.py),
+  When an agent touches a .py file and the rule fires,
+  Then the rule includes a section that states:
+    - Never use bare print() for diagnostic output,
+    - Use logger.debug() instead,
+    - print() is only allowed in CLI entry points (main() or __main__ guard),
+  And this convention is NOT duplicated in CLAUDE.md (CLAUDE.md may reference
+    the rule but must not restate it),
+  And the rule content is consistent with what check_no_print enforces.
+depends_on:
+  - INF-200a
+doc_links:
+  - path: templates/rules/logging.md
+    relationship: implements
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

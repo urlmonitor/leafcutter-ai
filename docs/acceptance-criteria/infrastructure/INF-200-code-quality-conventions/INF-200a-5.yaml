@@ -1,0 +1,31 @@
+id: INF-200a-5
+title: "Customer opts into leafcutter dev rules during onboarding — skipped rules skip their hooks"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+criteria: |
+  Given a consumer project running the /onboard wizard (or editing skills_config.json),
+  When the user reaches the conventions section,
+  Then they are asked whether to adopt "leafcutter dev rules" (the rules leafcutter
+    uses internally: logging, python-rules, etc.),
+  And if they decline a rule, build.py does NOT deploy:
+    - the rule file to .claude/rules/ (or .agents/rules/),
+    - the paired pre-commit hook to .pre-commit-config.yaml,
+  And if they accept a rule, both the rule AND its paired hook are deployed,
+  And the decision is persisted in skills_config.json under a "rules" or
+    "conventions" key so subsequent builds respect it without re-asking.
+depends_on:
+  - INF-200a-4
+doc_links:
+  - path: scripts/build.py
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,35 @@
+id: INF-300a-2
+title: "PO and BA agents consult the surface map before placing knowledge"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+criteria: |
+  Given the product-owner-v3 or business-analyst-v3 agent produces an output
+    that contains persistent knowledge (a convention, a decision, a definition),
+  When that agent determines where to write the output,
+  Then it consults the knowledge surface map (or invokes route-knowledge skill),
+  And routes the knowledge to the correct surface based on the documented rules,
+  And does NOT place:
+    - Python/code conventions into memory files (belongs in CLAUDE.md),
+    - Architectural decisions into CLAUDE.md (belongs in an ADR),
+    - Terminology definitions into CLAUDE.md (belongs in glossary),
+    - Structured requirements into ticket prose (belongs in AC store),
+    - User preferences into CLAUDE.md (belongs in memory).
+depends_on:
+  - INF-300a-1
+doc_links:
+  - path: templates/agents/product-owner-v3.md
+    relationship: constrains
+    status: exists
+  - path: templates/agents/business-analyst-v3.md
+    relationship: constrains
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
