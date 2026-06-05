@@ -74,6 +74,37 @@ Write tool for any other files.
 
 ---
 
+## S0 Knowledge Loop — Injection
+
+Before doing anything else, load accumulated context from prior runs of this
+agent and from the component being worked on. All reads are best-effort —
+skip gracefully if a file is absent, unreadable, binary, or exceeds 50 KB.
+
+1. **Identify the component.** From the user's request or the L1 AC you were
+   given, determine the target component ID (e.g., `infrastructure`, `build-orchestration`).
+
+2. **Read component PROJECT_CONTEXT.md.** Check for a file at:
+   `docs/acceptance-criteria/<component>/PROJECT_CONTEXT.md`
+   If it exists and is ≤ 50 KB of readable text, absorb its contents into your
+   context before any other step. If it is absent, binary, or oversized, log:
+   "S0: PROJECT_CONTEXT.md skipped (<reason>)" and continue.
+
+3. **Read component AC folder README.md.** Check for a file at:
+   `docs/acceptance-criteria/<component>/README.md`
+   If it exists, read it. Skip gracefully if absent.
+
+4. **Read per-agent memory files.** Scan the `memory/` directory (in the
+   project root) for any files matching the patterns `*po*.md`,
+   `*product*.md`, `*product-owner*.md`. Read each match. These files contain
+   learnings from prior runs of this agent. Skip the scan gracefully if the
+   `memory/` directory does not exist.
+
+5. **Proceed.** Continue to S1 with the loaded context available. No error
+   or warning is needed if all files were absent — a first run with no prior
+   context is the normal baseline.
+
+---
+
 ## S1 Knowledge Acquisition
 
 Before you frame anything, ground yourself in the product's current state.
@@ -296,6 +327,59 @@ Include a handoff summary:
   "origin_agent": "<user's name>"
 }
 ```
+
+---
+
+## S8 Knowledge Loop — Emission
+
+After producing your final output but before returning control, run this
+reflection step. It is mandatory but best-effort — a failure here must not
+block your output from reaching the caller.
+
+**Reflection prompt:**
+
+> "Did you discover any component conventions, naming patterns, standing rules,
+> user framing preferences, or decomposition strategies during this run that
+> future agents working in this component would benefit from knowing?"
+
+**On "no":** Proceed — nothing to persist.
+
+**On "yes":** Execute the following steps in order. Wrap the entire block in
+best-effort handling (log a warning and proceed if any step fails):
+
+1. Load `.claude/skills/route-learning/SKILL.md` (or `templates/skills/route-learning/SKILL.md`).
+   Apply its decision tree to classify the learning. If the skill is unavailable,
+   log: "S8: route-learning skill not found — capture skipped." and stop.
+
+2. Load `.claude/skills/capture-learning/SKILL.md` (or `templates/skills/capture-learning/SKILL.md`).
+   Execute the write using the route classification from step 1.
+   If the skill is unavailable, log: "S8: capture-learning skill not found — capture skipped." and stop.
+
+3. Emit a `knowledge_captured` telemetry event. Append to
+   `debugging/logs/agent_telemetry.jsonl` (create the file if absent; skip
+   gracefully if the directory is not writable):
+   ```json
+   {"event": "knowledge_captured", "timestamp": "<ISO-8601>", "agent": "product-owner-v3", "component": "<component-id>", "destination": "<routed_file_path>", "entry_kind": "<entry_kind from route-learning>"}
+   ```
+
+4. **Capture scope constraint (specification-relevant only):** The reflection
+   prompt asks about specification-relevant discoveries only:
+   - Component conventions and naming patterns
+   - Standing rules and invariants the BA and IT PO must respect
+   - User framing preferences (how users describe value vs. implementation)
+   - Agent assignment patterns observed across similar ACs
+   - Decomposition strategies that worked well or poorly
+
+   Do NOT capture code-level learnings (implementation patterns, error handling
+   conventions, test strategies). Those are not within this agent's scope.
+
+5. **Duplicate detection:** Before writing, route-learning Step 0 checks for
+   existing entries with equivalent content. If a duplicate is detected, skip
+   the write and log: "S8: duplicate learning detected — not persisted again."
+
+**Constraint — this step is not conditional on `ticket_path`:** The knowledge
+emission step runs whether or not this agent was spawned with a `ticket_path`.
+The `signoff` skill §7 trigger is separate; this step fires on every run.
 
 ---
 
