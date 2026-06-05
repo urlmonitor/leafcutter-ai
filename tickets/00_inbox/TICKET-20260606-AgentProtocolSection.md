@@ -1,6 +1,6 @@
 ---
 title: "Write Agent Protocol section in knowledge-query SKILL.md"
-status: in_progress
+status: done
 components:
   - build_pipeline
 created: 2026-06-06
@@ -21,7 +21,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   llm-expert: signed_off
@@ -190,7 +190,7 @@ AC files: `docs/acceptance-criteria/knowledge-management/KM-KQS-032.yaml` throug
 - [x] llm-expert — 2026-06-06 10:00
 - [x] pr-reviewer — 2026-06-06 10:15
 - [x] commit — 2026-06-06 10:30
-- [ ] pull-request
+- [x] pull-request — 2026-06-06 10:45
 
 ## Comments
 
@@ -217,6 +217,14 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Committed SHA cda2533 on branch feat/agent-protocol-section. 2 files changed, 161 insertions. No hook failures. Subject: feat(knowledge-query): add Agent Protocol section to SKILL.md.
+
+### 2026-06-06 10:45 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_5be848fc
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Pushed branch feat/agent-protocol-section and opened PR #70 targeting main: https://github.com/urlmonitor/leafcutter-ai/pull/70
 
 ## Implementation Tasks
 
