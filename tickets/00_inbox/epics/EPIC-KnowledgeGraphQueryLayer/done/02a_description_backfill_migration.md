@@ -1,6 +1,6 @@
 ---
 title: "Backfill description: field on all docs/ADRs/components (migration script)"
-status: todo
+status: done
 components:
   - knowledge-management
   - build_pipeline
@@ -25,8 +25,8 @@ agents:
   test-runner: signed_off
   documentation-expert: signed_off
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 ---
@@ -202,10 +202,36 @@ Delivers-to block above.
 - [x] test-runner — 2026-06-05 12:10
 - [x] documentation-expert — 2026-06-05 12:15
 - [x] pr-reviewer — 2026-06-05 12:20
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-05 12:25
+- [x] pull-request — 2026-06-05 12:30
 
 ## Comments
+
+### 2026-06-05 12:30 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_eb3e80af
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+  pr_url_recorded: true
+
+Branch EPIC-KnowledgeGraphQueryLayer pushed to origin. PR #63 opened:
+https://github.com/urlmonitor/leafcutter-ai/pull/63
+Title: feat(EPIC-KnowledgeGraphQueryLayer/02a): backfill description: migration script and enforcement docs
+Base: main. Covers all 9 ACs. Human reviewer must approve and trigger --write backfill.
+
+### 2026-06-05 12:25 — commit (status: ok)
+feedback-id: fb_2026-06-05_44864966
+completion_manifest:
+  commit_succeeded: true
+  staged_files_in_scope_only: true
+  lock_released: true
+
+Committed SHA 6ef0211 on branch EPIC-KnowledgeGraphQueryLayer.
+5 files: scripts/backfill_descriptions.py (+337 lines), unit_tests/test_backfill_descriptions.py (+345 lines),
+docs/architecture/agent_knowledge_system.md (+62 lines), docs/INDEX.md (+84 lines net),
+tickets/.../02a_description_backfill_migration.md (sign-offs and comments).
+unit_tests/test_knowledge_query.py (ticket 01a) was correctly excluded from staging.
+Commit lock acquired and released cleanly.
 
 ### 2026-06-05 12:20 — pr-reviewer (status: ok)
 feedback-id: fb_2026-06-05_cf7825f4
