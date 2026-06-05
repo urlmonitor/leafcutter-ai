@@ -4,7 +4,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 created_by: "tickets/00_inbox/TICKET-20260604-HookScriptIntegrityCheck.md"
 criteria: |
   Given a staged diff modifies the file "templates/scripts/commit_guardian/check_contract_shrinking.py"
@@ -40,5 +40,8 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - "tickets/00_inbox/TICKET-20260605-ContractShrinkingSelfExclusion.md"
+implemented_by:
+  - "templates/scripts/commit_guardian/check_contract_shrinking.py"
+  - "templates/commit-guardian/check_contract_shrinking.py"
