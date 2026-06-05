@@ -1,6 +1,6 @@
 ---
 title: "AC-driven development documentation — flow diagrams, state machine, and how-to"
-status: todo
+status: done
 components:
   - ac-store
 created: 2026-06-05
@@ -30,7 +30,7 @@ agents:
   documentation-expert: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 source_acs:
   - ACD-100a-1
   - ACD-100a-2
@@ -129,7 +129,7 @@ And it cross-links to all 4 diagrams produced by this ticket.
 - [x] documentation-expert — 2026-06-05 14:00
 - [x] pr-reviewer — 2026-06-05 14:45
 - [x] commit — 2026-06-05 15:00
-- [ ] pull-request
+- [x] pull-request — 2026-06-05 15:15
 
 ## Comments
 
@@ -164,6 +164,14 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Committed ticket-07 sign-off changes at SHA 8ed6655: architecture-diagram-author and pr-reviewer phase completions (24 insertions, 8 deletions). Pre-commit hook config absent (PRE_COMMIT_ALLOW_NO_CONFIG=1 used — no hooks to run). Commit message follows chore(ticket-07) style matching repo convention. Anomalies: no .pre-commit-config.yaml present in worktree — this is expected for this epic worktree setup.
+
+### 2026-06-05 15:15 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_810b4c80
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+PR already open as PR #61 (EPIC-ACDrivenDevelopment branch → urlmonitor/leafcutter-ai). Pushed ticket-07 sign-off commits (d84cf2c, 8ed6655) to update the PR. All five ACs satisfied; status flipped to done as last needed agent.
 
 ## Implementation Tasks
 
