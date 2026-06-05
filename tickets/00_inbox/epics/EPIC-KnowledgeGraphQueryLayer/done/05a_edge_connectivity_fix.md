@@ -1,6 +1,6 @@
 ---
 title: "Fix edge connectivity — components as hubs, depends_on resolution, phantom filtering"
-status: todo
+status: done
 components:
   - knowledge-management
 created: 2026-06-05
@@ -36,8 +36,8 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 ---
@@ -242,8 +242,8 @@ tests:
 - [x] python-coder — 2026-06-05 18:30
 - [x] test-runner — 2026-06-05 18:32
 - [x] pr-reviewer — 2026-06-05 18:35
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-05 18:40
+- [x] pull-request — 2026-06-05 18:42
 
 ## Comments
 
@@ -284,6 +284,21 @@ completion_manifest:
   no_third_party_imports: true
   error_handling_policy_followed: true
 All 10 ACs (KM-KQS-021 through KM-KQS-030) are covered by implementation and tests. Changes are minimal, additive, stdlib-only, and follow repo error-handling policy. 26/26 tests green. Approved.
+
+### 2026-06-05 18:40 — commit (status: ok)
+feedback-id: fb_2026-06-05_f64cc4f4
+completion_manifest:
+  commit_landed: true
+  no_hook_failures: true
+  staged_files_explicit: true
+Commit fed0f4a landed on branch EPIC-KnowledgeGraphQueryLayer. 4 files changed: config/paths.json, scripts/knowledge_query.py, unit_tests/test_knowledge_query.py, ticket file. Lock acquired and released atomically.
+
+### 2026-06-05 18:42 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_f73c085f
+completion_manifest:
+  branch_pushed: true
+  pr_exists: true
+Pushed commit fed0f4a to existing PR #63 on urlmonitor/leafcutter-ai (branch EPIC-KnowledgeGraphQueryLayer). No new PR needed — the epic-level PR already exists.
 
 ## Test Writer — Completion Report
 
