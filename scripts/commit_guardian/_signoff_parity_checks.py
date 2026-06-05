@@ -477,6 +477,38 @@ def _check_orphans(agents: dict, signoffs: dict[str, str]) -> list[str]:
     return violations
 
 
+def _check_done_folder_move(ticket_path: str) -> list[str]:
+    """Report tickets that have been moved into a done/ subfolder (BO-400c-3).
+
+    Moving tickets into a done/ subfolder is prohibited by BO-400: the done/
+    folder convention is deprecated in favour of frontmatter ``status: done``.
+    Use ``set_ticket_status.py --status done`` instead.
+
+    This check fires whenever a ticket file is found at a path that contains
+    a ``/done/`` path component inside an epic or tickets folder, signalling
+    that a git-mv-based move has occurred.
+
+    Handles both forward-slash and backslash path separators.
+
+    Args:
+        ticket_path: The file path as provided by pre-commit (may use either
+            slash style).
+
+    Returns:
+        A list with a single prohibition violation string when the path contains
+        a ``/done/`` component, or an empty list otherwise.
+    """
+    normalised = ticket_path.replace("\\", "/")
+    # Match /done/ as a path component (case-insensitive on the folder name)
+    if re.search(r"/[Dd]one/", normalised):
+        return [
+            f"Prohibited: ticket file moved into done/ subfolder. "
+            f"Use set_ticket_status.py --status done instead. "
+            f"File: {ticket_path}"
+        ]
+    return []
+
+
 def _check_done_folder(ticket_path: str, agents: dict) -> list[str]:
     """Report agents with ``needed`` or ``failed`` status in a done/ ticket.
 
@@ -562,6 +594,13 @@ def _check_unchecked_tasks(
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-05 12:30 [python-coder/BO-400]: Added _check_done_folder_move() — the
+  done-folder-move prohibition check (BO-400c-3). Fires when a ticket path
+  contains a /done/ component, signalling a git-mv-based move has occurred.
+  Emits "Prohibited: ticket file moved into done/ subfolder. Use
+  set_ticket_status.py --status done instead." Wired into _validate_ticket_content()
+  via check_ticket_signoff_parity.py before other validations so it is the first
+  error surfaced for moved tickets.
 - 2026-05-15 15:10 [python-coder/file-size-fix]: Extracted from check_ticket_signoff_parity.py
   to keep each file under the 400-line budget. Contains all parsing helpers
   (load_components_registry, load_agent_registry, _parse_frontmatter,

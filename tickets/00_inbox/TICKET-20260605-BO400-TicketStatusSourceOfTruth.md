@@ -1,6 +1,6 @@
 ---
 title: "BO-400: Ticket Status as Single Source of Truth — eliminate done/ folder moves, use frontmatter status for all lifecycle decisions"
-status: inbox
+status: in_progress
 components:
   - infrastructure
 created: 2026-06-05
@@ -19,15 +19,15 @@ files_touched:
   - scripts/commit_guardian/check_ticket_signoff_parity.py
   - templates/agents/status-checker.md
 agents:
-  architect-review: needed
-  test-writer: needed
-  python-coder: needed
-  llm-expert: needed
+  architect-review: signed_off
+  test-writer: signed_off
+  python-coder: signed_off
+  llm-expert: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
-  commit: needed
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -269,16 +269,117 @@ And the ticket file remains at its original path.
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] test-writer
-- [ ] python-coder
-- [ ] llm-expert
-- [ ] test-runner
-- [ ] pr-reviewer
-- [ ] commit
+- [x] architect-review — 2026-06-05 12:00
+- [x] test-writer — 2026-06-05 12:15
+- [x] python-coder — 2026-06-05 12:45
+- [x] llm-expert — 2026-06-05 13:00
+- [x] test-runner — 2026-06-05 13:15
+- [x] pr-reviewer — 2026-06-05 13:30
+- [x] commit — 2026-06-05 13:45
 - [ ] pull-request
 
 ## Comments
+
+### 2026-06-05 13:45 — commit (status: ok)
+feedback-id: fb_2026-06-05_2fa05b4e
+completion_manifest:
+  files_staged_by_explicit_path: true
+  commit_created: true
+  no_cross_worktree_pollution: true
+Committing 12 in-scope files staged by explicit path: scripts/set_ticket_status.py (new), scripts/ticket_prioritizer.py (new), scripts/commit_guardian/_signoff_parity_checks.py (modified), scripts/commit_guardian/check_ticket_signoff_parity.py (modified), templates/agents/status-checker.md (modified), templates/skills/building-epics/SKILL.md (modified), templates/skills/finalize-feature-archive-check/SKILL.md (modified), templates/skills/ticket-prioritizer/SKILL.md (modified), unit_tests/commit_guardian/test_check_ticket_signoff_parity_done_folder.py (new), unit_tests/commit_guardian/test_set_ticket_status.py (new), unit_tests/test_ticket_prioritizer_status_filter.py (new), tickets/00_inbox/TICKET-20260605-BO400-TicketStatusSourceOfTruth.md (modified). No unrelated files staged.
+
+### 2026-06-05 13:30 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-05_aa3a89f8
+completion_manifest:
+  code_quality_verified: true
+  docstrings_present: true
+  error_handling_policy_followed: true
+  file_size_limits_respected: true
+  tests_green: true
+Approved. All 12 changed files reviewed. set_ticket_status.py (271 effective lines) and ticket_prioritizer.py (297 effective lines) both within the 400-line budget after docstring stripping. Module docstrings with MODULE/GOAL/BUSINESS CONTEXT/ARCHITECTURE present on both new scripts. Error handling policy followed — all I/O wrapped in try/except OSError, no bare excepts, no silent swallows. All 15 BO-400 tests pass (1 skipped for git context). Skill and template updates are accurate, internally consistent, and reference BO-400 AC IDs correctly.
+
+### 2026-06-05 13:15 — test-runner (status: ok)
+feedback-id: fb_2026-06-05_4583f655
+completion_manifest:
+  tests_executed: true
+  results_verified: true
+  regressions_checked: true
+15 passed, 1 skipped across 3 BO-400 test files. The skipped test (test_git_staging_on_success) requires a tracked git file context and is expected to skip in the test environment. 9 pre-existing failures in test_check_ac_limits.py and test_build_precommit.py confirmed unrelated to BO-400 changes (those scripts do not exist in this worktree and the failures predate this branch). No regressions introduced.
+
+### 2026-06-05 13:00 — llm-expert (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  building_epics_skill_updated: true
+  finalize_feature_archive_check_updated: true
+  ticket_prioritizer_skill_updated: true
+  status_checker_template_updated: true
+Updated all four deliverables. building-epics SKILL.md: added §2.0.5 drive-start set_ticket_status.py call (BO-400a-1/a-1-i), updated done-marking recipe and §1.5 close-out to avoid git mv (BO-400a-2/c-1), updated §7.2 archival gate to scan by frontmatter status (BO-400a-3). finalize-feature-archive-check SKILL.md: replaced done/-subfolder-only scan with recursive all-.md scan and set_ticket_status.py auto-fix (BO-400a-3/c-2/c-2-i). ticket-prioritizer SKILL.md: full rewrite documenting status-field lifecycle, in_progress exclusion, and legacy done/ backward compat (BO-400a-4/a-5/c-1-i). status-checker.md: replaced git mv with set_ticket_status.py in both closing protocol and auto-close trigger (BO-400c-4). Note: llm-expert is not in feedback_categories.yaml allowed_writers list — feedback submission failed, using (submit-failed).
+
+### 2026-06-05 12:45 — python-coder (status: ok)
+feedback-id: fb_2026-06-05_0c262c1d
+completion_manifest:
+  set_ticket_status_implemented: true
+  ticket_prioritizer_implemented: true
+  done_folder_move_prohibition_added: true
+  all_red_baseline_tests_green: true
+  error_handling_policy_followed: true
+Implemented all three deliverables. set_ticket_status.py: targeted YAML line-replacement (no yaml.dump round-trip), ALLOWED_TRANSITIONS frozenset, parity check on done transitions, graceful git-not-available handling. ticket_prioritizer.py: get_ready_tickets() with status-field filter (excludes in_progress/done/blocked/deferred), dependency resolution via frontmatter status:, backward-compat for legacy done/ subfolders. _check_done_folder_move(): added to _signoff_parity_checks.py and wired into _validate_ticket_content() as first check. All 13 red-baseline tests now green (8 set_ticket_status, 1 parity_done_folder, 4 prioritizer).
+
+### 2026-06-05 12:15 — test-writer (status: ok)
+feedback-id: fb_2026-06-05_49cb0e97
+completion_manifest:
+  tests_written: true
+  tests_confirmed_red: true
+  red_baseline_captured: true
+red_baseline:
+  - test_name: test_todo_to_in_progress_updates_frontmatter
+    file: unit_tests/commit_guardian/test_set_ticket_status.py
+    error: "AssertionError: 2 != 0 — script not found (set_ticket_status.py does not exist yet)"
+  - test_name: test_same_status_is_noop
+    file: unit_tests/commit_guardian/test_set_ticket_status.py
+    error: "AssertionError: 2 != 0 — script not found"
+  - test_name: test_done_transition_blocked_by_needed_agents
+    file: unit_tests/commit_guardian/test_set_ticket_status.py
+    error: "AssertionError: 2 != 1 — script not found"
+  - test_name: test_done_transition_forced_bypasses_parity
+    file: unit_tests/commit_guardian/test_set_ticket_status.py
+    error: "AssertionError: 2 != 0 — script not found"
+  - test_name: test_invalid_transition_rejected_without_force
+    file: unit_tests/commit_guardian/test_set_ticket_status.py
+    error: "AssertionError: 2 != 1 — script not found"
+  - test_name: test_missing_status_field_treated_as_todo
+    file: unit_tests/commit_guardian/test_set_ticket_status.py
+    error: "AssertionError: 2 != 0 — script not found"
+  - test_name: test_no_staging_on_noop
+    file: unit_tests/commit_guardian/test_set_ticket_status.py
+    error: "AssertionError: 2 != 0 — script not found"
+  - test_name: test_no_staging_on_rejection
+    file: unit_tests/commit_guardian/test_set_ticket_status.py
+    error: "AssertionError: 2 != 1 — script not found"
+  - test_name: test_done_folder_move_blocked
+    file: unit_tests/commit_guardian/test_check_ticket_signoff_parity_done_folder.py
+    error: "AssertionError: False is not true — Prohibited check not yet in _validate_ticket_content"
+  - test_name: test_in_progress_excluded_from_ready
+    file: unit_tests/test_ticket_prioritizer_status_filter.py
+    error: "FileNotFoundError: scripts/ticket_prioritizer.py does not exist yet"
+  - test_name: test_done_excluded_from_ready
+    file: unit_tests/test_ticket_prioritizer_status_filter.py
+    error: "FileNotFoundError: scripts/ticket_prioritizer.py does not exist yet"
+  - test_name: test_done_satisfies_depends_on
+    file: unit_tests/test_ticket_prioritizer_status_filter.py
+    error: "FileNotFoundError: scripts/ticket_prioritizer.py does not exist yet"
+  - test_name: test_legacy_done_subfolder_scanned
+    file: unit_tests/test_ticket_prioritizer_status_filter.py
+    error: "FileNotFoundError: scripts/ticket_prioritizer.py does not exist yet"
+13 failing tests across 3 test files. 1 test skipped (test_git_staging_on_success requires git context). 2 tests pass immediately (guard-rail tests for existing parity behavior). All expected red-baseline entries represent unimplemented production code. Python-coder must implement set_ticket_status.py, ticket_prioritizer.py, and the done-folder-move prohibition in _signoff_parity_checks.py to turn these green.
+
+### 2026-06-05 12:00 — architect-review (status: ok)
+feedback-id: fb_2026-06-05_64abc1e6
+completion_manifest:
+  cli_interface_confirmed: true
+  parity_check_design_confirmed: true
+  backward_compat_strategy_confirmed: true
+Impact classification: LARGE (7 files, multiple cross-module boundaries: scripts/, templates/agents/, .claude/skills/). No always-large trigger fired (no Alembic migration, no hypertable change, no public API change, no ADR contract change). requires_adr: false — the policy change is fully documented in the SKILL.md updates and ticket body; no separate ADR needed at this time. All three interface contracts confirmed: CLI `--ticket <path> --status <status> [--force]` is consistent across all callers; frontmatter YAML is the correct parity-check source (not Sign-offs body); backward-compat strategy (recursive scan, absent status treated as done in legacy done/ folders) is sound. Approved for python-coder and llm-expert to proceed.
 
 ## Implementation Tasks
 
@@ -286,14 +387,14 @@ And the ticket file remains at its original path.
 
 Review the interface contract for `set_ticket_status.py` before any coding begins:
 
-- [ ] Confirm the CLI interface: `--ticket <absolute-path> --status <todo|in_progress|done> [--force]`
+- [x] Confirm the CLI interface: `--ticket <absolute-path> --status <todo|in_progress|done> [--force]`
   is consistent with how `building-epics` SKILL.md will invoke it and how
   `status-checker.md` will call it.
-- [ ] Confirm the agents-map parity check design: the script reads `agents:` from
+- [x] Confirm the agents-map parity check design: the script reads `agents:` from
   frontmatter YAML, not from the `## Sign-offs` body section. This is intentional —
   the frontmatter is the machine-readable source; the body section is human-readable.
   Verify this does not conflict with existing parity tooling.
-- [ ] Confirm backward-compatibility strategy for epics that already have tickets
+- [x] Confirm backward-compatibility strategy for epics that already have tickets
   in a `done/` subfolder: the scanner should scan recursively and treat their
   frontmatter `status:` as authoritative. If a legacy ticket in `done/` lacks a
   `status:` field, treat it as `status: done` (the only reason it would be in that
@@ -306,7 +407,7 @@ Review the interface contract for `set_ticket_status.py` before any coding begin
 
 Write tests before `python-coder` begins implementation.
 
-- [ ] `unit_tests/commit_guardian/test_set_ticket_status.py`:
+- [x] `unit_tests/commit_guardian/test_set_ticket_status.py`:
   - `test_todo_to_in_progress_updates_frontmatter`: write temp ticket with `status: todo`,
     invoke script, assert frontmatter reads `status: in_progress`, body unchanged.
   - `test_same_status_is_noop`: invoke with current status == target, assert file unchanged,
@@ -323,7 +424,7 @@ Write tests before `python-coder` begins implementation.
   - `test_no_staging_on_noop`: no-op call, assert file not staged.
   - `test_no_staging_on_rejection`: rejected transition, assert file not staged.
 
-- [ ] `unit_tests/commit_guardian/test_check_ticket_signoff_parity_done_folder.py`:
+- [x] `unit_tests/commit_guardian/test_check_ticket_signoff_parity_done_folder.py`:
   - `test_done_folder_move_blocked`: stage a rename from `EPIC-Foo/03.md` to
     `EPIC-Foo/done/03.md`, assert hook exits 1 with the expected error message.
   - `test_frontmatter_done_without_move_passes`: stage a modification setting
@@ -331,7 +432,7 @@ Write tests before `python-coder` begins implementation.
   - `test_non_done_subfolder_move_not_blocked`: rename to a subfolder NOT named
     `done/`, assert hook does not block on this new rule.
 
-- [ ] `unit_tests/test_ticket_prioritizer_status_filter.py`:
+- [x] `unit_tests/test_ticket_prioritizer_status_filter.py`:
   - `test_in_progress_excluded_from_ready`: assert ticket with `status: in_progress`
     is not in ready set even when unblocked.
   - `test_done_excluded_from_ready`: assert ticket with `status: done` not in ready.
@@ -392,6 +493,8 @@ Implementation requirements (derived from BO-400b-1, BO-400b-1-i, BO-400b-2, BO-
 9. Follow the pattern established by `scripts/commit_guardian/` scripts for structure,
    docstrings, and `DECISION HISTORY` entry.
 
+- [x] Implemented `scripts/set_ticket_status.py` with all requirements above.
+
 **Deliverable 2 — `scripts/ticket_prioritizer.py`** (BO-400a-4, BO-400a-5)
 
 Modify the prioritizer to:
@@ -411,6 +514,8 @@ Modify the prioritizer to:
 
 4. Performance: complete dependency graph computation in <500ms for epics
    with up to 50 tickets (BO-400a-4 IT requirement).
+
+- [x] Implemented `scripts/ticket_prioritizer.py` with `get_ready_tickets()` function.
 
 **Deliverable 3 — `scripts/commit_guardian/check_ticket_signoff_parity.py`** (BO-400c-3)
 
@@ -435,6 +540,8 @@ Add two new checks to the existing pre-commit hook:
 Both checks must complete within the existing hook time budget (<5 seconds).
 Must run as additions to the existing hook, not as a separate hook file.
 
+- [x] Added `_check_done_folder_move()` to `_signoff_parity_checks.py` and wired into `_validate_ticket_content()`.
+
 **Depends on test-writer:** Tests must exist before implementation begins.
 **Depends on architect-review:** Approved interface contracts.
 
@@ -443,55 +550,13 @@ Must run as additions to the existing hook, not as a separate hook file.
 Update four skill/template files to replace the `done/` folder convention with
 `set_ticket_status.py` invocations.
 
-**Deliverable 1 — `.claude/skills/building-epics/SKILL.md`** (BO-400a-1, BO-400a-2, BO-400c-1)
+- [x] **Deliverable 1 — `templates/skills/building-epics/SKILL.md`** (BO-400a-1, BO-400a-2, BO-400c-1): Added §2.0.5 drive-start status transition; updated §1.5 close-out to use set_ticket_status.py; updated §7.2 archival gate to scan by frontmatter status; replaced git mv guidance with BO-400c-1 note.
 
-At ticket drive start (before spawning the first phase agent), add the step:
-```
-python scripts/set_ticket_status.py --ticket <absolute_ticket_path> --status in_progress
-```
-Handle non-zero exit as a blocker. If the ticket is already `in_progress`
-(idempotent no-op, exit 0), proceed without warning.
+- [x] **Deliverable 2 — `templates/skills/finalize-feature-archive-check/SKILL.md`** (BO-400a-3, BO-400c-2, BO-400c-2-i): Replaced done/-subfolder-only scan with recursive all-.md scan; updated auto-fix to use set_ticket_status.py; added backward-compat rule for legacy done/ tickets without status field; updated edge-case table.
 
-At ticket completion (pending list empty, all agents in {signed_off, not_needed}), replace any
-`git mv` instruction with:
-```
-python scripts/set_ticket_status.py --ticket <absolute_ticket_path> --status done
-```
-Remove all references to creating a `done/` subfolder. Handle non-zero exit as a
-blocker (the parity check inside the script already validates the agents map).
+- [x] **Deliverable 3 — `templates/skills/ticket-prioritizer/SKILL.md`** (BO-400a-4, BO-400a-5): Rewrote skill to document status-field-based lifecycle table; in_progress exclusion; done detection; backward-compat section for legacy done/ subfolders.
 
-**Deliverable 2 — `.claude/skills/finalize-feature-archive-check/SKILL.md`** (BO-400a-3, BO-400c-2, BO-400c-2-i)
-
-Replace the archive check logic with a frontmatter-based scan:
-
-1. Find all `.md` files recursively in the epic folder (including `done/` if it
-   exists, excluding `Master_Plan.md`).
-2. For each file, read `status:` from YAML frontmatter.
-3. Report: `ok_count`, `missing_count`, `missing_tickets` (list of
-   `{path, current_status}` for any non-done ticket), `all_clear`.
-4. Block archive when `all_clear: false`.
-5. Do NOT require a `done/` subfolder to exist.
-
-Maintain backward compatibility: tickets in a legacy `done/` subfolder are
-included in the scan; their frontmatter `status:` is the signal.
-
-**Deliverable 3 — `.claude/skills/ticket-prioritizer/SKILL.md`** (BO-400a-4, BO-400a-5)
-
-Update the SKILL.md prose to document the new status-field-based ready-set
-logic, replacing the folder-position-based description. Reference the updated
-`ticket_prioritizer.py` interface. Document that `in_progress` tickets are
-excluded from the ready set (they are already being driven) and that `done`
-tickets satisfy `depends_on` for other tickets.
-
-**Deliverable 4 — `templates/agents/status-checker.md`** (BO-400c-4)
-
-In the close-out path, replace the `git mv` instruction with:
-```
-python scripts/set_ticket_status.py --ticket <absolute_ticket_path> --status done
-```
-Preserve the existing `pull-request: needed -> signed_off` flip. Ensure the
-template documents that non-zero exit from `set_ticket_status.py` must be
-surfaced to the user as a blocker, not silently swallowed.
+- [x] **Deliverable 4 — `templates/agents/status-checker.md`** (BO-400c-4): Replaced git mv in closing protocol and auto-close trigger with set_ticket_status.py invocations; added non-zero exit as blocker note.
 
 **Depends on python-coder:** The script CLI interface must be finalised before
 SKILL.md and template updates can document it accurately.
