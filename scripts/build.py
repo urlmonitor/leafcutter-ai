@@ -44,6 +44,7 @@ from build_phases import (
     build_sync_platforms,
     build_ac_store_docs,
     build_agent_cards,
+    validate_agent_self_description,
     reset_uptodate_count,
     get_uptodate_count,
     clean_stale_artifacts,
@@ -671,6 +672,20 @@ def main(argv: list[str] | None = None) -> int:
                             "files under .claude/agents/, .claude/skills/, and .claude/hooks/. "
                             "Files not managed by build.py are never removed."
                         ))
+    parser.add_argument(
+        "--self-description-enforcement",
+        choices=["warning", "error"],
+        default=None,
+        metavar="LEVEL",
+        help=(
+            "Override the self_description_enforcement level from "
+            "config/agent_registry.json. "
+            "Choices: 'warning' (build continues with printed warnings) or "
+            "'error' (build exits non-zero when any agent is missing required "
+            "self-description fields). When omitted, reads from the registry "
+            "config key (default: 'warning' when the key is absent)."
+        ),
+    )
 
     args = parser.parse_args(argv)
 
@@ -741,6 +756,41 @@ def main(argv: list[str] | None = None) -> int:
     # Reset the up-to-date counter before this run so consecutive CLI calls
     # report accurate per-run numbers.
     reset_uptodate_count()
+
+    # Self-description validation: resolve enforcement level (CLI flag overrides
+    # registry config key; registry key overrides the 'warning' built-in default).
+    _sd_enforcement: str = "warning"
+    package_root_for_sd = Path(__file__).resolve().parent.parent
+    _registry_path_for_sd = package_root_for_sd / "config" / "agent_registry.json"
+    if _registry_path_for_sd.exists():
+        try:
+            _reg_data = json.loads(
+                _registry_path_for_sd.read_text(encoding="utf-8")
+            )
+            _sd_enforcement = _reg_data.get(
+                "self_description_enforcement", "warning"
+            )
+        except (OSError, json.JSONDecodeError, KeyError, TypeError):
+            pass  # Fallback to 'warning' — non-fatal read failure.
+    # CLI flag overrides registry config value.
+    _cli_sd = getattr(args, "self_description_enforcement", None)
+    if _cli_sd is not None:
+        _sd_enforcement = _cli_sd
+
+    _heading("Self-description validation")
+    _sd_error_count, _sd_warning_count = validate_agent_self_description(
+        target_root=target_root,
+        config=config,
+        dry_run=args.dry_run,
+        enforcement_level=_sd_enforcement,
+    )
+    print()
+    if _sd_error_count > 0 and _sd_enforcement == "error":
+        _error(
+            f"Self-description validation failed with {_sd_error_count} error(s). "
+            "Fix the missing fields and re-run the build."
+        )
+        return 1
 
     total = _run_phases(target_root, output_root, config, args.dry_run, effective_force)
 
@@ -931,4 +981,12 @@ if __name__ == "__main__":
 #   before ("Doc index", build_doc_index). Generates .card.md files for all
 #   agent templates into docs/agents/cards/ on every build run.
 #   (#EPIC-SelfDescribingAgents/02)
+# - 2026-06-05 12:30 [python-coder/EPIC-SelfDescribingAgents/04]: Imported
+#   validate_agent_self_description from build_phases. Added
+#   --self-description-enforcement CLI flag (choices: warning|error, default None).
+#   Validation runs in main() before _run_phases() as the first phase. Enforcement
+#   level resolved: CLI flag > registry config key > built-in default ('warning').
+#   When enforcement='error' and errors found, main() returns 1 after printing
+#   all errors (aggregated output, never halts on first error). When enforcement
+#   ='warning', main() continues with 0 exit code. (#EPIC-SelfDescribingAgents/04)
 # ====================================================================

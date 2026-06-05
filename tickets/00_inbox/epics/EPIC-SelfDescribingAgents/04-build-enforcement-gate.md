@@ -17,13 +17,13 @@ files_touched:
   - scripts/build.py
   - config/agent_registry.json
 agents:
-  architect-review: needed
-  test-writer: needed
-  python-coder: needed
+  architect-review: signed_off
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   adr-author: not_needed
@@ -117,40 +117,105 @@ Then this CLI flag overrides the config/agent_registry.json setting
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
-- [ ] pr-reviewer
+- [x] architect-review — 2026-06-05 12:00
+- [x] test-writer — 2026-06-05 12:15
+- [x] python-coder — 2026-06-05 12:30
+- [x] test-runner — 2026-06-05 12:45
+- [x] pr-reviewer — 2026-06-05 13:00
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-06-05 13:00 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-05_bf0a88d8
+completion_manifest:
+  acs_satisfied: true
+  error_handling_policy_followed: true
+  code_quality_acceptable: true
+  no_regressions: true
+
+Reviewed implementation against all 7 AC scenarios in INF-600g. All scenarios satisfied: (1) error mode → non-zero exit with named agent and fields, (2) warning mode → zero exit with WARNING messages, (3) missing registry category caught, (4) unresolvable skills_invoked with package/project-local distinction, (5) out-of-range knowledge_channels citing 1-11, (6) fully-populated → clean exit, (7) CLI flag overrides config. Error-handling policy followed (all I/O in try/except OSError). Aggregated output confirmed by test. 11/11 tests green. No blockers.
+
+### 2026-06-05 12:45 — test-runner (status: ok)
+feedback-id: fb_2026-06-05_b47ae37c
+completion_manifest:
+  all_tests_green: true
+  no_regressions: true
+  test_coverage_complete: true
+
+Ran `unit_tests/test_agent_self_description_validation.py` — 11/11 tests passed. All test cases exercised: fully-populated pass, each missing frontmatter field (behavioral_patterns, pre_flight_reads, inputs, outputs, mutates), missing registry category, unresolvable skills_invoked, out-of-range knowledge_channels (12), warning mode (returns (0,N)), error mode aggregation (all errors collected), CLI flag override, and integration return-type check. No regressions in `test_generate_agent_cards.py`, `test_build_hooks.py`, `test_build_workflows.py`, `test_build_workflow_phase.py`, `test_build_epic_workflow.py`, `test_build_ac_store_scaffold.py`.
+
+### 2026-06-05 12:30 — python-coder (status: ok)
+feedback-id: fb_2026-06-05_72387b13
+completion_manifest:
+  validate_agent_self_description_implemented: true
+  self_description_enforcement_key_added: true
+  build_py_wired: true
+  tests_green: true
+  error_handling_policy_followed: true
+
+Implemented `validate_agent_self_description()` in `scripts/build_phases.py` per the approved schema: validates 5 frontmatter fields (`behavioral_patterns`, `pre_flight_reads`, `inputs`, `outputs`, `mutates`), 3 registry fields (`category`, `skills_invoked`, `knowledge_channels`), skill_id resolvability against package and project-local paths, and channel range 1-11. Aggregated output — never halts on first error. Added `self_description_enforcement: "warning"` to `config/agent_registry.json`. Wired `--self-description-enforcement` CLI flag into `build.py` with registry-config → CLI-flag precedence; validation runs before `_run_phases()` so errors surface before card generation. All 11 new tests green; 0 regressions in existing suite. All file I/O in `try/except OSError` per error-handling policy.
+
+### 2026-06-05 12:15 — test-writer (status: ok)
+feedback-id: fb_2026-06-05_7860ecb0
+completion_manifest:
+  tests_written: true
+  red_baseline_confirmed: true
+  covers_all_acs: true
+
+Created `unit_tests/test_agent_self_description_validation.py` with 11 failing tests (red baseline). All tests fail with ImportError confirming `validate_agent_self_description` does not yet exist. Test coverage includes: fully-populated pass, each missing frontmatter field, missing registry category, unresolvable skills_invoked, out-of-range knowledge_channels, warning mode, error aggregation, CLI flag override, and integration return-type check.
+
+### 2026-06-05 12:00 — architect-review (status: ok)
+feedback-id: fb_2026-06-05_95f8f96b
+completion_manifest:
+  blast_radius_assessed: true
+  impact_classified: true
+  architectural_note_written: true
+
+**Architectural Review — Small Case**
+
+Blast-radius: 3 files touched (`scripts/build_phases.py`, `scripts/build.py`, `config/agent_registry.json`), all within the `build_pipeline` component. No Alembic migrations, no hypertable changes, no public API changes, no ADR contract changes.
+
+**Impact classification: SMALL.** Threshold rules: 3 files ≤ 5, 1 component, no cross-module boundary. No always-large trigger fired.
+
+**Design confirmations:**
+1. Required frontmatter fields: `behavioral_patterns`, `pre_flight_reads`, `inputs`, `outputs`, `mutates`. Required registry fields: `category`, `skills_invoked`, `knowledge_channels`. Schema approved.
+2. Enforcement config: both mechanisms approved — `self_description_enforcement` key in `config/agent_registry.json` (default `"warning"`) + `--self-description-enforcement` CLI override.
+3. Validation phase ordering: `validate_agent_self_description()` runs BEFORE `build_agent_cards()`. Aggregated output (all problems in one pass) confirmed.
+4. Error message format: confirmed as proposed. Messages must name agent, field, location (frontmatter vs registry), and fix hint.
+
+**Design concerns:** The `skills_invoked` validation path must check both `templates/skills/` and `.claude/skills/` directories and clearly distinguish "not in package" from "not in project-local". This distinction is already called out in the ACs. No ADR required (`requires_adr: false`). No diagrams needed (pure refactor within one component).
+
+## Escalation
+
+Branch: none
+Reason: 3 files in one component (build_pipeline); no always-large trigger fired.
+
 ## Implementation Tasks
 
 ### architect-review
 
-- [ ] Confirm which fields are "required" for self-description validation.
+- [x] Confirm which fields are "required" for self-description validation.
   Proposed required-in-frontmatter: `behavioral_patterns`, `pre_flight_reads`,
   `inputs`, `outputs`, `mutates`. Proposed required-in-registry: `category`,
   `skills_invoked`, `knowledge_channels`. Confirm this list is correct and
   complete, or adjust. The validation gate must check exactly these fields.
 
-- [ ] Confirm the enforcement level configuration mechanism. Two options:
+- [x] Confirm the enforcement level configuration mechanism. Two options:
   (a) A top-level `self_description_enforcement: "warning"|"error"` key in
   `config/agent_registry.json` (config-file driven, version-controlled).
   (b) A `--self-description-enforcement` CLI flag on `build.py` (runtime
   override). Recommend using both: config sets the default, CLI can override.
   Confirm this is acceptable.
 
-- [ ] Confirm the validation should run as a separate build phase
+- [x] Confirm the validation should run as a separate build phase
   (`validate_agent_self_description()`) that runs BEFORE `build_agent_cards()`
   (Ticket 2), so validation errors are surfaced before the generator runs.
   The error/warning output should be aggregated: list all problems across all
   agents in one pass, not halt on the first agent.
 
-- [ ] Confirm error message format. Proposed:
+- [x] Confirm error message format. Proposed:
   ```
   ERROR: Agent 'sql-coder' template missing required self-description fields:
     - behavioral_patterns (frontmatter): Add a behavioral_patterns array listing
@@ -173,44 +238,44 @@ mechanism, and error message format.
 
 Create `unit_tests/test_agent_self_description_validation.py`:
 
-- `test_validation_passes_for_fully_populated_agent`:
+- [x] `test_validation_passes_for_fully_populated_agent`:
   Given a fixture with all required fields present, assert the validator
   returns no errors.
 
-- `test_validation_fails_for_missing_behavioral_patterns`:
+- [x] `test_validation_fails_for_missing_behavioral_patterns`:
   Given frontmatter with `behavioral_patterns` absent, assert the validator
   returns an error entry naming the field.
 
-- `test_validation_fails_for_missing_pre_flight_reads`:
+- [x] `test_validation_fails_for_missing_pre_flight_reads`:
   Similar test for `pre_flight_reads` absent.
 
-- `test_validation_fails_for_missing_inputs_outputs_mutates`:
+- [x] `test_validation_fails_for_missing_inputs_outputs_mutates`:
   Given frontmatter missing all three I/O fields, assert three error entries.
 
-- `test_validation_fails_for_missing_registry_category`:
+- [x] `test_validation_fails_for_missing_registry_category`:
   Given a registry entry with no `category` field, assert error naming the agent.
 
-- `test_validation_fails_for_invalid_skills_invoked_skill_id`:
+- [x] `test_validation_fails_for_invalid_skills_invoked_skill_id`:
   Given `skills_invoked: [{skill_id: "ghost-skill", mode: "always"}]`,
   assert error naming the unresolvable skill_id and distinguishing the two
   not-found cases (package vs. project-local).
 
-- `test_validation_fails_for_out_of_range_knowledge_channel`:
+- [x] `test_validation_fails_for_out_of_range_knowledge_channel`:
   Given `knowledge_channels: [{channel: 12, ...}]`, assert error citing range 1-11.
 
-- `test_warning_mode_does_not_raise`:
+- [x] `test_warning_mode_does_not_raise`:
   Given enforcement_level="warning" and missing fields, assert the function
   returns without raising and returns a list of warning strings (not raises).
 
-- `test_error_mode_aggregates_all_problems`:
+- [x] `test_error_mode_aggregates_all_problems`:
   Given two agents with missing fields, assert all errors are returned in one
   list (not halted at first error).
 
-- `test_cli_flag_overrides_config`:
+- [x] `test_cli_flag_overrides_config`:
   Given registry config says "warning" and CLI flag says "error", assert
   validation uses "error" mode.
 
-- `test_build_phases_integration`:
+- [x] `test_build_phases_integration`:
   Call `validate_agent_self_description(target_root=<tmp>, config={...},
   dry_run=False)` and assert it returns (error_count, warning_count) integers.
 
