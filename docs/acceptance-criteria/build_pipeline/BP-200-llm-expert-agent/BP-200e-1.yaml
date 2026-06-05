@@ -1,0 +1,40 @@
+id: BP-200e-1
+title: "Agent runs the Prompt-Quality Checklist before declaring any written prompt complete"
+component: build_pipeline
+level: L2
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given the llm-expert agent template at templates/agents/llm-expert.md exists,
+  When the "Implementation Sequence" section is read,
+  Then step 5 instructs: "Run the Prompt-Quality Checklist -- apply every item
+    from the Checklist section to your draft. Fix any violation before writing the file."
+  And step 5 appears AFTER step 4 (draft the body) and BEFORE step 6 (write the file)
+  And the Prompt-Quality Checklist section states: "A checklist item that fails is
+    a blocker -- fix the violation before signing off."
+depends_on: [BP-200e]
+doc_links:
+  - path: templates/agents/llm-expert.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Step ordering must enforce draft-then-check-then-write sequencing to prevent shipping unchecked prompts"
+  - "Blocker semantics must align with the signoff protocol -- failing checklist item prevents (status: ok)"
+delivers_to: null
+expects_from:
+  ac_id: BP-200a-2
+  contract: "Six-item Prompt-Quality Checklist in the agent template body that this step applies"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/01_agent_template.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "templates/agents/llm-expert.md"

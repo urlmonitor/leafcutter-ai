@@ -1,0 +1,33 @@
+id: BP-200d-2-i
+title: "Audit check 4 is skipped when agent template has signoff: false"
+component: build_pipeline
+level: L3
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given the prompt-audit skill at templates/skills/prompt-audit/SKILL.md exists,
+  When Check 4 (Signoff Protocol Validation) detection steps are read,
+  Then step 1 states: if signoff: true is absent or false in frontmatter,
+    skip this check and emit "N/A" in the report
+  And the report field signoff_protocol_valid is set to null (not false) when skipped
+depends_on: [BP-200d-2]
+doc_links:
+  - path: templates/skills/prompt-audit/SKILL.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Null vs false distinction must be preserved in the report schema to differentiate skipped from failed"
+  - "Skip logic must only trigger on explicit signoff: false or absence -- never on signoff: true"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/04_prompt_audit_skill.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "templates/skills/prompt-audit/SKILL.md"

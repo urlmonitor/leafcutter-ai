@@ -1,0 +1,43 @@
+id: BP-200b-3
+title: "Agent and skill frontmatter schemas distinguish required from build-injected fields"
+component: build_pipeline
+level: L2
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given the file docs/agents/llm-expert/PROJECT_CONTEXT.md exists,
+  When Section 2 (Agent Frontmatter Schema) is read,
+  Then it lists required hand-authored fields including:
+    name, description, model, tools, portable, signoff, domain, config_keys,
+    adopter_notes, requires_verification, spawn_allowlist
+  And it lists build-injected fields including inject_registry and config_keys
+  And it states that build-injected fields must NOT be hand-authored
+  And it documents valid values for the "model" field (haiku, sonnet, opus)
+  And it explains that domain is null for portable agents
+  When Section 3 (Skill Frontmatter Schema) is read,
+  Then it lists required fields: name, description, allowed-tools
+  And it explains the purpose of allowed-tools as a tool contract declaration
+depends_on: [BP-200b]
+doc_links:
+  - path: docs/agents/llm-expert/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Schema field lists must be consistent with the actual fields validated by build.py during agent compilation"
+  - "Model field valid values must stay synchronized with the harness-supported model tiers"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/02_project_context.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "docs/agents/llm-expert/PROJECT_CONTEXT.md"

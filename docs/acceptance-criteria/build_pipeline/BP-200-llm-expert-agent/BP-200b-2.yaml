@@ -1,0 +1,43 @@
+id: BP-200b-2
+title: "Shell convention section documents violation patterns with wrong and right examples"
+component: build_pipeline
+level: L2
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given the file docs/agents/llm-expert/PROJECT_CONTEXT.md exists,
+  When Section 1 (Shell Convention) is read,
+  Then it states the rule: every Bash tool call must be a single, simple command
+  And it provides a detection heuristic table covering at least these patterns:
+    - "&&" chain
+    - ";" semicolon chain (outside quoted strings)
+    - "||" chain
+    - "cd <path> &&" pattern
+    - multi-stage pipe producing side effects
+  And it provides at least 4 "Wrong" examples showing compound commands
+  And it provides at least 4 "Right" examples showing single commands with absolute paths
+  And it documents that "ENV=val command" syntax is allowed as a single command
+depends_on: [BP-200b]
+doc_links:
+  - path: docs/agents/llm-expert/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Shell convention content must be consistent with the root CLAUDE.md Shell Convention section"
+  - "Detection heuristic patterns must align with Check 3 of the prompt-audit skill (BP-200d-2)"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/02_project_context.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "docs/agents/llm-expert/PROJECT_CONTEXT.md"

@@ -1,0 +1,38 @@
+id: BP-200c-1-i
+title: "Registry default_status prevents automatic dispatch on existing tickets"
+component: build_pipeline
+level: L3
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given config/agent_registry.json is loaded,
+  When the llm-expert entry's selection_criteria is inspected,
+  Then default_status is "not_needed"
+  And this means existing tickets without an explicit "llm-expert: needed" entry
+    in their agents: map will not trigger dispatch of the llm-expert agent
+  And new tickets must explicitly opt in by setting "llm-expert: needed" in the
+    agents: map for the agent to be dispatched by ticket-supervisor
+depends_on: [BP-200c-1]
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "default_status behavior must be consistent with ticket-supervisor's dispatch logic for opt-in agents"
+  - "Must not cause regressions on existing tickets that lack an llm-expert agents map entry"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/03_registry_and_docs.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "config/agent_registry.json"

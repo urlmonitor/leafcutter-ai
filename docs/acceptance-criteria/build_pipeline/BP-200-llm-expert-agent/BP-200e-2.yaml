@@ -1,0 +1,43 @@
+id: BP-200e-2
+title: "Agent emits a structured completion report showing checklist pass/fail per item"
+component: build_pipeline
+level: L2
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given the llm-expert agent template at templates/agents/llm-expert.md exists,
+  When the "Response Payload" section is read,
+  Then it specifies a "Prompt-Quality Checklist Results" table with columns:
+    Item, Status, Notes
+  And it lists all 6 checklist items as rows:
+    - No compound bash commands
+    - Tool allowlist matches body
+    - No tools in body absent from allowlist
+    - spawn_allowlist declared
+    - Signoff section present
+    - Stop-and-ask rules present
+  And each row has a Status value of "pass" or "fail"
+  And each row has a Notes field for violation details when status is "fail"
+depends_on: [BP-200e]
+doc_links:
+  - path: templates/agents/llm-expert.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Report table items must be 1:1 with the checklist items (BP-200a-2) and detection checks (BP-200d-2)"
+  - "Pass/fail status must be a binary -- no partial or N/A values in the completion report"
+delivers_to: null
+expects_from:
+  ac_id: BP-200d-3
+  contract: "Structured report schema providing the violation data that populates the completion report table"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/01_agent_template.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "templates/agents/llm-expert.md"
