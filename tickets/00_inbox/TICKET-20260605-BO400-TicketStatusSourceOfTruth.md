@@ -28,7 +28,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 complexity: standard
@@ -276,9 +276,17 @@ And the ticket file remains at its original path.
 - [x] test-runner — 2026-06-05 13:15
 - [x] pr-reviewer — 2026-06-05 13:30
 - [x] commit — 2026-06-05 13:45
-- [ ] pull-request
+- [x] pull-request — 2026-06-05 13:50
 
 ## Comments
+
+### 2026-06-05 13:50 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_a7b246fd
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+  pr_url_recorded: true
+Branch feature/bo400-ticketstatussourceoftruth pushed to origin. PR #66 opened at https://github.com/urlmonitor/leafcutter-ai/pull/66. No conflicts detected on push.
 
 ### 2026-06-05 13:45 — commit (status: ok)
 feedback-id: fb_2026-06-05_2fa05b4e
