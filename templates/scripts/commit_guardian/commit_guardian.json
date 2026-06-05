@@ -676,6 +676,18 @@
                 ],
                 "pass_filenames": false,
                 "_comment": "EPIC-ACTreeSplit: Enforces ACS-100c-1 hard caps (>7 L1s per L0, >5 L2s per L1) and emits ACS-100c-2 sparse advisory (<3 children). Blocks commits that push a parent over its child limit. Fail-open on subprocess/YAML errors. Load ac-tree-split skill to resolve violations."
+            },
+            {
+                "id": "check-ac-governance",
+                "name": "Check AC Governance (ACS-400 write-lock for requirement-defining fields)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_ac_governance.py",
+                "language": "system",
+                "files": "^docs/acceptance-criteria/.*\\.yaml$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "ACS-400: Blocks commits where an implementation agent modifies protected fields (criteria, title, req_status, depends_on) in AC YAML files. Only authorized requirement authors (product-owner-v3, business-analyst-v3, it-po-v3) and human users may write protected fields. Fail-open: exits 0 on any unexpected error."
             }
         ]
     },
