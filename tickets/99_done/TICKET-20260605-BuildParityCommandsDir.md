@@ -1,6 +1,6 @@
 ---
 title: "Register templates/commands/ in build parity test allow-list"
-status: inbox
+status: done
 components:
   - build_pipeline
 created: 2026-06-05
