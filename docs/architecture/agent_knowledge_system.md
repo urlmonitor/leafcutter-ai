@@ -3,7 +3,7 @@ title: "Agent Knowledge System"
 type: "reference"
 status: "active"
 created: "2026-05-14"
-last_updated: "2026-05-15"
+last_updated: "2026-06-05"
 flight_level: "L2-Container"
 diagram_type: agent_flow
 components:
@@ -114,6 +114,64 @@ a `knowledge_captured` telemetry event to `agent_telemetry.jsonl`.
 
 ---
 
+## Description Field Convention
+
+Every structured documentation file in the leafcutter project (`docs/**/*.md`,
+`docs/architecture/adrs/*.md`, `docs/architecture/components/*.md`) MUST include
+a `description:` field in its YAML frontmatter. This requirement exists so that
+`knowledge_query.py` and `generate_doc_index.py` can use the structured field
+for all files rather than falling back to body-text parsing.
+
+### Why this matters
+
+`generate_doc_index.py` uses `description:` if present and falls back to the
+first non-blank body line if absent. The fallback produces lower-quality
+summaries — it picks up headers, preamble boilerplate, or context sentences
+rather than a purpose-statement. Consistent `description:` coverage ensures
+every doc surface is queryable via structured metadata.
+
+### Enforcement
+
+The `description:` field requirement is enforced by two mechanisms:
+
+1. **Pre-commit hook** (`check_description_field.py`): Blocks commits that
+   introduce new `.md` files in target directories without a `description:`
+   field. This is the primary mechanical gate for new files. See ticket
+   `02b_description_field_enforcement_hook.md` for implementation details.
+
+2. **Backfill migration script** (`scripts/backfill_descriptions.py`): A
+   one-time migration script that inserts a `description:` field into every
+   existing docs/ADR/component file that lacks one. Run with `--dry-run` first
+   to review candidates, then `--write` to apply.
+
+### What to write in description:
+
+- One sentence (or phrase), ≤ 120 characters.
+- Should capture the **purpose** of the document, not its title or category.
+- Written in plain prose — not metadata labels.
+
+**Good examples:**
+```yaml
+description: "Enumerates all 11 channels through which agents receive context at invocation time."
+description: "Operational runbook for ticket-supervisor: control flow, retry caps, and escalation ladder."
+```
+
+**Avoid:**
+```yaml
+description: "ADR"              # too generic — tells the reader nothing
+description: "Reference"        # category label, not a purpose statement
+```
+
+### Scope
+
+- **Included**: `docs/**/*.md`, `docs/architecture/adrs/*.md`, `docs/architecture/components/*.md`
+- **Excluded**: `tickets/**/*.md` — tickets use `title:` as their primary label.
+  Adding `description:` to tickets is out of scope.
+- **Excluded**: `templates/agents/`, `templates/skills/` — these use their
+  registry entries as the description layer and must not be modified here.
+
+---
+
 ## References
 
 - **[Agent Knowledge Plane](agent_knowledge_plane.md)** — the injection-side
@@ -123,3 +181,5 @@ a `knowledge_captured` telemetry event to `agent_telemetry.jsonl`.
 - `.claude/skills/capture-learning/SKILL.md` — write executor and error handling
 - `.claude/skills/signoff/SKILL.md` §7 — mandatory knowledge-capture trigger
 - `leafcutter/templates/skills/README.md` — `PROJECT_CONTEXT.md` pattern and **naming convention** (§Naming convention): filename MUST be `PROJECT_CONTEXT.md` (all uppercase, underscore); lowercase `project_context.md` is incorrect.
+- `scripts/backfill_descriptions.py` — one-time migration script; see `## Description Field Convention` above.
+- `scripts/commit_guardian/check_description_field.py` — pre-commit hook enforcing description: presence on new files (ticket 02b).
