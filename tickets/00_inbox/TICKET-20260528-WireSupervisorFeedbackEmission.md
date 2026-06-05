@@ -25,6 +25,11 @@ agents:
   pr-reviewer: needed
   commit: needed
   pull-request: needed
+ac_traceability:
+  L0: INF-400
+  L1: INF-400g
+  ac_path: docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400g.yaml
+  routing: direct_to_ba
 ---
 
 # Wire supervisor feedback emission system — implement emit_event.py and imperative emit calls
