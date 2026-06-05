@@ -1,0 +1,24 @@
+id: BO-700c
+title: "Understand which goals and features a release advances"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_3
+criteria: |
+  Each changelog entry connects to the L0 goal and L1 features it delivers.
+
+  Readers see customer value in the changelog, not a flat list of commits.
+  Every entry traces back to the goal it advances and the features it
+  shipped, so a package consumer or project owner understands the purpose
+  of the release at a glance.
+depends_on:
+  - BO-700a
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

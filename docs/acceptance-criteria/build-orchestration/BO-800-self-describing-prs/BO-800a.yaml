@@ -1,0 +1,23 @@
+id: BO-800a
+title: "PR titles come from the benefit statement, not from a commit summary"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_3
+criteria: |
+  The PR title is the L1 feature title -- what the reviewer gets, not what the developer did.
+
+  When a PR is created for a ticket, the title is taken directly from the
+  L1 acceptance criterion the ticket fulfills. The result is a PR list
+  that reads like a feature announcement rather than a developer's shorthand.
+depends_on:
+  - BO-800
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

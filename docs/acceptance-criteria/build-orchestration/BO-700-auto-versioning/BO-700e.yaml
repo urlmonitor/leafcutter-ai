@@ -1,0 +1,24 @@
+id: BO-700e
+title: "Trust that every shipped change has a changelog entry"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_3
+criteria: |
+  Nothing slips through without being recorded.
+
+  If a ticket reaches done and its changes merge to main, it appears in
+  the next version's changelog with no extra step required. There is no
+  scenario where a feature ships but is missing from the release notes
+  because someone forgot to run a command or write an entry.
+depends_on:
+  - BO-700a
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

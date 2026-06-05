@@ -1,0 +1,24 @@
+id: BO-700a
+title: "See what changed in every release without anyone writing release notes"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_3
+criteria: |
+  Changelogs generate themselves from completed tickets and their AC lineage.
+
+  When a release is cut, the changelog entry is assembled from the tickets
+  that shipped since the last release. Each ticket's title, summary, and
+  component come from the AC tree it fulfilled -- not from an LLM composing
+  prose or a human typing a description after the fact.
+depends_on:
+  - BO-700
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

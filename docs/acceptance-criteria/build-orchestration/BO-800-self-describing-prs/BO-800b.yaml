@@ -1,0 +1,23 @@
+id: BO-800b
+title: "PR descriptions tell you what value this change delivers"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_3
+criteria: |
+  The summary section is composed from the L0 goal and L1 feature criteria.
+
+  Reviewers read a PR description that explains the customer value being
+  delivered -- the goal this change advances and the capability it adds --
+  rather than a technical summary an LLM composed by reading the diff.
+depends_on:
+  - BO-800
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

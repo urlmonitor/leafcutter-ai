@@ -1,0 +1,24 @@
+id: BO-800c
+title: "The test plan is the acceptance criteria"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_3
+criteria: |
+  L2/L3 Gherkin scenarios appear as the PR test plan directly.
+
+  Instead of someone inventing a test plan for each PR, the L2 and L3
+  acceptance criteria for the ticket are surfaced as the verification
+  checklist. The test plan is what was already agreed during specification,
+  not a separate list written at PR time.
+depends_on:
+  - BO-800
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

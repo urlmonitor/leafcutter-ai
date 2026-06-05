@@ -1,0 +1,26 @@
+id: BO-700b
+title: "Get the right version number without deciding it yourself"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_3
+criteria: |
+  Flight level determines version bump magnitude automatically.
+
+  When tickets complete and a release is prepared, the version number
+  increments based on the highest AC flight level delivered: L1 feature
+  completions bump minor (0.X.0), L3 edge-case fixes bump patch (0.0.X),
+  and major version bumps (X.0.0) happen only when a human explicitly
+  decides. No one has to look at the changes and guess what kind of
+  release this is.
+depends_on:
+  - BO-700
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

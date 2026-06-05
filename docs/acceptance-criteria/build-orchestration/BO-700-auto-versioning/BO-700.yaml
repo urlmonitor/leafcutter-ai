@@ -1,0 +1,32 @@
+id: BO-700
+title: "Know what shipped and what version you are on without anyone writing it down"
+component: build-orchestration
+level: L0
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_3
+criteria: |
+  Automatic release notes and version numbers from structured delivery data.
+
+  Every release tells you what changed and what version it is -- derived
+  automatically from the tickets and acceptance criteria that already exist.
+  No one manually writes changelog entries. No one decides minor or patch
+  version numbers. The AC flight level encodes the version semantics: a
+  feature completion (L1) bumps minor, an edge-case fix (L3) bumps patch,
+  and major bumps remain a deliberate human choice. The changelog is a
+  materialized view of what shipped, not a separate artifact someone has
+  to remember to write.
+depends_on: []
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-700a
+  - BO-700b
+  - BO-700c
+  - BO-700d
+  - BO-700e
+implemented_by: []

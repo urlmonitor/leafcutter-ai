@@ -1,0 +1,31 @@
+id: BO-800
+title: "Pull requests explain themselves using what was already decided"
+component: build-orchestration
+level: L0
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_3
+criteria: |
+  PR descriptions assemble themselves from the ticket's acceptance criteria.
+
+  When a change is ready for review, the PR title, summary, and test plan
+  are composed from the structured AC data the ticket already carries. The
+  title comes from the L1 benefit statement. The summary connects to the
+  L0 goal. The test plan is the L2/L3 Gherkin scenarios. Reviewers see
+  exactly what the change delivers and how to verify it, without anyone
+  writing a description from scratch.
+depends_on:
+  - BO-700a
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-800a
+  - BO-800b
+  - BO-800c
+  - BO-800d
+  - BO-800e
+implemented_by: []

@@ -1,0 +1,25 @@
+id: BO-700d
+title: "Read the changelog in the format that suits your context"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_3
+criteria: |
+  The same release data serves multiple audiences without duplication.
+
+  Package consumers scanning a CHANGELOG file, project owners reviewing
+  what shipped this week, and agents needing context about recent
+  deliveries all read from the same underlying data. Each audience gets
+  the view that matches their needs without anyone maintaining separate
+  documents.
+depends_on:
+  - BO-700a
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
