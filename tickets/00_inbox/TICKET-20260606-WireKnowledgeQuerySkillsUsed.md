@@ -1,6 +1,6 @@
 ---
 title: "Add knowledge-query to skills_used in v3 agent templates and registry"
-status: todo
+status: in_progress
 components:
   - build_pipeline
 created: 2026-06-06
@@ -22,12 +22,12 @@ agents:
   sql-coder: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
-  commit: needed
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
-  llm-expert: needed
+  llm-expert: signed_off
 ac_coverage: 0/4
 ac_traceability:
   l2:
@@ -107,28 +107,52 @@ AC files: `docs/acceptance-criteria/ac-driven-dev/ACD-300e-1.yaml`
 
 ## Sign-offs
 
-- [ ] llm-expert
-- [ ] pr-reviewer
-- [ ] commit
+- [x] llm-expert — 2026-06-06 10:15
+- [x] pr-reviewer — 2026-06-06 10:20
+- [x] commit — 2026-06-06 10:25
 - [ ] pull-request
 
 ## Comments
 
+### 2026-06-06 10:15 — llm-expert (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  template_written: true
+  prompt_quality_checklist_passed: true
+  convention_violations_resolved: true
+Appended `knowledge-query` to `skills_used` in `product-owner-v3.md` and `business-analyst-v3.md` frontmatter; added `skills_used: [knowledge-query]` key to `it-po-v3.md` frontmatter; updated `config/agent_registry.json` `skills_used` arrays for all three agents from `[]` to `["knowledge-query"]`. All four files parse as valid YAML/JSON. Changes are strictly additive — no existing content removed.
+
+### 2026-06-06 10:20 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-05_58501385
+completion_manifest:
+  review_completed: true
+  high_confidence_findings: true
+  contract_validation_passed: true
+No high-confidence findings in the in-scope diff. AC-1 through AC-4 verified: knowledge-query added additively to skills_used in all three template frontmatters and agent_registry.json. YAML parses cleanly; JSON passes python3 -m json.tool. Suppressed: 0 low-confidence nits, 0 medium findings. Pre-existing changes to docs/INDEX.md and AC YAML files are out of scope for this ticket (they originate from EPIC-GoalToEpic branch work).
+
+### 2026-06-06 10:25 — commit (status: ok)
+feedback-id: fb_2026-06-05_76b210f9
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Staged 4 in-scope files (product-owner-v3.md, business-analyst-v3.md, it-po-v3.md, config/agent_registry.json) plus ticket file. No pre-existing EPIC-GoalToEpic files included. Commit pending user confirmation.
+
 ## Implementation Tasks
 
-- [ ] Edit `templates/agents/product-owner-v3.md`: append `- knowledge-query`
+- [x] Edit `templates/agents/product-owner-v3.md`: append `- knowledge-query`
   to the `skills_used` list, preserving the existing `- ac-tree-split` entry
   and its inline comment.
-- [ ] Edit `templates/agents/business-analyst-v3.md`: append `- knowledge-query`
+- [x] Edit `templates/agents/business-analyst-v3.md`: append `- knowledge-query`
   to the `skills_used` list, preserving the existing `- ac-tree-split` entry
   and its inline comment.
-- [ ] Edit `templates/agents/it-po-v3.md`: insert a `skills_used:` key in the
+- [x] Edit `templates/agents/it-po-v3.md`: insert a `skills_used:` key in the
   frontmatter block (after `config_keys: {}`) containing one entry:
   `- knowledge-query  # Loaded during S1 to query agents, skills, and component docs.`
-- [ ] Edit `config/agent_registry.json`: for entries `product-owner-v3`,
+- [x] Edit `config/agent_registry.json`: for entries `product-owner-v3`,
   `business-analyst-v3`, and `it-po-v3` change `"skills_used": []` to
   `"skills_used": ["knowledge-query"]`. Touch no other fields.
-- [ ] Verify all four files parse as valid YAML / JSON after the edit.
+- [x] Verify all four files parse as valid YAML / JSON after the edit.
 - [ ] PR review: confirm additive-only constraint (no existing content removed),
   valid YAML frontmatter in all three agent templates, and correct JSON in the
   registry.
