@@ -29,7 +29,7 @@ agents:
   test-runner: not_needed
   documentation-expert: signed_off
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 source_acs:
   - ACD-100a-1
@@ -128,7 +128,7 @@ And it cross-links to all 4 diagrams produced by this ticket.
 - [x] architecture-diagram-author — 2026-06-05 14:30
 - [x] documentation-expert — 2026-06-05 14:00
 - [x] pr-reviewer — 2026-06-05 14:45
-- [ ] commit
+- [x] commit — 2026-06-05 15:00
 - [ ] pull-request
 
 ## Comments
@@ -156,6 +156,14 @@ completion_manifest:
   no_high_findings: true
   scope_verified: true
 Reviewed ticket-07 artifacts against all 5 ACs. All four diagram files (c2-001 through c2-004) are committed and satisfy their respective ACs: sequenceDiagram with 4 participants and readiness annotations (AC-1), sequenceDiagram with 6 actors and yes/review/skip alt blocks (AC-2), stateDiagram-v2 with 5 states and actor-labelled transitions (AC-3), flowchart with all 7 required components and labelled data flow arrows (AC-4). How-to guide (AC-5) has 6 numbered task sections and cross-links to all four diagrams. No high-confidence findings. Scope matches ticket files_touched. The artifact files were committed to the branch prior to this supervisor run (commit 80149f7) — all documentation deliverables are present on disk. Suppressed: 0 low-confidence nits, 0 medium findings dropped. Escalation: none — not escalated (medium count was 0, threshold > 3).
+
+### 2026-06-05 15:00 — commit (status: ok)
+feedback-id: fb_2026-06-05_a02226de
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Committed ticket-07 sign-off changes at SHA 8ed6655: architecture-diagram-author and pr-reviewer phase completions (24 insertions, 8 deletions). Pre-commit hook config absent (PRE_COMMIT_ALLOW_NO_CONFIG=1 used — no hooks to run). Commit message follows chore(ticket-07) style matching repo convention. Anomalies: no .pre-commit-config.yaml present in worktree — this is expected for this epic worktree setup.
 
 ## Implementation Tasks
 
