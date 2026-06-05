@@ -735,6 +735,18 @@
                 ],
                 "pass_filenames": false,
                 "_comment": "TICKET-20260604-ACStoreInlineAlignmentHook: Blocks commit when a staged ticket body references an AC store ID (implements/amends/introduces AC-XX-NNN) that does not resolve to an active YAML file in docs/acceptance-criteria/. Exits 0 silently when AC store absent or no references present."
+            },
+            {
+                "id": "check-ac-governance",
+                "name": "Check AC Governance (ACS-400 write-lock for requirement-defining fields)",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_ac_governance.py",
+                "language": "system",
+                "files": "^docs/acceptance-criteria/.*\\.yaml$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "ACS-400: Blocks commits where an implementation agent (python-coder, test-writer, etc.) modifies protected fields (criteria, title, req_status, depends_on) in AC YAML files. Only authorized requirement authors (product-owner-v3, business-analyst-v3, it-po-v3) and human users may write protected fields. Also enforces origin_agent on new files (ACS-400c-1) and amended_by updates on criteria changes (ACS-400c-2). Fail-open: exits 0 on any unexpected error."
             }
         ],
         "post_merge": [
