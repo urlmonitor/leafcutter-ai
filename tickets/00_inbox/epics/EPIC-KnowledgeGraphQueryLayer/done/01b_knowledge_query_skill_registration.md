@@ -1,6 +1,6 @@
 ---
 title: "Register /knowledge-query skill — template and registry entry"
-status: todo
+status: done
 components:
   - knowledge-management
 created: 2026-06-04
@@ -11,7 +11,7 @@ roadmap_phase: phase_1
 advances_current_outcome: true
 requires_diagram: false
 requires_adr: false
-ac_coverage: 0/6
+ac_coverage: 6/6
 files_touched:
   - templates/skills/knowledge-query/SKILL.md
   - config/skill_registry.json
@@ -24,7 +24,7 @@ agents:
   documentation-expert: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 ---
@@ -114,7 +114,7 @@ YAML frontmatter, `## When to Use`, `## Invocation`, `## Output Modes`, `## Surf
 - [x] documentation-expert — 2026-06-05 10:05
 - [x] pr-reviewer — 2026-06-05 10:10
 - [x] commit — 2026-06-05 10:15
-- [ ] pull-request
+- [x] pull-request — 2026-06-05 10:20
 
 ## Comments
 
@@ -151,6 +151,13 @@ completion_manifest:
   commit_created: true
   staged_files_exact: true
 Committed 5 in-scope files (SHA 6bf81db): templates/skills/knowledge-query/SKILL.md, config/skill_registry.json, CLAUDE.md, docs/INDEX.md, ticket file. No cross-ticket files included.
+
+### 2026-06-05 10:20 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_e2a00a69
+completion_manifest:
+  branch_pushed: true
+  pr_updated: true
+Pushed branch EPIC-KnowledgeGraphQueryLayer to origin (0fce343..6bf81db). Existing PR #63 updated automatically with this commit.
 
 ## Risk & Safety
 

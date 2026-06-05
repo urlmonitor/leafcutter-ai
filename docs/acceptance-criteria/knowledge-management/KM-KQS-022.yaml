@@ -1,0 +1,43 @@
+id: KM-KQS-022
+title: "depends_on file paths are resolved to node IDs by stripping to filename stem"
+component: knowledge-management
+level: L2
+status: active
+work_status: todo
+criteria: |
+  Given a ticket file with frontmatter:
+    depends_on:
+      - tickets/00_inbox/epics/EPIC-Foo/01a_bar.md
+      - tickets/00_inbox/epics/EPIC-Foo/02a_baz.md
+  And the graph contains nodes with ids "01a_bar" and "02a_baz"
+  When the edge extraction function processes the ticket's depends_on field
+  Then it produces an edge from the ticket node to the node with id "01a_bar" with type "depends_on"
+  And it produces an edge from the ticket node to the node with id "02a_baz" with type "depends_on"
+  And the raw file path string does not appear as an edge target in the output
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must complete in <100ms for typical inputs (N < 500 nodes)"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must be idempotent — repeated calls with the same input produce the same edges"
+  - "Path resolution must use filename stem extraction only (no filesystem access required)"
+  - "Must not break existing depends_on edge behavior for values that are already bare IDs"
+delivers_to:
+  agent: python-coder
+  contract: "Edge list entries with type 'depends_on' where target is a bare node ID (filename stem without extension or path prefix)"
+expects_from:
+  ac_id: KM-KQS-015
+  contract: "config/paths.json 'surfaces' section with 'depends_on' present in the tickets surface edge_fields array"
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/05a_edge_connectivity_improvements.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

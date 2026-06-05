@@ -252,15 +252,7 @@ def _assemble_graph(
     project_root: Path | None = None,
     surface_filter: list[str] | None = None,
 ) -> dict:
-    """Assemble nodes and edges from knowledge_query into a serializable dict.
-
-    Args:
-        kq: Loaded knowledge_query module.
-        project_root: Override for the project root path. When None, auto-detects
-            from the script's location (parent of the scripts/ directory).
-        surface_filter: When not None, restricts the graph to only the named
-            surfaces. Nodes from all other surfaces are excluded, and edges whose
-            source or target is not in the filtered set are also excluded.
+    """Assemble nodes and edges by delegating to knowledge_query._collect_all.
 
     Returns:
         Dict with 'nodes' and 'edges' lists suitable for JSON serialisation.
@@ -269,87 +261,33 @@ def _assemble_graph(
         project_root = Path(__file__).resolve().parent.parent
     paths_json = project_root / "config" / "paths.json"
 
-    surfaces = kq.load_surfaces(project_root, paths_json)
+    sf = surface_filter[0] if surface_filter and len(surface_filter) == 1 else None
+    node_records, edge_records = kq._collect_all(project_root, paths_json, surface_filter=sf)
 
-    # Apply surface filter if provided
-    if surface_filter is not None:
-        surfaces = {k: v for k, v in surfaces.items() if k in surface_filter}
+    if surface_filter and len(surface_filter) > 1:
+        allowed = set(surface_filter)
+        node_records = [n for n in node_records if n.surface in allowed]
+        kept_ids = {n.id for n in node_records}
+        edge_records = [e for e in edge_records if e.source_id in kept_ids and e.target_id in kept_ids]
 
-    nodes: list[dict] = []
-    edges: list[dict] = []
+    nodes = []
+    seen: set[str] = set()
+    for nr in node_records:
+        if nr.id in seen:
+            continue
+        seen.add(nr.id)
+        nodes.append({
+            "id": nr.id,
+            "surface": nr.surface,
+            "title": nr.title,
+            "description": nr.description,
+            "color": SURFACE_COLORS.get(nr.surface, "#94a3b8"),
+        })
 
-    seen_node_ids: set[str] = set()
-
-    for surface_name, surface_path in surfaces.items():
-        for node_record in kq.extract_nodes(surface_name, surface_path):
-            # When surface_filter is active, skip nodes whose surface attribute
-            # does not match any of the requested surfaces. This handles edge
-            # cases where extract_nodes returns cross-surface records.
-            if surface_filter is not None and node_record.surface not in surface_filter:
-                continue
-
-            color = SURFACE_COLORS.get(node_record.surface, "#94a3b8")
-            node_dict = {
-                "id": node_record.id,
-                "surface": node_record.surface,
-                "title": node_record.title,
-                "description": node_record.description,
-                "color": color,
-            }
-            if node_record.id not in seen_node_ids:
-                nodes.append(node_dict)
-                seen_node_ids.add(node_record.id)
-
-            # Extract edges from frontmatter / registry data
-            if surface_path.is_file() and surface_path.suffix == ".json":
-                try:
-                    data = json.loads(surface_path.read_text(encoding="utf-8"))
-                except (OSError, json.JSONDecodeError):
-                    data = {}
-                entries: list = []
-                if isinstance(data, list):
-                    entries = data
-                elif isinstance(data, dict):
-                    for key in (surface_name, "agents", "skills", "phases", "items"):
-                        if key in data and isinstance(data[key], list):
-                            entries = data[key]
-                            break
-                    if not entries:
-                        for v in data.values():
-                            if isinstance(v, list):
-                                entries = v
-                                break
-                for entry in entries:
-                    if isinstance(entry, dict):
-                        entry_id = str(entry.get("id") or entry.get("name") or "")
-                        if entry_id == node_record.id:
-                            for edge in kq.extract_edges(surface_name, node_record, entry):
-                                edges.append({
-                                    "source": edge.source_id,
-                                    "target": edge.target_id,
-                                    "type": edge.edge_type,
-                                })
-            elif node_record.path.is_file() and node_record.path.suffix == ".md":
-                try:
-                    text = node_record.path.read_text(encoding="utf-8")
-                except OSError:
-                    continue
-                # Parse frontmatter for edges — reuse knowledge_query internals
-                if hasattr(kq, "_parse_frontmatter"):
-                    fm = kq._parse_frontmatter(text)
-                    for edge in kq.extract_edges(surface_name, node_record, fm):
-                        edges.append({
-                            "source": edge.source_id,
-                            "target": edge.target_id,
-                            "type": edge.edge_type,
-                        })
-
-    # When a surface filter is active, remove edges that cross into excluded nodes.
-    if surface_filter is not None:
-        edges = [
-            e for e in edges
-            if e["source"] in seen_node_ids and e["target"] in seen_node_ids
-        ]
+    edges = [
+        {"source": e.source_id, "target": e.target_id, "type": e.edge_type}
+        for e in edge_records
+    ]
 
     return {"nodes": nodes, "edges": edges}
 

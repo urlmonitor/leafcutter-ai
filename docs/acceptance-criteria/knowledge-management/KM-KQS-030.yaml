@@ -1,0 +1,35 @@
+id: KM-KQS-030
+title: "Phantom target filtering uses node-existence check not a hardcoded blocklist"
+component: knowledge-management
+level: L3
+status: active
+work_status: todo
+criteria: |
+  Given the graph contains a node with id "user" (e.g. a ticket or doc file named "user")
+  When the edge list is finalized
+  Then edges targeting "user" are retained (because "user" exists as a real node)
+  And given the graph does NOT contain a node with id "phantom_xyz"
+  When an edge targets "phantom_xyz"
+  Then that edge is excluded from the output
+  And the filtering decision is based solely on whether the target id exists in the node set, not on a hardcoded list of blocked names
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must use a set-membership check against the collected node IDs, not a hardcoded exclusion list"
+  - "Must retain edges to targets that happen to match previously-known phantom values if those targets now exist as real nodes"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must be O(1) per edge for the existence check (use a set or dict, not a list scan)"
+delivers_to: null
+expects_from:
+  ac_id: KM-KQS-024
+  contract: "Phantom target filtering logic that checks edge targets against the complete node ID set before including them in output"
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/05a_edge_connectivity_improvements.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

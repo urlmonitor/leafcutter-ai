@@ -700,6 +700,21 @@
                 ],
                 "pass_filenames": false,
                 "_comment": "EPIC-ContractDrivenACs/02b: Blocks commits when any staged ticket file has >7 ACs for a single agent block or >20 ACs total. Integration ACs (<!-- scope: integration -->) excluded from per-agent counts. Emits structured JSON ({hook, fix_agent, violations}) for precommit-autofix routing to IT PO. Override: ac_limit_override: true in frontmatter warns but does not block. v1 tickets (no ## Agent Contracts) skipped silently."
+            },
+            {
+                "id": "check-description-field",
+                "name": "Check Description Field (doc frontmatter enforcement)",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_description_field.py",
+                "language": "system",
+                "types": [
+                    "markdown"
+                ],
+                "files": "^docs/.*\\.md$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": true,
+                "_comment": "EPIC-KnowledgeGraphQueryLayer/02b: Blocks commits when any staged docs/*.md file is missing a non-empty description: frontmatter field. Silently skips tickets/, templates/skills/, and templates/agents/ trees. Enforces the invariant established by the 02a backfill migration."
             }
         ]
     },

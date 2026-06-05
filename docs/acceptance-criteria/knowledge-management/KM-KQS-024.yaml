@@ -1,0 +1,39 @@
+id: KM-KQS-024
+title: "Edges targeting phantom nodes are filtered from output"
+component: knowledge-management
+level: L2
+status: active
+work_status: todo
+criteria: |
+  Given the graph contains edges whose target values are "user" or "__ticket_phase_agents__"
+  And neither "user" nor "__ticket_phase_agents__" exists as a node id in the graph
+  When the edge list is finalized for output (both JSON and visualization)
+  Then edges with target "user" are excluded from the output
+  And edges with target "__ticket_phase_agents__" are excluded from the output
+  And edges whose target matches a valid node id in the graph are retained
+  And the filtering applies in both knowledge_query.py JSON output and visualise_knowledge_graph.py HTML output
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must complete in <100ms for edge sets with up to 1000 entries"
+  - "Must not use a hardcoded blocklist — filter by node-existence check only"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must apply the filter consistently in both scripts (knowledge_query.py and visualise_knowledge_graph.py)"
+  - "Must not modify the source edge data — filtering is output-stage only"
+delivers_to:
+  agent: python-coder
+  contract: "Filtered edge array where every edge target corresponds to an existing node ID in the graph's node set"
+expects_from: null
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/05a_edge_connectivity_improvements.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

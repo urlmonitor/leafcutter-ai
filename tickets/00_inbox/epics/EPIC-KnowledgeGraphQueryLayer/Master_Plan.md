@@ -95,7 +95,9 @@ that time.
 | 02a | [02a_description_backfill_migration.md](./02a_description_backfill_migration.md) | Backfill `description:` field on all docs/ADRs/components (migration script) | `[ ]` |
 | 02b | [02b_description_field_enforcement_hook.md](./02b_description_field_enforcement_hook.md) | Add `check_description_field.py` commit-guardian hook and register it | `[ ]` |
 | 03a | [03a_knowledge_graph_visualization_core.md](./03a_knowledge_graph_visualization_core.md) | Write `visualise_knowledge_graph.py` — core HTML generation and D3.js data embedding | `[ ]` |
-| 03b | [03b_knowledge_graph_cli_flags.md](./03b_knowledge_graph_cli_flags.md) | Add `--surface` and `--project-root` CLI flags to visualise_knowledge_graph.py | `[ ]` |
+| 03b | [03b_knowledge_graph_cli_flags.md](./03b_knowledge_graph_cli_flags.md) | Add `--surface` and `--project-root` CLI flags to visualise_knowledge_graph.py | `[x]` |
+| 04a | [04a_surfaces_config_wiring.md](./04a_surfaces_config_wiring.md) | Wire `surfaces` section into config/paths.json for real data | `[x]` |
+| 05a | [05a_edge_connectivity_fix.md](./05a_edge_connectivity_fix.md) | Fix edge connectivity — components as hubs, depends_on resolution, phantom filtering | `[ ]` |
 
 ### Dependency order
 
@@ -105,9 +107,14 @@ that time.
         +---> 01b_knowledge_query_skill_registration
         |
         +---> 03a_knowledge_graph_visualization_core
+        |             |
+        |             v
+        |     03b_knowledge_graph_cli_flags
+        |
+        +---> 04a_surfaces_config_wiring (depends on 01a + 03a)
                       |
                       v
-              03b_knowledge_graph_cli_flags
+              05a_edge_connectivity_fix (depends on 01a + 04a)
 
 02a_description_backfill_migration
         |

@@ -1,0 +1,37 @@
+id: KM-KQS-026
+title: "depends_on path that matches no existing node is silently dropped"
+component: knowledge-management
+level: L3
+status: active
+work_status: todo
+criteria: |
+  Given a ticket file with frontmatter:
+    depends_on:
+      - tickets/00_inbox/epics/EPIC-Foo/99_nonexistent_ticket.md
+  And the graph contains no node with id "99_nonexistent_ticket"
+  When the edge extraction function processes the ticket's depends_on field
+  Then no edge is produced for the unresolvable path
+  And no error or warning is emitted to the output
+  And the script exits with code 0
+  And edges for other resolvable depends_on values in the same list are still produced
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must not emit warnings or errors to stdout/stderr for unresolvable targets"
+  - "Must exit with code 0 regardless of how many depends_on values are unresolvable"
+  - "Must continue processing remaining depends_on entries after encountering an unresolvable one"
+  - "Must handle errors gracefully per the project error handling policy"
+delivers_to: null
+expects_from:
+  ac_id: KM-KQS-022
+  contract: "depends_on path resolution logic that strips file paths to filename stems before matching against the node set"
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/05a_edge_connectivity_improvements.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []
