@@ -1,6 +1,6 @@
 ---
 title: "AC readiness gate and authoring pipeline"
-status: todo
+status: done
 components:
   - ac-store
   - ticket-creation
@@ -31,7 +31,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 source_acs:
   - ACS-100a-1
   - ACD-200a
@@ -191,7 +191,7 @@ And IT PO v3 logs which documentation types were missing and for which feature.
 - [x] test-runner — 2026-06-05 15:00
 - [x] pr-reviewer — 2026-06-05 15:10
 - [x] commit — 2026-06-05 15:20
-- [ ] pull-request
+- [x] pull-request — 2026-06-05 15:30
 
 ## Comments
 
@@ -270,6 +270,13 @@ completion_manifest:
   lock_acquired_and_released: true
   files_staged_explicitly: true
 Committed SHA 3f20dd6 on branch EPIC-ACDrivenDevelopment. 366 files changed, 2678 insertions(+), 28 deletions(-). PRE_COMMIT_ALLOW_NO_CONFIG=1 was needed — no .pre-commit-config.yaml in worktree root (expected for a git worktree; pre-commit is configured in the main repo). Commit lock acquired before staging, released immediately after commit. Ticket 01 files (generate_ticket_from_ac.py, test_generate_ticket_from_ac.py) were unstaged to avoid cross-ticket commit pollution.
+
+### 2026-06-05 15:30 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_9b938c18
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+Branch EPIC-ACDrivenDevelopment pushed to origin. PR #61 opened: https://github.com/urlmonitor/leafcutter-ai/pull/61
 
 ## Implementation Tasks
 
