@@ -203,6 +203,7 @@ class TestTemplateDirectoriesHaveCategories(unittest.TestCase):
         # Also allow non-artifact template dirs that don't produce shimmed outputs
         non_artifact_dirs = {
             "acceptance-criteria",
+            "commands",
             "commit-guardian",
             "scripts",
             "doc-compliance",
