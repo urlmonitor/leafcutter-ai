@@ -15,11 +15,11 @@ files_touched:
 agents:
   architect-review: not_needed
   test-writer: not_needed
-  python-coder: needed
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   adr-author: not_needed
@@ -62,10 +62,10 @@ or drift-detection coverage. The correct fix is to add `"commands"` to
 
 ## Acceptance Criteria
 
-- [ ] AC-1: `"commands"` is present in the `non_artifact_dirs` set inside
+- [x] AC-1: `"commands"` is present in the `non_artifact_dirs` set inside
   `TestTemplateDirectoriesHaveCategories.test_no_unlisted_artifact_template_dirs`
   in `tests/test_build_artifact_parity.py`.
-- [ ] AC-2: Running `python -m pytest tests/test_build_artifact_parity.py -v`
+- [x] AC-2: Running `python -m pytest tests/test_build_artifact_parity.py -v`
   reports 6 passed, 0 failed, with all subtests green including
   `test_no_unlisted_artifact_template_dirs`.
 
@@ -73,15 +73,41 @@ or drift-detection coverage. The correct fix is to add `"commands"` to
 
 | AC   | Test | Implementation | Validated |
 |------|------|----------------|-----------|
-| AC-1 |      |                |           |
-| AC-2 |      |                |           |
+| AC-1 | test_no_unlisted_artifact_template_dirs PASSED | Added "commands" to non_artifact_dirs set in test_no_unlisted_artifact_template_dirs | ok — 2026-06-05 |
+| AC-2 | 6 passed, 0 failed, 30 subtests green | All 6 tests pass: 6 passed, 0 failed, including test_no_unlisted_artifact_template_dirs | ok — 2026-06-05 |
 
 ## Sign-offs
 
-- [ ] python-coder
-- [ ] test-runner
-- [ ] pr-reviewer
+- [x] python-coder — 2026-06-05 14:00
+- [x] test-runner — 2026-06-05 14:01
+- [x] pr-reviewer — 2026-06-05 14:02
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
+
+### 2026-06-05 14:00 — python-coder (status: ok)
+feedback-id: fb_2026-06-05_1d1ee22f
+completion_manifest:
+  code_implemented: true
+  tests_passing: true
+  doc_enforcer_clean: true
+  complexity_check_clean: true
+"commands" was already added to non_artifact_dirs in test_build_artifact_parity.py (commit a2129a1). All 6 tests pass: 6 passed, 0 failed, 30 subtests green including test_no_unlisted_artifact_template_dirs.
+
+### 2026-06-05 14:01 — test-runner (status: ok)
+feedback-id: fb_2026-06-05_b56109e9
+completion_manifest:
+  tests_green: true
+  target_test_file_verified: true
+  ac2_confirmed: true
+6 passed, 0 failed, 30 subtests green. test_no_unlisted_artifact_template_dirs passed. AC-2 confirmed: test_build_artifact_parity.py reports 6 passed, 0 failed.
+
+### 2026-06-05 14:02 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-05_447126f5
+completion_manifest:
+  change_is_minimal_and_correct: true
+  acs_satisfied: true
+  tests_green: true
+  no_quality_concerns: true
+One-line fix: `"commands"` added alphabetically to `non_artifact_dirs` set. Commit a2129a1 is clean. All 6 tests pass. AC-1 and AC-2 fully satisfied. No quality concerns.
