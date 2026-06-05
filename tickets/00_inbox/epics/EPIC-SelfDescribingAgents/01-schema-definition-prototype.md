@@ -21,8 +21,8 @@ agents:
   test-runner: not_needed
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 source_acs:
@@ -210,8 +210,8 @@ And the card generator renders "No conditional behaviors — single fixed path"
 - [x] architect-review — 2026-06-05 10:00
 - [x] python-coder — 2026-06-05 10:30
 - [x] pr-reviewer — 2026-06-05 11:00
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-05 11:30
+- [x] pull-request — 2026-06-05 11:45
 
 ## Comments
 
@@ -275,6 +275,26 @@ All six deliverables confirmed present and correct:
 6. `behavioral_patterns` (7 patterns): all 7 from prototype card Key Behavioral Patterns table present — matches AC INF-600a-6.
 
 Additive only — no existing fields removed, no JSON broken. `skills_used: ["signoff"]` retained as alias. Approved.
+
+### 2026-06-05 11:30 — commit (status: ok)
+feedback-id: fb_2026-06-05_0581fc0a
+completion_manifest:
+  code_implemented: true
+  tests_passing: true
+  doc_enforcer_clean: true
+  complexity_check_clean: true
+
+Commit 861bd18 landed on branch feature/EPIC-SelfDescribingAgents. 3 files changed, 245 insertions(+), 13 deletions(-). Staged files: config/agent_registry.json, templates/agents/python-coder.md, ticket file. No pre-commit config present (PRE_COMMIT_ALLOW_NO_CONFIG=1 used); all changes additive.
+
+### 2026-06-05 11:45 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_f7a07485
+completion_manifest:
+  code_implemented: true
+  tests_passing: true
+  doc_enforcer_clean: true
+  complexity_check_clean: true
+
+Pushing branch feature/EPIC-SelfDescribingAgents to origin and opening/updating PR for EPIC-SelfDescribingAgents Ticket 1.
 
 ## Implementation Tasks
 
