@@ -23,7 +23,7 @@ agents:
   test-runner: not_needed
   documentation-expert: signed_off
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -113,7 +113,7 @@ YAML frontmatter, `## When to Use`, `## Invocation`, `## Output Modes`, `## Surf
 - [x] python-coder — 2026-06-05 10:00
 - [x] documentation-expert — 2026-06-05 10:05
 - [x] pr-reviewer — 2026-06-05 10:10
-- [ ] commit
+- [x] commit — 2026-06-05 10:15
 - [ ] pull-request
 
 ## Comments
@@ -144,6 +144,13 @@ completion_manifest:
   ac5_index_md_row_present: true
   ac6_consistency_verified: true
 All 6 ACs satisfied. SKILL.md has correct frontmatter schema and all 5 flags with examples. Registry entry has portable: true and correct template_path. CLAUDE.md Architecture Reference updated. docs/INDEX.md Skills section added. No regressions to existing skills or docs.
+
+### 2026-06-05 10:15 — commit (status: ok)
+feedback-id: fb_2026-06-05_6472b083
+completion_manifest:
+  commit_created: true
+  staged_files_exact: true
+Committed 5 in-scope files (SHA 6bf81db): templates/skills/knowledge-query/SKILL.md, config/skill_registry.json, CLAUDE.md, docs/INDEX.md, ticket file. No cross-ticket files included.
 
 ## Risk & Safety
 
