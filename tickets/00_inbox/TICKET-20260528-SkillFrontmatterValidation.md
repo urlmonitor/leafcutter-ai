@@ -34,6 +34,11 @@ agents:
   reference-author: not_needed
   user-surface-smoker: not_needed
 user_facing_surface: null
+ac_traceability:
+  L0: BP-100
+  L1: BP-100g
+  ac_path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100g.yaml
+  routing: direct_to_ba
 ---
 
 # Add build-time SKILL.md frontmatter validation to build.py
