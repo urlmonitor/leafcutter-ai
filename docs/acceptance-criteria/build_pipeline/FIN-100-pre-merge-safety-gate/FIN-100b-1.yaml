@@ -1,0 +1,38 @@
+id: FIN-100b-1
+title: "Clean merge of main into worktree produces post-merge state for testing"
+level: L2
+component: finalize
+status: active
+parent: FIN-100b
+criteria: |
+  Given a feature branch that diverges from origin/main
+  And origin/main has commits not present on the feature branch
+  When Step 2 runs git merge origin/main --no-commit --no-ff
+  And the merge completes without conflicts (exit code 0)
+  Then the worktree reflects the combined state of the feature branch and main
+  And no merge commit is written to the feature branch history
+  And the workflow proceeds to Step 3 (test run)
+  And the merge_strategy is recorded as "merged_main"
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
+assigned_agent: "finalize-feature-workflow"
+estimated_complexity: S
+it_requirements: |
+  - Must use --no-commit --no-ff flags to avoid writing a merge commit to the feature branch
+  - Must run git fetch origin main before merging to ensure origin/main is current
+  - Must record merge_strategy as "merged_main" for the final summary
+  - The merged worktree state must be the input for the step 3 test run
+delivers_to:
+  - agent: "test-runner"
+    contract: "provides post-merge worktree state reflecting combined feature + main"
+expects_from: []
+doc_links:
+  - path: "docs/how-to/finalize-feature.md"
+    relevance: "Step 2 merge description and conflict resolution guidance"
+  - path: "templates/workflows/finalize-feature.md"
+    relevance: "Step map row 2 — merge_main_into_worktree"
+depends_on: []
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

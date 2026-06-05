@@ -1,0 +1,39 @@
+id: BP-200e-3
+title: "Prompt-audit skill compound-bash check distinguishes side-effect pipes from read-only pipes"
+component: build_pipeline
+level: L2
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given the file templates/skills/prompt-audit/SKILL.md exists,
+  When Check 3 (Compound Bash Detection) patterns table is read,
+  Then it classifies side-effect pipes (e.g. "ls | rm -rf") as severity "error"
+  And it classifies read-only pipes (e.g. "git log | grep fix") as severity "warning"
+  And it classifies "&&" operator, ";" semicolon chain, "||" operator,
+    and "cd <path> &&" patterns each as severity "error"
+  And each pattern entry includes a suggested_fix value
+depends_on: [BP-200e]
+doc_links:
+  - path: templates/skills/prompt-audit/SKILL.md
+    relationship: describes
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Pattern classifications must be consistent with the root CLAUDE.md Shell Convention rules"
+  - "Side-effect vs read-only pipe distinction must be documented with clear heuristics for the agent to follow"
+  - "suggested_fix values must produce valid single-command alternatives"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/04_prompt_audit_skill.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "templates/skills/prompt-audit/SKILL.md"

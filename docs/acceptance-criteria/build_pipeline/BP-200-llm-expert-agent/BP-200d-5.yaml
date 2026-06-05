@@ -1,0 +1,42 @@
+id: BP-200d-5
+title: "Prompt-audit skill supports both single-file and batch audit invocation"
+component: build_pipeline
+level: L2
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given the file templates/skills/prompt-audit/SKILL.md exists,
+  When the "Running an Audit" section is read,
+  Then it documents a single-file audit workflow:
+    1. Read the target file
+    2. Apply each check (1 through 6) in order
+    3. Collect violations and assemble the report
+  And it documents a batch audit workflow:
+    1. List all template files in the target directory
+    2. Run the single-file audit for each path
+    3. Sort the batch by total_errors descending, then total_warnings descending
+  And it documents that individual checks can be invoked in isolation
+    returning a partial report with only the relevant fields populated
+depends_on: [BP-200d]
+doc_links:
+  - path: templates/skills/prompt-audit/SKILL.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Batch sorting must be deterministic -- secondary sort by file_path alphabetic when error/warning counts tie"
+  - "Partial reports from isolated checks must conform to the same report schema (nullable fields for non-run checks)"
+delivers_to: null
+expects_from:
+  ac_id: BP-200d-3
+  contract: "Report schema definition for assembling single-file and batch audit outputs"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/04_prompt_audit_skill.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "templates/skills/prompt-audit/SKILL.md"

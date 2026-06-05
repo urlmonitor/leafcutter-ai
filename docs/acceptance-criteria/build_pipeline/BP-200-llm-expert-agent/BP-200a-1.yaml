@@ -1,0 +1,45 @@
+id: BP-200a-1
+title: "Agent template frontmatter declares all required fields for a phase agent"
+component: build_pipeline
+level: L2
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given the file templates/agents/llm-expert.md exists,
+  When its YAML frontmatter block is parsed,
+  Then it contains field "name" with value "llm-expert"
+  And it contains field "description" as a non-empty multi-line string
+  And it contains field "model" with value "sonnet"
+  And it contains field "tools" listing "Bash, Read, Edit, Write, Agent"
+  And it contains field "portable" with value true
+  And it contains field "signoff" with value true
+  And it contains field "domain" with value null
+  And it contains field "requires_verification" with value true
+  And it contains field "default_artifact_checklist" as a non-empty list
+depends_on: [BP-200a]
+doc_links:
+  - path: docs/agents/llm-expert/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Frontmatter fields must match the agent registry entry in config/agent_registry.json for consistency"
+  - "Must conform to the agent frontmatter schema documented in PROJECT_CONTEXT.md Section 2"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/01_agent_template.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "templates/agents/llm-expert.md"

@@ -1,0 +1,31 @@
+id: BP-006b-2
+title: "Edge case: duplicate sys.path insertion is prevented by guard"
+component: build_pipeline
+level: L3
+status: active
+req_status: approved
+work_status: done
+criteria: |
+  Given the scripts/ directory is already present in sys.path,
+  When tests/test_install_hooks.py setup code runs the sys.path insertion logic,
+  Then the scripts/ directory is NOT added a second time,
+  And sys.path contains exactly one occurrence of the scripts/ directory path.
+depends_on: [BP-006b-1]
+doc_links:
+  - tests/test_install_hooks.py
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  The guard condition `if str(scripts_dir) not in sys.path` must prevent duplicate
+  insertion even when the helper is called multiple times in the same process.
+  sys.path must contain exactly one occurrence of the scripts/ directory after execution.
+delivers_to: null
+expects_from:
+  BP-006b-1: "The sys.path guard implementation must exist for this edge case to be testable"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/00_inbox/TICKET-20260604-FixFailingBuildPipelineTests.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

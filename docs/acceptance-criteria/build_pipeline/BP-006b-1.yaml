@@ -1,0 +1,34 @@
+id: BP-006b-1
+title: "sys.path includes scripts/ directory before build_helpers module load"
+component: build_pipeline
+level: L2
+status: active
+req_status: approved
+work_status: done
+criteria: |
+  Given tests/test_install_hooks.py is executed by pytest,
+  When the test setup loads build_helpers.py via importlib spec_from_file_location,
+  Then the scripts/ directory is inserted into sys.path before spec.loader.exec_module is called,
+  And the insertion is guarded by a check that scripts/ is not already present in sys.path,
+  And build_colors is importable without raising ModuleNotFoundError.
+depends_on: [BP-006b]
+doc_links:
+  - tests/test_install_hooks.py
+  - scripts/build_helpers.py
+  - scripts/build_colors.py
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  The sys.path insertion must occur BEFORE spec.loader.exec_module() is called.
+  The insertion must be guarded by `if str(scripts_dir) not in sys.path` to prevent
+  duplicates. build_colors must be importable as a side-effect of the path fix.
+delivers_to:
+  BP-006b-2: "Provides the guarded insertion pattern that the edge-case AC validates"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/00_inbox/TICKET-20260604-FixFailingBuildPipelineTests.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

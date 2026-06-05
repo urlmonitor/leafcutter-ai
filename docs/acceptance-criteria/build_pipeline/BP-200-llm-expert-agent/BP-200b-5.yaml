@@ -1,0 +1,46 @@
+id: BP-200b-5
+title: "Nesting rules section documents the depth-3 cap and spawn_allowlist contract"
+component: build_pipeline
+level: L2
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given the file docs/agents/llm-expert/PROJECT_CONTEXT.md exists,
+  When Section 5 (Nesting / Spawn-Allowlist Rules) is read,
+  Then it states the hard depth limit is depth 3 with a table showing:
+    - Depth 0: user's direct session
+    - Depth 1: first-level sub-agents (e.g. ticket-supervisor)
+    - Depth 2: second-level sub-agents
+    - Depth 3: third-level sub-agents (hard floor, must not spawn further)
+  And it states that llm-expert runs at depth 1 (spawned by ticket-supervisor)
+  And it documents the spawn_allowlist contract: agents invoking the Agent tool
+    must declare which agents they may spawn
+  And it documents the spawned_by contract: agents list which agents may spawn them
+  And it states the llm-expert agent's spawn_allowlist is empty by default
+depends_on: [BP-200b]
+doc_links:
+  - path: docs/agents/llm-expert/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Depth values must be consistent with ADR-006 (flatten supervisor chain) depth topology"
+  - "spawn_allowlist documentation must match the agent's actual spawn_allowlist in config/agent_registry.json"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/02_project_context.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "docs/agents/llm-expert/PROJECT_CONTEXT.md"

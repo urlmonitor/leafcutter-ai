@@ -1,0 +1,33 @@
+id: FIN-100e
+title: "Pre-existing failures are auto-ticketed, not ignored"
+component: finalize
+level: L1
+status: active
+criteria: |
+  Known failures are tracked for resolution rather than silently accepted as
+  permanent technical debt.
+
+  Given the triage step classifies one or more failures as "pre-existing",
+  And the PR merge to main succeeds (Step 4),
+  When the workflow reaches the tracking step (Step 6),
+  Then it creates one tracking ticket per pre-existing failure (or a single
+  grouped ticket if the failures share a common root cause),
+  And each ticket includes the test name, error output, and the baseline
+  snapshot reference,
+  And the tickets are written to the project's ticket inbox,
+  So that pre-existing failures have an owner path to resolution rather than
+  accumulating silently.
+depends_on:
+  - FIN-100c
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
+amended_by: []
+superseded_by: null
+covered_by:
+  - FIN-100e-1
+  - FIN-100e-2
+  - FIN-100e-3
+implemented_by:
+  - scripts/finalize-feature.js

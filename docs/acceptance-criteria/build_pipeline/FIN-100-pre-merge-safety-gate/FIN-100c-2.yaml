@@ -1,0 +1,42 @@
+id: FIN-100c-2
+title: "Failures absent from baseline are classified as regressions"
+level: L2
+component: finalize
+status: active
+parent: FIN-100c
+criteria: |
+  Given the baseline snapshot from main HEAD (which may be empty — all tests passing)
+  And the post-merge test run reports one or more failing tests
+  When the triage agent compares post-merge failures against baseline_failures
+  Then any test ID present in the post-merge failures but NOT in the baseline
+  Is classified as "regression"
+  And the triage report sets blocks_finalization=true
+  And the regressions array includes every newly-failing test ID
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
+assigned_agent: "test-failure-triage"
+estimated_complexity: S
+it_requirements: |
+  - Must compute set difference: regression_candidates = post_merge_failures - baseline_failures
+  - Must set blocks_finalization=true when any regression exists
+  - Must include every newly-failing test ID in the regressions array
+  - Classification runs through Steps 3-4 of the triage algorithm (AC lookup + heuristic refinement)
+  - When baseline is empty (all pass on main), any post-merge failure is a regression
+delivers_to:
+  - agent: "finalize-feature-workflow"
+    contract: "provides triage_report with blocks_finalization=true and regressions array"
+expects_from:
+  - agent: "finalize-feature-workflow"
+    contract: "provides post_merge_failures, baseline_failures, baseline_sha, feature_branch, changed_files"
+  - agent: "test-runner"
+    contract: "returns structured failure list with test IDs in file::test_name format"
+doc_links:
+  - path: "templates/agents/test-failure-triage.md"
+    relevance: "Step 2 partition, Steps 3-4 AC lookup and heuristic refinement, Step 6 blocks_finalization"
+  - path: "templates/workflows/finalize-feature.md"
+    relevance: "Step 3 test_regression halt category"
+depends_on: []
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

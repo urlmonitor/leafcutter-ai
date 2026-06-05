@@ -1,0 +1,29 @@
+id: BP-200
+title: "Agent authors get a specialist peer that catches prompt mistakes before they ship"
+component: build-pipeline
+level: L0
+status: active
+req_status: active
+work_status: done
+criteria: |
+  A dedicated expert for LLM instructions — so prompt quality is reviewed, not hoped for.
+
+  Writing instructions for agents, skills, and slash commands is a craft with
+  its own conventions: frontmatter schemas, tool allowlists, signoff protocols,
+  and shell rules. Before this capability existed, prompt authors had to
+  self-review against a mental checklist, and mistakes only surfaced when a
+  downstream agent misbehaved. Now there is a specialist that knows every
+  convention and catches violations at authoring time — the same way a code
+  reviewer catches bugs before merge.
+depends_on: []
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "templates/agents/llm-expert.md"
+  - "docs/agents/llm-expert/PROJECT_CONTEXT.md"
+  - "config/agent_registry.json"
+  - "templates/skills/prompt-audit/SKILL.md"

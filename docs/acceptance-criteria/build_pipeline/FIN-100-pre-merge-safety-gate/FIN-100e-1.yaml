@@ -1,0 +1,42 @@
+id: FIN-100e-1
+title: "One tracking ticket is created per pre-existing or flaky failure"
+level: L2
+component: finalize
+status: active
+parent: FIN-100e
+criteria: |
+  Given the triage report contains entries with category "pre_existing" or "flaky"
+  And the PR merge to main succeeded (Step 4 completed)
+  When Step 6a iterates over the pre-existing and flaky triage entries
+  Then it dispatches create-ticket for each entry
+  And each ticket includes the test ID, error output, baseline SHA, and triage category
+  And flaky tickets additionally note the intermittent nature and need for investigation
+  And the ticket path returned by create-ticket is recorded in created_tracking_tickets
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
+assigned_agent: "create-ticket"
+estimated_complexity: M
+it_requirements: |
+  - Must iterate over triageReport entries filtering for category "pre_existing" or "flaky"
+  - Each create-ticket dispatch must include: test_id, baseline_sha, triage_category, baseline_run_at
+  - Flaky tickets must additionally note intermittent nature and investigation need
+  - Must record each returned ticket_path in created_tracking_tickets array
+  - Tickets land in tickets/00_inbox/ per the create-ticket agent's default behavior
+delivers_to: []
+expects_from:
+  - agent: "test-failure-triage"
+    contract: "provides triage_report with pre_existing/flaky entries containing test_id and category"
+  - agent: "finalize-feature-workflow"
+    contract: "provides triageReport state variable and baseline_sha/baseline_run_at context"
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relevance: "Step 6a — auto-ticketing loop for pre_existing/flaky entries (lines 662-736)"
+  - path: "docs/how-to/finalize-feature.md"
+    relevance: "Pre-existing failures and tracking tickets section"
+  - path: "templates/workflows/finalize-feature.md"
+    relevance: "Step 6 — create_pre_existing_tickets_and_close"
+depends_on: []
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

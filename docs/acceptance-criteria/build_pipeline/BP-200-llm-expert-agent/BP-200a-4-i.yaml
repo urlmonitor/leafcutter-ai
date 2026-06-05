@@ -1,0 +1,37 @@
+id: BP-200a-4-i
+title: "Agent gracefully degrades when PROJECT_CONTEXT.md is absent"
+component: build_pipeline
+level: L3
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given the llm-expert agent template at templates/agents/llm-expert.md exists,
+  When the "Pre-Flight Reads" section describes PROJECT_CONTEXT.md handling,
+  Then it instructs: if PROJECT_CONTEXT.md is absent, log one debug line
+    ("PROJECT_CONTEXT.md not found for llm-expert; running template-only")
+    and continue execution
+  And it does NOT instruct the agent to abort or raise an error when the file is missing
+depends_on: [BP-200a-4]
+doc_links:
+  - path: templates/agents/llm-expert.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Graceful degradation must not produce user-facing error output -- debug-level logging only"
+  - "Agent must remain fully functional without PROJECT_CONTEXT.md, using template-only knowledge"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/01_agent_template.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "templates/agents/llm-expert.md"

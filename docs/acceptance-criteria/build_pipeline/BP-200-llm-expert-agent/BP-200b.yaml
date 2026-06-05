@@ -1,0 +1,29 @@
+id: BP-200b
+title: "Every convention the expert knows is written down, not tribal knowledge"
+component: build-pipeline
+level: L1
+status: active
+req_status: active
+work_status: done
+criteria: |
+  A living knowledge file that captures every prompt-writing convention in one place.
+
+  The specialist's internal knowledge — shell rules, frontmatter schemas,
+  signoff protocol, nesting limits, and the expanded quality checklist — is
+  documented in a dedicated reference file so that it stays consistent across
+  sessions and can be updated as conventions evolve.
+depends_on:
+  - BP-200
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-200b-1
+  - BP-200b-2
+  - BP-200b-3
+  - BP-200b-4
+  - BP-200b-5
+implemented_by:
+  - "docs/agents/llm-expert/PROJECT_CONTEXT.md"

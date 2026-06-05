@@ -1,0 +1,35 @@
+id: BO-300a-3
+title: "build-feature.md On-ok block renders all four sections from the return value"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given build-epic.js returns a result object with `message`, `worktree_path`, and `manual_tests` fields,
+  When build-feature.md processes the "On ok" block for epic completion,
+  Then it renders the summary section from the result message,
+  And it renders the worktree path section from `worktree_path`,
+  And it renders the manual tests section from `manual_tests`,
+  And it renders the finalize command section with the epic name pre-filled,
+  And all four sections are presented to the user in the standard order.
+depends_on: [BO-300a]
+doc_links:
+  - templates/workflows/build-feature.md
+  - templates/workflows-js/build-epic.js
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The preferred JS path must render result.message verbatim — no re-formatting"
+  - "If result.message is empty or missing, fall through to the inline fallback template"
+delivers_to: null
+expects_from:
+  agent: python-coder
+  contract: "build-epic.js returns {message: string} with 4-section content"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - tickets/99_done/TICKET-20260604-StandardizeBuildCompletionOutput.md

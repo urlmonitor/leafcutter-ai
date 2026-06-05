@@ -1,0 +1,27 @@
+id: BP-006b
+title: "test_install_hooks.py sys.path allows build_helpers to import build_colors"
+component: build_pipeline
+level: L1
+status: active
+req_status: approved
+work_status: done
+criteria: |
+  Given tests/test_install_hooks.py is executed by pytest,
+  When build_helpers.py is loaded via importlib as part of the test setup,
+  Then build_colors is importable from within build_helpers
+  because sys.path includes the scripts/ directory,
+  And the test does not raise a ModuleNotFoundError for build_colors.
+depends_on:
+  - BP-006
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+created_by_ticket: "tickets/00_inbox/TICKET-20260604-FixFailingBuildPipelineTests.md"
+amended_by: []
+superseded_by: null
+covered_by: [BP-006b-1, BP-006b-2]
+implemented_by: []
