@@ -1,0 +1,36 @@
+id: BO-300b-1
+title: "build-single-ticket Step 4c template includes all four completion sections"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given build-single-ticket completes a standalone ticket successfully at Step 4c,
+  When the completion message template is rendered,
+  Then it includes a summary section derived from the ticket Goal and files_touched,
+  And it includes a worktree path section with the absolute path to the ticket worktree,
+  And it includes a manual test suggestions section with smoke-test hints based on files_touched,
+  And it includes a finalize section with a /finalize-feature command pre-filled with the branch name,
+  And the user can copy-paste the finalize command without manual editing.
+depends_on: [BO-300b]
+doc_links:
+  - templates/skills/build-single-ticket/SKILL.md
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Summary must be derived from ticket Goal section and files_touched, not hardcoded"
+  - "Worktree path comes from Step 2 output (WORKTREE_PATH variable)"
+  - "Manual test suggestions must reference specific files from files_touched"
+  - "The /finalize-feature command must include the BRANCH variable, not a placeholder"
+delivers_to: null
+expects_from:
+  agent: ticket-supervisor
+  contract: "Completed drive with WORKTREE_PATH and BRANCH variables set"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - tickets/99_done/TICKET-20260604-StandardizeBuildCompletionOutput.md

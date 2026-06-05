@@ -1,0 +1,33 @@
+id: BO-300a-4
+title: "build-feature.md inline fallback template includes all four sections with placeholders"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given build-feature.md defines an inline fallback completion message template
+    (used when build-epic.js does not return a structured result),
+  When the fallback template is rendered,
+  Then it includes a summary section with the epic title,
+  And it includes a worktree section with a WORKTREE_PATH placeholder,
+  And it includes a manual tests section with generic smoke-test suggestions,
+  And it includes a finalize section with an EPIC_NAME placeholder in the /finalize-feature command,
+  And all four sections appear in the standard order.
+depends_on: [BO-300a]
+doc_links:
+  - templates/workflows/build-feature.md
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Fallback template must use WORKTREE_PATH and EPIC_NAME as literal placeholder tokens"
+  - "The template must be maintained in sync with the JS-generated format — same 4 sections, same order"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - tickets/99_done/TICKET-20260604-StandardizeBuildCompletionOutput.md

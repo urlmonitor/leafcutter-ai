@@ -1,0 +1,29 @@
+id: BO-300c
+title: "Finalize command always uses the epic or branch name, never a raw path"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: done
+criteria: |
+  In every completion message — epic, single-ticket, and inline fallback —
+  the /finalize-feature command uses the epic name or branch name directly
+  (e.g. /finalize-feature EPIC-Foo or /finalize-feature feature/my-ticket),
+  never a raw file path like tickets/00_inbox/epics/EPIC-Foo. The user can
+  copy-paste without editing.
+depends_on: [BO-300]
+doc_links:
+  - templates/workflows-js/build-epic.js
+  - templates/skills/build-single-ticket/SKILL.md
+  - templates/workflows/build-feature.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [BO-300c-1]
+implemented_by:
+  - tickets/99_done/TICKET-20260604-StandardizeBuildCompletionOutput.md

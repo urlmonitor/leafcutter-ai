@@ -1,0 +1,28 @@
+id: BO-300a
+title: "Epic completion shows summary, worktree, test hints, and finalize command"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: done
+criteria: |
+  After an epic drive completes successfully, the output tells the user
+  what the epic accomplished (title and ticket count), where the worktree
+  lives on disk, what to smoke-test manually, and the exact /finalize-feature
+  command to run next. The finalize command uses the epic name, not a raw
+  file path.
+depends_on: [BO-300]
+doc_links:
+  - templates/workflows-js/build-epic.js
+  - templates/workflows/build-feature.md
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [BO-300a-1, BO-300a-2, BO-300a-3, BO-300a-4]
+implemented_by:
+  - tickets/99_done/TICKET-20260604-StandardizeBuildCompletionOutput.md

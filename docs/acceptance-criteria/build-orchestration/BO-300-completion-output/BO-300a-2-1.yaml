@@ -1,0 +1,31 @@
+id: BO-300a-2-1
+title: "Zero files_touched across all tickets still renders the manual_tests section"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given an epic completes successfully,
+  And none of the completed tickets have any entries in their files_touched frontmatter,
+  When the Step 6 message is assembled in build-epic.js,
+  Then the manual tests section is still present in the output,
+  And it contains generic smoke-test suggestions (e.g. "review the changes in the worktree")
+    rather than file-specific test hints,
+  And the section is not empty or omitted.
+depends_on: [BO-300a-2]
+doc_links:
+  - templates/workflows-js/build-epic.js
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The manual_tests array must never be empty — generate generic suggestions when no files_touched data is available"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - tickets/99_done/TICKET-20260604-StandardizeBuildCompletionOutput.md

@@ -1,0 +1,31 @@
+id: BO-300
+title: "Know exactly what was built and what to do next after every successful drive"
+component: build-orchestration
+level: L0
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given a build workflow (build-epic.js or build-single-ticket) completes successfully,
+  When the completion output is displayed to the user,
+  Then the output contains a clear summary of what was built,
+  And the worktree path where the changes live,
+  And concrete suggestions for manual testing,
+  And a copy-pastable /finalize-feature command with the branch or epic name pre-filled,
+  So the user never has to guess what happened, where to look, or what to type next.
+depends_on: []
+doc_links:
+  - templates/workflows-js/build-epic.js
+  - templates/skills/build-single-ticket/SKILL.md
+  - templates/workflows/build-feature.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [BO-300a, BO-300b, BO-300c]
+implemented_by:
+  - tickets/99_done/TICKET-20260604-StandardizeBuildCompletionOutput.md
