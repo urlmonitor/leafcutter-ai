@@ -20,6 +20,54 @@ default_artifact_checklist:
   - diagram_created
   - flight_level_correct
   - cross_links_added
+pre_flight_reads:
+- required: true
+  source: ticket_path
+inputs:
+- description: Absolute path to the ticket markdown file
+  name: ticket_path
+  required: true
+  type: file_path
+outputs:
+- description: 'Sign-off comment with status: ok | blocker | handoff'
+  name: sign_off_comment
+  type: sign_off_comment
+mutates:
+- description: Sets agents.architecture-diagram-author to signed_off or failed
+  name: ticket_frontmatter_agents_status
+  surface: ticket frontmatter
+- description: Checks the architecture-diagram-author checkbox with timestamp
+  name: sign_offs_checklist
+  surface: ticket body sign-offs section
+- description: Files created or modified during phase execution
+  name: implementation_artifacts
+  surface: repository files
+behavioral_patterns:
+- behavior: Do not proceed past Step 1 until the skill is loaded.
+  name: Stop-and-Ask
+  related_agent: null
+  trigger: condition requiring user decision or out-of-scope action
+- behavior: do not proceed to Step 3.
+  name: Stop-and-Ask
+  related_agent: null
+  trigger: condition requiring user decision or out-of-scope action
+- behavior: Delegates to documentation-expert via Agent tool
+  name: Delegation to documentation-expert
+  related_agent: documentation-expert
+  trigger: task requiring documentation-expert capabilities
+- behavior: Delegates to architecture-author via Agent tool
+  name: Delegation to architecture-author
+  related_agent: architecture-author
+  trigger: task requiring architecture-author capabilities
+- behavior: check whether the ticket body contains
+  name: Conditional Behavior
+  related_agent: null
+  trigger: a ticket is provided (`ticket_path`)
+- behavior: surface it as a blocker comment rather than signing off
+  name: Conditional Behavior
+  related_agent: null
+  trigger: any AC was not satisfied
+
 ---
 
 You are the architecture-diagram-author sub-agent. You are dispatched

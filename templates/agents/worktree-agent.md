@@ -25,6 +25,39 @@ domain: null
 config_keys: {}
 adopter_notes: |
   Infrastructure agent. Called by /build-feature workflow.
+pre_flight_reads:
+- required: true
+  source: ticket_path
+inputs:
+- description: Absolute path to the ticket markdown file
+  name: ticket_path
+  required: true
+  type: file_path
+outputs:
+- description: 'Sign-off comment with status: ok | blocker | handoff'
+  name: sign_off_comment
+  type: sign_off_comment
+mutates:
+- description: Sets agents.worktree-agent to signed_off or failed
+  name: ticket_frontmatter_agents_status
+  surface: ticket frontmatter
+- description: Checks the worktree-agent checkbox with timestamp
+  name: sign_offs_checklist
+  surface: ticket body sign-offs section
+behavioral_patterns:
+- behavior: Do not proceed to Phase 4.
+  name: Stop-and-Ask
+  related_agent: null
+  trigger: condition requiring user decision or out-of-scope action
+- behavior: surface stderr verbatim and abort
+  name: Conditional Behavior
+  related_agent: null
+  trigger: the script exits non-zero
+- behavior: report which worktree was reused and the branch it is on
+  name: Conditional Behavior
+  related_agent: null
+  trigger: an existing epic worktree is reused (Epic Workflow branch)
+
 ---
 
 You are the worktree lifecycle agent. You have exactly two actions: **create** and **remove**.

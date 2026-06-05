@@ -1,0 +1,48 @@
+agent_id: change-scope-reviewer
+template_file: templates/agents/change-scope-reviewer.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  - source: .agents/agents/<name>/PROJECT_CONTEXT.md
+    required: false
+    condition: when present
+  inputs:
+  - name: ticket_path
+    type: file_path
+    required: true
+    description: Absolute path to the ticket markdown file
+  outputs:
+  - name: sign_off_comment
+    type: sign_off_comment
+    description: 'Sign-off comment with status: ok | blocker | handoff'
+  mutates:
+  - name: ticket_frontmatter_agents_status
+    surface: ticket frontmatter
+    description: Sets agents.change-scope-reviewer to signed_off or failed
+  - name: sign_offs_checklist
+    surface: ticket body sign-offs section
+    description: Checks the change-scope-reviewer checkbox with timestamp
+  behavioral_patterns:
+  - name: Conditional Behavior
+    trigger: '`unexpected` is empty'
+    behavior: proceed directly to Step 4 (clean scope)
+    related_agent: null
+proposed_registry:
+  category: implementation
+  skills_invoked:
+  - skill_id: signoff
+    mode: conditional
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 3
+    source: ticket_path from ticket-supervisor
+  - channel: 4
+    source: pre-flight file reads
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)
+  - channel: 8
+    source: PROJECT_CONTEXT.md

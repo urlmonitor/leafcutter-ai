@@ -1,0 +1,38 @@
+agent_id: conflict-resolver
+template_file: templates/agents/conflict-resolver.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  inputs: []
+  outputs:
+  - name: completion_report
+    type: structured_response
+    description: Structured completion payload or sign-off comment
+  mutates:
+  - name: none
+    surface: none
+    description: Read-only agent — no filesystem mutations
+  behavioral_patterns:
+  - name: Delegation to conflict-resolver-deep
+    trigger: task requiring conflict-resolver-deep capabilities
+    behavior: Delegates to conflict-resolver-deep via Agent tool
+    related_agent: conflict-resolver-deep
+  - name: Conditional Behavior
+    trigger: the input is absent or incomplete
+    behavior: list conflicted files yourself via
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: the file is a Python source file
+    behavior: check that no conflict marker
+    related_agent: null
+proposed_registry:
+  category: supervisor
+  skills_invoked: []
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)

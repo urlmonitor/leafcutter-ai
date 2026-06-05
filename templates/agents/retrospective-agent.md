@@ -27,6 +27,24 @@ adopter_notes: |
   or by user via /retro. Read-only analysis — never mutates rules or CLAUDE.md
   without explicit user approval.
 requires_verification: true
+pre_flight_reads:
+- required: true
+  source: ticket_path
+inputs: []
+outputs:
+- description: Structured completion payload or sign-off comment
+  name: completion_report
+  type: structured_response
+mutates:
+- description: Read-only agent — no filesystem mutations
+  name: none
+  surface: none
+behavioral_patterns:
+- behavior: note this and produce a lightweight retro
+  name: Conditional Behavior
+  related_agent: null
+  trigger: the epic has < 3 completed tickets
+
 ---
 
 You are the retrospective agent. Your job is to extract institutional knowledge from

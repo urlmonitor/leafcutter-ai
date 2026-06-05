@@ -1167,6 +1167,280 @@ def build_ac_store_docs(target_root: Path, config: dict[str, Any],
     return written
 
 
+def validate_agent_self_description(
+    target_root: Path,
+    config: dict[str, Any],
+    dry_run: bool,
+    enforcement_level: str = "warning",
+) -> tuple[int, int]:
+    """Validate all agent templates have required self-description fields.
+
+    Checks each agent template under ``target_root / "templates" / "agents"``
+    for the presence of required frontmatter fields, and each registry entry
+    in ``target_root / "config" / "agent_registry.json"`` for required registry
+    fields.
+
+    Required frontmatter fields: ``behavioral_patterns``, ``pre_flight_reads``,
+    ``inputs``, ``outputs``, ``mutates``.
+
+    Required registry fields: ``category``, ``skills_invoked``,
+    ``knowledge_channels``.
+
+    ``skills_invoked`` entries are validated by resolving ``skill_id`` against
+    both ``target_root / "templates" / "skills"`` (package) and
+    ``.claude/skills/`` (project-local). An unresolvable skill_id produces a
+    problem entry naming which lookup location was checked.
+
+    ``knowledge_channels`` entries are validated: ``channel`` must be an
+    integer in the range 1-11 inclusive.
+
+    All problems across all agents are collected before returning (aggregated
+    output — never halts on the first error).
+
+    Args:
+        target_root: Absolute path to the target project root (or package root).
+        config: Build configuration dict (accepted for interface parity;
+            currently unused).
+        dry_run: When True, logs intent but performs no file I/O side-effects.
+            Validation reads are always performed regardless.
+        enforcement_level: One of ``"warning"`` or ``"error"``.
+            ``"warning"`` prints warnings and returns ``(0, warning_count)``.
+            ``"error"`` prints errors and returns ``(error_count, 0)``.
+
+    Returns:
+        Tuple ``(error_count, warning_count)`` as integers.
+
+    # DECISION HISTORY
+    # - 2026-06-05 12:30 [python-coder/EPIC-SelfDescribingAgents/04]:
+    #   Added validate_agent_self_description() per INF-600g. Checks
+    #   frontmatter fields (behavioral_patterns, pre_flight_reads, inputs,
+    #   outputs, mutates), registry fields (category, skills_invoked,
+    #   knowledge_channels), skill_id resolvability (package + project-local),
+    #   and knowledge_channels range (1-11). Aggregated output. Two severity
+    #   modes: 'warning' returns (0, N); 'error' returns (N, 0).
+    #   (#EPIC-SelfDescribingAgents/04)
+    """
+    agents_template_dir = target_root / "templates" / "agents"
+    registry_path = target_root / "config" / "agent_registry.json"
+    package_skills_dir = target_root / "templates" / "skills"
+    project_skills_dir = target_root / ".claude" / "skills"
+
+    _REQUIRED_FRONTMATTER = [
+        "behavioral_patterns",
+        "pre_flight_reads",
+        "inputs",
+        "outputs",
+        "mutates",
+    ]
+    _REQUIRED_REGISTRY = [
+        "category",
+        "skills_invoked",
+        "knowledge_channels",
+    ]
+    _VALID_CHANNEL_RANGE = range(1, 12)  # 1-11 inclusive
+
+    # Collect all problems as (agent_id, field, location, hint) tuples.
+    problems: list[str] = []
+
+    # ----------------------------------------------------------------
+    # Load registry — build dict keyed by agent ID for fast lookup.
+    # ----------------------------------------------------------------
+    registry_entries: dict[str, dict] = {}
+    if registry_path.exists():
+        try:
+            raw = registry_path.read_text(encoding="utf-8")
+            registry_data = json.loads(raw)
+        except OSError as exc:
+            _log.warning("validate_agent_self_description: cannot read registry: %s", exc)
+            registry_data = {}
+        for entry in registry_data.get("agents", []):
+            agent_id = entry.get("id")
+            if agent_id:
+                registry_entries[agent_id] = entry
+
+    # ----------------------------------------------------------------
+    # Validate each agent template file.
+    # ----------------------------------------------------------------
+    if agents_template_dir.exists():
+        for template_file in sorted(agents_template_dir.glob("*.md")):
+            if template_file.name.startswith("_"):
+                continue  # Skip helper files.
+            if template_file.name.upper() == "README.MD":
+                continue  # Skip the directory README — not an agent template.
+
+            try:
+                text = template_file.read_text(encoding="utf-8")
+            except OSError as exc:
+                _log.warning(
+                    "validate_agent_self_description: cannot read %s: %s",
+                    template_file,
+                    exc,
+                )
+                continue
+
+            fm, _ = parse_frontmatter(text)
+            agent_name = fm.get("name") or template_file.stem
+
+            # --- Frontmatter field checks ---
+            for field in _REQUIRED_FRONTMATTER:
+                if field not in fm or fm[field] is None:
+                    hint = _self_desc_field_hint(field)
+                    problems.append(
+                        f"Agent '{agent_name}' template missing required frontmatter field "
+                        f"'{field}' ({template_file.name}).\n"
+                        f"  Fix hint: {hint}"
+                    )
+
+            # --- Registry field checks ---
+            entry = registry_entries.get(agent_name, {})
+
+            for field in _REQUIRED_REGISTRY:
+                if field not in entry:
+                    problems.append(
+                        f"Registry entry '{agent_name}' missing required field '{field}'.\n"
+                        f"  Fix hint: Add '{field}' to the agent's entry in config/agent_registry.json."
+                    )
+                    continue
+
+                # skills_invoked: resolve each skill_id
+                if field == "skills_invoked":
+                    skills_invoked = entry.get("skills_invoked") or []
+                    if isinstance(skills_invoked, list):
+                        for inv in skills_invoked:
+                            skill_id = inv.get("skill_id") if isinstance(inv, dict) else None
+                            if not skill_id:
+                                continue
+                            in_package = (package_skills_dir / skill_id).exists()
+                            in_project = (project_skills_dir / skill_id).exists()
+                            if not in_package and not in_project:
+                                problems.append(
+                                    f"Registry entry '{agent_name}' has unresolvable "
+                                    f"skills_invoked skill_id '{skill_id}'.\n"
+                                    f"  Not found in package (templates/skills/{skill_id}/) "
+                                    f"nor project-local (.claude/skills/{skill_id}/).\n"
+                                    f"  Fix hint: Create the skill template or correct the skill_id."
+                                )
+
+                # knowledge_channels: check channel range 1-11
+                if field == "knowledge_channels":
+                    channels = entry.get("knowledge_channels") or []
+                    if isinstance(channels, list):
+                        for ch_entry in channels:
+                            channel = (
+                                ch_entry.get("channel")
+                                if isinstance(ch_entry, dict)
+                                else None
+                            )
+                            if channel is not None and channel not in _VALID_CHANNEL_RANGE:
+                                problems.append(
+                                    f"Registry entry '{agent_name}' has invalid "
+                                    f"knowledge_channels channel value {channel}.\n"
+                                    f"  Valid range is 1-11 (per ADR-029 Agent Knowledge Plane).\n"
+                                    f"  Fix hint: Correct the channel value."
+                                )
+
+    # ----------------------------------------------------------------
+    # Emit problems according to enforcement_level.
+    # ----------------------------------------------------------------
+    if not problems:
+        if not dry_run:
+            print("  Self-description validation: all agents pass.")
+        return (0, 0)
+
+    is_error = enforcement_level == "error"
+    prefix = "ERROR" if is_error else "WARNING"
+    for problem in problems:
+        print(f"  [{prefix}] {problem}")
+
+    if is_error:
+        print(
+            f"\n  Self-description validation: {len(problems)} error(s) found. "
+            "Fix these fields and re-run the build."
+        )
+        return (len(problems), 0)
+    else:
+        print(
+            f"\n  Self-description validation: {len(problems)} warning(s). "
+            "Enforcement is 'warning' — build continues. "
+            "Set self_description_enforcement='error' in config/agent_registry.json "
+            "once all agents are populated."
+        )
+        return (0, len(problems))
+
+
+def _self_desc_field_hint(field: str) -> str:
+    """Return a one-line fix hint for a missing self-description frontmatter field.
+
+    Args:
+        field: The missing frontmatter field name.
+
+    Returns:
+        A short string describing what the field should contain.
+    """
+    _HINTS = {
+        "behavioral_patterns": (
+            "Add a behavioral_patterns array listing conditional behaviors, "
+            "gates, and delegation rules. Example: "
+            "behavioral_patterns: [{name: 'Stop-and-Ask', trigger: '...', "
+            "behavior: '...', related_agent: null}]"
+        ),
+        "pre_flight_reads": (
+            "Add a pre_flight_reads list of documents the agent reads before "
+            "starting work. Example: pre_flight_reads: ['ticket body', "
+            "'cited ADRs']"
+        ),
+        "inputs": (
+            "Add an inputs list describing what the agent receives. Example: "
+            "inputs: [{name: ticket_path, type: path, description: 'Path to ticket'}]"
+        ),
+        "outputs": (
+            "Add an outputs list describing what the agent produces. Example: "
+            "outputs: [{name: 'Sign-off comment', type: comment, "
+            "description: 'status: ok | blocker'}]"
+        ),
+        "mutates": (
+            "Add a mutates list describing what the agent modifies. Example: "
+            "mutates: [{name: 'Ticket frontmatter', type: file, "
+            "description: 'agents.<name>: signed_off'}]"
+        ),
+    }
+    return _HINTS.get(field, f"Populate the '{field}' field in the agent template frontmatter.")
+
+
+def build_agent_cards(target_root: Path, config: dict[str, Any],
+                      dry_run: bool, force: bool) -> int:
+    """Generate .card.md files for all agent templates.
+
+    Delegates entirely to ``generate_agent_cards.build_agent_cards()``.
+    Reads all ``.md`` files in ``<target_root>/templates/agents/`` (excluding
+    ``_*.md`` helper files), reads YAML frontmatter and the corresponding
+    registry entry from ``config/agent_registry.json``, calls
+    ``generate_card()``, and writes to
+    ``<target_root>/docs/agents/cards/<agent-id>.card.md``.
+
+    Args:
+        target_root: Absolute path to the target project root.
+        config: Build configuration dict (passed through for interface parity).
+        dry_run: When True, logs intent but writes nothing.
+        force: When True, overwrites existing card files.
+
+    Returns:
+        Count of files written (or that would be written in dry-run mode).
+
+    # DECISION HISTORY
+    # - 2026-06-05 10:30 [python-coder/EPIC-SelfDescribingAgents/02]:
+    #   Added build_agent_cards phase. Delegates to generate_agent_cards.py
+    #   to keep build_phases.py a thin dispatcher. Registered in build.py
+    #   scaffold_phases after ("AC store docs", build_ac_store_docs).
+    #   (#EPIC-SelfDescribingAgents/02)
+    """
+    from generate_agent_cards import (  # noqa: PLC0415 — lazy import avoids circular
+        build_agent_cards as _generate_cards,
+    )
+    return _generate_cards(target_root=target_root, config=config,
+                           dry_run=dry_run, force=force)
+
+
 # ---------------------------------------------------------------------------
 # Clean-mode: remove stale artifacts
 # ---------------------------------------------------------------------------

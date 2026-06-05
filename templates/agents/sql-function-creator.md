@@ -8,6 +8,35 @@ description: |
 model: sonnet
 tools: Bash, Read, Edit, Write, Agent
 requires_verification: true
+pre_flight_reads:
+- required: true
+  source: ticket_path
+- condition: when present
+  required: false
+  source: .agents/agents/<name>/PROJECT_CONTEXT.md
+inputs: []
+outputs:
+- description: Structured completion payload or sign-off comment
+  name: completion_report
+  type: structured_response
+mutates:
+- description: Read-only agent — no filesystem mutations
+  name: none
+  surface: none
+behavioral_patterns:
+- behavior: Do not proceed to Step 3 until all four are determined.
+  name: Stop-and-Ask
+  related_agent: null
+  trigger: condition requiring user decision or out-of-scope action
+- behavior: stop immediately and
+  name: Conditional Behavior
+  related_agent: null
+  trigger: ANY of the following are true
+- behavior: called inside a
+  name: Conditional Behavior
+  related_agent: null
+  trigger: the request clearly describes a function (returns a value
+
 ---
 
 ## Pre-flight (every run)

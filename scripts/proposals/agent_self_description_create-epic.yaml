@@ -1,0 +1,49 @@
+agent_id: create-epic
+template_file: templates/agents/create-epic.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  inputs: []
+  outputs:
+  - name: completion_report
+    type: structured_response
+    description: Structured completion payload or sign-off comment
+  mutates:
+  - name: none
+    surface: none
+    description: Read-only agent — no filesystem mutations
+  behavioral_patterns:
+  - name: Stop-and-Ask
+    trigger: condition requiring user decision or out-of-scope action
+    behavior: Do not proceed to fanout until all stubs pass the guard.
+    related_agent: null
+  - name: Delegation to create-ticket
+    trigger: task requiring create-ticket capabilities
+    behavior: Delegates to create-ticket via Agent tool
+    related_agent: create-ticket
+  - name: Delegation to research-agent
+    trigger: task requiring research-agent capabilities
+    behavior: Delegates to research-agent via Agent tool
+    related_agent: research-agent
+  - name: Conditional Behavior
+    trigger: '`current_depth >= 3`'
+    behavior: do not fan out further create-ticket
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: this limit is reached
+    behavior: finish the scaffold and stub phases as normal, but instead of issuing
+      N
+    related_agent: null
+proposed_registry:
+  category: supervisor
+  skills_invoked:
+  - skill_id: ticket-authoring
+    mode: always
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)

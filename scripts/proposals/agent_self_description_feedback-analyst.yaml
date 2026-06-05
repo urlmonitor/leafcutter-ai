@@ -1,0 +1,32 @@
+agent_id: feedback-analyst
+template_file: templates/agents/feedback-analyst.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  inputs: []
+  outputs:
+  - name: completion_report
+    type: structured_response
+    description: Structured completion payload or sign-off comment
+  mutates:
+  - name: none
+    surface: none
+    description: Read-only agent — no filesystem mutations
+  behavioral_patterns:
+  - name: Conditional Behavior
+    trigger: no output at all
+    behavior: report the error and stop
+    related_agent: null
+proposed_registry:
+  category: supervisor
+  skills_invoked:
+  - skill_id: feedback-analysis
+    mode: always
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)

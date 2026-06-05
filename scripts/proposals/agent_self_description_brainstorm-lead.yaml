@@ -1,0 +1,55 @@
+agent_id: brainstorm-lead
+template_file: templates/agents/brainstorm-lead.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  - source: .claude/skills/building-epics/SKILL.md
+    required: false
+    condition: when present
+  - source: project conventions
+    required: false
+  inputs:
+  - name: question
+    type: string
+    required: true
+    description: Design question to reason about
+  - name: perspective
+    type: string
+    required: true
+    description: Single reasoning lens (simplicity, robustness, etc.)
+  outputs:
+  - name: completion_report
+    type: structured_response
+    description: Structured completion payload or sign-off comment
+  mutates:
+  - name: none
+    surface: none
+    description: Read-only agent — no filesystem mutations
+  behavioral_patterns:
+  - name: Stop-and-Ask
+    trigger: condition requiring user decision or out-of-scope action
+    behavior: refuse politely and point them at `/build-feature`.
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: a user appears to have invoked you directly
+    behavior: refuse politely and point them at `/build-feature`
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: either is missing
+    behavior: 'return an `outcome:'
+    related_agent: null
+proposed_registry:
+  category: supervisor
+  skills_invoked:
+  - skill_id: building-epics
+    mode: conditional
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 4
+    source: pre-flight file reads
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)

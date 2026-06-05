@@ -27,6 +27,34 @@ default_artifact_checklist:
   - failures_classified
   - ac_lookup_attempted
   - triage_report_structured
+pre_flight_reads:
+- required: true
+  source: ticket_path
+inputs: []
+outputs:
+- description: 'Output field: triage_report'
+  name: triage_report
+  type: structured_response
+- description: 'Output field: test_id'
+  name: test_id
+  type: structured_response
+- description: 'Output field: test_file'
+  name: test_file
+  type: structured_response
+mutates:
+- description: Read-only agent — no filesystem mutations
+  name: none
+  surface: none
+behavioral_patterns:
+- behavior: set `covers_tag` to `null`
+  name: Conditional Behavior
+  related_agent: null
+  trigger: 'absent or `# covers: UNKNOWN`'
+- behavior: log a warning and
+  name: Conditional Behavior
+  related_agent: null
+  trigger: the file does not exist
+
 ---
 
 You are the test-failure triage agent. Your only job is to classify

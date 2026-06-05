@@ -1,0 +1,54 @@
+agent_id: it-po
+template_file: templates/agents/it-po.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  - source: .agents/agents/<name>/PROJECT_CONTEXT.md
+    required: false
+    condition: when present
+  inputs:
+  - name: ticket_path
+    type: file_path
+    required: true
+    description: Absolute path to the ticket markdown file
+  outputs:
+  - name: sign_off_comment
+    type: sign_off_comment
+    description: 'Sign-off comment with status: ok | blocker | handoff'
+  mutates:
+  - name: ticket_frontmatter_agents_status
+    surface: ticket frontmatter
+    description: Sets agents.it-po to signed_off or failed
+  - name: sign_offs_checklist
+    surface: ticket body sign-offs section
+    description: Checks the it-po checkbox with timestamp
+  behavioral_patterns:
+  - name: Stop-and-Ask
+    trigger: condition requiring user decision or out-of-scope action
+    behavior: Do NOT proceed to §1.
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: the backend returns 422
+    behavior: which exact field does the frontend read?"
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: you exceed this
+    behavior: you are writing an epic
+    related_agent: null
+proposed_registry:
+  category: planning
+  skills_invoked:
+  - skill_id: signoff
+    mode: conditional
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 3
+    source: ticket_path from ticket-supervisor
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)
+  - channel: 8
+    source: PROJECT_CONTEXT.md

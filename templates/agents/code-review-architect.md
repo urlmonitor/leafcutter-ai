@@ -24,6 +24,29 @@ adopter_notes: |
   Unlike pr-reviewer (which reviews the working diff for obvious issues),
   this agent performs a full architectural review of a feature or module.
   Output goes to a file, not chat.
+pre_flight_reads:
+- required: true
+  source: ticket_path
+inputs: []
+outputs:
+- description: Structured completion payload or sign-off comment
+  name: completion_report
+  type: structured_response
+mutates:
+- description: Read-only agent — no filesystem mutations
+  name: none
+  surface: none
+behavioral_patterns:
+- behavior: include low-level checks explicitly in the review
+  name: Conditional Behavior
+  related_agent: null
+  trigger: the stack includes a framework/library with important internals
+- behavior: state briefly that low-level checks were performed and no material violations
+    were detected
+  name: Conditional Behavior
+  related_agent: null
+  trigger: such technology is present and no issues are found
+
 ---
 
 ## Role

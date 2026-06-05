@@ -1,0 +1,46 @@
+agent_id: create-ticket-v2
+template_file: templates/agents/create-ticket-v2.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  inputs: []
+  outputs:
+  - name: completion_report
+    type: structured_response
+    description: Structured completion payload or sign-off comment
+  mutates:
+  - name: none
+    surface: none
+    description: Read-only agent — no filesystem mutations
+  behavioral_patterns:
+  - name: Delegation to business-analyst-v2
+    trigger: task requiring business-analyst-v2 capabilities
+    behavior: Delegates to business-analyst-v2 via Agent tool
+    related_agent: business-analyst-v2
+  - name: Delegation to create-epic
+    trigger: task requiring create-epic capabilities
+    behavior: Delegates to create-epic via Agent tool
+    related_agent: create-epic
+  - name: Delegation to refinement
+    trigger: task requiring refinement capabilities
+    behavior: Delegates to refinement via Agent tool
+    related_agent: refinement
+  - name: Conditional Behavior
+    trigger: both are empty (or absent)
+    behavior: '**skip this step entirely** — no AC files are written'
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: the file does not exist
+    behavior: abort with an error — amendments require a pre-existing record
+    related_agent: null
+proposed_registry:
+  category: supervisor
+  skills_invoked: []
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)

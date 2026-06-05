@@ -15,6 +15,41 @@ config_keys: {}
 adopter_notes: |
   User-facing. Called via /create-epic or directly.
 requires_verification: true
+pre_flight_reads:
+- required: true
+  source: ticket_path
+inputs: []
+outputs:
+- description: Structured completion payload or sign-off comment
+  name: completion_report
+  type: structured_response
+mutates:
+- description: Read-only agent — no filesystem mutations
+  name: none
+  surface: none
+behavioral_patterns:
+- behavior: Do not proceed to fanout until all stubs pass the guard.
+  name: Stop-and-Ask
+  related_agent: null
+  trigger: condition requiring user decision or out-of-scope action
+- behavior: Delegates to create-ticket via Agent tool
+  name: Delegation to create-ticket
+  related_agent: create-ticket
+  trigger: task requiring create-ticket capabilities
+- behavior: Delegates to research-agent via Agent tool
+  name: Delegation to research-agent
+  related_agent: research-agent
+  trigger: task requiring research-agent capabilities
+- behavior: do not fan out further create-ticket
+  name: Conditional Behavior
+  related_agent: null
+  trigger: '`current_depth >= 3`'
+- behavior: finish the scaffold and stub phases as normal, but instead of issuing
+    N
+  name: Conditional Behavior
+  related_agent: null
+  trigger: this limit is reached
+
 ---
 
 <!--

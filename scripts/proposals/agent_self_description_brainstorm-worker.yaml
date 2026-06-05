@@ -1,0 +1,48 @@
+agent_id: brainstorm-worker
+template_file: templates/agents/brainstorm-worker.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  inputs:
+  - name: question
+    type: string
+    required: true
+    description: Design question to reason about
+  - name: perspective
+    type: string
+    required: true
+    description: Single reasoning lens (simplicity, robustness, etc.)
+  outputs:
+  - name: completion_report
+    type: structured_response
+    description: Structured completion payload or sign-off comment
+  mutates:
+  - name: none
+    surface: none
+    description: Read-only agent — no filesystem mutations
+  behavioral_patterns:
+  - name: Stop-and-Ask
+    trigger: condition requiring user decision or out-of-scope action
+    behavior: 'refuse
+
+      politely and point them at `brainstorm-lead`.'
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: either field is missing or unparseable
+    behavior: return the malformed-input
+    related_agent: null
+proposed_registry:
+  category: research
+  skills_invoked:
+  - skill_id: building-epics
+    mode: always
+  - skill_id: signoff
+    mode: always
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)

@@ -21,6 +21,40 @@ adopter_notes: |
   Does NOT replace create-ticket. Does NOT modify any v1 templates or workflows.
   Once v2 is proven, promote by renaming — never by modifying v1 in-place.
 requires_verification: true
+pre_flight_reads:
+- required: true
+  source: ticket_path
+inputs: []
+outputs:
+- description: Structured completion payload or sign-off comment
+  name: completion_report
+  type: structured_response
+mutates:
+- description: Read-only agent — no filesystem mutations
+  name: none
+  surface: none
+behavioral_patterns:
+- behavior: Delegates to business-analyst-v2 via Agent tool
+  name: Delegation to business-analyst-v2
+  related_agent: business-analyst-v2
+  trigger: task requiring business-analyst-v2 capabilities
+- behavior: Delegates to create-epic via Agent tool
+  name: Delegation to create-epic
+  related_agent: create-epic
+  trigger: task requiring create-epic capabilities
+- behavior: Delegates to refinement via Agent tool
+  name: Delegation to refinement
+  related_agent: refinement
+  trigger: task requiring refinement capabilities
+- behavior: '**skip this step entirely** — no AC files are written'
+  name: Conditional Behavior
+  related_agent: null
+  trigger: both are empty (or absent)
+- behavior: abort with an error — amendments require a pre-existing record
+  name: Conditional Behavior
+  related_agent: null
+  trigger: the file does not exist
+
 ---
 
 You are the v2 parallel ticket-creation pipeline. You orchestrate the v2 flow

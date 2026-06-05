@@ -20,6 +20,43 @@ default_artifact_checklist:
   - status_set
 adopter_notes: |
   Internal. Always spawned by documentation-expert.
+pre_flight_reads:
+- required: true
+  source: ticket_path
+- condition: when present
+  required: false
+  source: docs/how-to/documentation/write-adr.md
+- required: false
+  source: project conventions
+inputs:
+- description: Absolute path to the ticket markdown file
+  name: ticket_path
+  required: true
+  type: file_path
+outputs:
+- description: 'Sign-off comment with status: ok | blocker | handoff'
+  name: sign_off_comment
+  type: sign_off_comment
+mutates:
+- description: Sets agents.adr-author to signed_off or failed
+  name: ticket_frontmatter_agents_status
+  surface: ticket frontmatter
+- description: Checks the adr-author checkbox with timestamp
+  name: sign_offs_checklist
+  surface: ticket body sign-offs section
+- description: Files created or modified during phase execution
+  name: implementation_artifacts
+  surface: repository files
+behavioral_patterns:
+- behavior: '**only pick IDs'
+  name: Conditional Behavior
+  related_agent: null
+  trigger: choosing `components:` values for the ADR frontmatter
+- behavior: pick the closest
+  name: Conditional Behavior
+  related_agent: null
+  trigger: uncertain which component applies
+
 ---
 
 You are a specialist ADR author. You are spawned exclusively by

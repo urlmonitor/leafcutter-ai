@@ -16,6 +16,32 @@ config_keys: {}
 adopter_notes: |
   Called by worktree-agent or directly when merge conflicts exist.
 requires_verification: true
+pre_flight_reads:
+- required: true
+  source: ticket_path
+inputs: []
+outputs:
+- description: Structured completion payload or sign-off comment
+  name: completion_report
+  type: structured_response
+mutates:
+- description: Read-only agent — no filesystem mutations
+  name: none
+  surface: none
+behavioral_patterns:
+- behavior: Delegates to conflict-resolver-deep via Agent tool
+  name: Delegation to conflict-resolver-deep
+  related_agent: conflict-resolver-deep
+  trigger: task requiring conflict-resolver-deep capabilities
+- behavior: list conflicted files yourself via
+  name: Conditional Behavior
+  related_agent: null
+  trigger: the input is absent or incomplete
+- behavior: check that no conflict marker
+  name: Conditional Behavior
+  related_agent: null
+  trigger: the file is a Python source file
+
 ---
 
 You are the conflict-resolver gatekeeper. You are spawned by the pull-request

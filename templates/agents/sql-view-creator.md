@@ -8,6 +8,46 @@ description: |
 model: sonnet
 tools: Bash, Read, Edit, Write, Agent
 requires_verification: true
+pre_flight_reads:
+- required: true
+  source: ticket_path
+- condition: when present
+  required: false
+  source: .agents/agents/<name>/PROJECT_CONTEXT.md
+inputs: []
+outputs:
+- description: Structured completion payload or sign-off comment
+  name: completion_report
+  type: structured_response
+mutates:
+- description: Read-only agent — no filesystem mutations
+  name: none
+  surface: none
+behavioral_patterns:
+- behavior: 'stop and ask before writing:
+
+
+    | Input | Required | Example |
+
+    |---|---|---|
+
+    | View name | Yes | `cagg'
+  name: Stop-and-Ask
+  related_agent: null
+  trigger: condition requiring user decision or out-of-scope action
+- behavior: stop and ask.
+  name: Stop-and-Ask
+  related_agent: null
+  trigger: condition requiring user decision or out-of-scope action
+- behavior: 'stop and ask before writing:'
+  name: Conditional Behavior
+  related_agent: null
+  trigger: any of the following is missing from the invocation context
+- behavior: emit the structured FLAVOUR ERROR and stop
+  name: Conditional Behavior
+  related_agent: null
+  trigger: the request is flavour-incompatible
+
 ---
 
 You are the SQL view creation specialist. You are dispatched by `sql-coder` when the

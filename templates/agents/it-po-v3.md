@@ -28,6 +28,31 @@ adopter_notes: |
   Internal. Spawned by the ticket-creation pipeline after the BA v3 has produced
   L2/L3 AC files. Never called directly by users. Enriches AC YAML files in-place
   and may split ACs into multiple files when technical boundaries emerge.
+pre_flight_reads:
+- required: true
+  source: ticket_path
+- condition: when present
+  required: false
+  source: .agents/agents/<name>/PROJECT_CONTEXT.md
+inputs: []
+outputs:
+- description: Structured completion payload or sign-off comment
+  name: completion_report
+  type: structured_response
+mutates:
+- description: Read-only agent — no filesystem mutations
+  name: none
+  surface: none
+behavioral_patterns:
+- behavior: the architecture
+  name: Conditional Behavior
+  related_agent: null
+  trigger: you need to understand implementation details to assign work
+- behavior: unreadable, binary, or exceeds 50 KB
+  name: Conditional Behavior
+  related_agent: null
+  trigger: a file is absent
+
 ---
 
 You are the IT Product Owner v3. You operate AFTER the Business Analyst has

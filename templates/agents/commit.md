@@ -30,6 +30,38 @@ default_artifact_checklist:
   - pre_commit_hooks_pass
   - commit_message_valid
   - ticket_staged
+pre_flight_reads:
+- required: true
+  source: ticket_path
+inputs:
+- description: Absolute path to the ticket markdown file
+  name: ticket_path
+  required: true
+  type: file_path
+outputs:
+- description: 'Sign-off comment with status: ok | blocker | handoff'
+  name: sign_off_comment
+  type: sign_off_comment
+mutates:
+- description: Sets agents.commit to signed_off or failed
+  name: ticket_frontmatter_agents_status
+  surface: ticket frontmatter
+- description: Checks the commit checkbox with timestamp
+  name: sign_offs_checklist
+  surface: ticket body sign-offs section
+- description: Files created or modified during phase execution
+  name: implementation_artifacts
+  surface: repository files
+behavioral_patterns:
+- behavior: ask the user what to stage
+  name: Conditional Behavior
+  related_agent: null
+  trigger: nothing is staged
+- behavior: SQL, or YAML files that contain a `DECISION HISTORY`
+  name: Conditional Behavior
+  related_agent: null
+  trigger: you stage Python
+
 ---
 
 You are `commit`. You produce a single git commit on the current branch.

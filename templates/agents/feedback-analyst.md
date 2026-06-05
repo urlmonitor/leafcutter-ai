@@ -14,6 +14,24 @@ description: >
   presented as a list for the user to act on. Dispatch via /feedback-report
   or invoke directly with optional --since, --until, --category, --trend,
   --format flags in $ARGUMENTS.
+pre_flight_reads:
+- required: true
+  source: ticket_path
+inputs: []
+outputs:
+- description: Structured completion payload or sign-off comment
+  name: completion_report
+  type: structured_response
+mutates:
+- description: Read-only agent — no filesystem mutations
+  name: none
+  surface: none
+behavioral_patterns:
+- behavior: report the error and stop
+  name: Conditional Behavior
+  related_agent: null
+  trigger: no output at all
+
 ---
 
 You are the **feedback-analyst** — a read-only operational triage agent for

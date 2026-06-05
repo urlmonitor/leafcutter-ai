@@ -1,0 +1,63 @@
+agent_id: documentation-expert
+template_file: templates/agents/documentation-expert.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  - source: docs/README.md
+    required: false
+    condition: when present
+  inputs:
+  - name: ticket_path
+    type: file_path
+    required: true
+    description: Absolute path to the ticket markdown file
+  outputs:
+  - name: sign_off_comment
+    type: sign_off_comment
+    description: 'Sign-off comment with status: ok | blocker | handoff'
+  mutates:
+  - name: ticket_frontmatter_agents_status
+    surface: ticket frontmatter
+    description: Sets agents.documentation-expert to signed_off or failed
+  - name: sign_offs_checklist
+    surface: ticket body sign-offs section
+    description: Checks the documentation-expert checkbox with timestamp
+  - name: implementation_artifacts
+    surface: repository files
+    description: Files created or modified during phase execution
+  behavioral_patterns:
+  - name: Delegation to glossary-triage
+    trigger: task requiring glossary-triage capabilities
+    behavior: Delegates to glossary-triage via Agent tool
+    related_agent: glossary-triage
+  - name: Delegation to documentation-expert
+    trigger: task requiring documentation-expert capabilities
+    behavior: Delegates to documentation-expert via Agent tool
+    related_agent: documentation-expert
+  - name: Conditional Behavior
+    trigger: intent is genuinely ambiguous between two types
+    behavior: ask one clarifying
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: dispatching more than one specialist in a single run
+    behavior: always use this
+    related_agent: null
+proposed_registry:
+  category: implementation
+  skills_invoked:
+  - skill_id: route-knowledge
+    mode: conditional
+  - skill_id: signoff
+    mode: conditional
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 3
+    source: ticket_path from ticket-supervisor
+  - channel: 4
+    source: pre-flight file reads
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)

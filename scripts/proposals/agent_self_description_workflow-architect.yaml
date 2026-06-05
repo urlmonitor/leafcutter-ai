@@ -1,0 +1,49 @@
+agent_id: workflow-architect
+template_file: templates/agents/workflow-architect.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  - source: .agents/agents/<name>/PROJECT_CONTEXT.md
+    required: false
+    condition: when present
+  inputs: []
+  outputs:
+  - name: completion_report
+    type: structured_response
+    description: Structured completion payload or sign-off comment
+  mutates:
+  - name: none
+    surface: none
+    description: Read-only agent — no filesystem mutations
+  behavioral_patterns:
+  - name: Delegation to create-hook
+    trigger: task requiring create-hook capabilities
+    behavior: Delegates to create-hook via Agent tool
+    related_agent: create-hook
+  - name: Delegation to add-agent-to-package
+    trigger: task requiring add-agent-to-package capabilities
+    behavior: Delegates to add-agent-to-package via Agent tool
+    related_agent: add-agent-to-package
+  - name: Delegation to add-skill-to-package
+    trigger: task requiring add-skill-to-package capabilities
+    behavior: Delegates to add-skill-to-package via Agent tool
+    related_agent: add-skill-to-package
+  - name: Conditional Behavior
+    trigger: a new project adopts a portable agent
+    behavior: it provides project-specific knowledge via a
+    related_agent: null
+proposed_registry:
+  category: supervisor
+  skills_invoked:
+  - skill_id: package-audit
+    mode: conditional
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)
+  - channel: 8
+    source: PROJECT_CONTEXT.md

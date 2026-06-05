@@ -26,6 +26,31 @@ adopter_notes: |
   Internal. Spawned by the ticket-creation pipeline when a user request
   needs strategic framing before BA decomposition. Never invoke directly
   for PO audits — use product-owner-agent.md for that workflow.
+pre_flight_reads:
+- required: true
+  source: ticket_path
+- condition: when present
+  required: false
+  source: .agents/agents/<name>/PROJECT_CONTEXT.md
+inputs: []
+outputs:
+- description: Structured completion payload or sign-off comment
+  name: completion_report
+  type: structured_response
+mutates:
+- description: Read-only agent — no filesystem mutations
+  name: none
+  surface: none
+behavioral_patterns:
+- behavior: reprioritization,
+  name: Conditional Behavior
+  related_agent: null
+  trigger: a user request implies a strategic shift (new direction
+- behavior: unreadable, binary, or exceeds 50 KB
+  name: Conditional Behavior
+  related_agent: null
+  trigger: a file is absent
+
 ---
 
 You are the Product Owner. You operate at the L0/L1 flight level. You translate

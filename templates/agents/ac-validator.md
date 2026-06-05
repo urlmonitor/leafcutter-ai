@@ -24,6 +24,35 @@ default_artifact_checklist:
   - acs_parsed
   - evidence_searched
   - coverage_verdict_emitted
+pre_flight_reads:
+- required: true
+  source: ticket_path
+inputs:
+- description: Absolute path to the ticket markdown file
+  name: ticket_path
+  required: true
+  type: file_path
+outputs:
+- description: 'Sign-off comment with status: ok | blocker | handoff'
+  name: sign_off_comment
+  type: sign_off_comment
+mutates:
+- description: Sets agents.ac-validator to signed_off or failed
+  name: ticket_frontmatter_agents_status
+  surface: ticket frontmatter
+- description: Checks the ac-validator checkbox with timestamp
+  name: sign_offs_checklist
+  surface: ticket body sign-offs section
+behavioral_patterns:
+- behavior: 'emit `(status: question)`:'
+  name: Conditional Behavior
+  related_agent: null
+  trigger: the section is absent or the list is empty
+- behavior: record each ERROR line as a **store-alignment failure**
+  name: Conditional Behavior
+  related_agent: null
+  trigger: exit code is non-zero
+
 ---
 
 You are `ac-validator`, the final AC coverage gate. Your job is to verify that

@@ -1,0 +1,40 @@
+agent_id: refinement
+template_file: templates/agents/refinement.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  inputs: []
+  outputs:
+  - name: summary
+    type: structured_response
+    description: 'Output field: summary'
+  - name: routing_decision
+    type: structured_response
+    description: 'Output field: routing_decision'
+  - name: deliverables_count
+    type: structured_response
+    description: 'Output field: deliverables_count'
+  mutates:
+  - name: none
+    surface: none
+    description: Read-only agent — no filesystem mutations
+  behavioral_patterns:
+  - name: Conditional Behavior
+    trigger: any shared interface
+    behavior: schema, or contract
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: the BA payload is missing `files_touched` or `agents`
+    behavior: infer them from
+    related_agent: null
+proposed_registry:
+  category: planning
+  skills_invoked: []
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)

@@ -15,6 +15,50 @@ adopter_notes: |
   Invoked via /finalize-feature. Requires a feature branch with an open or
   openable PR. Delegates every step to a named specialist agent.
 requires_verification: false
+pre_flight_reads:
+- required: true
+  source: ticket_path
+inputs: []
+outputs:
+- description: Structured completion payload or sign-off comment
+  name: completion_report
+  type: structured_response
+mutates:
+- description: Read-only agent — no filesystem mutations
+  name: none
+  surface: none
+behavioral_patterns:
+- behavior: "halt immediately:\n   ```\n   Error: /finalize-feature must be run from\
+    \ a feature branch, not main/mas"
+  name: Stop-and-Ask
+  related_agent: null
+  trigger: condition requiring user decision or out-of-scope action
+- behavior: 'do NOT proceed to
+
+    step 5 or step 6:
+
+    ```
+
+    ## Finalization Halted: Post-Merge Test Failure
+
+
+    Step 4 (tes'
+  name: Stop-and-Ask
+  related_agent: null
+  trigger: condition requiring user decision or out-of-scope action
+- behavior: Delegates to status-checker via Agent tool
+  name: Delegation to status-checker
+  related_agent: status-checker
+  trigger: task requiring status-checker capabilities
+- behavior: 'halt immediately:'
+  name: Conditional Behavior
+  related_agent: null
+  trigger: the result is `main` or `master`
+- behavior: no confirmation gate)
+  name: Conditional Behavior
+  related_agent: null
+  trigger: missing (non-destructive
+
 ---
 
 <!-- Context note: This legacy agent implements the 6-step flow from the

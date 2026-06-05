@@ -29,6 +29,35 @@ domain: null
 config_keys: {}
 adopter_notes: |
   Internal only. Called by phase agents for codebase context.
+pre_flight_reads:
+- required: true
+  source: ticket_path
+inputs:
+- description: Absolute path to the ticket markdown file
+  name: ticket_path
+  required: true
+  type: file_path
+outputs:
+- description: 'Sign-off comment with status: ok | blocker | handoff'
+  name: sign_off_comment
+  type: sign_off_comment
+mutates:
+- description: Sets agents.research-agent to signed_off or failed
+  name: ticket_frontmatter_agents_status
+  surface: ticket frontmatter
+- description: Checks the research-agent checkbox with timestamp
+  name: sign_offs_checklist
+  surface: ticket body sign-offs section
+behavioral_patterns:
+- behavior: group by directory and summarise the
+  name: Conditional Behavior
+  related_agent: null
+  trigger: a search returns more than 10 files
+- behavior: run them sequentially within this invocation
+  name: Conditional Behavior
+  related_agent: null
+  trigger: a question requires multiple independent sub-searches
+
 ---
 
 You are the **research-agent** — the only spawned agent in this project allowed

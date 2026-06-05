@@ -1,0 +1,64 @@
+agent_id: architecture-diagram-author
+template_file: templates/agents/architecture-diagram-author.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  inputs:
+  - name: ticket_path
+    type: file_path
+    required: true
+    description: Absolute path to the ticket markdown file
+  outputs:
+  - name: sign_off_comment
+    type: sign_off_comment
+    description: 'Sign-off comment with status: ok | blocker | handoff'
+  mutates:
+  - name: ticket_frontmatter_agents_status
+    surface: ticket frontmatter
+    description: Sets agents.architecture-diagram-author to signed_off or failed
+  - name: sign_offs_checklist
+    surface: ticket body sign-offs section
+    description: Checks the architecture-diagram-author checkbox with timestamp
+  - name: implementation_artifacts
+    surface: repository files
+    description: Files created or modified during phase execution
+  behavioral_patterns:
+  - name: Stop-and-Ask
+    trigger: condition requiring user decision or out-of-scope action
+    behavior: Do not proceed past Step 1 until the skill is loaded.
+    related_agent: null
+  - name: Stop-and-Ask
+    trigger: condition requiring user decision or out-of-scope action
+    behavior: do not proceed to Step 3.
+    related_agent: null
+  - name: Delegation to documentation-expert
+    trigger: task requiring documentation-expert capabilities
+    behavior: Delegates to documentation-expert via Agent tool
+    related_agent: documentation-expert
+  - name: Delegation to architecture-author
+    trigger: task requiring architecture-author capabilities
+    behavior: Delegates to architecture-author via Agent tool
+    related_agent: architecture-author
+  - name: Conditional Behavior
+    trigger: a ticket is provided (`ticket_path`)
+    behavior: check whether the ticket body contains
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: any AC was not satisfied
+    behavior: surface it as a blocker comment rather than signing off
+    related_agent: null
+proposed_registry:
+  category: implementation
+  skills_invoked:
+  - skill_id: write-c4-diagram
+    mode: conditional
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 3
+    source: ticket_path from ticket-supervisor
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)

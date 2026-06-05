@@ -1,0 +1,89 @@
+agent_id: ticket-supervisor
+template_file: templates/agents/ticket-supervisor.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  - source: .claude/skills/building-epics/SKILL.md
+    required: false
+    condition: when present
+  - source: .claude/skills/signoff/SKILL.md
+    required: false
+    condition: when present
+  - source: project conventions
+    required: false
+  inputs:
+  - name: ticket_path
+    type: file_path
+    required: true
+    description: Absolute path to the ticket markdown file
+  outputs:
+  - name: sign_off_comment
+    type: sign_off_comment
+    description: 'Sign-off comment with status: ok | blocker | handoff'
+  - name: ticket_path
+    type: structured_response
+    description: 'Output field: ticket_path'
+  mutates:
+  - name: ticket_frontmatter_agents_status
+    surface: ticket frontmatter
+    description: Sets agents.ticket-supervisor to signed_off or failed
+  - name: sign_offs_checklist
+    surface: ticket body sign-offs section
+    description: Checks the ticket-supervisor checkbox with timestamp
+  - name: implementation_artifacts
+    surface: repository files
+    description: Files created or modified during phase execution
+  behavioral_patterns:
+  - name: Stop-and-Ask
+    trigger: condition requiring user decision or out-of-scope action
+    behavior: Do not proceed to step 4 until all three reads are complete.
+    related_agent: null
+  - name: Stop-and-Ask
+    trigger: condition requiring user decision or out-of-scope action
+    behavior: 'halt immediately with a
+
+      parity-violation payload — the agent appeared to sign off but no bytes
+
+      chang'
+    related_agent: null
+  - name: Delegation to frontend-coder
+    trigger: task requiring frontend-coder capabilities
+    behavior: Delegates to frontend-coder via Agent tool
+    related_agent: frontend-coder
+  - name: Delegation to webapp-testing
+    trigger: task requiring webapp-testing capabilities
+    behavior: Delegates to webapp-testing via Agent tool
+    related_agent: webapp-testing
+  - name: Delegation to test-writer
+    trigger: task requiring test-writer capabilities
+    behavior: Delegates to test-writer via Agent tool
+    related_agent: test-writer
+  - name: Conditional Behavior
+    trigger: '`agents:` IS present'
+    behavior: '**validate every agent name against the registry**'
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: you first read a ticket's `agents:` map
+    behavior: validate each agent name by
+    related_agent: null
+proposed_registry:
+  category: supervisor
+  skills_invoked:
+  - skill_id: building-epics
+    mode: always
+  - skill_id: signoff
+    mode: conditional
+  - skill_id: frontend-design
+    mode: always
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 3
+    source: ticket_path from ticket-supervisor
+  - channel: 4
+    source: pre-flight file reads
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)

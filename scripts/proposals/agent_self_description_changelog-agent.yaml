@@ -1,0 +1,36 @@
+agent_id: changelog-agent
+template_file: templates/agents/changelog-agent.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  inputs: []
+  outputs:
+  - name: completion_report
+    type: structured_response
+    description: Structured completion payload or sign-off comment
+  mutates:
+  - name: none
+    surface: none
+    description: Read-only agent — no filesystem mutations
+  behavioral_patterns:
+  - name: Conditional Behavior
+    trigger: no `deploy-*` tag exists yet
+    behavior: use the initial commit as the start of the range
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: git log returns no commits (range is empty)
+    behavior: print a message and exit without
+    related_agent: null
+proposed_registry:
+  category: supervisor
+  skills_invoked: []
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 5
+    source: skills_config.json config_keys
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)

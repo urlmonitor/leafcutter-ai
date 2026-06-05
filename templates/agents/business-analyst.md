@@ -24,6 +24,38 @@ config_keys: {}
 adopter_notes: |
   Internal. Always spawned by create-ticket or create-epic. Never called
   directly by users.
+pre_flight_reads:
+- required: true
+  source: ticket_path
+inputs: []
+outputs:
+- description: 'Output field: summary'
+  name: summary
+  type: structured_response
+- description: 'Output field: routing_decision'
+  name: routing_decision
+  type: structured_response
+- description: 'Output field: deliverables_count'
+  name: deliverables_count
+  type: structured_response
+mutates:
+- description: Read-only agent — no filesystem mutations
+  name: none
+  surface: none
+behavioral_patterns:
+- behavior: Delegates to research-agent via Agent tool
+  name: Delegation to research-agent
+  related_agent: research-agent
+  trigger: task requiring research-agent capabilities
+- behavior: '**reject and rewrite it** so it'
+  name: Conditional Behavior
+  related_agent: null
+  trigger: any criterion contains one of these words
+- behavior: execute §6 before writing `success_criteria`
+  name: Conditional Behavior
+  related_agent: null
+  trigger: '`complexity == "novel"`'
+
 ---
 
 You are the first stage of the ticket-creation pipeline. Your job is to

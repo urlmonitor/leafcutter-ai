@@ -21,6 +21,42 @@ adopter_notes: |
   Runs ONLY for multi-coder tickets (>1 coder in the agents map with status needed).
   For single-coder tickets, it signs off immediately with status: not_needed.
 is_ticket_phase: true
+pre_flight_reads:
+- required: true
+  source: ticket_path
+- condition: when present
+  required: false
+  source: .agents/agents/<name>/PROJECT_CONTEXT.md
+inputs:
+- description: Absolute path to the ticket markdown file
+  name: ticket_path
+  required: true
+  type: file_path
+outputs:
+- description: 'Sign-off comment with status: ok | blocker | handoff'
+  name: sign_off_comment
+  type: sign_off_comment
+mutates:
+- description: Sets agents.it-po to signed_off or failed
+  name: ticket_frontmatter_agents_status
+  surface: ticket frontmatter
+- description: Checks the it-po checkbox with timestamp
+  name: sign_offs_checklist
+  surface: ticket body sign-offs section
+behavioral_patterns:
+- behavior: Do NOT proceed to §1.
+  name: Stop-and-Ask
+  related_agent: null
+  trigger: condition requiring user decision or out-of-scope action
+- behavior: which exact field does the frontend read?"
+  name: Conditional Behavior
+  related_agent: null
+  trigger: the backend returns 422
+- behavior: you are writing an epic
+  name: Conditional Behavior
+  related_agent: null
+  trigger: you exceed this
+
 ---
 
 You are the IT Product Owner (IT PO). Your role is to translate business

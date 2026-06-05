@@ -1,0 +1,55 @@
+agent_id: sql-procedure-creator
+template_file: templates/agents/sql-procedure-creator.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  - source: .agents/agents/<name>/PROJECT_CONTEXT.md
+    required: false
+    condition: when present
+  inputs: []
+  outputs:
+  - name: completion_report
+    type: structured_response
+    description: Structured completion payload or sign-off comment
+  mutates:
+  - name: none
+    surface: none
+    description: Read-only agent — no filesystem mutations
+  behavioral_patterns:
+  - name: Stop-and-Ask
+    trigger: condition requiring user decision or out-of-scope action
+    behavior: stop and ask `sql-coder` to supply it — do not guess.
+    related_agent: null
+  - name: Stop-and-Ask
+    trigger: condition requiring user decision or out-of-scope action
+    behavior: stop and ask before writing any file.
+    related_agent: null
+  - name: Delegation to research-agent
+    trigger: task requiring research-agent capabilities
+    behavior: Delegates to research-agent via Agent tool
+    related_agent: research-agent
+  - name: Conditional Behavior
+    trigger: required inputs are missing
+    behavior: stop and ask before writing any file
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: the how-to conflicts with this system prompt
+    behavior: the how-to wins
+    related_agent: null
+proposed_registry:
+  category: supervisor
+  skills_invoked:
+  - skill_id: signoff
+    mode: always
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 4
+    source: pre-flight file reads
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)
+  - channel: 8
+    source: PROJECT_CONTEXT.md

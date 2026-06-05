@@ -1,0 +1,54 @@
+agent_id: status-checker
+template_file: templates/agents/status-checker.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  inputs:
+  - name: ticket_path
+    type: file_path
+    required: true
+    description: Absolute path to the ticket markdown file
+  outputs:
+  - name: sign_off_comment
+    type: sign_off_comment
+    description: 'Sign-off comment with status: ok | blocker | handoff'
+  mutates:
+  - name: ticket_frontmatter_agents_status
+    surface: ticket frontmatter
+    description: Sets agents.status-checker to signed_off or failed
+  - name: sign_offs_checklist
+    surface: ticket body sign-offs section
+    description: Checks the status-checker checkbox with timestamp
+  - name: implementation_artifacts
+    surface: repository files
+    description: Files created or modified during phase execution
+  behavioral_patterns:
+  - name: Delegation to research-agent
+    trigger: task requiring research-agent capabilities
+    behavior: Delegates to research-agent via Agent tool
+    related_agent: research-agent
+  - name: Conditional Behavior
+    trigger: the ticket touches prod-relevant code (workers
+    behavior: 'migrations, SQL deployed to prod):'
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: the auto-close fires
+    behavior: the ticket is closed immediately without
+    related_agent: null
+proposed_registry:
+  category: implementation
+  skills_invoked:
+  - skill_id: signoff
+    mode: conditional
+  - skill_id: trade-report
+    mode: always
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 3
+    source: ticket_path from ticket-supervisor
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)

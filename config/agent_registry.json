@@ -1,6 +1,80 @@
 {
     "$schema": "./agent_registry.schema.json",
     "_comment": "Single source of truth for all agents in the leafcutter ecosystem. When adding a new agent: (1) add an entry here, (2) create the template file, (3) run build.py --validate to confirm bidirectional consistency. business-analyst reads this file to build the agents: map for new tickets. trigger_conditions use the two-tier format per ADR-018: type=dsl for mechanically-evaluable rules, type=llm for natural-language judgment calls.",
+    "self_description_enforcement": "error",
+    "agent_categories": {
+        "_comment": "Defines the five canonical agent categories and their default constraints. Each agent entry may carry a 'category' field referencing one of these keys. Per-agent explicit field values always override these category defaults. The 'category' field is additive to (not a replacement for) the existing 'tier' field: 'tier' describes supervisor-hierarchy role (phase/supervisor/utility); 'category' describes functional domain for capability inference. Category mapping for common agents: python-coder/sql-coder/frontend-coder/documentation-expert -> implementation; architect-review/pr-reviewer/business-analyst/it-po -> planning; test-writer/test-runner -> testing; research-agent -> research; ticket-supervisor/create-epic/create-ticket -> supervisor.",
+        "implementation": {
+            "default_tools": [
+                "Bash",
+                "Read",
+                "Edit",
+                "Write",
+                "Agent"
+            ],
+            "required_inputs": [
+                "ticket_path"
+            ],
+            "signoff_capable": true,
+            "spawn_constraints": {
+                "allowed": [
+                    "research-agent",
+                    "test-runner"
+                ]
+            }
+        },
+        "planning": {
+            "default_tools": [
+                "Read",
+                "Agent"
+            ],
+            "required_inputs": [],
+            "signoff_capable": false,
+            "spawn_constraints": {
+                "allowed": "all"
+            }
+        },
+        "testing": {
+            "default_tools": [
+                "Bash",
+                "Read",
+                "Edit",
+                "Write"
+            ],
+            "required_inputs": [
+                "ticket_path"
+            ],
+            "signoff_capable": true,
+            "spawn_constraints": {
+                "allowed": "none"
+            }
+        },
+        "research": {
+            "default_tools": [
+                "Read",
+                "Agent"
+            ],
+            "required_inputs": [],
+            "signoff_capable": false,
+            "spawn_constraints": {
+                "allowed": "none"
+            }
+        },
+        "supervisor": {
+            "default_tools": [
+                "Bash",
+                "Read",
+                "Edit",
+                "Write",
+                "Agent"
+            ],
+            "required_inputs": [],
+            "signoff_capable": false,
+            "spawn_constraints": {
+                "allowed": "all"
+            }
+        }
+    },
     "agents": [
         {
             "id": "epic-supervisor",
@@ -27,7 +101,36 @@
                 "signoff"
             ],
             "deprecated": true,
-            "legacy_only": true
+            "legacy_only": true,
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "building-epics",
+                    "mode": "conditional"
+                },
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "ticket-supervisor",
@@ -53,7 +156,44 @@
                 "signoff"
             ],
             "description": "Drives a single ticket from needed agents to fully signed off. Dispatched directly at depth-0 by /build-feature (the user-facing entrypoint) or by the deprecated epic-supervisor during the deprecation window. Phase agents run at depth-1.",
-            "legacy_only": true
+            "legacy_only": true,
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "building-epics",
+                    "mode": "always"
+                },
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                },
+                {
+                    "skill_id": "frontend-design",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "create-ticket",
@@ -81,6 +221,31 @@
             "model": "sonnet",
             "skills_used": [
                 "ticket-authoring"
+            ],
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "ticket-wiring",
+                    "mode": "always"
+                },
+                {
+                    "skill_id": "ticket-authoring",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
             ]
         },
         {
@@ -104,6 +269,27 @@
             "model": "sonnet",
             "skills_used": [
                 "ticket-authoring"
+            ],
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "ticket-authoring",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
             ]
         },
         {
@@ -125,7 +311,23 @@
             "selection_criteria": null,
             "template_path": "templates/agents/business-analyst.md",
             "model": "sonnet",
-            "skills_used": []
+            "skills_used": [],
+            "category": "planning",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "business-analyst-v2",
@@ -143,7 +345,23 @@
             "template_path": "templates/agents/business-analyst-v2.md",
             "model": "opus",
             "skills_used": [],
-            "description": "Enhanced Opus BA for v2 ticket-creation pipeline. Parallel test path — does not replace business-analyst.md."
+            "description": "Enhanced Opus BA for v2 ticket-creation pipeline. Parallel test path — does not replace business-analyst.md.",
+            "category": "planning",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "create-ticket-v2",
@@ -166,7 +384,23 @@
             "skills_used": [
                 "ticket-authoring"
             ],
-            "description": "V2 parallel ticket-creation pipeline orchestrator. Routes by complexity (trivial/simple → refinement, standard/novel → it-po). Does not modify v1 templates."
+            "description": "V2 parallel ticket-creation pipeline orchestrator. Routes by complexity (trivial/simple → refinement, standard/novel → it-po). Does not modify v1 templates.",
+            "category": "supervisor",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "brainstorm-lead",
@@ -186,7 +420,32 @@
             "selection_criteria": null,
             "template_path": "templates/agents/brainstorm-lead.md",
             "model": "sonnet",
-            "skills_used": []
+            "skills_used": [],
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "building-epics",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "brainstorm-worker",
@@ -203,7 +462,32 @@
             "selection_criteria": null,
             "template_path": "templates/agents/brainstorm-worker.md",
             "model": "sonnet",
-            "skills_used": []
+            "skills_used": [],
+            "category": "research",
+            "skills_invoked": [
+                {
+                    "skill_id": "building-epics",
+                    "mode": "always"
+                },
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "research-agent",
@@ -239,7 +523,32 @@
             "selection_criteria": null,
             "template_path": "templates/agents/research-agent.md",
             "model": "sonnet",
-            "skills_used": []
+            "skills_used": [],
+            "category": "research",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "architect-review",
@@ -290,12 +599,38 @@
             ],
             "priority": 4,
             "priority_rationale": "Runs after ADR and diagram authors; shapes design before any implementation begins",
-            "requires_ticket_section": false
+            "requires_ticket_section": false,
+            "category": "planning",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "python-coder",
             "name": "Python Coder",
             "tier": "phase",
+            "category": "implementation",
             "role": "coding",
             "portable": true,
             "domain": null,
@@ -335,6 +670,72 @@
             "skills_used": [
                 "signoff"
             ],
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                },
+                {
+                    "skill_id": "doc-enforcer",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "Root CLAUDE.md",
+                    "injection_mode": "always",
+                    "description": "Project instructions, error handling policy, shell conventions"
+                },
+                {
+                    "channel": 2,
+                    "source": "Per-folder README.md",
+                    "injection_mode": "on-demand",
+                    "description": "Module-level context when cwd overlaps edited module folder"
+                },
+                {
+                    "channel": 5,
+                    "source": "signoff SKILL.md; doc-enforcer SKILL.md; complexity-reduction; collector-enforcer",
+                    "injection_mode": "on-demand",
+                    "description": "Sign-off protocol, docstring enforcement, complexity scoring, collector pattern enforcement"
+                },
+                {
+                    "channel": 6,
+                    "source": "Agent frontmatter",
+                    "injection_mode": "spawn-scoped",
+                    "description": "Model: sonnet, tools: Bash/Read/Edit/Write/Agent, signoff: true, config_keys, portable: true"
+                },
+                {
+                    "channel": 7,
+                    "source": "skills_config.json + settings.json",
+                    "injection_mode": "spawn-scoped",
+                    "description": "test_command, collector_enforcer_paths, file_size_limit_py"
+                },
+                {
+                    "channel": 8,
+                    "source": "Ticket frontmatter",
+                    "injection_mode": "ticket-scoped",
+                    "description": "Agents map, files_touched, depends_on, ACs, Agent Contracts section"
+                },
+                {
+                    "channel": 9,
+                    "source": "Auto-memory (memory/*.md)",
+                    "injection_mode": "always",
+                    "description": "Persistent cross-session learnings"
+                },
+                {
+                    "channel": 10,
+                    "source": "MCP server prompts + tool descriptions",
+                    "injection_mode": "always",
+                    "description": "Available tool surface and usage guidance"
+                },
+                {
+                    "channel": 11,
+                    "source": "Glossary (docs/glossary.md)",
+                    "injection_mode": "always",
+                    "description": "Project jargon definitions via CLAUDE.md ref"
+                }
+            ],
             "priority": 6,
             "priority_rationale": "Primary implementation agent; runs after architectural review is complete",
             "requires_ticket_section": true,
@@ -359,7 +760,27 @@
             "selection_criteria": null,
             "template_path": "templates/agents/test-planner.md",
             "model": "sonnet",
-            "skills_used": []
+            "skills_used": [],
+            "category": "planning",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 5,
+                    "source": "skills_config.json config_keys"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "test-writer",
@@ -401,7 +822,40 @@
             ],
             "priority": 5,
             "priority_rationale": "Writes failing tests before coders implement; ensures tests exist and are red before any production code is written",
-            "requires_ticket_section": true
+            "requires_ticket_section": true,
+            "category": "testing",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 5,
+                    "source": "skills_config.json config_keys"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "test-runner",
@@ -443,7 +897,40 @@
             ],
             "priority": 9,
             "priority_rationale": "Validates test suite after test-writer completes; must run after tests are written",
-            "requires_ticket_section": false
+            "requires_ticket_section": false,
+            "category": "testing",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 5,
+                    "source": "skills_config.json config_keys"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "documentation-expert",
@@ -494,7 +981,40 @@
             ],
             "priority": 10,
             "priority_rationale": "Documents changes after code and tests are complete; runs before final PR review",
-            "requires_ticket_section": true
+            "requires_ticket_section": true,
+            "category": "implementation",
+            "skills_invoked": [
+                {
+                    "skill_id": "route-knowledge",
+                    "mode": "conditional"
+                },
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "change-scope-reviewer",
@@ -529,7 +1049,40 @@
             ],
             "priority": 10,
             "priority_rationale": "Runs after coder phase and before pr-reviewer; verifies the actual change set matches the planned scope",
-            "requires_ticket_section": false
+            "requires_ticket_section": false,
+            "category": "implementation",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ]
         },
         {
             "id": "pr-reviewer",
@@ -564,7 +1117,36 @@
             ],
             "priority": 11,
             "priority_rationale": "Final quality gate; runs after all implementation and documentation is complete",
-            "requires_ticket_section": false
+            "requires_ticket_section": false,
+            "category": "implementation",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 9,
+                    "source": "agent memory store"
+                }
+            ]
         },
         {
             "id": "code-review-architect",
@@ -583,7 +1165,23 @@
             "model": "opus",
             "skills_used": [],
             "requires_ticket_section": false,
-            "requires_verification": true
+            "requires_verification": true,
+            "category": "supervisor",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "commit",
@@ -614,7 +1212,40 @@
             ],
             "priority": 12,
             "priority_rationale": "Atomic commit phase; runs after PR review approves the change",
-            "requires_ticket_section": false
+            "requires_ticket_section": false,
+            "category": "implementation",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                },
+                {
+                    "skill_id": "precommit-autofix",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 9,
+                    "source": "agent memory store"
+                }
+            ]
         },
         {
             "id": "pull-request",
@@ -648,7 +1279,40 @@
             ],
             "priority": 13,
             "priority_rationale": "Pushes branch and opens PR; final step in the ticket lifecycle",
-            "requires_ticket_section": false
+            "requires_ticket_section": false,
+            "category": "implementation",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ]
         },
         {
             "id": "conflict-resolver",
@@ -667,7 +1331,23 @@
             "selection_criteria": null,
             "template_path": "templates/agents/conflict-resolver.md",
             "model": "sonnet",
-            "skills_used": []
+            "skills_used": [],
+            "category": "supervisor",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "status-checker",
@@ -705,7 +1385,32 @@
             ],
             "priority": 1,
             "priority_rationale": "Runs before any author or coder; verifies current system state is as expected",
-            "requires_ticket_section": false
+            "requires_ticket_section": false,
+            "category": "implementation",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "worktree-agent",
@@ -724,7 +1429,40 @@
             "selection_criteria": null,
             "template_path": "templates/agents/worktree-agent.md",
             "model": "sonnet",
-            "skills_used": []
+            "skills_used": [],
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "feature",
+                    "mode": "conditional"
+                },
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 9,
+                    "source": "agent memory store"
+                }
+            ]
         },
         {
             "id": "changelog-agent",
@@ -742,7 +1480,27 @@
             "selection_criteria": null,
             "template_path": "templates/agents/changelog-agent.md",
             "model": "sonnet",
-            "skills_used": []
+            "skills_used": [],
+            "category": "supervisor",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 5,
+                    "source": "skills_config.json config_keys"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "retrospective-agent",
@@ -760,7 +1518,23 @@
             "selection_criteria": null,
             "template_path": "templates/agents/retrospective-agent.md",
             "model": "sonnet",
-            "skills_used": []
+            "skills_used": [],
+            "category": "supervisor",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "feedback-analyst",
@@ -779,6 +1553,27 @@
             "model": "sonnet",
             "skills_used": [
                 "feedback-analysis"
+            ],
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "feedback-analysis",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
             ]
         },
         {
@@ -796,7 +1591,23 @@
             "selection_criteria": null,
             "template_path": "templates/agents/refinement.md",
             "model": "sonnet",
-            "skills_used": []
+            "skills_used": [],
+            "category": "planning",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "sql-coder",
@@ -852,6 +1663,35 @@
             "requires_ticket_section": true,
             "owns_file_extensions": [
                 ".sql"
+            ],
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
             ]
         },
         {
@@ -905,6 +1745,51 @@
                 ".html",
                 ".css",
                 ".scss"
+            ],
+            "category": "implementation",
+            "skills_invoked": [
+                {
+                    "skill_id": "frontend-design",
+                    "mode": "conditional"
+                },
+                {
+                    "skill_id": "webapp-testing",
+                    "mode": "conditional"
+                },
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 5,
+                    "source": "skills_config.json config_keys"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
             ]
         },
         {
@@ -924,7 +1809,36 @@
             "selection_criteria": null,
             "template_path": "templates/agents/sql-table-creator.md",
             "model": "sonnet",
-            "skills_used": []
+            "skills_used": [],
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ]
         },
         {
             "id": "sql-query",
@@ -963,7 +1877,40 @@
             ],
             "priority": 7,
             "priority_rationale": "Ad-hoc query authoring; co-equal with sql-coder (both priority 7) but for read-only queries",
-            "requires_ticket_section": true
+            "requires_ticket_section": true,
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "sql-query-past-queries",
+                    "mode": "always"
+                },
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ]
         },
         {
             "id": "sql-test-writer",
@@ -985,6 +1932,35 @@
             "model": "sonnet",
             "skills_used": [
                 "signoff"
+            ],
+            "category": "testing",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
             ]
         },
         {
@@ -1004,7 +1980,36 @@
             "selection_criteria": null,
             "template_path": "templates/agents/sql-procedure-creator.md",
             "model": "sonnet",
-            "skills_used": []
+            "skills_used": [],
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ]
         },
         {
             "id": "sql-function-creator",
@@ -1023,7 +2028,36 @@
             "selection_criteria": null,
             "template_path": "templates/agents/sql-function-creator.md",
             "model": "sonnet",
-            "skills_used": []
+            "skills_used": [],
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ]
         },
         {
             "id": "sql-index-creator",
@@ -1042,7 +2076,36 @@
             "selection_criteria": null,
             "template_path": "templates/agents/sql-index-creator.md",
             "model": "sonnet",
-            "skills_used": []
+            "skills_used": [],
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ]
         },
         {
             "id": "sql-view-creator",
@@ -1061,7 +2124,36 @@
             "selection_criteria": null,
             "template_path": "templates/agents/sql-view-creator.md",
             "model": "sonnet",
-            "skills_used": []
+            "skills_used": [],
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ]
         },
         {
             "id": "workflow-architect",
@@ -1083,6 +2175,31 @@
                 "add-agent-to-package",
                 "add-skill-to-package",
                 "package-audit"
+            ],
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "package-audit",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
             ]
         },
         {
@@ -1106,7 +2223,23 @@
             "selection_criteria": null,
             "template_path": "templates/agents/finalize-feature.md",
             "model": "sonnet",
-            "skills_used": []
+            "skills_used": [],
+            "category": "supervisor",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "adr-author",
@@ -1140,7 +2273,40 @@
             "skills_used": [],
             "priority": 2,
             "priority_rationale": "ADR must exist before coders or diagram authors reference architectural decisions",
-            "requires_ticket_section": true
+            "requires_ticket_section": true,
+            "category": "implementation",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                },
+                {
+                    "skill_id": "doc-enforcer",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "architect-review-deep",
@@ -1193,7 +2359,32 @@
             ],
             "priority": 3,
             "priority_rationale": "Diagram must exist before coders reference the architecture; runs after ADR author",
-            "requires_ticket_section": true
+            "requires_ticket_section": true,
+            "category": "implementation",
+            "skills_invoked": [
+                {
+                    "skill_id": "write-c4-diagram",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "conflict-resolver-deep",
@@ -1244,7 +2435,32 @@
             "skills_used": [],
             "priority": 10,
             "priority_rationale": "Documentation specialist; runs in the documentation phase alongside documentation-expert",
-            "requires_ticket_section": true
+            "requires_ticket_section": true,
+            "category": "implementation",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "how-to-author",
@@ -1278,7 +2494,32 @@
             "skills_used": [],
             "priority": 10,
             "priority_rationale": "Documentation specialist; runs in the documentation phase alongside documentation-expert",
-            "requires_ticket_section": true
+            "requires_ticket_section": true,
+            "category": "implementation",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "reference-author",
@@ -1316,7 +2557,32 @@
             ],
             "priority": 10,
             "priority_rationale": "Documentation specialist; runs in the documentation phase alongside documentation-expert",
-            "requires_ticket_section": true
+            "requires_ticket_section": true,
+            "category": "implementation",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "glossary-triage",
@@ -1333,7 +2599,31 @@
             "selection_criteria": null,
             "template_path": "templates/agents/glossary-triage.md",
             "model": "haiku",
-            "skills_used": []
+            "skills_used": [],
+            "category": "supervisor",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ]
         },
         {
             "id": "user-surface-smoker",
@@ -1374,7 +2664,31 @@
             "priority_rationale": "Runs after pr-reviewer (11) confirms tests green, before commit (12) locks the worktree. Invokes the surface end-to-end with production wiring and asserts observable side-effects. See ADR-036.",
             "conditional": true,
             "conditional_field": "user_facing_surface",
-            "requires_ticket_section": false
+            "requires_ticket_section": false,
+            "category": "testing",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 9,
+                    "source": "agent memory store"
+                }
+            ]
         },
         {
             "id": "onboard",
@@ -1392,7 +2706,32 @@
             "is_ticket_phase": false,
             "selection_criteria": null,
             "template_path": "templates/agents/onboard.md",
-            "model": "sonnet"
+            "model": "sonnet",
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "webapp-testing",
+                    "mode": "conditional"
+                },
+                {
+                    "skill_id": "frontend-design",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "onboard-config-section",
@@ -1408,7 +2747,19 @@
             "is_ticket_phase": false,
             "selection_criteria": null,
             "template_path": "templates/agents/onboard-config-section.md",
-            "model": "haiku"
+            "model": "haiku",
+            "category": "supervisor",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                }
+            ]
         },
         {
             "id": "test-failure-triage",
@@ -1425,7 +2776,23 @@
             "selection_criteria": null,
             "template_path": "templates/agents/test-failure-triage.md",
             "model": "sonnet",
-            "skills_used": []
+            "skills_used": [],
+            "category": "testing",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "product-owner-agent",
@@ -1451,6 +2818,27 @@
             "description": "Periodic product-owner audit agent. Reads vision.md and roadmap.json, invokes roadmap-steward skill, holds interactive PO dialogue, and proposes confirmation-gated actions. Model: opus (ADR-039).",
             "invocation_surface": [
                 "/po-review"
+            ],
+            "category": "planning",
+            "skills_invoked": [
+                {
+                    "skill_id": "roadmap-steward",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
             ]
         },
         {
@@ -1487,7 +2875,32 @@
             "priority": 11.5,
             "priority_rationale": "Final AC coverage gate; runs after pr-reviewer (11) and before commit (12) to verify all ACs are evidenced before the worktree is locked",
             "requires_ticket_section": false,
-            "description": "Reads ticket ACs, the working diff, and test output; produces a coverage verdict (ok / blocker / question). Never implements — read-only on code files, edits only the ticket file."
+            "description": "Reads ticket ACs, the working diff, and test output; produces a coverage verdict (ok / blocker / question). Never implements — read-only on code files, edits only the ticket file.",
+            "category": "testing",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "ac-fulfillment-gate",
@@ -1523,7 +2936,32 @@
             "priority": 11.7,
             "priority_rationale": "AC store fulfillment gate; runs after ac-validator (11.5) and before commit (12) to verify AC YAML store fields are accurate and up-to-date",
             "requires_ticket_section": false,
-            "description": "Verifies AC YAML store fields (work_status, implemented_by, covered_by) are accurate before commit. Auto-fixes when diff evidence exists (append-only, idempotent). Returns ok if all ACs pass or ac_traceability absent; blocker with per-AC details if any AC fails after auto-fix."
+            "description": "Verifies AC YAML store fields (work_status, implemented_by, covered_by) are accurate before commit. Auto-fixes when diff evidence exists (append-only, idempotent). Returns ok if all ACs pass or ac_traceability absent; blocker with per-AC details if any AC fails after auto-fix.",
+            "category": "testing",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         },
         {
             "id": "it-po",
@@ -1561,7 +2999,36 @@
             "priority": 3.5,
             "priority_rationale": "Runs after architecture-diagram-author (3) and before architect-review (4); produces per-agent contracts that architect-review can validate before any coder starts",
             "requires_ticket_section": false,
-            "description": "Opus-tier IT PO. Reads architecture docs only (never source files). Asks clarifying questions before producing contracts. Activates only for multi-coder tickets. Handles check_ac_limits split protocol."
+            "description": "Opus-tier IT PO. Reads architecture docs only (never source files). Asks clarifying questions before producing contracts. Activates only for multi-coder tickets. Handles check_ac_limits split protocol.",
+            "category": "planning",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ]
         },
         {
             "id": "llm-expert",
@@ -1605,7 +3072,48 @@
             "priority": 6,
             "priority_rationale": "Authoring phase agent; runs after architectural review and before test-runner/pr-reviewer",
             "requires_ticket_section": true,
-            "description": "Authors, edits, and audits agent templates, skill bodies, and slash-command markdown files. Applies the Prompt-Quality Checklist."
+            "description": "Authors, edits, and audits agent templates, skill bodies, and slash-command markdown files. Applies the Prompt-Quality Checklist.",
+            "category": "implementation",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                },
+                {
+                    "skill_id": "add-agent-to-package",
+                    "mode": "conditional"
+                },
+                {
+                    "skill_id": "add-skill-to-package",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ]
         },
         {
             "id": "product-owner-v3",
@@ -1621,7 +3129,36 @@
             "template_path": "templates/agents/product-owner-v3.md",
             "model": "opus",
             "skills_used": [],
-            "description": "Product Owner for v3 ticket-creation pipeline. Operates at L0/L1 flight level: translates user requests into customer value propositions and feature benefit statements. Speaks customer language, never engineering jargon."
+            "description": "Product Owner for v3 ticket-creation pipeline. Operates at L0/L1 flight level: translates user requests into customer value propositions and feature benefit statements. Speaks customer language, never engineering jargon.",
+            "category": "planning",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ]
         },
         {
             "id": "business-analyst-v3",
@@ -1639,7 +3176,27 @@
             "template_path": "templates/agents/business-analyst-v3.md",
             "model": "opus",
             "skills_used": [],
-            "description": "Business Analyst for v3 ticket-creation pipeline. Operates at L2/L3 flight level: decomposes L1 feature ACs into testable Gherkin behaviors and edge-case specifications. Produces AC YAML files."
+            "description": "Business Analyst for v3 ticket-creation pipeline. Operates at L2/L3 flight level: decomposes L1 feature ACs into testable Gherkin behaviors and edge-case specifications. Produces AC YAML files.",
+            "category": "planning",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ]
         },
         {
             "id": "it-po-v3",
@@ -1655,27 +3212,26 @@
             "template_path": "templates/agents/it-po-v3.md",
             "model": "opus",
             "skills_used": [],
-            "description": "IT Product Owner for v3 ticket-creation pipeline. Enriches L2/L3 AC YAML files with technical fields: assigned_agent, it_requirements, estimated_complexity, delivers_to/expects_from contracts, and doc_links."
-        },
-        {
-            "id": "build-ac",
-            "name": "Build AC",
-            "tier": "utility",
-            "role": "orchestration",
-            "portable": true,
-            "domain": null,
-            "spawn_allowlist": [],
-            "spawned_by": [
-                "user"
-            ],
-            "is_ticket_phase": false,
-            "selection_criteria": null,
-            "template_path": "templates/agents/build-ac.md",
-            "model": "sonnet",
-            "skills_used": [],
-            "description": "AC-to-ticket-to-build entry-point coordinator. Calls ac_prioritizer.py to find the top-ranked ready AC, generates a ticket via generate_ticket_from_ac.py, surfaces the ticket to the user for confirmation (yes / review / skip), and documents how to mark the AC done after a successful build. Does NOT call /build-feature inline — depth-cap constraint (ADR-006). Invoked by /build-ac slash command.",
-            "invocation_surface": [
-                "/build-ac"
+            "description": "IT Product Owner for v3 ticket-creation pipeline. Enriches L2/L3 AC YAML files with technical fields: assigned_agent, it_requirements, estimated_complexity, delivers_to/expects_from contracts, and doc_links.",
+            "category": "planning",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
             ]
         },
         {
@@ -1713,7 +3269,27 @@
             "selection_criteria": null,
             "template_path": "templates/agents/knowledge-harvester.md",
             "model": "sonnet",
-            "skills_used": []
+            "skills_used": [],
+            "category": "research",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ]
         }
     ]
 }

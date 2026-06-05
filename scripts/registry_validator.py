@@ -68,6 +68,16 @@ def validate_agent_registry(package_root: Path) -> list[str]:
     errors.extend(_check_skills_used(portable_agents, package_root))
     errors.extend(validate_verification_flags(template_dir))
 
+    # Validate category field values against agent_categories (if present in registry)
+    registry_path = package_root / "config" / "agent_registry.json"
+    try:
+        raw_data: dict[str, Any] = json.loads(registry_path.read_text(encoding="utf-8"))
+        errors.extend(_check_agent_categories(agents, raw_data))
+    except (json.JSONDecodeError, OSError) as exc:
+        # Registry already loaded successfully above via _load_agents; a second
+        # read failure here is unlikely but non-fatal — log and skip category check.
+        print(f"  [WARNING] Could not re-read registry for category validation: {exc}")
+
     domain_count = len(domain_agents)
     if domain_count:
         # Informational — not an error
@@ -339,6 +349,43 @@ def validate_verification_flags(template_dir: Path) -> list[str]:
     return errors
 
 
+def _check_agent_categories(
+    agents: list[dict[str, Any]], raw_data: dict[str, Any]
+) -> list[str]:
+    """Check that every agent's category field references a known category.
+
+    If the registry contains an 'agent_categories' top-level object, validate
+    that any agent entry with a 'category' field references one of the defined
+    category keys. Agents without a 'category' field are skipped (the field is
+    optional and additive).
+
+    Args:
+        agents: List of agent dicts from the registry.
+        raw_data: The full parsed registry dict (includes top-level keys beyond 'agents').
+
+    Returns:
+        List of warning strings, one per agent with an unrecognised category value.
+        Returns an empty list when 'agent_categories' is absent (validation skipped).
+    """
+    agent_categories = raw_data.get("agent_categories")
+    if not isinstance(agent_categories, dict):
+        # No agent_categories object defined — skip validation.
+        return []
+
+    valid_categories = set(agent_categories.keys()) - {"_comment"}
+    errors = []
+    for agent in agents:
+        category = agent.get("category")
+        if category is None:
+            continue  # Category field is optional; absence is not an error.
+        if category not in valid_categories:
+            errors.append(
+                f"Agent '{agent['id']}' has unrecognised category '{category}'. "
+                f"Valid categories: {sorted(valid_categories)}."
+            )
+    return errors
+
+
 def _check_self_loops(spawn_map: dict[str, list[str]]) -> list[str]:
     """Check for self-loops in the spawn graph.
 
@@ -442,16 +489,19 @@ def validate_skill_registry(
 
     # --- Load registry ---
     if not registry_path.exists():
-        raise FileNotFoundError(
+        msg = (
             f"skill_registry.json not found at {registry_path}. "
             "Create it or run build.py --validate to diagnose."
         )
+        raise FileNotFoundError(msg)
     data: dict[str, Any] = json.loads(registry_path.read_text(encoding="utf-8"))
     skills_list = data.get("skills")
     if not isinstance(skills_list, list):
-        raise ValueError(
-            f"skill_registry.json has no 'skills' array or it is not a list (at {registry_path})."
+        msg = (
+            f"skill_registry.json has no 'skills' array or it is not a list "
+            f"(at {registry_path})."
         )
+        raise TypeError(msg)
 
     registry_ids: set[str] = {entry["id"] for entry in skills_list if "id" in entry}
 

@@ -15,6 +15,39 @@ default_artifact_checklist:
   - sql_file_written
   - local_db_deployed
   - sql_tests_passed
+pre_flight_reads:
+- required: true
+  source: ticket_path
+- condition: when present
+  required: false
+  source: .agents/agents/<name>/PROJECT_CONTEXT.md
+inputs: []
+outputs:
+- description: Structured completion payload or sign-off comment
+  name: completion_report
+  type: structured_response
+mutates:
+- description: Read-only agent — no filesystem mutations
+  name: none
+  surface: none
+behavioral_patterns:
+- behavior: Halt immediately.
+  name: Stop-and-Ask
+  related_agent: null
+  trigger: condition requiring user decision or out-of-scope action
+- behavior: Delegates to research-agent via Agent tool
+  name: Delegation to research-agent
+  related_agent: research-agent
+  trigger: task requiring research-agent capabilities
+- behavior: 'log one debug line:'
+  name: Conditional Behavior
+  related_agent: null
+  trigger: the file is absent
+- behavior: or the script does not exist, skip this step silently
+  name: Conditional Behavior
+  related_agent: null
+  trigger: no helpers are listed
+
 ---
 
 You are `sql-coder`, the orchestrator for SQL implementation work.

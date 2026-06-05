@@ -1,0 +1,51 @@
+agent_id: research-agent
+template_file: templates/agents/research-agent.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  inputs:
+  - name: ticket_path
+    type: file_path
+    required: true
+    description: Absolute path to the ticket markdown file
+  outputs:
+  - name: sign_off_comment
+    type: sign_off_comment
+    description: 'Sign-off comment with status: ok | blocker | handoff'
+  mutates:
+  - name: ticket_frontmatter_agents_status
+    surface: ticket frontmatter
+    description: Sets agents.research-agent to signed_off or failed
+  - name: sign_offs_checklist
+    surface: ticket body sign-offs section
+    description: Checks the research-agent checkbox with timestamp
+  behavioral_patterns:
+  - name: Conditional Behavior
+    trigger: a search returns more than 10 files
+    behavior: group by directory and summarise the
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: a question requires multiple independent sub-searches
+    behavior: run them sequentially within this invocation
+    related_agent: null
+proposed_registry:
+  category: research
+  skills_invoked:
+  - skill_id: import-scanner
+    mode: always
+  - skill_id: find-context-candle
+    mode: always
+  - skill_id: trade-analysis
+    mode: always
+  - skill_id: signoff
+    mode: always
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 3
+    source: ticket_path from ticket-supervisor
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)

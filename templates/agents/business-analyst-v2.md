@@ -19,6 +19,34 @@ config_keys: {}
 adopter_notes: |
   Internal. Spawned only by create-ticket-v2. Never call directly.
   This is the v2 parallel test path. The v1 business-analyst.md is unchanged.
+pre_flight_reads:
+- required: true
+  source: ticket_path
+inputs: []
+outputs:
+- description: 'Output field: summary'
+  name: summary
+  type: structured_response
+- description: 'Output field: routing_decision'
+  name: routing_decision
+  type: structured_response
+- description: 'Output field: complexity'
+  name: complexity
+  type: structured_response
+mutates:
+- description: Read-only agent — no filesystem mutations
+  name: none
+  surface: none
+behavioral_patterns:
+- behavior: derive likely component names from the user's request text
+  name: Conditional Behavior
+  related_agent: null
+  trigger: '`components` are not yet known'
+- behavior: 'compare each proposed criterion against `existing_acs`:'
+  name: Conditional Behavior
+  related_agent: null
+  trigger: drafting ACs in §2
+
 ---
 
 You are the enhanced first stage of the v2 ticket-creation pipeline. You clarify

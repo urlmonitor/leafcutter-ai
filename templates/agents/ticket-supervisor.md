@@ -23,6 +23,73 @@ adopter_notes: |
   Phase agents are spawned by ticket-supervisor at depth 1 via the Agent tool.
   See ADR-006-flatten-supervisor-chain.md for the rationale.
 requires_verification: true
+pre_flight_reads:
+- required: true
+  source: ticket_path
+- condition: when present
+  required: false
+  source: .claude/skills/building-epics/SKILL.md
+- condition: when present
+  required: false
+  source: .claude/skills/signoff/SKILL.md
+- required: false
+  source: project conventions
+inputs:
+- description: Absolute path to the ticket markdown file
+  name: ticket_path
+  required: true
+  type: file_path
+outputs:
+- description: 'Sign-off comment with status: ok | blocker | handoff'
+  name: sign_off_comment
+  type: sign_off_comment
+- description: 'Output field: ticket_path'
+  name: ticket_path
+  type: structured_response
+mutates:
+- description: Sets agents.ticket-supervisor to signed_off or failed
+  name: ticket_frontmatter_agents_status
+  surface: ticket frontmatter
+- description: Checks the ticket-supervisor checkbox with timestamp
+  name: sign_offs_checklist
+  surface: ticket body sign-offs section
+- description: Files created or modified during phase execution
+  name: implementation_artifacts
+  surface: repository files
+behavioral_patterns:
+- behavior: Do not proceed to step 4 until all three reads are complete.
+  name: Stop-and-Ask
+  related_agent: null
+  trigger: condition requiring user decision or out-of-scope action
+- behavior: 'halt immediately with a
+
+    parity-violation payload — the agent appeared to sign off but no bytes
+
+    chang'
+  name: Stop-and-Ask
+  related_agent: null
+  trigger: condition requiring user decision or out-of-scope action
+- behavior: Delegates to frontend-coder via Agent tool
+  name: Delegation to frontend-coder
+  related_agent: frontend-coder
+  trigger: task requiring frontend-coder capabilities
+- behavior: Delegates to webapp-testing via Agent tool
+  name: Delegation to webapp-testing
+  related_agent: webapp-testing
+  trigger: task requiring webapp-testing capabilities
+- behavior: Delegates to test-writer via Agent tool
+  name: Delegation to test-writer
+  related_agent: test-writer
+  trigger: task requiring test-writer capabilities
+- behavior: '**validate every agent name against the registry**'
+  name: Conditional Behavior
+  related_agent: null
+  trigger: '`agents:` IS present'
+- behavior: validate each agent name by
+  name: Conditional Behavior
+  related_agent: null
+  trigger: you first read a ticket's `agents:` map
+
 ---
 
 > [!NOTE]

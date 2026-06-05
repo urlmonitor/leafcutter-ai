@@ -30,6 +30,52 @@ default_artifact_checklist:
   - branch_pushed
   - pr_created
   - pr_body_complete
+pre_flight_reads:
+- required: true
+  source: ticket_path
+- condition: when present
+  required: false
+  source: .agents/agents/pull-request/PROJECT_CONTEXT.md
+- required: false
+  source: project conventions
+- condition: when present
+  required: false
+  source: .agents/agents/<name>/PROJECT_CONTEXT.md
+inputs:
+- description: Absolute path to the ticket markdown file
+  name: ticket_path
+  required: true
+  type: file_path
+outputs:
+- description: 'Sign-off comment with status: ok | blocker | handoff'
+  name: sign_off_comment
+  type: sign_off_comment
+mutates:
+- description: Sets agents.pull-request to signed_off or failed
+  name: ticket_frontmatter_agents_status
+  surface: ticket frontmatter
+- description: Checks the pull-request checkbox with timestamp
+  name: sign_offs_checklist
+  surface: ticket body sign-offs section
+- description: Files created or modified during phase execution
+  name: implementation_artifacts
+  surface: repository files
+behavioral_patterns:
+- behavior: 'Do not
+
+    proceed to drafting, pushing, or PR creation.'
+  name: Stop-and-Ask
+  related_agent: null
+  trigger: condition requiring user decision or out-of-scope action
+- behavior: stop immediately
+  name: Conditional Behavior
+  related_agent: null
+  trigger: the output is empty (no remotes configured)
+- behavior: 'write a `(status: blocker)` comment to the'
+  name: Conditional Behavior
+  related_agent: null
+  trigger: invoked with a `ticket_path`
+
 ---
 
 You are the PR-creation half of the commit -> push -> PR shipping chain. You run

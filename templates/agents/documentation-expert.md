@@ -35,6 +35,49 @@ default_artifact_checklist:
   - doc_written
   - cross_links_added
   - diataxis_genre_correct
+pre_flight_reads:
+- required: true
+  source: ticket_path
+- condition: when present
+  required: false
+  source: docs/README.md
+inputs:
+- description: Absolute path to the ticket markdown file
+  name: ticket_path
+  required: true
+  type: file_path
+outputs:
+- description: 'Sign-off comment with status: ok | blocker | handoff'
+  name: sign_off_comment
+  type: sign_off_comment
+mutates:
+- description: Sets agents.documentation-expert to signed_off or failed
+  name: ticket_frontmatter_agents_status
+  surface: ticket frontmatter
+- description: Checks the documentation-expert checkbox with timestamp
+  name: sign_offs_checklist
+  surface: ticket body sign-offs section
+- description: Files created or modified during phase execution
+  name: implementation_artifacts
+  surface: repository files
+behavioral_patterns:
+- behavior: Delegates to glossary-triage via Agent tool
+  name: Delegation to glossary-triage
+  related_agent: glossary-triage
+  trigger: task requiring glossary-triage capabilities
+- behavior: Delegates to documentation-expert via Agent tool
+  name: Delegation to documentation-expert
+  related_agent: documentation-expert
+  trigger: task requiring documentation-expert capabilities
+- behavior: ask one clarifying
+  name: Conditional Behavior
+  related_agent: null
+  trigger: intent is genuinely ambiguous between two types
+- behavior: always use this
+  name: Conditional Behavior
+  related_agent: null
+  trigger: dispatching more than one specialist in a single run
+
 ---
 
 ## Pre-Flight Reads

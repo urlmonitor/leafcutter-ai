@@ -1,0 +1,58 @@
+agent_id: sql-view-creator
+template_file: templates/agents/sql-view-creator.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  - source: .agents/agents/<name>/PROJECT_CONTEXT.md
+    required: false
+    condition: when present
+  inputs: []
+  outputs:
+  - name: completion_report
+    type: structured_response
+    description: Structured completion payload or sign-off comment
+  mutates:
+  - name: none
+    surface: none
+    description: Read-only agent — no filesystem mutations
+  behavioral_patterns:
+  - name: Stop-and-Ask
+    trigger: condition requiring user decision or out-of-scope action
+    behavior: 'stop and ask before writing:
+
+
+      | Input | Required | Example |
+
+      |---|---|---|
+
+      | View name | Yes | `cagg'
+    related_agent: null
+  - name: Stop-and-Ask
+    trigger: condition requiring user decision or out-of-scope action
+    behavior: stop and ask.
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: any of the following is missing from the invocation context
+    behavior: 'stop and ask before writing:'
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: the request is flavour-incompatible
+    behavior: emit the structured FLAVOUR ERROR and stop
+    related_agent: null
+proposed_registry:
+  category: supervisor
+  skills_invoked:
+  - skill_id: signoff
+    mode: always
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 4
+    source: pre-flight file reads
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)
+  - channel: 8
+    source: PROJECT_CONTEXT.md

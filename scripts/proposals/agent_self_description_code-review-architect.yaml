@@ -1,0 +1,35 @@
+agent_id: code-review-architect
+template_file: templates/agents/code-review-architect.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  inputs: []
+  outputs:
+  - name: completion_report
+    type: structured_response
+    description: Structured completion payload or sign-off comment
+  mutates:
+  - name: none
+    surface: none
+    description: Read-only agent — no filesystem mutations
+  behavioral_patterns:
+  - name: Conditional Behavior
+    trigger: the stack includes a framework/library with important internals
+    behavior: include low-level checks explicitly in the review
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: such technology is present and no issues are found
+    behavior: state briefly that low-level checks were performed and no material violations
+      were detected
+    related_agent: null
+proposed_registry:
+  category: supervisor
+  skills_invoked: []
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)
