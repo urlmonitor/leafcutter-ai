@@ -1,0 +1,31 @@
+id: BP-006a-2
+title: "test_no_orphaned_directories passes with no unregistered skill directories"
+component: build_pipeline
+level: L2
+status: active
+req_status: approved
+work_status: done
+criteria: |
+  Given skill_registry.json contains entries for every directory in templates/skills/,
+  When pytest runs test_no_orphaned_directories,
+  Then the test passes with exit code 0,
+  And the set of registered skill IDs is a superset of the templates/skills/ directory listing.
+depends_on: [BP-006a]
+doc_links:
+  - config/skill_registry.json
+  - tests/test_skill_registry.py::TestSkillRegistryBidirectional
+assigned_agent: test-runner
+estimated_complexity: S
+it_requirements: |
+  Test verifies that the set of registered skill IDs is a superset of the
+  templates/skills/ directory listing. No unregistered directories may exist.
+delivers_to: null
+expects_from:
+  BP-006a-1: "Registry entries for all skill directories must exist before this test can pass"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/00_inbox/TICKET-20260604-FixFailingBuildPipelineTests.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

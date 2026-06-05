@@ -1,0 +1,32 @@
+id: BP-006c-2
+title: "test_build_workflow_phase validates .claude/workflows/ path"
+component: build_pipeline
+level: L2
+status: active
+req_status: approved
+work_status: done
+criteria: |
+  Given test_build_workflow_phase is executed by pytest,
+  When it calls build_workflow_scripts() with a temporary target_root,
+  Then the test asserts that files appear under target_root/.claude/workflows/,
+  And the test passes with exit code 0.
+depends_on: [BP-006c]
+doc_links:
+  - unit_tests/test_build_workflow_phase.py
+  - scripts/build_phases.py
+assigned_agent: test-runner
+estimated_complexity: S
+it_requirements: |
+  Test must call build_workflow_scripts() with a temporary target_root and assert
+  that generated files appear under target_root/.claude/workflows/, not under
+  target_root/workflows/. Test must pass with exit code 0.
+delivers_to: null
+expects_from:
+  BP-006c-1: "The path fix in build_phases.py must be in place for this test to pass"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/00_inbox/TICKET-20260604-FixFailingBuildPipelineTests.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
