@@ -1,6 +1,6 @@
 ---
 title: "Folder context accumulation — component READMEs and PROJECT_CONTEXT growth"
-status: todo
+status: done
 components:
   - infrastructure
 created: 2026-06-05
@@ -26,8 +26,8 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
 source_acs:
   - INF-400d-1
   - INF-400d-2
@@ -100,8 +100,8 @@ And the file includes a brief summary section at the top that is updated
 - [x] python-coder — 2026-06-05 10:30
 - [x] test-runner — 2026-06-05 10:45
 - [x] pr-reviewer — 2026-06-05 11:00
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-05 11:15
+- [x] pull-request — 2026-06-05 11:30
 
 ## Comments
 
@@ -174,6 +174,22 @@ completion_manifest:
   ruff_clean: true
   tests_green: true
 Code review passed. AC-1 (create_readme with standard header, idempotent append), AC-2 (existing entries preserved, PROJECT_CONTEXT.md naming convention), and AC-3 (reverse-chronological, auto-summary >15 entries) are all satisfied. All I/O is wrapped with try/except OSError + log+raise per project policy. No bare excepts, no blind exception catches. Ruff E722/BLE001/TRY clean on all 3 new/modified files. 7/7 test cases green. Implementation is correct and complete.
+
+### 2026-06-05 11:15 — commit (status: ok)
+feedback-id: fb_2026-06-05_b6610a82
+completion_manifest:
+  files_staged_by_explicit_path: true
+  commit_created: true
+  lock_released: true
+Commit 0679f5c: 4 files, 914 insertions. Staged by explicit path (scripts/knowledge/context_file_maintenance.py, scripts/knowledge/init_component_readme.py, tests/knowledge/test_context_accumulation.py, tickets/00_inbox/epics/EPIC-AgentLearningLoop/02_folder_context_accumulation.md). Unrelated modified file (ticket 01) not staged. Commit lock acquired and released successfully.
+
+### 2026-06-05 11:30 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_fd696beb
+completion_manifest:
+  branch_pushed: true
+  pr_updated: true
+  lock_released: true
+Pushed commit 0679f5c to existing PR #60 on EPIC-AgentLearningLoop branch (a2244c6..0679f5c). Remote confirmed: github.com-urlmonitor:urlmonitor/leafcutter-ai.git. PR URL: https://github.com/urlmonitor/leafcutter-ai/pull/60
 
 ## Implementation Tasks
 

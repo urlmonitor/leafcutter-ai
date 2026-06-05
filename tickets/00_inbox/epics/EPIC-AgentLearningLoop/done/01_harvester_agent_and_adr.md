@@ -1,6 +1,6 @@
 ---
 title: "Knowledge harvester agent and emission sink ADR"
-status: todo
+status: done
 components:
   - infrastructure
 created: 2026-06-05
@@ -28,7 +28,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 source_acs:
   - INF-400c-1
   - INF-400c-2
@@ -118,7 +118,7 @@ And it does not crash or stop processing subsequent events.
 - [x] test-runner — 2026-06-05 14:30
 - [x] pr-reviewer — 2026-06-05 14:35
 - [x] commit — 2026-06-05 14:40
-- [ ] pull-request
+- [x] pull-request — 2026-06-05 14:45
 
 ## Comments
 
@@ -202,6 +202,13 @@ completion_manifest:
   all_files_staged: true
   lock_acquired_and_released: true
 Commit b2a02f9: 8 files, 1369 insertions. Staged explicitly by path (no git add .): ADR-011, harvest_learnings.py, knowledge-harvester.md, test file, __init__.py, handoff JSON, ADR README, ticket file. Lock acquired before commit and released on success.
+
+### 2026-06-05 14:45 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_f46bc271
+completion_manifest:
+  branch_pushed: true
+  pr_exists: true
+Branch pushed to origin/EPIC-AgentLearningLoop. Existing PR #60 (feat(templates): add knowledge injection and emission steps to v3 agent templates) updated with ticket 01 commit b2a02f9.
 
 ## Implementation Tasks
 
