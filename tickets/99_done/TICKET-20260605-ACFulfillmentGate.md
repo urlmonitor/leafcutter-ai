@@ -1,6 +1,6 @@
 ---
 title: "AC Fulfillment Gate — verify and auto-fix AC store fields before commit"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-05
@@ -25,7 +25,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 ac_traceability:
@@ -117,7 +117,7 @@ AC files: `docs/acceptance-criteria/build_pipeline/BO-201.yaml`, `docs/acceptanc
 - [x] test-runner — 2026-06-05 10:35
 - [x] pr-reviewer — 2026-06-05 10:40
 - [x] commit — 2026-06-05 10:45
-- [ ] pull-request
+- [x] pull-request — 2026-06-05 10:50
 
 ## Comments
 
@@ -204,7 +204,15 @@ completion_manifest:
   staged_files_verified: true
   commit_created: true
   no_scope_pollution: true
-Staged 6 in-scope files: config/ac_store_schema.json, config/agent_registry.json, templates/agents/ac-fulfillment-gate.md, templates/skills/building-epics/SKILL.md, tests/test_ac_fulfillment_gate.py, tickets/00_inbox/TICKET-20260605-ACFulfillmentGate.md. Commit created on branch feature/acfulfillmentgate.
+Staged 6 in-scope files: config/ac_store_schema.json, config/agent_registry.json, templates/agents/ac-fulfillment-gate.md, templates/skills/building-epics/SKILL.md, tests/test_ac_fulfillment_gate.py, tickets/00_inbox/TICKET-20260605-ACFulfillmentGate.md. Commit created on branch feature/acfulfillmentgate (76bf656).
+
+### 2026-06-05 10:50 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_54bbc28a
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+  pr_url_recorded: true
+Pushed branch feature/acfulfillmentgate to origin (urlmonitor/leafcutter-ai). Opened PR #59: https://github.com/urlmonitor/leafcutter-ai/pull/59
 
 ## Implementation Tasks
 
