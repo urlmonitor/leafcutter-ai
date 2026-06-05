@@ -12,7 +12,7 @@ criteria: |
   change the agent, the card updates on the next build. No separate
   documentation step is needed.
 depends_on:
-  - INF-600
+  - INF-900
   - INF-600a
 doc_links: []
 origin_agent: product-owner-v3

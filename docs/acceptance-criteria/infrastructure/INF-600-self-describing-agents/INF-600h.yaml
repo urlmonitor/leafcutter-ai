@@ -1,0 +1,25 @@
+id: INF-600h
+title: "Know what an agent can and cannot do from its category alone"
+component: infrastructure
+level: L1
+status: active
+criteria: |
+  Agent categories determine default constraints — no per-agent guesswork.
+
+  Every agent belongs to exactly one category (implementation, planning,
+  testing, research, or supervisor). The category determines the agent's
+  default tool permissions, required inputs, sign-off behavior, and spawn
+  constraints. When you see an agent's category, you already know what it
+  is allowed to do without checking its individual configuration. Per-agent
+  overrides are possible but explicit — the default behavior comes from the
+  category, not from manual wiring.
+depends_on:
+  - INF-600
+  - INF-600a
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -13,7 +13,7 @@ criteria: |
   and "which knowledge surfaces does it read or write?" No one has to
   dig through source files to answer their question.
 depends_on:
-  - INF-600
+  - INF-900
   - INF-600b
 doc_links: []
 origin_agent: product-owner-v3

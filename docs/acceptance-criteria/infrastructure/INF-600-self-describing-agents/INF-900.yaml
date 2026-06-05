@@ -1,0 +1,28 @@
+id: INF-900
+title: "Find any agent's full profile in seconds"
+component: infrastructure
+level: L0
+status: active
+criteria: |
+  Every agent's capabilities, relationships, and knowledge sources are
+  discoverable without reading source code.
+
+  Contributors, operators, and peer agents can look up any agent and
+  immediately see its inputs, outputs, spawn relationships, knowledge
+  channels, and category — assembled automatically from template metadata
+  during the build. No manual doc maintenance required.
+depends_on:
+  - INF-400
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+  - path: docs/agents/README.md
+    relationship: describes
+    status: exists
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [INF-600b, INF-600d, INF-600e, INF-600f]
+implemented_by: []

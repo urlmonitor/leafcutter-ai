@@ -12,7 +12,7 @@ criteria: |
   (ticket frontmatter, AC store, knowledge surfaces). You can understand an
   agent's contract without reading its full prompt.
 depends_on:
-  - INF-600
+  - INF-900
   - INF-600b
 doc_links: []
 origin_agent: product-owner-v3

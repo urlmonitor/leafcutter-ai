@@ -1,0 +1,26 @@
+id: INF-800f
+title: "Refactoring specialist recognized as a first-class agent"
+component: infrastructure
+level: L1
+status: active
+criteria: |
+  Dedicated agent with its own identity, tools, and dispatch rules.
+
+  The refactoring specialist is a full agent -- discoverable in the agent
+  registry, with a defined tool set, a clear invocation path, and its own
+  sign-off protocol. It is no longer an informal skill that only works
+  when manually invoked -- supervisors can dispatch it as part of a
+  ticket workflow.
+depends_on:
+  - INF-800
+  - INF-600
+doc_links:
+  - path: templates/workflows/code-refactoring-specialist.md
+    relationship: evolves
+    status: exists
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
