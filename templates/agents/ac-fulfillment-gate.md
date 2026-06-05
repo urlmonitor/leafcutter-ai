@@ -21,7 +21,7 @@ adopter_notes: |
   at 11.5, before commit at 12). No configuration required — reads ticket
   frontmatter and AC YAML store files. Requires docs/acceptance-criteria/ to
   be present in the repo.
-requires_verification: false
+requires_verification: true
 default_artifact_checklist:
   - ac_traceability_loaded
   - store_fields_verified
