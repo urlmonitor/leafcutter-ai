@@ -1,0 +1,29 @@
+id: BO-1100e
+readiness: draft
+priority: medium
+title: "The specialist only reads relevant history, not thousands of commits"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Pattern recognition is fast and cost-effective thanks to targeted filtering.
+
+  When the specialist analyses history to detect recurring commit shapes, it
+  uses a filtering skill that narrows git log output to structurally similar
+  commits before analysis begins. It never reads thousands of unrelated log
+  entries. The result is lower latency, fewer tokens consumed, and accurate
+  pattern detection even in repositories with long histories.
+depends_on: [BO-1100d]
+doc_links: []
+assigned_agent: null
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

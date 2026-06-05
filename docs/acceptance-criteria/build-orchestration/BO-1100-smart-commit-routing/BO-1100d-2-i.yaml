@@ -1,0 +1,35 @@
+id: BO-1100d-2-i
+title: "Shape with 10 occurrences but inconsistent historical messages is flagged for manual rule authoring"
+component: build-orchestration
+level: L3
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given a shape has reached 10 occurrences in the shape-tracking store,
+    and the specialist examines 12 historical commits matching this shape,
+    and the subject lines of those commits show no repeating pattern
+      (e.g. 4 different prefixes: "docs:", "chore:", "feat:", "refactor:"),
+  When the specialist attempts to infer a message template,
+  Then the specialist does NOT propose an arbitrary template,
+  And the specialist presents the finding to the user:
+    "Shape 'docs/architecture/**' has reached 10 occurrences but historical
+    messages show no consistent pattern. Manual rule authoring recommended."
+  And the user is shown the 3-4 most common subject line prefixes found
+    to aid their manual authoring decision.
+depends_on: [BO-1100d-2]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-1100d-4
+  contract: "Analysis result from the specialist showing no dominant pattern in historical messages"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

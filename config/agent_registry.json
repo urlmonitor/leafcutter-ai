@@ -3235,6 +3235,29 @@
             ]
         },
         {
+            "id": "build-ac",
+            "name": "Build AC",
+            "tier": "utility",
+            "role": "orchestration",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "ac-triage"
+            ],
+            "spawned_by": [
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/build-ac.md",
+            "model": "sonnet",
+            "skills_used": [],
+            "description": "AC-to-ticket-to-build entry-point coordinator. Calls ac_prioritizer.py to find the top-ranked ready AC, generates a ticket via generate_ticket_from_ac.py, surfaces the ticket to the user for confirmation (yes / review / skip), and documents how to mark the AC done after a successful build. Does NOT call /build-feature inline — depth-cap constraint (ADR-006). Invoked by /build-ac slash command.",
+            "invocation_surface": [
+                "/build-ac"
+            ]
+        },
+        {
             "id": "ac-triage",
             "name": "AC Triage",
             "tier": "utility",

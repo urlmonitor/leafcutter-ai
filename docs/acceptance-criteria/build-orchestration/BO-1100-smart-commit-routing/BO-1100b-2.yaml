@@ -1,0 +1,33 @@
+id: BO-1100b-2
+title: "Mixed-change warning names the conflicting groups and lists files per group"
+component: build-orchestration
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the commit agent has detected a mixed commit with files in 2 groups:
+    - group "tickets": tickets/02_in_progress/TICKET-001.md
+    - group "implementation": scripts/commit_guardian/new_hook.py, scripts/commit_guardian/utils.py
+  When the warning is presented to the user,
+  Then the warning includes:
+    - the name of each group ("tickets", "implementation")
+    - the list of files belonging to each group
+  And the warning does NOT say only "mixed commit detected" without details,
+  And each file appears under exactly one group heading.
+depends_on: [BO-1100b, BO-1100b-1]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-1100a-1
+  contract: "File-to-group classification with per-file group assignments"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

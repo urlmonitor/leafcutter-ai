@@ -1,0 +1,37 @@
+id: BO-1100c-1
+title: "Routing configuration is a single JSON file with an array of pattern entries"
+component: build-orchestration
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given a routing configuration file exists at the project's config location,
+  When the commit agent parses the file,
+  Then the file is valid JSON containing a top-level array of routing entries,
+  And each entry contains at minimum:
+    - a "group" field (string, e.g. "tickets", "new-acs", "shipped-acs", "implementation", "status-changes")
+    - a "path_pattern" field (string glob or regex matching staged file paths)
+    - a "template" field (string message template with interpolation placeholders)
+  And entries are evaluated in array order (first match wins),
+  And at least 5 built-in entries ship with the default configuration:
+    tickets, new ACs, shipped ACs, implementation code, and status changes.
+depends_on: [BO-1100c]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: "A JSON schema and default config file that the commit agent and pattern-learning specialist both consume"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

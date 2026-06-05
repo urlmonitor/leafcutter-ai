@@ -1,0 +1,37 @@
+id: BO-1100e-3
+title: "Each candidate commit includes subject line and list of files changed"
+component: build-orchestration
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the filtering skill has identified 12 candidate commits matching
+    the pattern "docs/architecture/**",
+  When the skill formats its output for the specialist agent,
+  Then each candidate commit entry includes:
+    - the commit subject line (first line of the commit message)
+    - the list of files changed in that commit (relative paths)
+    - the commit hash (abbreviated, for reference)
+  And the specialist can read both the message pattern AND the file structure
+    for each candidate without a second git query,
+  And the output format is structured (not raw git log text) so the specialist
+    can parse it programmatically.
+depends_on: [BO-1100e, BO-1100e-1]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: llm-expert
+  contract: "Structured commit data (hash, subject, files) per candidate, ready for pattern extraction"
+expects_from:
+  ac_id: BO-1100e-1
+  contract: "Raw git log output from path-scoped query"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

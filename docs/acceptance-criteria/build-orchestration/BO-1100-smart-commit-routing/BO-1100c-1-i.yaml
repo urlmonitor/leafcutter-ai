@@ -1,0 +1,42 @@
+id: BO-1100c-1-i
+title: "Malformed routing config is rejected with a specific parse error"
+component: build-orchestration
+level: L3
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the routing configuration file contains invalid JSON
+    (e.g. a trailing comma after the last entry: [{"group":"tickets",...},]),
+  When the commit agent attempts to load the config,
+  Then the agent rejects the file with an error message that includes:
+    - the file path that failed to parse
+    - the line number or character offset of the syntax error
+  And the commit does not proceed with a generic fallback message,
+  And the user is informed they must fix the config before committing.
+
+  Given the routing configuration file is valid JSON but an entry is missing
+    the required "group" field (e.g. {"path_pattern": "docs/**", "template": "..."}),
+  When the commit agent validates the config,
+  Then the agent rejects the file with an error naming the entry index (e.g. "entry 3")
+    and the missing field ("group"),
+  And no commit message is produced.
+depends_on: [BO-1100c-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-1100c-1
+  contract: "The JSON routing config schema that defines required fields per entry"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

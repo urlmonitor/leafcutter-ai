@@ -1,0 +1,34 @@
+id: BO-1100c-3
+title: "Commit agent reloads the routing config on every invocation"
+component: build-orchestration
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the routing configuration file contains 5 entries at time T1,
+    and the commit agent is invoked at T1 and matches group "tickets",
+  When a user adds a 6th entry ("architecture-docs") to the config file at time T2,
+    and the commit agent is invoked again at T3 (T3 > T2)
+    with staged files matching "docs/architecture/**",
+  Then the commit agent matches the "architecture-docs" group at T3,
+  And no restart, rebuild, or cache-clear step is required between T2 and T3.
+depends_on: [BO-1100c, BO-1100c-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-1100c-1
+  contract: "The JSON routing config file that is read fresh on each invocation"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

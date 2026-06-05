@@ -1,0 +1,31 @@
+id: BO-1100e-1
+title: "Filtering skill narrows git log to commits touching the same directory set"
+component: build-orchestration
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given an unmatched shape with directory pattern "docs/architecture/**",
+  When the filtering skill is invoked with this pattern,
+  Then the skill executes a path-scoped git log query limited to commits
+    that touched files under "docs/architecture/",
+  And the skill does NOT read the full unfiltered git log,
+  And the returned commits are limited to those where at least one
+    changed file matches the provided directory pattern.
+depends_on: [BO-1100e, BO-1100d-4]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: llm-expert
+  contract: "A filtered list of commits (bounded in count) with subject line and file list per commit"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,33 @@
+id: BO-1100d-1-i
+title: "Shapes differing only in file count are treated as the same shape"
+component: build-orchestration
+level: L3
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the shape-tracking store contains 5 occurrences of:
+    - directory pattern: "docs/architecture/**", file count: 2, extensions: [".md"]
+  And a new commit is logged with:
+    - directory pattern: "docs/architecture/**", file count: 4, extensions: [".md"]
+  When the shape tracker determines whether this is the same shape,
+  Then the two are treated as the same shape (identity is based on directory
+    pattern and extension set, not file count),
+  And the occurrence counter increments to 6,
+  And the counter does NOT start a separate count for "file count: 4".
+depends_on: [BO-1100d-1]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-1100d-1
+  contract: "Shape-tracking store with shape identity logic"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

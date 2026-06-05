@@ -1,0 +1,37 @@
+id: BO-1100a-5
+title: "Commit body enumerates all staged files for a single-group commit"
+component: build-orchestration
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given all staged files belong to the single group "tickets",
+    and the staged files are:
+      - tickets/02_in_progress/TICKET-001.md
+      - tickets/02_in_progress/TICKET-002.md
+      - tickets/02_in_progress/TICKET-003.md
+  When the commit agent composes the full commit message (subject + body),
+  Then the body section lists each affected file or ticket identifier,
+  And the body includes at least the ticket IDs: TICKET-001, TICKET-002, TICKET-003,
+  And no staged file is silently omitted from the body,
+  And the body is separated from the subject by one blank line (git convention).
+depends_on: [BO-1100a, BO-1100a-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-1100a-1
+  contract: "File-to-group classification with all files and their group assignment"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

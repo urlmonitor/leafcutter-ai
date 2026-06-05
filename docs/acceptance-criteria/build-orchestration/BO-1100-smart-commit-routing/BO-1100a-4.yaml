@@ -1,0 +1,34 @@
+id: BO-1100a-4
+title: "Router skips pattern application when a user-approved subject line already exists"
+component: build-orchestration
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the user has already approved a commit message subject line
+    (as defined by BO-200c-4: the user confirmed the subject in Step 3 of the commit workflow),
+    and the approved subject line is: "fix(parser): handle nested YAML arrays"
+    and a pre-commit hook has auto-fixed and re-staged additional files,
+  When the commit agent re-enters the message composition step after re-staging,
+  Then the router does NOT classify the re-staged files,
+  And the router does NOT apply any routing pattern to overwrite the subject line,
+  And the approved subject line "fix(parser): handle nested YAML arrays" is preserved verbatim,
+  And only the commit body may be amended to reflect the newly staged files.
+depends_on: [BO-1100a, BO-200c-4]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200c-4.yaml
+    relationship: constrains
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,31 @@
+id: BO-1100e-2-i
+title: "Path pattern matching zero commits returns an empty result set without error"
+component: build-orchestration
+level: L3
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given a repository has no commits that touch files under "docs/new-section/**"
+    (a directory that has never existed before),
+  When the filtering skill is invoked with pattern "docs/new-section/**",
+  Then the skill returns an empty list of candidates (zero entries),
+  And the skill does NOT raise an error, crash, or return null,
+  And the specialist receives the empty list and skips pattern inference for this shape
+    (no template can be inferred from zero historical examples).
+depends_on: [BO-1100e-2]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-1100e-1
+  contract: "Path-scoped git log query that may match zero commits"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

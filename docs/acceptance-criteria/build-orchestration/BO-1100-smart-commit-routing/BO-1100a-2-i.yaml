@@ -1,0 +1,27 @@
+id: BO-1100a-2-i
+title: "Empty staging area produces no commit message"
+component: build-orchestration
+level: L3
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the git staging area is empty (git diff --cached produces no output),
+  When the commit agent is invoked,
+  Then the agent does not produce any commit message (neither routed nor generic),
+  And the agent reports that there are no staged changes to commit,
+  And no specialist or pattern-learning agent is dispatched.
+depends_on: [BO-1100a-1]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

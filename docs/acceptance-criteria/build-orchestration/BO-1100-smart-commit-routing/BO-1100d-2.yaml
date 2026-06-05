@@ -1,0 +1,38 @@
+id: BO-1100d-2
+title: "After 10 occurrences of the same unmatched shape, a new routing rule is proposed"
+component: build-orchestration
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the shape-tracking store contains 9 logged occurrences of the shape:
+    - directory pattern: "docs/architecture/**"
+    - file extensions: [".md", ".mmd"]
+  And the specialist agent has access to this store,
+  When a 10th commit with the same shape is logged,
+  Then the specialist produces a candidate routing entry:
+    - group: "architecture-docs" (or similar derived name)
+    - path_pattern: "docs/architecture/**"
+    - template: a message template inferred from the existing commit messages
+      found for this shape in git history
+  And the candidate is presented to the user for review,
+  And no candidate is proposed at 9 occurrences or fewer.
+depends_on: [BO-1100d, BO-1100d-1, BO-1100d-4]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: L
+delivers_to:
+  agent: llm-expert
+  contract: "A candidate routing config entry ready for user review and optional insertion into the config"
+expects_from:
+  ac_id: BO-1100d-1
+  contract: "Shape-tracking store with counted occurrences per shape"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

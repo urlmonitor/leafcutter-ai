@@ -1,0 +1,32 @@
+id: BO-1100e-2
+title: "Filtering skill returns at most a bounded number of candidate commits"
+component: build-orchestration
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given a repository has 500 commits touching files under "docs/architecture/**",
+  When the filtering skill is invoked with pattern "docs/architecture/**",
+  Then the skill returns at most 50 candidate commits (most recent first),
+  And the skill does NOT return all 500 commits,
+  And the bound (50) is configurable but has a sensible default,
+  And the skill completes without consuming unbounded tokens or memory.
+depends_on: [BO-1100e, BO-1100e-1]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: llm-expert
+  contract: "A capped list of commits that the specialist can analyse without exceeding context limits"
+expects_from:
+  ac_id: BO-1100e-1
+  contract: "Path-scoped git log query results before bounding"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
