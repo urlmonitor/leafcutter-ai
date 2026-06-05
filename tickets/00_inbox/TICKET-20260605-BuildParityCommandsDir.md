@@ -21,7 +21,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 complexity: trivial
@@ -82,7 +82,7 @@ or drift-detection coverage. The correct fix is to add `"commands"` to
 - [x] test-runner — 2026-06-05 14:01
 - [x] pr-reviewer — 2026-06-05 14:02
 - [x] commit — 2026-06-05 14:03
-- [ ] pull-request
+- [x] pull-request — 2026-06-05 14:04
 
 ## Comments
 
@@ -119,3 +119,11 @@ completion_manifest:
   staged_files_match_scope: true
   implementation_in_history: true
 Committed ticket sign-offs in 4a2760f. Implementation change (adding "commands" to non_artifact_dirs) was already in commit a2129a1. Staged only the ticket file per explicit-path discipline.
+
+### 2026-06-05 14:04 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_51dc64c4
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+  pr_url_recorded: true
+Pushed feature/buildparitycommandsdir and opened PR #64: https://github.com/urlmonitor/leafcutter-ai/pull/64
