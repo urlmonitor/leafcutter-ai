@@ -1,0 +1,32 @@
+id: BO-700c-1-i
+title: "An L3 fix with no L0 ancestor renders under an Ungrouped fixes heading"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a changelog entry was emitted for an AC whose depends_on chain
+    does NOT reach an L0 AC (e.g., an orphan L3 AC with depends_on: []
+    or depends_on referencing only another L3),
+  When the changelog entry's goal field is resolved by traversing the depends_on chain,
+  Then the traversal terminates without finding a level: L0 AC
+  And the goal field is set to null
+  And when the release changelog is rendered,
+  Then this entry appears under a heading: "Ungrouped fixes"
+  And the "Ungrouped fixes" heading appears after all goal-grouped entries.
+depends_on: [BO-700c-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

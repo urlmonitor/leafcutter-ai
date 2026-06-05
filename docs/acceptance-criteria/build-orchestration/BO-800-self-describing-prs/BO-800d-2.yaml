@@ -1,0 +1,34 @@
+id: BO-800d-2
+title: "An amended AC (amended_by non-empty) is read in its current state, not its original state"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket's AC lineage includes BO-200a-1 (level: L2)
+    and BO-200a-1.yaml has:
+      amended_by: ["tickets/00_inbox/epics/EPIC-AtomicDelivery/03_scope_narrow.md"]
+      criteria: "Given a delivery with exactly 2 files...\nWhen both writes succeed...\nThen both are committed in one transaction"
+    (the criteria was narrowed from "any number of files" to "exactly 2 files" mid-drive),
+  When the pull-request agent assembles the Test plan section,
+  Then the Gherkin scenario listed for BO-200a-1 reflects the CURRENT criteria:
+    "Given a delivery with exactly 2 files..."
+  And the original pre-amendment criteria does NOT appear in the PR
+  And the PR body does not mention the amendment history
+    (the amended_by field is metadata, not displayed in the PR).
+depends_on: [BO-800d, BO-800d-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

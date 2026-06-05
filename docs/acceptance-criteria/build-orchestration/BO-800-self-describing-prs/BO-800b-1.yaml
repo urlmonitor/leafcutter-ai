@@ -1,0 +1,34 @@
+id: BO-800b-1
+title: "PR summary section contains the L0 criteria text (goal) and the L1 criteria text (feature)"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket's source_ac is BO-200a (level: L1)
+    and BO-200a.yaml has criteria: "Atomic commit guarantees that multi-file deliveries..."
+    and the depends_on chain resolves to BO-200 (level: L0)
+    and BO-200.yaml has criteria: "Every delivery is all-or-nothing..."
+    and the ticket is at the pull-request phase,
+  When the pull-request agent assembles the PR body,
+  Then the PR body contains a "## Summary" section with two subsections:
+    - "**Goal:** Every delivery is all-or-nothing..." (L0 criteria text)
+    - "**Feature:** Atomic commit guarantees that multi-file deliveries..." (L1 criteria text)
+  And both texts are taken verbatim from the criteria fields of the AC YAML files
+  And no LLM-composed prose replaces or supplements the AC criteria text.
+depends_on: [BO-800b]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

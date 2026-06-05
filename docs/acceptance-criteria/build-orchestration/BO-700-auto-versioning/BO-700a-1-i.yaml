@@ -1,0 +1,33 @@
+id: BO-700a-1-i
+title: "Ticket completed without a source_ac produces a placeholder entry"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket file has been driven to completion
+    and the ticket frontmatter does NOT contain a source_ac field
+    (e.g., a legacy ticket or a manually-created ticket),
+  When the changelog emission step runs for this ticket,
+  Then a changelog entry is still produced
+  And the entry heading is the ticket's frontmatter title field
+  And the entry contains a note: "No AC lineage -- entry derived from ticket metadata"
+  And the component field is taken from the ticket's component frontmatter
+    (or "unspecified" if absent)
+  And no error is raised during emission.
+depends_on: [BO-700a-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

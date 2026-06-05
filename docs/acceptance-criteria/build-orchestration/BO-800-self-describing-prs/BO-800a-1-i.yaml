@@ -1,0 +1,31 @@
+id: BO-800a-1-i
+title: "Ticket with no source_ac field falls back to the ticket title"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket file does NOT contain a source_ac field in its frontmatter
+    and the ticket frontmatter contains title: "Fix retry logic in scanner"
+    and the ticket is at the pull-request phase,
+  When the pull-request agent assembles the PR title,
+  Then the PR title is set to: "Fix retry logic in scanner"
+  And the title is taken from the ticket's own title frontmatter field
+  And no error is raised about the missing source_ac
+  And a note is included in the PR body: "Title from ticket metadata (no AC lineage)".
+depends_on: [BO-800a-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

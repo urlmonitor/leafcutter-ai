@@ -1,0 +1,34 @@
+id: BO-700e-1-i
+title: "A ticket moved to done/ manually (bypassing done-link) is detected by the validation scan"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket file was moved directly to tickets/99_done/
+    by a user running `git mv` (bypassing the done-link closure step)
+    and the ticket has frontmatter source_ac: BO-500a
+    and no changelog entry file exists with ac_id: BO-500a,
+  When the pre-release validation scan runs,
+  Then it detects the gap: ticket in done/ but no changelog entry
+  And it reports: "ticket-path: missing changelog entry for ac_id BO-500a"
+  And the scan recommends running the changelog emission step manually
+    for the affected ticket
+  And the validation scan does NOT auto-emit the entry
+    (it only reports; the user or done-link closure performs the emission).
+depends_on: [BO-700e-2]
+doc_links:
+  - path: docs/how-to/ac-driven-development.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

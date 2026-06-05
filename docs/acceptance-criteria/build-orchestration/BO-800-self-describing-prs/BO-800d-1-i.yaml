@@ -1,0 +1,35 @@
+id: BO-800d-1-i
+title: "An AC that was superseded mid-drive is excluded from the PR description"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket's AC lineage includes BO-200a-2 (level: L2)
+    and BO-200a-2.yaml was superseded during implementation:
+      status: superseded_by
+      superseded_by: BO-200a-3
+    and BO-200a-3.yaml is the replacement AC with status: active,
+  When the pull-request agent assembles the PR body,
+  Then BO-200a-2 does NOT appear in the Test plan section
+    (because its status is superseded_by)
+  And BO-200a-3 DOES appear in the Test plan section
+    (because it is the active replacement)
+  And the Summary section references the current active ACs only
+  And no mention of the superseded AC appears anywhere in the PR body.
+depends_on: [BO-800d-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

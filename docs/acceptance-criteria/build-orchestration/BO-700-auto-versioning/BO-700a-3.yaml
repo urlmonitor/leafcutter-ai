@@ -1,0 +1,36 @@
+id: BO-700a-3
+title: "Changelog entries group into releases by version tag boundary"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the changelog directory contains 4 entry files:
+    - entry-1.md with frontmatter created: 2026-06-01, ac_id: BO-100a
+    - entry-2.md with frontmatter created: 2026-06-02, ac_id: BO-200a
+    - entry-3.md with frontmatter created: 2026-06-04, ac_id: BO-300a
+    - entry-4.md with frontmatter created: 2026-06-05, ac_id: BO-400a
+    and a git tag v0.3.0 exists at the commit containing entries 1 and 2
+    and no tag exists after entries 3 and 4,
+  When a release changelog is assembled for "the next version",
+  Then entries 3 and 4 appear under the new version heading
+  And entries 1 and 2 do NOT appear (they belong to the v0.3.0 release)
+  And the entries within the new version are ordered by creation date ascending.
+depends_on: [BO-700a, BO-700a-2]
+doc_links:
+  - path: docs/how-to/ac-driven-development.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-700a-2
+  contract: "Changelog entry files in the changelog directory with YAML frontmatter containing ac_id and created fields"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

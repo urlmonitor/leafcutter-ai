@@ -1,0 +1,38 @@
+id: BO-700d-1
+title: "A Markdown CHANGELOG file is rendered from the release data"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a release has been prepared with version 0.5.0
+    and 3 changelog entries exist for this release:
+    - "Build tickets in dependency order" (goal: "Smart sequencing")
+    - "Atomic commit for multi-file deliveries" (goal: "Atomic delivery")
+    - "Cycle detection in dependency graph" (goal: "Smart sequencing")
+  When the CHANGELOG rendering step runs,
+  Then a Markdown file is produced containing:
+    - a level-2 heading: "## 0.5.0 (2026-06-05)"
+    - a level-3 heading for each goal group: "### Smart sequencing", "### Atomic delivery"
+    - a bullet item for each entry under its goal group
+  And the file is written to the project's CHANGELOG location
+  And any existing content in the CHANGELOG file is preserved below the new entry
+    (newest-first ordering).
+depends_on: [BO-700d, BO-700c-2, BO-700b-2]
+doc_links:
+  - path: docs/how-to/ac-driven-development.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-700c-2
+  contract: "Release data with entries grouped by L0 goal heading"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

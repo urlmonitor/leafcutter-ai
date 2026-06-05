@@ -1,0 +1,37 @@
+id: BO-700c-1
+title: "Each changelog entry includes the parent L0 title and the L1 feature title"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a changelog entry was emitted for AC BO-200a-1 (level: L2)
+    and BO-200a-1.yaml has depends_on containing BO-200a
+    and BO-200a.yaml (level: L1) has title: "Atomic commit for multi-file deliveries"
+      and depends_on containing BO-200
+    and BO-200.yaml (level: L0) has title: "Every delivery is all-or-nothing",
+  When the changelog entry is rendered for display,
+  Then the entry contains:
+    - goal: "Every delivery is all-or-nothing" (from the L0)
+    - feature: "Atomic commit for multi-file deliveries" (from the L1)
+    - entry_title: (from the L2's own title)
+  And the goal and feature fields are populated by traversing the depends_on
+    chain upward through the AC YAML files until reaching L0.
+depends_on: [BO-700c, BO-700a-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-700a-1
+  contract: "Changelog entry data structure with ac_id that can be resolved to an AC YAML file with depends_on chain"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

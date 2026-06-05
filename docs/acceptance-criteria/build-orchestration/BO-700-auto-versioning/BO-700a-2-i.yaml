@@ -1,0 +1,33 @@
+id: BO-700a-2-i
+title: "Duplicate completion events do not produce duplicate changelog entries"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket file with source_ac: BO-200a has already been completed
+    and a changelog entry file with frontmatter ac_id: BO-200a
+    and ticket_path matching this ticket already exists in the changelog directory,
+  When the done-link closure runs again for the same ticket
+    (e.g., due to a re-drive after a transient failure),
+  Then no new changelog entry file is created
+  And the existing entry file is not modified
+  And the emission step exits successfully with a message:
+    "changelog entry already exists for <ac_id> from <ticket_path>"
+  And no error or warning is raised.
+depends_on: [BO-700a-2]
+doc_links:
+  - path: docs/how-to/ac-driven-development.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

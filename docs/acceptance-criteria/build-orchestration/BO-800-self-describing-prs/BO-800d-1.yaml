@@ -1,0 +1,34 @@
+id: BO-800d-1
+title: "PR description is assembled from AC YAML files on disk at PR-creation time, not from cached data"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket's source_ac is BO-200a
+    and the AC file BO-200a.yaml was originally written with:
+      title: "Atomic commit for multi-file deliveries"
+    and during implementation the title was amended to:
+      title: "Atomic commit with rollback for multi-file deliveries"
+    and the amended_by field now contains a ticket path,
+  When the pull-request agent assembles the PR at PR-creation time,
+  Then it reads the AC YAML file from disk at that moment
+  And the PR title is: "Atomic commit with rollback for multi-file deliveries"
+  And the PR title is NOT the original pre-amendment text
+  And no cached or in-memory copy of the AC is used.
+depends_on: [BO-800d]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

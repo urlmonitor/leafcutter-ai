@@ -1,0 +1,37 @@
+id: BO-800c-1
+title: "PR test plan section lists all L2/L3 Gherkin scenarios from the ticket's AC lineage"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket's source_ac is BO-200a (level: L1)
+    and the AC store contains 3 child ACs under BO-200a:
+    - BO-200a-1.yaml (level: L2, criteria: "Given a multi-file delivery...\nWhen the commit agent runs...\nThen all files are committed atomically...")
+    - BO-200a-2.yaml (level: L2, criteria: "Given a partial failure...\nWhen the rollback runs...\nThen no partial state persists...")
+    - BO-200a-1-i.yaml (level: L3, criteria: "Given a file lock prevents writing...\nWhen the commit agent retries...\nThen it reports the locked file...")
+    and the ticket is at the pull-request phase,
+  When the pull-request agent assembles the PR body,
+  Then the PR body contains a "## Test plan" section
+  And the test plan lists each L2/L3 AC as a checkbox item:
+    - [ ] BO-200a-1: "Given a multi-file delivery..."
+    - [ ] BO-200a-2: "Given a partial failure..."
+    - [ ] BO-200a-1-i: "Given a file lock prevents writing..."
+  And each item includes the AC ID and the full Gherkin criteria text
+  And the items are ordered: L2 ACs first (by numeric suffix), then L3 ACs.
+depends_on: [BO-800c]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

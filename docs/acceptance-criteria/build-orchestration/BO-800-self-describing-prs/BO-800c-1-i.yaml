@@ -1,0 +1,31 @@
+id: BO-800c-1-i
+title: "A ticket with zero L2/L3 ACs produces an empty test plan section with a note"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket's source_ac is BO-500a (level: L1)
+    and the AC store contains NO child ACs under BO-500a
+    (no files with depends_on containing BO-500a and level L2 or L3),
+  When the pull-request agent assembles the PR body's Test plan section,
+  Then the Test plan section is present but contains the text:
+    "No L2/L3 acceptance criteria defined for this feature."
+  And the section is NOT omitted entirely (the heading still appears)
+  And no error is raised during PR assembly.
+depends_on: [BO-800c-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

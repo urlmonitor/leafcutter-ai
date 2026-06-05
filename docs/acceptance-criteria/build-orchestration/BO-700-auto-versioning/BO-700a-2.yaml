@@ -1,0 +1,38 @@
+id: BO-700a-2
+title: "Changelog entries are emitted at ticket completion (done-link closure)"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket has been driven to completion
+    (all agents in the agents: map have status signed_off)
+    and the ticket has frontmatter `source_ac: BO-200a`
+    and the done-link closure step (mark_ac_done.py) is invoked,
+  When the done-link closure completes successfully,
+  Then a changelog entry file is written to the changelog directory
+    with content derived from the AC lineage of BO-200a
+  And the entry file is written before the ticket is moved to the done/ folder
+  And the entry file has YAML frontmatter containing:
+    - ac_id: BO-200a
+    - ticket_path: (the ticket that triggered emission)
+    - created: (ISO-8601 date of emission)
+  And no manual invocation is required to produce the entry.
+depends_on: [BO-700a, BO-700a-1]
+doc_links:
+  - path: docs/how-to/ac-driven-development.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-700a-1
+  contract: "Changelog entry data structure with AC-derived fields ready for file emission"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

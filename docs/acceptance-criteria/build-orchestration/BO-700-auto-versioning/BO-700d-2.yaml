@@ -1,0 +1,39 @@
+id: BO-700d-2
+title: "A structured YAML release manifest is produced alongside the Markdown"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a release has been prepared with version 0.5.0
+    and 2 changelog entries exist for this release,
+  When the release rendering step runs,
+  Then a YAML manifest file is produced alongside the Markdown CHANGELOG
+  And the manifest contains:
+    - version: "0.5.0"
+    - date: "2026-06-05"
+    - bump_magnitude: "minor"
+    - determining_ac: (the AC ID that determined the bump)
+    - entries: (a list of objects, each with ac_id, title, component, goal, level)
+  And the manifest is machine-readable for downstream consumers
+    (agents needing context about recent deliveries, CI/CD pipelines)
+  And each entry in the manifest includes the same data as the Markdown rendering
+    but in structured form.
+depends_on: [BO-700d, BO-700d-1]
+doc_links:
+  - path: docs/how-to/ac-driven-development.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-700d-1
+  contract: "Release data structure with version, entries, and goal groupings already computed"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

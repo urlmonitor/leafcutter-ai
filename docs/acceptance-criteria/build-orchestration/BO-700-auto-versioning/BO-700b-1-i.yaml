@@ -1,0 +1,30 @@
+id: BO-700b-1-i
+title: "No tickets completed since last tag produces no version bump"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the latest git tag is "v0.4.2"
+    and the changelog directory contains NO entry files created after the tagged commit,
+  When the version computation step scans for post-tag entries,
+  Then it outputs magnitude: "none"
+  And the next version remains 0.4.2 (no increment)
+  And the output includes a message: "no completed tickets since v0.4.2 -- no version bump"
+  And no tag is created.
+depends_on: [BO-700b-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

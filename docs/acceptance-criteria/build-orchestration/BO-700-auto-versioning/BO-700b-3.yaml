@@ -1,0 +1,37 @@
+id: BO-700b-3
+title: "Major version is never bumped without explicit human override"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the changelog directory contains entries with AC levels L0, L1, L2, and L3
+    (all four flight levels represented in a single release window),
+  When the version computation step determines the bump magnitude,
+  Then it NEVER outputs "major" as the magnitude
+  And the maximum automatic bump is "minor" (from L1)
+  And the output includes a field: major_override: false
+
+  Given a human invokes the version computation with an explicit --major flag,
+  When the computation runs,
+  Then the next version increments the major segment (e.g., 0.5.0 -> 1.0.0)
+  And the minor and patch segments reset to 0
+  And the output includes: major_override: true.
+depends_on: [BO-700b, BO-700b-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-700b-1
+  contract: "Bump-magnitude decision logic that caps at 'minor' unless overridden"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,35 @@
+id: BO-700e-1
+title: "The done-link closure invokes changelog emission as a mandatory step"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket has been driven to completion
+    and the done-link closure step (mark_ac_done.py) is invoked,
+  When mark_ac_done.py updates the AC YAML work_status to done,
+  Then it also invokes the changelog emission step for the same ticket
+  And the changelog emission is invoked AFTER the AC status update succeeds
+    but BEFORE the ticket is moved to the done/ folder
+  And if the changelog emission step fails,
+  Then the done-link closure reports the failure
+  And the AC work_status remains done (the AC update is not rolled back)
+  And the ticket is NOT moved to the done/ folder until the changelog entry exists.
+depends_on: [BO-700e, BO-700a-2]
+doc_links:
+  - path: docs/how-to/ac-driven-development.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-700a-2
+  contract: "Changelog emission callable that accepts a ticket path and source_ac, returns success/failure"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

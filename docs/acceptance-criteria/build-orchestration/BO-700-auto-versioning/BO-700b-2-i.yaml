@@ -1,0 +1,33 @@
+id: BO-700b-2-i
+title: "Mixed L1 and L3 completions in one release yield a single minor bump (highest wins)"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the current version is 0.4.2
+    and the changelog directory contains post-tag entries:
+    - entry-A.md with ac_id: BO-100a (level: L1)
+    - entry-B.md with ac_id: BO-200a-1-i (level: L3)
+    - entry-C.md with ac_id: BO-300a-2 (level: L2)
+  When the version computation determines the bump magnitude,
+  Then it identifies L1 as the highest level (L1 > L2 > L3 for bump purposes)
+  And the next version is 0.5.0 (minor bump, not patch)
+  And the output does NOT produce multiple bumps (e.g., NOT 0.5.1)
+  And the determining_ac field is set to BO-100a.
+depends_on: [BO-700b-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

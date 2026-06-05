@@ -1,0 +1,35 @@
+id: BO-700c-2
+title: "Entries sharing the same L0 parent are grouped under a goal heading"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a release contains 4 changelog entries:
+    - entry-A (ac_id: BO-100a-1, L0 ancestor: BO-100 "Smart sequencing")
+    - entry-B (ac_id: BO-100a-2, L0 ancestor: BO-100 "Smart sequencing")
+    - entry-C (ac_id: BO-200a-1, L0 ancestor: BO-200 "Atomic delivery")
+    - entry-D (ac_id: BO-200a-2, L0 ancestor: BO-200 "Atomic delivery")
+  When the release changelog is rendered,
+  Then entries A and B appear under a heading: "Smart sequencing"
+  And entries C and D appear under a heading: "Atomic delivery"
+  And each goal heading appears exactly once
+  And entries within a goal group are ordered by creation date ascending.
+depends_on: [BO-700c, BO-700c-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-700c-1
+  contract: "Each entry has a resolved goal field (L0 title) available for grouping"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

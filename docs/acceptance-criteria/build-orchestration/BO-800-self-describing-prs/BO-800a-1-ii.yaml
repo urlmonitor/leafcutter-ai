@@ -1,0 +1,31 @@
+id: BO-800a-1-ii
+title: "L1 title exceeding 70 characters is truncated with an ellipsis"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket's source_ac references an L1 AC with title:
+    "Automatically detect and resolve circular dependencies in the build graph at startup"
+    (84 characters),
+  When the pull-request agent assembles the PR title,
+  Then the PR title is truncated to 70 characters: "Automatically detect and resolve circular dependencies in the build..."
+  And the truncation preserves whole words (does not cut mid-word)
+  And the ellipsis ("...") is appended as the final 3 characters
+  And the full untruncated title appears in the PR body's summary section.
+depends_on: [BO-800a-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

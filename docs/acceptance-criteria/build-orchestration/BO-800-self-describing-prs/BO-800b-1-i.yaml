@@ -1,0 +1,32 @@
+id: BO-800b-1-i
+title: "Source AC chain with no L0 ancestor produces a summary from L1 criteria only"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket's source_ac is BO-500a (level: L1)
+    and BO-500a.yaml has criteria: "Computed quality gates for agent sign-offs..."
+    and the depends_on chain of BO-500a does NOT lead to an L0 AC
+    (e.g., depends_on is empty or points only to other L1 ACs),
+  When the pull-request agent assembles the PR body's Summary section,
+  Then the Goal subsection states: "(No L0 goal in AC lineage)"
+  And the Feature subsection contains the L1 criteria text verbatim
+  And the PR is still created successfully without error
+  And the Summary section is not left empty.
+depends_on: [BO-800b-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

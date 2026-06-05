@@ -1,0 +1,36 @@
+id: BO-800e-1
+title: "PR body includes a Goal line with the L0 AC ID and title, linking to the AC file path"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket's source_ac is BO-200a (level: L1)
+    and the depends_on chain resolves to BO-200 (level: L0)
+    and BO-200.yaml has:
+      title: "Every delivery is all-or-nothing"
+      id: BO-200
+    and the AC file is located at:
+      docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200.yaml,
+  When the pull-request agent assembles the PR body,
+  Then the PR body contains a line:
+    "**Goal:** [BO-200: Every delivery is all-or-nothing](docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200.yaml)"
+  And the line appears above the Summary section
+  And the path in the link is relative to the repository root
+  And a reviewer can navigate to the L0 AC in one click from the PR.
+depends_on: [BO-800e]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

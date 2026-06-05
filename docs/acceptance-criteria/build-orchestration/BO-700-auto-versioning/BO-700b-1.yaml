@@ -1,0 +1,39 @@
+id: BO-700b-1
+title: "Version computation reads the highest AC level among completed tickets since last tag"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the changelog directory contains 3 entry files created after the last git tag:
+    - entry-A.md with frontmatter ac_id: BO-100a (whose AC YAML has level: L1)
+    - entry-B.md with frontmatter ac_id: BO-200a-1 (whose AC YAML has level: L2)
+    - entry-C.md with frontmatter ac_id: BO-300a-1-i (whose AC YAML has level: L3)
+  When the version computation step reads all post-tag changelog entries
+    and resolves each ac_id to its AC YAML file to determine the level field,
+  Then it identifies L1 as the highest flight level in this release
+  And it outputs "minor" as the bump magnitude
+  And it records the determining AC ID (BO-100a) in its output.
+depends_on: [BO-700b, BO-700a-3]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/ac-driven-development.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A bump-magnitude decision: {magnitude: minor|patch, determining_ac: <ac_id>, current_version: <semver>}"
+expects_from:
+  ac_id: BO-700a-3
+  contract: "Changelog entry files with ac_id frontmatter that can be resolved to AC YAML files containing a level field"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,33 @@
+id: BO-800e-1-i
+title: "A ticket whose source_ac chain has multiple L0 ancestors lists all of them"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket's source_ac is BO-250a (level: L1)
+    and BO-250a.yaml has depends_on: [BO-200, BO-300]
+    and BO-200 (level: L0) has title: "Every delivery is all-or-nothing"
+    and BO-300 (level: L0) has title: "See what the build produced",
+  When the pull-request agent assembles the PR body's Goal line,
+  Then the PR body contains TWO goal lines:
+    - "**Goal:** [BO-200: Every delivery is all-or-nothing](...)"
+    - "**Goal:** [BO-300: See what the build produced](...)"
+  And both L0 ACs are listed (none is silently dropped)
+  And each goal line links to its respective AC file path.
+depends_on: [BO-800e-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
