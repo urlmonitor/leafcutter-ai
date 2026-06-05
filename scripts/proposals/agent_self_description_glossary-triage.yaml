@@ -1,0 +1,47 @@
+agent_id: glossary-triage
+template_file: templates/agents/glossary-triage.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  - source: .agents/agents/<name>/PROJECT_CONTEXT.md
+    required: false
+    condition: when present
+  inputs: []
+  outputs:
+  - name: action
+    type: structured_response
+    description: 'Output field: action'
+  - name: reason
+    type: structured_response
+    description: 'Output field: reason'
+  - name: draft_entry
+    type: structured_response
+    description: 'Output field: draft_entry'
+  mutates:
+  - name: none
+    surface: none
+    description: Read-only agent — no filesystem mutations
+  behavioral_patterns:
+  - name: Conditional Behavior
+    trigger: '`action == "add_to_glossary"`'
+    behavior: provide a complete markdown
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: classifying `add_to_glossary`
+    behavior: 'write `draft_entry` as:'
+    related_agent: null
+proposed_registry:
+  category: supervisor
+  skills_invoked: []
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 4
+    source: pre-flight file reads
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)
+  - channel: 8
+    source: PROJECT_CONTEXT.md

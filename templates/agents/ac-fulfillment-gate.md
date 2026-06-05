@@ -26,6 +26,35 @@ default_artifact_checklist:
   - ac_traceability_loaded
   - store_fields_verified
   - fulfillment_verdict_emitted
+pre_flight_reads:
+- required: true
+  source: ticket_path
+inputs:
+- description: Absolute path to the ticket markdown file
+  name: ticket_path
+  required: true
+  type: file_path
+outputs:
+- description: 'Sign-off comment with status: ok | blocker | handoff'
+  name: sign_off_comment
+  type: sign_off_comment
+mutates:
+- description: Sets agents.ac-fulfillment-gate to signed_off or failed
+  name: ticket_frontmatter_agents_status
+  surface: ticket frontmatter
+- description: Checks the ac-fulfillment-gate checkbox with timestamp
+  name: sign_offs_checklist
+  surface: ticket body sign-offs section
+behavioral_patterns:
+- behavior: treat as L2/L3 (check it)
+  name: Conditional Behavior
+  related_agent: null
+  trigger: the file is absent
+- behavior: skip this AC entirely
+  name: Conditional Behavior
+  related_agent: null
+  trigger: '`level` equals `L0` or `L1`'
+
 ---
 
 You are `ac-fulfillment-gate`, the AC store fulfillment gate. Your job is to

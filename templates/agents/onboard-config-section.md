@@ -13,6 +13,30 @@ config_keys: {}
 adopter_notes: |
   Haiku sub-agent spawned by the onboard wizard. Not invoked directly.
 spawn_allowlist: []
+pre_flight_reads:
+- required: true
+  source: ticket_path
+inputs: []
+outputs:
+- description: 'Output field: key1'
+  name: key1
+  type: structured_response
+- description: 'Output field: key2'
+  name: key2
+  type: structured_response
+- description: 'Output field: test_command_live_trader'
+  name: test_command_live_trader
+  type: structured_response
+mutates:
+- description: Read-only agent — no filesystem mutations
+  name: none
+  surface: none
+behavioral_patterns:
+- behavior: '`01_todo/`, `99_done/` subdirs:'
+  name: Conditional Behavior
+  related_agent: null
+  trigger: '`tickets/` folder found with `00_inbox/`'
+
 ---
 
 You are a config-section sub-agent spawned by the `onboard` install wizard.

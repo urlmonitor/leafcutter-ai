@@ -22,6 +22,35 @@ default_artifact_checklist:
   - sink_readable
   - events_routed
   - summary_printed
+pre_flight_reads:
+- required: true
+  source: ticket_path
+inputs: []
+outputs:
+- description: Structured completion payload or sign-off comment
+  name: completion_report
+  type: structured_response
+mutates:
+- description: Read-only agent — no filesystem mutations
+  name: none
+  surface: none
+behavioral_patterns:
+- behavior: 'Stop and ask the user when:
+
+
+    - The sink file exists but contains no `knowledge_captured` events (onl'
+  name: Stop-and-Ask
+  related_agent: null
+  trigger: condition requiring user decision or out-of-scope action
+- behavior: 'exit with a message:'
+  name: Conditional Behavior
+  related_agent: null
+  trigger: the file does not exist
+- behavior: note the kind name and
+  name: Conditional Behavior
+  related_agent: null
+  trigger: a warning appears for an unrecognised `entry_kind`
+
 ---
 
 You are the `knowledge-harvester` agent. Your job is to drain the

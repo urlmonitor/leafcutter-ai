@@ -1,0 +1,72 @@
+agent_id: epic-supervisor
+template_file: templates/agents/epic-supervisor.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  - source: project conventions
+    required: false
+  - source: .claude/skills/building-epics/SKILL.md
+    required: false
+    condition: when present
+  - source: .claude/skills/signoff/SKILL.md
+    required: false
+    condition: when present
+  - source: inline_work_guard.py
+    required: false
+    condition: when present
+  - source: Master_Plan.md
+    required: false
+    condition: when present
+  inputs: []
+  outputs:
+  - name: completion_report
+    type: structured_response
+    description: Structured completion payload or sign-off comment
+  mutates:
+  - name: none
+    surface: none
+    description: Read-only agent — no filesystem mutations
+  behavioral_patterns:
+  - name: Stop-and-Ask
+    trigger: condition requiring user decision or out-of-scope action
+    behavior: 'Do not proceed until all seven checks succeed (checks 1–5 are blocking;
+
+      check 6 is advisory; check 7'
+    related_agent: null
+  - name: Stop-and-Ask
+    trigger: condition requiring user decision or out-of-scope action
+    behavior: Do NOT proceed to the next phase assuming the missing dispatches completed.
+    related_agent: null
+  - name: Delegation to worktree-agent
+    trigger: task requiring worktree-agent capabilities
+    behavior: Delegates to worktree-agent via Agent tool
+    related_agent: worktree-agent
+  - name: Delegation to retrospective-agent
+    trigger: task requiring retrospective-agent capabilities
+    behavior: Delegates to retrospective-agent via Agent tool
+    related_agent: retrospective-agent
+  - name: Conditional Behavior
+    trigger: you are a new caller
+    behavior: use `/build-feature` instead
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: any processes are returned
+    behavior: surface them to the user in a single
+    related_agent: null
+proposed_registry:
+  category: supervisor
+  skills_invoked:
+  - skill_id: building-epics
+    mode: conditional
+  - skill_id: signoff
+    mode: always
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 4
+    source: pre-flight file reads
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)

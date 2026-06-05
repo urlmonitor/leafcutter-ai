@@ -1,0 +1,47 @@
+agent_id: product-owner-v3
+template_file: templates/agents/product-owner-v3.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  - source: .agents/agents/<name>/PROJECT_CONTEXT.md
+    required: false
+    condition: when present
+  inputs: []
+  outputs:
+  - name: completion_report
+    type: structured_response
+    description: Structured completion payload or sign-off comment
+  mutates:
+  - name: none
+    surface: none
+    description: Read-only agent — no filesystem mutations
+  behavioral_patterns:
+  - name: Conditional Behavior
+    trigger: a user request implies a strategic shift (new direction
+    behavior: reprioritization,
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: a file is absent
+    behavior: unreadable, binary, or exceeds 50 KB
+    related_agent: null
+proposed_registry:
+  category: planning
+  skills_invoked:
+  - skill_id: route-learning
+    mode: always
+  - skill_id: capture-learning
+    mode: conditional
+  - skill_id: signoff
+    mode: always
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 4
+    source: pre-flight file reads
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)
+  - channel: 8
+    source: PROJECT_CONTEXT.md

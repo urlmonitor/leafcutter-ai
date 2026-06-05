@@ -1,0 +1,50 @@
+agent_id: create-ticket
+template_file: templates/agents/create-ticket.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  inputs: []
+  outputs:
+  - name: completion_report
+    type: structured_response
+    description: Structured completion payload or sign-off comment
+  mutates:
+  - name: none
+    surface: none
+    description: Read-only agent — no filesystem mutations
+  behavioral_patterns:
+  - name: Stop-and-Ask
+    trigger: condition requiring user decision or out-of-scope action
+    behavior: do not proceed to Step 3.
+    related_agent: null
+  - name: Delegation to refinement
+    trigger: task requiring refinement capabilities
+    behavior: Delegates to refinement via Agent tool
+    related_agent: refinement
+  - name: Delegation to create-epic
+    trigger: task requiring create-epic capabilities
+    behavior: Delegates to create-epic via Agent tool
+    related_agent: create-epic
+  - name: Conditional Behavior
+    trigger: '`routing_decision == "epic"`'
+    behavior: this routing still applies — the epic path is
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: '`complexity == "novel"`'
+    behavior: brainstorm-lead MUST run
+    related_agent: null
+proposed_registry:
+  category: supervisor
+  skills_invoked:
+  - skill_id: ticket-wiring
+    mode: always
+  - skill_id: ticket-authoring
+    mode: always
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)

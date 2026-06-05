@@ -31,6 +31,42 @@ default_artifact_checklist:
   - state_verified
   - git_history_checked
   - status_reported
+pre_flight_reads:
+- required: true
+  source: ticket_path
+inputs:
+- description: Absolute path to the ticket markdown file
+  name: ticket_path
+  required: true
+  type: file_path
+outputs:
+- description: 'Sign-off comment with status: ok | blocker | handoff'
+  name: sign_off_comment
+  type: sign_off_comment
+mutates:
+- description: Sets agents.status-checker to signed_off or failed
+  name: ticket_frontmatter_agents_status
+  surface: ticket frontmatter
+- description: Checks the status-checker checkbox with timestamp
+  name: sign_offs_checklist
+  surface: ticket body sign-offs section
+- description: Files created or modified during phase execution
+  name: implementation_artifacts
+  surface: repository files
+behavioral_patterns:
+- behavior: Delegates to research-agent via Agent tool
+  name: Delegation to research-agent
+  related_agent: research-agent
+  trigger: task requiring research-agent capabilities
+- behavior: 'migrations, SQL deployed to prod):'
+  name: Conditional Behavior
+  related_agent: null
+  trigger: the ticket touches prod-relevant code (workers
+- behavior: the ticket is closed immediately without
+  name: Conditional Behavior
+  related_agent: null
+  trigger: the auto-close fires
+
 ---
 
 You are `status-checker`. Your job is to answer ticket-state questions with

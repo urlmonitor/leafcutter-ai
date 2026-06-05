@@ -34,6 +34,60 @@ config_keys: {}
 adopter_notes: |
   Invoked via /build-feature <epic>. Requires worktrees per epic.
 requires_verification: true
+pre_flight_reads:
+- required: true
+  source: ticket_path
+- required: false
+  source: project conventions
+- condition: when present
+  required: false
+  source: .claude/skills/building-epics/SKILL.md
+- condition: when present
+  required: false
+  source: .claude/skills/signoff/SKILL.md
+- condition: when present
+  required: false
+  source: inline_work_guard.py
+- condition: when present
+  required: false
+  source: Master_Plan.md
+inputs: []
+outputs:
+- description: Structured completion payload or sign-off comment
+  name: completion_report
+  type: structured_response
+mutates:
+- description: Read-only agent — no filesystem mutations
+  name: none
+  surface: none
+behavioral_patterns:
+- behavior: 'Do not proceed until all seven checks succeed (checks 1–5 are blocking;
+
+    check 6 is advisory; check 7'
+  name: Stop-and-Ask
+  related_agent: null
+  trigger: condition requiring user decision or out-of-scope action
+- behavior: Do NOT proceed to the next phase assuming the missing dispatches completed.
+  name: Stop-and-Ask
+  related_agent: null
+  trigger: condition requiring user decision or out-of-scope action
+- behavior: Delegates to worktree-agent via Agent tool
+  name: Delegation to worktree-agent
+  related_agent: worktree-agent
+  trigger: task requiring worktree-agent capabilities
+- behavior: Delegates to retrospective-agent via Agent tool
+  name: Delegation to retrospective-agent
+  related_agent: retrospective-agent
+  trigger: task requiring retrospective-agent capabilities
+- behavior: use `/build-feature` instead
+  name: Conditional Behavior
+  related_agent: null
+  trigger: you are a new caller
+- behavior: surface them to the user in a single
+  name: Conditional Behavior
+  related_agent: null
+  trigger: any processes are returned
+
 ---
 
 > [!NOTE]

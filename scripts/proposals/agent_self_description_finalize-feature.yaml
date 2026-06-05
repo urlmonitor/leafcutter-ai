@@ -1,0 +1,56 @@
+agent_id: finalize-feature
+template_file: templates/agents/finalize-feature.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  inputs: []
+  outputs:
+  - name: completion_report
+    type: structured_response
+    description: Structured completion payload or sign-off comment
+  mutates:
+  - name: none
+    surface: none
+    description: Read-only agent — no filesystem mutations
+  behavioral_patterns:
+  - name: Stop-and-Ask
+    trigger: condition requiring user decision or out-of-scope action
+    behavior: "halt immediately:\n   ```\n   Error: /finalize-feature must be run\
+      \ from a feature branch, not main/mas"
+    related_agent: null
+  - name: Stop-and-Ask
+    trigger: condition requiring user decision or out-of-scope action
+    behavior: 'do NOT proceed to
+
+      step 5 or step 6:
+
+      ```
+
+      ## Finalization Halted: Post-Merge Test Failure
+
+
+      Step 4 (tes'
+    related_agent: null
+  - name: Delegation to status-checker
+    trigger: task requiring status-checker capabilities
+    behavior: Delegates to status-checker via Agent tool
+    related_agent: status-checker
+  - name: Conditional Behavior
+    trigger: the result is `main` or `master`
+    behavior: 'halt immediately:'
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: missing (non-destructive
+    behavior: no confirmation gate)
+    related_agent: null
+proposed_registry:
+  category: supervisor
+  skills_invoked: []
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 4
+    source: pre-flight file reads
+  - channel: 7
+    source: bash command output (git, build, tests)

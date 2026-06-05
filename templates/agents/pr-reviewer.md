@@ -32,6 +32,39 @@ default_artifact_checklist:
   - diff_reviewed
   - no_high_findings
   - scope_verified
+pre_flight_reads:
+- required: true
+  source: ticket_path
+inputs:
+- description: Absolute path to the ticket markdown file
+  name: ticket_path
+  required: true
+  type: file_path
+outputs:
+- description: 'Sign-off comment with status: ok | blocker | handoff'
+  name: sign_off_comment
+  type: sign_off_comment
+mutates:
+- description: Sets agents.pr-reviewer to signed_off or failed
+  name: ticket_frontmatter_agents_status
+  surface: ticket frontmatter
+- description: Checks the pr-reviewer checkbox with timestamp
+  name: sign_offs_checklist
+  surface: ticket body sign-offs section
+behavioral_patterns:
+- behavior: Delegates to research-agent via Agent tool
+  name: Delegation to research-agent
+  related_agent: research-agent
+  trigger: task requiring research-agent capabilities
+- behavior: default to `auto`
+  name: Conditional Behavior
+  related_agent: null
+  trigger: no argument is provided
+- behavior: skip the contract
+  name: Conditional Behavior
+  related_agent: null
+  trigger: '`## Agent Contracts` is absent from the ticket body'
+
 ---
 
 <!--

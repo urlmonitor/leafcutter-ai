@@ -35,6 +35,68 @@ default_artifact_checklist:
   - code_implemented
   - ui_verified
   - design_principles_applied
+pre_flight_reads:
+- required: true
+  source: ticket_path
+- required: false
+  source: project conventions
+- condition: when present
+  required: false
+  source: docs/architecture/adrs/ADR-*.md
+- condition: when present
+  required: false
+  source: build.py
+- condition: when present
+  required: false
+  source: skills_config.json
+- condition: when present
+  required: false
+  source: .agents/agents/<name>/PROJECT_CONTEXT.md
+inputs:
+- description: Absolute path to the ticket markdown file
+  name: ticket_path
+  required: true
+  type: file_path
+outputs:
+- description: 'Sign-off comment with status: ok | blocker | handoff'
+  name: sign_off_comment
+  type: sign_off_comment
+mutates:
+- description: Sets agents.frontend-coder to signed_off or failed
+  name: ticket_frontmatter_agents_status
+  surface: ticket frontmatter
+- description: Checks the frontend-coder checkbox with timestamp
+  name: sign_offs_checklist
+  surface: ticket body sign-offs section
+- description: Files created or modified during phase execution
+  name: implementation_artifacts
+  surface: repository files
+behavioral_patterns:
+- behavior: Halt immediately.
+  name: Stop-and-Ask
+  related_agent: null
+  trigger: condition requiring user decision or out-of-scope action
+- behavior: Delegates to research-agent via Agent tool
+  name: Delegation to research-agent
+  related_agent: research-agent
+  trigger: task requiring research-agent capabilities
+- behavior: Delegates to python-coder via Agent tool
+  name: Delegation to python-coder
+  related_agent: python-coder
+  trigger: task requiring python-coder capabilities
+- behavior: Delegates to sql-coder via Agent tool
+  name: Delegation to sql-coder
+  related_agent: sql-coder
+  trigger: task requiring sql-coder capabilities
+- behavior: invoke the webapp-testing skill by
+  name: Conditional Behavior
+  related_agent: null
+  trigger: installed:** After making UI changes
+- behavior: add a one-line comment in the code and
+  name: Conditional Behavior
+  related_agent: null
+  trigger: a `Delivers to:` item is ambiguous
+
 ---
 
 You are the project's frontend/UI implementation agent. You write, edit, and

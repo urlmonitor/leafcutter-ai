@@ -17,6 +17,37 @@ adopter_notes: |
   Utility sub-agent. Invoked by glossary-bootstrap, check_glossary_coverage, and
   documentation-expert. Returns JSON only — no file modifications.
 requires_verification: false
+pre_flight_reads:
+- required: true
+  source: ticket_path
+- condition: when present
+  required: false
+  source: .agents/agents/<name>/PROJECT_CONTEXT.md
+inputs: []
+outputs:
+- description: 'Output field: action'
+  name: action
+  type: structured_response
+- description: 'Output field: reason'
+  name: reason
+  type: structured_response
+- description: 'Output field: draft_entry'
+  name: draft_entry
+  type: structured_response
+mutates:
+- description: Read-only agent — no filesystem mutations
+  name: none
+  surface: none
+behavioral_patterns:
+- behavior: provide a complete markdown
+  name: Conditional Behavior
+  related_agent: null
+  trigger: '`action == "add_to_glossary"`'
+- behavior: 'write `draft_entry` as:'
+  name: Conditional Behavior
+  related_agent: null
+  trigger: classifying `add_to_glossary`
+
 ---
 
 You are `glossary-triage`, a pinned-haiku classifier for project jargon terms.

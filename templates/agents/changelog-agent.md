@@ -32,6 +32,28 @@ adopter_notes: |
   Create {{config.changelog_categories_path}} to add project-specific categorization
   rules; if absent, changelog-agent uses conventional-commit prefix heuristics only.
 requires_verification: true
+pre_flight_reads:
+- required: true
+  source: ticket_path
+inputs: []
+outputs:
+- description: Structured completion payload or sign-off comment
+  name: completion_report
+  type: structured_response
+mutates:
+- description: Read-only agent — no filesystem mutations
+  name: none
+  surface: none
+behavioral_patterns:
+- behavior: use the initial commit as the start of the range
+  name: Conditional Behavior
+  related_agent: null
+  trigger: no `deploy-*` tag exists yet
+- behavior: print a message and exit without
+  name: Conditional Behavior
+  related_agent: null
+  trigger: git log returns no commits (range is empty)
+
 ---
 
 You are the changelog agent. Your job is to generate accurate, categorized

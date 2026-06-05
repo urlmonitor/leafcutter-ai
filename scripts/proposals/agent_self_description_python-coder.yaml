@@ -1,0 +1,90 @@
+agent_id: python-coder
+template_file: templates/agents/python-coder.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  - source: project conventions
+    required: false
+  - source: docs/architecture/adrs/ADR-*.md
+    required: false
+    condition: when present
+  - source: docs/conventions/ephemeral_table_naming.md
+    required: false
+    condition: when present
+  - source: docs/database-domain.md
+    required: false
+    condition: when present
+  inputs:
+  - name: ticket_path
+    type: file_path
+    required: true
+    description: Absolute path to the ticket markdown file
+  outputs:
+  - name: sign_off_comment
+    type: sign_off_comment
+    description: 'Sign-off comment with status: ok | blocker | handoff'
+  mutates:
+  - name: ticket_frontmatter_agents_status
+    surface: ticket frontmatter
+    description: Sets agents.python-coder to signed_off or failed
+  - name: sign_offs_checklist
+    surface: ticket body sign-offs section
+    description: Checks the python-coder checkbox with timestamp
+  - name: implementation_artifacts
+    surface: repository files
+    description: Files created or modified during phase execution
+  behavioral_patterns:
+  - name: Stop-and-Ask
+    trigger: condition requiring user decision or out-of-scope action
+    behavior: Halt immediately.
+    related_agent: null
+  - name: Stop-and-Ask
+    trigger: condition requiring user decision or out-of-scope action
+    behavior: do not proceed to sign off.
+    related_agent: null
+  - name: Delegation to research-agent
+    trigger: task requiring research-agent capabilities
+    behavior: Delegates to research-agent via Agent tool
+    related_agent: research-agent
+  - name: Delegation to sql-coder
+    trigger: task requiring sql-coder capabilities
+    behavior: Delegates to sql-coder via Agent tool
+    related_agent: sql-coder
+  - name: Delegation to collector-enforcer
+    trigger: task requiring collector-enforcer capabilities
+    behavior: Delegates to collector-enforcer via Agent tool
+    related_agent: collector-enforcer
+  - name: Conditional Behavior
+    trigger: you discover or fix a bug/error during implementation
+    behavior: you MUST add a new unit test that reproduces the bug and verifies the
+      fix
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: '`doc-enforcer` flags violations'
+    behavior: fix them before proceeding
+    related_agent: null
+proposed_registry:
+  category: implementation
+  skills_invoked:
+  - skill_id: signoff
+    mode: conditional
+  - skill_id: collector-enforcer
+    mode: conditional
+  - skill_id: doc-enforcer
+    mode: conditional
+  - skill_id: complexity-reduction
+    mode: conditional
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 3
+    source: ticket_path from ticket-supervisor
+  - channel: 4
+    source: pre-flight file reads
+  - channel: 5
+    source: skills_config.json config_keys
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)

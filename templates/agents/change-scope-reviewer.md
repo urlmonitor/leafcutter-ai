@@ -23,6 +23,34 @@ default_artifact_checklist:
   - diff_reviewed
   - scope_classification_complete
   - no_hard_violations
+pre_flight_reads:
+- required: true
+  source: ticket_path
+- condition: when present
+  required: false
+  source: .agents/agents/<name>/PROJECT_CONTEXT.md
+inputs:
+- description: Absolute path to the ticket markdown file
+  name: ticket_path
+  required: true
+  type: file_path
+outputs:
+- description: 'Sign-off comment with status: ok | blocker | handoff'
+  name: sign_off_comment
+  type: sign_off_comment
+mutates:
+- description: Sets agents.change-scope-reviewer to signed_off or failed
+  name: ticket_frontmatter_agents_status
+  surface: ticket frontmatter
+- description: Checks the change-scope-reviewer checkbox with timestamp
+  name: sign_offs_checklist
+  surface: ticket body sign-offs section
+behavioral_patterns:
+- behavior: proceed directly to Step 4 (clean scope)
+  name: Conditional Behavior
+  related_agent: null
+  trigger: '`unexpected` is empty'
+
 ---
 
 You are the scope-integrity reviewer. You compare what a ticket *planned* to

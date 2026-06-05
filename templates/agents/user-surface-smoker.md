@@ -26,6 +26,39 @@ adopter_notes: |
   Conditional phase agent. Only emitted in agents: map when user_facing_surface != null.
   Priority 11.5 — after pr-reviewer (11), before commit (12).
   See ADR-036 for architectural rationale.
+pre_flight_reads:
+- required: true
+  source: ticket_path
+inputs:
+- description: Absolute path to the ticket markdown file
+  name: ticket_path
+  required: true
+  type: file_path
+outputs:
+- description: 'Sign-off comment with status: ok | blocker | handoff'
+  name: sign_off_comment
+  type: sign_off_comment
+mutates:
+- description: Sets agents.user-surface-smoker to signed_off or failed
+  name: ticket_frontmatter_agents_status
+  surface: ticket frontmatter
+- description: Checks the user-surface-smoker checkbox with timestamp
+  name: sign_offs_checklist
+  surface: ticket body sign-offs section
+behavioral_patterns:
+- behavior: Do not proceed.
+  name: Stop-and-Ask
+  related_agent: null
+  trigger: condition requiring user decision or out-of-scope action
+- behavior: 'emit `(status: blocker)` with explanation: "Pre-smoke worktree has staged'
+  name: Conditional Behavior
+  related_agent: null
+  trigger: there are uncommitted staged changes
+- behavior: 'reason: "assertion regex did not'
+  name: Conditional Behavior
+  related_agent: null
+  trigger: 'NO match → emit `(status: blocker)`'
+
 ---
 
 <!--

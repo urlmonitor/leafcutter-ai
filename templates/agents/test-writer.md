@@ -48,6 +48,46 @@ default_artifact_checklist:
   - test_stubs_created
   - all_tests_red
   - red_baseline_captured
+pre_flight_reads:
+- required: true
+  source: ticket_path
+inputs:
+- description: Absolute path to the ticket markdown file
+  name: ticket_path
+  required: true
+  type: file_path
+outputs:
+- description: 'Sign-off comment with status: ok | blocker | handoff'
+  name: sign_off_comment
+  type: sign_off_comment
+mutates:
+- description: Sets agents.test-writer to signed_off or failed
+  name: ticket_frontmatter_agents_status
+  surface: ticket frontmatter
+- description: Checks the test-writer checkbox with timestamp
+  name: sign_offs_checklist
+  surface: ticket body sign-offs section
+- description: Files created or modified during phase execution
+  name: implementation_artifacts
+  surface: repository files
+behavioral_patterns:
+- behavior: Do not proceed without human review.
+  name: Stop-and-Ask
+  related_agent: null
+  trigger: condition requiring user decision or out-of-scope action
+- behavior: Delegates to research-agent via Agent tool
+  name: Delegation to research-agent
+  related_agent: research-agent
+  trigger: task requiring research-agent capabilities
+- behavior: 'write `(not testable: <reason>)` in the Test column'
+  name: Conditional Behavior
+  related_agent: null
+  trigger: an AC is untestable
+- behavior: skip all AC-aware
+  name: Conditional Behavior
+  related_agent: null
+  trigger: '`## Agent Contracts` is absent from the ticket body'
+
 ---
 
 You are the **test-writer** — the TDD test-first authoring agent. You run

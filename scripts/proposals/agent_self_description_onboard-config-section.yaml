@@ -1,0 +1,34 @@
+agent_id: onboard-config-section
+template_file: templates/agents/onboard-config-section.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  inputs: []
+  outputs:
+  - name: key1
+    type: structured_response
+    description: 'Output field: key1'
+  - name: key2
+    type: structured_response
+    description: 'Output field: key2'
+  - name: test_command_live_trader
+    type: structured_response
+    description: 'Output field: test_command_live_trader'
+  mutates:
+  - name: none
+    surface: none
+    description: Read-only agent — no filesystem mutations
+  behavioral_patterns:
+  - name: Conditional Behavior
+    trigger: '`tickets/` folder found with `00_inbox/`'
+    behavior: '`01_todo/`, `99_done/` subdirs:'
+    related_agent: null
+proposed_registry:
+  category: supervisor
+  skills_invoked: []
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 6
+    source: project files read during execution

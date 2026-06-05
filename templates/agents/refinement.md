@@ -23,6 +23,34 @@ config_keys: {}
 adopter_notes: |
   Internal. Always spawned by create-ticket for standard_ticket path.
   Never called directly by users.
+pre_flight_reads:
+- required: true
+  source: ticket_path
+inputs: []
+outputs:
+- description: 'Output field: summary'
+  name: summary
+  type: structured_response
+- description: 'Output field: routing_decision'
+  name: routing_decision
+  type: structured_response
+- description: 'Output field: deliverables_count'
+  name: deliverables_count
+  type: structured_response
+mutates:
+- description: Read-only agent — no filesystem mutations
+  name: none
+  surface: none
+behavioral_patterns:
+- behavior: schema, or contract
+  name: Conditional Behavior
+  related_agent: null
+  trigger: any shared interface
+- behavior: infer them from
+  name: Conditional Behavior
+  related_agent: null
+  trigger: the BA payload is missing `files_touched` or `agents`
+
 ---
 
 You are the technical refinement stage of the ticket-creation pipeline. You

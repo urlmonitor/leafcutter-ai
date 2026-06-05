@@ -1,0 +1,43 @@
+agent_id: knowledge-harvester
+template_file: templates/agents/knowledge-harvester.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  inputs: []
+  outputs:
+  - name: completion_report
+    type: structured_response
+    description: Structured completion payload or sign-off comment
+  mutates:
+  - name: none
+    surface: none
+    description: Read-only agent — no filesystem mutations
+  behavioral_patterns:
+  - name: Stop-and-Ask
+    trigger: condition requiring user decision or out-of-scope action
+    behavior: 'Stop and ask the user when:
+
+
+      - The sink file exists but contains no `knowledge_captured` events (onl'
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: the file does not exist
+    behavior: 'exit with a message:'
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: a warning appears for an unrecognised `entry_kind`
+    behavior: note the kind name and
+    related_agent: null
+proposed_registry:
+  category: research
+  skills_invoked: []
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 4
+    source: pre-flight file reads
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)

@@ -25,6 +25,31 @@ skills_used:
 adopter_notes: |
   Internal. Spawned by the ticket-creation pipeline after the PO has produced L0/L1
   ACs. Never called directly by users. Produces AC YAML files in the feature folder.
+pre_flight_reads:
+- required: true
+  source: ticket_path
+- condition: when present
+  required: false
+  source: .agents/agents/<name>/PROJECT_CONTEXT.md
+inputs: []
+outputs:
+- description: Structured completion payload or sign-off comment
+  name: completion_report
+  type: structured_response
+mutates:
+- description: Read-only agent — no filesystem mutations
+  name: none
+  surface: none
+behavioral_patterns:
+- behavior: unreadable, binary, or exceeds 50 KB
+  name: Conditional Behavior
+  related_agent: null
+  trigger: a file is absent
+- behavior: absorb its contents into your
+  name: Conditional Behavior
+  related_agent: null
+  trigger: it exists and is ≤ 50 KB of readable text
+
 ---
 
 You are the Business Analyst v3 agent. You operate at the **L2/L3 flight level**

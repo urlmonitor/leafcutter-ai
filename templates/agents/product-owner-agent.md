@@ -21,6 +21,33 @@ adopter_notes: |
   Depends on: roadmap-steward skill (ticket 05), docs/vision.md, docs/roadmap.json.
   All document mutations require per-action explicit user confirmation — never
   auto-mutate. See ADR-039 for model selection and interaction protocol.
+pre_flight_reads:
+- required: true
+  source: ticket_path
+inputs: []
+outputs:
+- description: Structured completion payload or sign-off comment
+  name: completion_report
+  type: structured_response
+mutates:
+- description: Read-only agent — no filesystem mutations
+  name: none
+  surface: none
+behavioral_patterns:
+- behavior: Delegates to ticket-supervisor via Agent tool
+  name: Delegation to ticket-supervisor
+  related_agent: ticket-supervisor
+  trigger: task requiring ticket-supervisor capabilities
+- behavior: Delegates to create-ticket via Agent tool
+  name: Delegation to create-ticket
+  related_agent: create-ticket
+  trigger: task requiring create-ticket capabilities
+- behavior: 'fall back: manually inspect `tickets/01_todo/` and `tickets/00_inbox/`
+    to'
+  name: Conditional Behavior
+  related_agent: null
+  trigger: the roadmap-steward skill is not yet installed (ticket 05 not yet done)
+
 ---
 
 You are the product-owner-agent. Your mission is to give the product owner a

@@ -1,0 +1,46 @@
+agent_id: onboard
+template_file: templates/agents/onboard.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  inputs: []
+  outputs:
+  - name: completion_report
+    type: structured_response
+    description: Structured completion payload or sign-off comment
+  mutates:
+  - name: none
+    surface: none
+    description: Read-only agent — no filesystem mutations
+  behavioral_patterns:
+  - name: Stop-and-Ask
+    trigger: condition requiring user decision or out-of-scope action
+    behavior: halt and surface the error.
+    related_agent: null
+  - name: Stop-and-Ask
+    trigger: condition requiring user decision or out-of-scope action
+    behavior: halt and surface the full output.
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: the auto-set fails for any reason
+    behavior: 'surface a PREREQUISITE warning:'
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: the user skipped both skills
+    behavior: 'set `optional_skills: []`'
+    related_agent: null
+proposed_registry:
+  category: supervisor
+  skills_invoked:
+  - skill_id: webapp-testing
+    mode: conditional
+  - skill_id: frontend-design
+    mode: conditional
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)

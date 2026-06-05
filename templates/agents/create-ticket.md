@@ -24,6 +24,40 @@ config_keys: {}
 adopter_notes: |
   User-facing. Called via /create-ticket or by create-epic.
 requires_verification: true
+pre_flight_reads:
+- required: true
+  source: ticket_path
+inputs: []
+outputs:
+- description: Structured completion payload or sign-off comment
+  name: completion_report
+  type: structured_response
+mutates:
+- description: Read-only agent — no filesystem mutations
+  name: none
+  surface: none
+behavioral_patterns:
+- behavior: do not proceed to Step 3.
+  name: Stop-and-Ask
+  related_agent: null
+  trigger: condition requiring user decision or out-of-scope action
+- behavior: Delegates to refinement via Agent tool
+  name: Delegation to refinement
+  related_agent: refinement
+  trigger: task requiring refinement capabilities
+- behavior: Delegates to create-epic via Agent tool
+  name: Delegation to create-epic
+  related_agent: create-epic
+  trigger: task requiring create-epic capabilities
+- behavior: this routing still applies — the epic path is
+  name: Conditional Behavior
+  related_agent: null
+  trigger: '`routing_decision == "epic"`'
+- behavior: brainstorm-lead MUST run
+  name: Conditional Behavior
+  related_agent: null
+  trigger: '`complexity == "novel"`'
+
 ---
 
 You are the single user-facing entry point for ticket creation. You orchestrate

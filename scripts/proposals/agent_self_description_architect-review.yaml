@@ -1,0 +1,57 @@
+agent_id: architect-review
+template_file: templates/agents/architect-review.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  inputs:
+  - name: ticket_path
+    type: file_path
+    required: true
+    description: Absolute path to the ticket markdown file
+  outputs:
+  - name: sign_off_comment
+    type: sign_off_comment
+    description: 'Sign-off comment with status: ok | blocker | handoff'
+  mutates:
+  - name: ticket_frontmatter_agents_status
+    surface: ticket frontmatter
+    description: Sets agents.architect-review to signed_off or failed
+  - name: sign_offs_checklist
+    surface: ticket body sign-offs section
+    description: Checks the architect-review checkbox with timestamp
+  - name: implementation_artifacts
+    surface: repository files
+    description: Files created or modified during phase execution
+  behavioral_patterns:
+  - name: Delegation to adr-author
+    trigger: task requiring adr-author capabilities
+    behavior: Delegates to adr-author via Agent tool
+    related_agent: adr-author
+  - name: Delegation to architect-review-deep
+    trigger: task requiring architect-review-deep capabilities
+    behavior: Delegates to architect-review-deep via Agent tool
+    related_agent: architect-review-deep
+  - name: Conditional Behavior
+    trigger: the change introduces a new cross-cutting policy decision (new abstraction
+    behavior: new constraint, new cross-component contract) that is not already covered
+      by an
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: '`requires_adr: true`'
+    behavior: 'also set `adr-author: needed` in the `agents` map'
+    related_agent: null
+proposed_registry:
+  category: planning
+  skills_invoked:
+  - skill_id: signoff
+    mode: conditional
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 3
+    source: ticket_path from ticket-supervisor
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)

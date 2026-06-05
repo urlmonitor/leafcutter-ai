@@ -1,0 +1,88 @@
+agent_id: frontend-coder
+template_file: templates/agents/frontend-coder.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  - source: project conventions
+    required: false
+  - source: docs/architecture/adrs/ADR-*.md
+    required: false
+    condition: when present
+  - source: build.py
+    required: false
+    condition: when present
+  - source: skills_config.json
+    required: false
+    condition: when present
+  - source: .agents/agents/<name>/PROJECT_CONTEXT.md
+    required: false
+    condition: when present
+  inputs:
+  - name: ticket_path
+    type: file_path
+    required: true
+    description: Absolute path to the ticket markdown file
+  outputs:
+  - name: sign_off_comment
+    type: sign_off_comment
+    description: 'Sign-off comment with status: ok | blocker | handoff'
+  mutates:
+  - name: ticket_frontmatter_agents_status
+    surface: ticket frontmatter
+    description: Sets agents.frontend-coder to signed_off or failed
+  - name: sign_offs_checklist
+    surface: ticket body sign-offs section
+    description: Checks the frontend-coder checkbox with timestamp
+  - name: implementation_artifacts
+    surface: repository files
+    description: Files created or modified during phase execution
+  behavioral_patterns:
+  - name: Stop-and-Ask
+    trigger: condition requiring user decision or out-of-scope action
+    behavior: Halt immediately.
+    related_agent: null
+  - name: Delegation to research-agent
+    trigger: task requiring research-agent capabilities
+    behavior: Delegates to research-agent via Agent tool
+    related_agent: research-agent
+  - name: Delegation to python-coder
+    trigger: task requiring python-coder capabilities
+    behavior: Delegates to python-coder via Agent tool
+    related_agent: python-coder
+  - name: Delegation to sql-coder
+    trigger: task requiring sql-coder capabilities
+    behavior: Delegates to sql-coder via Agent tool
+    related_agent: sql-coder
+  - name: Conditional Behavior
+    trigger: installed:** After making UI changes
+    behavior: invoke the webapp-testing skill by
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: a `Delivers to:` item is ambiguous
+    behavior: add a one-line comment in the code and
+    related_agent: null
+proposed_registry:
+  category: implementation
+  skills_invoked:
+  - skill_id: frontend-design
+    mode: conditional
+  - skill_id: webapp-testing
+    mode: conditional
+  - skill_id: signoff
+    mode: conditional
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 3
+    source: ticket_path from ticket-supervisor
+  - channel: 4
+    source: pre-flight file reads
+  - channel: 5
+    source: skills_config.json config_keys
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)
+  - channel: 8
+    source: PROJECT_CONTEXT.md

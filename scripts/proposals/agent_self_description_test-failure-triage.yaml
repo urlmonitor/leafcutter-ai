@@ -1,0 +1,40 @@
+agent_id: test-failure-triage
+template_file: templates/agents/test-failure-triage.md
+proposed_frontmatter:
+  pre_flight_reads:
+  - source: ticket_path
+    required: true
+  inputs: []
+  outputs:
+  - name: triage_report
+    type: structured_response
+    description: 'Output field: triage_report'
+  - name: test_id
+    type: structured_response
+    description: 'Output field: test_id'
+  - name: test_file
+    type: structured_response
+    description: 'Output field: test_file'
+  mutates:
+  - name: none
+    surface: none
+    description: Read-only agent — no filesystem mutations
+  behavioral_patterns:
+  - name: Conditional Behavior
+    trigger: 'absent or `# covers: UNKNOWN`'
+    behavior: set `covers_tag` to `null`
+    related_agent: null
+  - name: Conditional Behavior
+    trigger: the file does not exist
+    behavior: log a warning and
+    related_agent: null
+proposed_registry:
+  category: testing
+  skills_invoked: []
+  knowledge_channels:
+  - channel: 1
+    source: template description field
+  - channel: 6
+    source: project files read during execution
+  - channel: 7
+    source: bash command output (git, build, tests)

@@ -1265,6 +1265,8 @@ def validate_agent_self_description(
         for template_file in sorted(agents_template_dir.glob("*.md")):
             if template_file.name.startswith("_"):
                 continue  # Skip helper files.
+            if template_file.name.upper() == "README.MD":
+                continue  # Skip the directory README — not an agent template.
 
             try:
                 text = template_file.read_text(encoding="utf-8")
