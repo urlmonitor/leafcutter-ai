@@ -1,0 +1,10 @@
+{
+  "adr_id": "ADR-011",
+  "affected_files": [
+    "docs/architecture/adrs/ADR-NNN-learning-emission-sink.md",
+    "scripts/knowledge/harvest_learnings.py",
+    "tests/knowledge/test_harvest_learnings.py",
+    "templates/agents/knowledge-harvester.md"
+  ],
+  "one_line_summary": "Knowledge_captured events MUST be written to debugging/logs/knowledge_emissions.jsonl, not to agent_telemetry.jsonl, to keep the harvester input clean and avoid coupling to the shared operational telemetry sink."
+}
