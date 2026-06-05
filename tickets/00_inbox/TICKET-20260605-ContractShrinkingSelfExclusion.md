@@ -15,13 +15,13 @@ files_touched:
   - templates/commit-guardian/check_contract_shrinking.py
 agents:
   architect-review: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
-  commit: needed
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -76,11 +76,47 @@ AC files: `docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100
 
 ## Sign-offs
 
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
-- [ ] pr-reviewer
-- [ ] commit
+- [x] test-writer — 2026-06-05 00:00
+- [x] python-coder — 2026-06-05 00:01
+- [x] test-runner — 2026-06-05 00:02
+- [x] pr-reviewer — 2026-06-05 00:03
+- [x] commit — 2026-06-05 00:04
 - [ ] pull-request
 
 ## Comments
+
+### 2026-06-05 00:00 — ticket-supervisor (status: ok)
+test_requirements empty — test-writer phase skipped (docs-only or config-only ticket)
+
+### 2026-06-05 00:01 — python-coder (status: ok)
+feedback-id: fb_2026-06-05_8e45fc33
+completion_manifest:
+  code_implemented: true
+  tests_passing: true
+  doc_enforcer_clean: true
+  complexity_check_clean: true
+Verified existing implementation: `_TEST_PATH_RE` in both `templates/scripts/commit_guardian/check_contract_shrinking.py` and `templates/commit-guardian/check_contract_shrinking.py` already includes `commit[_-]guardian/` exclusion (covers both underscore and hyphen variants). All 10 unit tests pass (3 in `test_check_contract_shrinking.py` + 7 in `test_contract_shrinking.py`). AC BP-100a-3 and BP-100a-3-i are fully satisfied by the existing implementation and test coverage.
+
+### 2026-06-05 00:02 — test-runner (status: ok)
+feedback-id: fb_2026-06-05_1ce37a4e
+completion_manifest:
+  tests_passing: true
+  coverage_adequate: true
+10/10 tests pass: 3 self-exclusion tests (`test_check_contract_shrinking.py`) verify the `commit_guardian/` path exclusion does not trigger false-positive detection, and 7 behavioral tests (`test_contract_shrinking.py`) verify the hook correctly blocks and allows commits. Command: `python3 -m pytest unit_tests/commit_guardian/test_check_contract_shrinking.py unit_tests/commit_guardian/test_contract_shrinking.py -v`.
+
+### 2026-06-05 00:03 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-05_2c3d59ec
+completion_manifest:
+  implementation_correct: true
+  tests_adequate: true
+  no_regressions: true
+  acs_satisfied: true
+Code review complete. Both `templates/scripts/commit_guardian/check_contract_shrinking.py` and `templates/commit-guardian/check_contract_shrinking.py` correctly use `commit[_-]guardian/` in `_TEST_PATH_RE`, satisfying AC BP-100a-3 for both canonical and legacy paths. `test_check_contract_shrinking.py` provides the required unit test for AC BP-100a-3-i. All 10 tests green, no regressions. Approve.
+
+### 2026-06-05 00:04 — commit (status: ok)
+feedback-id: fb_2026-06-05_5b29154d
+completion_manifest:
+  staged_correctly: true
+  commit_clean: true
+Staged ticket file with all phase sign-offs. Committing ticket sign-off record for TICKET-20260605-ContractShrinkingSelfExclusion.
+
