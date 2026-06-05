@@ -1,6 +1,6 @@
 ---
 title: "target_epic stamping — tag included ACs with the generated epic name"
-status: in_progress
+status: done
 components:
   - ac-driven-dev
 created: 2026-06-05
@@ -22,7 +22,7 @@ agents:
   test-runner: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ac_coverage: 0/3
 source_ac: ACD-1200d
 ---
@@ -133,7 +133,7 @@ tests:
 - [x] test-runner — 2026-06-05 10:40
 - [x] pr-reviewer — 2026-06-05 10:42
 - [x] commit — 2026-06-05 10:45
-- [ ] pull-request
+- [x] pull-request — 2026-06-05 10:48
 
 ## Comments
 
@@ -198,3 +198,11 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Committing 3 in-scope files: scripts/goal_to_epic.py (stamp_target_epic + helpers, +174 lines), unit_tests/ac_store/test_target_epic_stamping.py (17 unit tests), and tickets/00_inbox/epics/EPIC-GoalToEpic/04_target-epic-stamping.md (all agents signed off).
+
+### 2026-06-05 10:48 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_6de329ed
+completion_manifest:
+  branch_pushed: true
+  pr_exists: true
+  commit_sha_correct: true
+Pushed to EPIC-GoalToEpic branch (2acd23d..2f1369d). PR #69 already open — no new PR needed. Commit 2f1369d is now on the remote.
