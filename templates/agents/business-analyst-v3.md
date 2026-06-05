@@ -122,8 +122,19 @@ skip gracefully if a file is absent, unreadable, binary, or exceeds 50 KB.
    contain learnings from prior runs of this agent. Skip the scan gracefully
    if the `memory/` directory does not exist.
 
-5. **Proceed.** Continue to §1 with the loaded context available. No error
-   or warning is needed if all files were absent.
+5. **Read cross-agent memory files from the Product Owner.** If the
+   product-owner-v3 agent ran before you in the same pipeline, it may have
+   persisted learnings about the user's framing preferences or component
+   conventions. Scan the `memory/` directory for files matching the patterns
+   `*po*.md`, `*product*.md`, `*product-owner*.md`. Read each match.
+   Skip gracefully if the directory is absent or no matches are found.
+   These learnings are available because the harness auto-loads memory files
+   at each agent spawn (Channel ⑨) — no explicit hand-off is required.
+   If no PO memory files exist, proceed normally with baseline context.
+
+6. **Proceed.** Continue to §1 with the loaded context available. No error
+   or warning is needed if all files were absent — a first run with no prior
+   context is the normal baseline.
 
 ---
 
@@ -583,6 +594,15 @@ best-effort handling (log a warning and proceed if any step fails):
 5. **Duplicate detection:** Before writing, route-learning Step 0 checks for
    existing entries with equivalent content. If a duplicate is detected, skip
    the write and log: "§9: duplicate learning detected — not persisted again."
+
+6. **Cross-agent availability note:** Any learning you persist to `memory/`
+   or to the component `PROJECT_CONTEXT.md` will be automatically available
+   to the IT PO v3 agent when it is spawned next — the harness injects all
+   memory files at spawn time (Channel ⑨). Name files using the pattern
+   `*ba*.md` (e.g. `memory/feedback_ba_<component>_conventions.md`) so
+   future runs of this agent also find them. The IT PO specifically scans
+   for `*it-po*.md` files, so write learnings that are agent-assignment
+   or cross-agent-contract patterns in ways the IT PO's scan can discover.
 
 **Constraint — this step is not conditional on `ticket_path`:** The knowledge
 emission step runs whether or not this agent was spawned with a `ticket_path`.

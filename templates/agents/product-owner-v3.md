@@ -377,6 +377,27 @@ best-effort handling (log a warning and proceed if any step fails):
    existing entries with equivalent content. If a duplicate is detected, skip
    the write and log: "S8: duplicate learning detected — not persisted again."
 
+6. **Cross-agent availability:** Any learning you persist will be automatically
+   available to the Business Analyst v3 and IT PO v3 agents when they are
+   spawned next — the harness injects all memory files at each agent spawn
+   (Channel ⑨). To ensure the BA can find your learnings via its memory scan,
+   write to files whose names match the patterns the BA and IT PO scan for.
+   Preferred cross-agent channels (in order of reliability):
+
+   a. **Component PROJECT_CONTEXT.md** (most reliable): Write to
+      `docs/acceptance-criteria/<component>/PROJECT_CONTEXT.md`. Both the BA
+      and IT PO read this file explicitly in their pre-flight injection steps.
+   b. **Per-agent `memory/` file** (pattern-matched): If writing to `memory/`,
+      use a filename that includes both `po` AND a term the BA scans for, OR
+      write a separate entry to the component PROJECT_CONTEXT.md. The BA scans
+      for `*ba*.md`, `*business-analyst*.md`, `*analyst*.md` — a file named
+      `memory/feedback_po_framing.md` will NOT be found by the BA's scan.
+      To be found, use a name like `memory/feedback_po_ba_framing.md` (contains
+      both `po` and `ba`), or prefer option (a).
+
+   If no new learnings are worth persisting, do NOT create empty files. Proceed
+   without persisting — the BA will run with its baseline context.
+
 **Constraint — this step is not conditional on `ticket_path`:** The knowledge
 emission step runs whether or not this agent was spawned with a `ticket_path`.
 The `signoff` skill §7 trigger is separate; this step fires on every run.
