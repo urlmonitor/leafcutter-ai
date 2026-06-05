@@ -20,7 +20,7 @@ agents:
   test-runner: not_needed
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -189,7 +189,7 @@ AC files: `docs/acceptance-criteria/knowledge-management/KM-KQS-032.yaml` throug
 
 - [x] llm-expert — 2026-06-06 10:00
 - [x] pr-reviewer — 2026-06-06 10:15
-- [ ] commit
+- [x] commit — 2026-06-06 10:30
 - [ ] pull-request
 
 ## Comments
@@ -209,6 +209,14 @@ completion_manifest:
   prompt_quality_checklist_passed: true
   convention_violations_resolved: true
 Reviewed diff (+135 lines, 1 file). All 8 ACs verified: invocation syntax (AC-1), zero-result/empty-graph log messages (AC-2), graceful degradation format (AC-3), citation+dedup surface routing (AC-4), mandatory-invocation rule without WHEN/WHICH (AC-5), surface-type distinction (AC-6), failure mode distinction (AC-7), self-contained imperative voice structure (AC-8). No high-confidence findings. Escalation: not escalated (medium count 0).
+
+### 2026-06-06 10:30 — commit (status: ok)
+feedback-id: fb_2026-06-05_cdf157ea
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Committed SHA cda2533 on branch feat/agent-protocol-section. 2 files changed, 161 insertions. No hook failures. Subject: feat(knowledge-query): add Agent Protocol section to SKILL.md.
 
 ## Implementation Tasks
 
