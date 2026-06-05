@@ -247,19 +247,33 @@ window.addEventListener('resize', () => {
 # ---------------------------------------------------------------------------
 
 
-def _assemble_graph(kq) -> dict:
+def _assemble_graph(
+    kq,
+    project_root: Path | None = None,
+    surface_filter: list[str] | None = None,
+) -> dict:
     """Assemble nodes and edges from knowledge_query into a serializable dict.
 
     Args:
         kq: Loaded knowledge_query module.
+        project_root: Override for the project root path. When None, auto-detects
+            from the script's location (parent of the scripts/ directory).
+        surface_filter: When not None, restricts the graph to only the named
+            surfaces. Nodes from all other surfaces are excluded, and edges whose
+            source or target is not in the filtered set are also excluded.
 
     Returns:
         Dict with 'nodes' and 'edges' lists suitable for JSON serialisation.
     """
-    project_root = Path(__file__).resolve().parent.parent
+    if project_root is None:
+        project_root = Path(__file__).resolve().parent.parent
     paths_json = project_root / "config" / "paths.json"
 
     surfaces = kq.load_surfaces(project_root, paths_json)
+
+    # Apply surface filter if provided
+    if surface_filter is not None:
+        surfaces = {k: v for k, v in surfaces.items() if k in surface_filter}
 
     nodes: list[dict] = []
     edges: list[dict] = []
@@ -268,6 +282,12 @@ def _assemble_graph(kq) -> dict:
 
     for surface_name, surface_path in surfaces.items():
         for node_record in kq.extract_nodes(surface_name, surface_path):
+            # When surface_filter is active, skip nodes whose surface attribute
+            # does not match any of the requested surfaces. This handles edge
+            # cases where extract_nodes returns cross-surface records.
+            if surface_filter is not None and node_record.surface not in surface_filter:
+                continue
+
             color = SURFACE_COLORS.get(node_record.surface, "#94a3b8")
             node_dict = {
                 "id": node_record.id,
@@ -324,6 +344,13 @@ def _assemble_graph(kq) -> dict:
                             "type": edge.edge_type,
                         })
 
+    # When a surface filter is active, remove edges that cross into excluded nodes.
+    if surface_filter is not None:
+        edges = [
+            e for e in edges
+            if e["source"] in seen_node_ids and e["target"] in seen_node_ids
+        ]
+
     return {"nodes": nodes, "edges": edges}
 
 
@@ -354,6 +381,27 @@ def main(argv: list[str] | None = None) -> None:
         action="store_true",
         help="Write the HTML file but do not open the browser.",
     )
+    parser.add_argument(
+        "--surface",
+        nargs="+",
+        default=None,
+        metavar="SURFACE",
+        help=(
+            "Restrict the graph to one or more named surfaces "
+            "(e.g. --surface agents skills). "
+            "When omitted, all surfaces are included."
+        ),
+    )
+    parser.add_argument(
+        "--project-root",
+        type=Path,
+        default=None,
+        metavar="PATH",
+        help=(
+            "Override the project root directory passed to load_surfaces(). "
+            "When omitted, auto-detects from the script's location."
+        ),
+    )
     args = parser.parse_args(argv)
 
     # Load knowledge_query sibling module
@@ -367,7 +415,11 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(1)
 
     # Assemble graph data
-    graph = _assemble_graph(kq)
+    graph = _assemble_graph(
+        kq,
+        project_root=args.project_root,
+        surface_filter=args.surface,
+    )
 
     if not graph["nodes"]:
         print(
@@ -417,5 +469,11 @@ DECISION HISTORY
   reference (AC-3). Clean error on missing knowledge_query.py (AC-5). Argparse
   flags --output and --no-open (AC-1). Zero network I/O in Python (AC-3).
   (#EPIC-KnowledgeGraphQueryLayer/03a)
+- 2026-06-05 14:40 [EPIC-KnowledgeGraphQueryLayer/03b]: Added --surface and --project-root
+  argparse flags. --surface (nargs='+') filters surfaces dict before node extraction
+  and post-filters edges to exclude cross-surface links (AC-1). --project-root (type=Path)
+  overrides auto-detect and is passed as project_root to load_surfaces() (AC-2).
+  _assemble_graph() now accepts optional project_root and surface_filter parameters.
+  (#EPIC-KnowledgeGraphQueryLayer/03b)
 ====================================================================
 """

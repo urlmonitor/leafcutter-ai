@@ -9,7 +9,6 @@ from __future__ import annotations
 import importlib.util
 import json
 import re
-import sys
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -432,6 +431,117 @@ class TestSurfaceColorsConstant(unittest.TestCase):
         """AC-2: Ticket surface color is yellow (#fbbf24)."""
         mod = _load_module()
         self.assertEqual(mod.SURFACE_COLORS.get("ticket"), "#fbbf24")
+
+
+# ---------------------------------------------------------------------------
+# Ticket 03b Tests — --surface and --project-root CLI flags
+# ---------------------------------------------------------------------------
+
+
+class TestSurfaceFilterExcludesOthers(unittest.TestCase):
+    """AC-1: --surface flag filters graph to only named surfaces.
+
+    test_surface_filter_excludes_others: call with --surface agents, mock
+    data with agent and ticket nodes, assert only agent nodes in embedded JSON.
+    """
+
+    def test_surface_filter_excludes_others(self):
+        # covers: UNKNOWN
+        """AC-1: Running with --surface agents produces a graph with only agent nodes."""
+        import tempfile
+        mod = _load_module()
+
+        # Mock data: one agent node and one ticket node
+        agent_node = _node("agent-1", "agents", "Agent One")
+        ticket_node = _node("ticket-1", "tickets", "Ticket One")
+
+        mock_kq = _make_mock_kq(nodes=[agent_node, ticket_node])
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False) as tmp:
+            output_path = tmp.name
+
+        with patch.object(mod, "_load_kq_module", return_value=mock_kq):
+            try:
+                mod.main(["--output", output_path, "--no-open", "--surface", "agents"])
+            except SystemExit as exc:
+                self.assertEqual(exc.code, 0, f"Script exited with code {exc.code}")
+
+        content = Path(output_path).read_text(encoding="utf-8")
+        match = re.search(r"const DATA\s*=\s*(\{.*?\});", content, re.DOTALL)
+        self.assertIsNotNone(match, "Could not find 'const DATA = ...' block in HTML")
+
+        data = json.loads(match.group(1))
+        node_ids = [n["id"] for n in data["nodes"]]
+
+        # agent-1 should be present; ticket-1 should be absent
+        self.assertIn("agent-1", node_ids, "Agent node must be present when --surface agents given")
+        self.assertNotIn(
+            "ticket-1",
+            node_ids,
+            "Ticket node must be excluded when --surface agents specified",
+        )
+
+        Path(output_path).unlink(missing_ok=True)
+
+
+class TestProjectRootFlagPassedToKq(unittest.TestCase):
+    """AC-2: --project-root flag passes the path to load_surfaces().
+
+    test_project_root_flag_passed_to_kq: mock load_surfaces, assert it is
+    called with the value passed to --project-root.
+    """
+
+    def test_project_root_flag_passed_to_kq(self):
+        # covers: UNKNOWN
+        """AC-2: --project-root value is passed to kq.load_surfaces() as project_root."""
+        import tempfile
+        mod = _load_module()
+
+        mock_kq = _make_mock_kq()
+        # Patch load_surfaces so we can inspect the call args
+        mock_kq.load_surfaces.return_value = {}
+
+        custom_root = "/custom/project/root"
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False) as tmp:
+            output_path = tmp.name
+
+        with patch.object(mod, "_load_kq_module", return_value=mock_kq):
+            try:
+                mod.main([
+                    "--output", output_path,
+                    "--no-open",
+                    "--project-root", custom_root,
+                ])
+            except SystemExit as exc:
+                self.assertEqual(exc.code, 0, f"Script exited with code {exc.code}")
+
+        # Verify load_surfaces was called with the custom project_root
+        self.assertTrue(
+            mock_kq.load_surfaces.called,
+            "load_surfaces() must be called when --project-root is passed",
+        )
+
+        call_kwargs = mock_kq.load_surfaces.call_args
+
+        # Accept both positional and keyword argument forms
+        call_args_list = call_kwargs[0] if call_kwargs[0] else []
+        call_kwargs_dict = call_kwargs[1] if call_kwargs[1] else {}
+
+        custom_path = Path(custom_root)
+        found_root = False
+        if call_args_list and Path(str(call_args_list[0])) == custom_path:
+            found_root = True
+        if "project_root" in call_kwargs_dict and Path(str(call_kwargs_dict["project_root"])) == custom_path:
+            found_root = True
+
+        self.assertTrue(
+            found_root,
+            f"load_surfaces() must be called with project_root={custom_root!r}. "
+            f"Actual call args: {call_kwargs}",
+        )
+
+        Path(output_path).unlink(missing_ok=True)
 
 
 if __name__ == "__main__":
