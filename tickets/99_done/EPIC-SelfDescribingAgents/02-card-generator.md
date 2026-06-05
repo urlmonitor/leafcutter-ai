@@ -1,6 +1,6 @@
 ---
 title: "INF-600 Ticket 2: Write scripts/generate_agent_cards.py and wire into build.py"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-05
@@ -24,7 +24,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 source_acs:
@@ -111,7 +111,7 @@ And does not write any .card.md files
 - [x] test-runner — 2026-06-05 10:45
 - [x] pr-reviewer — 2026-06-05 11:00
 - [x] commit — 2026-06-05 11:15
-- [ ] pull-request
+- [x] pull-request — 2026-06-05 11:20
 
 ## Comments
 
@@ -255,6 +255,14 @@ completion_manifest:
   commit_succeeded: true
 
 Staged 64 files in scope: 59 generated card files (docs/agents/cards/*.card.md), scripts/generate_agent_cards.py, scripts/build.py, scripts/build_phases.py, unit_tests/test_generate_agent_cards.py, tickets/.../02-card-generator.md. Out-of-scope changes (config/agent_registry.json, registry_validator.py, ticket 03, ticket 01) left unstaged per commit-scope discipline.
+
+### 2026-06-05 11:20 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_6031418f
+completion_manifest:
+  branch_pushed: true
+  pr_exists: true
+
+Branch `feature/EPIC-SelfDescribingAgents` pushed to origin (3520a6a..cfd36e4). Existing PR #65 (feat(EPIC-SelfDescribingAgents/01): add six self-description metadata fields to python-coder) is open and now includes ticket 02's commit cfd36e4. No new PR needed — epic uses one PR per branch.
 
 ## Implementation Tasks
 

@@ -1,6 +1,6 @@
 ---
 title: "INF-600 Ticket 1: Add self-description metadata fields to python-coder prototype"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-05
