@@ -68,15 +68,21 @@ class EdgeRecord(NamedTuple):
 # ---------------------------------------------------------------------------
 
 _SURFACE_EDGE_FIELDS: dict[str, list[str]] = {
-    "agents": ["spawn_allowlist", "spawned_by", "skills_used"],
-    "skills": ["dependencies"],
-    "tickets": ["depends_on", "files_touched"],
-    "docs": ["related_docs", "related_code"],
-    "adrs": ["related_docs", "related_code"],
-    "components": ["related_docs", "related_code"],
-    "roadmap": [],
+    "agents": ["spawn_allowlist", "spawned_by", "skills_used", "components"],
+    "skills": ["dependencies", "components"],
+    "tickets": ["depends_on", "files_touched", "components"],
+    "docs": ["related_docs", "components"],
+    "adrs": ["related_docs", "components"],
+    "components": ["related_docs", "components"],
+    "roadmap": ["components"],
     "glossary": [],
 }
+
+# Fields that use "component_membership" edge type (targeting component hub nodes)
+_COMPONENT_FIELDS: frozenset[str] = frozenset({"components"})
+
+# Fields whose values may be file paths that need stem resolution
+_PATH_FIELDS: frozenset[str] = frozenset({"depends_on"})
 
 # ---------------------------------------------------------------------------
 # Frontmatter parser (stdlib only, mirrors roadmap_query.py pattern)
@@ -443,6 +449,23 @@ def _extract_nodes_from_dir(surface: str, path: Path) -> Generator[NodeRecord, N
 # ---------------------------------------------------------------------------
 
 
+def _resolve_depends_on_target(value: str) -> str:
+    """Resolve a depends_on value to a node ID (filename stem).
+
+    If the value contains '/' or ends with '.md', it is treated as a file path
+    and reduced to its filename stem. Otherwise it is returned unchanged.
+
+    Args:
+        value: Raw depends_on value from frontmatter.
+
+    Returns:
+        Node ID string (filename stem or unchanged bare ID).
+    """
+    if "/" in value or value.endswith(".md"):
+        return Path(value).stem
+    return value
+
+
 def extract_edges(
     surface: str, record: NodeRecord, raw_data: dict[str, Any]
 ) -> Generator[EdgeRecord, None, None]:
@@ -451,6 +474,12 @@ def extract_edges(
     Reads the edge fields configured for the surface and produces one edge per
     value in each field. String values become single edges; list values produce
     one edge per element.
+
+    For fields in ``_COMPONENT_FIELDS`` (i.e. ``components``), the edge type is
+    set to ``component_membership`` instead of the field name.
+
+    For fields in ``_PATH_FIELDS`` (i.e. ``depends_on``), path values are
+    resolved to filename stems before being used as target IDs.
 
     Args:
         surface: Surface name (e.g. 'agents', 'tickets').
@@ -466,20 +495,24 @@ def extract_edges(
         value = raw_data.get(field)
         if value is None:
             continue
+        # Determine edge type: components field uses "component_membership"
+        edge_type = "component_membership" if field in _COMPONENT_FIELDS else field
         if isinstance(value, str):
             if value:
+                target = _resolve_depends_on_target(value) if field in _PATH_FIELDS else value
                 yield EdgeRecord(
                     source_id=record.id,
-                    target_id=value,
-                    edge_type=field,
+                    target_id=target,
+                    edge_type=edge_type,
                 )
         elif isinstance(value, list):
             for item in value:
                 if isinstance(item, str) and item:
+                    target = _resolve_depends_on_target(item) if field in _PATH_FIELDS else item
                     yield EdgeRecord(
                         source_id=record.id,
-                        target_id=item,
-                        edge_type=field,
+                        target_id=target,
+                        edge_type=edge_type,
                     )
 
 
@@ -494,6 +527,14 @@ def _collect_all(
     surface_filter: str | None = None,
 ) -> tuple[list[NodeRecord], list[EdgeRecord]]:
     """Traverse all surfaces and collect nodes and edges.
+
+    After collecting all primary nodes and edges, this function:
+    1. Creates synthetic hub NodeRecords for each unique component value seen in
+       component_membership edges that doesn't already exist as a node. These
+       hubs have surface="components".
+    2. Filters edges to keep only those where both source_id and target_id exist
+       in the full node set (including synthetic hubs). This removes phantom
+       edge targets without using a hardcoded blocklist.
 
     Args:
         project_root: Absolute path to the project root.
@@ -549,7 +590,37 @@ def _collect_all(
                     for edge in extract_edges(surface_name, node, fm):
                         all_edges.append(edge)
 
-    return all_nodes, all_edges
+    # Post-processing step 1: create synthetic hub nodes for component values
+    # that appear as targets in component_membership edges but don't exist yet.
+    existing_ids = {n.id for n in all_nodes}
+    seen_component_targets: set[str] = set()
+    for edge in all_edges:
+        if edge.edge_type == "component_membership":
+            seen_component_targets.add(edge.target_id)
+
+    for component_name in sorted(seen_component_targets):
+        if component_name not in existing_ids:
+            # Title: replace hyphens and underscores with spaces, title-case each word
+            hub_title = component_name.replace("-", " ").replace("_", " ").title()
+            hub_node = NodeRecord(
+                id=component_name,
+                surface="components",
+                title=hub_title,
+                description=f"Component hub: {component_name}",
+                path=Path("docs/architecture/components/"),
+            )
+            all_nodes.append(hub_node)
+            existing_ids.add(component_name)
+
+    # Post-processing step 2: filter phantom edges — keep only edges where both
+    # source and target exist in the node set (no hardcoded blocklist).
+    node_ids = existing_ids
+    filtered_edges = [
+        e for e in all_edges
+        if e.source_id in node_ids and e.target_id in node_ids
+    ]
+
+    return all_nodes, filtered_edges
 
 
 # ---------------------------------------------------------------------------

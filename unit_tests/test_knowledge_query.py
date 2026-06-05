@@ -525,3 +525,412 @@ class TestEmptySurfaceGraceful:
         assert "Traceback" not in combined, (
             "Script must not emit a traceback for empty surface (KM-KQS-020)"
         )
+
+
+# ---------------------------------------------------------------------------
+# Ticket 05a: edge connectivity tests — KM-KQS-021 through KM-KQS-030
+# These tests are RED until python-coder implements the edge connectivity fixes.
+# ---------------------------------------------------------------------------
+
+
+class TestComponentHubEdges:
+    """KM-KQS-021 / KM-KQS-027 / KM-KQS-029: component_membership edges from components field."""
+
+    def test_component_hub_edges_basic(self):
+        # covers: KM-KQS-021
+        """KM-KQS-021: extract_edges emits component_membership edges for a node with components field."""
+        fake_record = NodeRecord(
+            id="python-coder",
+            surface="agents",
+            title="Python Coder",
+            description="Writes Python.",
+            path=Path("config/agent_registry.json"),
+        )
+        raw_data = {
+            "id": "python-coder",
+            "components": ["knowledge-management", "build_pipeline"],
+        }
+        edges = list(extract_edges("agents", fake_record, raw_data))
+        component_edges = [e for e in edges if e.edge_type == "component_membership"]
+        targets = {e.target_id for e in component_edges}
+        assert "knowledge-management" in targets, (
+            "components entry 'knowledge-management' must produce a component_membership edge (KM-KQS-021)"
+        )
+        assert "build_pipeline" in targets, (
+            "components entry 'build_pipeline' must produce a component_membership edge (KM-KQS-021)"
+        )
+        assert len(component_edges) == 2, (
+            "Expected exactly 2 component_membership edges for components: [knowledge-management, build_pipeline]"
+        )
+
+    def test_component_hub_edges_multiple_surfaces(self):
+        # covers: KM-KQS-021
+        """KM-KQS-021: component_membership edges are emitted for ticket surface too."""
+        ticket_record = NodeRecord(
+            id="05a_edge_connectivity_fix",
+            surface="tickets",
+            title="Fix edge connectivity",
+            description="Fixes edge connectivity.",
+            path=Path("tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/05a_edge_connectivity_fix.md"),
+        )
+        raw_data = {
+            "title": "Fix edge connectivity",
+            "components": ["knowledge-management"],
+        }
+        edges = list(extract_edges("tickets", ticket_record, raw_data))
+        component_edges = [e for e in edges if e.edge_type == "component_membership"]
+        assert len(component_edges) == 1, (
+            "Ticket with components: [knowledge-management] must produce 1 component_membership edge"
+        )
+        assert component_edges[0].target_id == "knowledge-management", (
+            "component_membership edge target must be the component name (KM-KQS-021)"
+        )
+
+    def test_component_hub_edges_empty_components(self):
+        # covers: KM-KQS-029
+        """KM-KQS-029: extract_edges emits zero component_membership edges for empty components list."""
+        fake_record = NodeRecord(
+            id="some-agent",
+            surface="agents",
+            title="Some Agent",
+            description="Does something.",
+            path=Path("config/agent_registry.json"),
+        )
+        raw_data = {
+            "id": "some-agent",
+            "components": [],
+        }
+        edges = list(extract_edges("agents", fake_record, raw_data))
+        component_edges = [e for e in edges if e.edge_type == "component_membership"]
+        assert len(component_edges) == 0, (
+            "components: [] must produce zero component_membership edges (KM-KQS-029)"
+        )
+
+    def test_component_hub_undocumented_component(self):
+        # covers: KM-KQS-027
+        """KM-KQS-027: extract_edges emits edge for component with no matching component doc."""
+        fake_record = NodeRecord(
+            id="some-skill",
+            surface="skills",
+            title="Some Skill",
+            description="Does something.",
+            path=Path("config/skill_registry.json"),
+        )
+        raw_data = {
+            "id": "some-skill",
+            "components": ["undocumented-component"],
+        }
+        edges = list(extract_edges("skills", fake_record, raw_data))
+        component_edges = [e for e in edges if e.edge_type == "component_membership"]
+        assert len(component_edges) == 1, (
+            "components: [undocumented-component] must produce 1 component_membership edge (KM-KQS-027)"
+        )
+        assert component_edges[0].target_id == "undocumented-component", (
+            "Edge target must be the component name even when no doc exists (KM-KQS-027)"
+        )
+
+
+class TestDependsOnPathResolution:
+    """KM-KQS-022 / KM-KQS-026 / KM-KQS-028: depends_on path-to-stem resolution."""
+
+    def test_depends_on_file_path_resolved_to_stem(self):
+        # covers: KM-KQS-022
+        """KM-KQS-022: extract_edges resolves depends_on file path to filename stem."""
+        ticket_record = NodeRecord(
+            id="05a_edge_connectivity_fix",
+            surface="tickets",
+            title="Fix edge connectivity",
+            description="Fixes edge connectivity.",
+            path=Path("tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/05a_edge_connectivity_fix.md"),
+        )
+        raw_data = {
+            "title": "Fix edge connectivity",
+            "depends_on": [
+                "tickets/00_inbox/epics/EPIC-Foo/01a_schema.md",
+                "tickets/00_inbox/epics/EPIC-Foo/02a_bar.md",
+            ],
+        }
+        edges = list(extract_edges("tickets", ticket_record, raw_data))
+        depends_edges = [e for e in edges if e.edge_type == "depends_on"]
+        targets = {e.target_id for e in depends_edges}
+        assert "01a_schema" in targets, (
+            "depends_on path must be resolved to stem '01a_schema' (KM-KQS-022)"
+        )
+        assert "02a_bar" in targets, (
+            "depends_on path must be resolved to stem '02a_bar' (KM-KQS-022)"
+        )
+        # Raw paths must NOT appear as targets
+        for target in targets:
+            assert "/" not in target, (
+                f"Raw file path must not appear as edge target; got '{target}' (KM-KQS-022)"
+            )
+            assert target.endswith(".md") is False, (
+                f"Edge target must not include .md extension; got '{target}' (KM-KQS-022)"
+            )
+
+    def test_depends_on_bare_id_unchanged(self):
+        # covers: KM-KQS-028
+        """KM-KQS-028: depends_on bare node ID is passed through unchanged."""
+        ticket_record = NodeRecord(
+            id="05b_follow_on",
+            surface="tickets",
+            title="Follow-on ticket",
+            description="A follow-on ticket.",
+            path=Path("tickets/00_inbox/05b_follow_on.md"),
+        )
+        raw_data = {
+            "title": "Follow-on ticket",
+            "depends_on": ["01a_schema"],
+        }
+        edges = list(extract_edges("tickets", ticket_record, raw_data))
+        depends_edges = [e for e in edges if e.edge_type == "depends_on"]
+        assert len(depends_edges) == 1, (
+            "depends_on: [01a_schema] must produce exactly 1 depends_on edge (KM-KQS-028)"
+        )
+        assert depends_edges[0].target_id == "01a_schema", (
+            "Bare node ID must pass through unchanged as edge target (KM-KQS-028)"
+        )
+
+    def test_depends_on_nonexistent_path_silently_dropped(self):
+        # covers: KM-KQS-026
+        """KM-KQS-026: depends_on path with no matching node produces no edge (no crash)."""
+        ticket_record = NodeRecord(
+            id="some_ticket",
+            surface="tickets",
+            title="Some ticket",
+            description=".",
+            path=Path("tickets/00_inbox/some_ticket.md"),
+        )
+        raw_data = {
+            "title": "Some ticket",
+            "depends_on": ["nonexistent/path/fake_ticket.md"],
+        }
+        # This should not raise — it may emit an edge that is later filtered,
+        # but the stem "fake_ticket" must be the target (path-resolved), not the raw path.
+        # The phantom filter in _collect_all will drop it from final output.
+        try:
+            edges = list(extract_edges("tickets", ticket_record, raw_data))
+        except Exception as exc:  # noqa: BLE001
+            pytest.fail(
+                f"extract_edges must not raise on nonexistent path; got {exc} (KM-KQS-026)"
+            )
+        # The edge is emitted with the stem as target (filtering happens at collect level)
+        depends_edges = [e for e in edges if e.edge_type == "depends_on"]
+        for edge in depends_edges:
+            assert "/" not in edge.target_id, (
+                f"Raw path must not appear as edge target; got '{edge.target_id}' (KM-KQS-026)"
+            )
+
+
+class TestPhantomEdgeFiltering:
+    """KM-KQS-024 / KM-KQS-030: phantom edge filtering by node-existence check."""
+
+    def test_phantom_edges_filtered_by_node_existence(self, tmp_path):
+        # covers: KM-KQS-024
+        """KM-KQS-024: edges targeting non-existent nodes are filtered from output."""
+        # Build a minimal paths.json + surface that produces phantom edges
+        config_dir = tmp_path / "config"
+        config_dir.mkdir(parents=True)
+        registry = {
+            "agents": [
+                {
+                    "id": "python-coder",
+                    "name": "Python Coder",
+                    "description": "Writes Python.",
+                    "is_ticket_phase": True,
+                    "spawn_allowlist": ["phantom-agent"],  # phantom target
+                    "spawned_by": ["ticket-supervisor"],
+                    "skills_used": [],
+                }
+            ]
+        }
+        (config_dir / "agent_registry.json").write_text(
+            json.dumps(registry), encoding="utf-8"
+        )
+        paths_data = {
+            "surfaces": {
+                "agents": {
+                    "path": "config/agent_registry.json",
+                    "edge_fields": ["spawn_allowlist"],
+                }
+            }
+        }
+        (config_dir / "paths.json").write_text(json.dumps(paths_data), encoding="utf-8")
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(_SCRIPTS_DIR / "knowledge_query.py"),
+                "--format", "json",
+                "--project-root", str(tmp_path),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        assert result.returncode == 0, (
+            f"Script must exit 0; stderr: {result.stderr}"
+        )
+        data = json.loads(result.stdout)
+        edges = data.get("edges", [])
+        node_ids = {n["id"] for n in data.get("nodes", [])}
+        # All edge targets must be in the node set (no phantoms allowed in output)
+        for edge in edges:
+            assert edge["target"] in node_ids, (
+                f"Edge target '{edge['target']}' is not in node set — "
+                f"phantom filtering failed (KM-KQS-024)"
+            )
+
+    def test_phantom_filter_by_node_existence_not_blocklist(self, tmp_path):
+        # covers: KM-KQS-030
+        """KM-KQS-030: phantom filter uses node-existence check, not a hardcoded blocklist."""
+        # If a node named "user" were added, edges to "user" should be retained.
+        config_dir = tmp_path / "config"
+        config_dir.mkdir(parents=True)
+        # Surface: one agent that spawns "user"; also a "user" agent in the registry
+        registry = {
+            "agents": [
+                {
+                    "id": "python-coder",
+                    "name": "Python Coder",
+                    "description": "Writes Python.",
+                    "is_ticket_phase": True,
+                    "spawn_allowlist": ["user"],
+                    "spawned_by": [],
+                    "skills_used": [],
+                },
+                {
+                    "id": "user",
+                    "name": "User",
+                    "description": "Represents the human user.",
+                    "is_ticket_phase": False,
+                    "spawn_allowlist": [],
+                    "spawned_by": [],
+                    "skills_used": [],
+                },
+            ]
+        }
+        (config_dir / "agent_registry.json").write_text(
+            json.dumps(registry), encoding="utf-8"
+        )
+        paths_data = {
+            "surfaces": {
+                "agents": {
+                    "path": "config/agent_registry.json",
+                    "edge_fields": ["spawn_allowlist"],
+                }
+            }
+        }
+        (config_dir / "paths.json").write_text(json.dumps(paths_data), encoding="utf-8")
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(_SCRIPTS_DIR / "knowledge_query.py"),
+                "--format", "json",
+                "--project-root", str(tmp_path),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        assert result.returncode == 0, (
+            f"Script must exit 0; stderr: {result.stderr}"
+        )
+        data = json.loads(result.stdout)
+        edges = data.get("edges", [])
+        node_ids = {n["id"] for n in data.get("nodes", [])}
+        # "user" is now a real node, so the edge to "user" must be retained
+        assert "user" in node_ids, (
+            "Node 'user' must be present in nodes array when declared in registry (KM-KQS-030)"
+        )
+        user_edges = [e for e in edges if e["target"] == "user"]
+        assert len(user_edges) >= 1, (
+            "Edge to 'user' must be preserved when 'user' is a real node (KM-KQS-030); "
+            "filtering must be by node-existence, not a hardcoded blocklist"
+        )
+
+
+class TestEdgeCountIntegration:
+    """KM-KQS-025: combined improvements must produce >= 600 edges from real repo."""
+
+    def test_edge_count_integration(self):
+        # covers: KM-KQS-025
+        """KM-KQS-025: knowledge_query.py --format json produces >= 600 edges from real repo."""
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(_SCRIPTS_DIR / "knowledge_query.py"),
+                "--format", "json",
+                "--project-root", str(_REPO_ROOT),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        assert result.returncode == 0, (
+            f"knowledge_query.py must exit 0; stderr: {result.stderr}"
+        )
+        data = json.loads(result.stdout)
+        edges = data.get("edges", [])
+        assert len(edges) >= 600, (
+            f"Expected >= 600 edges after all improvements; got {len(edges)} (KM-KQS-025)"
+        )
+        # All edge targets must be known node IDs (no phantoms)
+        node_ids = {n["id"] for n in data.get("nodes", [])}
+        for edge in edges:
+            assert edge["target"] in node_ids, (
+                f"Edge target '{edge['target']}' is not in node set — "
+                f"phantom filtering must be applied (KM-KQS-025)"
+            )
+        # Must contain at least one component_membership edge
+        cm_edges = [e for e in edges if e["type"] == "component_membership"]
+        assert len(cm_edges) >= 1, (
+            f"Expected at least one component_membership edge; got 0 (KM-KQS-025)"
+        )
+        # Must not contain phantoms "user" or "__ticket_phase_agents__" unless they are real nodes
+        phantom_ids = {"user", "__ticket_phase_agents__"}
+        for phantom_id in phantom_ids:
+            if phantom_id not in node_ids:
+                phantom_edges = [e for e in edges if e["target"] == phantom_id]
+                assert len(phantom_edges) == 0, (
+                    f"Phantom target '{phantom_id}' must not appear as edge target (KM-KQS-025)"
+                )
+
+
+class TestPathsJsonEdgeFields:
+    """KM-KQS-023: paths.json edge_fields must include 'components' for applicable surfaces."""
+
+    def test_paths_json_edge_fields_components(self):
+        # covers: KM-KQS-023
+        """KM-KQS-023: 'components' in edge_fields for agents, skills, tickets, docs, adrs, components."""
+        assert _REAL_PATHS_JSON.exists(), f"paths.json not found at {_REAL_PATHS_JSON}"
+        data = json.loads(_REAL_PATHS_JSON.read_text(encoding="utf-8"))
+        surfaces = data.get("surfaces", {})
+        surfaces_needing_components = ["agents", "skills", "tickets", "docs", "adrs", "components"]
+        for surface_name in surfaces_needing_components:
+            assert surface_name in surfaces, (
+                f"Surface '{surface_name}' must be present in paths.json (KM-KQS-023)"
+            )
+            edge_fields = surfaces[surface_name].get("edge_fields", [])
+            assert "components" in edge_fields, (
+                f"Surface '{surface_name}' edge_fields must include 'components' (KM-KQS-023); "
+                f"got {edge_fields}"
+            )
+
+    def test_paths_json_edge_fields_related_docs(self):
+        # covers: KM-KQS-023
+        """KM-KQS-023: 'related_docs' in edge_fields for docs, adrs, components surfaces."""
+        assert _REAL_PATHS_JSON.exists(), f"paths.json not found at {_REAL_PATHS_JSON}"
+        data = json.loads(_REAL_PATHS_JSON.read_text(encoding="utf-8"))
+        surfaces = data.get("surfaces", {})
+        surfaces_needing_related_docs = ["docs", "adrs", "components"]
+        for surface_name in surfaces_needing_related_docs:
+            assert surface_name in surfaces, (
+                f"Surface '{surface_name}' must be present in paths.json (KM-KQS-023)"
+            )
+            edge_fields = surfaces[surface_name].get("edge_fields", [])
+            assert "related_docs" in edge_fields, (
+                f"Surface '{surface_name}' edge_fields must include 'related_docs' (KM-KQS-023); "
+                f"got {edge_fields}"
+            )

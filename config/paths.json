@@ -3,33 +3,33 @@
   "surfaces": {
     "agents": {
       "path": "config/agent_registry.json",
-      "edge_fields": ["spawn_allowlist", "spawned_by", "skills_used"]
+      "edge_fields": ["spawn_allowlist", "spawned_by", "skills_used", "components"]
     },
     "skills": {
       "path": "config/skill_registry.json",
-      "edge_fields": ["dependencies"],
+      "edge_fields": ["dependencies", "components"],
       "_optional": true
     },
     "tickets": {
       "path": "tickets/",
-      "edge_fields": ["depends_on", "files_touched"]
+      "edge_fields": ["depends_on", "files_touched", "components"]
     },
     "docs": {
       "path": "docs/",
-      "edge_fields": []
+      "edge_fields": ["related_docs", "components"]
     },
     "adrs": {
       "path": "docs/architecture/adrs/",
-      "edge_fields": []
+      "edge_fields": ["related_docs", "components"]
     },
     "components": {
       "path": "docs/architecture/components/",
-      "edge_fields": [],
+      "edge_fields": ["related_docs", "components"],
       "_optional": true
     },
     "roadmap": {
       "path": "docs/roadmap.json",
-      "edge_fields": []
+      "edge_fields": ["components"]
     },
     "glossary": {
       "path": "docs/glossary.md",
