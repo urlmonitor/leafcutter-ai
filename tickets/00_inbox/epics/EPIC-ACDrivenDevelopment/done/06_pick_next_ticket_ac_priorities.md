@@ -1,6 +1,6 @@
 ---
 title: "pick-next-ticket skill: incorporate AC priorities into ticket selection"
-status: todo
+status: done
 components:
   - ac-store
   - ticket-creation
@@ -27,8 +27,8 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
 source_acs:
   - ACD-900
   - ACD-900a
@@ -141,8 +141,8 @@ And it contains the complexity-to-priority mapping table (S→high, M→medium,
 - [x] python-coder — 2026-06-05 10:15
 - [x] test-runner — 2026-06-05 10:20
 - [x] pr-reviewer — 2026-06-05 10:25
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-05 10:30
+- [x] pull-request — 2026-06-05 10:35
 
 ## Comments
 
@@ -234,6 +234,24 @@ Medium count: 2 (threshold > 3 for Opus escalation — not escalated).
 **Suppressed:** 3 low-confidence nits (import ordering, comment spacing), 0 medium findings dropped by Opus.
 
 **Escalation:** none — medium count was 2 (threshold > 3).
+
+### 2026-06-05 10:30 — commit (status: ok)
+feedback-id: fb_2026-06-05_86b6c044
+completion_manifest:
+  files_staged_correctly: true
+  commit_succeeded: true
+  pre_commit_hooks_clean: true
+
+Staged 4 files by explicit path (per commit staging discipline): SKILL.md, pick_next.py, test_pick_next_with_acs.py, ticket 06 file. Stale lock from ticket 04 (PID 2419293, dead) was cleared before acquiring lock for ticket 06. Committed as `3694029` on branch EPIC-ACDrivenDevelopment: feat(ticket-06): add pick_next.py and AC-aware SKILL.md sections. 4 files changed, 812 insertions, 17 deletions. No pre-commit config present (PRE_COMMIT_ALLOW_NO_CONFIG=1 used); no hook failures.
+
+### 2026-06-05 10:35 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_415d2ec8
+completion_manifest:
+  branch_pushed: true
+  pr_exists: true
+  commit_in_pr: true
+
+Pushed branch EPIC-ACDrivenDevelopment to origin. PR #61 already exists for this epic branch: https://github.com/urlmonitor/leafcutter-ai/pull/61 — "EPIC-ACDrivenDevelopment: AC readiness gate and authoring pipeline". Commit `3694029` (ticket-06 implementation) is now included in the PR. No new PR needed — one PR per epic convention followed.
 
 ## Implementation Tasks
 
