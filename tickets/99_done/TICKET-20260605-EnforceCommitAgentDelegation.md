@@ -1,6 +1,6 @@
 ---
 title: "Enforce commit agent delegation — block direct git commit from main agent"
-status: todo
+status: done
 components:
   - infrastructure
   - build_pipeline
@@ -25,8 +25,8 @@ agents:
   test-runner: signed_off
   documentation-expert: signed_off
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 ---
@@ -203,8 +203,8 @@ must exist before `settings.json` can reference a real path.
 - [x] test-runner — 2026-06-05 09:30
 - [x] documentation-expert — 2026-06-05 09:30
 - [x] pr-reviewer — 2026-06-05 09:45
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-05 09:50
+- [x] pull-request — 2026-06-05 09:55
 
 ## Implementation Notes
 
@@ -320,3 +320,18 @@ completion_manifest:
   hook_fail_open: true
   ruff_clean: true
 All 7 ACs verified: hook created and ruff-clean (AC-1), commit.md all 4 git commit calls prefixed (AC-2), CLAUDE.md rule added (AC-3), 5 tests written (AC-4), settings.json updated (AC-5), block message verified with all three required elements (AC-6), pytest 5/5 green (AC-7). Scope matches files_touched. Risk: low — fail-open hook, env-var prefix is bash-native, reversible.
+
+### 2026-06-05 09:50 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Committed SHA 55d7751: "feat(hooks): add enforce_commit_delegation PreToolUse hook". 6 files, 391 insertions / 36 deletions. No pre-commit hook failures. COMMIT_AGENT_MODE=1 prefix used to pass the new enforce_commit_delegation hook.
+
+### 2026-06-05 09:55 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+Pushed branch feature/enforcecommitagentdelegation to origin. Opened PR #67 at https://github.com/urlmonitor/leafcutter-ai/pull/67.
