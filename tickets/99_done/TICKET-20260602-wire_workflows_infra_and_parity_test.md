@@ -1,6 +1,6 @@
 ---
 title: "Wire workflow scripts into build infrastructure and add template-category parity test"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-02
@@ -30,8 +30,8 @@ agents:
   test-runner: signed_off
   documentation-expert: signed_off
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   explanation-author: signed_off
   how-to-author: signed_off
 ac_traceability:
@@ -127,8 +127,8 @@ Then a .claude/workflows/ row is present
 - [x] test-runner — 2026-06-05 10:20
 - [x] documentation-expert — 2026-06-05 10:30
 - [x] pr-reviewer — 2026-06-05 10:40
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-05 10:45
+- [x] pull-request — 2026-06-05 10:50
 - [x] explanation-author — 2026-06-05 10:35
 - [x] how-to-author — 2026-06-05 10:35
 
@@ -210,6 +210,23 @@ completion_manifest:
   no_scope_violations: true
 
 All 12 ACs (BP-100b-1 through BP-100b-10, BP-100b-5-i, BP-100b-6-i) are satisfied. Core implementation was committed in a6ca06a on main (already on this branch). Documentation additions complete: build-pipeline.md mermaid diagram updated, consolidated-output-root.md shim table updated, build-drift-hook.md §5.4 developer checklist added. Parity tests 5/5 pass. No scope violations detected. The two pre-existing test failures in test_emit_entry_cwd.py are worktree-specific and not caused by this ticket.
+
+### 2026-06-05 10:45 — commit (status: ok)
+feedback-id: fb_2026-06-05_4f654e46
+completion_manifest:
+  commit_created: true
+  all_hooks_passed: true
+  no_scope_pollution: true
+
+Committed d7dd81d on feature/wire-workflows-infra-and-parity-test. Files: docs/build-pipeline.md, docs/explanation/consolidated-output-root.md, docs/build-drift-hook.md, docs/INDEX.md, ticket. All 26 pre-commit hooks passed (feedback-id check, output drift, contract shrinking, etc.).
+
+### 2026-06-05 10:50 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_47d55b16
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+
+Branch feature/wire-workflows-infra-and-parity-test pushed to origin. PR #58 opened at https://github.com/urlmonitor/leafcutter-ai/pull/58 with title "docs: wire build_workflow_scripts documentation (BP-100b-8,9,10)".
 
 ## Implementation Tasks
 
