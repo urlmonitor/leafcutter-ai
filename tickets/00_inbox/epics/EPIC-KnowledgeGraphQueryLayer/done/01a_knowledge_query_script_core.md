@@ -1,6 +1,6 @@
 ---
 title: "Write knowledge_query.py — cross-surface knowledge index script"
-status: todo
+status: done
 components:
   - knowledge-management
 created: 2026-06-04
