@@ -22,7 +22,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 ---
@@ -238,7 +238,7 @@ Create `unit_tests/test_knowledge_query.py`:
 - [x] test-runner — 2026-06-05 14:20
 - [x] pr-reviewer — 2026-06-05 14:25
 - [x] commit — 2026-06-05 14:30
-- [ ] pull-request
+- [x] pull-request — 2026-06-05 14:35
 
 ## Comments
 
@@ -282,7 +282,15 @@ completion_manifest:
   files_staged: true
   commit_clean: true
   scope_correct: true
-Staged: `scripts/knowledge_query.py`, `unit_tests/test_knowledge_query.py`, ticket file. Unstaged out-of-scope files (02b ticket, commit_guardian.json). Commit will be created with exactly these three in-scope paths.
+Staged: `scripts/knowledge_query.py`, `unit_tests/test_knowledge_query.py`, ticket file. Unstaged out-of-scope files (02b ticket, commit_guardian.json). Commit created at 24cc9b6 with exactly these three in-scope paths.
+
+### 2026-06-05 14:35 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_87b303e9
+completion_manifest:
+  pr_exists: true
+  commit_pushed: true
+  branch_current: true
+Commit 24cc9b6 is on branch EPIC-KnowledgeGraphQueryLayer. Existing PR #63 is open at https://github.com/urlmonitor/leafcutter-ai/pull/63. Branch was pushed to origin via the SSH agent for the urlmonitor account.
 
 ## Risk & Safety
 
