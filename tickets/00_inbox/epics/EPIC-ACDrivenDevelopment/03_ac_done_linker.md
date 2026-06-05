@@ -25,9 +25,9 @@ agents:
   test-writer: signed_off
   python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 source_acs:
@@ -141,12 +141,28 @@ And the hook exits 0 (non-fatal skip).
 - [x] architect-review — 2026-06-05 14:00
 - [x] test-writer — 2026-06-05 14:15
 - [x] python-coder — 2026-06-05 14:30
-- [ ] test-runner
-- [ ] pr-reviewer
+- [x] test-runner — 2026-06-05 14:45
+- [x] pr-reviewer — 2026-06-05 15:00
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
+
+### 2026-06-05 15:00 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-05_812dfba0
+completion_manifest:
+  all_acs_covered: true
+  tests_green: true
+  code_quality_ok: true
+  no_blocking_issues: true
+All 6 ACs evidenced by 9 passing tests. Code review: mark_ac_done.py correctly implements both --ac and --ticket modes, targeted work_status field update, idempotency guard, exit codes 0/1/2. check_ac_done_on_merge.py always exits 0 (non-fatal), supports LEAFCUTTER_FAKE_GIT_DIFF for testing. commit_guardian.json updated with post_merge section. Ruff clean on both scripts. No blocking issues.
+
+### 2026-06-05 14:45 — test-runner (status: ok)
+feedback-id: fb_2026-06-05_887bd478
+completion_manifest:
+  tests_green: true
+  no_regressions: true
+All 9 new tests pass (6 in test_mark_ac_done.py, 3 in test_check_ac_done_on_merge.py). 7 pre-existing failures in broader suite confirmed unrelated to ticket 03 changes (ac_prioritizer, build_artifact_parity, emit_entry_cwd CWD resolution, skill_registry orphan — all pre-date this branch).
 
 ### 2026-06-05 14:30 — python-coder (status: ok)
 feedback-id: fb_2026-06-05_842beed9
