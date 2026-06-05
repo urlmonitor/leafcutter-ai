@@ -232,6 +232,36 @@ class TestTemplateDirectoriesHaveCategories(unittest.TestCase):
                 )
 
 
+class TestPreCommitFilesPatternCoversAllShimmedDirs(unittest.TestCase):
+    """check-output-drift hook files: regex must match all shimmed output dirs."""
+
+    def test_precommit_files_pattern_covers_shimmed_dirs(self):
+        cg_json = _REPO_ROOT / "templates" / "commit-guardian" / "commit_guardian.json"
+        if not cg_json.exists():
+            self.skipTest("commit_guardian.json not found")
+
+        import json
+        import re
+
+        data = json.loads(cg_json.read_text(encoding="utf-8"))
+        hooks = data.get("hooks_manifest", {}).get("hooks", [])
+        drift_hook = next((h for h in hooks if isinstance(h, dict) and h.get("id") == "check-output-drift"), None)
+        self.assertIsNotNone(drift_hook, "check-output-drift hook not found in commit_guardian.json")
+
+        pattern = drift_hook["files"]
+
+        all_categories = _USER_FACING_CATEGORIES + _INTERNAL_CATEGORIES
+        for cat, shim_path, _ in all_categories:
+            test_path = shim_path + "/some-file.py"
+            with self.subTest(category=cat, shim_path=shim_path):
+                self.assertIsNotNone(
+                    re.search(pattern, test_path),
+                    f"commit_guardian.json check-output-drift 'files' pattern "
+                    f"does not match '{shim_path}/' for category '{cat}'. "
+                    f"Add '\\.{shim_path.lstrip('.')}/' to the files regex.",
+                )
+
+
 def _extract_path_parts(node: ast.expr) -> list[str] | None:
     """Extract string parts from a Path division chain like _REPO_ROOT / 'x' / 'y'."""
     parts: list[str] = []

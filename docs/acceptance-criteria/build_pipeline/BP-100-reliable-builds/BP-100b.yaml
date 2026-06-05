@@ -17,5 +17,11 @@ origin_agent: BrainCandy
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - tests/test_build_artifact_parity.py
+implemented_by:
+  - scripts/build_helpers.py
+  - scripts/build_phases.py
+  - scripts/build.py
+  - templates/scripts/commit_guardian/check_output_drift.py
+  - templates/commit-guardian/commit_guardian.json
