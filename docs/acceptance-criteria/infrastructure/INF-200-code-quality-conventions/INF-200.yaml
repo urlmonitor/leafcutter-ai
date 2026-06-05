@@ -1,0 +1,21 @@
+id: INF-200
+title: "Code follows project conventions automatically — no manual policing"
+component: infrastructure
+level: L0
+status: active
+criteria: |
+  The codebase enforces its own conventions at commit time.
+
+  When a developer (human or agent) writes code, the pre-commit hooks catch
+  convention violations before they land. You never discover after the fact
+  that someone used print() instead of the project logger, or that diagnostic
+  output was left in production code. The conventions are documented, the
+  enforcement is mechanical, and violations are caught at the gate.
+depends_on: []
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

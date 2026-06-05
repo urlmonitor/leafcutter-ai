@@ -1,0 +1,38 @@
+id: INF-200a-6
+title: "Rules for same file type are merged — one rule + one hook per glob"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+criteria: |
+  Given multiple rule templates that trigger on the same glob pattern (e.g. *.py),
+  When build.py deploys rules to a consumer project,
+  Then all conventions for that file type are consolidated into a single rule file
+    (e.g. all Python conventions — logging, naming, typing, docstrings — live in
+    one python.md rule, not scattered across logging.md + python-rules.md),
+  And the merged rule references exactly one paired pre-commit hook that enforces
+    the mechanical subset of those conventions,
+  And the rule file is structured with numbered sections so individual conventions
+    can be toggled or referenced independently,
+  And no two deployed rule files have overlapping glob patterns.
+
+  Note: today templates/rules/ has logging.md (globs: *.py) and python-rules.md
+  (globs: *.sql — this is a bug, should be *.py). These must be merged before
+  this AC is satisfied.
+depends_on:
+  - INF-200a-4
+doc_links:
+  - path: templates/rules/logging.md
+    relationship: refactors
+    status: exists
+  - path: templates/rules/python-rules.md
+    relationship: refactors
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

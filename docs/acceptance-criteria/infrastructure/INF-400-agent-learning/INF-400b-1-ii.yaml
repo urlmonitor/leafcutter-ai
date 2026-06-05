@@ -1,0 +1,36 @@
+id: INF-400b-1-ii
+title: "Duplicate learnings are not persisted twice across consecutive runs"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the business-analyst-v3 agent discovered during run N that
+    "the infrastructure component has no parent in index.yaml"
+    and persisted it to memory/project_infrastructure_conventions.md,
+  When the same agent runs again (run N+1) in the same component
+    and its knowledge-capture step fires with the same or near-identical
+    learning text ("infrastructure has no parent component"),
+  Then route-learning Step 0 (duplicate detection) identifies a match
+    with Levenshtein ratio >= 0.85 against the existing memory file entry,
+  And route-learning returns {duplicate: true} without invoking capture-learning,
+  And no duplicate entry is appended to the memory file,
+  And no knowledge_captured telemetry event is emitted for the duplicate.
+depends_on: [INF-400b-1]
+doc_links:
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: INF-400b-1
+  contract: "Knowledge-capture step that invokes route-learning including Step 0 deduplication"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

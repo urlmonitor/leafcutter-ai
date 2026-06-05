@@ -1,0 +1,35 @@
+id: ACD-300c-3
+title: "Final gate after IT PO v3 allows the user to set priority and promote to approved"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given IT PO v3 has enriched the AC batch and set readiness: reviewed,
+  When the workflow presents gate 3 (the final gate) to the user,
+  Then it displays: all ACs in the batch with their enriched fields
+    (assigned_agent, estimated_complexity, delivers_to, expects_from),
+  And it prompts the user to set a priority (critical/high/medium/low)
+    for the batch,
+  And it offers three actions:
+    - "approve" — set readiness: approved and the chosen priority on all ACs
+      in the batch; the pipeline completes successfully,
+    - "edit" — provide feedback; IT PO v3 is re-invoked to adjust
+      technical assignments (loop until approved),
+    - "defer" — set readiness: reviewed but do NOT promote to approved;
+      ACs stay in store but are not scanner-eligible,
+  And if the user approves, the workflow writes the priority and
+    readiness: approved to each AC file and reports the final AC count.
+depends_on: [ACD-300c]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

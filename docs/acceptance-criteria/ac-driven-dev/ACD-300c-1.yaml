@@ -1,0 +1,30 @@
+id: ACD-300c-1
+title: "Gate after PO v3 shows L0/L1 ACs and offers approve, edit, or cancel"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given PO v3 has written L0/L1 ACs to the AC store with readiness: draft,
+  When the workflow presents gate 1 to the user,
+  Then it displays: the AC ids, titles, and full criteria text of all L0/L1 ACs produced,
+  And it offers three actions:
+    - "approve" — proceed to BA v3 decomposition,
+    - "edit" — provide feedback text; PO v3 is re-invoked with the feedback
+      and rewrites the ACs (loop until approved),
+    - "cancel" — abort the pipeline; ACs remain in store with readiness: draft,
+  And if the user approves, the workflow logs the approval timestamp
+    and proceeds to BA v3.
+depends_on: [ACD-300c]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

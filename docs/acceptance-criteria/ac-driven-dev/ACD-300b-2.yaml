@@ -1,0 +1,33 @@
+id: ACD-300b-2
+title: "The behavioral and technical routes skip upstream agents and start at the correct stage"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the triage agent returns route: "behavioral",
+  When the create-ac.js workflow script processes the routing decision,
+  Then it skips PO v3 entirely,
+  And dispatches BA v3 with the user's request plus the parent_l1_id from triage,
+  And BA v3 writes L2/L3 ACs under the existing L1 parent,
+  And the workflow continues with the user gate and IT PO v3 as normal.
+
+  Given the triage agent returns route: "technical",
+  When the create-ac.js workflow script processes the routing decision,
+  Then it skips both PO v3 and BA v3,
+  And dispatches IT PO v3 directly with the existing AC ids to amend,
+  And IT PO v3 enriches the specified ACs with technical constraints,
+  And the workflow presents the enriched ACs for user confirmation.
+depends_on: [ACD-300b]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

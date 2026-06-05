@@ -1,0 +1,34 @@
+id: ACD-100a
+title: "End-to-end lifecycle flow diagram covers all actors and transitions"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the AC-driven development system is operational,
+  When the architecture documentation is reviewed,
+  Then a sequence or flow diagram exists showing the full lifecycle:
+    User intent -> PO v3 (L0/L1 ACs, readiness: draft)
+    -> BA v3 (L2/L3 ACs, readiness: draft)
+    -> IT PO v3 (enrichment, readiness: reviewed)
+    -> User approval (readiness: approved, priority set)
+    -> Scanner (finds ready ACs)
+    -> Ticket generator (produces ticket from AC)
+    -> /build-feature (builds the ticket)
+    -> Done-linker (marks AC work_status: done),
+  And every actor is labelled,
+  And every state transition of the readiness field is annotated.
+depends_on: [ACD-100]
+doc_links:
+  - docs/architecture/agent_delivery_workflows.md
+assigned_agent: architecture-diagram-author
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-100a-1, ACD-100a-2]
+implemented_by: []

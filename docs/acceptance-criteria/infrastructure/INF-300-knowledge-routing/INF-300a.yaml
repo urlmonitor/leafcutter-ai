@@ -1,0 +1,26 @@
+id: INF-300a
+title: "Knowledge surfaces are enumerated with routing rules so agents pick the right one"
+component: infrastructure
+level: L1
+status: active
+criteria: |
+  The project maintains a definitive list of knowledge surfaces with clear
+  routing rules.
+
+  When a PO, BA, or any agent produces knowledge that needs to persist, it
+  can consult a documented surface map that lists every available knowledge
+  surface (Claude-native and leafcutter-provided), what kind of knowledge
+  belongs on each, and the decision criteria for choosing between them.
+  Ambiguous cases are resolved by the route-knowledge skill, not by guessing.
+depends_on:
+  - INF-300
+doc_links:
+  - path: .claude/skills/route-knowledge/SKILL.md
+    relationship: implements
+    status: exists
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,32 @@
+id: INF-400e-3
+title: "Second-run IT PO assigns agents correctly based on previously-learned component-agent mappings"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the it-po-v3 agent ran once on the infrastructure component and discovered
+    that infrastructure ACs are typically assigned to "llm-expert" for template work
+    and "python-coder" for script work (not "frontend-coder" or "sql-coder"),
+  And that mapping was captured in a component-scoped context file,
+  When the it-po-v3 agent runs a second time on new infrastructure L2 ACs,
+  Then the agent assigns "llm-expert" or "python-coder" to the new ACs
+    without needing to re-read the full agent registry to discover this pattern,
+  And the agent does not assign agents that have never been relevant to this
+    component (e.g., does not assign "sql-coder" to infrastructure template ACs).
+depends_on: [INF-400e, INF-400a, INF-400d]
+doc_links:
+  - path: templates/agents/it-po-v3.md
+    relationship: constrains
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

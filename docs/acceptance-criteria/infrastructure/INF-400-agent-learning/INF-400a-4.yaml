@@ -1,0 +1,39 @@
+id: INF-400a-4
+title: "First run on a component with no prior context produces normal-quality output"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a component folder has no PROJECT_CONTEXT.md files,
+  And no memory files exist for that component's domain,
+  And no per-folder README.md exists in the component's AC directory,
+  When a v3 agent (PO, BA, or IT PO) is spawned for the first time in that component,
+  Then the agent completes its task without error,
+  And the agent does not emit warnings about missing context files,
+  And the output quality matches the baseline established by the agent template alone
+    (i.e., the pre-flight step skips missing files silently and proceeds).
+depends_on: [INF-400a, INF-400a-1]
+doc_links:
+  - path: templates/agents/product-owner-v3.md
+    relationship: constrains
+    status: exists
+  - path: templates/agents/business-analyst-v3.md
+    relationship: constrains
+    status: exists
+  - path: templates/agents/it-po-v3.md
+    relationship: constrains
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: INF-400a-1
+  contract: "Pre-flight step specifies graceful skip for absent context files"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

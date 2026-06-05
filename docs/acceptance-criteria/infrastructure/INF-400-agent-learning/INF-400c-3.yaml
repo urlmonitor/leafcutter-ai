@@ -1,0 +1,34 @@
+id: INF-400c-3
+title: "The harvester is idempotent: re-running it does not duplicate persisted learnings"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the harvester has already processed 3 events from the emission sink
+    and written their learnings to the target files,
+  And the sink still contains those 3 events (events are not deleted after processing),
+  When the harvester runs a second time,
+  Then it identifies the 3 events as already-processed (via a watermark, offset, or
+    processed-event-ID list),
+  And it does not re-invoke capture-learning for any of the 3 events,
+  And it does not append duplicate entries to the target files,
+  And it reports: "0 new learnings to process".
+depends_on: [INF-400c, INF-400c-2]
+doc_links:
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: INF-400c-2
+  contract: "Harvester that processes events and needs an idempotency mechanism"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

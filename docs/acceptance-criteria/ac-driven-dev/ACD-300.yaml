@@ -1,0 +1,27 @@
+id: ACD-300
+title: "New requirements flow into the AC store through a single command"
+component: ac-driven-dev
+level: L0
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a user has a new feature idea, a behavioral addition, or a technical constraint,
+  When they invoke a single command (/create-ac),
+  Then the system triages their request, routes it through the correct authoring agents
+    (PO v3, BA v3, IT PO v3) in sequence with user confirmation gates between stages,
+  And the output is written to the AC store (docs/acceptance-criteria/<component>/),
+  And duplicate or already-covered requirements are surfaced rather than re-authored,
+  And the user controls progression at each stage before the next agent begins.
+depends_on: []
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-300a, ACD-300b, ACD-300c, ACD-300d]
+implemented_by: []

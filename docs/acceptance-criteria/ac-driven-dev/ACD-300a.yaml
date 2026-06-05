@@ -1,0 +1,30 @@
+id: ACD-300a
+title: "A fast triage agent classifies the request and checks for duplicates before authoring begins"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Before any heavyweight authoring agent is invoked, a Haiku-tier pre-triage
+  agent reads the user's request and the existing AC store to determine:
+  (a) whether existing ACs already cover the request (duplication check),
+  (b) which routing path to follow based on the nature of the request.
+  The triage runs in under 3 seconds and produces a structured routing decision
+  that the orchestration workflow consumes. The user never interacts with the
+  triage agent directly — they see only its outcome (the routing recommendation)
+  presented for optional override.
+depends_on: [ACD-300]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to:
+  agent: create-ac-workflow
+  contract: "{ route: strategic|behavioral|technical|covered, existing_acs: string[], rationale: string }"
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-300a-1, ACD-300a-2, ACD-300a-3]
+implemented_by: []

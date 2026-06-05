@@ -1,0 +1,28 @@
+id: ACD-200c
+title: "PO v3 signals documentation intent at L0/L1 level"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given product-owner-v3 is authoring L0 or L1 ACs for a feature,
+  When the feature will be user-facing or introduces observable behavior changes,
+  Then PO v3 includes a `documentation_triggers` field in the L1 AC YAML listing
+    which documentation types are expected (e.g. [how-to, sequence-diagram, state-diagram]),
+  And the BA v3 reads this field as a directive for which documentation ACs to produce,
+  And if PO v3 sets documentation_triggers to an empty list, it includes a
+    `documentation_rationale` field explaining why no docs are needed.
+depends_on: [ACD-200]
+doc_links:
+  - templates/agents/product-owner-v3.md
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-200c-1]
+implemented_by: []

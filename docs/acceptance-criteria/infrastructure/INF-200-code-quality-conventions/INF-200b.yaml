@@ -1,0 +1,24 @@
+id: INF-200b
+title: "[Phase 2] Customer codebase logging convention detection and hook generation"
+component: infrastructure
+level: L1
+status: active
+criteria: |
+  Leafcutter detects the customer's logging convention and generates a matching hook.
+
+  When a consumer project installs leafcutter-ai, the system can scan the
+  customer's codebase, detect which logging pattern they use (structlog,
+  logging.getLogger, loguru, bare print, etc.), present the findings, ask
+  the user which convention to enforce, and generate a project-specific
+  pre-commit hook template that blocks deviations from the chosen convention.
+  The customer never has to write the hook manually.
+depends_on:
+  - INF-200a
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-06-05
+roadmap_phase: phase_2
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

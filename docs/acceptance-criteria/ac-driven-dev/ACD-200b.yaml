@@ -1,0 +1,29 @@
+id: ACD-200b
+title: "IT PO v3 validates documentation AC presence before promoting to reviewed"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given it-po-v3 is enriching ACs with technical fields,
+  When the feature being enriched introduces new commands, flows, or state machines,
+  Then IT PO v3 checks whether documentation ACs exist in the same AC batch,
+  And if documentation ACs are missing, IT PO v3 either:
+    (a) creates the missing documentation ACs itself (with readiness: reviewed), or
+    (b) flags the gap and refuses to set readiness: reviewed until resolved,
+  And IT PO v3 never promotes a batch to readiness: reviewed if it contains
+    flow/state triggers but no corresponding documentation ACs.
+depends_on: [ACD-200]
+doc_links:
+  - templates/agents/it-po-v3.md
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-200b-1]
+implemented_by: []

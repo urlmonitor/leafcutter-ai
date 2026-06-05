@@ -1,0 +1,43 @@
+id: INF-400b-3
+title: "V3 agent knowledge-capture prompt is domain-appropriate for specification work"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the standard signoff section 7 prompt is designed for phase agents doing
+    implementation work ("Did you discover anything during this ticket..."),
+  When the v3 agent knowledge-capture step (INF-400b-1) fires for a PO, BA, or IT PO,
+  Then the prompt is adapted to the specification domain, asking about:
+    - Component conventions discovered while reading standing ACs or component docs,
+    - User framing preferences discovered while translating user requests to L0/L1,
+    - Cross-component relationships discovered while traversing the component tree,
+    - Naming patterns or structural rules discovered while reading the AC store,
+  And the prompt does NOT ask about code patterns, test strategies, or implementation details
+    (since v3 agents never read source code),
+  And the prompt provides 2-3 concrete examples of learnings worth capturing
+    to help the agent distinguish signal from noise.
+depends_on: [INF-400b, INF-400b-1]
+doc_links:
+  - path: templates/agents/product-owner-v3.md
+    relationship: constrains
+    status: exists
+  - path: templates/agents/business-analyst-v3.md
+    relationship: constrains
+    status: exists
+  - path: templates/agents/it-po-v3.md
+    relationship: constrains
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: INF-400b-1
+  contract: "Knowledge-capture step that contains a domain-specific prompt"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

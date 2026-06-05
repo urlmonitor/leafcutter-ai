@@ -1,0 +1,25 @@
+id: INF-400f
+title: "Knowledge from one agent benefits the others in the same pipeline"
+component: infrastructure
+level: L1
+status: active
+criteria: |
+  Cross-agent knowledge sharing within the pipeline.
+
+  When the PO learns a user preference about how features should be framed,
+  the BA's decomposition reflects that preference. When the BA discovers a
+  component convention, the IT PO's technical enrichment respects it. When
+  a coder finds a project-specific pattern, every subsequent coder in the
+  pipeline benefits. Knowledge flows across agent boundaries, not just
+  within them.
+depends_on:
+  - INF-400
+  - INF-400a
+  - INF-400c
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

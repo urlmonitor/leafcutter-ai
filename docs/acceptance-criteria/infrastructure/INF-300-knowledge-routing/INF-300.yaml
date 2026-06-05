@@ -1,0 +1,22 @@
+id: INF-300
+title: "Agents put knowledge in the right place — never the wrong surface"
+component: infrastructure
+level: L0
+status: active
+criteria: |
+  Every piece of project knowledge lands on the correct surface automatically.
+
+  When an agent learns something that should persist, it knows whether that
+  belongs in CLAUDE.md, a memory file, the glossary, a skill, an ADR, a
+  how-to doc, the AC store, or somewhere else — and routes it correctly
+  without human intervention. You never find Python rules in memory files,
+  glossary entries in CLAUDE.md, or architectural decisions buried in ticket
+  comments.
+depends_on: []
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

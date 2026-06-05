@@ -1,0 +1,27 @@
+id: ACD-300c
+title: "The user confirms each authoring stage before the next agent begins"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Between each authoring agent's output and the next agent's invocation, the
+  workflow presents the produced ACs to the user and waits for explicit
+  confirmation. The user can approve (continue to next stage), request edits
+  (re-invoke the same agent with feedback), or cancel (abort the pipeline and
+  keep any ACs already written as drafts). No downstream agent is invoked
+  without prior-stage approval. The final gate additionally allows the user
+  to set priority and promote readiness to approved.
+depends_on: [ACD-300, ACD-300b]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-300c-1, ACD-300c-2, ACD-300c-3]
+implemented_by: []
