@@ -1,6 +1,6 @@
 ---
 title: "BO-400: Ticket Status as Single Source of Truth — eliminate done/ folder moves, use frontmatter status for all lifecycle decisions"
-status: in_progress
+status: done
 components:
   - infrastructure
 created: 2026-06-05
