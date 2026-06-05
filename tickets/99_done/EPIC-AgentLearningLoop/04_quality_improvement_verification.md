@@ -1,6 +1,6 @@
 ---
 title: "Verify second-run quality improvement for PO, BA, and IT PO"
-status: todo
+status: done
 components:
   - infrastructure
 created: 2026-06-05
@@ -26,8 +26,8 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
 source_acs:
   - INF-400e-1
   - INF-400e-2
@@ -95,14 +95,30 @@ Then the agent assigns python-coder to script-related ACs and llm-expert
 - [x] python-coder — 2026-06-05 10:30
 - [x] test-runner — 2026-06-05 10:35
 - [x] pr-reviewer — 2026-06-05 10:40
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-05 10:45
+- [x] pull-request — 2026-06-05 10:50
 
 ## Comments
 
 ### 2026-06-05 10:00 — ticket-supervisor (status: ok)
 test_requirements empty — test-writer phase skipped (docs-only or config-only ticket)
 Note: ticket has test writing tasks under ### test-writer in ## Implementation Tasks. python-coder should write the full test file tests/knowledge/test_quality_improvement.py as part of its phase.
+
+### 2026-06-05 10:50 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_9efeb55d
+completion_manifest:
+  branch_pushed: true
+  pr_exists: true
+  commit_included_in_pr: true
+Pushed commit f034855 to origin EPIC-AgentLearningLoop (a4a8e8d..f034855). PR #60 (urlmonitor/leafcutter-ai) already exists for this branch and includes this commit. PR title: "feat(templates): add knowledge injection and emission steps to v3 agent templates".
+
+### 2026-06-05 10:45 — commit (status: ok)
+feedback-id: fb_2026-06-05_d941da9f
+completion_manifest:
+  commit_created: true
+  staged_files_explicit: true
+  no_cross_worktree_pollution: true
+Commit f034855 on branch EPIC-AgentLearningLoop: 2 files, 955 insertions. Staged by explicit path (tests/knowledge/test_quality_improvement.py and ticket file). No cross-worktree pollution. PRE_COMMIT_ALLOW_NO_CONFIG=1 required (no .pre-commit-config.yaml in worktree). Lock acquired before spawn, released after.
 
 ### 2026-06-05 10:40 — pr-reviewer (status: ok)
 feedback-id: fb_2026-06-05_51aed675
