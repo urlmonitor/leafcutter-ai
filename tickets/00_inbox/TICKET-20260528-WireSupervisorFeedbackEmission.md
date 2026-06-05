@@ -28,6 +28,19 @@ agents:
 ac_traceability:
   L0: INF-400
   L1: INF-400g
+  l2:
+    - INF-400g-1
+    - INF-400g-2
+    - INF-400g-3
+    - INF-400g-4
+    - INF-400g-5
+    - INF-400g-6
+    - INF-400g-7
+    - INF-400g-8
+    - INF-400g-9
+  l3:
+    - INF-400g-2-i
+    - INF-400g-2-ii
   ac_path: docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400g.yaml
   routing: direct_to_ba
 ---
