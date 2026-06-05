@@ -1,0 +1,50 @@
+id: INF-600a-2
+title: "Agent frontmatter declares structured inputs, outputs, and mutates"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+criteria: |
+  Given an agent template file with YAML frontmatter
+    (e.g. templates/agents/python-coder.md)
+  When the frontmatter is parsed
+  Then it contains an `inputs` array where each element has:
+    - `name` (string, e.g. "ticket_path")
+    - `type` (string, e.g. "file_path", "structured_payload", "config_value")
+    - `required` (boolean)
+    - `description` (string)
+  And it contains an `outputs` array where each element has:
+    - `name` (string, e.g. "edited_py_files")
+    - `type` (string, e.g. "file", "structured_response", "sign_off_comment")
+    - `description` (string)
+  And it contains a `mutates` array where each element has:
+    - `name` (string, e.g. "ticket_frontmatter_agents_status")
+    - `surface` (string identifying what is mutated,
+       e.g. "ticket frontmatter", "sign-offs checklist", "AC store")
+    - `description` (string)
+  And the card generator can produce the Input/Output Contract section
+    from these three arrays without reading the template prose body
+depends_on:
+  - INF-600a
+doc_links:
+  - path: docs/agents/cards/python-coder.card.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/python-coder.md
+    relationship: describes
+    status: exists
+  - path: docs/agents/conventions.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+  agent: python-coder
+  contract: "Structured inputs/outputs/mutates arrays in agent frontmatter that the card generator reads to produce the I/O Contract diagram"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

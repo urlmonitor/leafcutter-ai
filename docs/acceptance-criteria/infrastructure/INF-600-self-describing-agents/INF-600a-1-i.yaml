@@ -1,0 +1,36 @@
+id: INF-600a-1-i
+title: "skills_invoked rejects skill IDs that do not resolve to a template or project-local skill"
+component: infrastructure
+level: L3
+status: active
+work_status: todo
+criteria: |
+  Given an agent registry entry where `skills_invoked` contains
+    an element with skill_id "nonexistent-skill"
+  When the build system validates the registry
+  Then validation fails with an error naming the unresolvable skill_id
+  And the error message identifies the agent entry that contains it
+  And the error distinguishes between "skill not packaged in
+    templates/skills/" and "skill not found as project-local in
+    .claude/skills/" so the fix action is clear
+depends_on:
+  - INF-600a-1
+doc_links:
+  - path: docs/agents/cards/python-coder.card.md
+    relationship: describes
+    status: exists
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: INF-600a-1
+  contract: "skills_invoked array exists in registry entries"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

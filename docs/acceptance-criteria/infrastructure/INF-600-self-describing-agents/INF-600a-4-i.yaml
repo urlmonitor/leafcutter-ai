@@ -1,0 +1,39 @@
+id: INF-600a-4-i
+title: "Build detects Mustache variables in template body that are not declared in config_keys"
+component: infrastructure
+level: L3
+status: active
+work_status: todo
+criteria: |
+  Given an agent template that contains the Mustache expression
+    `{{config.undeclared_key}}` in its prose body
+  And the frontmatter `config_keys` block does not contain
+    an entry named "undeclared_key"
+  When the build system validates agent templates
+  Then it emits a warning (or error, per enforcement level)
+    identifying the undeclared Mustache variable
+  And the warning names the template file and the line containing
+    the reference
+  And the warning suggests adding the key to `config_keys` with
+    the required/description/source fields
+depends_on:
+  - INF-600a-4
+doc_links:
+  - path: templates/agents/python-coder.md
+    relationship: describes
+    status: exists
+  - path: docs/agents/cards/python-coder.card.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: INF-600a-4
+  contract: "config_keys block with source field exists in agent frontmatter"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
