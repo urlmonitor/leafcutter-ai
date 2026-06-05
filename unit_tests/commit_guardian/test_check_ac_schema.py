@@ -43,6 +43,8 @@ _VALID_AC_YAML = textwrap.dedent("""\
       Given a feature branch exists
       When the workflow runs
       Then main is merged first
+    priority: medium
+    readiness: draft
 """)
 
 
@@ -194,6 +196,8 @@ class TestDeprecatedAcPasses(unittest.TestCase):
               Given something old
               When it is deprecated
               Then it still validates
+            priority: medium
+            readiness: draft
         """)
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -241,6 +245,8 @@ class TestOriginAgentValidString(unittest.TestCase):
               Given something
               When something
               Then something
+            priority: medium
+            readiness: draft
             origin_agent: "business-analyst"
         """)
         with tempfile.TemporaryDirectory() as tmp:
