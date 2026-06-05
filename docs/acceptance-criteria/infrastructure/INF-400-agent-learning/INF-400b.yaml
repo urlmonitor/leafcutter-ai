@@ -1,0 +1,25 @@
+id: INF-400b
+title: "Agents capture what they discover during a run without being asked"
+component: infrastructure
+level: L1
+status: active
+criteria: |
+  New project patterns, preferences, and conventions captured automatically.
+
+  As an agent works, it notices things worth remembering: a component
+  convention, a user preference, a cross-cutting pattern. It emits these
+  learnings through the standard feedback channel without requiring a
+  separate prompt or manual trigger. Nothing learned is lost when the
+  agent exits.
+depends_on:
+  - INF-400
+doc_links:
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

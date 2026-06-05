@@ -1,0 +1,32 @@
+id: INF-400c-2-i
+title: "Harvester skips events with an unrecognized entry_kind without crashing"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the emission sink contains an event with entry_kind "unknown-future-surface"
+    that does not match any surface in the route-knowledge taxonomy,
+  When the harvester processes this event,
+  Then it logs a warning: "Unrecognized entry_kind 'unknown-future-surface' — skipping event <event-id>",
+  And it marks the event as processed (so it does not retry indefinitely),
+  And it continues processing subsequent events in the sink,
+  And the harvester exits with success status (not a failure).
+depends_on: [INF-400c-2]
+doc_links:
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: INF-400c-2
+  contract: "Harvester that iterates events and must handle unexpected entry_kind values"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

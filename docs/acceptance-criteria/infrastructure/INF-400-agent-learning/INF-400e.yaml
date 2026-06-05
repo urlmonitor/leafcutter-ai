@@ -1,0 +1,23 @@
+id: INF-400e
+title: "Repeat work on the same domain is noticeably better than the first time"
+component: infrastructure
+level: L1
+status: active
+criteria: |
+  The second time any agent works in a domain, it already knows what matters.
+
+  When you create specifications, write code, or review changes in a domain
+  the system has worked in before, the output quality is measurably higher.
+  The agent makes fewer mistakes, asks fewer redundant questions, and
+  produces work that fits the established patterns without being told.
+depends_on:
+  - INF-400
+  - INF-400a
+  - INF-400d
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

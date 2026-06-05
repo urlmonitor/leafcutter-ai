@@ -1,0 +1,31 @@
+id: INF-400c
+title: "A dedicated harvester turns raw agent emissions into properly-routed knowledge"
+component: infrastructure
+level: L1
+status: active
+criteria: |
+  Agents emit learnings; a separate process routes them to the right surface.
+
+  Agents do not need to know the routing rules or file conventions. They
+  emit raw learnings through the same channel they emit feedback. A dedicated
+  harvester process reads those emissions and persists each learning to the
+  correct knowledge surface: PROJECT_CONTEXT.md, component README, domain
+  CLAUDE.md, or memory file.
+
+  Note for BA: the architectural decision about whether to reuse the existing
+  feedback endpoint (agent_telemetry.jsonl / feedback.jsonl) or create a
+  separate channel must be documented as an ADR before implementation. An
+  L2 AC should capture this decision requirement.
+depends_on:
+  - INF-400
+  - INF-300
+doc_links:
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

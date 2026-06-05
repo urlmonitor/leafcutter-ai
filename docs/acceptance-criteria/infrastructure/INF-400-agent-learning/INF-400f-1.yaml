@@ -1,0 +1,36 @@
+id: INF-400f-1
+title: "PO v3 learnings are available to the BA v3 when both run in the same pipeline invocation"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the product-owner-v3 agent runs first in the v3 ticket-creation pipeline
+    and discovers a user preference during L0/L1 framing
+    (e.g., "the user prefers value propositions to start with the problem, not the solution"),
+  And the PO's knowledge-capture step (INF-400b-1) persists that learning
+    to memory/feedback_l0_framing_preference.md before the PO exits,
+  When the business-analyst-v3 agent is spawned next in the same pipeline run,
+  Then the BA's pre-flight step (INF-400a-1) reads the memory file that the PO just wrote,
+  And the BA's L2 decomposition reflects the PO's learned preference
+    (e.g., criteria language mirrors the problem-first framing),
+  And no manual hand-off or explicit "pass this to the BA" instruction is required.
+depends_on: [INF-400f, INF-400a, INF-400b]
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

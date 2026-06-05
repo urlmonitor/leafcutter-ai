@@ -1,0 +1,40 @@
+id: INF-400d-2
+title: "Skill-scoped PROJECT_CONTEXT.md files grow with each agent run that discovers skill-relevant learnings"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a v3 agent runs and discovers a learning relevant to the signoff skill
+    (e.g., "signoff section 7 does not fire for agents with signoff: false"),
+  And route-learning classifies this as entry_kind "agent-frontmatter" with
+    destination ".claude/skills/signoff/PROJECT_CONTEXT.md",
+  When capture-learning executes the write,
+  Then if PROJECT_CONTEXT.md does not exist alongside the skill's SKILL.md,
+    it is created with a header: "# signoff — Project-Specific Context",
+  And the learning is appended under a "## Accumulated Learnings" section
+    with date and originating agent,
+  And the SKILL.md file is NOT modified (it is a portable upstream template),
+  And subsequent agents loading the signoff skill also read the co-located
+    PROJECT_CONTEXT.md (per Channel 3 of the knowledge plane).
+depends_on: [INF-400d, INF-400c-2]
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: INF-400c-2
+  contract: "Harvester that invokes capture-learning for agent-frontmatter entry_kind"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,39 @@
+id: INF-400d-1
+title: "Each component's AC directory has a README.md that accumulates domain conventions"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the harvester (INF-400c-2) routes a learning with entry_kind "per-folder-readme"
+    and destination "docs/acceptance-criteria/infrastructure/README.md",
+  When the harvester's capture-learning write executes,
+  Then if the README.md does not exist, it is created with a standard header:
+    "# infrastructure — Accumulated Domain Context" followed by a blank line,
+  And the learning is appended as a new bullet under a "## Learnings" section,
+  And each bullet is prefixed with the date and originating agent
+    (e.g., "- 2026-06-05 [business-analyst-v3]: INF prefix, no parent component"),
+  And subsequent writes append new bullets without overwriting existing content.
+depends_on: [INF-400d, INF-400c-2]
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: llm-expert
+  contract: "A README.md file in each component AC directory that v3 agents read in their pre-flight step"
+expects_from:
+  ac_id: INF-400c-2
+  contract: "Harvester that invokes capture-learning with per-folder-readme as the entry_kind"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

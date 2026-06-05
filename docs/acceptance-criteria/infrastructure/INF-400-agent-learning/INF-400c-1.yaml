@@ -1,0 +1,42 @@
+id: INF-400c-1
+title: "An ADR documents the decision on whether learning emissions reuse the existing telemetry sink"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the existing feedback infrastructure uses two JSONL sinks:
+    - feedback.jsonl (phase-agent sign-off feedback via submit_feedback.py),
+    - agent_telemetry.jsonl (structured telemetry events including knowledge_captured),
+  And the knowledge-emission mechanism (INF-400b) must decide whether to:
+    - Option A: route learning emissions through agent_telemetry.jsonl (reuse existing sink),
+    - Option B: create a separate dedicated sink (e.g., knowledge_emissions.jsonl),
+  When the system is designed for learning emission routing,
+  Then an ADR is authored at docs/architecture/adrs/ADR-NNN-learning-emission-sink.md
+    that documents:
+    1. The decision context (what learning emissions are, volume expectations,
+       consumer requirements),
+    2. The options considered (reuse telemetry sink vs. separate sink vs. other),
+    3. The chosen option with rationale,
+    4. The consequences (impact on harvester design, replay semantics,
+       backward compatibility with existing telemetry consumers),
+  And the ADR is authored BEFORE any harvester implementation begins,
+  And the ADR references INF-400b and INF-400c as the driving requirements.
+depends_on: [INF-400c]
+doc_links:
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+assigned_agent: architect-review
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "An ADR that specifies which sink the harvester reads from, so the harvester can be implemented"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

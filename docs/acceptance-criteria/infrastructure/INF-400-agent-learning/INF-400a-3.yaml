@@ -1,0 +1,37 @@
+id: INF-400a-3
+title: "V3 agents read component-scoped PROJECT_CONTEXT.md files when working in a domain"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a PROJECT_CONTEXT.md file exists alongside the route-knowledge skill
+    containing the entry "INF-400 feature folder uses standing-rule-aware decomposition",
+  And the business-analyst-v3 agent's pre-flight step (from INF-400a-1) directs it
+    to read PROJECT_CONTEXT.md files for skills it loads,
+  When the business-analyst-v3 agent is spawned and loads the route-knowledge skill,
+  Then the agent reads the co-located PROJECT_CONTEXT.md,
+  And the agent incorporates that learning into its working context,
+  And the learning influences the agent's output (e.g., it checks for standing rules
+    without needing the user to remind it).
+depends_on: [INF-400a, INF-400a-1]
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: INF-400a-1
+  contract: "Pre-flight step in v3 agent templates that reads PROJECT_CONTEXT.md"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
