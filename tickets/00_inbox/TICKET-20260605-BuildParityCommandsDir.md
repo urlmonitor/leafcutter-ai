@@ -20,7 +20,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -81,7 +81,7 @@ or drift-detection coverage. The correct fix is to add `"commands"` to
 - [x] python-coder — 2026-06-05 14:00
 - [x] test-runner — 2026-06-05 14:01
 - [x] pr-reviewer — 2026-06-05 14:02
-- [ ] commit
+- [x] commit — 2026-06-05 14:03
 - [ ] pull-request
 
 ## Comments
@@ -111,3 +111,11 @@ completion_manifest:
   tests_green: true
   no_quality_concerns: true
 One-line fix: `"commands"` added alphabetically to `non_artifact_dirs` set. Commit a2129a1 is clean. All 6 tests pass. AC-1 and AC-2 fully satisfied. No quality concerns.
+
+### 2026-06-05 14:03 — commit (status: ok)
+feedback-id: fb_2026-06-05_5a077c49
+completion_manifest:
+  commit_created: true
+  staged_files_match_scope: true
+  implementation_in_history: true
+Committed ticket sign-offs in 4a2760f. Implementation change (adding "commands" to non_artifact_dirs) was already in commit a2129a1. Staged only the ticket file per explicit-path discipline.
