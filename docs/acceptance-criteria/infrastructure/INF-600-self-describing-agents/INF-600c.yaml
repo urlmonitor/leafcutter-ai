@@ -13,7 +13,7 @@ criteria: |
   You can see the full knowledge picture for one agent without reading the
   system-wide architecture doc.
 depends_on:
-  - INF-600
+  - INF-900
   - INF-600b
 doc_links:
   - path: docs/architecture/agent_knowledge_plane.md

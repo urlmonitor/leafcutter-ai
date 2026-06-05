@@ -26,6 +26,7 @@ origin_agent: product-owner-v3
 created: 2026-06-05
 amended_by:
   - reason: "split: INF-600 -> INF-600 + INF-900, 2026-06-05"
+  - reason: "fix grouping: swap b<->c so INF-600 keeps infrastructure (a,b,g,h), INF-900 keeps visibility (c,d,e,f)"
 superseded_by: null
-covered_by: [INF-600a, INF-600c, INF-600g, INF-600h]
+covered_by: [INF-600a, INF-600b, INF-600g, INF-600h]
 implemented_by: []
