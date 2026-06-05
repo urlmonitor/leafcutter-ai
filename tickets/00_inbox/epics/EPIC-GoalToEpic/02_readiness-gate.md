@@ -1,6 +1,6 @@
 ---
 title: "Readiness gate — report unapproved ACs and offer approval choices"
-status: in_progress
+status: done
 components:
   - ac-driven-dev
 created: 2026-06-05
@@ -22,8 +22,8 @@ agents:
   llm-expert: signed_off
   test-runner: signed_off
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
 ac_coverage: 0/3
 source_ac: ACD-1200b
 ---
@@ -149,8 +149,8 @@ tests:
 - [x] llm-expert — 2026-06-05 13:20
 - [x] test-runner — 2026-06-05 13:30
 - [x] pr-reviewer — 2026-06-05 13:40
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-05 13:50
+- [x] pull-request — 2026-06-05 14:00
 
 ## Comments
 
@@ -239,3 +239,21 @@ completion_manifest:
   no_contract_shrinkage: true
 
 Code review passed. classify_readiness() is correctly read-only (rglob + open, no writes). readiness_gate_prompt() correctly delegates to _route_answer() with is_retry=False for first presentation. dispatch_it_po_v3() checks script existence before subprocess. Gate correctly positioned in run() before ticket generation. Two unused imports fixed by ruff autofix (MagicMock, pytest). build-ac.md Step 1b documents all required routing paths. No regressions in 54-test suite. Approved.
+
+### 2026-06-05 13:50 — commit (status: ok)
+feedback-id: fb_2026-06-05_2c2f4ace
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+
+Commit ab9ddf0 includes ticket 02 changes: scripts/goal_to_epic.py (+611 lines), templates/agents/build-ac.md (+110 lines), tickets/00_inbox/epics/EPIC-GoalToEpic/02_readiness-gate.md (+241 lines), unit_tests/ac_store/test_readiness_gate.py (+448 lines). All pre-commit hooks passed. SHA: ab9ddf0. Branch: EPIC-GoalToEpic.
+
+### 2026-06-05 14:00 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_ca63b198
+completion_manifest:
+  branch_pushed: true
+  pr_exists: true
+  no_new_pr_needed: true
+
+Pushed ticket 02 changes to existing PR #69 on branch EPIC-GoalToEpic. Branch was already up to date with origin (commit ab9ddf0 already pushed in the same session that included ticket 03). PR #69 at https://github.com/urlmonitor/leafcutter-ai/pull/69 contains the readiness gate implementation.
