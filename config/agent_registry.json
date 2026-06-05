@@ -1656,6 +1656,27 @@
             "model": "opus",
             "skills_used": [],
             "description": "IT Product Owner for v3 ticket-creation pipeline. Enriches L2/L3 AC YAML files with technical fields: assigned_agent, it_requirements, estimated_complexity, delivers_to/expects_from contracts, and doc_links."
+        },
+        {
+            "id": "build-ac",
+            "name": "Build AC",
+            "tier": "utility",
+            "role": "orchestration",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/build-ac.md",
+            "model": "sonnet",
+            "skills_used": [],
+            "description": "AC-to-ticket-to-build entry-point coordinator. Calls ac_prioritizer.py to find the top-ranked ready AC, generates a ticket via generate_ticket_from_ac.py, surfaces the ticket to the user for confirmation (yes / review / skip), and documents how to mark the AC done after a successful build. Does NOT call /build-feature inline — depth-cap constraint (ADR-006). Invoked by /build-ac slash command.",
+            "invocation_surface": [
+                "/build-ac"
+            ]
         }
     ]
 }
