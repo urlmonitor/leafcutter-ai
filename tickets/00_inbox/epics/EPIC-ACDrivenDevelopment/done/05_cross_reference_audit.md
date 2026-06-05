@@ -1,6 +1,6 @@
 ---
 title: "Cross-reference audit — backfill implemented_by from existing tickets"
-status: todo
+status: done
 components:
   - ac-store
   - ticket-creation
@@ -25,8 +25,8 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
 source_acs:
   - ACD-800
   - ACD-800a
@@ -147,8 +147,8 @@ And the script logs: no-op (already linked) for that AC.
 - [x] python-coder — 2026-06-05 10:15
 - [x] test-runner — 2026-06-05 10:20
 - [x] pr-reviewer — 2026-06-05 10:25
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-05 11:58
+- [x] pull-request — 2026-06-05 12:05
 
 ## Comments
 
@@ -195,6 +195,21 @@ completion_manifest:
   error_handling_present: true
   tests_cover_all_acs: true
 Reviewed `cross_reference_audit.py` and `test_cross_reference_audit.py`. All 6 ACs (AC-1 through AC-6) are covered by implementation and tests. CLI matches spec (--ac-root, --tickets-root, --apply, --json, --min-confidence). Pass 1 uses difflib.SequenceMatcher >= 0.90, Pass 2 uses keyword overlap + component match with approved stop-word list. --apply writes only high-confidence matches. Idempotency check present. Error handling via try/except on all file I/O and YAML parsing. Logging module used for diagnostics. No issues found.
+
+### 2026-06-05 11:58 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  files_staged_correctly: true
+  commit_created: true
+  bug_fix_committed: true
+Committed feat(ticket-05) with SHA d83bbfa (initial implementation) and fix(ticket-05) with SHA 95acc5e (dict-typed component field fix discovered during real-store run). Files staged by explicit path: scripts/ac_store/cross_reference_audit.py, tests/ac_store/test_cross_reference_audit.py, ticket file. All 6 tests pass after fix. PRE_COMMIT_ALLOW_NO_CONFIG=1 used because no .pre-commit-config.yaml exists in this worktree.
+
+### 2026-06-05 12:05 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_exists: true
+Branch EPIC-ACDrivenDevelopment pushed to origin (3050718..95acc5e). Existing PR #61 "EPIC-ACDrivenDevelopment: AC readiness gate and authoring pipeline" already open — commits included in existing epic PR per one-PR-per-epic convention. Stale commit lock from ticket-02 (PID 2371407, dead) was cleared before acquiring lock for this phase.
 
 ## Implementation Tasks
 
