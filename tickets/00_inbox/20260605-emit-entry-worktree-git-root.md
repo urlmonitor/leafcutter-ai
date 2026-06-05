@@ -19,6 +19,13 @@ ac_coverage: 0/3
 ac_traceability:
   L0: INF-100
   L1: INF-100b
+  l2:
+    - INF-100b-1
+    - INF-100b-2
+    - INF-100b-3
+  l3:
+    - INF-100b-1-i
+    - INF-100b-2-i
   ac_path: docs/acceptance-criteria/infrastructure/INF-100-agent-reliability/INF-100b.yaml
   routing: direct_to_ba
 ---

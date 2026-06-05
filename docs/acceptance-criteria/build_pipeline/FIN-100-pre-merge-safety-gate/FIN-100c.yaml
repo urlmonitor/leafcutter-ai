@@ -1,0 +1,33 @@
+id: FIN-100c
+title: "Test failures are triaged into regression, pre-existing, or flaky"
+component: finalize
+level: L1
+status: active
+criteria: |
+  Every test failure after the merge-main step is classified so that the halt
+  decision is based on actual regressions, not noise.
+
+  Given the test suite has been run on the merged worktree (Step 3),
+  When one or more tests fail,
+  Then each failure is compared against the baseline snapshot (from Step 0),
+  And failures present in both the baseline and the merged run are classified
+  as "pre-existing",
+  And failures present only in the merged run are classified as "regression",
+  And failures that passed in the baseline but fail intermittently may be
+  classified as "flaky" if retry logic confirms inconsistency,
+  And the triage result is reported clearly with per-test classification.
+depends_on:
+  - FIN-100a
+  - FIN-100b
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
+amended_by: []
+superseded_by: null
+covered_by:
+  - FIN-100c-1
+  - FIN-100c-2
+  - FIN-100c-3
+implemented_by:
+  - scripts/finalize-feature.js

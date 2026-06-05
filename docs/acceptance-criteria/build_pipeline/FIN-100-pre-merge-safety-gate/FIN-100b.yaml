@@ -1,0 +1,31 @@
+id: FIN-100b
+title: "Main is merged into the worktree before the PR merge decision"
+component: finalize
+level: L1
+status: active
+criteria: |
+  Integration conflicts and test interactions with upstream changes are surfaced
+  before code lands on main — not after.
+
+  Given a feature branch with an open PR,
+  When finalize-feature reaches the merge-main step (Step 2),
+  Then it merges the current main branch into the feature worktree,
+  And if the merge produces conflicts, the workflow halts with a clear error
+  listing the conflicting files,
+  And this merge occurs BEFORE the PR is merged to main (Step 4),
+  So that the subsequent test run (Step 3) validates the feature code against
+  the latest main state.
+depends_on:
+  - FIN-100
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
+amended_by: []
+superseded_by: null
+covered_by:
+  - FIN-100b-1
+  - FIN-100b-2
+  - FIN-100b-3
+implemented_by:
+  - scripts/finalize-feature.js

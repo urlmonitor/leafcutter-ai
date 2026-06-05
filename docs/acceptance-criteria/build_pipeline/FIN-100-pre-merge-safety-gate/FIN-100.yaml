@@ -1,0 +1,34 @@
+id: FIN-100
+title: "Integration failures are caught before code reaches main"
+component: finalize
+level: L0
+status: active
+criteria: |
+  As a developer, I want finalize-feature to verify that my changes integrate
+  cleanly with the latest main branch BEFORE merging my PR, so that main never
+  enters a broken state due to integration regressions.
+
+  When a feature branch is finalized, the workflow merges main into the
+  worktree, runs the full test suite, and classifies any failures as
+  regressions, pre-existing, or flaky. Only branches that introduce zero
+  regressions are allowed to merge. Pre-existing failures are tracked as
+  separate tickets rather than blocking the merge. The result is a main branch
+  that never degrades — every merge either improves the test suite or leaves it
+  unchanged.
+depends_on: []
+doc_links:
+  - docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+origin_agent: product-owner-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
+amended_by: []
+superseded_by: null
+covered_by:
+  - FIN-100a
+  - FIN-100b
+  - FIN-100c
+  - FIN-100d
+  - FIN-100e
+  - FIN-100f
+implemented_by:
+  - scripts/finalize-feature.js

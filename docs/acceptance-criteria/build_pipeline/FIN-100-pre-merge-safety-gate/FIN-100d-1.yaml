@@ -1,0 +1,41 @@
+id: FIN-100d-1
+title: "blocks_finalization=true causes immediate halt with non-zero exit"
+level: L2
+component: finalize
+status: active
+parent: FIN-100d
+criteria: |
+  Given the triage report from Step 3 has blocks_finalization=true
+  When the halt gate evaluates the triage report
+  Then the workflow returns immediately with status="halted" and halted_at_step=3
+  And the reason is "test_regression"
+  And the response includes the full triage_report with every regression test name
+  And the response includes the raw test output for developer diagnosis
+  And the message instructs the developer to fix regressions and re-run
+  And control flow never reaches Step 4 (PR merge)
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
+assigned_agent: "finalize-feature-workflow"
+estimated_complexity: S
+it_requirements: |
+  - Must use early return (not throw) when blocks_finalization=true
+  - Return object must include status="halted", halted_at_step=3, reason="test_regression"
+  - Must include full triage_report and raw test output in the return for developer diagnosis
+  - Must call cleanupBaselineWorktree() before returning
+  - Control flow must NEVER reach step 4 code when this halt fires
+delivers_to: []
+expects_from:
+  - agent: "test-failure-triage"
+    contract: "provides triage_report with blocks_finalization boolean and regressions array"
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relevance: "Step 3 halt gate — early return on blocks_finalization=true (lines 512-531)"
+  - path: "docs/how-to/finalize-feature.md"
+    relevance: "test_regression halt category diagnosis and resolution"
+  - path: "templates/workflows/finalize-feature.md"
+    relevance: "Halt categories table — test_regression row"
+depends_on: []
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

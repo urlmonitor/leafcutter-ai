@@ -1,0 +1,37 @@
+id: FIN-100d-3
+title: "Defensive guard at Step 4 catches blocks_finalization=true that bypassed Step 3 halt"
+level: L3
+component: finalize
+status: active
+parent: FIN-100d-1
+criteria: |
+  Given a code path that somehow reaches Step 4 with triageReport.blocks_finalization=true
+  (e.g. future refactoring introduces a path that skips the Step 3 halt gate)
+  When Step 4 evaluates the defensive guard before the merge confirmation prompt
+  Then it detects blocks_finalization=true
+  And returns halted with halted_at_step=4 and reason="test_regression"
+  And the message explicitly states "Defensive guard triggered"
+  And the PR is NOT merged to main
+  And the baseline worktree cleanup runs
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
+assigned_agent: "finalize-feature-workflow"
+estimated_complexity: S
+it_requirements: |
+  - Defensive guard must evaluate triageReport !== null && triageReport.blocks_finalization BEFORE the prompt() call
+  - Must return halted with halted_at_step=4 (not 3) to distinguish from the primary halt
+  - Message must explicitly state "Defensive guard triggered" for debugging
+  - Must call cleanupBaselineWorktree() before returning
+  - This guard exists to catch future refactoring errors that skip the step 3 halt
+delivers_to: []
+expects_from: []
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relevance: "Step 4 defensive guard (lines 548-564)"
+  - path: "templates/workflows/finalize-feature.md"
+    relevance: "Step 4 — defensive guard description"
+depends_on: []
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []
