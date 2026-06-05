@@ -1,0 +1,36 @@
+id: TKT-200b-2
+title: "Boundary doc is derived from specs, not manually written"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a feature folder contains 4 L2 AC files across 2 components,
+  When the boundary documentation step runs,
+  Then it produces one boundary document per touched component (2 documents total),
+  And each document's content is derived from the AC files' component, criteria,
+    delivers_to, and expects_from fields,
+  And no boundary document requires manual authoring or editing by the user
+    before the review checkpoint.
+depends_on: [TKT-200b, TKT-200b-1]
+doc_links:
+  - path: docs/architecture/components/ticket-creation.md
+    relationship: describes
+    status: planned
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Must produce one document per distinct component value found in the AC files"
+  - "Must not prompt the user for input during generation"
+  - "Must complete generation for all components within 60 seconds total"
+delivers_to: null
+expects_from:
+  ac_id: TKT-200b-1
+  contract: "Boundary document generation capability that reads AC files and produces .md output"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

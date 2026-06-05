@@ -1,0 +1,30 @@
+id: BP-300a-4
+title: "Phase 3 calls build-ticket workflow, not build-epic"
+component: build-pipeline
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260602-debug_js_workflow.md"
+criteria: |
+  Given the create-ticket workflow succeeds and returns a ticket_path
+  When Phase 3 (build-ticket) is reached
+  Then the workflow calls workflow("build-ticket", { userInput: ticket_path })
+  And it does NOT call workflow("build-epic", ...)
+depends_on:
+  - BP-300c
+doc_links:
+  - path: templates/workflows-js/build-ticket.js
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: BP-300a-4-i
+expects_from: BP-300a-2
+it_requirements: "Must call workflow('build-ticket', { userInput: ticket_path }) not workflow('build-epic', ...); ticket_path must come from the create-ticket result"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - "split: BP-300a -> BP-300a + BP-300c, 2026-06-05"
+superseded_by: null
+covered_by: []
+implemented_by: []

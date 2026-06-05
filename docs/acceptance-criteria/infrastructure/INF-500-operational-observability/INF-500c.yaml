@@ -1,0 +1,22 @@
+id: INF-500c
+title: "Feedback analysis supports trend detection, date filtering, and read-only agent integration"
+component: infrastructure
+level: L1
+status: active
+work_status: todo
+criteria: |
+  Beyond the core report, the feedback analysis pipeline supports advanced
+  analysis features. Operators can detect week-over-week trends (rising,
+  stable, falling) per category, filter reports by date range, and invoke
+  the analysis through a dedicated read-only agent that never modifies
+  feedback data. These capabilities make the feedback corpus actionable
+  for ongoing operational decisions, not just one-time snapshots.
+depends_on:
+  - INF-500
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -15,9 +15,18 @@ criteria: |
     execution manifest, or ordering configuration
     outside the AC hierarchy itself.
 depends_on: [TKT-300d, TKT-300d-2]
-doc_links: []
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: S
+it_requirements:
+  - "The supervisor must derive build sequencing solely from AC YAML depends_on fields — no separate manifest or plan file"
+  - "Must handle errors gracefully per the project error handling policy"
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3

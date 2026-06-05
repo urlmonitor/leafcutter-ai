@@ -1,0 +1,24 @@
+id: INF-600f
+title: "New contributors, operators, and peer agents all find what they need"
+component: infrastructure
+level: L1
+status: active
+criteria: |
+  The right level of detail for each audience in a single card.
+
+  The agent card serves three audiences from the same generated artifact.
+  Operators see "when do I use this?" and "what slash command triggers it?"
+  Contributors see "how is it structured?" and "what patterns does it
+  follow?" Peer agents see "what is this agent's input/output contract?"
+  and "which knowledge surfaces does it read or write?" No one has to
+  dig through source files to answer their question.
+depends_on:
+  - INF-600
+  - INF-600b
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

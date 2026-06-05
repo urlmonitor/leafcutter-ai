@@ -1,0 +1,36 @@
+id: BP-100g-3-i
+title: "Validation accepts allowed-tools as comma-separated string or YAML list"
+component: build-pipeline
+level: L3
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-SkillFrontmatterValidation.md"
+criteria: |
+  Given a SKILL.md where allowed-tools is specified as a comma-separated string "Bash, Read, Write"
+  When build.py validates the frontmatter
+  Then the validator splits and strips whitespace before checking each token
+  And validation passes for all canonical tool names
+
+  Given a SKILL.md where allowed-tools is specified as a YAML list ["Bash", "Read", "Write"]
+  When build.py validates the frontmatter
+  Then validation passes for all canonical tool names
+depends_on:
+  - BP-100g-3
+doc_links:
+  - path: scripts/build.py
+    relationship: implements
+    status: exists
+  - path: docs/reference/skill-frontmatter.md
+    relationship: related
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+delivers_to: test-runner
+expects_from: BP-100g-3
+it_requirements: "Test must cover both format variants (comma-separated string and YAML list); must verify whitespace stripping on comma-separated format"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

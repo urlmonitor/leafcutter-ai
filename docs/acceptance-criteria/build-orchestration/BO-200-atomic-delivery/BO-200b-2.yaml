@@ -1,0 +1,38 @@
+id: BO-200b-2
+title: "Failed commit rolls back staging area to pre-commit state"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a work envelope with 4 files has been staged for commit,
+  When the commit fails (due to a pre-commit hook rejection or git error),
+  Then all 4 files are unstaged (returned to modified-but-not-staged state),
+  And the working directory content of those files is preserved unchanged,
+  And no partial commit exists in the git history,
+  And the system reports which step failed and why.
+depends_on: [BO-200b, BO-200b-1]
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must capture the pre-staging state so it can be restored on failure"
+  - "Must preserve working directory file contents during rollback (never discard uncommitted edits)"
+  - "Must log the failure reason at appropriate severity levels"
+  - "Must handle errors gracefully per the project error handling policy"
+delivers_to:
+  agent: python-coder
+  contract: "Rollback result: list of unstaged files and the failure reason string"
+expects_from:
+  ac_id: BO-200b-1
+  contract: "Atomic commit mechanism that reports success or failure with error details"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

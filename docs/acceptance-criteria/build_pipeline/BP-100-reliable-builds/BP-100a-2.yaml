@@ -4,7 +4,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 created_by: "tickets/00_inbox/TICKET-20260604-HookScriptIntegrityCheck.md"
 criteria: |
   Given the hook manifest contains 3 hook entries:
@@ -37,4 +37,5 @@ created: 2026-06-05
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - "PR #53 — feat(build): hook integrity check + contract-shrinking self-exclusion"

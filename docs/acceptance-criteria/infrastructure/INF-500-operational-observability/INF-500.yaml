@@ -1,0 +1,25 @@
+id: INF-500
+title: "You can see what happened and why — retrospectives and analysis are never blocked by tooling gaps"
+component: infrastructure
+level: L0
+status: active
+work_status: todo
+criteria: |
+  Operational visibility that works even when the project has been reorganised.
+
+  After a drive completes, you can always answer "what happened and why?"
+  The retrospective pipeline resolves facts correctly even after epic folders
+  have been moved to their archive location. The feedback analysis pipeline
+  turns accumulated agent observations into a prioritised, actionable
+  summary on demand — without waiting for a full epic lifecycle to complete.
+  Tooling gaps never force you to reconstruct history manually.
+depends_on:
+  - INF-400
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by:
+  - "split: INF-500b -> INF-500b + INF-500c, 2026-06-05"
+superseded_by: null
+covered_by: []
+implemented_by: []

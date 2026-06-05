@@ -1,0 +1,34 @@
+id: TKT-200b-3
+title: "Boundary doc for a new component is created; existing component doc is updated"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a feature introduces ACs under a component that has no existing boundary document,
+  When the boundary documentation step runs,
+  Then a new boundary document is created for that component,
+  And given a feature also touches a component that already has a boundary document,
+  Then the existing document is updated to reflect the new responsibilities
+    added by the feature's ACs,
+  And the update preserves existing content that is not contradicted by the new ACs.
+depends_on: [TKT-200b, TKT-200b-1]
+doc_links:
+  - path: docs/architecture/components/ticket-creation.md
+    relationship: describes
+    status: planned
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Must detect whether a boundary document already exists for a component before writing"
+  - "Must preserve non-contradicted content in existing documents (append-only for new responsibilities)"
+  - "Must not silently overwrite existing boundary documents"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

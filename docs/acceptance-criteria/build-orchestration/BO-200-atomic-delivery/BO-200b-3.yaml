@@ -1,0 +1,36 @@
+id: BO-200b-3
+title: "Automatic retry attempts commit again after recoverable hook failure"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a commit attempt fails because a pre-commit hook reported a fixable violation,
+  When the system detects the failure is recoverable (hook exited with a fix applied),
+  Then it re-stages the corrected files and attempts the commit again,
+  And it retries at most 3 times before reporting permanent failure,
+  And if all retries are exhausted, it rolls back to the pre-commit state
+    and reports the accumulated errors from each attempt.
+depends_on: [BO-200b, BO-200b-2]
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must cap retries at a configurable maximum (default: 3)"
+  - "Must distinguish recoverable failures (hook auto-fixed files) from permanent failures"
+  - "Must accumulate error context across retry attempts for diagnostic purposes"
+  - "Must invoke the rollback mechanism after exhausting retries"
+delivers_to: null
+expects_from:
+  ac_id: BO-200b-2
+  contract: "Rollback mechanism callable on final failure after retries exhausted"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

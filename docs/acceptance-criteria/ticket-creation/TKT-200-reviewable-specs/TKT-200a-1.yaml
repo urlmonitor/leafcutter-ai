@@ -1,0 +1,41 @@
+id: TKT-200a-1
+title: "Diagram generation reads component relationships from AC files"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a feature folder contains 3 L2 AC files,
+    each with a populated component field and depends_on references to ACs in other components,
+  When the diagram generation step runs against that feature folder,
+  Then it produces a component-relationship diagram showing all 3 components
+    and the dependency edges between them,
+  And the diagram uses a standard visual notation (C4 or equivalent)
+    that a reviewer can interpret without tool-specific training.
+depends_on: [TKT-200a]
+doc_links:
+  - path: docs/architecture/components/ticket-creation.md
+    relationship: describes
+    status: planned
+  - path: docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Must produce valid Mermaid syntax that renders without errors"
+  - "Must complete diagram generation within 30 seconds for features with up to 20 AC files"
+  - "Must handle AC files with missing or empty component fields gracefully"
+delivers_to:
+  agent: llm-expert
+  contract: "Mermaid C4 diagram file (.md) showing component nodes and dependency edges, written to the feature folder"
+expects_from:
+  ac_id: TKT-200a
+  contract: "Feature folder path containing L2/L3 AC YAML files with component and depends_on fields populated"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

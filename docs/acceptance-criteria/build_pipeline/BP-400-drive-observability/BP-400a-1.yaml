@@ -1,0 +1,49 @@
+id: BP-400a-1
+title: "emit_event.py exists at the deployed path and produces valid JSONL"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-WireSupervisorFeedbackEmission.md"
+criteria: |
+  Given the build system has deployed the leafcutter package,
+  When the deploy target is inspected,
+  Then .claude/skills/agent-telemetry/scripts/emit_event.py exists.
+
+  Given emit_event.py is invoked as:
+    python emit_event.py --agent "ticket-supervisor" --event agent_start
+      --ticket "/path/to/01_schema.md" --phase "python-coder"
+      --log debugging/logs/agent_telemetry.jsonl
+  When the script completes,
+  Then it exits with code 0,
+  And exactly one JSON line is appended to the log file,
+  And that line contains the keys: event_type, timestamp, agent_name,
+    ticket_path, and payload,
+  And payload contains phase, outcome (null if not supplied),
+    and retry_count (null if not supplied).
+depends_on:
+  - BP-400a
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must use only Python standard library (no third-party dependencies)"
+  - "Must follow the project error handling policy (wrap file I/O, never bare except, never silent swallow)"
+  - "Must produce valid JSON on each line (parseable by json.loads)"
+  - "Must use ISO 8601 UTC timestamps"
+  - "Must be idempotent on repeated invocations (append-only, no file corruption)"
+delivers_to:
+  agent: llm-expert
+  contract: "emit_event.py CLI at templates/skills/agent-telemetry/scripts/emit_event.py that appends structured JSONL with keys: event_type, timestamp, agent_name, ticket_path, payload"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

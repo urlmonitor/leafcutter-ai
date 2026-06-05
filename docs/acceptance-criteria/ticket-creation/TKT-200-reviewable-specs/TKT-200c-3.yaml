@@ -1,0 +1,38 @@
+id: TKT-200c-3
+title: "Review package includes relevant existing documentation alongside new artifacts"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the AC files in a feature folder each have a doc_links field
+    referencing 2 existing project documents,
+  When the review package assembly step runs,
+  Then the manifest includes those existing documents in a separate "context" section,
+  And each context entry states which AC's doc_links field referenced it,
+  And the reviewer can access the existing documents from the same manifest
+    without searching the repository separately.
+depends_on: [TKT-200c, TKT-200c-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/architecture/components/ticket-creation.md
+    relationship: describes
+    status: planned
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Must deduplicate doc_links referenced by multiple ACs (list each document once with all referencing AC IDs)"
+  - "Must verify that referenced documents exist and report missing ones as warnings, not errors"
+delivers_to: null
+expects_from:
+  ac_id: TKT-200c-1
+  contract: "Review manifest assembly capability that can accept context-section entries"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

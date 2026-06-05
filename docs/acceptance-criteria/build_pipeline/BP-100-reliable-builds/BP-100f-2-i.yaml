@@ -1,0 +1,29 @@
+id: BP-100f-2-i
+title: "No secondary git calls fire before the guard in changelog-agent"
+component: build-pipeline
+level: L3
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260526-git_check_precondition.md"
+criteria: |
+  Given the changelog-agent template has been updated with Step 0
+  When the template is audited for git calls
+  Then no git command appears before the Step 0 guard
+  And all secondary git calls in the template are gated behind the guard passing
+depends_on:
+  - BP-100f-2
+doc_links:
+  - path: templates/agents/changelog-agent.md
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: pr-reviewer
+expects_from: BP-100f-2
+it_requirements: "Same template audit pattern as BP-100f-1-i; no git command before the guard; all gated behind guard passing"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

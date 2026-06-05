@@ -1,0 +1,28 @@
+id: BP-300a-2
+title: "Synthesis proceeds without prompt when all investigators agree with high confidence"
+component: build-pipeline
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260602-debug_js_workflow.md"
+criteria: |
+  Given the three investigative agents all return high-confidence, agreeing reports
+  When the synthesis agent merges their output
+  Then the workflow proceeds directly to create-ticket without calling prompt()
+depends_on:
+  - BP-300a
+doc_links:
+  - path: templates/workflows-js/build-ticket.js
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: BP-300a-4
+expects_from: BP-300a-1
+it_requirements: "Confidence check: all three reports must have confidence >= threshold (e.g. 'high') and must agree on root cause; if conditions met, skip prompt() and go directly to create-ticket"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

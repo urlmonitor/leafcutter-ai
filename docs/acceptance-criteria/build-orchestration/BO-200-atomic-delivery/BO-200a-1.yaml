@@ -1,0 +1,38 @@
+id: BO-200a-1
+title: "Work envelope contains ticket reference and changed file list"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket-supervisor has completed all phase agents for a ticket
+    and the working directory contains 4 modified files,
+  When the commit phase assembles the work envelope,
+  Then the envelope includes the ticket path (relative to repo root),
+  And the envelope includes the list of all 4 changed file paths,
+  And the envelope includes a formatted commit message referencing the ticket.
+depends_on: [BO-200a]
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-ticket-workflow-dispatch.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must use paths relative to repo root for portability across environments"
+  - "Must detect all modified files (staged + unstaged) via git status"
+  - "Must be idempotent on re-runs — assembling the envelope twice yields the same result"
+delivers_to:
+  agent: python-coder
+  contract: "Work envelope dict with keys: ticket_path (str), changed_files (list[str]), commit_message (str), sign_offs (dict)"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

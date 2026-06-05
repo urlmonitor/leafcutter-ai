@@ -1,0 +1,36 @@
+id: INF-400g-5
+title: "ticket-supervisor executes feedback emission on mechanical retry (section 3.1)"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-WireSupervisorFeedbackEmission.md"
+criteria: |
+  Given ticket-supervisor adjudicates a mechanical retry (section 3.1)
+  When it classifies the blocker as a single-file concrete fix
+  Then it executes the submit_feedback.py call with category subagent-quality
+  And the call occurs before respawning the failing agent
+depends_on:
+  - INF-400h
+doc_links:
+  - path: templates/agents/ticket-supervisor.md
+    relationship: implements
+    status: exists
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: related
+    status: exists
+  - path: scripts/feedback/submit_feedback.py
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: INF-400g-9
+expects_from: INF-400g-1
+it_requirements: "Feedback emission must occur BEFORE respawning the failing agent; must use category subagent-quality; the instruction must be imperative (not example code) in section 3.1 of the skill"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - "split: INF-400g -> INF-400g + INF-400h, 2026-06-05"
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,29 @@
+id: INF-500a-3-i
+title: "SHA override mode sets git_commit_count to None (distinguishes from zero-commit)"
+component: infrastructure
+level: L3
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-HardenExtractEpicFacts.md"
+criteria: |
+  Given --first-commit and --merge-commit are supplied on the CLI
+  When extract_epic_facts.py produces its output dict
+  Then git_commit_count is None (not 0)
+  And callers can distinguish explicit override mode from genuine zero-commit epics
+depends_on:
+  - INF-500a-3
+doc_links:
+  - path: scripts/retrospective/extract_epic_facts.py
+    relationship: implements
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+delivers_to: test-runner
+expects_from: INF-500a-3
+it_requirements: "Test must verify that git_commit_count is None (Python None, JSON null) when SHA overrides are used — not 0, which would indicate a genuine zero-commit epic"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

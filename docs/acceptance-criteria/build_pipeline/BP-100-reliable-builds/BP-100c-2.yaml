@@ -28,4 +28,5 @@ created: 2026-06-05
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - "PR #53 — feat(build): hook integrity check + contract-shrinking self-exclusion"

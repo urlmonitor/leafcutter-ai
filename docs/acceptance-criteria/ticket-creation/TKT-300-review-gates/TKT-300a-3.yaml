@@ -16,9 +16,19 @@ criteria: |
     and describing the same data shape,
   And the contract descriptions on both sides are compatible.
 depends_on: [TKT-300a, TKT-300a-1]
-doc_links: []
+doc_links:
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: M
+it_requirements:
+  - "Contract descriptions on both sides of a boundary must be validated for semantic compatibility"
+  - "Must detect cross-agent boundaries by comparing assigned_agent fields across sibling ACs"
+  - "Must handle errors gracefully per the project error handling policy"
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3

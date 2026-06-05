@@ -1,0 +1,23 @@
+id: INF-600g
+title: "An agent that cannot describe itself does not pass the build"
+component: infrastructure
+level: L1
+status: active
+criteria: |
+  The build system rejects incomplete agent metadata -- cards never go stale.
+
+  If an agent template is missing required self-description fields, or if
+  its registry entry lacks the metadata needed to generate a complete card,
+  the build fails with a clear error naming the missing fields. This
+  prevents the slow drift that made the existing hand-written agent
+  reference docs inconsistent. Every shipped agent has a complete card.
+depends_on:
+  - INF-600
+  - INF-600a
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

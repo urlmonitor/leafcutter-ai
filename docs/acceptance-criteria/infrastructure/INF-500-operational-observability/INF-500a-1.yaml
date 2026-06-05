@@ -1,0 +1,30 @@
+id: INF-500a-1
+title: "extract_epic_facts.py resolves git history via rename fallback for moved folders"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-HardenExtractEpicFacts.md"
+criteria: |
+  Given an epic folder that has been moved to tickets/99_done/
+  When extract_epic_facts.py is run against the moved path
+  Then git_commit_count is non-zero
+  And git_first_commit_date and git_last_commit_date are populated
+  And the dates are derived from the original path found via git rename history
+depends_on:
+  - INF-500a
+doc_links:
+  - path: scripts/retrospective/extract_epic_facts.py
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: INF-500a-1-i
+expects_from: null
+it_requirements: "Must use git log --follow --diff-filter=R to detect renames; must fall back to the original (pre-move) path for commit history queries; must populate git_commit_count, git_first_commit_date, and git_last_commit_date from the resolved path"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,23 @@
+id: BP-400c
+title: "Get a prioritized summary of what to fix next — on demand"
+component: build-pipeline
+level: L1
+status: active
+work_status: todo
+criteria: |
+  One command shows you what the accumulated feedback says to tackle first.
+
+  At any time, you can ask for a report that reads all accumulated agent
+  feedback, groups it by category, identifies trends, and tells you which
+  issues deserve attention now. The report is prioritized — high-severity
+  recurring problems surface at the top — so you always know what to fix
+  next without reading raw log files.
+depends_on:
+  - BP-400
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

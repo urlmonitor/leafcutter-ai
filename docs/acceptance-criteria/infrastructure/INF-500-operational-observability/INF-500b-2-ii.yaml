@@ -1,0 +1,30 @@
+id: INF-500b-2-ii
+title: "JSON format output contains required keys"
+component: infrastructure
+level: L3
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260603-FeedbackAnalysisPipeline.md"
+criteria: |
+  Given feedback.jsonl contains data
+  When trend_report.py is run with --format json
+  Then the output is valid JSON
+  And it contains keys: summary, by_category, action_items
+  And when --trend was computed, it also contains a trends key
+depends_on:
+  - INF-500b-2
+doc_links:
+  - path: templates/skills/feedback-analysis/scripts/trend_report.py
+    relationship: implements
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+delivers_to: test-runner
+expects_from: INF-500b-2
+it_requirements: "Test must invoke trend_report.py with --format json; parse output as JSON; assert required keys: summary, by_category, action_items; assert trends key present when --trend was computed"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

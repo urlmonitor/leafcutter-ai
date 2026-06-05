@@ -17,7 +17,7 @@ criteria: |
   separate channel must be documented as an ADR before implementation. An
   L2 AC should capture this decision requirement.
 depends_on:
-  - INF-400
+  - INF-700
   - INF-300
 doc_links:
   - path: docs/architecture/agent_knowledge_system.md
@@ -25,7 +25,8 @@ doc_links:
     status: exists
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "split: INF-400 -> INF-400 + INF-700, 2026-06-05 — reparented from INF-400 to INF-700"
 superseded_by: null
 covered_by: []
 implemented_by: []

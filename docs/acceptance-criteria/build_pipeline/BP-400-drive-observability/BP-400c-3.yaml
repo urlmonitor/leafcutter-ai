@@ -1,0 +1,41 @@
+id: BP-400c-3
+title: "trend_report.py computes week-over-week trend indicators"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260603-FeedbackAnalysisPipeline.md"
+criteria: |
+  Given feedback.jsonl contains entries spanning at least 14 days,
+  When trend_report.py is run with --trend week,
+  Then the output includes a trend indicator for each category:
+    "rising" when the current 7-day count exceeds the previous 7-day
+      count by more than 20 percent,
+    "falling" when the current 7-day count is more than 20 percent
+      below the previous 7-day count,
+    "stable" when the difference is 20 percent or less.
+depends_on:
+  - BP-400c
+  - BP-400c-2
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must use a consistent 20% threshold for rising/falling determination"
+  - "Must handle the edge case where the previous 7-day window has zero entries (avoid division by zero)"
+  - "Must use the current date (or --until date if provided) as the window anchor"
+delivers_to: null
+expects_from:
+  ac_id: BP-400c-2
+  contract: "trend_report.py with per-category count computation and --trend CLI flag"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

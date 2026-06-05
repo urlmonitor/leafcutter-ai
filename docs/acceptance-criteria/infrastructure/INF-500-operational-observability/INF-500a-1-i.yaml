@@ -1,0 +1,29 @@
+id: INF-500a-1-i
+title: "Output includes git_resolved_path showing the rename-recovered original path"
+component: infrastructure
+level: L3
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-HardenExtractEpicFacts.md"
+criteria: |
+  Given an epic folder that has been moved and rename detection succeeds
+  When extract_epic_facts.py produces its output dict
+  Then git_resolved_path contains the original (pre-move) path as a string
+  And when no rename resolution was needed, git_resolved_path equals the input path
+depends_on:
+  - INF-500a-1
+doc_links:
+  - path: scripts/retrospective/extract_epic_facts.py
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: test-writer
+expects_from: INF-500a-1
+it_requirements: "Output dict must include git_resolved_path key; when rename resolution succeeds, value is the original pre-move path; when no rename was needed, value equals the input path"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

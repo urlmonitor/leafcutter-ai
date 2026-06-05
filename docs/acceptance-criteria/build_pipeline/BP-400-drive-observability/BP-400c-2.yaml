@@ -1,0 +1,48 @@
+id: BP-400c-2
+title: "trend_report.py produces a prioritized report from multi-category feedback"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260603-FeedbackAnalysisPipeline.md"
+criteria: |
+  Given feedback.jsonl contains at least one entry in each of the
+    actionable categories (knowledge-gap, convention-ambiguity,
+    tooling-issue, quality-concern, blocker, subagent-quality),
+  When trend_report.py is run with no filters,
+  Then it exits with code 0,
+  And the output contains at least one section per non-zero category,
+  And each section contains at least one actionable recommendation,
+  And a "Prioritized Action Items" section ranks categories by a
+    combined score of count multiplied by severity weight,
+  And high-severity categories with equal counts rank above
+    low-severity categories.
+depends_on:
+  - BP-400c
+  - BP-400c-1
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must reuse aggregate.py and list_tags.py for data loading -- must not re-implement JSONL reading"
+  - "Must use only Python standard library beyond the existing feedback scripts"
+  - "Must follow the project error handling policy (wrap subprocess/import calls)"
+  - "Must complete within 5 seconds for feedback files up to 10,000 lines"
+  - "Severity weights must be sourced from feedback_categories.yaml or hardcoded consistently"
+delivers_to:
+  agent: llm-expert
+  contract: "trend_report.py CLI producing structured text or JSON output with keys: summary, by_category, action_items, and optional trends"
+expects_from:
+  ac_id: BP-400c-1
+  contract: "trend_report.py deployed alongside aggregate.py and list_tags.py at importable paths"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

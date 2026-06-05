@@ -1,0 +1,23 @@
+id: BP-400b
+title: "Retrospectives produce accurate timelines even after files move"
+component: build-pipeline
+level: L1
+status: active
+work_status: todo
+criteria: |
+  Post-drive analysis finds the right history regardless of folder reorganization.
+
+  When an epic folder has been moved (e.g., from active to archive) before
+  the retrospective runs, the analysis still surfaces accurate commit counts
+  and date ranges. It traces file history through renames rather than
+  silently reporting zero activity. When history is truly ambiguous, you get
+  a clear explanation and a manual override option — not silent nulls.
+depends_on:
+  - BP-400
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

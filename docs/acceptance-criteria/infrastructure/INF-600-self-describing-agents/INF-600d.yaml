@@ -1,0 +1,22 @@
+id: INF-600d
+title: "See who spawns each agent and what it spawns"
+component: infrastructure
+level: L1
+status: active
+criteria: |
+  A per-agent spawn and dependency diagram showing orchestration position.
+
+  Each agent card includes a diagram showing which agents or supervisors
+  can invoke this agent, which agents this agent can spawn, and where it
+  sits in the overall orchestration hierarchy. You can trace any agent's
+  place in the pipeline without scanning the full spawn graph.
+depends_on:
+  - INF-600
+  - INF-600b
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

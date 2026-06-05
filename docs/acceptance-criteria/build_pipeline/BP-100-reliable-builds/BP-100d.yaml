@@ -10,11 +10,12 @@ criteria: |
   the hook does not misclassify its own patterns as violations. Developers can
   modify hook infrastructure without being blocked by the very hook they are fixing.
 depends_on:
-  - BP-100
+  - BP-500
 doc_links: []
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "split: BP-100 -> BP-100 + BP-500, 2026-06-05 — reparented from BP-100 to BP-500"
 superseded_by: null
 covered_by: []
 implemented_by: []

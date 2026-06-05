@@ -1,0 +1,38 @@
+id: ACS-100c-3
+title: "L0 and L1 ACs are authored by product-owner-class agents only"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a new AC file is created with level L0 or L1,
+  When the AC validator checks the origin_agent field,
+  Then it accepts values from the product-owner class
+    (e.g., "product-owner-v3", "BrainCandy"),
+  And it rejects origin_agent values from the analyst class
+    (e.g., "business-analyst-v3") with an error stating
+    "L0/L1 ACs must be authored by a product-owner-class agent",
+  And L2/L3 ACs with origin_agent from the analyst class pass validation.
+depends_on: [ACS-100c]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/how-to/ac-traceability-store.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must maintain the allowed origin_agent list as configuration, not hardcoded values"
+  - "Must distinguish between L0/L1 (PO-class required) and L2/L3 (analyst-class allowed) by the level field"
+  - "Must produce a clear error message naming the rejected agent and the required class"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

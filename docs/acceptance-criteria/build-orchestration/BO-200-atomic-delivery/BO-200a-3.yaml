@@ -1,0 +1,34 @@
+id: BO-200a-3
+title: "Incomplete work envelope is rejected before commit attempt"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a work envelope is missing the ticket reference field,
+  When the commit phase validates the envelope before committing,
+  Then it rejects the envelope with an error naming the missing field,
+  And no git commit is created,
+  And the working directory remains unchanged.
+depends_on: [BO-200a, BO-200a-1]
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must validate all required envelope fields before any git operation"
+  - "Must name the specific missing field(s) in the error message"
+  - "Must not modify the git staging area or working directory on validation failure"
+delivers_to: null
+expects_from:
+  ac_id: BO-200a-1
+  contract: "Work envelope dict with validation rules: ticket_path required, changed_files non-empty, commit_message non-empty"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -8,15 +8,22 @@ criteria: |
 
   After a build completes, every artifact the system promised is present and
   functional. Hooks point to real scripts, compiled workflows land where agents
-  can find them, and folder paths respect the project's own configuration
-  rather than assuming a fixed layout. When something in the build chain is
-  misconfigured, you find out immediately — not three commits later when a
-  workflow silently fails.
+  can find them, folder paths respect the project's own configuration, and
+  skill files are validated before deployment. When something in the build
+  chain is misconfigured, you find out immediately — not three commits later
+  when a workflow silently fails.
 depends_on: []
 doc_links: []
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "split: BP-100g -> BP-100g + BP-100h, 2026-06-05"
+  - "split: BP-100 -> BP-100 + BP-500, 2026-06-05"
 superseded_by: null
-covered_by: []
+covered_by:
+  - BP-100a
+  - BP-100b
+  - BP-100c
+  - BP-100g
+  - BP-100h
 implemented_by: []

@@ -1,0 +1,28 @@
+id: BP-100e-3
+title: "Pre-commit hook accepts signed-off lines with valid YYYY-MM-DD HH:MM timestamps"
+component: build-pipeline
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-HardenSignoffTimestamps.md"
+criteria: |
+  Given a ticket commit where a signed-off line reads "- [x] python-coder — 2026-05-28 15:12"
+  When the pre-commit hook runs
+  Then the hook passes with no violations for that line
+depends_on:
+  - BP-100e
+doc_links:
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+delivers_to: test-runner
+expects_from: BP-100e-2
+it_requirements: "Test must confirm the hook passes (exit 0) for well-formed timestamps; serves as the positive-path regression guard for the timestamp validator"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

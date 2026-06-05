@@ -1,0 +1,35 @@
+id: INF-400g-6
+title: "ticket-supervisor executes feedback emission on cross-agent rework (section 3.2)"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-WireSupervisorFeedbackEmission.md"
+criteria: |
+  Given ticket-supervisor adjudicates a cross-agent rework (section 3.2)
+  When a review-class agent names a sibling that needs revision
+  Then it executes the submit_feedback.py call with category subagent-quality
+depends_on:
+  - INF-400h
+doc_links:
+  - path: templates/agents/ticket-supervisor.md
+    relationship: implements
+    status: exists
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: related
+    status: exists
+  - path: scripts/feedback/submit_feedback.py
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: INF-400g-9
+expects_from: INF-400g-1
+it_requirements: "Must execute submit_feedback.py with category subagent-quality in section 3.2 (cross-agent rework); must be imperative instruction, not example code"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - "split: INF-400g -> INF-400g + INF-400h, 2026-06-05"
+superseded_by: null
+covered_by: []
+implemented_by: []

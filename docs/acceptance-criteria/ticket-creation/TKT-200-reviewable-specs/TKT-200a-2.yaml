@@ -1,0 +1,39 @@
+id: TKT-200a-2
+title: "Diagram generation captures data flow from delivers_to and expects_from contracts"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a feature folder contains 2 L2 AC files where:
+    - AC-1 has delivers_to with contract "parsed configuration object"
+    - AC-2 has expects_from referencing AC-1 with contract "parsed configuration object",
+  When the diagram generation step runs,
+  Then the produced diagram includes a labeled data-flow edge from AC-1's component to AC-2's component,
+  And the edge label contains the contract description,
+  And the direction of the edge reflects the delivers_to direction (producer to consumer).
+depends_on: [TKT-200a, TKT-200a-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/architecture/components/ticket-creation.md
+    relationship: describes
+    status: planned
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Must render data-flow edges visually distinct from dependency edges"
+  - "Must truncate edge labels exceeding 60 characters with an ellipsis"
+  - "Must handle ACs with delivers_to referencing non-existent AC IDs gracefully"
+delivers_to: null
+expects_from:
+  ac_id: TKT-200a-1
+  contract: "Diagram generation capability that reads AC files and produces Mermaid C4 output"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

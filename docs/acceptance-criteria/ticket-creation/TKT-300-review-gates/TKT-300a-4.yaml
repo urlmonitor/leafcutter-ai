@@ -14,9 +14,18 @@ criteria: |
   And the IT PO logs a caveat instead of rewriting
     when criteria are ambiguous for implementation purposes.
 depends_on: [TKT-300a]
-doc_links: []
+doc_links:
+  - path: docs/architecture/adrs/ADR-009-itpo-no-source-code-access.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: S
+it_requirements:
+  - "The criteria field must be preserved byte-for-byte during enrichment — no whitespace normalization, no reordering"
+  - "Caveats must be surfaced as structured data at the confirmation gate, not silently discarded"
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3

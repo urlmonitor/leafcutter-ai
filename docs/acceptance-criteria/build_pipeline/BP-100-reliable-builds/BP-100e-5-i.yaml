@@ -1,0 +1,28 @@
+id: BP-100e-5-i
+title: "Pre-commit hook accepts comment headings with valid YYYY-MM-DD HH:MM timestamps"
+component: build-pipeline
+level: L3
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-HardenSignoffTimestamps.md"
+criteria: |
+  Given a ticket commit where a comments heading reads "### 2026-05-28 15:12 — python-coder (status: ok)"
+  When the pre-commit hook runs
+  Then the hook passes with no violations for that heading
+depends_on:
+  - BP-100e-5
+doc_links:
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+delivers_to: test-runner
+expects_from: BP-100e-5
+it_requirements: "Positive-path test for comment heading validation; must confirm exit 0 for well-formed heading timestamps"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

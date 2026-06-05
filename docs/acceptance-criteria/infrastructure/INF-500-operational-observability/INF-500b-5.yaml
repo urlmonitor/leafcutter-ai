@@ -1,0 +1,34 @@
+id: INF-500b-5
+title: "feedback-analyst agent reads data and returns report without modifying files"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260603-FeedbackAnalysisPipeline.md"
+criteria: |
+  Given a user invokes /feedback-report
+  When the feedback-analyst agent is dispatched
+  Then it reads feedback.jsonl via the analysis scripts
+  And returns a structured report to the user
+  And does not modify any file (read-only operation)
+depends_on:
+  - INF-500c
+doc_links:
+  - path: templates/agents/feedback-analyst.md
+    relationship: implements
+    status: exists
+  - path: templates/skills/feedback-analysis/SKILL.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: pr-reviewer
+expects_from: INF-500b-1
+it_requirements: "feedback-analyst agent must be read-only (Bash + Read tools only, no Edit or Write); must invoke trend_report.py via Bash; must return structured report to user; must not modify feedback.jsonl or any other file"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - "split: INF-500b -> INF-500b + INF-500c, 2026-06-05"
+superseded_by: null
+covered_by: []
+implemented_by: []

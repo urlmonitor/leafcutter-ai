@@ -1,0 +1,22 @@
+id: INF-600a
+title: "Every agent template follows a standardized self-description contract"
+component: infrastructure
+level: L1
+status: active
+criteria: |
+  Consistent metadata patterns across all agents make auto-generation reliable.
+
+  Every agent template carries the same set of structured metadata fields
+  that fully describe its knowledge sources, capabilities, inputs, outputs,
+  and orchestration relationships. When a new agent is created, the same
+  pattern is enforced, so the system can always extract a complete profile
+  from the template alone without relying on separate hand-written docs.
+depends_on:
+  - INF-600
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

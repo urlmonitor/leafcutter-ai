@@ -1,0 +1,29 @@
+id: BP-100f-1-i
+title: "No secondary git calls fire before the guard in finalize-feature"
+component: build-pipeline
+level: L3
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260526-git_check_precondition.md"
+criteria: |
+  Given the finalize-feature agent template has been updated with Step 0
+  When the template is audited for git calls
+  Then no git command appears before the Step 0 guard
+  And all secondary git calls in the template are gated behind the guard passing
+depends_on:
+  - BP-100f-1
+doc_links:
+  - path: templates/agents/finalize-feature.md
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: pr-reviewer
+expects_from: BP-100f-1
+it_requirements: "Audit the template for any git command (git log, git diff, git status, etc.) before Step 0; all must be moved behind the guard; no conditional branches may bypass the guard"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

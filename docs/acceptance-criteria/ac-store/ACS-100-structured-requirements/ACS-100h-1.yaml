@@ -1,0 +1,38 @@
+id: ACS-100h-1
+title: "Overcrowded parent triggers the split procedure with the correct pattern"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an L0 AC has 8 L1 children listed in its covered_by field (exceeding the limit of 7),
+  When an agent loads the ac-tree-split skill for that L0,
+  Then it selects Pattern A (horizontal split) as the applicable procedure,
+  And given an L1 AC has 6 L2 children (exceeding the limit of 5),
+  When an agent loads the ac-tree-split skill for that L1,
+  Then it selects Pattern C (intermediate split) as the applicable procedure.
+depends_on: [ACS-100h]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/how-to/ac-traceability-store.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Must use the covered_by field count as the authoritative child count (not file-system scanning)"
+  - "Must select Pattern A for L0 parents and Pattern C for L1 parents exclusively"
+  - "Must handle edge cases where covered_by contains IDs for non-existent files gracefully"
+delivers_to:
+  agent: llm-expert
+  contract: "Selected split pattern (A or C) and the overcrowded parent AC ID, ready for the rewiring step"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

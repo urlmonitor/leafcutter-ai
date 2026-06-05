@@ -1,0 +1,28 @@
+id: BP-300a-3
+title: "Workflow prompts user for clarification when investigators disagree or have low confidence"
+component: build-pipeline
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260602-debug_js_workflow.md"
+criteria: |
+  Given the three investigative agents return conflicting or low-confidence reports
+  When the synthesis agent merges their output and flags uncertainty
+  Then the workflow calls prompt() with targeted questions before creating a ticket
+depends_on:
+  - BP-300a
+doc_links:
+  - path: templates/workflows-js/build-ticket.js
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: BP-300a-4
+expects_from: BP-300a-1
+it_requirements: "Must call prompt() with targeted questions derived from the uncertainty areas; prompt result feeds back into synthesis before ticket creation"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

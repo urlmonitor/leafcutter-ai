@@ -1,0 +1,33 @@
+id: BP-100f-1
+title: "finalize-feature emits warning and skips git steps outside a git worktree"
+component: build-pipeline
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260526-git_check_precondition.md"
+criteria: |
+  Given the finalize-feature agent is invoked
+  When git rev-parse --is-inside-work-tree returns a non-zero exit code
+  Then the agent emits a user-friendly warning naming the missing git context
+  And the agent skips all git-dependent steps
+  And the agent exits cleanly without a fatal error
+depends_on:
+  - BP-100f
+doc_links:
+  - path: templates/agents/finalize-feature.md
+    relationship: implements
+    status: exists
+  - path: docs/how-to/finalize-feature.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: BP-100f-1-i
+expects_from: null
+it_requirements: "Must add Step 0 guard using subprocess.run(['git', 'rev-parse', '--is-inside-work-tree']); must emit warning to stdout (not stderr) so agent sees it; must skip all subsequent git calls via early return or flag"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

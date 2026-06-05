@@ -13,9 +13,16 @@ criteria: |
     that at least one artifact reference is required,
   And the ticket's sign-off status remains unchanged at "needed".
 depends_on: [TKT-300b, TKT-300b-1]
-doc_links: []
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Rejection must not mutate the ticket's sign-off state — the state remains unchanged on invalid input"
+  - "Error messages must be deterministic for the same invalid payload"
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3

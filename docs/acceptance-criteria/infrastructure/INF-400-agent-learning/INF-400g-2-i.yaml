@@ -1,0 +1,29 @@
+id: INF-400g-2-i
+title: "emit_event.py handles optional arguments gracefully (null in payload)"
+component: infrastructure
+level: L3
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-WireSupervisorFeedbackEmission.md"
+criteria: |
+  Given emit_event.py is invoked without --ticket, --phase, --outcome, or --retry-count
+  When the script runs
+  Then it exits 0 without crashing
+  And the payload fields for missing arguments are null in the output JSON line
+depends_on:
+  - INF-400g-2
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: related
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+delivers_to: test-runner
+expects_from: INF-400g-2
+it_requirements: "Test must invoke emit_event.py without --ticket, --phase, --outcome, --retry-count; assert exit code 0; parse the JSON output and verify missing fields are null (not absent)"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

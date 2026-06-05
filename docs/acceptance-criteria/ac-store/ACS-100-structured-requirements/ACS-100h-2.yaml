@@ -1,0 +1,44 @@
+id: ACS-100h-2
+title: "Split rewires depends_on and covered_by without breaking any reference"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an L0 "ACS-100" has 8 L1 children and is split horizontally
+    into "ACS-100" (4 L1s) and "ACS-101" (4 L1s),
+  When the rewiring step completes,
+  Then every moved L1's depends_on field references ACS-101 (not ACS-100),
+  And ACS-100's covered_by field contains exactly the 4 remaining L1 IDs,
+  And ACS-101's covered_by field contains exactly the 4 moved L1 IDs,
+  And no L2 AC under any moved L1 has its depends_on field changed
+    (L1 IDs are stable across horizontal splits),
+  And no delivers_to or expects_from contract references are broken.
+depends_on: [ACS-100h, ACS-100h-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/how-to/ac-traceability-store.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: L
+it_requirements:
+  - "Must preserve L1 IDs unchanged during horizontal splits (ID stability invariant)"
+  - "Must verify no delivers_to or expects_from references are broken after rewiring"
+  - "Must be idempotent — running the rewiring step again on an already-split tree produces no changes"
+  - "Must handle the case where a moved L1 has no L2 children without error"
+delivers_to:
+  agent: llm-expert
+  contract: "Set of modified AC YAML files with updated depends_on and covered_by fields, ready for gate and audit"
+expects_from:
+  ac_id: ACS-100h-1
+  contract: "Selected split pattern and the cluster assignment (which L1s move to which new parent)"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
