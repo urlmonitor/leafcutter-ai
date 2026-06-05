@@ -20,3 +20,4 @@ are the way they are.
 | [ADR-007b](ADR-007-ac-store-schema-id-format-enforcement.md) | Accepted | AC Store — YAML Schema, ID Format, and Bidirectional Enforcement Model | 2026-06-04 |
 | [ADR-007c](ADR-007-test-fixture-convention.md) | Active | Test Fixture Convention | 2026-06-04 |
 | [ADR-009](ADR-009-itpo-no-source-code-access.md) | Accepted | IT Product Owner v3 — Source Code Access Restriction | 2026-06-05 |
+| [ADR-010](ADR-010-ac-store-as-authoritative-backlog.md) | Accepted | AC Store as Authoritative Backlog — Source-of-Truth Inversion | 2026-06-05 |

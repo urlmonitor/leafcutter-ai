@@ -1,0 +1,30 @@
+id: ACD-1000b
+title: "Ticket creation understands existing ACs from the start"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a user invokes ticket creation (Phase 1 — more LLM compute, human babysitting),
+  When PO v3 runs, it scans existing L0/L1 ACs, asks the user questions, and
+    either produces new L0/L1 ACs or identifies existing ones that cover the request,
+  And when BA v3 runs, it reviews the goal and existing L2s beneath it, then
+    decomposes into new L2/L3 ACs (not duplicating what already exists),
+  And when IT PO v3 runs, it enriches the new ACs with technical fields,
+  Then humans confirm at each stage before the next agent begins,
+  And the epic name (target_epic) is assigned early in the flow so all produced
+    ACs belong to the same shipping batch from the start.
+depends_on: [ACD-1000a]
+doc_links: []
+assigned_agent: null
+estimated_complexity: L
+it_requirements: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

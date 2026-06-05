@@ -1,0 +1,29 @@
+id: ACD-1000
+title: "Goals persist and grow incrementally while shipping happens in named batches that close when done"
+component: ac-driven-dev
+level: L0
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a user has permanent goals captured as L0/L1 ACs in the AC store,
+  And they want to ship a specific subset of L2/L3 work toward those goals,
+  When they group that work under a named epic (target_epic: EPIC-Name),
+  Then all ACs sharing that epic name form a transient shipping batch,
+  And the batch closes when the epic ships to main,
+  And the permanent L0/L1 goals remain untouched and ready for future work,
+  And new scope under the same goal simply spawns a new epic name,
+  So that the user never loses track of where they are headed (permanent goals)
+    even as they ship piece by piece through separate closing batches.
+depends_on: []
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-1000a, ACD-1000b, ACD-1000c, ACD-1000d, ACD-1000e]
+implemented_by: []

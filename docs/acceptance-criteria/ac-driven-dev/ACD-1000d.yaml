@@ -1,0 +1,29 @@
+id: ACD-1000d
+title: "Full pipeline runs end-to-end with minimal intervention"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the automated skills from ACD-1000c exist (Phase 3 — autopilot),
+  When a user invokes a single command with their intent,
+  Then the system proposes what to build by scanning goals and gaps,
+  And groups the proposed L2/L3 ACs under a target_epic name,
+  And generates the epic folder structure,
+  And drives the epic through build (ticket-supervisor dispatch),
+  And the AC store is self-directing: permanent goals surface unfinished work
+    automatically, and shipping batches form and close without manual assembly.
+depends_on: [ACD-1000c]
+doc_links: []
+assigned_agent: null
+estimated_complexity: XL
+it_requirements: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,30 @@
+id: ACD-1000b-1
+title: "/po slash command invokes PO v3 with AC store context"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given the user types /po followed by a feature description,
+  When the product-owner-v3 agent is invoked,
+  Then it scans docs/acceptance-criteria/ for existing L0/L1 ACs before asking questions,
+  And it identifies overlap with existing goals,
+  And it asks clarifying questions to understand customer value,
+  And it produces L0 and L1 AC YAML files in the AC store,
+  And it does NOT produce L2/L3 ACs (that is the BA's job).
+depends_on:
+  - ACD-1000b
+doc_links:
+  - path: .claude/commands/po.md
+    relationship: implements
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - .claude/commands/po.md

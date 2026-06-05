@@ -1,0 +1,31 @@
+id: ACD-1000b-3
+title: "/it-po slash command invokes IT PO v3 for technical enrichment"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given the user types /it-po followed by a reference to L2/L3 ACs,
+  When the it-po-v3 agent is invoked,
+  Then it reads the referenced L2/L3 ACs from the AC store,
+  And it enriches each with assigned_agent, estimated_complexity,
+    delivers_to/expects_from contracts, and doc_links,
+  And it reads architecture docs to understand component boundaries,
+  And it splits ACs when technical boundaries reveal multi-agent work,
+  And it does NOT modify the criteria field (that belongs to the BA).
+depends_on:
+  - ACD-1000b
+doc_links:
+  - path: .claude/commands/it-po.md
+    relationship: implements
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - .claude/commands/it-po.md

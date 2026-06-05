@@ -31,3 +31,29 @@ the glossary-automation system (`check_glossary_coverage.py` / `glossary-triage`
 | db_connection_test | JSON config field name (testing_context sub-field), not a domain concept | 2026-05-27 |
 | test_output_rules | JSON config field name (testing_context sub-field), not a domain concept | 2026-05-27 |
 | agent_delivery_workflows | Document filename used as a cross-link path in frontmatter and prose, not a standalone domain concept | 2026-06-03 |
+| scan_ac_store | Python script filename (code identifier), not a standalone domain concept | 2026-06-05 |
+| generate_ticket_from_ac | Python script filename (code identifier), not a standalone domain concept | 2026-06-05 |
+| classDef | Mermaid CSS class definition syntax keyword, not a domain concept | 2026-06-05 |
+| nInputs | Mermaid \n-escape tokenization artifact, not a domain concept | 2026-06-05 |
+| nOutputs | Mermaid \n-escape tokenization artifact, not a domain concept | 2026-06-05 |
+| nExit | Mermaid \n-escape tokenization artifact, not a domain concept | 2026-06-05 |
+| nIdempotency | Mermaid \n-escape tokenization artifact, not a domain concept | 2026-06-05 |
+| nFrontmatter | Mermaid \n-escape tokenization artifact, not a domain concept | 2026-06-05 |
+| nBody | Mermaid \n-escape tokenization artifact, not a domain concept | 2026-06-05 |
+| nSource | Mermaid \n-escape tokenization artifact, not a domain concept | 2026-06-05 |
+| nNo | Mermaid \n-escape tokenization artifact, not a domain concept | 2026-06-05 |
+| mark_ac_done | Internal script filename (scripts/ac_store/mark_ac_done.py), not a domain concept | 2026-06-05 |
+| validate_ac_schema | Internal script filename (scripts/ac_store/validate_ac_schema.py), not a domain concept | 2026-06-05 |
+| sequenceDiagram | Mermaid diagram-type keyword in a code block, not a domain concept | 2026-06-05 |
+| stateDiagram | Mermaid diagram-type keyword in a code block, not a domain concept | 2026-06-05 |
+| nBuild | Mermaid \n-escape tokenization artifact, not a domain concept | 2026-06-05 |
+| nBlocks | Mermaid \n-escape tokenization artifact, not a domain concept | 2026-06-05 |
+| nEnforces | Mermaid \n-escape tokenization artifact, not a domain concept | 2026-06-05 |
+| nIdempotent | Mermaid \n-escape tokenization artifact, not a domain concept | 2026-06-05 |
+| nReads | Mermaid \n-escape tokenization artifact, not a domain concept | 2026-06-05 |
+| nRequires | Mermaid \n-escape tokenization artifact, not a domain concept | 2026-06-05 |
+| nReturns | Mermaid \n-escape tokenization artifact, not a domain concept | 2026-06-05 |
+| nSequences | Mermaid \n-escape tokenization artifact, not a domain concept | 2026-06-05 |
+| nSets | Mermaid \n-escape tokenization artifact, not a domain concept | 2026-06-05 |
+| nSort | Mermaid \n-escape tokenization artifact, not a domain concept | 2026-06-05 |
+| nWrites | Mermaid \n-escape tokenization artifact, not a domain concept | 2026-06-05 |

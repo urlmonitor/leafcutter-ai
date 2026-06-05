@@ -1,0 +1,29 @@
+id: ACD-1000c
+title: "Agents handle mechanical work between stages with less human intervention"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the pipeline from ACD-1000b exists (Phase 2 — skills and scripts),
+  When the system transitions between authoring stages,
+  Then agents have skills for scanning existing ACs, detecting duplicates,
+    generating epic names from target_epic tags, and resolving dependency order,
+  And less human intervention is required between stages because mechanical
+    decisions (naming, deduplication, dependency wiring) are automated,
+  And scripts handle AC lookup, epic folder generation from target_epic groups,
+    and dependency ordering without user prompts for each step.
+depends_on: [ACD-1000b]
+doc_links: []
+assigned_agent: null
+estimated_complexity: L
+it_requirements: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
