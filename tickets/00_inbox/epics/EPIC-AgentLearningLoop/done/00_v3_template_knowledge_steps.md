@@ -1,6 +1,6 @@
 ---
 title: "V3 template knowledge steps — inject at start, emit before exit"
-status: todo
+status: done
 components:
   - infrastructure
 created: 2026-06-05
@@ -25,8 +25,8 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
 source_acs:
   - INF-400a-1
   - INF-400a-2
@@ -172,10 +172,31 @@ Then the capture step detects the duplicate (via route-learning Step 0)
 - [x] llm-expert — 2026-06-05 10:15
 - [x] test-runner — 2026-06-05 10:30
 - [x] pr-reviewer — 2026-06-05 10:45
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-05 11:00
+- [x] pull-request — 2026-06-05 11:15
 
 ## Comments
+
+### 2026-06-05 11:15 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_e7c35c64
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+  pr_url_recorded: true
+
+Pushed EPIC-AgentLearningLoop branch to origin. PR #60 opened at
+https://github.com/urlmonitor/leafcutter-ai/pull/60 against main.
+
+### 2026-06-05 11:00 — commit (status: ok)
+feedback-id: fb_2026-06-05_de9e9743
+completion_manifest:
+  files_staged_explicitly: true
+  commit_succeeded: true
+  no_cross_worktree_pollution: true
+
+Committed 4 files (3 v3 templates + ticket) as SHA 650a53c. Used explicit
+git add per path (not git add .). Pre-commit hook absent (PRE_COMMIT_ALLOW_NO_CONFIG=1
+used). Lock acquired before commit and released after. 553 insertions total.
 
 ### 2026-06-05 10:45 — pr-reviewer (status: ok)
 feedback-id: fb_2026-06-05_a23dd488
