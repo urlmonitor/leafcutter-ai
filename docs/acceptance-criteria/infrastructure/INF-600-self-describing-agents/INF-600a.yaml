@@ -16,7 +16,8 @@ depends_on:
 doc_links: []
 origin_agent: product-owner-v3
 created: 2026-06-05
-amended_by: []
-superseded_by: null
+amended_by:
+  - reason: "split: INF-600a -> INF-600i + INF-600j, 2026-06-05. Knowledge/skills (a-1,a-3,a-5) to INF-600i, contracts/behaviors (a-2,a-4,a-6) to INF-600j."
+superseded_by: [INF-600i, INF-600j]
 covered_by: []
 implemented_by: []

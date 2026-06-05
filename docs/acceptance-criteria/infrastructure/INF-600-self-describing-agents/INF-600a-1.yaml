@@ -20,7 +20,7 @@ criteria: |
   And the existing `skills_used` field is retained as an alias
     for backward compatibility but is no longer the sole source of truth
 depends_on:
-  - INF-600a
+  - INF-600i
 doc_links:
   - path: docs/agents/cards/python-coder.card.md
     relationship: describes

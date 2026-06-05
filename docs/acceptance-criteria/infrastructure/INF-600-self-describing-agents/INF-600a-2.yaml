@@ -25,7 +25,7 @@ criteria: |
   And the card generator can produce the Input/Output Contract section
     from these three arrays without reading the template prose body
 depends_on:
-  - INF-600a
+  - INF-600j
 doc_links:
   - path: docs/agents/cards/python-coder.card.md
     relationship: describes

@@ -1,0 +1,57 @@
+id: INF-600a-6
+title: "Agent frontmatter declares structured behavioral patterns"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+criteria: |
+  Given an agent template file whose prose body describes conditional
+    behaviors, gates, delegation rules, or scope boundaries
+    (e.g. python-coder, which has 7 behavioral patterns including
+     Contract-Aware Mode, TDD Red-Baseline Gate, Stop-and-Ask,
+     Contract-Shrinkage Guard, Test Delegation, File-Size Limit,
+     and Research Delegation)
+  When the frontmatter is parsed
+  Then it contains a `behavioral_patterns` array
+  And each element in the array has fields:
+    - `name` (string, human-readable pattern name,
+       e.g. "Contract-Aware Mode", "TDD Red-Baseline Gate")
+    - `trigger` (string describing when the pattern activates,
+       e.g. "ticket has ## Agent Contracts section with ### python-coder",
+       "test-writer signed off with red_baseline in comment")
+    - `behavior` (string describing what the agent does differently,
+       e.g. "contract becomes primary spec, superseding Implementation Tasks",
+       "must turn all listed red tests green, cannot skip or xfail")
+    - `related_agent` (string or null, naming an agent involved
+       in the pattern if applicable,
+       e.g. "sql-coder" for Stop-and-Ask, "research-agent" for
+       Contract-Shrinkage Guard, null for File-Size Limit)
+  And the array includes every conditional behavior, gate, delegation
+    rule, or scope boundary described in the template prose body
+  And the card generator can produce the Key Behavioral Patterns table
+    in the Contributor Notes section from this array without parsing
+    the template prose body
+depends_on:
+  - INF-600j
+doc_links:
+  - path: docs/agents/cards/python-coder.card.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/python-coder.md
+    relationship: describes
+    status: exists
+  - path: docs/agents/conventions.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A behavioral_patterns array in agent frontmatter that the card generator reads to produce the Key Behavioral Patterns table"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

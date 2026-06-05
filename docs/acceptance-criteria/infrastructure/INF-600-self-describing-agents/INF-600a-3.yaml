@@ -26,7 +26,7 @@ criteria: |
     if a convention flag `include_universal_channels: false` is set
     at the registry level
 depends_on:
-  - INF-600a
+  - INF-600i
 doc_links:
   - path: docs/agents/cards/python-coder.card.md
     relationship: describes

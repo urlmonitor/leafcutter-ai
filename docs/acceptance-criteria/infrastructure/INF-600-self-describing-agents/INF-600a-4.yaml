@@ -21,7 +21,7 @@ criteria: |
   And no Mustache variable in the template body resolves to an
     undeclared config key
 depends_on:
-  - INF-600a
+  - INF-600j
 doc_links:
   - path: docs/agents/cards/python-coder.card.md
     relationship: describes

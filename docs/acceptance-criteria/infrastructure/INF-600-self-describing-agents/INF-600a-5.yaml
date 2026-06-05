@@ -25,7 +25,7 @@ criteria: |
     in the Knowledge Flow table from this array without parsing
     the template prose body
 depends_on:
-  - INF-600a
+  - INF-600i
 doc_links:
   - path: docs/agents/cards/python-coder.card.md
     relationship: describes
