@@ -6,12 +6,9 @@ complexity: simple
 components:
   - infrastructure
 agents:
-  python-coder:
-    role: implement
-    phase: build
-  reviewer:
-    role: review
-    phase: review
+  python-coder: needed
+  pr-reviewer: needed
+  commit: needed
 files_touched:
   - scripts/changelog/emit_entry.py
 depends_on: []
@@ -79,4 +76,5 @@ if (p2 / ".git").exists():
 ## Sign-offs
 
 - [ ] python-coder
-- [ ] reviewer
+- [ ] pr-reviewer
+- [ ] commit
