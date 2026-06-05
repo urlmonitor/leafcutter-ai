@@ -1,6 +1,6 @@
 ---
 title: "Add --surface and --project-root CLI flags to visualise_knowledge_graph.py"
-status: todo
+status: done
 components:
   - knowledge-management
 created: 2026-06-04
@@ -11,7 +11,7 @@ roadmap_phase: phase_1
 advances_current_outcome: true
 requires_diagram: false
 requires_adr: false
-ac_coverage: 0/4
+ac_coverage: 4/4
 files_touched:
   - scripts/visualise_knowledge_graph.py
 agents:
