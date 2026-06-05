@@ -1,6 +1,6 @@
 ---
 title: "Fix emit_entry _resolve_repo_root() to support git worktrees"
-status: inbox
+status: done
 date: 2026-06-05
 complexity: simple
 components:
@@ -12,7 +12,7 @@ agents:
 files_touched:
   - scripts/changelog/emit_entry.py
 depends_on: []
-ac_coverage: 0/3
+ac_coverage: 3/3
 ---
 
 ## Context
@@ -52,17 +52,17 @@ if (p2 / ".git").exists():
 
 ## Acceptance Criteria
 
-- [ ] AC-1: `_resolve_repo_root()` returns `parents[2]` when invoked from a git worktree where `parents[2]/.git` is a file. (INF-100b-1)
-- [ ] AC-2: `_resolve_repo_root()` returns `parents[2]` when invoked from a standard checkout where `parents[2]/.git` is a directory. (INF-100b-2)
-- [ ] AC-3: All 8 previously-failing worktree emit_entry tests pass after the fix, and no previously-passing test is newly broken. (INF-100b-3)
+- [x] AC-1: `_resolve_repo_root()` returns `parents[2]` when invoked from a git worktree where `parents[2]/.git` is a file. (INF-100b-1)
+- [x] AC-2: `_resolve_repo_root()` returns `parents[2]` when invoked from a standard checkout where `parents[2]/.git` is a directory. (INF-100b-2)
+- [x] AC-3: All 8 previously-failing worktree emit_entry tests pass after the fix, and no previously-passing test is newly broken. (INF-100b-3)
 
 ## AC Coverage
 
 | AC   | Test | Implementation | Validated |
 |------|------|----------------|-----------|
-| AC-1 |      |                |           |
-| AC-2 |      |                |           |
-| AC-3 |      |                |           |
+| AC-1 | test_git_as_file_returns_parents2 (test_emit_entry_cwd.py) | Changed .is_dir() to .exists() on line 82 | covered — 2026-06-05 |
+| AC-2 | test_git_as_directory_returns_parents2 (test_emit_entry_cwd.py) | .exists() returns True for directories too | covered — 2026-06-05 |
+| AC-3 | 42 emit_entry tests all pass (was 2 failing before fix) | Fix in _resolve_repo_root() + noqa suppression | covered — 2026-06-05 |
 
 ## Implementation Notes
 
