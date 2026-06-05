@@ -1,0 +1,40 @@
+id: KM-KQS-017
+title: "knowledge_query.py produces at least one node per surface against the real repository"
+component: knowledge-management
+level: L2
+status: active
+work_status: todo
+criteria: |
+  Given the repository with the "surfaces" section present in config/paths.json
+  When running knowledge_query.py with --format json and no other flags
+  Then the output JSON "nodes" array contains at least one node with surface "agents"
+  And at least one node with surface "skills"
+  And at least one node with surface "tickets"
+  And at least one node with surface "docs"
+  And at least one node with surface "adrs"
+  And at least one node with surface "components"
+  And at least one node with surface "roadmap"
+  And at least one node with surface "glossary"
+  And the total node count is greater than 50
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must complete within 30 seconds for a repository with fewer than 1000 surface items"
+  - "Must not modify any files — read-only operation"
+delivers_to: null
+expects_from:
+  ac_id: KM-KQS-015
+  contract: "JSON 'surfaces' key present in config/paths.json with 8 entries each having a 'path' string and 'edge_fields' array"
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/04a_surfaces_config_wiring.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

@@ -1,0 +1,39 @@
+id: KM-KQS-015
+title: "paths.json contains a surfaces top-level key with all eight surface entries"
+component: knowledge-management
+level: L2
+status: active
+work_status: todo
+criteria: |
+  Given config/paths.json in the repository
+  When the file is parsed as JSON
+  Then it contains a top-level "surfaces" key
+  And the "surfaces" object contains exactly these surface names as keys:
+    agents, skills, tickets, docs, adrs, components, roadmap, glossary
+  And each surface entry has a "path" string field pointing to the surface's
+    source location relative to the project root
+  And each surface entry has an "edge_fields" array field listing the
+    frontmatter or JSON fields that produce cross-surface edges
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must produce valid JSON that passes `python -m json.tool` without error"
+  - "Must not modify or remove any existing top-level keys in config/paths.json"
+  - "Must be idempotent — re-running the config write produces the same output"
+delivers_to:
+  agent: python-coder
+  contract: "JSON top-level 'surfaces' key in config/paths.json containing 8 surface objects, each with 'path' (string, project-relative POSIX path) and 'edge_fields' (array of strings)"
+expects_from: null
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/04a_surfaces_config_wiring.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

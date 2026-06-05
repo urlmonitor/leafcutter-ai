@@ -1,0 +1,35 @@
+id: KM-KQS-016
+title: "Each surface path in paths.json resolves to an existing directory or file"
+component: knowledge-management
+level: L2
+status: active
+work_status: todo
+criteria: |
+  Given config/paths.json contains the "surfaces" section with eight entries
+  When each surface entry's "path" value is resolved relative to the project root
+  Then the "agents" path resolves to the agent registry JSON file
+  And the "skills" path resolves to the skill registry JSON file
+  And the "tickets" path resolves to an existing directory containing ticket markdown files
+  And the "docs" path resolves to an existing directory containing documentation files
+  And the "adrs" path resolves to an existing directory containing ADR markdown files
+  And the "components" path resolves to an existing directory containing component docs
+  And the "roadmap" path resolves to the roadmap JSON file
+  And the "glossary" path resolves to the glossary markdown file
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Paths must follow the project-relative POSIX convention established in the existing paths.json 'paths' section (directories with trailing slash, files without)"
+delivers_to: null
+expects_from:
+  ac_id: KM-KQS-015
+  contract: "JSON 'surfaces' key present in config/paths.json with 8 entries each having a 'path' string"
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/04a_surfaces_config_wiring.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

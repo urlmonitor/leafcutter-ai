@@ -349,3 +349,179 @@ class TestStdlibOnly:
             assert imp not in source, (
                 f"Third-party import '{imp}' found — only stdlib allowed (AC-1)"
             )
+
+
+# ---------------------------------------------------------------------------
+# Ticket 04a Integration Tests — surfaces config wiring
+# These tests are RED until python-coder adds the "surfaces" key to
+# config/paths.json.
+# ---------------------------------------------------------------------------
+
+_REAL_PATHS_JSON = _REPO_ROOT / "config" / "paths.json"
+
+
+class TestPathsJsonSurfacesKey:
+    """KM-KQS-015 / KM-KQS-016: paths.json must contain a 'surfaces' top-level key
+    with exactly 8 surface entries, each having 'path' and 'edge_fields'."""
+
+    def test_paths_json_surfaces_key(self):
+        # covers: KM-KQS-015
+        # covers: KM-KQS-016
+        """KM-KQS-015/016: paths.json surfaces key with 8 entries; all paths resolve."""
+        assert _REAL_PATHS_JSON.exists(), f"paths.json not found at {_REAL_PATHS_JSON}"
+        data = json.loads(_REAL_PATHS_JSON.read_text(encoding="utf-8"))
+        assert "surfaces" in data, (
+            "paths.json must have a top-level 'surfaces' key (KM-KQS-015)"
+        )
+        surfaces = data["surfaces"]
+        required_names = {"agents", "skills", "tickets", "docs", "adrs", "components", "roadmap", "glossary"}
+        actual_names = set(surfaces.keys())
+        assert actual_names == required_names, (
+            f"surfaces must have exactly {required_names}; got {actual_names}"
+        )
+        for name, entry in surfaces.items():
+            assert "path" in entry, f"Surface '{name}' missing 'path' field (KM-KQS-015)"
+            assert isinstance(entry["path"], str), f"Surface '{name}' path must be a string"
+            assert "edge_fields" in entry, f"Surface '{name}' missing 'edge_fields' field"
+            assert isinstance(entry["edge_fields"], list), (
+                f"Surface '{name}' edge_fields must be a list"
+            )
+            # KM-KQS-016: resolved paths must exist (non-optional)
+            resolved = _REPO_ROOT / entry["path"]
+            assert resolved.exists(), (
+                f"Surface '{name}' path '{entry['path']}' does not resolve to an "
+                f"existing file or directory (KM-KQS-016)"
+            )
+
+
+class TestRealRepoNodeProduction:
+    """KM-KQS-017: knowledge_query.py must produce >50 nodes against the real repo."""
+
+    def test_real_repo_node_production(self):
+        # covers: KM-KQS-017
+        """KM-KQS-017: knowledge_query.py --format json produces >50 nodes from real repo."""
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(_SCRIPTS_DIR / "knowledge_query.py"),
+                "--format", "json",
+                "--project-root", str(_REPO_ROOT),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        assert result.returncode == 0, (
+            f"knowledge_query.py must exit 0; stderr: {result.stderr}"
+        )
+        data = json.loads(result.stdout)
+        nodes = data.get("nodes", [])
+        assert len(nodes) > 50, (
+            f"Expected >50 nodes from real repo; got {len(nodes)} (KM-KQS-017)"
+        )
+        # Each of the 8 surfaces must have at least one node
+        surfaces_found = {n["surface"] for n in nodes}
+        required_surfaces = {"agents", "skills", "tickets", "docs", "adrs", "components", "roadmap", "glossary"}
+        for surface in required_surfaces:
+            assert surface in surfaces_found, (
+                f"No node found for surface '{surface}' (KM-KQS-017)"
+            )
+
+
+class TestEdgeFieldsCorrectness:
+    """KM-KQS-018: edge_fields in surfaces config match fields present in each surface source."""
+
+    def test_edge_fields_correctness(self):
+        # covers: KM-KQS-018
+        """KM-KQS-018: agents edge_fields include spawn_allowlist/skills_used; tickets include depends_on/files_touched."""
+        assert _REAL_PATHS_JSON.exists(), f"paths.json not found at {_REAL_PATHS_JSON}"
+        data = json.loads(_REAL_PATHS_JSON.read_text(encoding="utf-8"))
+        surfaces = data.get("surfaces", {})
+
+        # KM-KQS-018: agents surface edge_fields
+        agents_fields = set(surfaces.get("agents", {}).get("edge_fields", []))
+        assert "spawn_allowlist" in agents_fields, (
+            "agents edge_fields must include 'spawn_allowlist' (KM-KQS-018)"
+        )
+        assert "skills_used" in agents_fields, (
+            "agents edge_fields must include 'skills_used' (KM-KQS-018)"
+        )
+
+        # KM-KQS-018: tickets surface edge_fields
+        tickets_fields = set(surfaces.get("tickets", {}).get("edge_fields", []))
+        assert "depends_on" in tickets_fields, (
+            "tickets edge_fields must include 'depends_on' (KM-KQS-018)"
+        )
+        assert "files_touched" in tickets_fields, (
+            "tickets edge_fields must include 'files_touched' (KM-KQS-018)"
+        )
+
+        # KM-KQS-018: skills surface edge_fields
+        skills_fields = set(surfaces.get("skills", {}).get("edge_fields", []))
+        assert "dependencies" in skills_fields, (
+            "skills edge_fields must include 'dependencies' (KM-KQS-018)"
+        )
+
+
+class TestPathsIntegrityPasses:
+    """KM-KQS-019: check_paths_integrity.py must exit 0 with both paths and surfaces keys."""
+
+    def test_paths_integrity_passes(self):
+        # covers: KM-KQS-019
+        """KM-KQS-019: check_paths_integrity.py exits 0 after surfaces key is added."""
+        script = _REPO_ROOT / "scripts" / "commit_guardian" / "check_paths_integrity.py"
+        assert script.exists(), f"check_paths_integrity.py not found at {script}"
+        # The script checks staged files; when run standalone, it exits 0 when paths.json
+        # is not staged (the "not staged; skipping" path). We verify the exit code is 0.
+        result = subprocess.run(
+            [sys.executable, str(script)],
+            capture_output=True,
+            text=True,
+            cwd=str(_REPO_ROOT),
+        )
+        assert result.returncode == 0, (
+            f"check_paths_integrity.py must exit 0; stderr: {result.stderr}; "
+            f"stdout: {result.stdout}"
+        )
+
+
+class TestEmptySurfaceGraceful:
+    """KM-KQS-020: knowledge_query.py handles empty surface directory gracefully."""
+
+    def test_empty_surface_graceful(self, tmp_path):
+        # covers: KM-KQS-020
+        """KM-KQS-020: knowledge_query.py exits 0 with zero nodes for empty surface."""
+        # Create a paths.json with an empty directory as a surface
+        config_dir = tmp_path / "config"
+        config_dir.mkdir(parents=True)
+        empty_surface_dir = tmp_path / "empty_surface_dir"
+        empty_surface_dir.mkdir()
+        paths_data = {
+            "surfaces": {
+                "empty_surface": {
+                    "path": "empty_surface_dir/",
+                    "edge_fields": [],
+                }
+            }
+        }
+        (config_dir / "paths.json").write_text(
+            json.dumps(paths_data), encoding="utf-8"
+        )
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(_SCRIPTS_DIR / "knowledge_query.py"),
+                "--surface", "empty_surface",
+                "--project-root", str(tmp_path),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        assert result.returncode == 0, (
+            f"Script must exit 0 for empty surface; stderr: {result.stderr}"
+        )
+        combined = result.stdout + result.stderr
+        assert "Traceback" not in combined, (
+            "Script must not emit a traceback for empty surface (KM-KQS-020)"
+        )

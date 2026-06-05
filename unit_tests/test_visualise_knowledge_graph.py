@@ -544,5 +544,61 @@ class TestProjectRootFlagPassedToKq(unittest.TestCase):
         Path(output_path).unlink(missing_ok=True)
 
 
+# ---------------------------------------------------------------------------
+# Ticket 04a Integration Test — KM-VIS-013
+# This test is RED until python-coder adds "surfaces" to config/paths.json.
+# ---------------------------------------------------------------------------
+
+_REPO_ROOT = _SCRIPTS_DIR.parent
+_REAL_PATHS_JSON = _REPO_ROOT / "config" / "paths.json"
+
+
+class TestVisualisationProducesGraph(unittest.TestCase):
+    """KM-VIS-013: visualise_knowledge_graph.py produces nodes >50 and edges >10
+    from the real repository after surfaces section is wired into paths.json."""
+
+    def test_visualisation_produces_graph(self):
+        # covers: KM-VIS-013
+        """KM-VIS-013: --no-open writes HTML with >50 nodes and >10 edges from real repo."""
+        import re
+        import tempfile
+
+        mod = _load_module()
+
+        with tempfile.NamedTemporaryFile(suffix=".html", delete=False) as tmp:
+            output_path = tmp.name
+
+        try:
+            mod.main([
+                "--output", output_path,
+                "--no-open",
+                "--project-root", str(_REPO_ROOT),
+            ])
+        except SystemExit as exc:
+            self.assertEqual(exc.code, 0, f"Script exited with code {exc.code}")
+
+        content = Path(output_path).read_text(encoding="utf-8")
+        match = re.search(r"const DATA\s*=\s*(\{.*?\});", content, re.DOTALL)
+        self.assertIsNotNone(match, "Could not find 'const DATA = ...' block in HTML")
+
+        data = json.loads(match.group(1))
+        nodes = data.get("nodes", [])
+        edges = data.get("edges", [])
+
+        self.assertGreater(
+            len(nodes),
+            50,
+            f"Expected >50 nodes in graph; got {len(nodes)} (KM-VIS-013). "
+            f"Ensure config/paths.json has 'surfaces' key wired.",
+        )
+        self.assertGreater(
+            len(edges),
+            10,
+            f"Expected >10 edges in graph; got {len(edges)} (KM-VIS-013).",
+        )
+
+        Path(output_path).unlink(missing_ok=True)
+
+
 if __name__ == "__main__":
     unittest.main()

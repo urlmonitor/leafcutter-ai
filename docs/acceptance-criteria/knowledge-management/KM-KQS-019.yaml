@@ -1,0 +1,32 @@
+id: KM-KQS-019
+title: "paths.json surfaces section does not break check_paths_integrity.py"
+component: knowledge-management
+level: L3
+status: active
+work_status: todo
+criteria: |
+  Given config/paths.json contains both the existing "paths" top-level key
+    and the new "surfaces" top-level key
+  When check_paths_integrity.py is run against the repository
+  Then it exits with code 0
+  And it does not report the "surfaces" key as an unknown or invalid entry
+  And all existing "paths" entries continue to pass validation unchanged
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must not alter the behavior of check_paths_integrity.py for existing 'paths' entries"
+  - "If check_paths_integrity.py uses a strict key whitelist, the 'surfaces' key must be added to the allowlist"
+delivers_to: null
+expects_from:
+  ac_id: KM-KQS-015
+  contract: "config/paths.json with both existing 'paths' key and new 'surfaces' key"
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/04a_surfaces_config_wiring.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []
