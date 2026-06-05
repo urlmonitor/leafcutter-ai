@@ -37,6 +37,11 @@ agents:
   reference-author: not_needed
   user-surface-smoker: needed
 user_facing_surface: pre_commit_hook
+ac_traceability:
+  L0: BP-100
+  L1: BP-100e
+  ac_path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100e.yaml
+  routing: direct_to_ba
 actuation_contract: "The check_ticket_signoff_parity pre-commit hook rejects any ticket commit where a signed-off or failed sign-off line carries a timestamp that does not match \\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}, blocking known bad patterns such as '(current session)' or '(now)'."
 ---
 
