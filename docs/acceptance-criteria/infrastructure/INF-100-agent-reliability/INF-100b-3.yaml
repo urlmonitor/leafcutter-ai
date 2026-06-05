@@ -1,0 +1,33 @@
+id: INF-100b-3
+title: "All 8 worktree-environment emit_entry test failures resolve after fix"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the fix to _resolve_repo_root() replaces .is_dir() with .exists() on the .git check,
+  When the full test suite is run from the worktree at
+  /home/henzeh/projects/leafcutter/worktrees/acfulfillmentgate,
+  Then all 8 previously-failing emit_entry tests pass,
+  And no previously-passing tests are newly broken,
+  And the test run exits with code 0.
+depends_on: [INF-100b-1, INF-100b-2]
+doc_links:
+  - path: tests/test_emit_entry.py
+    relationship: validates
+    status: exists
+  - path: tests/test_emit_entry_cwd.py
+    relationship: validates
+    status: exists
+  - path: tests/test_emit_entry_pr_field.py
+    relationship: validates
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
