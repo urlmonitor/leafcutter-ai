@@ -1,0 +1,27 @@
+id: TKT-300b-4
+title: "Sign-off status is tracked in AC metadata and queryable"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket has three phase agents each requiring sign-off,
+  When the first agent signs off with valid artifacts
+    and the second agent has not yet run,
+  Then the ticket metadata shows sign-off status per phase:
+    phase 1 as "signed_off", phase 2 as "needed", phase 3 as "not_needed",
+  And a supervisor querying the ticket can determine
+    which phases are complete and which remain outstanding.
+depends_on: [TKT-300b, TKT-300b-2]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

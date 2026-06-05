@@ -1,0 +1,13 @@
+id: KM-VIS-010
+title: "Tests RED before python-coder, GREEN after"
+component: knowledge-management
+status: active
+criteria: |
+  All tests in `test_visualise_knowledge_graph.py` fail (RED) before
+  python-coder runs and pass (GREEN) after python-coder delivers.
+origin_agent: "create-ticket-v2"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/03a_knowledge_graph_visualization_core.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

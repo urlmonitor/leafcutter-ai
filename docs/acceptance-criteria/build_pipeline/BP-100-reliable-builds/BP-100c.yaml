@@ -1,0 +1,21 @@
+id: BP-100c
+title: "Build output respects your project's folder layout"
+component: build-pipeline
+level: L1
+status: active
+criteria: |
+  The build system puts files where your project says they belong — not where it assumes.
+
+  When a project configures custom paths for tickets, docs, or other
+  directories, the build system honours those paths instead of creating
+  default folders at the workspace root. Self-hosting and consumer projects
+  alike get clean output without leftover scaffold directories.
+depends_on:
+  - BP-100
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

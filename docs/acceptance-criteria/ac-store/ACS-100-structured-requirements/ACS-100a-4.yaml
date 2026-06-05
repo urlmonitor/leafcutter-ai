@@ -1,0 +1,27 @@
+id: ACS-100a-4
+title: "Additional properties are rejected to prevent schema drift"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a YAML file contains all required fields plus an unknown field
+    (e.g. "priority: high" or "foo: bar"),
+  When the schema validator checks the file,
+  Then validation fails with a diagnostic error,
+  And the error message identifies the unknown field name,
+  And the commit is blocked,
+  And the file is not partially accepted (all-or-nothing validation).
+depends_on: [ACS-100a]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

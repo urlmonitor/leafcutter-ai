@@ -1,0 +1,49 @@
+id: BP-100a-3
+title: "Contract-shrinking hook excludes commit_guardian paths from production classification"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: done
+created_by: "tickets/00_inbox/TICKET-20260604-HookScriptIntegrityCheck.md"
+criteria: |
+  Given a staged diff modifies the file "templates/scripts/commit_guardian/check_contract_shrinking.py"
+  And the diff contains patterns that would normally trigger a contract-shrinking warning
+    (e.g., removing a pytest.mark.xfail decorator)
+  When the contract-shrinking hook classifies the changed files
+  Then the commit_guardian file is NOT classified as a production file
+  And no contract-shrinking block is raised for that file
+
+  Given a staged diff modifies the file "templates/commit-guardian/check_contract_shrinking.py"
+    (legacy path)
+  When the contract-shrinking hook classifies the changed files
+  Then the legacy-path file is also NOT classified as a production file
+
+  Given a staged diff modifies a genuine production file (e.g., "src/trading/engine.py")
+  And the diff removes a pytest.mark.xfail decorator
+  When the contract-shrinking hook classifies the changed files
+  Then the production file IS classified as production code
+  And the contract-shrinking block IS raised as before
+depends_on:
+  - BP-100a
+doc_links:
+  - path: "tickets/00_inbox/TICKET-20260604-HookScriptIntegrityCheck.md"
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: test-writer
+  contract: "Extended exclusion regex that covers commit_guardian/ paths in both canonical and legacy locations"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by:
+  - "unit_tests/commit_guardian/test_check_contract_shrinking.py::test_contract_shrinking_excludes_commit_guardian_paths"
+  - "unit_tests/commit_guardian/test_check_contract_shrinking.py::test_contract_shrinking_excludes_legacy_commit_guardian_path"
+  - "unit_tests/commit_guardian/test_check_contract_shrinking.py::test_non_commit_guardian_py_still_detected_as_production"
+implemented_by:
+  - "templates/scripts/commit_guardian/check_contract_shrinking.py"
+  - "templates/commit-guardian/check_contract_shrinking.py"

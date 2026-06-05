@@ -1,0 +1,33 @@
+id: TKT-100g-4
+title: "Router classifies L3 when criteria are a sub-scenario of an existing L2 covering an edge case"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an AC enters the pipeline with criteria text:
+    "Given docs/acceptance-criteria/ticket-creation/ contains a .yaml file
+    with malformed YAML (missing closing quote on line 3),
+    When the BA v3 attempts to parse it,
+    Then it skips the malformed file, logs a warning with the file path
+    and parse error message, and continues processing remaining files"
+    and its depends_on references an existing L2 AC ID (e.g., TKT-100a-1),
+  When the flight-level router evaluates the text,
+  Then it assigns level: L3,
+  And the classification signal is: contains Given/When/Then Gherkin,
+    depends_on references an L2 AC, and the scenario describes an error path
+    or boundary condition not covered by the parent L2's happy path,
+  And it dispatches the AC to the BA v3 agent for validation.
+depends_on: [TKT-100g, TKT-100g-3]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

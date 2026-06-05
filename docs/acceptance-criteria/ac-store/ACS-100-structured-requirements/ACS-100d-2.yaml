@@ -1,0 +1,27 @@
+id: ACS-100d-2
+title: "created_by field links to the originating ticket path"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a new AC is created in response to a ticket,
+  When the AC YAML file is written,
+  Then the created_by field contains the ticket's path relative to the repo root
+    (e.g. "tickets/00_inbox/epics/EPIC-FinalizeFeatureHardening/01_merge_main.md"),
+  And the path string is non-empty (minLength: 1),
+  And the path points to the specific ticket file that introduced this AC
+    (not the epic folder, not a PR URL).
+depends_on: [ACS-100d]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

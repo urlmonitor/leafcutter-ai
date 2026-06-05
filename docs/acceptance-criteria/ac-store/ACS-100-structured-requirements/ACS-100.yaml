@@ -1,0 +1,24 @@
+id: ACS-100
+title: "Requirements that build themselves"
+component: ac-store
+level: L0
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  The leafcutter-ai package provides an AC-first development workflow where
+  individual acceptance criteria are the atomic unit of work — each AC is a
+  standalone YAML file that carries business requirements, IT requirements,
+  agent assignment, dependencies, documentation links, and verification state,
+  enabling agents to work from precise, testable specifications with full
+  traceability from requirement to implementation to test.
+depends_on: []
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: [ACS-100a, ACS-100b, ACS-100c, ACS-100d, ACS-100e, ACS-100f]
+implemented_by: []

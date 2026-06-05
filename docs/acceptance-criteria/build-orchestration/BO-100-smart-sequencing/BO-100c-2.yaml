@@ -1,0 +1,28 @@
+id: BO-100c-2
+title: "Overlapping files_touched removes conflicting ticket from batch"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given ticket A has files_touched: ["src/shared.py", "src/a.py"]
+    and ticket B has files_touched: ["src/shared.py", "src/b.py"]
+    and ticket C has files_touched: ["src/c.py"],
+  When /build-feature computes the file-touch intersection at step 3a,
+  Then A and B share "src/shared.py" and cannot be in the same batch,
+  And the batch contains A and C (A is selected first by NN prefix order),
+  And B is deferred to a subsequent loop iteration,
+  And B becomes eligible for the next batch after A completes.
+depends_on: [BO-100c]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

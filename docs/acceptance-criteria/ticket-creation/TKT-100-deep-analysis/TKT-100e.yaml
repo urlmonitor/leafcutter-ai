@@ -1,0 +1,33 @@
+id: TKT-100e
+title: "Your product vision shapes every requirement from the top down"
+component: ticket-creation
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  A product-minded agent frames your request as customer value before detailed analysis begins.
+  It reads your roadmap and vision, understands what already exists, and translates your
+  idea into benefit-oriented goals and feature statements. You confirm the framing before
+  detailed specification work starts — ensuring nothing gets built that doesn't serve
+  your product direction.
+depends_on: [TKT-100a, ACS-100c]
+doc_links:
+  - path: docs/roadmap.json
+    relationship: constrains
+    status: exists
+  - path: docs/vision.md
+    relationship: specifies
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: L
+delivers_to:
+  agent: business-analyst-v3
+  contract: "L0 + L1 AC YAML files with customer-facing titles, taglines, component assignments"
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

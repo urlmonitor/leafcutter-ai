@@ -1,0 +1,24 @@
+id: BO-100c
+title: "Parallel work never creates merge conflicts"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Tickets that touch the same files never run at the same time.
+  Before dispatching a batch, the system checks which files each ticket will
+  modify and separates overlapping tickets into sequential rounds. When in
+  doubt about which files a ticket touches, it runs alone to be safe.
+depends_on: [BO-100a]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

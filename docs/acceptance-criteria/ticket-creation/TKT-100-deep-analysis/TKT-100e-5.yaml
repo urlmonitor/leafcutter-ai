@@ -1,0 +1,29 @@
+id: TKT-100e-5
+title: "PO agent L1 output includes depends_on ordering between sibling L1s"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the PO agent produces 4 L1 ACs for a feature (e.g., TKT-100a through TKT-100d),
+  When two L1 ACs have a logical dependency
+    (e.g., TKT-100b requires the data contract defined by TKT-100a),
+  Then the dependent L1 includes the prerequisite L1's ID in its depends_on array
+    (e.g., TKT-100b.depends_on includes "TKT-100a"),
+  And the depends_on graph across all sibling L1s forms a directed acyclic graph
+    (no circular dependencies),
+  And L1s with no inter-sibling dependencies have depends_on containing
+    only the parent L0 ID.
+depends_on: [TKT-100e, TKT-100e-2]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

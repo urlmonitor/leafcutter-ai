@@ -1,0 +1,34 @@
+id: BP-100c-4
+title: "Template compiler threads config to project paths table generation"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260603-ConfigDrivenBuildPaths.md"
+criteria: |
+  Given an agent template file containing the placeholder {{project_paths_table}}
+  And a project config containing tickets_inbox_path = "leafcutter-ai/tickets/00_inbox"
+  When the template compiler compiles this agent template
+  Then the compiled output contains "leafcutter-ai/tickets/00_inbox" in the paths table section
+  And the compiled output does NOT contain "tickets/00_inbox/" as the inbox path value
+  And the config is passed through compile_agent_template to the registry injection to the paths table builder
+depends_on:
+  - BP-100c
+  - BP-100c-3
+doc_links:
+  - path: docs/architecture/components/build-pipeline.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-100c-3
+  contract: "build_project_paths_table accepts config parameter and applies overlay"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

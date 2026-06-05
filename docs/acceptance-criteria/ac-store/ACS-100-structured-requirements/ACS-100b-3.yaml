@@ -1,0 +1,28 @@
+id: ACS-100b-3
+title: "L1 IDs extend the L0 ID with a lowercase letter suffix"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an L0 file with id "{PREFIX}-{NNN}" exists in a feature folder,
+  When an L1 AC is created as a child of that L0,
+  Then the L1 file is named {PREFIX}-{NNN}{letter}.yaml
+    (e.g. "ACS-100a.yaml", "ACS-100b.yaml"),
+  And the id field equals "{PREFIX}-{NNN}{letter}" where {letter} is a single
+    lowercase letter a-z assigned sequentially,
+  And the level field is set to "L1",
+  And the depends_on array includes the parent L0 id (e.g. ["ACS-100"]).
+depends_on: [ACS-100b]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

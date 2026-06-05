@@ -1,0 +1,31 @@
+id: ACS-100b-5
+title: "Tooling can reconstruct the parent-child tree from hierarchical IDs"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a feature folder contains files at L0, L1, and L2 levels,
+  When a script parses all YAML files in the folder,
+  Then it can reconstruct the tree: L0 is root, L1s are children of L0,
+    L2s are children of their respective L1,
+  And the tree is derivable from the id field alone by parsing:
+    "ACS-100" -> root, "ACS-100a" -> child of "ACS-100",
+    "ACS-100a-1" -> child of "ACS-100a",
+  And every L1 and L2 file's depends_on array confirms the parent relationship
+    (the parent id is always the first element in depends_on),
+  And orphan files (L2 with no matching L1 parent in the folder) are detectable
+    as a consistency error.
+depends_on: [ACS-100b]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

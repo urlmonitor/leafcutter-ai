@@ -1,0 +1,27 @@
+id: BO-100a-5
+title: "Unknown dependency references are treated as satisfied (not blocking)"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an epic contains ticket A with depends_on=["nonexistent-ticket.md"],
+  When the dependency resolver constructs the graph and computes the ready set,
+  Then "nonexistent-ticket.md" is not present as a node in the graph,
+  And the dependency edge from A to the unknown node is silently ignored,
+  And ticket A appears in the ready list (the unknown dep is treated as
+    satisfied because it is absent from the graph),
+  And no error or warning is raised for the missing dependency reference.
+depends_on: [BO-100a]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

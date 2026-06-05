@@ -1,0 +1,33 @@
+id: BP-100b-5
+title: "Drift detection scans .claude/workflows/ for compiled workflow changes"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
+criteria: |
+  Given compiled workflow files exist at .claude/workflows/
+  When the output-drift detection hook runs during a pre-commit check
+  Then it scans .claude/workflows/ (not .agents/workflows/) for content changes
+  And if a compiled workflow file has been manually edited (content differs from
+    the source template fingerprint), the hook reports drift for that file
+  And if all compiled workflow files match their source fingerprints, the hook
+    passes with no drift warnings for the workflows category
+depends_on:
+  - BP-100b
+  - BP-100b-1
+doc_links:
+  - path: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,35 @@
+id: BP-100b-6-i
+title: "Parity test failure message names the missing layer and category"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
+criteria: |
+  Given a developer has added a new template category "widgets" to the output
+    mappings and the managed artifact dirs but has NOT added it to the shim map
+    or source manifests
+  When the parity test suite executes
+  Then the test fails
+  And the assertion error message names the category that is missing ("widgets")
+  And the assertion error message names the specific layer(s) where the category
+    is absent (e.g., "shim map" and "source manifests")
+  And the message is sufficient for the developer to identify which registration
+    steps were skipped without reading the test source
+depends_on:
+  - BP-100b-6
+doc_links:
+  - path: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
+    relationship: implements
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

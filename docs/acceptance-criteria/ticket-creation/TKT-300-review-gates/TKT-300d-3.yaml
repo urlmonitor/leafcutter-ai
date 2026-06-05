@@ -1,0 +1,28 @@
+id: TKT-300d-3
+title: "The supervisor reads the AC hierarchy for sequencing, not a separate epic plan"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an epic folder contains L0, L1, and L2 AC files
+    with depends_on relationships forming a directed acyclic graph,
+  When the supervisor determines which tickets to build next,
+  Then it reads the AC YAML files in the feature folder
+    and constructs the build sequence from depends_on fields,
+  And it does not read or require a separate epic plan document,
+    execution manifest, or ordering configuration
+    outside the AC hierarchy itself.
+depends_on: [TKT-300d, TKT-300d-2]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

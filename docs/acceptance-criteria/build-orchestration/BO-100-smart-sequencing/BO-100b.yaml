@@ -1,0 +1,24 @@
+id: BO-100b
+title: "Work runs in parallel up to a safe limit you control"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Multiple tickets run simultaneously without overwhelming the system.
+  A configurable cap limits how many tickets are in flight at once, so you
+  get parallelism without resource exhaustion. Lower-numbered tickets take
+  priority when more are ready than the cap allows.
+depends_on: [BO-100a]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

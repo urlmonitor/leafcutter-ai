@@ -1,0 +1,27 @@
+id: ACS-100a-2
+title: "ID field enforces PREFIX-NNN regex pattern"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a YAML file has an id field,
+  When the schema validator checks the id value,
+  Then ids matching ^[A-Z]{2,6}-[0-9]{3}$ pass validation (e.g. "FIN-001", "ACS-042"),
+  And ids that violate the pattern cause validation to fail with a diagnostic error
+    (e.g. "fin-001" lowercase, "FIN-1" too few digits, "TOOLONG-001" prefix > 6 chars,
+    "F-001" prefix < 2 chars, "FIN001" missing hyphen),
+  And the error message includes the invalid id value and the expected pattern.
+depends_on: [ACS-100a]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

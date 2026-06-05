@@ -1,0 +1,26 @@
+id: TKT-300a
+title: "Technical constraints are added without overwriting business intent"
+component: ticket-creation
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  A technical reviewer adds security, performance, and integration constraints to each spec.
+  After business requirements are written, a technical review pass adds constraints,
+  assigns who builds each piece, estimates complexity, and wires up cross-feature
+  dependencies — without ever changing what the business asked for.
+depends_on: [TKT-100a, TKT-200c]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: L
+delivers_to: null
+expects_from:
+  ac_id: TKT-200c
+  contract: "AC files + diagram files + component docs all available"
+origin_agent: BrainCandy
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,27 @@
+id: TKT-300c-3
+title: "No AC files are written to disk without prior user approval"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the pipeline has produced a set of AC files in memory
+    (either from the PO, BA, or IT PO stage),
+  When the pipeline attempts to write those files to the feature folder,
+  Then it must have received an explicit user confirmation
+    in a preceding confirmation gate for that stage,
+  And if no confirmation was received, the write operation is blocked
+    and the pipeline prompts the user for approval.
+depends_on: [TKT-300c, TKT-300c-1, TKT-300c-2]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

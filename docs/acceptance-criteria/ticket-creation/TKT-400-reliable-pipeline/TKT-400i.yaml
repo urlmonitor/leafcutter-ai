@@ -1,0 +1,25 @@
+id: TKT-400i
+title: "Business agents cannot accidentally read or modify source code"
+component: ticket-creation
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Structural guardrails prevent business-focused agents from touching implementation files.
+  The product owner and analyst agents can only access documentation and requirement
+  files — any attempt to read or write source code is blocked automatically. This is
+  defense-in-depth: even if an instruction is misunderstood, the guardrail prevents
+  scope violations. The protection travels with the package to every project.
+depends_on: [TKT-100l]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

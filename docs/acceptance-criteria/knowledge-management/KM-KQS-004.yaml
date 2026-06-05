@@ -1,0 +1,13 @@
+id: KM-KQS-004
+title: "Surface filter restricts output to specified surface and its edges"
+component: knowledge-management
+status: active
+criteria: |
+  Running with `--surface agents` returns only nodes from the `agents`
+  surface and their direct edges.
+origin_agent: "create-ticket-v2"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/01a_knowledge_query_script_core.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

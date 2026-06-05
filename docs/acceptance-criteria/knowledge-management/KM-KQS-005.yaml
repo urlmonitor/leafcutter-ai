@@ -1,0 +1,14 @@
+id: KM-KQS-005
+title: "All paths discovered via paths.json with optional surface skipping"
+component: knowledge-management
+status: active
+criteria: |
+  All paths are discovered via `paths.json`; no surface path is hardcoded
+  in `knowledge_query.py`. When a surface path is marked `optional: true` and the
+  directory does not exist, the surface is skipped without error.
+origin_agent: "create-ticket-v2"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/01a_knowledge_query_script_core.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

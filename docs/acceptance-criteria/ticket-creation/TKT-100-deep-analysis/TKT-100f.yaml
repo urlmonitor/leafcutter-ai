@@ -1,0 +1,29 @@
+id: TKT-100f
+title: "Every feature is broken down into testable, unambiguous behaviors"
+component: ticket-creation
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  An analyst decomposes each feature into precise, testable behaviors and edge cases.
+  Starting from the approved feature goals, the analyst reads all related context,
+  iterates with you until behaviors are clear, and writes one specification per
+  testable outcome — each with specific inputs, actions, and observable results.
+  Edge cases and failure modes are captured separately so nothing is overlooked.
+depends_on: [TKT-100e, ACS-300g, ACS-300h]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: L
+delivers_to:
+  agent: diagram-classifier
+  contract: "L2/L3 AC YAML files with Gherkin criteria, assigned_agent, depends_on"
+expects_from:
+  ac_id: TKT-100e
+  contract: "L0 + L1 AC files with customer-facing titles, component assignments"
+origin_agent: BrainCandy
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

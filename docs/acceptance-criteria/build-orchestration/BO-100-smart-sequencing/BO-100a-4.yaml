@@ -1,0 +1,29 @@
+id: BO-100a-4
+title: "Cycle detection halts the epic with a diagnostic naming all cycle members"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an epic contains tickets A, B, C where A.depends_on=[C],
+    B.depends_on=[A], and C.depends_on=[B] (cycle A->B->C->A),
+  When the cycle detection logic analyzes the dependency graph,
+  Then it identifies the cycle containing at least the nodes [A, B, C],
+  And the reported cycle forms a closed path (starts and ends with the same node),
+  And the build system halts with a blocking error,
+  And the error message contains "CYCLE DETECTED"
+    followed by the arrow-separated cycle path (e.g. "A -> B -> C -> A"),
+  And no ticket-supervisor is dispatched (dispatch step is never reached).
+depends_on: [BO-100a]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

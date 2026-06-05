@@ -1,0 +1,26 @@
+id: TKT-300d-1
+title: "An L0 AC serves as the epic-level goal for its feature group"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a feature folder contains an L0 AC file and three L1 AC files,
+  When the system reads the AC hierarchy,
+  Then the L0 AC is recognized as the epic-level goal
+    that defines the value proposition for the group,
+  And each L1 AC references the L0 in its depends_on field,
+  And the L0's covered_by field lists all L1 AC ids in the folder.
+depends_on: [TKT-300d]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

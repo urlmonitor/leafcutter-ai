@@ -1,0 +1,24 @@
+id: TKT-300b
+title: "No phase can pass without showing its work"
+component: ticket-creation
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Every approval comes with verifiable proof of what was produced.
+  When a step completes, it must present a validated checklist of outputs including
+  which files were created, their integrity hashes, and a confidence assessment.
+  Empty or incomplete approvals are rejected — you always know what was actually done.
+depends_on: [ACS-100a]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

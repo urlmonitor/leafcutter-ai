@@ -1,0 +1,29 @@
+id: TKT-100a-5
+title: "BA v3 identifies inter-agent data contracts from the AC store"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given existing_acs contains active ACs for component "ticket-creation"
+    and at least two ACs reference different assigned_agent values,
+  When the BA v3 builds its domain model,
+  Then it identifies delivers_to and expects_from relationships
+    between ACs that share depends_on edges,
+  And it stores these relationships as agent_contracts in working context
+    (a list of {source_agent, target_agent, data_fields} triples),
+  And the agent_contracts inform L2 Gherkin scenarios that test
+    the handoff points between agents (e.g., BA output consumed by IT PO).
+depends_on: [TKT-100a, TKT-100a-1]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

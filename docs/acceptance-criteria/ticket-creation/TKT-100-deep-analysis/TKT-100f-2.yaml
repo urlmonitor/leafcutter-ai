@@ -1,0 +1,29 @@
+id: TKT-100f-2
+title: "Each L2 AC has exactly one assigned_agent and a depends_on referencing its parent L1"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the BA v3 produces an L2 AC derived from L1 AC "TKT-100a",
+  When the L2 YAML fields are populated,
+  Then assigned_agent contains exactly one agent name
+    (e.g., "llm-expert" or "python-coder", never a comma-separated list),
+  And depends_on contains at minimum the parent L1 AC ID "TKT-100a",
+  And depends_on may also contain sibling L2 AC IDs
+    when there is a logical ordering dependency,
+  And the L2 ID follows the pattern "{L1-ID}-{number}"
+    (e.g., TKT-100a-1, TKT-100a-2).
+depends_on: [TKT-100f]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

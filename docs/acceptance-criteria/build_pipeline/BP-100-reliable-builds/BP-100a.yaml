@@ -1,0 +1,23 @@
+id: BP-100a
+title: "Every registered hook has a real script behind it"
+component: build-pipeline
+level: L1
+status: active
+criteria: |
+  Registered hooks always point to scripts that exist — broken references are caught before they ship.
+
+  When a hook is declared in the configuration but its backing script is
+  missing or misplaced, the build warns clearly instead of producing a hook
+  that silently does nothing. The integrity check is non-blocking — the build
+  continues after emitting warnings — so that developers are informed without
+  being halted.
+depends_on:
+  - BP-100
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by:
+  - 2026-06-05: "Narrowed scope to integrity check only; false-positive fix moved to BP-100d. Changed 'build fails' to 'build warns' to match non-blocking behavior."
+superseded_by: null
+covered_by: []
+implemented_by: []

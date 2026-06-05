@@ -1,0 +1,14 @@
+id: KM-KQS-008
+title: "SKILL.md exists with correct frontmatter and documents all CLI flags"
+component: knowledge-management
+status: active
+criteria: |
+  `templates/skills/knowledge-query/SKILL.md` exists, follows the same
+  frontmatter schema as `templates/skills/roadmap-query/SKILL.md`, and documents all
+  CLI flags with at least one example invocation per flag.
+origin_agent: "create-ticket-v2"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/01b_knowledge_query_skill_registration.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

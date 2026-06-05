@@ -1,0 +1,16 @@
+id: KM-KQS-011
+title: "Unit test file exists with full coverage of public API and CLI behavior"
+component: knowledge-management
+status: active
+criteria: |
+  `unit_tests/test_knowledge_query.py` exists with tests covering:
+  `load_surfaces` (all-present and optional-missing), `extract_nodes` (frontmatter
+  description and body-line fallback), `extract_edges` (spawn_allowlist edge type),
+  `--query` filter (case-insensitive), `--format json` (valid schema), missing
+  `paths.json` (clean exit), and stdlib-only import validation.
+origin_agent: "create-ticket-v2"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/01a_knowledge_query_script_core.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

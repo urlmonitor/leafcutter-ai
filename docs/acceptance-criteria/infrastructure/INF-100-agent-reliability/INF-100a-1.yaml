@@ -1,0 +1,31 @@
+id: INF-100a-1
+title: "Pull-request template contains Pre-Flight section that loads PROJECT_CONTEXT.md"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260604-PullRequestAgentProjectContext.md"
+criteria: |
+  Given the pull-request agent template file,
+  When an agent reads the template to execute the pull-request workflow,
+  Then the template contains a Pre-Flight section that appears before the first numbered step (Step 0),
+  And the Pre-Flight section instructs the agent to read the file at .agents/agents/pull-request/PROJECT_CONTEXT.md,
+  And the Pre-Flight section instructs the agent to follow every pointer in that file before proceeding.
+depends_on: [INF-100a]
+doc_links:
+  - path: docs/conventions/PROJECT_CONTEXT-injection.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: "A template file with a Pre-Flight section that the PROJECT_CONTEXT.md file can hook into"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

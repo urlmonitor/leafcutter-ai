@@ -1,0 +1,13 @@
+id: KM-DBF-007
+title: "Backfill script accepts --project-root flag"
+component: knowledge-management
+status: active
+criteria: |
+  The backfill script accepts a `--project-root <path>` flag so it can be
+  run from outside the project root (consistent with other scripts in this repo).
+origin_agent: "create-ticket-v2"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/02a_description_backfill_migration.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

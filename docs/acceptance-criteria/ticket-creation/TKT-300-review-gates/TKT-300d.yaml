@@ -1,0 +1,24 @@
+id: TKT-300d
+title: "Large initiatives group related work for tracking, not for execution"
+component: ticket-creation
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Epics are labels for filtering and reporting, not execution boundaries.
+  Related requirements are grouped under a shared goal for visibility and
+  roadmap alignment, but the system dispatches work based on actual dependencies
+  between requirements — not based on which group they belong to.
+depends_on: [ACS-100, BO-100a]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

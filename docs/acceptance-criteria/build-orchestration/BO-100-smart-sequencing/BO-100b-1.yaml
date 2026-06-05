@@ -1,0 +1,26 @@
+id: BO-100b-1
+title: "Default batch cap of 3 limits dispatch when ready set exceeds cap"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an epic has 5 tickets in the ready set with disjoint files_touched,
+  When /build-feature computes the next batch with no explicit cap configured,
+  Then the batch contains exactly 3 tickets (the default cap),
+  And the 3 selected tickets are those with the lowest NN execution-order
+    prefixes (e.g. 01_, 02_, 03_ are chosen over 04_, 05_),
+  And the remaining 2 tickets are deferred to the next loop iteration.
+depends_on: [BO-100b]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

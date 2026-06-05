@@ -1,0 +1,13 @@
+id: KM-VIS-006
+title: "Project-root flag passed through to knowledge_query.py"
+component: knowledge-management
+status: active
+criteria: |
+  The script accepts `--project-root <path>` and passes it to
+  `knowledge_query.py`'s surface loader without error.
+origin_agent: "create-ticket-v2"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/03b_knowledge_graph_cli_flags.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

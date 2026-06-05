@@ -1,0 +1,46 @@
+id: ACS-300h
+title: "Agent affinity field maps components to default agents"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a component entry exists in docs/components.json,
+  When the IT PO receives a ticket that touches that component,
+  Then the component entry includes an agent_affinity field
+    containing an ordered list of agent IDs from agent_registry.json
+    that are the default implementors for work in that component.
+  And agent_affinity is a JSON array of strings, where each string
+    is a valid agent ID present in agent_registry.json.
+  And full-stack components list multiple agents in priority order
+    (e.g. ["python-coder", "frontend-coder"] for a component that
+    spans backend and UI).
+  And the IT PO uses agent_affinity to populate the agents: map
+    in new tickets without needing to read source code or guess
+    which agent handles which subsystem.
+  And if a component has no natural agent affinity (e.g. a pure
+    data-only component), agent_affinity is set to an empty array []
+    rather than omitted, so the IT PO knows affinity was considered
+    and found inapplicable.
+  And check_ac_schema.py (or a new component-schema validator)
+    validates that every agent ID in agent_affinity exists in
+    agent_registry.json.
+depends_on: [ACS-300g]
+doc_links:
+  - path: docs/components.json
+    relationship: extends
+    status: exists
+  - path: config/agent_registry.json
+    relationship: validates-against
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

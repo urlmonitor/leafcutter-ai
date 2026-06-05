@@ -1,0 +1,32 @@
+id: INF-100a-1-i
+title: "Agent continues with template-only behavior when PROJECT_CONTEXT.md is absent"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260604-PullRequestAgentProjectContext.md"
+criteria: |
+  Given the pull-request agent template contains the Pre-Flight section,
+  And the file .agents/agents/pull-request/PROJECT_CONTEXT.md does not exist on disk,
+  When the agent executes the Pre-Flight step,
+  Then the agent logs exactly one debug line reading "PROJECT_CONTEXT.md not found for pull-request; running template-only",
+  And the agent proceeds to Step 0 without error,
+  And no additional warning or error messages are emitted about the missing file.
+depends_on: [INF-100a-1]
+doc_links:
+  - path: docs/conventions/PROJECT_CONTEXT-injection.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: INF-100a-1
+  contract: "Template Pre-Flight section with the absent-file fallback instruction"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

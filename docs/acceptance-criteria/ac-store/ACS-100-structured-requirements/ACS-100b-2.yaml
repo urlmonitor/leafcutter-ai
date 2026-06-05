@@ -1,0 +1,26 @@
+id: ACS-100b-2
+title: "L0 file uses the folder's base ID as its own ID"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a feature folder named {PREFIX}-{NNN}-{kebab-slug} exists,
+  When an L0 AC file is created in that folder,
+  Then the file is named {PREFIX}-{NNN}.yaml (e.g. "ACS-100.yaml"),
+  And the id field inside the file equals "{PREFIX}-{NNN}" (e.g. "ACS-100"),
+  And the level field is set to "L0",
+  And exactly one L0 file exists per feature folder.
+depends_on: [ACS-100b]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

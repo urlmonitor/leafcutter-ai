@@ -1,0 +1,26 @@
+id: BO-100b-2
+title: "Custom cap overrides default when configured in epic metadata"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an epic's Master_Plan.md contains frontmatter key
+    batch_cap: 5,
+  When /build-feature reads the epic configuration,
+  Then the batch cap is set to 5 (not the default 3),
+  And a ready set of 7 tickets results in a batch of exactly 5,
+  And a ready set of 4 tickets results in a batch of 4 (below cap, all dispatched).
+depends_on: [BO-100b]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

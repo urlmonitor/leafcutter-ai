@@ -1,0 +1,24 @@
+id: BO-100a
+title: "Dependencies are resolved automatically so nothing runs out of order"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  The system figures out which tickets must finish before others can start.
+  Before any work begins, ticket dependencies are analyzed and circular
+  dependencies are caught immediately with a clear error. Only tickets
+  whose prerequisites are complete become eligible for dispatch.
+depends_on: [BO-100]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,27 @@
+id: ACS-100a
+title: "Every requirement carries its full context in one place"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  A single requirement file holds everything needed to understand and build it.
+  Each AC YAML file carries business context, technical constraints, ownership,
+  dependencies, and verification state so no one has to hunt across multiple
+  documents. Both the existing and new schema formats are accepted seamlessly.
+depends_on: [ACS-100]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

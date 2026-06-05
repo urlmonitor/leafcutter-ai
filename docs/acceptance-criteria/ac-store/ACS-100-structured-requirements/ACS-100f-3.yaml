@@ -1,0 +1,29 @@
+id: ACS-100f-3
+title: "Related ticket lookup finds tickets that created or amended matched ACs"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given AC "ACS-100a" has created_by: "tickets/00_inbox/some-ticket.md"
+    and amended_by: ["tickets/00_inbox/another-ticket.md"],
+  When an agent queries for AC ID "ACS-100a" with include_tickets: true,
+  Then the result includes a related_tickets list containing:
+    - the ticket path from created_by,
+    - all ticket paths from amended_by,
+  And each ticket entry includes the ticket's title and status
+    (read from frontmatter),
+  And tickets that no longer exist on disk are listed with status: "missing".
+depends_on: [ACS-100f]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

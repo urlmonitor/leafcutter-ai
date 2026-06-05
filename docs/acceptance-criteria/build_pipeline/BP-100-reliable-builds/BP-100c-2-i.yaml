@@ -1,0 +1,31 @@
+id: BP-100c-2-i
+title: "Force flag bypasses the skip guard and overwrites existing manifest"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260603-ConfigDrivenBuildPaths.md"
+criteria: |
+  Given a project where ticket_lifecycle.json already exists in the tickets root directory
+  And the build system is invoked with the --force flag
+  When the ticket lifecycle scaffold phase is reached
+  Then it does NOT print "exists (skipped)"
+  And it overwrites the existing ticket_lifecycle.json with fresh content
+  And it writes all scaffold files as if the directory were empty
+depends_on:
+  - BP-100c-2
+doc_links:
+  - path: docs/architecture/components/build-pipeline.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

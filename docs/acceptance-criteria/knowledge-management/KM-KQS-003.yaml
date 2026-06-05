@@ -1,0 +1,14 @@
+id: KM-KQS-003
+title: "Query filter returns matching nodes case-insensitively across all surfaces"
+component: knowledge-management
+status: active
+criteria: |
+  Running with `--query <keyword>` returns only nodes whose `title` or
+  `description` contains the keyword (case-insensitive); nodes from all surfaces
+  are included in the search scope.
+origin_agent: "create-ticket-v2"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/01a_knowledge_query_script_core.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

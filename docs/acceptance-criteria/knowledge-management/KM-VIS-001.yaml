@@ -1,0 +1,14 @@
+id: KM-VIS-001
+title: "Script writes valid HTML with embedded node/edge JSON"
+component: knowledge-management
+status: active
+criteria: |
+  Running `python scripts/visualise_knowledge_graph.py --no-open` writes a
+  file to `/tmp/leafcutter_knowledge_graph.html` (or `--output` path) that is valid
+  HTML containing at least one `<script>` block with embedded node and edge JSON data.
+origin_agent: "create-ticket-v2"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/03a_knowledge_graph_visualization_core.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

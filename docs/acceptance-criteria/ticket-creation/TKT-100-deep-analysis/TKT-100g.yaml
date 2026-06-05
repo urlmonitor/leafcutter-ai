@@ -1,0 +1,27 @@
+id: TKT-100g
+title: "The system picks the right workflow for your request automatically"
+component: ticket-creation
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Big-picture ideas get strategic treatment; specific fixes get straight to work.
+  Before any analysis begins, your request is classified as either a product
+  goal (routed through vision alignment first) or a tactical change (routed
+  directly to detailed specification). You can override the classification
+  explicitly, and ambiguous requests default to the more thorough path.
+depends_on: [TKT-100e, TKT-100f]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to:
+  agent: product-owner | business-analyst-v3
+  contract: "{ flight_level: strategic|tactical, rationale: string }"
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

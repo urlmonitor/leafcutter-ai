@@ -1,0 +1,35 @@
+id: BP-100a-5
+title: "Test verifies no warning is emitted when all hook scripts exist"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260604-HookScriptIntegrityCheck.md"
+criteria: |
+  Given a test that sets up:
+    - A temporary directory acting as the canonical template path
+    - A hook manifest list with entries referencing "check_alpha.py" and "check_beta.py"
+    - The temporary directory contains both "check_alpha.py" and "check_beta.py"
+  When the test invokes the integrity check logic
+  Then the test asserts that no integrity-related warnings were emitted
+  And no exception was raised during the check
+depends_on:
+  - BP-100a
+  - BP-100a-2
+doc_links:
+  - path: "tickets/00_inbox/TICKET-20260604-HookScriptIntegrityCheck.md"
+    relationship: implements
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-100a-2
+  contract: "Integrity check loop that is silent when all scripts are present"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

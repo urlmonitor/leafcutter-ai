@@ -1,0 +1,24 @@
+id: ACS-100e
+title: "Your team's names appear on requirements automatically"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Projects configure who gets credited on requirements during onboarding.
+  The setup wizard asks whether to track individual names on requirements. When
+  enabled, agents ask who owns each requirement and record the answer, with an
+  optional team directory to catch typos. No manual setup beyond the initial prompt.
+depends_on: [ACS-100d]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,28 @@
+id: TKT-300c-1
+title: "User reviews business requirements before technical enrichment begins"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the product owner has written L0 and L1 AC files for a feature,
+  When the pipeline reaches the transition between analysis and technical review,
+  Then the system presents a summary of the L0 goal and all L1 feature statements
+    to the user,
+  And the system waits for explicit user confirmation before dispatching
+    the IT PO enrichment step,
+  And if the user requests adjustments, the pipeline pauses
+    until the user confirms the revised requirements.
+depends_on: [TKT-300c]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

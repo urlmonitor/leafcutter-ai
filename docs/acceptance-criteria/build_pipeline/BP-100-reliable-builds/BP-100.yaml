@@ -1,0 +1,22 @@
+id: BP-100
+title: "Ship changes confidently — every build produces exactly what you expect"
+component: build-pipeline
+level: L0
+status: active
+criteria: |
+  Build once, trust the result — no silent breakage, no missing pieces.
+
+  After a build completes, every artifact the system promised is present and
+  functional. Hooks point to real scripts, compiled workflows land where agents
+  can find them, and folder paths respect the project's own configuration
+  rather than assuming a fixed layout. When something in the build chain is
+  misconfigured, you find out immediately — not three commits later when a
+  workflow silently fails.
+depends_on: []
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

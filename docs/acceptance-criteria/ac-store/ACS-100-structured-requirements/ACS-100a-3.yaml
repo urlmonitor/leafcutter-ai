@@ -1,0 +1,26 @@
+id: ACS-100a-3
+title: "Status field accepts only the three allowed enum values"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a YAML file has a status field,
+  When the schema validator checks the status value,
+  Then "active", "deprecated", and "superseded_by" each pass validation,
+  And any other string (e.g. "draft", "done", "inactive", "") causes validation
+    to fail with a diagnostic error,
+  And the error message names the invalid value and lists the allowed enum members.
+depends_on: [ACS-100a]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

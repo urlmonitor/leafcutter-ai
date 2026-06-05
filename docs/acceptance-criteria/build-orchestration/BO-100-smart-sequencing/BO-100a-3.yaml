@@ -1,0 +1,30 @@
+id: BO-100a-3
+title: "Diamond dependency resolves without duplicate dispatch"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an epic contains tickets A, B, C, D where B.depends_on=[A],
+    C.depends_on=[A], and D.depends_on=[B, C] (diamond shape),
+  When the dependency resolver constructs the graph,
+  Then the graph contains four nodes with edges A->B, A->C, B->D, C->D,
+  And the ready-set computation on the initial state returns ready=[A],
+  And after A is done, the ready set becomes ready=[B, C] (both unblocked),
+  And after both B and C are done, the ready set becomes ready=[D],
+  And D is never placed in the ready set while either B or C is still pending,
+  And D appears exactly once in the ready list (no duplication from having
+    two satisfied predecessors).
+depends_on: [BO-100a]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

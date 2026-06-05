@@ -1,0 +1,27 @@
+id: ACS-100b
+title: "Find any requirement instantly by its ID"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Requirements are organized by feature and numbered so you always know where to look.
+  IDs follow a predictable hierarchy — goals, features, behaviors, and edge cases
+  each get a distinct suffix pattern, so the full requirement tree is navigable
+  from the ID alone without searching through folders.
+depends_on: [ACS-100a]
+doc_links:
+  - path: docs/acceptance-criteria/README.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

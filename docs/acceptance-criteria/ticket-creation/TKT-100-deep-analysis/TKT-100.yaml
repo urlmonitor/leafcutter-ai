@@ -1,0 +1,27 @@
+id: TKT-100
+title: "From idea to ready-to-build spec in minutes"
+component: ticket-creation
+level: L0
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  A user describes what they want in plain language and receives a complete,
+  validated specification — with acceptance criteria, architecture diagrams,
+  technical requirements, and agent assignments — without writing a single
+  line of formal documentation themselves. The system deeply understands
+  requirements, respects project rules and constraints, suggests logical
+  groupings, and triggers automatically when work is implied.
+depends_on: [ACS-100]
+doc_links:
+  - path: docs/architecture/components/create-ticket-v2-pipeline.md
+    relationship: constrains
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: [TKT-100a, TKT-100e, TKT-100f, TKT-100g, TKT-100l]
+implemented_by: []

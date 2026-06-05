@@ -1,0 +1,38 @@
+id: BP-100a-1
+title: "Build emits a warning for each registered hook whose script file is absent"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260604-HookScriptIntegrityCheck.md"
+criteria: |
+  Given the hook manifest contains 3 hook entries:
+    - hook "check_alpha" referencing script "check_alpha.py"
+    - hook "check_beta" referencing script "check_beta.py"
+    - hook "check_gamma" referencing script "check_gamma.py"
+  And the canonical template directory contains only "check_alpha.py"
+    (check_beta.py and check_gamma.py are absent)
+  When the build system loads and processes the hook manifest
+  Then it emits a warning for "check_beta" naming the missing script and expected path
+  And it emits a warning for "check_gamma" naming the missing script and expected path
+  And the build continues to completion without raising an error
+  And the build returns its normal hook count (3)
+depends_on:
+  - BP-100a
+doc_links:
+  - path: "tickets/00_inbox/TICKET-20260604-HookScriptIntegrityCheck.md"
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: test-writer
+  contract: "A warning-emitting integrity check loop that runs after hook manifest is loaded"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

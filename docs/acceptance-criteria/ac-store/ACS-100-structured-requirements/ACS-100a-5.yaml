@@ -1,0 +1,28 @@
+id: ACS-100a-5
+title: "superseded_by field enforces conditional constraint with status"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a YAML file has status "superseded_by",
+  When the schema validator checks the superseded_by field,
+  Then a non-null value matching ^[A-Z]{2,6}-[0-9]{3}$ passes
+    (e.g. superseded_by: "FIN-002"),
+  And a null value fails because superseded_by must reference the replacement AC,
+  And when status is "active" or "deprecated", superseded_by must be null
+    (a non-null value with status != "superseded_by" fails validation),
+  And the error message explains the status/superseded_by coupling rule.
+depends_on: [ACS-100a]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

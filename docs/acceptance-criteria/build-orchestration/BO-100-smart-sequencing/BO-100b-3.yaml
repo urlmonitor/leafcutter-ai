@@ -1,0 +1,25 @@
+id: BO-100b-3
+title: "Ready set smaller than cap dispatches all available tickets"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an epic has 2 tickets in the ready set and the batch cap is 3,
+  When /build-feature computes the next batch,
+  Then the batch contains exactly 2 tickets (all available),
+  And no error or warning is raised about under-utilization of the cap,
+  And both tickets are dispatched in the same parallel fanout.
+depends_on: [BO-100b]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,25 @@
+id: TKT-300c
+title: "You approve the plan before any building starts"
+component: ticket-creation
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  You see and confirm the specifications twice — once after analysis and once after technical review.
+  After the analyst writes the requirements, you review them before technical enrichment
+  begins. After the technical review adds constraints and assignments, you review the
+  final plan before any implementation is dispatched. Intermediate automated steps
+  proceed without interruption unless something is ambiguous.
+depends_on: [TKT-100a, TKT-300a]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

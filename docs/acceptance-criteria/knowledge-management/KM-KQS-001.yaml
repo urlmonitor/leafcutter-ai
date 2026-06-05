@@ -1,0 +1,14 @@
+id: KM-KQS-001
+title: "Full index output covers all eight surfaces with descriptions"
+component: knowledge-management
+status: active
+criteria: |
+  Running `python scripts/knowledge_query.py` without flags produces a
+  human-readable index covering all eight surfaces, with at least one node per
+  surface that has a non-empty `description` field.
+origin_agent: "create-ticket-v2"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/01a_knowledge_query_script_core.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

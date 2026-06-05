@@ -1,0 +1,29 @@
+id: BO-100b-4
+title: "NN execution-order prefix breaks ties deterministically within cap"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an epic has tickets named 03_feature_x.md, 01_setup.md, 05_cleanup.md,
+    02_schema.md, 04_migration.md all in the ready set with disjoint files_touched,
+  When /build-feature selects a batch with cap=3,
+  Then the batch contains 01_setup.md, 02_schema.md, 03_feature_x.md
+    (the three lowest NN prefixes),
+  And the ordering is determined by the numeric prefix extracted from the
+    filename (leading digits before the first underscore),
+  And tickets without a numeric prefix sort after all prefixed tickets
+    (using lexicographic filename as fallback).
+depends_on: [BO-100b]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

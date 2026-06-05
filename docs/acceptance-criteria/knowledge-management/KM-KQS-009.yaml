@@ -1,0 +1,13 @@
+id: KM-KQS-009
+title: "Skill registry entry present with portable flag and correct template path"
+component: knowledge-management
+status: active
+criteria: |
+  An entry for `knowledge-query` is present in `config/skill_registry.json`
+  with `portable: true` and `template_path: "leafcutter/templates/skills/knowledge-query/"`.
+origin_agent: "create-ticket-v2"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/01b_knowledge_query_skill_registration.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

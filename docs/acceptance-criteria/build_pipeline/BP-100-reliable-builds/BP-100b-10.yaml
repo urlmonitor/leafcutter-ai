@@ -1,0 +1,29 @@
+id: BP-100b-10
+title: "Drift hook docs include a developer checklist for adding new template categories"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given docs/build-drift-hook.md exists,
+  When a developer reads the section titled "Adding a new template category",
+  Then the section enumerates all four infrastructure layers (shim map, output mappings,
+    managed artifact dirs, source manifests) that must be updated
+  And it references tests/test_build_artifact_parity.py as the enforcement gate
+depends_on: [BP-100b, BP-100b-6]
+doc_links:
+  - path: docs/build-drift-hook.md
+    relationship: modifies
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

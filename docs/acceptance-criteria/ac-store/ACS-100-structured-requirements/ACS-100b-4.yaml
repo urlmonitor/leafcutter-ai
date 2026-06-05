@@ -1,0 +1,28 @@
+id: ACS-100b-4
+title: "L2 IDs extend the L1 ID with a hyphen-number suffix"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an L1 file with id "{PREFIX}-{NNN}{letter}" exists,
+  When an L2 AC is created as a child of that L1,
+  Then the L2 file is named {PREFIX}-{NNN}{letter}-{number}.yaml
+    (e.g. "ACS-100a-1.yaml", "ACS-100a-2.yaml"),
+  And the id field equals "{PREFIX}-{NNN}{letter}-{number}" where {number} is
+    a positive integer assigned sequentially starting at 1,
+  And the level field is set to "L2",
+  And the depends_on array includes the parent L1 id (e.g. ["ACS-100a"]).
+depends_on: [ACS-100b]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

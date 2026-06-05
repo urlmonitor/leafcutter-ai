@@ -1,0 +1,24 @@
+id: BO-200a
+title: "Every commit knows exactly what it contains and why"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Before committing, all the context about what changed and who approved it is bundled together.
+  The commit package includes the ticket reference, changed files, formatted message,
+  sign-off records, and parent context — all validated upfront so incomplete
+  deliveries are caught before they reach the repository.
+depends_on: [BO-200]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

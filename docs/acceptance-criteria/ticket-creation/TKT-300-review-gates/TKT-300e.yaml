@@ -1,0 +1,25 @@
+id: TKT-300e
+title: "Complex requirements are split into buildable pieces automatically"
+component: ticket-creation
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  When a requirement needs multiple specialists, it becomes separate deliverable pieces.
+  During technical review, if a single requirement spans multiple implementation
+  boundaries (e.g., database + API + frontend), it is automatically split into
+  one focused piece per specialist. Each piece has a clear deliverable and
+  ordering, and the split is visible to you at the confirmation step.
+depends_on: [TKT-300a, TKT-100f]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

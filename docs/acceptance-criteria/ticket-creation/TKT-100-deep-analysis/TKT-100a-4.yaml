@@ -1,0 +1,28 @@
+id: TKT-100a-4
+title: "BA v3 degrades gracefully when AC store directory is absent"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given docs/acceptance-criteria/ does not exist in the project root,
+  When the BA v3 attempts domain-model construction,
+  Then it sets existing_acs to an empty list,
+  And it logs an assumption entry with:
+    inference: "AC store absent -- proceeding without existing AC comparison",
+    why: "docs/acceptance-criteria/ directory not found",
+    risk_if_wrong: "L2 ACs may duplicate existing behaviors that live outside the AC store",
+  And it proceeds to L2 decomposition without error.
+depends_on: [TKT-100a, TKT-100a-1]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

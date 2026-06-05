@@ -1,0 +1,31 @@
+id: BP-100b-4
+title: "Source manifests include workflows for content fingerprinting"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
+criteria: |
+  Given the build system computes source manifests for drift detection
+  When source manifests are generated
+  Then the returned manifest dictionary contains a "workflows-js"
+    key whose value is a mapping of workflow template filenames to their content
+    fingerprints
+  And each .js file in templates/scripts/workflows/ is represented in that mapping
+depends_on:
+  - BP-100b
+doc_links:
+  - path: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

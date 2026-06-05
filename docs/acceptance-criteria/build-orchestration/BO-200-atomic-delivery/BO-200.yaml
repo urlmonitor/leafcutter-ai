@@ -1,0 +1,28 @@
+id: BO-200
+title: "Every delivery is complete and undoable if something goes wrong"
+component: build-orchestration
+level: L0
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket-supervisor completes all phase agents for a ticket,
+  When the commit phase fires,
+  Then the work is packaged into a well-defined envelope with all required metadata,
+  And the commit is created atomically (all-or-nothing),
+  And partial failures are rolled back cleanly without corrupting the worktree,
+  And the commit message follows the project convention and references the ticket.
+depends_on: []
+doc_links:
+  - docs/architecture/agent_delivery_workflows.md
+  - templates/skills/building-epics/SKILL.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: [BO-200a, BO-200b, BO-200c]
+implemented_by: []

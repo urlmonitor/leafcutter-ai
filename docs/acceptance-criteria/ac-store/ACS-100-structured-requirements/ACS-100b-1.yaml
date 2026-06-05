@@ -1,0 +1,28 @@
+id: ACS-100b-1
+title: "Feature folder naming follows PREFIX-NNN-kebab-slug convention"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a new feature set of ACs is being created for the ac-store component,
+  When the author creates the feature folder,
+  Then the folder name matches the pattern {PREFIX}-{NNN}-{kebab-slug}
+    (e.g. "ACS-100-structured-requirements", "ACS-600-doc-traceability"),
+  And {PREFIX} is the component's prefix from index.yaml (2-6 uppercase letters),
+  And {NNN} is a three-digit zero-padded integer unique within the component,
+  And {kebab-slug} is a lowercase-hyphenated human-readable descriptor,
+  And the folder is a direct child of docs/acceptance-criteria/{component}/.
+depends_on: [ACS-100b]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

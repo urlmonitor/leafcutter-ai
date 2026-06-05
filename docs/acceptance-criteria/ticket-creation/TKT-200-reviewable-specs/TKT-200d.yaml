@@ -1,0 +1,26 @@
+id: TKT-200d
+title: "Documentation stays current with the specs it describes"
+component: ticket-creation
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  When specs change, supporting docs update to match.
+
+  If the analysis step revises a spec after initial documentation was generated,
+  the documentation step detects the change and regenerates only the affected
+  materials. Reviewers never see stale diagrams that contradict the current
+  requirements.
+depends_on: [TKT-200, TKT-200a, TKT-200b]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,12 @@
+id: KM-KQS-007
+title: "Script uses only Python standard library imports"
+component: knowledge-management
+status: active
+criteria: |
+  The script is pure stdlib Python (no imports outside the standard library).
+origin_agent: "create-ticket-v2"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/01a_knowledge_query_script_core.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

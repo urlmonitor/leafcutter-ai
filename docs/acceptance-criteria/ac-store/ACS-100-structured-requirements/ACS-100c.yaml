@@ -1,0 +1,24 @@
+id: ACS-100c
+title: "The right person owns each level of detail"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Business owners define what success looks like; analysts define exact behaviors.
+  Goals and features are written in customer language by the product owner, while
+  testable behaviors and edge cases are written in specification language by the
+  analyst. Each level can evolve independently without breaking the others.
+depends_on: [ACS-100a]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

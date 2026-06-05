@@ -1,0 +1,24 @@
+id: ACS-100d
+title: "Named authorship on every requirement"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  You can always see who requested each requirement by name.
+  Every requirement records the specific person or agent that authored it, so
+  stakeholders can trace any requirement back to its source. The author is
+  locked at creation and never changes — amendments are tracked separately.
+depends_on: [ACS-100a]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,12 @@
+id: KM-DBF-011
+title: "Tests fail RED before implementation and pass GREEN after"
+component: knowledge-management
+status: active
+criteria: |
+  All tests fail (RED) before python-coder runs and pass (GREEN) after.
+origin_agent: "create-ticket-v2"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/02a_description_backfill_migration.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

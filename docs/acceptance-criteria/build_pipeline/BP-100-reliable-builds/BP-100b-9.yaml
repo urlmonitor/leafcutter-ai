@@ -1,0 +1,28 @@
+id: BP-100b-9
+title: "Consolidated output root doc lists .claude/workflows/ as a shimmed output"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given docs/explanation/consolidated-output-root.md contains a shimmed outputs table,
+  When the table is viewed,
+  Then a row exists with source "templates/scripts/workflows/",
+    output ".claude/workflows/", and content description mentioning compiled workflow JS scripts
+depends_on: [BP-100b]
+doc_links:
+  - path: docs/explanation/consolidated-output-root.md
+    relationship: modifies
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

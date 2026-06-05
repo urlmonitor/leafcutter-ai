@@ -216,6 +216,7 @@
             "spawned_by": [
                 "architect-review",
                 "business-analyst",
+                "business-analyst-v3",
                 "python-coder",
                 "documentation-expert",
                 "reference-author",
@@ -231,7 +232,8 @@
                 "test-planner",
                 "test-writer",
                 "product-owner-agent",
-                "frontend-coder"
+                "frontend-coder",
+                "llm-expert"
             ],
             "is_ticket_phase": false,
             "selection_criteria": null,
@@ -1568,6 +1570,56 @@
             "priority_rationale": "Authoring phase agent; runs after architectural review and before test-runner/pr-reviewer",
             "requires_ticket_section": true,
             "description": "Authors, edits, and audits agent templates, skill bodies, and slash-command markdown files. Applies the Prompt-Quality Checklist."
+        },
+        {
+            "id": "product-owner-v3",
+            "name": "Product Owner V3",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/product-owner-v3.md",
+            "model": "opus",
+            "skills_used": [],
+            "description": "Product Owner for v3 ticket-creation pipeline. Operates at L0/L1 flight level: translates user requests into customer value propositions and feature benefit statements. Speaks customer language, never engineering jargon."
+        },
+        {
+            "id": "business-analyst-v3",
+            "name": "Business Analyst V3",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "research-agent"
+            ],
+            "spawned_by": [],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/business-analyst-v3.md",
+            "model": "opus",
+            "skills_used": [],
+            "description": "Business Analyst for v3 ticket-creation pipeline. Operates at L2/L3 flight level: decomposes L1 feature ACs into testable Gherkin behaviors and edge-case specifications. Produces AC YAML files."
+        },
+        {
+            "id": "it-po-v3",
+            "name": "IT Product Owner V3",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/it-po-v3.md",
+            "model": "opus",
+            "skills_used": [],
+            "description": "IT Product Owner for v3 ticket-creation pipeline. Enriches L2/L3 AC YAML files with technical fields: assigned_agent, it_requirements, estimated_complexity, delivers_to/expects_from contracts, and doc_links."
         }
     ]
 }

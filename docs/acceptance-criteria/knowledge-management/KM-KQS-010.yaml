@@ -1,0 +1,14 @@
+id: KM-KQS-010
+title: "Public API functions importable by sibling scripts via importlib"
+component: knowledge-management
+status: active
+criteria: |
+  `knowledge_query.py` exposes public functions `load_surfaces(project_root, paths_json)`,
+  `extract_nodes(surface, path)`, and `extract_edges(surface, record, raw_data)` that can be
+  imported by sibling scripts via `importlib.util`.
+origin_agent: "create-ticket-v2"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/01a_knowledge_query_script_core.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

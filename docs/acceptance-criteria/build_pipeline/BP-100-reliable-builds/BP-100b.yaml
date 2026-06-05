@@ -1,0 +1,21 @@
+id: BP-100b
+title: "Compiled workflows are reachable where agents look for them"
+component: build-pipeline
+level: L1
+status: active
+criteria: |
+  Workflow scripts land in the right place after every build — no manual wiring needed.
+
+  When a workflow script is compiled by the build system, it is automatically
+  registered in all four infrastructure layers so that agents can discover
+  and execute it without manual intervention. A parity test catches any
+  future omission before it reaches users.
+depends_on:
+  - BP-100
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

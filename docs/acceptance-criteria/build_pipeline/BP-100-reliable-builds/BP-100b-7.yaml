@@ -1,0 +1,30 @@
+id: BP-100b-7
+title: "Pre-commit drift hook triggers on compiled workflow files"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given .pre-commit-config.yaml defines the check_output_drift hook,
+  When a compiled workflow file at .claude/workflows/ is modified,
+  Then the hook's file pattern matches .claude/workflows/ and the hook runs
+  And drift is detected and reported by check_output_drift.py
+depends_on: [BP-100b, BP-100b-5]
+doc_links:
+  - path: tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-100b-5
+  contract: "Drift detection script that knows about .claude/workflows/"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

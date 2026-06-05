@@ -1,0 +1,41 @@
+id: BP-100a-3-i
+title: "Test verifies commit_guardian paths are excluded from production file classification"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: done
+created_by: "tickets/00_inbox/TICKET-20260604-HookScriptIntegrityCheck.md"
+criteria: |
+  Given a test that constructs a unified diff where:
+    - The diff header names the file "templates/scripts/commit_guardian/check_contract_shrinking.py"
+    - The diff body contains a removed line with "pytest.mark.xfail"
+      (a pattern that normally triggers a contract-shrinking warning)
+  When the test passes this diff through the contract-shrinking scanner
+  Then the scanner reports no production file changes
+  And the commit is not blocked
+
+  Given a second test scenario with the same diff content but the file path
+    is "src/app/service.py" (a genuine production path)
+  When the test passes this diff through the contract-shrinking scanner
+  Then the scanner DOES report a production file change
+  And the contract-shrinking warning IS raised
+depends_on:
+  - BP-100a-3
+doc_links:
+  - path: "tickets/00_inbox/TICKET-20260604-HookScriptIntegrityCheck.md"
+    relationship: implements
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-100a-3
+  contract: "Extended exclusion regex that treats commit_guardian/ paths as non-production"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "unit_tests/commit_guardian/test_check_contract_shrinking.py"

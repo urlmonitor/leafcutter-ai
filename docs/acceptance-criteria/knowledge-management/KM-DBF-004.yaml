@@ -1,0 +1,14 @@
+id: KM-DBF-004
+title: "Hook exits 0 on valid files and non-zero with violation list"
+component: knowledge-management
+status: active
+criteria: |
+  `scripts/commit_guardian/check_description_field.py` exits 0 when all
+  staged target files have a non-empty `description:` field and exits non-zero with a
+  per-file list of violations when any staged target file is missing the field.
+origin_agent: "create-ticket-v2"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/02b_description_field_enforcement_hook.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

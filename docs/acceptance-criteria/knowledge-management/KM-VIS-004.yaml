@@ -1,0 +1,14 @@
+id: KM-VIS-004
+title: "Surface traversal delegated exclusively to knowledge_query.py"
+component: knowledge-management
+status: active
+criteria: |
+  The script delegates surface traversal exclusively to `knowledge_query.py`
+  (calls `load_surfaces`, `extract_nodes`, `extract_edges`). No surface path is
+  hardcoded in `visualise_knowledge_graph.py` itself.
+origin_agent: "create-ticket-v2"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/03a_knowledge_graph_visualization_core.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

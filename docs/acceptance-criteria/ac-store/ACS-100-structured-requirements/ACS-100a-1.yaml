@@ -1,0 +1,26 @@
+id: ACS-100a-1
+title: "Required fields reject missing values at commit time"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a YAML file under docs/acceptance-criteria/ is staged for commit,
+  When the schema validator runs and any of the six required fields
+    (id, title, component, status, created_by, criteria) is absent or empty,
+  Then the commit is blocked with a diagnostic error,
+  And the error message names the missing field and the file path,
+  And no partial commit occurs.
+depends_on: [ACS-100a]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

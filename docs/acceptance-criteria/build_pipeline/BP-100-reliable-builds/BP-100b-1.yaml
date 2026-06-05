@@ -1,0 +1,32 @@
+id: BP-100b-1
+title: "Build creates a symlink so agents reach compiled workflows at .claude/workflows/"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
+criteria: |
+  Given a project with a valid skills_config.json and workflow source templates
+    in templates/scripts/workflows/ (containing build-epic.js, build-ticket.js,
+    create-ticket.js)
+  When the build system runs to completion
+  Then a symlink (or directory) exists at .claude/workflows/
+  And .claude/workflows/ contains build-epic.js, build-ticket.js, and create-ticket.js
+  And the build exits with status 0 and emits no warnings about missing shims
+depends_on:
+  - BP-100b
+doc_links:
+  - path: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
