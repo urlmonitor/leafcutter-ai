@@ -347,6 +347,45 @@ After both changes:
 
 ---
 
+### 5.4 Adding a New Template Category — Developer Checklist
+
+When you add a new build phase that produces user-facing output (e.g. a new
+`templates/my-category/` directory), you must update **all four** infrastructure
+layers or the new category will be invisible to shims, drift detection, and
+stale-artifact cleanup. The parity test (`tests/test_build_artifact_parity.py`)
+enforces this requirement mechanically — a commit that adds a phase without
+wiring all four layers will cause the parity test to fail with a message naming
+the missing layer and category.
+
+**Mandatory updates (all four must be done before committing):**
+
+| Layer | File | Change required |
+|---|---|---|
+| 1. Shim map | `scripts/build_helpers.py` — `install_shims()` | Add `(".claude/<my-category>", "<output-rel>")` to the `shim_map` list |
+| 2. Output mappings | `scripts/build_helpers.py` — `_compute_output_mappings()` | Add a scanning block for the new template directory→output path pair |
+| 3. Managed artifact dirs | `scripts/build_phases.py` — `_MANAGED_ARTIFACT_DIRS` | Add `"<my-category>": "<output-subdir>"` to the dict |
+| 4. Source manifests | `scripts/build.py` — `_build_source_manifests()` | Add a scanning block for the new template directory; include the key in the returned dict |
+
+**Bonus: update the drift hook (Direction B):**
+
+If the new category produces output files that should be scanned for
+direct-edit drift, also add the new output directory to `_OUTPUT_DIRS` in
+`templates/scripts/commit_guardian/check_output_drift.py`.
+
+**Verification:**
+
+After wiring all four layers, run `tests/test_build_artifact_parity.py` to
+confirm all cross-validation assertions pass:
+
+```bash
+python -m pytest tests/test_build_artifact_parity.py -v
+```
+
+If any assertion fails, the error message names the specific category and the
+missing layer so you can identify the gap immediately.
+
+---
+
 ## 6. Hook Registration
 
 The hook is registered in two places:

@@ -90,6 +90,7 @@ and creates a pointer — either a symlink (preferred) or a file copy (Windows f
 | `.claude/skills/` | `.leafcutter/skills/` | Claude Code discovers skills at this path |
 | `.claude/commands/` | `.leafcutter/commands/` | Claude Code discovers commands at this path |
 | `.claude/hooks/` | `.leafcutter/hooks/` | Claude Code discovers hooks at this path |
+| `.claude/workflows/` | `.leafcutter/workflows/` | Claude Code Workflows JS scripts (build-epic.js, build-ticket.js, create-ticket.js) |
 | `.claude/settings.json` | `.leafcutter/settings.json` | Claude Code reads settings at this path |
 | `.gemini/` | `.leafcutter/gemini/` | Gemini reads instructions at this path |
 | `.pre-commit-config.yaml` | `.leafcutter/pre-commit-config.yaml` | pre-commit reads config at the project root |

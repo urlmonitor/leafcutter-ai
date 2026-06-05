@@ -551,12 +551,12 @@
                 "name": "Check Output Drift (leafcutter Direction B)",
                 "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_output_drift.py",
                 "language": "system",
-                "files": "^(\\.claude/agents/|\\.claude/skills/|\\.agents/workflows/|\\.agents/rules/)",
+                "files": "^(\\.claude/agents/|\\.claude/skills/|\\.claude/commands/|\\.claude/hooks/|\\.claude/workflows/|\\.agents/rules/)",
                 "stages": [
                     "pre-commit"
                 ],
                 "pass_filenames": false,
-                "_comment": "Direction B drift guard: blocks direct edits to built output files. Companion to check-build-drift (Direction A). Fires when .claude/agents/, .claude/skills/, .agents/workflows/, or .agents/rules/ files are staged."
+                "_comment": "Direction B drift guard: blocks direct edits to built output files. Companion to check-build-drift (Direction A). Fires when any .claude/ or .agents/ output directory files are staged."
             },
             {
                 "id": "check-glossary-coverage",

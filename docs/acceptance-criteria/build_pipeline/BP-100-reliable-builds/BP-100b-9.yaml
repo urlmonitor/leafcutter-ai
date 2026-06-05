@@ -4,7 +4,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given docs/explanation/consolidated-output-root.md contains a shimmed outputs table,
   When the table is viewed,
@@ -25,4 +25,5 @@ created_by: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_te
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - docs/explanation/consolidated-output-root.md
