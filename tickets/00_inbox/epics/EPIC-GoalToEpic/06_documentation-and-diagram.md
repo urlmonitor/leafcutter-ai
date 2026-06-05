@@ -1,6 +1,6 @@
 ---
 title: "Documentation and sequence diagram for ACD-1200 goal-to-epic features"
-status: in_progress
+status: done
 components:
   - ac-driven-dev
 created: 2026-06-05
@@ -25,7 +25,7 @@ agents:
   architecture-diagram-author: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ac_coverage: 0/4
 source_ac: ACD-1200a
 ---
@@ -141,7 +141,7 @@ The four deliverables are independent and can be parallelized:
 - [x] architecture-diagram-author — 2026-06-06 14:00
 - [x] pr-reviewer — 2026-06-06 14:10
 - [x] commit — 2026-06-06 14:30
-- [ ] pull-request
+- [x] pull-request — 2026-06-06 14:35
 
 ## Comments
 
@@ -193,3 +193,10 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Staged 5 files (4 new docs + ticket sign-off). Renamed diagram from seq-goal-to-epic-dispatch.md to c2-005-goal-to-epic-dispatch.md to satisfy check-diagram-naming pre-commit hook. All references updated.
+
+### 2026-06-06 14:35 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_5896fac3
+completion_manifest:
+  branch_pushed: true
+  pr_updated: true
+Pushed EPIC-GoalToEpic branch to remote (de029c1..d0fbe1c). PR #69 is already open and now includes ticket 06 documentation deliverables. No new PR created — pushed to existing branch per epic convention.
