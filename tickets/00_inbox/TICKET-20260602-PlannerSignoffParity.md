@@ -22,6 +22,11 @@ agents:
   pr-reviewer: needed
   commit: needed
   pull-request: needed
+ac_traceability:
+  L0: BP-300
+  L1: BP-300b
+  ac_path: docs/acceptance-criteria/build_pipeline/BP-300-workflow-orchestration/BP-300b.yaml
+  routing: direct_to_ba
 ---
 
 # Enhance build-ticket.js planner to cross-validate frontmatter agents map against Sign-offs checklist
