@@ -16,6 +16,11 @@ files_touched:
   - scripts/changelog/emit_entry.py
 depends_on: []
 ac_coverage: 0/3
+ac_traceability:
+  L0: INF-100
+  L1: INF-100b
+  ac_path: docs/acceptance-criteria/infrastructure/INF-100-agent-reliability/INF-100b.yaml
+  routing: direct_to_ba
 ---
 
 ## Context
