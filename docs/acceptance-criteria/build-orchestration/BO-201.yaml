@@ -1,0 +1,43 @@
+id: BO-201
+title: "ac-fulfillment-gate phase gate — ok/blocker verdict with per-AC details"
+component: build-orchestration
+status: active
+created_by: "tickets/99_done/TICKET-20260605-ACFulfillmentGate.md"
+criteria: |
+  Given a ticket with ac_traceability frontmatter referencing AC YAML files
+    (e.g. l2: [BO-201, BO-202], ac_path: docs/acceptance-criteria/build_pipeline/)
+  When the ac-fulfillment-gate agent runs at priority 11.7
+    (after ac-validator at 11.5 and before commit at 12)
+  Then it loads each referenced L2/L3 AC YAML file from the ac_path
+  And it verifies work_status equals done for each AC
+  And it verifies implemented_by contains at least one file path
+    present in the branch diff intersected with the ticket's files_touched
+  And it verifies covered_by is non-empty for L2 ACs
+    (L3 ACs may have empty covered_by)
+  And it returns status:ok if all referenced ACs pass verification
+
+  Given a ticket with ac_traceability where a referenced AC has work_status: todo
+    and no auto-fix is possible (no matching diff evidence)
+  When the ac-fulfillment-gate agent completes verification
+  Then it returns status:blocker with per-AC details listing each failing AC ID
+    and the specific field that failed (work_status, implemented_by, or covered_by)
+
+  Given a ticket without ac_traceability in its frontmatter
+  When the ac-fulfillment-gate agent runs
+  Then it signs off with status:ok (no ACs to verify)
+
+  Given an ac_traceability block referencing L0 or L1 ACs
+  When the ac-fulfillment-gate agent processes the list
+  Then it skips L0/L1 ACs (composite — fulfillment derived from children)
+    and only verifies L2/L3 ACs
+level: L2
+work_status: done
+origin_agent: BrainCandy
+superseded_by: null
+amended_by: []
+implemented_by:
+  - "templates/agents/ac-fulfillment-gate.md"
+  - "templates/skills/building-epics/SKILL.md"
+  - "config/agent_registry.json"
+covered_by:
+  - "tests/test_ac_fulfillment_gate.py"

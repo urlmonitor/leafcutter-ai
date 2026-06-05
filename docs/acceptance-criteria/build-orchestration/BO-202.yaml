@@ -1,0 +1,38 @@
+id: BO-202
+title: "Auto-fix work_status and implemented_by/covered_by when diff evidence exists"
+component: build-orchestration
+status: active
+created_by: "tickets/99_done/TICKET-20260605-ACFulfillmentGate.md"
+criteria: |
+  Given an AC YAML file referenced in ac_traceability has work_status: todo
+  And the branch diff contains file paths that intersect with the ticket's files_touched
+  When the ac-fulfillment-gate agent detects this matching evidence
+  Then it sets work_status to done in the AC YAML file
+  And it populates implemented_by with file paths from the diff
+    that intersect with files_touched
+  And it populates covered_by with test file paths from the diff
+    that contain a "# covers: <AC-ID>" tag matching this AC's ID
+
+  Given an AC YAML file already has entries in implemented_by or covered_by
+  When the auto-fix runs
+  Then it appends new entries without overwriting or removing existing entries
+    (append-only behavior)
+
+  Given the auto-fix has already been applied to an AC YAML file
+  When the ac-fulfillment-gate agent runs again on the same diff
+  Then no duplicate entries are added (idempotent behavior)
+  And the resulting YAML passes check_ac_schema.py validation
+
+  Given the auto-fix modifies one or more AC YAML files
+  When the ac-fulfillment-gate agent signs off
+  Then the sign-off comment lists each auto-fix action performed
+    (AC ID, fields updated, values added) for auditability
+level: L2
+work_status: done
+origin_agent: BrainCandy
+superseded_by: null
+amended_by: []
+implemented_by:
+  - "templates/agents/ac-fulfillment-gate.md"
+covered_by:
+  - "tests/test_ac_fulfillment_gate.py"

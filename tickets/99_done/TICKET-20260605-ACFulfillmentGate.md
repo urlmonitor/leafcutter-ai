@@ -32,7 +32,7 @@ ac_traceability:
   l2:
     - BO-201
     - BO-202
-  ac_path: docs/acceptance-criteria/build_pipeline/
+  ac_path: docs/acceptance-criteria/build-orchestration/
 ---
 
 # AC Fulfillment Gate — verify and auto-fix AC store fields before commit
