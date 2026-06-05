@@ -1,0 +1,27 @@
+id: INF-200b-2
+title: "[Phase 2] Hook generator produces project-specific pre-commit template"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+criteria: |
+  Given the user has confirmed their preferred logging convention,
+  When the hook generator runs,
+  Then it writes a pre-commit hook template under templates/skills/
+    that enforces the chosen convention (AST-based for Python),
+  And the template is parameterized for the convention (allowed calls, banned calls),
+  And build.py registers it in the consumer's .pre-commit-config.yaml on next build,
+  And the generated hook follows the same pattern as check_no_print.py
+    (AST scan, exempt paths, exempt patterns, structured error output).
+depends_on:
+  - INF-200b-1
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: L
+roadmap_phase: phase_2
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

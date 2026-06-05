@@ -1,0 +1,43 @@
+id: INF-400b-2
+title: "Knowledge emissions from v3 agents use the same JSONL event schema as signoff section 7"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a v3 agent (PO, BA, or IT PO) discovers a learning during its run
+    and the post-work knowledge-capture step (INF-400b-1) fires,
+  When the agent emits a knowledge_captured event to the telemetry sink,
+  Then the event is a single-line JSON object appended to agent_telemetry.jsonl
+    with the following fields:
+    - "event": "knowledge_captured"
+    - "timestamp": ISO-8601 datetime
+    - "agent": the v3 agent name (e.g., "business-analyst-v3")
+    - "component": the component the agent was working in (e.g., "infrastructure")
+    - "destination": the file path where the learning was persisted
+    - "entry_kind": the classification from route-learning (e.g., "memory-project",
+      "per-folder-readme", "agent-frontmatter")
+  And the event is structurally identical to the knowledge_captured events
+    emitted by phase agents via signoff section 7 step 4,
+  And downstream consumers (the harvester, retrospective-agent) can process
+    v3 agent emissions without schema-specific handling.
+depends_on: [INF-400b, INF-400b-1]
+doc_links:
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: "JSONL events in agent_telemetry.jsonl that match the existing knowledge_captured schema"
+expects_from:
+  ac_id: INF-400b-1
+  contract: "V3 agent templates with knowledge-capture step that calls route-learning and capture-learning"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

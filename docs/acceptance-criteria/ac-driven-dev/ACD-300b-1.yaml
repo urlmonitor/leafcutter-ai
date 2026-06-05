@@ -1,0 +1,31 @@
+id: ACD-300b-1
+title: "The strategic route dispatches PO v3, then BA v3, then IT PO v3 in strict sequence"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the triage agent returns route: "strategic",
+  When the create-ac.js workflow script processes the routing decision,
+  Then it dispatches product-owner-v3 with the user's request,
+  And waits for PO v3 to write L0/L1 ACs to the AC store with readiness: draft,
+  And presents the PO v3 output to the user for confirmation (gate 1),
+  And only after user approval dispatches business-analyst-v3 with the L1 AC ids,
+  And waits for BA v3 to write L2/L3 ACs with readiness: draft,
+  And presents the BA v3 output to the user for confirmation (gate 2),
+  And only after user approval dispatches it-po-v3 with the full AC batch,
+  And waits for IT PO v3 to enrich and set readiness: reviewed,
+  And presents the final output to the user for priority setting and approval (gate 3).
+depends_on: [ACD-300b]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

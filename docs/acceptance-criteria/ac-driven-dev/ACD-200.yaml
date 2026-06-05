@@ -1,0 +1,27 @@
+id: ACD-200
+title: "The AC authoring pipeline guarantees documentation ACs for every feature"
+component: ac-driven-dev
+level: L0
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given any feature is being authored through the PO v3 -> BA v3 pipeline,
+  When the feature introduces new user-facing commands, new state machines,
+    new multi-actor flows, or new architectural components,
+  Then the BA v3 automatically produces documentation ACs alongside behavioral ACs,
+  And the IT PO v3 validates that documentation ACs are present before
+    promoting to readiness: reviewed,
+  And the documentation ACs specify which diagrams and guides must be produced.
+depends_on: []
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-200a, ACD-200b, ACD-200c]
+implemented_by: []

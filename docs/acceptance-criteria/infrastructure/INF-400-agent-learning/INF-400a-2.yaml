@@ -1,0 +1,31 @@
+id: INF-400a-2
+title: "V3 agents read memory files that contain learnings from their own prior runs"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a memory file exists at memory/project_infrastructure_conventions.md
+    containing a learning captured during a previous BA v3 run
+    (e.g., "The infrastructure component uses INF- prefix and has no parent component"),
+  When the business-analyst-v3 agent is spawned for a new task in the infrastructure component,
+  Then the agent's context window contains the content of that memory file
+    (injected by the harness via Channel 9 of the knowledge plane),
+  And the agent can reference the prior learning without re-discovering it,
+  And the agent does not need to explicitly invoke a skill or tool to access it.
+depends_on: [INF-400a]
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

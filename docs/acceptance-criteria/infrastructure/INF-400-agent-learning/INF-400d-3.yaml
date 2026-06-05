@@ -1,0 +1,36 @@
+id: INF-400d-3
+title: "Context files remain readable and useful as they accumulate entries over many runs"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a PROJECT_CONTEXT.md file has accumulated 20 learning entries over 20 agent runs,
+  When a new agent loads the skill and reads the co-located PROJECT_CONTEXT.md,
+  Then the file is organized with:
+    - Most recent entries at the top (reverse chronological within the Accumulated Learnings section),
+    - Each entry is 1-3 sentences (concise, not verbose),
+    - Entries from the same component or topic are naturally grouped by their date proximity,
+  And the total file size does not exceed 100 entries
+    (older entries should be summarized or archived by the harvester
+    when the count exceeds this threshold),
+  And the agent can identify relevant learnings by scanning the entry text and dates
+    without needing full-text search tooling.
+depends_on: [INF-400d, INF-400d-2]
+doc_links:
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: INF-400d-2
+  contract: "PROJECT_CONTEXT.md files with structured append-only entries that need lifecycle management"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

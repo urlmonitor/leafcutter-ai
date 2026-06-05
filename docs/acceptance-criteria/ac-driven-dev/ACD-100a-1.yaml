@@ -1,0 +1,33 @@
+id: ACD-100a-1
+title: "Sequence diagram for the AC authoring pipeline (PO -> BA -> IT PO -> user)"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given docs/architecture/diagrams/ is the canonical location for architecture diagrams,
+  When the AC authoring pipeline documentation is reviewed,
+  Then a Mermaid sequence diagram exists at
+    docs/architecture/diagrams/ac-authoring-pipeline.md,
+  And it shows four actors: User, product-owner-v3, business-analyst-v3, it-po-v3,
+  And the sequence is:
+    User describes feature -> PO v3 writes L0/L1 ACs (readiness: draft)
+    -> BA v3 decomposes into L2/L3 (readiness: draft)
+    -> IT PO v3 enriches with technical fields (readiness: reviewed)
+    -> User reviews and sets readiness: approved + priority,
+  And each message arrow is labelled with the readiness state written,
+  And the diagram has frontmatter with parent link to agent_delivery_workflows.md.
+depends_on: [ACD-100a]
+doc_links:
+  - docs/architecture/diagrams/ac-authoring-pipeline.md
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

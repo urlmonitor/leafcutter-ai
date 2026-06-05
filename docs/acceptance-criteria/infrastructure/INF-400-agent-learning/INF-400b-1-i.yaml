@@ -1,0 +1,34 @@
+id: INF-400b-1-i
+title: "Knowledge capture does not block agent exit if route-learning or capture-learning is unavailable"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a v3 agent's post-work knowledge-capture step fires,
+  And the agent has discovered a learning worth persisting,
+  But the route-learning skill is not available (e.g., the skill file is missing
+    from the deployed .claude/skills/ directory),
+  When the agent attempts to invoke route-learning,
+  Then the agent logs a warning: "route-learning skill unavailable; learning not persisted",
+  And the agent proceeds to exit without the learning being captured,
+  And the agent's primary output (AC YAML files) is not affected,
+  And no error is returned to the calling supervisor or pipeline.
+depends_on: [INF-400b-1]
+doc_links:
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: INF-400b-1
+  contract: "Knowledge-capture step with graceful degradation for missing skills"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

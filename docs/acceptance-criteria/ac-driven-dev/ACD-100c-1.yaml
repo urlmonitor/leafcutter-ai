@@ -1,0 +1,31 @@
+id: ACD-100c-1
+title: "How-to guide written at docs/how-to/ac-driven-development.md"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the AC-driven development system is fully implemented (tickets 00-04 complete),
+  When documentation-expert is invoked with how-to intent,
+  Then a file exists at docs/how-to/ac-driven-development.md,
+  And it contains sections for each of the 6 tasks listed in ACD-100c,
+  And each section has a numbered step list (not explanation, not reference),
+  And it includes cross-links to:
+    - docs/architecture/diagrams/ac-authoring-pipeline.md (ACD-100a-1)
+    - docs/architecture/diagrams/build-ac-flow.md (ACD-100a-2)
+    - docs/architecture/diagrams/ac-readiness-states.md (ACD-100b-1),
+  And the file has YAML frontmatter with title, category: how-to, and related docs.
+depends_on: [ACD-100c]
+doc_links:
+  - docs/how-to/ac-driven-development.md
+assigned_agent: documentation-expert
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

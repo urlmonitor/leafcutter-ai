@@ -1,0 +1,29 @@
+id: ACD-300b
+title: "A workflow script orchestrates the authoring agents in sequence based on the triage decision"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  A JavaScript workflow script (create-ac.js) receives the triage routing
+  decision and dispatches the correct authoring agents in sequence. The script
+  handles three routing paths (strategic, behavioral, technical) and one
+  short-circuit path (covered). Each agent is called as a sub-agent, receives
+  the user's original request plus any ACs produced by prior agents, and writes
+  its output to the AC store. The workflow script itself never writes ACs —
+  it only orchestrates agents and presents confirmation gates.
+depends_on: [ACD-300, ACD-300a]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  agent: haiku-triage
+  contract: "{ route: strategic|behavioral|technical|covered, existing_acs: string[], parent_l1_id?: string }"
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-300b-1, ACD-300b-2]
+implemented_by: []

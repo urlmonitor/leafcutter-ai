@@ -1,0 +1,35 @@
+id: ACD-100d-1
+title: "C4 component diagram written at docs/architecture/diagrams/ac-driven-pipeline.md"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given docs/architecture/diagrams/ is the canonical location for architecture diagrams,
+  When the architecture-diagram-author produces the component diagram,
+  Then a file exists at docs/architecture/diagrams/ac-driven-pipeline.md,
+  And it contains a Mermaid C4Context or flowchart block showing:
+    - AC Store (docs/acceptance-criteria/) as a data store
+    - scan_ac_store.py reading from AC Store
+    - ac_prioritizer.py receiving scan output
+    - generate_ticket_from_ac.py writing to tickets/00_inbox/
+    - generate_ticket_from_ac.py writing implemented_by back to AC Store
+    - mark_ac_done.py writing work_status: done to AC Store
+    - validate_ac_schema.py as a commit-time guard on AC Store
+    - build-ac agent calling prioritizer, generator, /build-feature, and mark_done,
+  And data flow arrows are labelled (JSON, YAML, ticket path),
+  And the file has frontmatter with parent: agent_delivery_workflows.md.
+depends_on: [ACD-100d]
+doc_links:
+  - docs/architecture/diagrams/ac-driven-pipeline.md
+assigned_agent: architecture-diagram-author
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

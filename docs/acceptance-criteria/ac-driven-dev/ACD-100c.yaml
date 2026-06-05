@@ -1,0 +1,32 @@
+id: ACD-100c
+title: "How-to guide for using /build-ac and the AC-driven workflow"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a user has the AC-driven development system deployed,
+  When they want to learn how to use it,
+  Then a how-to guide exists in docs/how-to/ (or docs/) explaining:
+    1. How to author new ACs via the PO/BA pipeline
+    2. How to review and approve ACs (set readiness: approved + priority)
+    3. How to invoke /build-ac to build the next most important AC
+    4. How to use /build-ac --ac <id> to target a specific AC
+    5. How to check which ACs are ready vs blocked vs draft
+    6. How the done-linker closes the loop automatically after merge,
+  And the guide follows the Diataxis how-to style (task-oriented, not explanatory),
+  And it references the flow diagrams (ACD-100a-1, ACD-100a-2) as visual aids.
+depends_on: [ACD-100]
+doc_links:
+  - docs/how-to/ac-driven-development.md
+assigned_agent: documentation-expert
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-100c-1]
+implemented_by: []

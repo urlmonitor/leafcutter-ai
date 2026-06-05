@@ -1,4 +1,4 @@
-id: BP-100a-3-i
+id: BP-100d-1-i
 title: "Test verifies commit_guardian paths are excluded from production file classification"
 component: build-pipeline
 level: L3
@@ -21,16 +21,16 @@ criteria: |
   Then the scanner DOES report a production file change
   And the contract-shrinking warning IS raised
 depends_on:
-  - BP-100a-3
+  - BP-100d-1
 doc_links:
-  - path: "tickets/00_inbox/TICKET-20260604-HookScriptIntegrityCheck.md"
+  - path: "tickets/00_inbox/TICKET-20260605-ContractShrinkingSelfExclusion.md"
     relationship: implements
     status: exists
 assigned_agent: test-writer
 estimated_complexity: S
 delivers_to: null
 expects_from:
-  ac_id: BP-100a-3
+  ac_id: BP-100d-1
   contract: "Extended exclusion regex that treats commit_guardian/ paths as non-production"
 origin_agent: business-analyst-v3
 created: 2026-06-05

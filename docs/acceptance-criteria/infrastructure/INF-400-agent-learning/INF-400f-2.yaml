@@ -1,0 +1,39 @@
+id: INF-400f-2
+title: "BA v3 component discoveries are available to the IT PO v3 in the same pipeline run"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the business-analyst-v3 agent discovers during L2 decomposition that
+    the infrastructure component has a standing rule requiring all ACs to include
+    doc_links to architecture documents,
+  And the BA's knowledge-capture step persists this to a component-scoped context file
+    (e.g., docs/acceptance-criteria/infrastructure/README.md or
+    memory/project_infrastructure_conventions.md),
+  When the it-po-v3 agent is spawned next in the same pipeline run to enrich
+    the BA's L2 AC files,
+  Then the IT PO's pre-flight step reads the context file the BA just wrote,
+  And the IT PO ensures its enriched ACs include doc_links to architecture documents
+    without being told to do so by the user or the BA's output,
+  And if the IT PO finds an AC missing a doc_link, it adds one rather than leaving
+    the gap for a reviewer to catch.
+depends_on: [INF-400f, INF-400a, INF-400b]
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/it-po-v3.md
+    relationship: constrains
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

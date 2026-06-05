@@ -1,0 +1,24 @@
+id: INF-400a
+title: "Agents start each run informed by everything learned in previous runs"
+component: infrastructure
+level: L1
+status: active
+criteria: |
+  Past discoveries about your project available before the first decision.
+
+  When an agent starts a new task, accumulated knowledge from past runs is
+  already in its context. It knows the patterns that worked, the preferences
+  you expressed, and the conventions that matter for the domain it is about
+  to work in. No cold starts after the first run.
+depends_on:
+  - INF-400
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

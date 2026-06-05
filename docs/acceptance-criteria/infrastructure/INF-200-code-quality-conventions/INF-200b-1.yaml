@@ -1,0 +1,26 @@
+id: INF-200b-1
+title: "[Phase 2] Convention detector scans customer codebase and presents findings"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+criteria: |
+  Given a consumer project with leafcutter-ai installed,
+  When the user invokes the logging-convention detection skill,
+  Then the system scans all .py files in the customer's project,
+  And identifies the dominant logging pattern (e.g. "structlog", "logging.getLogger",
+    "loguru", "print-based", "mixed"),
+  And presents a summary: pattern name, file count, example usages,
+  And asks the user which convention to enforce going forward.
+depends_on:
+  - INF-200b
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: M
+roadmap_phase: phase_2
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

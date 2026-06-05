@@ -1,0 +1,51 @@
+id: INF-400b-1
+title: "V3 agent templates contain a mandatory knowledge-capture step that fires before exit"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the product-owner-v3, business-analyst-v3, and it-po-v3 agent templates
+    all have signoff: false in their frontmatter,
+  And therefore signoff skill section 7 (the standard knowledge-capture trigger)
+    never fires for these agents,
+  When the agent template is read by a human or validation tool,
+  Then the template contains a mandatory post-work step (after the agent's final
+    output is produced, before the agent returns control to the caller) that:
+    1. Prompts the agent: "Did you discover any component conventions, user
+       preferences, or domain patterns during this run that future agents working
+       in this component would benefit from knowing?",
+    2. On "yes": directs the agent to invoke route-learning to classify the learning,
+    3. On "yes": directs the agent to invoke capture-learning to persist the learning,
+    4. On "yes": directs the agent to emit a knowledge_captured event to the
+       telemetry sink,
+    5. On "no": proceeds without writing anything,
+  And this step is not conditional on ticket_path being present
+    (since v3 agents operate on AC files, not tickets).
+depends_on: [INF-400b]
+doc_links:
+  - path: templates/agents/product-owner-v3.md
+    relationship: constrains
+    status: exists
+  - path: templates/agents/business-analyst-v3.md
+    relationship: constrains
+    status: exists
+  - path: templates/agents/it-po-v3.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to:
+  agent: llm-expert
+  contract: "Three agent templates with embedded knowledge-capture steps analogous to signoff section 7"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

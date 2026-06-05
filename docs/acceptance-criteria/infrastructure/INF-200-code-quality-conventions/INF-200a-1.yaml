@@ -1,0 +1,31 @@
+id: INF-200a-1
+title: "check_no_print pre-commit hook blocks print() outside CLI entry points"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+criteria: |
+  Given a .py file is staged for commit in the leafcutter-ai repo,
+  When the file contains a print() call that is NOT inside:
+    - a function named main(), OR
+    - an `if __name__ == "__main__":` guard block,
+  Then the check_no_print pre-commit hook exits non-zero,
+  And the error message includes the file path, line number, and column,
+  And the error message suggests using `logger.debug(...)` instead.
+depends_on:
+  - INF-200a
+doc_links:
+  - path: scripts/commit_guardian/check_no_print.py
+    relationship: implements
+    status: planned
+  - path: scripts/commit_guardian/commit_guardian.json
+    relationship: configures
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

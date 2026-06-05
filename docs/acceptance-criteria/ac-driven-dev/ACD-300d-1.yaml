@@ -1,0 +1,30 @@
+id: ACD-300d-1
+title: "Each authoring agent writes ACs to the correct component subdirectory with valid schema"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given PO v3, BA v3, or IT PO v3 is invoked by the create-ac workflow,
+  When the agent produces AC YAML output,
+  Then each AC file is written to docs/acceptance-criteria/<component>/
+    where <component> matches the AC's component field,
+  And the file is named <id>.yaml (e.g. ACD-400a-1.yaml),
+  And the file passes validate_ac_schema.py validation (all required fields
+    present, enums valid, depends_on references existing ids),
+  And if the component subdirectory does not exist, it is created,
+  And no file is written to tickets/, scripts/, or any other directory,
+  And the workflow reports the list of files written at each gate.
+depends_on: [ACD-300d]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

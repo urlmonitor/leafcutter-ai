@@ -5,3 +5,4 @@ GENERIC_SECRET:scripts/commit_guardian/check_feedback_id.py:*
 GENERIC_SECRET:scripts/commit_guardian/check_mermaid_drift.py:*
 GENERIC_SECRET:scripts/commit_guardian/check_paths_integrity.py:*
 ENTROPY_HIGH:templates/hooks/auto_commit_inbox_ticket.py:8
+ENTROPY_HIGH:docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400a-3.yaml:9
