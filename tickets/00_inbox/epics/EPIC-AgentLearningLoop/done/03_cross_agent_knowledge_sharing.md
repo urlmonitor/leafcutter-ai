@@ -1,6 +1,6 @@
 ---
 title: "Cross-agent knowledge sharing via shared persistence"
-status: todo
+status: done
 components:
   - infrastructure
 created: 2026-06-05
@@ -27,7 +27,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 source_acs:
   - INF-400f-1
   - INF-400f-2
@@ -107,7 +107,7 @@ And the BA's output quality is unchanged from the no-knowledge-loop baseline.
 - [x] test-runner — 2026-06-05 10:20
 - [x] pr-reviewer — 2026-06-05 10:25
 - [x] commit — 2026-06-05 10:30
-- [ ] pull-request
+- [x] pull-request — 2026-06-05 10:35
 
 ## Comments
 
@@ -158,6 +158,16 @@ completion_manifest:
 - AC-4: No-learnings path — all injection steps say "skip gracefully if absent"; all emission steps say "on no: proceed"
 
 **Prompt-Quality Checklist:** All 6 items pass. No Bash commands in the changed sections; no new tool references; no spawn changes; existing signoff protocol unchanged.
+
+### 2026-06-05 10:35 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_b7f99372
+completion_manifest:
+  branch_pushed: true
+  pr_created_or_updated: true
+
+Pushed commit `db8d974` to branch `EPIC-AgentLearningLoop` on `origin`. PR #60 (`feat(templates): add knowledge injection and emission steps to v3 agent templates`) was already open for this branch and now includes ticket-03's changes. No new PR was created — one PR per epic convention respected.
+
+PR URL: https://github.com/urlmonitor/leafcutter-ai/pull/60
 
 ### 2026-06-05 10:30 — commit (status: ok)
 feedback-id: fb_2026-06-05_36a34f1f
