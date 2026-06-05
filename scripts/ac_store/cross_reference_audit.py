@@ -291,12 +291,19 @@ def _find_matches(
         ac_id = ac.get("id", "UNKNOWN")
         ac_title = str(ac.get("title", ""))
         ac_criteria = str(ac.get("criteria", ""))
-        # component may be a string or list
+        # component may be a string, list, or dict (various AC YAML schemas)
         ac_component_raw = ac.get("component", ac.get("components", None))
         if isinstance(ac_component_raw, list):
-            ac_component = ac_component_raw[0] if ac_component_raw else None
+            ac_component: str | None = ac_component_raw[0] if ac_component_raw else None
+        elif isinstance(ac_component_raw, dict):
+            # Some ACs encode component as a dict with an 'id' or 'name' key
+            ac_component = str(
+                ac_component_raw.get("id", ac_component_raw.get("name", ""))
+            ) or None
+        elif ac_component_raw is None:
+            ac_component = None
         else:
-            ac_component = ac_component_raw
+            ac_component = str(ac_component_raw)
 
         best_match: MatchRecord | None = None
 
