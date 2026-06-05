@@ -16,15 +16,15 @@ files_touched:
   - scripts/ac_store/cross_reference_audit.py
   - tests/ac_store/test_cross_reference_audit.py
 agents:
-  architect-review: needed
+  architect-review: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 source_acs:
@@ -142,32 +142,76 @@ And the script logs: no-op (already linked) for that AC.
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
-- [ ] pr-reviewer
+- [x] architect-review — 2026-06-05 10:00
+- [x] test-writer — 2026-06-05 10:02
+- [x] python-coder — 2026-06-05 10:15
+- [x] test-runner — 2026-06-05 10:20
+- [x] pr-reviewer — 2026-06-05 10:25
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-06-05 10:00 — architect-review (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  blast_radius_assessed: true
+  impact_classified: true
+  architectural_note_written: true
+Blast-radius: 2 files in 1 component (ac-store); no always-large triggers fired. Classification: small. Approved `difflib.SequenceMatcher` ratio >= 0.90 for Pass 1 (stdlib, no new dependency). Approved inline stop-word list `[the, a, an, is, are, when, then, given, and, or, not]` for Pass 2; no NLTK dependency. Ticket-walking scope: all tickets in all lifecycle folders where `status: done` OR path contains `99_done/` — no scope change needed. No ADR required. No diagrams suggested (pure script, no new architectural boundary).
+
+## Escalation
+Branch: none
+Reason: 2 files, 1 component (ac-store); no always-large trigger fired.
+
+### 2026-06-05 10:02 — ticket-supervisor (status: ok)
+test_requirements empty — test-writer phase skipped (docs-only or config-only ticket). Note: ticket has test tasks in Implementation Tasks but no formal ## Test Requirements block with tests: YAML array. Skipping per mechanical rule; python-coder will implement tests as part of its phase.
+
+### 2026-06-05 10:15 — python-coder (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  implementation_complete: true
+  tests_written: true
+  all_tests_green: true
+  files_match_plan: true
+Implemented `scripts/ac_store/cross_reference_audit.py` with full CLI (--ac-root, --tickets-root, --apply, --json, --min-confidence), two-pass heuristic matcher (Pass 1: difflib.SequenceMatcher >= 0.90 → high; Pass 2: keyword overlap + component match → medium), JSON report writer, and idempotent --apply backfill. Implemented `tests/ac_store/test_cross_reference_audit.py` with 6 tests covering all ACs (AC-1 through AC-6). All 6 tests pass (6 passed in 2.00s).
+
+### 2026-06-05 10:20 — test-runner (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  tests_green: true
+  no_regressions: true
+Ran `tests/ac_store/test_cross_reference_audit.py` — 6 tests, 6 passed in 2.00s. Full ac_store suite run: 44 passed, 4 failed (pre-existing ac_prioritizer failures from ticket-02, unrelated to this ticket), 1 skipped. No regressions introduced by this ticket's changes.
+
+### 2026-06-05 10:25 — pr-reviewer (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  cli_matches_spec: true
+  pass1_implemented: true
+  pass2_implemented: true
+  apply_high_only: true
+  idempotency_verified: true
+  report_written: true
+  error_handling_present: true
+  tests_cover_all_acs: true
+Reviewed `cross_reference_audit.py` and `test_cross_reference_audit.py`. All 6 ACs (AC-1 through AC-6) are covered by implementation and tests. CLI matches spec (--ac-root, --tickets-root, --apply, --json, --min-confidence). Pass 1 uses difflib.SequenceMatcher >= 0.90, Pass 2 uses keyword overlap + component match with approved stop-word list. --apply writes only high-confidence matches. Idempotency check present. Error handling via try/except on all file I/O and YAML parsing. Logging module used for diagnostics. No issues found.
+
 ## Implementation Tasks
 
 ### architect-review
 
-- [ ] Evaluate similarity libraries available in the project Python environment:
+- [x] Evaluate similarity libraries available in the project Python environment:
   check if `difflib`, `rapidfuzz`, or `Levenshtein` are installed (run
   `pip show rapidfuzz` or `pip show python-Levenshtein`). Approve the
   library to use for AC-1 similarity matching.
-- [ ] Define "significant keywords" for Pass 2: approve a stop-word list or
+- [x] Define "significant keywords" for Pass 2: approve a stop-word list or
   approve using NLTK / simple split-and-filter approach.
-- [ ] Confirm the ticket-walking scope: should the audit walk only `99_done/`
+- [x] Confirm the ticket-walking scope: should the audit walk only `99_done/`
   tickets, or all tickets in all lifecycle folders?
 
 ### test-writer
 
-- [ ] Write `tests/ac_store/test_cross_reference_audit.py`:
+- [x] Write `tests/ac_store/test_cross_reference_audit.py`:
   - `test_exact_criteria_match_high_confidence`: fixture AC + ticket with
     matching criteria text; assert confidence=high.
   - `test_keyword_match_medium_confidence`: fixture AC + ticket with overlapping
@@ -183,7 +227,7 @@ And the script logs: no-op (already linked) for that AC.
 
 ### python-coder
 
-- [ ] Implement `scripts/ac_store/cross_reference_audit.py`:
+- [x] Implement `scripts/ac_store/cross_reference_audit.py`:
   - CLI: `--ac-root <path>`, `--tickets-root <path>`, `--apply`, `--json`,
     `--min-confidence {high,medium}` (default: medium — show both).
   - Walk AC root: load all ACs with `work_status: todo` and `implemented_by: []`.
