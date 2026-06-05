@@ -4,7 +4,8 @@ type: cross-cutting
 status: accepted
 created: 2026-05-19
 last_updated: 2026-05-21
-components: []
+components:
+  - docs
 tags:
   - vision
   - roadmap

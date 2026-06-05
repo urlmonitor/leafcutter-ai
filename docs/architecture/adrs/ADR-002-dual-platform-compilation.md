@@ -4,7 +4,8 @@ type: "adr"
 status: "active"
 created: "2026-05-22"
 last_updated: "2026-05-22"
-components: []
+components:
+  - build_pipeline
 ---
 
 # ADR-002: Dual Platform Compilation for AI Agents
