@@ -1,6 +1,6 @@
 ---
 title: "INF-600 Ticket 3: Define 5 agent categories in agent_registry.json with default constraints"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-05
@@ -23,7 +23,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 source_acs:
@@ -120,7 +120,7 @@ And the valid category values are listed in the warning message
 - [x] python-coder — 2026-06-05 10:05
 - [x] pr-reviewer — 2026-06-05 14:30
 - [x] commit — 2026-06-05 14:35
-- [ ] pull-request
+- [x] pull-request — 2026-06-05 14:40
 
 ## Comments
 
@@ -135,6 +135,14 @@ completion_manifest:
   deliverable_3_skipped: true
 
 Added `agent_categories` top-level object to `config/agent_registry.json` with 5 categories (implementation, planning, testing, research, supervisor), each with `default_tools`, `required_inputs`, `signoff_capable`, and `spawn_constraints`. Added `"category": "implementation"` to the python-coder registry entry alongside the existing `tier: phase` field. Deliverable 3 skipped per architect-review decision (registry is sole source of truth). JSON parses valid, registry_validator passes, build.py --dry-run shows no regressions.
+
+### 2026-06-05 14:40 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_7f16c058
+completion_manifest:
+  branch_pushed: true
+  pr_exists: true
+
+Pushed commit a4e0813 to `feature/EPIC-SelfDescribingAgents` (186e450..a4e0813). Existing PR #65 (feat(EPIC-SelfDescribingAgents/01)) is open and now includes ticket 03's commit. Epic uses one PR per branch — no new PR needed.
 
 ### 2026-06-05 14:35 — commit (status: ok)
 feedback-id: fb_2026-06-05_c0bc6b4a
