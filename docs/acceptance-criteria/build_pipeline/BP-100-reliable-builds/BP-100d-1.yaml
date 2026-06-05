@@ -1,11 +1,11 @@
-id: BP-100a-3
+id: BP-100d-1
 title: "Contract-shrinking hook excludes commit_guardian paths from production classification"
 component: build-pipeline
 level: L2
 status: active
 req_status: active
 work_status: todo
-created_by: "tickets/00_inbox/TICKET-20260604-HookScriptIntegrityCheck.md"
+created_by: "tickets/00_inbox/TICKET-20260605-ContractShrinkingSelfExclusion.md"
 criteria: |
   Given a staged diff modifies the file "templates/scripts/commit_guardian/check_contract_shrinking.py"
   And the diff contains patterns that would normally trigger a contract-shrinking warning
@@ -25,9 +25,9 @@ criteria: |
   Then the production file IS classified as production code
   And the contract-shrinking block IS raised as before
 depends_on:
-  - BP-100a
+  - BP-100d
 doc_links:
-  - path: "tickets/00_inbox/TICKET-20260604-HookScriptIntegrityCheck.md"
+  - path: "tickets/00_inbox/TICKET-20260605-ContractShrinkingSelfExclusion.md"
     relationship: implements
     status: exists
 assigned_agent: python-coder
