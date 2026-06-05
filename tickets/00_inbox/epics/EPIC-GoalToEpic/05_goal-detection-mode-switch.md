@@ -1,6 +1,6 @@
 ---
 title: "Goal detection and mode switch — /build-ac auto-routes leaf vs goal"
-status: in_progress
+status: done
 components:
   - ac-driven-dev
 created: 2026-06-05
@@ -26,9 +26,9 @@ agents:
   llm-expert: signed_off
   test-runner: signed_off
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
-ac_coverage: 0/3
+  commit: signed_off
+  pull-request: signed_off
+ac_coverage: 3/3
 source_ac: ACD-1200e
 ---
 
@@ -130,8 +130,8 @@ tests:
 - [x] llm-expert — 2026-06-06 09:00
 - [x] test-runner — 2026-06-06 09:30
 - [x] pr-reviewer — 2026-06-06 09:45
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-06 10:00
+- [x] pull-request — 2026-06-06 10:15
 
 ## Comments
 
@@ -193,6 +193,22 @@ red_baseline:
     file: unit_tests/agents/test_build_ac_mode_detection.py
     error: "AssertionError: ImportError: cannot import detect_ac_mode from scripts.build_ac_mode_detection — implementation not yet written."
 16 failing test stubs written for all 3 ACs (ACD-1200e-1, ACD-1200e-2, ACD-1200e-2-i). All tests red on AssertionError/ImportError — implementation not yet written. Handoff to llm-expert.
+
+### 2026-06-06 10:15 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_6b4388ee
+completion_manifest:
+  branch_pushed: true
+  pr_exists: true
+  no_new_pr_created: true
+Pushed commit 249ec59 to origin/EPIC-GoalToEpic. Existing PR #69 updated (6cf51a5..249ec59). No new PR created — PR already open per epic convention.
+
+### 2026-06-06 10:00 — commit (status: ok)
+feedback-id: fb_2026-06-05_3547141a
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+SHA 249ec59 on branch EPIC-GoalToEpic. 7 files committed (967 insertions). Pre-commit hooks passed; no autofix needed.
 
 ### 2026-06-06 09:45 — pr-reviewer (status: ok)
 feedback-id: fb_2026-06-05_63919d40
