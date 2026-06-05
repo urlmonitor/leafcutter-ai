@@ -1,0 +1,25 @@
+id: BP-300
+title: "Workflow scripts orchestrate agents deterministically — no silent skips, no stale state"
+component: build-pipeline
+level: L0
+status: active
+work_status: todo
+criteria: |
+  Deterministic orchestration you can trust to do the right thing every time.
+
+  When a workflow script dispatches agents, it works from current ticket
+  state rather than stale metadata. It validates inputs before dispatching,
+  reconciles divergent sources of truth, and composes leaf workflows into
+  larger pipelines without losing crash-resumability. The user sees a
+  predictable, inspectable execution path — not a black box that silently
+  skips phases or re-runs work that was already done.
+depends_on:
+  - BP-100
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by:
+  - "split: BP-300a -> BP-300a + BP-300c, 2026-06-05"
+superseded_by: null
+covered_by: []
+implemented_by: []

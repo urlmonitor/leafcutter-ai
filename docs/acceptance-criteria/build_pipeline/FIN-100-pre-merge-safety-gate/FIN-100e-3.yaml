@@ -1,0 +1,34 @@
+id: FIN-100e-3
+title: "No tickets are created when all tests pass (triageReport is null)"
+level: L3
+component: finalize
+status: active
+parent: FIN-100e-1
+criteria: |
+  Given the post-merge test run passed with zero failures
+  And triageReport is null (triage sub-step was skipped entirely)
+  When Step 6a checks whether to create tracking tickets
+  Then the entire Step 6a sub-step is skipped
+  And created_tracking_tickets remains an empty array
+  And no create-ticket agent dispatches occur
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
+assigned_agent: "finalize-feature-workflow"
+estimated_complexity: S
+it_requirements: |
+  - Must check triageReport !== null before entering the step 6a sub-step
+  - When triageReport is null (tests all passed), the entire 6a block is skipped
+  - created_tracking_tickets must remain an empty array (never undefined)
+  - No create-ticket agent dispatches must occur on this path
+delivers_to: []
+expects_from: []
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relevance: "Step 6a guard — if (triageReport !== null) wraps the entire ticketing loop (line 662)"
+  - path: "templates/workflows/finalize-feature.md"
+    relevance: "Step 3 — skip triage sub-steps when tests pass"
+depends_on: []
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

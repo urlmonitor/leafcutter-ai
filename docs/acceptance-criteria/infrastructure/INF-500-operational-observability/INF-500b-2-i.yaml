@@ -1,0 +1,28 @@
+id: INF-500b-2-i
+title: "Priority scoring ranks high-severity categories above equal-count low-severity"
+component: infrastructure
+level: L3
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260603-FeedbackAnalysisPipeline.md"
+criteria: |
+  Given two categories with equal entry counts but different default_severity weights
+  When trend_report.py computes the Prioritized Action Items
+  Then the category with higher severity_weight (high=3) ranks above the one with lower weight (low=1)
+depends_on:
+  - INF-500b-2
+doc_links:
+  - path: templates/skills/feedback-analysis/scripts/trend_report.py
+    relationship: implements
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+delivers_to: test-runner
+expects_from: INF-500b-2
+it_requirements: "Test must seed feedback.jsonl with two categories of equal count but different severity weights (e.g. high=3 vs low=1); assert the higher-severity category appears first in the prioritized output"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

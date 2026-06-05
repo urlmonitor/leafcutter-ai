@@ -1,0 +1,46 @@
+id: ACS-400b-3
+title: "Implementation agents are rejected when touching protected requirement fields"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an existing AC YAML file has one or more of the following fields changed
+    in the staged diff: criteria, title, req_status, or depends_on,
+  When the committing agent is an implementation agent
+    (e.g. python-coder, test-writer, sql-coder, commit, pr-reviewer),
+  Then the commit is blocked,
+  And the error message names the agent, the file path, and each protected field
+    that was modified,
+  And the error distinguishes "requirement-defining fields" from
+    "progress-reporting fields" in its explanation.
+depends_on: [ACS-400b, ACS-400a-3]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must follow the fail-open convention per docs/reference/claude-code-hooks.md"
+  - "Must enumerate all protected fields that were modified in a single error message (not fail on first)"
+  - "Must clearly categorize fields as 'requirement-defining' vs 'progress-reporting' in the error output"
+  - "Must use the same agent identity detection mechanism as ACS-400a-3"
+  - "Protected field list must be configurable (not hard-coded inline) to allow future field additions"
+delivers_to: null
+expects_from:
+  ac_id: ACS-400a-3
+  contract: "Shared governance validation function that classifies fields as protected vs open, and determines whether the detected agent is authorized for protected field changes"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

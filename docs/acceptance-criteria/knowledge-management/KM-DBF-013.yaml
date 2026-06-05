@@ -1,4 +1,6 @@
 id: KM-DBF-013
+readiness: reviewed
+priority: medium
 title: "Architecture doc includes Description Field Convention section"
 component: knowledge-management
 status: active

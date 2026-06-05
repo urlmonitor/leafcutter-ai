@@ -1,4 +1,6 @@
 id: ACD-600a-4
+readiness: reviewed
+priority: medium
 title: "mark_ac_done rejects a ticket that has no source_ac field"
 component: ac-driven-dev
 level: L2

@@ -1,0 +1,38 @@
+id: FIN-100a-2
+title: "Baseline capture degrades gracefully on failure"
+level: L2
+component: finalize
+status: active
+parent: FIN-100a
+criteria: |
+  Given finalize-feature is invoked on a feature branch
+  When Step 0 fails to create the temporary worktree (e.g. disk full, git error)
+  Or the test suite fails to execute (e.g. pytest not found, import error)
+  Then baseline_failures is set to null
+  And the workflow logs a warning explaining the failure reason
+  And the workflow does NOT halt — it continues to Step 1
+  And the triage agent in Step 3 receives baseline_failures=null
+  And triage treats all post-merge failures as regressions (conservative classification)
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
+assigned_agent: "finalize-feature-workflow"
+estimated_complexity: S
+it_requirements: |
+  - Must set baseline_failures to null (not empty array) on any failure path
+  - Must log a warning with the failure reason (worktree creation failed, pytest not found, import error)
+  - Must NOT halt the workflow — control must pass to step 1 regardless of failure
+  - Parse-failure of the agent response must also degrade gracefully (status: parse_failed)
+delivers_to:
+  - agent: "test-failure-triage"
+    contract: "provides baseline_failures=null signaling conservative classification mode"
+expects_from: []
+doc_links:
+  - path: "docs/how-to/finalize-feature.md"
+    relevance: "Step 0 graceful degradation description"
+  - path: "templates/agents/test-failure-triage.md"
+    relevance: "Step 1 — Handle null baseline (classifies all as regression)"
+depends_on: []
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

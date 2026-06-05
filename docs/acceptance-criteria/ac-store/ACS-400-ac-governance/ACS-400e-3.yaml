@@ -1,0 +1,37 @@
+id: ACS-400e-3
+title: "Non-AC files in the same commit are not affected by governance rejection"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a commit is staged that includes:
+    - a Python source file (e.g. scripts/build.py) with valid changes
+    - an AC YAML file with an unauthorized criteria modification,
+  When the governance enforcement hook runs and detects the violation,
+  Then the entire commit is blocked (git pre-commit hook semantics),
+  And the error message refers only to the AC governance violation,
+  And the error does NOT suggest that the Python file has any problem,
+  And after the agent removes the AC file from staging (git reset),
+    a subsequent commit of only the Python file succeeds.
+depends_on: [ACS-400e]
+doc_links:
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must follow the fail-open convention per docs/reference/claude-code-hooks.md"
+  - "Must only reference AC YAML files in the error message -- never mention non-AC files that are part of the same commit"
+  - "Must provide guidance in the error message about how to resolve the block (e.g. unstage the AC file)"
+  - "Must not inspect or validate non-AC files in any way -- the hook's scope is strictly docs/acceptance-criteria/**/*.yaml"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

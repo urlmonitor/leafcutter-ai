@@ -1,0 +1,32 @@
+id: FIN-100f
+title: "Step ordering guarantees tests complete before PR merge"
+component: finalize
+level: L1
+status: active
+criteria: |
+  The workflow enforces a strict ordering where the PR merge decision cannot
+  execute until the test-and-triage gate has passed.
+
+  Given the finalize-feature step sequence,
+  When the workflow is executed,
+  Then Step 2 (merge main into worktree) executes before Step 3 (run tests),
+  And Step 3 (run tests + triage) executes before Step 4 (merge PR to main),
+  And Step 4 is unreachable if Step 3 halted due to regressions,
+  And no code path exists that allows the PR merge to bypass or execute
+  concurrently with the test gate,
+  So that the invariant "tests pass on the integrated code before it reaches
+  main" is structurally enforced, not merely conventional.
+depends_on:
+  - FIN-100b
+  - FIN-100d
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
+amended_by: []
+superseded_by: null
+covered_by:
+  - FIN-100f-1
+  - FIN-100f-2
+implemented_by:
+  - scripts/finalize-feature.js

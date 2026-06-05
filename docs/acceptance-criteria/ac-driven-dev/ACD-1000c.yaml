@@ -1,4 +1,6 @@
 id: ACD-1000c
+readiness: reviewed
+priority: medium
 title: "Agents handle mechanical work between stages with less human intervention"
 component: ac-driven-dev
 level: L1

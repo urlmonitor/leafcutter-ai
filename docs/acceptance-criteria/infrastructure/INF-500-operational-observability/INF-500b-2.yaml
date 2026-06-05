@@ -1,0 +1,36 @@
+id: INF-500b-2
+title: "trend_report.py produces prioritized report with per-category sections"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260603-FeedbackAnalysisPipeline.md"
+criteria: |
+  Given feedback.jsonl contains at least one entry per category
+  When trend_report.py is run with no filters
+  Then it exits 0
+  And it prints a prioritized report with at minimum one section per non-zero category
+  And each section contains at minimum one actionable recommendation
+depends_on:
+  - INF-500b
+doc_links:
+  - path: templates/skills/feedback-analysis/scripts/trend_report.py
+    relationship: implements
+    status: exists
+  - path: scripts/feedback/aggregate.py
+    relationship: related
+    status: exists
+  - path: scripts/feedback/list_tags.py
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: INF-500b-2-i
+expects_from: INF-500b-1
+it_requirements: "trend_report.py must call aggregate.py and list_tags.py as library imports (not subprocess); must group results by category; each section must contain at least one actionable recommendation derived from entry content"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

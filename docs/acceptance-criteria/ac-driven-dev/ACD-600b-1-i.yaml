@@ -1,4 +1,6 @@
 id: ACD-600b-1-i
+readiness: reviewed
+priority: medium
 title: "Post-merge hook exits 0 even when mark_ac_done fails for one ticket"
 component: ac-driven-dev
 level: L3

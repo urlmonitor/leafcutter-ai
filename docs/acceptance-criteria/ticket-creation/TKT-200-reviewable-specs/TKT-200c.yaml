@@ -1,4 +1,6 @@
 id: TKT-200c
+readiness: reviewed
+priority: medium
 title: "Everything a reviewer needs is in one place"
 component: ticket-creation
 level: L1

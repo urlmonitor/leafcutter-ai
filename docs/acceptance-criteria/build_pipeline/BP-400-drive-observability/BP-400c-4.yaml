@@ -1,0 +1,38 @@
+id: BP-400c-4
+title: "Date filtering via --since limits report to matching entries only"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260603-FeedbackAnalysisPipeline.md"
+criteria: |
+  Given feedback.jsonl contains entries from 2026-04-15 through 2026-06-01,
+  When trend_report.py is run with --since 2026-05-01,
+  Then only entries with timestamps on or after 2026-05-01 appear in
+    the category counts and action items,
+  And entries before 2026-05-01 are excluded from the report,
+  And the --since filter is forwarded to aggregate.py as a pass-through.
+depends_on:
+  - BP-400c
+  - BP-400c-2
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must pass --since through to aggregate.py rather than re-implementing date filtering"
+  - "Date format must be ISO 8601 (YYYY-MM-DD)"
+delivers_to: null
+expects_from:
+  ac_id: BP-400c-2
+  contract: "trend_report.py with pass-through argument forwarding to aggregate.py"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

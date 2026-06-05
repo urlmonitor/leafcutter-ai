@@ -1,0 +1,30 @@
+id: INF-500a-4
+title: "Existing path (pre-finalization) behavior is unchanged"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-HardenExtractEpicFacts.md"
+criteria: |
+  Given an epic folder still at its original (pre-finalization) path
+  When extract_epic_facts.py is run with no extra flags
+  Then behavior is identical to today
+  And git log queries succeed against the current path
+  And exit code is 0
+depends_on:
+  - INF-500a
+doc_links:
+  - path: scripts/retrospective/extract_epic_facts.py
+    relationship: implements
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+delivers_to: test-runner
+expects_from: INF-500a-1
+it_requirements: "Regression test; must verify that the pre-existing behavior (epic at original path, no extra flags) produces identical output to today; exit code 0, all date fields populated"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

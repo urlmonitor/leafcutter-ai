@@ -1,0 +1,24 @@
+id: ACS-400a
+title: "Only requirement authors can define what 'done' means"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  The criteria field is write-locked to authorized requirement agents only.
+
+  Only the product-owner, business-analyst, and it-po agents (plus the human
+  user) may create, modify, or delete the criteria field in any AC YAML file.
+  All other agents — coders, testers, reviewers, supervisors — are explicitly
+  forbidden from touching this field regardless of context.
+depends_on: [ACS-400]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACS-400a-1, ACS-400a-2, ACS-400a-3, ACS-400a-3-i]
+implemented_by: []

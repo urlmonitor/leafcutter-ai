@@ -1,10 +1,12 @@
 id: BP-100c-2-i
+readiness: reviewed
+priority: medium
 title: "Force flag bypasses the skip guard and overwrites existing manifest"
 component: build-pipeline
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 created_by: "tickets/00_inbox/TICKET-20260603-ConfigDrivenBuildPaths.md"
 criteria: |
   Given a project where ticket_lifecycle.json already exists in the tickets root directory
@@ -28,4 +30,5 @@ created: 2026-06-05
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - "PR #53 — feat(build): hook integrity check + contract-shrinking self-exclusion"

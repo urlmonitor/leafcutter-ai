@@ -1,0 +1,51 @@
+id: BP-400a-3
+title: "Supervisor templates contain imperative feedback emission instructions"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-WireSupervisorFeedbackEmission.md"
+criteria: |
+  Given the epic-supervisor template at templates/agents/epic-supervisor.md,
+  When the cross-ticket pattern detection section (between steps 5 and 6) is read,
+  Then the submit_feedback.py call appears as an imperative Bash code block
+    (not inside a Python code fence or an inline comment),
+  And the surrounding prose uses imperative language ("execute", "run")
+    rather than conditional or hypothetical language ("could emit", "you might").
+
+  Given the ticket-supervisor template at templates/agents/ticket-supervisor.md,
+  When the failure adjudication sections (3.1 mechanical retry, 3.2 cross-agent
+    rework, 3.3 brainstorm escalation, 3.4 exhausted ladder) are read,
+  Then each section contains a submit_feedback.py Bash call framed as a
+    mandatory execution step with category "subagent-quality",
+  And the framing prose uses imperative language for each emit instruction.
+depends_on:
+  - BP-400a
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Must preserve all existing logic and algorithm pseudocode in the templates"
+  - "Must frame Bash emit calls as imperative instructions, not optional examples"
+  - "Must not alter the CFCS emit contract paragraph (non-blocking failure semantics)"
+  - "Must retain the || true suffix on all emit calls to ensure non-fatal telemetry"
+delivers_to:
+  agent: python-coder
+  contract: "Supervisor templates with imperative submit_feedback.py calls that agents will execute during adjudication"
+expects_from:
+  ac_id: BP-400a-1
+  contract: "emit_event.py deployed so the telemetry call sites in building-epics SKILL.md resolve"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,40 @@
+id: BP-400c-2-i
+title: "trend_report.py handles empty or absent feedback.jsonl gracefully"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260603-FeedbackAnalysisPipeline.md"
+criteria: |
+  Given feedback.jsonl does not exist at the expected path,
+  When trend_report.py is run,
+  Then it exits with code 0,
+  And it prints "(no feedback data found)" to stdout.
+
+  Given feedback.jsonl exists but is an empty file (zero bytes),
+  When trend_report.py is run,
+  Then it exits with code 0,
+  And it prints "(no feedback data found)" to stdout.
+depends_on:
+  - BP-400c-2
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must handle FileNotFoundError gracefully per the project error handling policy"
+  - "Must not raise an unhandled exception for missing or empty input"
+delivers_to: null
+expects_from:
+  ac_id: BP-400c-2
+  contract: "trend_report.py with JSONL loading logic that this edge case exercises"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

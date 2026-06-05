@@ -1,0 +1,28 @@
+id: BP-006
+title: "Build pipeline test suite passes without manual intervention"
+component: build_pipeline
+level: L0
+status: active
+req_status: approved
+work_status: done
+criteria: |
+  Given the full test suite is run,
+  When all build pipeline tests execute,
+  Then zero failures are reported across test_skill_registry, test_install_hooks,
+  and test_build_workflow_phase.
+depends_on: []
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+created_by_ticket: "tickets/00_inbox/TICKET-20260604-FixFailingBuildPipelineTests.md"
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-006a
+  - BP-006b
+  - BP-006c
+implemented_by: []

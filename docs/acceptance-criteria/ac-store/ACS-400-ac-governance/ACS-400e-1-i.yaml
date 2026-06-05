@@ -1,0 +1,36 @@
+id: ACS-400e-1-i
+title: "Hook failure does not block legitimate commits (fail-open)"
+component: ac-store
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the governance enforcement hook encounters an unexpected error
+    during execution (e.g. the AC YAML file has invalid YAML syntax that
+    causes a parse exception, or the git diff command fails),
+  When the hook catches the exception,
+  Then it exits with code 0 (fail-open per project convention),
+  And the commit is NOT blocked by the governance hook,
+  And a diagnostic message is printed to stderr identifying the hook name
+    and the nature of the unexpected error.
+depends_on: [ACS-400e-1]
+doc_links:
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must wrap the entire main() function body in try/except Exception per the fail-open convention documented in docs/reference/claude-code-hooks.md"
+  - "Must print the exception type and message to stderr with the hook name prefix for debugging"
+  - "Must exit with code 0 on any unexpected exception (never exit non-zero from an exception handler)"
+  - "Must not produce any stdout output on unexpected errors (empty stdout = allow per the PreToolUse contract)"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

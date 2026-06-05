@@ -1,0 +1,36 @@
+id: FIN-100f-1
+title: "PR merge (Step 4) is structurally unreachable when regressions halt Step 3"
+level: L2
+component: finalize
+status: active
+parent: FIN-100f
+criteria: |
+  Given the workflow function run() is a single async function with sequential awaits
+  And the halt gate in Step 3 uses an early return statement when blocks_finalization=true
+  When the Step 3 halt fires (blocks_finalization=true)
+  Then the function returns immediately from within the Step 3 code block
+  And no subsequent line of code in the function body executes
+  And specifically the Step 4 code (PR state probe, confirmation prompt, merge dispatch)
+  Is physically located AFTER the return statement in the source
+  And is therefore unreachable by any execution path when the halt fires
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
+assigned_agent: "finalize-feature-workflow"
+estimated_complexity: S
+it_requirements: |
+  - The early return in step 3 must be a return statement (not throw) inside the if (blocks_finalization) block
+  - Step 4 code must be physically located AFTER the return in the source — no goto or jump semantics
+  - JavaScript sequential await guarantees: once the function returns, no further code executes
+  - This is a structural/architectural property, not a runtime check — verified by code review
+delivers_to: []
+expects_from: []
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relevance: "Source layout: step 3 halt return (line 514) precedes all step 4 code (line 548+)"
+  - path: "templates/workflows/finalize-feature.md"
+    relevance: "Step 3 — hard halt makes step 4 structurally unreachable"
+depends_on: []
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

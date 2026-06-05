@@ -1,0 +1,23 @@
+id: INF-600b
+title: "Agent cards are assembled during the build"
+component: infrastructure
+level: L1
+status: active
+criteria: |
+  A complete agent profile page generated at build time -- never hand-written.
+
+  When the build system runs, it reads each agent's template frontmatter,
+  registry entry, knowledge plane mapping, and spawn graph, then produces a
+  structured agent card document. The card is a build artifact -- if you
+  change the agent, the card updates on the next build. No separate
+  documentation step is needed.
+depends_on:
+  - INF-600
+  - INF-600a
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

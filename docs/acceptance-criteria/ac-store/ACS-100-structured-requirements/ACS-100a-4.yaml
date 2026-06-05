@@ -1,4 +1,6 @@
 id: ACS-100a-4
+readiness: reviewed
+priority: medium
 title: "Additional properties are rejected to prevent schema drift"
 component: ac-store
 level: L2
@@ -13,7 +15,7 @@ criteria: |
   And the error message identifies the unknown field name,
   And the commit is blocked,
   And the file is not partially accepted (all-or-nothing validation).
-depends_on: [ACS-100a]
+depends_on: [ACS-100i]
 doc_links: []
 assigned_agent: python-coder
 estimated_complexity: S
@@ -21,7 +23,8 @@ delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-04
-amended_by: []
+amended_by:
+  - "split: ACS-100a -> ACS-100a + ACS-100i, 2026-06-05"
 superseded_by: null
 covered_by: []
 implemented_by: []

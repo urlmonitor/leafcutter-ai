@@ -1,4 +1,6 @@
 id: INF-200
+readiness: reviewed
+priority: medium
 title: "Code follows project conventions automatically — no manual policing"
 component: infrastructure
 level: L0

@@ -1,0 +1,43 @@
+id: BP-400b-1
+title: "Git rename fallback populates commit dates for a moved epic folder"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-HardenExtractEpicFacts.md"
+criteria: |
+  Given an epic folder has been moved from tickets/01_todo/EPIC-Example/
+    to tickets/99_done/EPIC-Example/,
+  And git history contains commits associated with the original path,
+  When extract_epic_facts.py is run against the moved path
+    (tickets/99_done/EPIC-Example/),
+  Then git_commit_count is greater than zero,
+  And git_first_commit_date is a non-null date string,
+  And git_last_commit_date is a non-null date string,
+  And the output contains a git_resolved_path field set to the
+    original pre-move path that git resolved via rename history.
+depends_on:
+  - BP-400b
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must follow the project error handling policy (wrap subprocess calls, never bare except)"
+  - "Must handle git rename detection via --follow or --diff-filter=R"
+  - "Must not break the existing public function signature of extract_facts()"
+  - "Must complete git rename resolution within 5 seconds for typical repositories"
+delivers_to:
+  agent: test-writer
+  contract: "_resolve_git_path() helper returning the best path for git queries, and output dict containing git_resolved_path field as a string"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

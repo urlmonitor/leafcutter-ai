@@ -1,0 +1,30 @@
+id: FIN-100d
+title: "Regressions trigger a hard halt — PR merge is blocked"
+component: finalize
+level: L1
+status: active
+criteria: |
+  Code that introduces new test failures never reaches main automatically.
+
+  Given the triage step (Step 3) has classified test failures,
+  When one or more failures are classified as "regression",
+  Then the workflow halts immediately with a non-zero exit code,
+  And the PR is NOT merged to main,
+  And the halt message lists every regression with its test name, file path,
+  and error output,
+  And the developer must fix the regressions and re-run finalize-feature
+  before the PR can land.
+depends_on:
+  - FIN-100c
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
+amended_by: []
+superseded_by: null
+covered_by:
+  - FIN-100d-1
+  - FIN-100d-2
+  - FIN-100d-3
+implemented_by:
+  - scripts/finalize-feature.js

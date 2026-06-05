@@ -1,0 +1,36 @@
+id: INF-600a-3-i
+title: "knowledge_channels rejects channel numbers outside the 1-11 range"
+component: infrastructure
+level: L3
+status: active
+work_status: todo
+criteria: |
+  Given an agent registry entry where `knowledge_channels` contains
+    an element with channel: 12
+  When the build system validates the registry
+  Then validation fails with an error stating that channel 12
+    is not a valid channel number
+  And the error references the valid range (1-11) as defined in
+    docs/architecture/agent_knowledge_plane.md
+  And the error names the agent entry that contains the invalid channel
+depends_on:
+  - INF-600a-3
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: INF-600a-3
+  contract: "knowledge_channels array exists in registry entries with channel numbers"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

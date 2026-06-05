@@ -1,4 +1,6 @@
 id: ACD-700a-2
+readiness: reviewed
+priority: medium
 title: "Answering yes triggers ticket generation, build dispatch, and done-marking in sequence"
 component: ac-driven-dev
 level: L2

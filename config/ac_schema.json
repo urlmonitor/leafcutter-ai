@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "config/ac_schema.json",
+  "title": "AC Triage — Output Schema",
+  "description": "JSON Schema (draft-07) for the output object returned by the ac-triage agent. Defines the routing decision produced by Stage 0 of the /create-ac workflow.",
+  "type": "object",
+  "required": [
+    "route",
+    "existing_acs",
+    "parent_l1_id",
+    "rationale"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "route": {
+      "type": "string",
+      "description": "Routing decision: strategic = new capability; behavioral = add to existing feature; technical = add constraint; covered = already covered.",
+      "enum": [
+        "strategic",
+        "behavioral",
+        "technical",
+        "covered"
+      ]
+    },
+    "existing_acs": {
+      "type": "array",
+      "description": "AC IDs that are semantically relevant to the user's request. Empty array for strategic route.",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z]{2,6}-[0-9]{3}[a-z]?(-[0-9]+)?$"
+      },
+      "uniqueItems": true,
+      "default": []
+    },
+    "parent_l1_id": {
+      "description": "The ID of the matched L1 AC for behavioral route; null for all other routes.",
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Z]{2,6}-[0-9]{3}[a-z]?$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "rationale": {
+      "type": "string",
+      "description": "One-sentence explanation of the classification decision (≤ 80 characters).",
+      "minLength": 1,
+      "maxLength": 200
+    }
+  }
+}

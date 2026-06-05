@@ -1,4 +1,6 @@
 id: TKT-300e-2
+readiness: reviewed
+priority: medium
 title: "Split preserves original criteria distributed across children"
 component: ticket-creation
 level: L2
@@ -14,11 +16,23 @@ criteria: |
   And each child's criteria describe only the portion
     relevant to that child's assigned_agent.
 depends_on: [TKT-300e, TKT-300e-1]
-doc_links: []
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: M
+it_requirements:
+  - "The union of child criteria must be verifiable as covering all clauses of the original — no silent omission"
+  - "Child criteria must not introduce new behavioral requirements beyond what the original specified"
+  - "Must handle errors gracefully per the project error handling policy"
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: TKT-300e-1
+  contract: "Split decision metadata: original AC id, proposed child count, agent assignment per child"
 origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []

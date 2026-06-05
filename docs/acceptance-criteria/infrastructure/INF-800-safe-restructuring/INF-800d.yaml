@@ -1,0 +1,21 @@
+id: INF-800d
+title: "Prove behavior is preserved after restructuring"
+component: infrastructure
+level: L1
+status: active
+criteria: |
+  Automated verification that restructuring changed structure, not behavior.
+
+  After restructuring completes, existing tests still pass and any new
+  characterization tests confirm the same inputs produce the same outputs.
+  You never have to wonder whether the restructuring quietly changed
+  what the code actually does.
+depends_on:
+  - INF-800c
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

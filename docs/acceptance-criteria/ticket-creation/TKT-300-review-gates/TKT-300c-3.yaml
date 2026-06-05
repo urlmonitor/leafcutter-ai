@@ -1,4 +1,6 @@
 id: TKT-300c-3
+readiness: reviewed
+priority: medium
 title: "No AC files are written to disk without prior user approval"
 component: ticket-creation
 level: L2
@@ -14,9 +16,16 @@ criteria: |
   And if no confirmation was received, the write operation is blocked
     and the pipeline prompts the user for approval.
 depends_on: [TKT-300c, TKT-300c-1, TKT-300c-2]
-doc_links: []
-assigned_agent: python-coder
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
 estimated_complexity: S
+it_requirements:
+  - "The write-gate must be enforced in the agent template, not as a suggestion — no code path may bypass it"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must be idempotent — requesting approval for already-approved files must not create duplicate prompts"
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3

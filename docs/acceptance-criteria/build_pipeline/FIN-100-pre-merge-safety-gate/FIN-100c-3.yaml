@@ -1,0 +1,41 @@
+id: FIN-100c-3
+title: "Null baseline causes all failures to be treated as regressions"
+level: L3
+component: finalize
+status: active
+parent: FIN-100c-2
+criteria: |
+  Given Step 0 failed to capture a baseline (baseline_failures is null)
+  And the post-merge test run reports one or more failing tests
+  When the triage agent receives baseline_failures=null
+  Then it cannot distinguish pre-existing from new failures
+  And it classifies ALL post-merge failures as "regression" (conservative path)
+  And blocks_finalization is set to true
+  And the triage summary explains that classification is conservative due to missing baseline
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
+assigned_agent: "test-failure-triage"
+estimated_complexity: S
+it_requirements: |
+  - Must detect baseline_failures === null as the trigger for conservative classification
+  - Must classify ALL post_merge_failures as "regression" (no exceptions)
+  - Must set blocks_finalization=true immediately and return
+  - Triage summary must explain that classification is conservative due to missing baseline
+  - This is the Step 1 early-return path in the triage algorithm
+delivers_to:
+  - agent: "finalize-feature-workflow"
+    contract: "provides triage_report with blocks_finalization=true and all failures as regressions"
+expects_from:
+  - agent: "finalize-feature-workflow"
+    contract: "provides baseline_failures=null (indicating failed baseline capture)"
+doc_links:
+  - path: "templates/agents/test-failure-triage.md"
+    relevance: "Step 1 — Handle null baseline (immediate conservative classification)"
+  - path: "docs/how-to/finalize-feature.md"
+    relevance: "Step 0 graceful degradation and its downstream consequence on triage"
+depends_on:
+  - FIN-100a-2
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

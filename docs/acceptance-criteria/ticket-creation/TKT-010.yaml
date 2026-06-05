@@ -1,4 +1,6 @@
 id: TKT-010
+readiness: reviewed
+priority: medium
 title: "Hook exits 1 when referenced AC has deprecated status"
 component: ticket-creation
 status: active

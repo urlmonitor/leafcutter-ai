@@ -1,0 +1,34 @@
+id: TKT-200a-3
+title: "Diagram generation runs without manual invocation after spec completion"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the analysis step has completed and produced L2 AC files in a feature folder,
+  When the ticket-creation pipeline advances to the documentation step,
+  Then diagram generation begins without any user command or manual trigger,
+  And the pipeline does not proceed to the review checkpoint
+    until at least one diagram file exists in the feature folder.
+depends_on: [TKT-200a]
+doc_links:
+  - path: docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ticket-creation.md
+    relationship: describes
+    status: planned
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Must not require user interaction to trigger diagram generation"
+  - "Pipeline must block at review checkpoint until diagram exists, not silently skip"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

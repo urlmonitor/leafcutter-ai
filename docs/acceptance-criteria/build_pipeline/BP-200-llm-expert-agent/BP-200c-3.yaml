@@ -1,0 +1,43 @@
+id: BP-200c-3
+title: "Ticket-supervisor spawn_allowlist includes llm-expert for automatic dispatch"
+component: build_pipeline
+level: L2
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given config/agent_registry.json is loaded,
+  When the ticket-supervisor entry's spawn_allowlist array is inspected,
+  Then it includes the string "llm-expert"
+  And the llm-expert entry's spawned_by array includes "ticket-supervisor"
+  And the llm-expert entry's spawn_allowlist includes "research-agent"
+  And the llm-expert entry's skills_used list includes:
+    "add-agent-to-package", "add-skill-to-package", "signoff"
+depends_on: [BP-200c]
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Bidirectional spawn wiring must be consistent: ticket-supervisor spawn_allowlist and llm-expert spawned_by must agree"
+  - "skills_used list must match the skills declared in the agent template's Skills section (BP-200a-5)"
+delivers_to: null
+expects_from:
+  ac_id: BP-200a-5
+  contract: "Agent template declaring exactly three skills that must match the registry skills_used array"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/03_registry_and_docs.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "config/agent_registry.json"

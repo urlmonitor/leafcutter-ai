@@ -1,0 +1,28 @@
+id: ACS-400
+title: "Trust that requirements cannot be silently rewritten by the wrong agent"
+component: ac-store
+level: L0
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Requirements stay exactly as the product team wrote them — no silent rewrites.
+
+  When an acceptance criterion is created, its criteria field represents the
+  authoritative definition of "done" as agreed by the product team. No
+  implementation agent, test agent, or automation can alter that definition.
+  Only the agents responsible for defining requirements (PO, BA, IT-PO) and
+  the human user can create, change, or remove criteria. Implementation agents
+  report their progress through status fields without ever touching what they
+  are being measured against. This separation of concerns ensures the AC store
+  remains a trustworthy source of truth.
+depends_on: [ACS-100]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACS-400a, ACS-400b, ACS-400c, ACS-400d, ACS-400e]
+implemented_by: []

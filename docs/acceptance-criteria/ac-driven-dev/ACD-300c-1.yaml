@@ -1,4 +1,6 @@
 id: ACD-300c-1
+readiness: reviewed
+priority: medium
 title: "Gate after PO v3 shows L0/L1 ACs and offers approve, edit, or cancel"
 component: ac-driven-dev
 level: L2

@@ -1,0 +1,30 @@
+id: BP-100g-4
+title: "build.py deploys all skills successfully when all SKILL.md files have valid frontmatter"
+component: build-pipeline
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-SkillFrontmatterValidation.md"
+criteria: |
+  Given all SKILL.md files have valid frontmatter
+  When python scripts/build.py --target-dir <target> is run
+  Then all skills deploy successfully
+  And build.py exits 0
+depends_on:
+  - BP-100h
+doc_links:
+  - path: scripts/build.py
+    relationship: implements
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+delivers_to: test-runner
+expects_from: BP-100g-1
+it_requirements: "Happy-path regression test; must invoke build.py on all canonical skill templates and confirm exit 0 with all skills deployed to target"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - "split: BP-100g -> BP-100g + BP-100h, 2026-06-05"
+superseded_by: null
+covered_by: []
+implemented_by: []

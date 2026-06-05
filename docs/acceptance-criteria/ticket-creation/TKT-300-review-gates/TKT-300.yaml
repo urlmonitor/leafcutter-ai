@@ -1,4 +1,6 @@
 id: TKT-300
+readiness: reviewed
+priority: medium
 title: "Human checkpoints at every critical decision point"
 component: ticket-creation
 level: L0

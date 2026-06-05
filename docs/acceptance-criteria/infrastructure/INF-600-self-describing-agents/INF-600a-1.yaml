@@ -1,0 +1,45 @@
+id: INF-600a-1
+title: "Registry declares every skill an agent invokes, with invocation mode"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+criteria: |
+  Given an agent registry entry for an agent that invokes skills
+    (e.g. python-coder, which invokes signoff, doc-enforcer,
+     complexity-reduction, and collector-enforcer)
+  When the registry entry is read by the card generator
+  Then the entry contains a `skills_invoked` array
+  And each element in the array has fields:
+    - `skill_id` (string matching a skill directory name)
+    - `mode` (enum: "always" | "conditional")
+    - `condition` (string, required when mode is "conditional",
+       describes when the skill is invoked, e.g. "paths under collector/")
+  And the array includes every skill the agent references in its
+    template body, not only skills declared in the current `skills_used` field
+  And the existing `skills_used` field is retained as an alias
+    for backward compatibility but is no longer the sole source of truth
+depends_on:
+  - INF-600i
+doc_links:
+  - path: docs/agents/cards/python-coder.card.md
+    relationship: describes
+    status: exists
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A skills_invoked array in each registry entry that the card generator reads to populate the Skills Used section"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

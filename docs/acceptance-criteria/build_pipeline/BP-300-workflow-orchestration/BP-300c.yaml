@@ -1,0 +1,21 @@
+id: BP-300c
+title: "The debug workflow executes build-finalize and returns structured results across runtime versions"
+component: build-pipeline
+level: L1
+status: active
+work_status: todo
+criteria: |
+  After investigation and synthesis complete, the debug workflow drives the fix
+  through build-ticket, offers the user a finalize gate, and returns a structured
+  result object. The entire pipeline also maintains backward compatibility with
+  older Claude Code runtimes by falling back to the prose skill. The user always
+  gets a predictable, inspectable outcome regardless of runtime version.
+depends_on:
+  - BP-300
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

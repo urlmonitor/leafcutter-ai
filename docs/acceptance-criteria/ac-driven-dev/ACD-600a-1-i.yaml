@@ -1,4 +1,6 @@
 id: ACD-600a-1-i
+readiness: reviewed
+priority: medium
 title: "mark_ac_done rejects marking an AC that has status: deprecated"
 component: ac-driven-dev
 level: L3

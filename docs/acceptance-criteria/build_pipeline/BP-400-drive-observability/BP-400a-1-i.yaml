@@ -1,0 +1,40 @@
+id: BP-400a-1-i
+title: "emit_event.py write failure is non-fatal (exits 0 with stderr warning)"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-WireSupervisorFeedbackEmission.md"
+criteria: |
+  Given emit_event.py is invoked with --log pointing to a path where the
+    file system denies write permission (e.g. a read-only mount),
+  When the script attempts to append the JSON line,
+  Then it prints a warning to stderr describing the write failure,
+  And it exits with code 0 (not code 1),
+  And it does NOT raise an unhandled exception.
+
+  This ensures that callers using "|| true" receive consistent behavior:
+  telemetry failures never interrupt the drive.
+depends_on:
+  - BP-400a-1
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must log the write failure to stderr at WARNING level"
+  - "Telemetry must never block or interrupt the caller workflow"
+delivers_to: null
+expects_from:
+  ac_id: BP-400a-1
+  contract: "emit_event.py script with file-append logic that this edge case exercises"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

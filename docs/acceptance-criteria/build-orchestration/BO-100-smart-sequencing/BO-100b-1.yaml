@@ -1,4 +1,6 @@
 id: BO-100b-1
+readiness: reviewed
+priority: medium
 title: "Default batch cap of 3 limits dispatch when ready set exceeds cap"
 component: build-orchestration
 level: L2

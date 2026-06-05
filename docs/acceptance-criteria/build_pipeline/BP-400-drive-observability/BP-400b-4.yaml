@@ -1,0 +1,38 @@
+id: BP-400b-4
+title: "Pre-move happy path remains unchanged (no behavioral regression)"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-HardenExtractEpicFacts.md"
+criteria: |
+  Given an epic folder still at its original (pre-finalization) path
+    tickets/01_todo/EPIC-Example/,
+  And git history contains commits associated with that path,
+  When extract_epic_facts.py is run with no extra flags,
+  Then git_commit_count is greater than zero,
+  And git_first_commit_date and git_last_commit_date are populated,
+  And git_resolved_path equals the input path (no rename resolution needed),
+  And exit code is 0,
+  And behavior is identical to the pre-patch contract.
+depends_on:
+  - BP-400b
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must not alter the existing call signature of extract_facts()"
+  - "Must be verified as a regression test -- no new behavior, just confirmation the existing path works"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,38 @@
+id: ACS-400c-2-i
+title: "Criteria change with stale amended_by entry is rejected"
+component: ac-store
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an existing AC YAML file has its criteria field changed in the staged diff,
+  When the amended_by list contains entries but none of them are new
+    compared to the previous committed version of the file
+    (i.e. the list is identical to the prior version despite criteria changing),
+  Then the commit is blocked,
+  And the error message states that a new amended_by entry is required
+    to accompany the criteria change,
+  And the error names the file path and the amended_by field.
+depends_on: [ACS-400c-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must follow the fail-open convention per docs/reference/claude-code-hooks.md"
+  - "Must compare amended_by lists as ordered collections (set comparison is insufficient -- order may matter for audit trail)"
+  - "Must clearly distinguish between 'amended_by is empty' and 'amended_by exists but has no new entries' in the error message"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

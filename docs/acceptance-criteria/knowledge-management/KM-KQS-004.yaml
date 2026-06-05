@@ -1,4 +1,6 @@
 id: KM-KQS-004
+readiness: reviewed
+priority: medium
 title: "Surface filter restricts output to specified surface and its edges"
 component: knowledge-management
 status: active

@@ -1,0 +1,33 @@
+id: BP-100g-6
+title: "pr-reviewer template includes skill-file checklist items"
+component: build-pipeline
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-SkillFrontmatterValidation.md"
+criteria: |
+  Given templates/agents/pr-reviewer.md
+  When a reviewer checks a PR that modifies any templates/skills/*/SKILL.md
+  Then the five skill-file checklist items are visible in pr-reviewer.md
+  And the checklist includes YAML parseable, name match, allowed-tools, input contract, and output contract checks
+depends_on:
+  - BP-100h
+doc_links:
+  - path: templates/agents/pr-reviewer.md
+    relationship: implements
+    status: exists
+  - path: docs/reference/skill-frontmatter.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: pr-reviewer
+expects_from: null
+it_requirements: "Must add five checklist items to pr-reviewer.md template: YAML parseable, name-directory match, allowed-tools valid, input contract present, output contract present; items must be in a conditional section triggered by templates/skills/*/SKILL.md in the diff"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - "split: BP-100g -> BP-100g + BP-100h, 2026-06-05"
+superseded_by: null
+covered_by: []
+implemented_by: []

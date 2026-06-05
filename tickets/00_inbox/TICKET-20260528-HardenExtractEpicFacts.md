@@ -26,6 +26,14 @@ agents:
 ac_traceability:
   L0: INF-500
   L1: INF-500a
+  l2:
+    - INF-500a-1
+    - INF-500a-2
+    - INF-500a-3
+    - INF-500a-4
+  l3:
+    - INF-500a-1-i
+    - INF-500a-3-i
   ac_path: docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500a.yaml
   routing: direct_to_ba
 ---

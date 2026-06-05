@@ -1,4 +1,6 @@
 id: TKT-200a
+readiness: reviewed
+priority: medium
 title: "Architecture is visible before anyone asks for it"
 component: ticket-creation
 level: L1

@@ -1,0 +1,32 @@
+id: BP-100g-3
+title: "build.py exits non-zero when SKILL.md allowed-tools contains unrecognised tool"
+component: build-pipeline
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-SkillFrontmatterValidation.md"
+criteria: |
+  Given a SKILL.md where allowed-tools contains an unrecognised tool name
+  When python scripts/build.py --target-dir <target> is run
+  Then build.py exits non-zero
+  And the error message names the file and the offending tool token
+depends_on:
+  - BP-100g
+doc_links:
+  - path: scripts/build.py
+    relationship: implements
+    status: exists
+  - path: docs/reference/skill-frontmatter.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: BP-100g-3-i
+expects_from: null
+it_requirements: "Must validate each token in allowed-tools against the canonical tool list (Bash, Read, Edit, Write, etc.) plus mcp__ prefix pattern; unrecognised tokens cause exit non-zero"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,38 @@
+id: BP-400c-1
+title: "Build system deploys all feedback analysis pipeline artifacts"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260603-FeedbackAnalysisPipeline.md"
+criteria: |
+  Given the build system has deployed the leafcutter package,
+  When the deploy target is inspected,
+  Then .claude/skills/feedback-analysis/SKILL.md exists,
+  And .claude/skills/feedback-analysis/scripts/trend_report.py exists,
+  And .claude/agents/feedback-analyst.md exists,
+  And .claude/commands/feedback-report.md exists.
+depends_on:
+  - BP-400c
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must verify that build_skills() in build_phases.py picks up the new feedback-analysis skill folder automatically"
+  - "Must verify that build_agents() deploys feedback-analyst.md"
+  - "Must verify that build_workflows() deploys feedback-report.md to .claude/commands/"
+delivers_to:
+  agent: llm-expert
+  contract: "Four deployed artifacts: SKILL.md, trend_report.py, feedback-analyst.md, feedback-report.md -- all reachable at their .claude/ paths after build"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

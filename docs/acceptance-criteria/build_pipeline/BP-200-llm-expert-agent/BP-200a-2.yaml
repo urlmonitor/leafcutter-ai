@@ -1,0 +1,45 @@
+id: BP-200a-2
+title: "Agent template body contains the six-item Prompt-Quality Checklist with detection heuristics"
+component: build_pipeline
+level: L2
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given the file templates/agents/llm-expert.md exists,
+  When the section headed "Prompt-Quality Checklist" is read,
+  Then it contains exactly 6 numbered checklist items:
+    1. No compound bash commands
+    2. Tool allowlist matches body usage
+    3. No tools in body absent from allowlist
+    4. spawn_allowlist declared when spawning sub-agents
+    5. Signoff protocol section present for signoff: true agents
+    6. Stop-and-ask rules present for scope boundaries
+  And each item includes a "Violation pattern" or "Violation" example
+  And each item includes a "Correct form" example
+  And the checklist states that a failing item is a blocker
+depends_on: [BP-200a]
+doc_links:
+  - path: docs/agents/llm-expert/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Checklist items must be consistent with the detection checks defined in the prompt-audit skill (BP-200d-2)"
+  - "Violation and correct-form examples must be syntactically valid markdown code blocks"
+delivers_to:
+  agent: llm-expert
+  contract: "Six-item checklist definition reused by the prompt-audit skill as its detection ruleset"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/01_agent_template.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "templates/agents/llm-expert.md"

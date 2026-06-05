@@ -1,0 +1,36 @@
+id: INF-400g-4
+title: "epic-supervisor CFCS emit block is imperative, not example code"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-WireSupervisorFeedbackEmission.md"
+criteria: |
+  Given epic-supervisor reaches the end of a batch (between steps 5 and 6)
+  When the cross-ticket pattern detection algorithm runs
+  Then the Bash block calling submit_feedback.py is an imperative instruction (not a Python/prose example block)
+  And the agent executes it
+depends_on:
+  - INF-400h
+doc_links:
+  - path: templates/agents/epic-supervisor.md
+    relationship: implements
+    status: exists
+  - path: scripts/feedback/submit_feedback.py
+    relationship: related
+    status: exists
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: INF-400g-9
+expects_from: INF-400g-1
+it_requirements: "The Bash block calling submit_feedback.py must be an imperative instruction (not a code example inside prose); agent must execute it directly; submit_feedback.py call must include --category subagent-quality"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - "split: INF-400g -> INF-400g + INF-400h, 2026-06-05"
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,36 @@
+id: TKT-200d-1
+title: "Changed spec triggers regeneration of its dependent diagram"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a feature folder contains an L2 AC file and a previously generated diagram,
+  When the analysis step revises that AC file (changing its component or depends_on fields),
+  Then the documentation step detects that the diagram's source data has changed,
+  And it regenerates the diagram to reflect the updated component relationships,
+  And the old diagram content is replaced (not appended or duplicated).
+depends_on: [TKT-200d, TKT-200a]
+doc_links:
+  - path: docs/architecture/components/ticket-creation.md
+    relationship: describes
+    status: planned
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Must detect changes by comparing AC field values (component, depends_on, delivers_to, expects_from) against the diagram's source snapshot"
+  - "Must replace the diagram file atomically (write to temp, then rename)"
+  - "Must log which AC changes triggered the regeneration"
+delivers_to:
+  agent: llm-expert
+  contract: "Change-detection result identifying which AC files changed and which diagrams are stale"
+expects_from:
+  ac_id: TKT-200a-1
+  contract: "Diagram generation capability that can be re-invoked to regenerate specific diagrams"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

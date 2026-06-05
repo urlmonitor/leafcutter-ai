@@ -83,6 +83,49 @@ will read source when they implement.
 
 ---
 
+## S0 Knowledge Loop — Injection
+
+Before doing anything else, load accumulated context from prior runs of this
+agent and from the component being worked on. All reads are best-effort —
+skip gracefully if a file is absent, unreadable, binary, or exceeds 50 KB.
+
+1. **Identify the component.** Extract the `component` field from the L2/L3
+   AC files you were given (or derive it from the feature folder path).
+
+2. **Read component PROJECT_CONTEXT.md.** Check for a file at:
+   `docs/acceptance-criteria/<component>/PROJECT_CONTEXT.md`
+   If it exists and is ≤ 50 KB of readable text, absorb its contents into your
+   context before S1. If it is absent, binary, or oversized, log:
+   "S0: PROJECT_CONTEXT.md skipped (<reason>)" and continue.
+
+3. **Read component AC folder README.md.** Check for a file at:
+   `docs/acceptance-criteria/<component>/README.md`
+   If it exists, read it. Skip gracefully if absent.
+
+4. **Read per-agent memory files.** Scan the `memory/` directory (in the
+   project root) for any files matching the patterns `*it-po*.md`,
+   `*itpo*.md`, `*technical-enrichment*.md`. Read each match. These files
+   contain learnings from prior runs of this agent. Skip the scan gracefully
+   if the `memory/` directory does not exist.
+
+5. **Read cross-agent memory files from the Product Owner and Business Analyst.**
+   If the product-owner-v3 and business-analyst-v3 agents ran before you in
+   the same pipeline, they may have persisted learnings about component
+   conventions, framing preferences, and decomposition strategies. Scan the
+   `memory/` directory for files matching the patterns `*po*.md`,
+   `*product*.md`, `*product-owner*.md`, `*ba*.md`, `*business-analyst*.md`,
+   `*analyst*.md`. Read each match. Skip gracefully if the directory is
+   absent or no matches are found.
+   These learnings are available because the harness auto-loads memory files
+   at each agent spawn (Channel ⑨) — no explicit hand-off is required.
+   If no prior-agent memory files exist, proceed normally with baseline context.
+
+6. **Proceed.** Continue to S1 with the loaded context available. No error
+   or warning is needed if all files were absent — a first run with no prior
+   context is the normal baseline.
+
+---
+
 ## S1 Knowledge Acquisition
 
 You read broadly to understand the technical landscape at the architecture and
@@ -396,6 +439,52 @@ original's status.
   `delivers_to`, `expects_from`, and `doc_links` fields
 - For splits: write new files, then update original with `superseded_by`
 - Validate that every enriched file has a non-null `assigned_agent`
+- **After enriching an AC with all technical fields, set `readiness: reviewed`.**
+  Do NOT set `readiness: approved` — only the user may promote to `approved`.
+  The scanner ignores `reviewed` ACs; the user must explicitly approve before
+  the scanner will pick them up.
+
+---
+
+## S7b Documentation Gate (mandatory — runs BEFORE S8 Self-Review)
+
+Before marking any AC batch as enriched, check for missing documentation ACs.
+
+**Step 1 — Identify triggered documentation types.**
+
+For each behavioral AC in the batch, check if its parent L1 has a
+`documentation_triggers` field set with one or more entries. Collect the
+union of all triggered types across the batch.
+
+**Step 2 — Verify documentation ACs exist.**
+
+For each triggered type, check whether the batch contains a corresponding
+documentation AC (with the correct `assigned_agent` and `level: L2`):
+
+| Trigger | Expected documentation AC |
+|---|---|
+| `how-to` | `assigned_agent: documentation-expert` |
+| `sequence-diagram` | `assigned_agent: architecture-diagram-author` |
+| `state-diagram` | `assigned_agent: architecture-diagram-author` |
+| `component-diagram` | `assigned_agent: architecture-diagram-author` |
+| `reference-doc` | `assigned_agent: documentation-expert` |
+
+**Step 3 — Fill the gap.**
+
+If a triggered type has no corresponding documentation AC:
+
+**Option A (preferred):** Create the missing documentation AC yourself. Write
+it to the same feature folder with the correct `assigned_agent`, `level: L2`,
+`readiness: reviewed`, and `depends_on` referencing the behavioral AC it
+documents.
+
+**Option B:** Refuse to set `readiness: reviewed` on the batch until the gap
+is resolved. Log which documentation types were missing and for which feature.
+
+**The invariant:** "Batches without documentation coverage for triggered
+categories MUST NOT receive `readiness: reviewed`."
+
+If `documentation_triggers` is `[]` or absent on all parent L1s, skip this gate.
 
 ---
 
@@ -415,7 +504,63 @@ Before presenting the confirmation gate, verify:
 [ ] 9. estimated_complexity is set on every AC.
 [ ] 10. Split ACs have correct depends_on ordering and superseded_by on the original.
 [ ] 11. Caveats are logged for every ambiguity found.
+[ ] 12. Every enriched AC has readiness: reviewed (not draft, not approved).
+[ ] 13. Documentation gate (S7b) passed: all triggered documentation types have
+       a corresponding documentation AC in the batch, or Option B was invoked
+       with explicit logging of missing types.
 ```
+
+---
+
+## S9 Knowledge Loop — Emission
+
+After writing the enriched AC YAML files but before returning control, run this
+reflection step. It is mandatory but best-effort — a failure here must not block
+your output from reaching the caller.
+
+**Reflection prompt:**
+
+> "Did you discover any component conventions, naming patterns, standing rules,
+> agent assignment patterns, or decomposition strategies during this run that
+> future agents working in this component would benefit from knowing?"
+
+**On "no":** Proceed — nothing to persist.
+
+**On "yes":** Execute the following steps in order. Wrap the entire block in
+best-effort handling (log a warning and proceed if any step fails):
+
+1. Load `.claude/skills/route-learning/SKILL.md` (or `templates/skills/route-learning/SKILL.md`).
+   Apply its decision tree to classify the learning. If the skill is unavailable,
+   log: "S9: route-learning skill not found — capture skipped." and stop.
+
+2. Load `.claude/skills/capture-learning/SKILL.md` (or `templates/skills/capture-learning/SKILL.md`).
+   Execute the write using the route classification from step 1.
+   If the skill is unavailable, log: "S9: capture-learning skill not found — capture skipped." and stop.
+
+3. Emit a `knowledge_captured` telemetry event. Append to
+   `debugging/logs/agent_telemetry.jsonl` (create the file if absent; skip
+   gracefully if the directory is not writable):
+   ```json
+   {"event": "knowledge_captured", "timestamp": "<ISO-8601>", "agent": "it-po-v3", "component": "<component-id>", "destination": "<routed_file_path>", "entry_kind": "<entry_kind from route-learning>"}
+   ```
+
+4. **Capture scope constraint (specification-relevant only):** The reflection
+   prompt asks about specification-relevant discoveries only:
+   - Component conventions and agent assignment patterns
+   - Cross-agent boundary patterns and contract shapes that recur
+   - Standing technical constraints applicable to this component
+   - Decomposition strategies for multi-agent work (split patterns)
+   - Agent selection heuristics validated by this run
+
+   Do NOT capture code-level learnings (implementation patterns, error handling
+   conventions, test strategies). Those belong to the implementing agents.
+
+5. **Duplicate detection:** Before writing, route-learning Step 0 checks for
+   existing entries with equivalent content. If a duplicate is detected, skip
+   the write and log: "S9: duplicate learning detected — not persisted again."
+
+**Constraint — this step is not conditional on `ticket_path`:** The knowledge
+emission step runs whether or not this agent was spawned with a `ticket_path`.
 
 ---
 

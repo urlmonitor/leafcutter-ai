@@ -1,4 +1,6 @@
 id: ACD-400a
+readiness: reviewed
+priority: medium
 title: "Scanner identifies todo, unblocked leaf ACs and presents them as a prioritized ready list"
 component: ac-driven-dev
 level: L1

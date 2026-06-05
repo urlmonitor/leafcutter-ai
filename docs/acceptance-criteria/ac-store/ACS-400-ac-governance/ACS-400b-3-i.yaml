@@ -1,0 +1,38 @@
+id: ACS-400b-3-i
+title: "Mixed commit with both allowed and disallowed field changes is fully rejected"
+component: ac-store
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an existing AC YAML file has both work_status changed (allowed)
+    AND criteria changed (disallowed) in the same staged diff,
+  When the committing agent is an implementation agent (e.g. python-coder),
+  Then the entire commit is blocked (not partially applied),
+  And the error message identifies the disallowed field change (criteria)
+    without suppressing the fact that work_status was also changed,
+  And no partial commit occurs — the repository state is unchanged.
+depends_on: [ACS-400b-3]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must follow the fail-open convention per docs/reference/claude-code-hooks.md"
+  - "Must report all field changes (both allowed and disallowed) in the error message for transparency"
+  - "Must block on ANY protected field violation regardless of whether other changes in the same file are legitimate"
+  - "Must not produce false positives when only progress-reporting fields are changed"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,37 @@
+id: FIN-100b-2
+title: "Merge conflict halts workflow with clear error listing conflicting files"
+level: L2
+component: finalize
+status: active
+parent: FIN-100b
+criteria: |
+  Given a feature branch that has conflicting changes with origin/main
+  When Step 2 runs git merge origin/main --no-commit --no-ff
+  And the merge exits with a non-zero code (conflict detected)
+  Then the workflow runs git merge --abort to restore the worktree to a clean state
+  And returns a halted response with halted_at_step=2 and reason="merge_conflict"
+  And the error message instructs the developer to resolve conflicts and re-run
+  And the temporary baseline worktree (if present) is cleaned up
+  And the PR is NOT merged to main
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
+assigned_agent: "finalize-feature-workflow"
+estimated_complexity: S
+it_requirements: |
+  - Must detect non-zero exit code from git merge as the conflict signal
+  - Must run git merge --abort to restore worktree to pre-merge state before returning
+  - Must call cleanupBaselineWorktree() before returning the halted response
+  - Must include halted_at_step=2, reason="merge_conflict" in the return object
+  - Must NOT allow control flow to reach step 3 or step 4
+delivers_to: []
+expects_from: []
+doc_links:
+  - path: "docs/how-to/finalize-feature.md"
+    relevance: "merge_conflict halt category diagnosis and resolution steps"
+  - path: "templates/workflows/finalize-feature.md"
+    relevance: "Halt categories table — merge_conflict row"
+depends_on: []
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

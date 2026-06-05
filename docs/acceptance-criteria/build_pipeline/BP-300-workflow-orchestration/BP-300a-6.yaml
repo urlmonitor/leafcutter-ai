@@ -1,0 +1,29 @@
+id: BP-300a-6
+title: "Workflow return object contains all required structured fields"
+component: build-pipeline
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260602-debug_js_workflow.md"
+criteria: |
+  Given the workflow completes (with or without finalize)
+  When it returns
+  Then the return object contains status, investigation_summary, ticket_path, build_result, and finalize_result (null when skipped)
+depends_on:
+  - BP-300c
+doc_links:
+  - path: templates/workflows-js/build-ticket.js
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: BP-300a-6-i
+expects_from: BP-300a-5
+it_requirements: "Return object must be { status, investigation_summary, ticket_path, build_result, finalize_result }; finalize_result is null when user skips finalize"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - "split: BP-300a -> BP-300a + BP-300c, 2026-06-05"
+superseded_by: null
+covered_by: []
+implemented_by: []

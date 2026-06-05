@@ -1,0 +1,30 @@
+id: BP-100e-1
+title: "Signoff skill recipe mandates timestamp capture before any edit"
+component: build-pipeline
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-HardenSignoffTimestamps.md"
+criteria: |
+  Given the signoff skill section 2 recipe is followed
+  When an agent performs the atomic sign-off
+  Then the recipe contains an explicit mandatory Step 0 at the TOP
+  And Step 0 computes now_local via shell (date +"%Y-%m-%d %H:%M") before any Edit is issued
+  And the step is labelled as non-optional
+depends_on:
+  - BP-100e
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: BP-100e-2
+expects_from: null
+it_requirements: "Step 0 must use shell date command (date +\"%Y-%m-%d %H:%M\") not Python datetime; must be inserted at the TOP of the recipe before any Edit tool call"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

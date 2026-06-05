@@ -1,4 +1,6 @@
 id: ACD-600a
+readiness: reviewed
+priority: medium
 title: "mark_ac_done script sets work_status to done for a given AC or ticket"
 component: ac-driven-dev
 level: L1

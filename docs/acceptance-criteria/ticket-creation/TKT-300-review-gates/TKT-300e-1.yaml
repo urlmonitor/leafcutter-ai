@@ -1,4 +1,6 @@
 id: TKT-300e-1
+readiness: reviewed
+priority: medium
 title: "Split is triggered when criteria cross agent boundaries"
 component: ticket-creation
 level: L2
@@ -14,10 +16,25 @@ criteria: |
     the full criteria,
   And it initiates the split procedure to produce one child AC per agent.
 depends_on: [TKT-300e]
-doc_links: []
+doc_links:
+  - path: docs/architecture/adrs/ADR-009-itpo-no-source-code-access.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: M
-delivers_to: null
+it_requirements:
+  - "Split detection must be based on owns_file_extensions in agent_registry.json, not on heuristic name matching"
+  - "Must not split ACs that can be implemented by a single agent — false positive splits waste effort"
+  - "Must handle errors gracefully per the project error handling policy"
+delivers_to:
+  agent: llm-expert
+  contract: "Split decision metadata: original AC id, proposed child count, agent assignment per child"
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05

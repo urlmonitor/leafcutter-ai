@@ -1,0 +1,26 @@
+id: INF-800
+title: "Restructure code safely without breaking what depends on it"
+component: infrastructure
+level: L0
+status: active
+criteria: |
+  Confident code restructuring -- every change proves its consumers still work.
+
+  When your codebase grows, files get too large, responsibilities get tangled,
+  and modules accumulate technical debt. Today, restructuring is risky -- you
+  do not know what depends on the code you want to move, and you cannot be
+  sure you have not silently broken a caller three directories away. With this
+  capability, you can restructure any part of the codebase knowing that every
+  consumer has been identified, every dependency has been traced, and the
+  result is verified to preserve the same behavior with a cleaner structure.
+depends_on: []
+doc_links:
+  - path: templates/workflows/code-refactoring-specialist.md
+    relationship: evolves
+    status: exists
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

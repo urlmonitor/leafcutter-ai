@@ -1,0 +1,29 @@
+id: BP-300a-4-i
+title: "Workflow returns error when create-ticket does not return a ticket_path"
+component: build-pipeline
+level: L3
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260602-debug_js_workflow.md"
+criteria: |
+  Given the create-ticket workflow is called in Phase 2
+  When it returns a result with a falsy ticket_path
+  Then the workflow returns { status: "error", message: "create-ticket did not return a ticket_path" }
+  And it does NOT proceed to Phase 3 (build-ticket)
+depends_on:
+  - BP-300a-4
+doc_links:
+  - path: templates/workflows-js/build-ticket.js
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: test-writer
+expects_from: BP-300a-4
+it_requirements: "Must guard against falsy ticket_path (null, undefined, empty string); return structured error object with status and message; must NOT proceed to Phase 3"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

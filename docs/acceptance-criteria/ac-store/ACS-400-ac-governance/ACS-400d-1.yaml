@@ -1,0 +1,47 @@
+id: ACS-400d-1
+title: "Governance rules appear in deployed agent instructions after build"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a consumer project has installed leafcutter via build.py,
+  When an agent reads its instruction surface
+    (CLAUDE.md or the generated agent template),
+  Then the instruction text contains the AC governance write-access rules:
+    - which agents are authorized to write criteria
+      (product-owner-v3, business-analyst-v3, it-po-v3, human user)
+    - which fields are protected (criteria, title, req_status, depends_on)
+    - which fields are open to implementation agents
+      (work_status, implemented_by, covered_by)
+  And the rules are present without any manual configuration by the project user.
+depends_on: [ACS-400d]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must integrate with the existing build.py template compilation pipeline"
+  - "Must inject governance rules into the instruction surface that agents read at invocation time"
+  - "Must keep governance rule text in a single maintainable source (template partial or config) to avoid drift between the hook enforcement and the instruction text"
+  - "Must not break existing CLAUDE.md content when appending governance rules"
+  - "Governance rule text must be human-readable and concise (suitable for inclusion in an agent's context window)"
+delivers_to:
+  agent: python-coder
+  contract: "Governance rules text block deployed into the consumer project's instruction surface. Format: markdown section with field classifications (protected vs open) and authorized agent list. Location: compiled into .claude/ output by build.py from a templates/ source."
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

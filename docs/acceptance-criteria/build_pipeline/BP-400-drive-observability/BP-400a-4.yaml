@@ -1,0 +1,39 @@
+id: BP-400a-4
+title: "Post-drive aggregation for subagent-quality returns non-empty results"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-WireSupervisorFeedbackEmission.md"
+criteria: |
+  Given an epic drive has completed (or been halted) where at least one
+    supervisor adjudication occurred,
+  When aggregate.py is invoked as:
+    python scripts/feedback/aggregate.py --category subagent-quality,
+  Then the output contains at least one entry,
+  And each entry has a category field equal to "subagent-quality",
+  And each entry has non-null timestamp, tags, and note fields.
+depends_on:
+  - BP-400a
+  - BP-400a-3
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must verify end-to-end integration: templates emit, aggregate.py reads"
+  - "This is a validation AC -- no new code required if BP-400a-1 and BP-400a-3 are correctly implemented"
+delivers_to: null
+expects_from:
+  ac_id: BP-400a-3
+  contract: "Supervisors emit feedback entries with category 'subagent-quality' during adjudication, written to debugging/logs/feedback.jsonl"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,24 @@
+id: BP-300a
+title: "The debug workflow dispatches parallel investigators and synthesises findings deterministically"
+component: build-pipeline
+level: L1
+status: active
+work_status: todo
+criteria: |
+  The investigation phase of the debug workflow is deterministic and structured.
+
+  When a user invokes /debug, the workflow dispatches three parallel Explore
+  agents (database, backend, frontend/docs) to investigate the issue. Their
+  findings are synthesised: when all investigators agree with high confidence
+  the workflow proceeds automatically, and when they disagree or report low
+  confidence the user is prompted for clarification before creating a ticket.
+depends_on:
+  - BP-300
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by:
+  - "split: BP-300a -> BP-300a + BP-300c, 2026-06-05"
+superseded_by: null
+covered_by: []
+implemented_by: []

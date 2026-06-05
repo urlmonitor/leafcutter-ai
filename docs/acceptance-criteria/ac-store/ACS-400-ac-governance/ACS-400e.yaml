@@ -1,0 +1,25 @@
+id: ACS-400e
+title: "Violations are caught before they reach the repository"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Unauthorized criteria changes are rejected at commit time, not discovered later.
+
+  If an agent that is not on the authorized list attempts to commit a change
+  to the criteria field of any AC YAML file, the commit is blocked with a
+  clear error message naming the offending agent, the file, and the rule
+  being violated. The team never has to do forensic investigation to find
+  requirement tampering — it simply cannot happen.
+depends_on: [ACS-400a, ACS-400d]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACS-400e-1, ACS-400e-1-i, ACS-400e-2, ACS-400e-3]
+implemented_by: []

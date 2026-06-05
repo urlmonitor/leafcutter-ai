@@ -279,12 +279,14 @@ unimplemented even after its commit has landed.
 1. Run the implementation supervisor to completion (through the commit phase).
 2. Dispatch a `status-checker` agent on the same ticket.
 3. The status-checker verifies all frontmatter agents are in `{signed_off, not_needed}`,
-   moves the ticket to `done/`, and flips `pull-request: needed → signed_off` (per
-   epic convention: one PR per epic, not per ticket).
+   invokes `set_ticket_status.py --status done` to mark the ticket complete (BO-400c-4),
+   and flips `pull-request: needed → signed_off` (per epic convention: one PR per epic,
+   not per ticket).
 
 This "implementation supervisor → status-checker close-out" pattern is the expected idiom
 for individual ticket runs within a multi-ticket epic. Validate: after the status-checker
-runs, `git status` on the ticket path should show the file in the `done/` subfolder.
+runs, the ticket file's frontmatter shows `status: done`. The ticket file MUST remain at
+its original path — do NOT move it to a `done/` subfolder (BO-400c-1).
 
 
 
@@ -325,6 +327,22 @@ This was observed in EPIC-AgentRegistryAsSourceOfTruth (2026-05-15) where ~835 l
 scripts from a different epic leaked into the worktree as untracked files and confused
 every ticket-supervisor that ran until a cleanup commit removed them.
 
+### §2.0.5 Drive-Start Status Transition (BO-400a-1)
+
+Before spawning the first phase agent for a ticket, the ticket-supervisor MUST
+invoke `set_ticket_status.py` to mark the ticket as in-progress:
+
+```bash
+python scripts/set_ticket_status.py --ticket <absolute_ticket_path> --status in_progress
+```
+
+**Idempotent re-drive (BO-400a-1-i):** If the ticket is already `in_progress`
+(prior run was interrupted), the script exits 0 and prints `status: in_progress -> in_progress (no change)`.
+Proceed without warning.
+
+**Non-zero exit** from `set_ticket_status.py` is a blocker — surface to the user
+and halt the ticket run. Do NOT spawn any phase agent if the status transition fails.
+
 ### §2.1 Pseudocode
 
 ```
@@ -332,8 +350,9 @@ every ticket-supervisor that ran until a cleanup commit removed them.
     LET pending = [ name for name, status in agents
                           if status == "needed" ]
     IF pending is empty:
-      → mark ticket done (move file to done/, flip status: done),
+      → mark ticket done via set_ticket_status.py --status done (BO-400a-2),
         return {status: "done"}.
+        NOTE: Do NOT use git mv to move the file to a done/ subfolder (BO-400c-1).
     LET next_agent = first(pending) in natural order
                      (declaration order in the YAML; ties broken
                       by canonical phase ordering — architect-review,
@@ -900,23 +919,27 @@ Master_Plan. The discipline is upstream of the dispatch loop.
 
 ### §7.2 Epic archival gate (supervisor)
 
-When the main loop reports "epic complete" and the supervisor is about to move
-the epic folder from `tickets/01_todo/EPIC-<Name>/` (or `tickets/00_inbox/epics/EPIC-<Name>/`)
-to `tickets/99_done/EPIC-<Name>/`, the supervisor MUST iterate over every
-sub-ticket file in the epic and verify:
+When the main loop reports "epic complete", the supervisor MUST iterate over every
+sub-ticket file in the epic (scanning recursively via frontmatter `status:`, not
+by checking folder position — BO-400a-3) and verify:
 
-1. Frontmatter `status: done` (not `todo`).
+1. Frontmatter `status: done` (not `todo` or `in_progress`).
 2. Every entry in `agents:` map is `signed_off` or `not_needed` (not `needed` or `failed`).
 3. Every line in the `## Sign-offs` checklist is `- [x] ...` (not `- [ ]`).
 
+The scan MUST cover ALL `.md` files recursively in the epic folder, including any
+legacy `done/` subfolder that may exist from prior convention. Use the ticket's
+frontmatter `status:` field as the authoritative signal — not the file's folder
+position (BO-400c-2).
+
 If any sub-ticket fails one or more of these checks, the supervisor MUST:
 
-- **Extract** the failing ticket(s) from the epic folder to
-  `tickets/00_inbox/<TICKET-YYYYMMDD-Slug>.md` with the same content (file move
-  via `git mv`, optionally renaming to a standalone-ticket convention).
-- **Update** `Master_Plan.md` to mark the extracted ticket(s) as
-  *"deferred to standalone ticket"* with a link, so the audit trail is intact.
-- **Then** archive the remaining (genuinely complete) epic.
+- **Defer** the failing ticket(s) by updating its frontmatter `status:` to `blocked`
+  via `set_ticket_status.py --status blocked --force`, and noting the deferral in
+  a `## Comments` entry. Do NOT move the file via `git mv`.
+- **Update** `Master_Plan.md` to mark the deferred ticket(s) as
+  *"deferred — status: blocked"* with a link, so the audit trail is intact.
+- **Then** proceed with archival of the remaining (genuinely complete) epic.
 
 Bulk-moving an entire epic folder to `99_done/` without per-ticket validation —
 as happened with EPIC-WorkflowArchitect's T11 — hides outstanding scope and
@@ -924,16 +947,16 @@ silently breaks `check-ticket-signoff-parity` on every subsequent commit
 touching the archived ticket. The cost of the validation is a few file reads;
 the cost of missing it is days of confusion later.
 
-**Re-stage moved files before the archival commit.** When `git mv` is used to
-move a ticket or epic folder, any subsequent edits to the moved file (final
-sign-offs, status flips, comment-append) MUST be followed by an explicit
-`git add <new-path>` *before* committing. The `check-ticket-signoff-parity`
-guard reads the **staged** content, not the working-tree content; without the
-re-stage, the guard sees the pre-edit snapshot captured at `git mv` time and
-fires on a file that is already correct on disk. Observed in
-EPIC-ProdIndexHygiene (2026-05-14): the archival commit blocked because the
-final pull-request sign-off had been written after the `git mv` but never
-re-staged. Resolution was a single `git add <ticket-file>`.
+**Stage all status-transition edits before the archival commit.** After
+`set_ticket_status.py` updates a ticket's frontmatter, any subsequent edits
+to the file (sign-offs, comment-append) MUST be followed by an explicit
+`git add <ticket-path>` before committing. The `check-ticket-signoff-parity`
+guard reads the **staged** content, not the working-tree content.
+
+**Note (BO-400c-1):** Ticket files are NEVER moved via `git mv` to a `done/`
+subfolder. The `set_ticket_status.py` script updates the frontmatter in place
+and the file remains at its original path. The parity guard will block any
+`git mv` into a `done/` subfolder (BO-400c-3).
 
 ---
 

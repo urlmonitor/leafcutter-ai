@@ -1,4 +1,6 @@
 id: BO-202
+readiness: reviewed
+priority: medium
 title: "Auto-fix work_status and implemented_by/covered_by when diff evidence exists"
 component: build-orchestration
 status: active

@@ -1,0 +1,29 @@
+id: INF-500b-6
+title: "feedback-report command supports --since date filtering"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260603-FeedbackAnalysisPipeline.md"
+criteria: |
+  Given the /feedback-report command is invoked with --since 2026-05-01
+  When the feedback-analyst filters by date
+  Then only entries on or after 2026-05-01 appear in the report
+depends_on:
+  - INF-500c
+doc_links:
+  - path: templates/skills/feedback-analysis/scripts/trend_report.py
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: test-writer
+expects_from: INF-500b-2
+it_requirements: "Must accept --since YYYY-MM-DD argument; filter entries by timestamp >= the given date; pass the filter down to aggregate.py/list_tags.py calls; only matching entries appear in the report"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - "split: INF-500b -> INF-500b + INF-500c, 2026-06-05"
+superseded_by: null
+covered_by: []
+implemented_by: []

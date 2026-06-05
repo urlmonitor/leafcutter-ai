@@ -1,0 +1,25 @@
+id: BP-100g
+title: "Malformed skill files fail the build with clear diagnostics"
+component: build-pipeline
+level: L1
+status: active
+work_status: todo
+criteria: |
+  The build system rejects malformed SKILL.md files before deploying them.
+
+  When a skill template has invalid YAML frontmatter, a name that does not
+  match its directory, or an unrecognised tool in its allowed-tools list,
+  the build fails with a clear error identifying the offending file and the
+  specific rule that was violated. The broken skill is never written to the
+  target. Authoring errors surface at build time — not at invocation time
+  during an epic drive when a confusing parse failure derails the workflow.
+depends_on:
+  - BP-100
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by:
+  - "split: BP-100g -> BP-100g + BP-100h, 2026-06-05"
+superseded_by: null
+covered_by: []
+implemented_by: []

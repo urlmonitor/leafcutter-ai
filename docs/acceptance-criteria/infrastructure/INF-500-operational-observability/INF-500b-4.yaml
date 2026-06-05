@@ -1,0 +1,29 @@
+id: INF-500b-4
+title: "trend_report.py gracefully handles empty or absent feedback data"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260603-FeedbackAnalysisPipeline.md"
+criteria: |
+  Given feedback.jsonl is empty or absent
+  When trend_report.py is run
+  Then it exits 0
+  And prints "(no feedback data found)"
+depends_on:
+  - INF-500b
+doc_links:
+  - path: templates/skills/feedback-analysis/scripts/trend_report.py
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: test-writer
+expects_from: INF-500b-1
+it_requirements: "Must handle both empty file and absent file; exit 0 in both cases; print '(no feedback data found)' to stdout; must not raise FileNotFoundError or produce a traceback"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

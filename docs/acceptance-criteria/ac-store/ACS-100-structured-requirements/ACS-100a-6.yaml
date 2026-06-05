@@ -1,4 +1,6 @@
 id: ACS-100a-6
+readiness: reviewed
+priority: medium
 title: "Dangling depends_on and expects_from references blocked at commit time"
 component: ac-store
 level: L2
@@ -18,15 +20,31 @@ criteria: |
     under docs/acceptance-criteria/,
   Then the commit is blocked with a diagnostic error,
   And the error message names the dangling expects_from.ac_id and the file that contains it.
-depends_on: [ACS-100a]
-doc_links: []
+depends_on: [ACS-100i]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Must complete in <2 seconds for repositories with up to 500 AC YAML files"
+  - "Must only scan staged files, not the entire AC store, for commit-time performance"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Diagnostic error messages must name each dangling reference and the file that contains it"
+  - "Must be idempotent — re-running on the same staged set must produce the same result"
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "split: ACS-100a -> ACS-100a + ACS-100i, 2026-06-05"
 superseded_by: null
 covered_by: []
 implemented_by: []
+# NOTE: ACS-100a-6 is spec-only — no implementation yet. The dangling-reference
+# check is not part of check_ac_limits.py (which handles count limits only).
+# A separate hook (check_ac_dangling_refs.py) needs to be implemented.

@@ -1,4 +1,6 @@
 id: ACD-600a-1-ii
+readiness: reviewed
+priority: medium
 title: "mark_ac_done with --ac directly sets work_status done without needing a ticket"
 component: ac-driven-dev
 level: L3

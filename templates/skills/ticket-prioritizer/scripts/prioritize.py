@@ -6,6 +6,12 @@ BUSINESS CONTEXT: Agents need to know which ticket to pick up next. Priority-onl
     sorting is insufficient when tickets have depends_on chains; this script resolves
     those chains and returns only genuinely workable tickets.
 ARCHITECTURE: Not needed.
+
+New flag (ticket 02 — EPIC-ACDrivenDevelopment):
+  --include-acs  When set, delegates to ac_prioritizer.py which merges ready ACs
+                 from the AC store with ready tickets into a unified priority queue.
+                 Default is off (False) for backward compatibility — callers that
+                 do not pass the flag see identical output to prior versions.
 """
 
 from __future__ import annotations
@@ -468,6 +474,62 @@ def build_scope(args: argparse.Namespace) -> list[Path]:
     return [inbox, todo]
 
 
+def _find_worktree_root_from(start: Path) -> Path | None:
+    """Walk up from *start* to find the nearest directory containing a .git marker.
+
+    Args:
+        start: Starting path for the upward search.
+
+    Returns:
+        The worktree root Path, or None when no .git marker is found.
+    """
+    current = start.resolve()
+    for parent in [current, *current.parents]:
+        if (parent / ".git").exists():
+            return parent
+    return None
+
+
+def _delegate_to_ac_prioritizer(args: "argparse.Namespace") -> int:
+    """Delegate to ac_prioritizer.py when --include-acs is set.
+
+    Locates ac_prioritizer.py relative to the worktree root and invokes it as
+    a subprocess, forwarding --json when set. Returns its exit code.
+
+    Args:
+        args: Parsed argument namespace (must have output_json attribute).
+
+    Returns:
+        Exit code from ac_prioritizer.py, or 1 on location failure.
+    """
+    import subprocess  # noqa: PLC0415 — local import to keep module-level imports minimal
+
+    # Locate ac_prioritizer.py relative to the worktree root
+    script_dir = Path(__file__).resolve().parent
+    worktree_root = _find_worktree_root_from(script_dir)
+    if worktree_root is None:
+        print(
+            "ERROR: --include-acs: could not locate worktree root to find ac_prioritizer.py",
+            file=sys.stderr,
+        )
+        return 1
+
+    ac_prio_script = worktree_root / "scripts" / "ac_store" / "ac_prioritizer.py"
+    if not ac_prio_script.exists():
+        print(
+            f"ERROR: --include-acs: ac_prioritizer.py not found at {ac_prio_script}",
+            file=sys.stderr,
+        )
+        return 1
+
+    cmd = [sys.executable, str(ac_prio_script)]
+    if args.output_json:
+        cmd.append("--json")
+
+    result = subprocess.run(cmd)
+    return result.returncode
+
+
 def main(argv: list[str] | None = None) -> int:
     """Entry point for the ticket prioritizer CLI.
 
@@ -507,8 +569,24 @@ def main(argv: list[str] | None = None) -> int:
         dest="output_json",
         help="Emit machine-readable JSON instead of human-readable text.",
     )
+    parser.add_argument(
+        "--include-acs",
+        action="store_true",
+        dest="include_acs",
+        default=False,
+        help=(
+            "Merge ready ACs from the AC store with ready tickets into a unified "
+            "priority queue. Delegates to scripts/ac_store/ac_prioritizer.py. "
+            "Default: off (backward-compatible — existing callers are unaffected)."
+        ),
+    )
 
     args = parser.parse_args(argv)
+
+    # --include-acs: delegate entirely to ac_prioritizer.py
+    if args.include_acs:
+        return _delegate_to_ac_prioritizer(args)
+
     scope_paths = build_scope(args)
 
     tickets = discover_tickets(scope_paths)
@@ -547,5 +625,9 @@ DECISION HISTORY
   the renamed done folder (09_done → 99_done per ticket lifecycle manifest update). (#TICKETLESS reason=99-done-dir-name-alignment)
 - 2026-06-03 00:00 [Agent]: Appended missing tail-tags to both DECISION HISTORY entries
   so check_documentation pre-commit hook passes on downstream installs. (#EPIC-TemplateDocViolations/02)
+- 2026-06-05 10:10 [Agent]: Added --include-acs flag (default off) that delegates to
+  ac_prioritizer.py when set. Backward-compatible: callers without the flag get identical
+  output. Added _delegate_to_ac_prioritizer() and _find_worktree_root_from() helpers.
+  (#EPIC-ACDrivenDevelopment/02)
 ====================================================================
 """

@@ -1,4 +1,6 @@
 id: TKT-100e
+readiness: reviewed
+priority: medium
 title: "Your product vision shapes every requirement from the top down"
 component: ticket-creation
 level: L1

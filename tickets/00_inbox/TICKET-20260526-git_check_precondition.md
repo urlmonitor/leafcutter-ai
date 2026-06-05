@@ -36,6 +36,13 @@ advances_current_outcome: true
 ac_traceability:
   L0: BP-100
   L1: BP-100f
+  l2:
+    - BP-100f-1
+    - BP-100f-2
+    - BP-100f-3
+  l3:
+    - BP-100f-1-i
+    - BP-100f-2-i
   ac_path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100f.yaml
   routing: direct_to_ba
 ---

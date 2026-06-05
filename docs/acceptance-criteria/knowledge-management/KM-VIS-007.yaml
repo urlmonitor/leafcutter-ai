@@ -1,4 +1,6 @@
 id: KM-VIS-007
+readiness: reviewed
+priority: medium
 title: "Missing knowledge_query.py exits with clean error message"
 component: knowledge-management
 status: active

@@ -1,0 +1,31 @@
+id: BP-006a-3
+title: "Edge case: new skill directory added without registry entry is detected"
+component: build_pipeline
+level: L3
+status: active
+req_status: approved
+work_status: done
+criteria: |
+  Given a new directory exists under templates/skills/ that has no corresponding entry in skill_registry.json,
+  When test_no_orphaned_directories runs,
+  Then the test fails with an assertion listing the unregistered directory name,
+  And the failure message clearly identifies which directory lacks a registry entry.
+depends_on: [BP-006a-1]
+doc_links:
+  - tests/test_skill_registry.py::TestSkillRegistryBidirectional
+assigned_agent: test-runner
+estimated_complexity: S
+it_requirements: |
+  The test must produce a clear assertion message identifying the unregistered
+  directory name when a skill directory exists without a corresponding registry entry.
+  This is the negative-path counterpart to BP-006a-2.
+delivers_to: null
+expects_from:
+  BP-006a-1: "Registry structure must be in place for the detection logic to compare against"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/00_inbox/TICKET-20260604-FixFailingBuildPipelineTests.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

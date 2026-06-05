@@ -1,0 +1,45 @@
+id: FIN-100a-1
+title: "Successful baseline capture records failing tests from main HEAD"
+level: L2
+component: finalize
+status: active
+parent: FIN-100a
+criteria: |
+  Given finalize-feature is invoked on a feature branch
+  And the project has a test suite that can be executed
+  When Step 0 creates a temporary detached worktree at origin/main
+  And runs the full test suite inside that worktree
+  Then the workflow records the SHA of main HEAD as baseline_sha
+  And records each failing test ID (file::test_name pattern) as baseline_failures
+  And records the run timestamp as baseline_run_at
+  And removes the temporary worktree after the run completes
+  And the baseline data is forwarded to the triage agent in Step 3
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
+assigned_agent: "finalize-feature-workflow"
+estimated_complexity: M
+it_requirements: |
+  - Must create a detached worktree at origin/main (git worktree add --detach)
+  - Must dispatch test-runner inside the temporary worktree context
+  - Must capture structured failure output in file::test_name format
+  - Must record baseline_sha, baseline_failures array, and baseline_run_at timestamp
+  - Must remove the temporary worktree after the run (git worktree remove --force)
+  - Baseline data must be forwarded verbatim to step 3 triage dispatch
+delivers_to:
+  - agent: "test-failure-triage"
+    contract: "provides baseline_failures array (string[] | null), baseline_sha, and baseline_run_at"
+expects_from:
+  - agent: "test-runner"
+    contract: "returns structured failure list with test IDs in file::test_name format"
+doc_links:
+  - path: "docs/how-to/finalize-feature.md"
+    relevance: "Step 0 baseline capture description and graceful degradation semantics"
+  - path: "templates/workflows/finalize-feature.md"
+    relevance: "Step map row 0 — capture_baseline specification"
+  - path: "templates/agents/test-failure-triage.md"
+    relevance: "Input contract consuming baseline_failures, baseline_sha"
+depends_on: []
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

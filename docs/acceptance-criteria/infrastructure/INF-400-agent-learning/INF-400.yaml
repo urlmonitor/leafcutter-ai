@@ -1,4 +1,6 @@
 id: INF-400
+readiness: reviewed
+priority: medium
 title: "Every agent gets smarter the more your project uses it"
 component: infrastructure
 level: L0
@@ -22,7 +24,14 @@ doc_links:
     status: exists
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "split: INF-400g -> INF-400g + INF-400h, 2026-06-05"
+  - "split: INF-400 -> INF-400 + INF-700, 2026-06-05"
 superseded_by: null
-covered_by: []
+covered_by:
+  - INF-400a
+  - INF-400b
+  - INF-400d
+  - INF-400e
+  - INF-400f
 implemented_by: []

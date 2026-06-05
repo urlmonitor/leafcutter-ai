@@ -1,4 +1,6 @@
 id: ACS-100e-1
+readiness: reviewed
+priority: medium
 title: "Agent template can declare a default origin_agent value"
 component: ac-store
 level: L2

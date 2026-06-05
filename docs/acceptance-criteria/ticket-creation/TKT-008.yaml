@@ -1,4 +1,6 @@
 id: TKT-008
+readiness: reviewed
+priority: medium
 title: "Hook exits 0 when ticket references a valid active AC"
 component: ticket-creation
 status: active

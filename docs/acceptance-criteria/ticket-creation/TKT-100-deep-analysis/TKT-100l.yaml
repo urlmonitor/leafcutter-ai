@@ -1,4 +1,6 @@
 id: TKT-100l
+readiness: reviewed
+priority: medium
 title: "Specifications describe what happens, not how to code it"
 component: ticket-creation
 level: L1

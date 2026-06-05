@@ -1,0 +1,32 @@
+id: BP-200d
+title: "Audit any prompt file against the quality checklist on demand"
+component: build-pipeline
+level: L1
+status: active
+req_status: active
+work_status: done
+criteria: |
+  A reusable audit capability that checks any template against six quality rules.
+
+  Without modifying a file, you can run an audit that checks frontmatter
+  schema compliance, tool allowlist accuracy, compound-bash violations,
+  signoff protocol presence, spawn allowlist completeness, and stop-and-ask
+  rule coverage. The audit returns structured findings so you know exactly
+  what to fix.
+depends_on:
+  - BP-200
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-200d-1
+  - BP-200d-2
+  - BP-200d-2-i
+  - BP-200d-2-ii
+  - BP-200d-3
+  - BP-200d-4
+  - BP-200d-5
+implemented_by:
+  - "templates/skills/prompt-audit/SKILL.md"

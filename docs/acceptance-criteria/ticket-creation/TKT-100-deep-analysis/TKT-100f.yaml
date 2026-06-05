@@ -1,4 +1,6 @@
 id: TKT-100f
+readiness: reviewed
+priority: medium
 title: "Every feature is broken down into testable, unambiguous behaviors"
 component: ticket-creation
 level: L1

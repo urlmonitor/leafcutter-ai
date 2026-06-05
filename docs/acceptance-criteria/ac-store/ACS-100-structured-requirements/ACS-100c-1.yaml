@@ -1,10 +1,12 @@
 id: ACS-100c-1
+readiness: reviewed
+priority: medium
 title: "AC tree branching factor is capped to keep folders readable"
 component: ac-store
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given an L0 AC has more than 7 L1 children in its feature folder,
   Or an L1 AC has more than 5 L2 children in its feature folder,
@@ -19,11 +21,19 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Must complete in <2 seconds for repositories with up to 500 AC YAML files"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Validation failure messages must name the overcrowded parent AC and state both the current count and the applicable limit"
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/commit_guardian/test_check_ac_limits.py::TestCheckLimitsHardCap
+  - unit_tests/commit_guardian/test_check_ac_limits.py::TestCheckAcLimitsCLI::test_overcrowded_l0_exits_one
+  - unit_tests/commit_guardian/test_check_ac_limits.py::TestCheckAcLimitsCLI::test_overcrowded_l1_exits_one
+implemented_by:
+  - scripts/commit_guardian/check_ac_limits.py#_check_limits

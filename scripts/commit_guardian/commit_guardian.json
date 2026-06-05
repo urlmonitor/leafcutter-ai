@@ -715,6 +715,30 @@
                 ],
                 "pass_filenames": true,
                 "_comment": "EPIC-KnowledgeGraphQueryLayer/02b: Blocks commits when any staged docs/*.md file is missing a non-empty description: frontmatter field. Silently skips tickets/, templates/skills/, and templates/agents/ trees. Enforces the invariant established by the 02a backfill migration."
+            },
+            {
+                "id": "check-ac-tree-limits",
+                "name": "Check AC Tree Depth Limits (ACS-100c-1/c-2)",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_ac_limits.py",
+                "language": "system",
+                "files": "^docs/acceptance-criteria/.*\\.yaml$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "EPIC-ACTreeSplit: Enforces ACS-100c-1 hard caps (>7 L1s per L0, >5 L2s per L1) and emits ACS-100c-2 sparse advisory (<3 children). Blocks commits that push a parent over its child limit. Fail-open on subprocess/YAML errors. Load ac-tree-split skill to resolve violations."
+            },
+            {
+                "id": "check-ac-governance",
+                "name": "Check AC Governance (ACS-400 write-lock for requirement-defining fields)",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_ac_governance.py",
+                "language": "system",
+                "files": "^docs/acceptance-criteria/.*\\.yaml$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "ACS-400: Blocks commits where an implementation agent (python-coder, test-writer, etc.) modifies protected fields (criteria, title, req_status, depends_on) in AC YAML files. Only authorized requirement authors (product-owner-v3, business-analyst-v3, it-po-v3) and human users may write protected fields. Also enforces origin_agent on new files (ACS-400c-1) and amended_by updates on criteria changes (ACS-400c-2). Fail-open: exits 0 on any unexpected error."
             }
         ]
     },
@@ -756,5 +780,17 @@
         "max_states": 10,
         "max_classes": 10,
         "max_boundaries": 4
+    },
+    "post_merge": {
+        "_comment": "Post-merge hook configuration. Hooks in this section fire after git merge completes.",
+        "hooks": [
+            {
+                "id": "check_ac_done_on_merge",
+                "script": "scripts/commit_guardian/hooks/check_ac_done_on_merge.py",
+                "description": "Mark source ACs as work_status: done for all done tickets in the merge diff.",
+                "enabled": true,
+                "exit_on_failure": false
+            }
+        ]
     }
 }

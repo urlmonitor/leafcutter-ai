@@ -1,0 +1,29 @@
+id: BP-300a-7
+title: "debug.md falls back to prose skill for older Claude Code runtimes"
+component: build-pipeline
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260602-debug_js_workflow.md"
+criteria: |
+  Given templates/workflows/debug.md is updated
+  When a Claude Code runtime < 2.1.154 loads /debug
+  Then debug.md falls back to the prose skill at .claude/skills/debug/SKILL.md
+depends_on:
+  - BP-300c
+doc_links:
+  - path: templates/skills/debug/SKILL.md
+    relationship: implements
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: BP-300a-8
+expects_from: BP-300a-1
+it_requirements: "debug.md must detect Claude Code runtime version and fall back to SKILL.md for runtimes < 2.1.154; preserve all existing prose skill behavior as fallback path"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - "split: BP-300a -> BP-300a + BP-300c, 2026-06-05"
+superseded_by: null
+covered_by: []
+implemented_by: []

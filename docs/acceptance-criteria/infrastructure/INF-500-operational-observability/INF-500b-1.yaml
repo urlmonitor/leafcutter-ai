@@ -1,0 +1,37 @@
+id: INF-500b-1
+title: "Build system deploys feedback-analysis skill, feedback-analyst agent, and command"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260603-FeedbackAnalysisPipeline.md"
+criteria: |
+  Given the build system has deployed the leafcutter package
+  When the deploy target is inspected
+  Then .claude/skills/feedback-analysis/SKILL.md exists
+  And .claude/skills/feedback-analysis/scripts/trend_report.py exists
+  And .claude/agents/feedback-analyst.md exists
+  And .claude/commands/feedback-report.md exists
+depends_on:
+  - INF-500b
+doc_links:
+  - path: templates/skills/feedback-analysis/scripts/trend_report.py
+    relationship: implements
+    status: exists
+  - path: scripts/feedback/aggregate.py
+    relationship: related
+    status: exists
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: INF-500b-2
+expects_from: null
+it_requirements: "Must create four artifacts: SKILL.md, scripts/trend_report.py, feedback-analyst.md agent, and feedback-report.md command; all must be registered in build.py for deployment to .claude/ target"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

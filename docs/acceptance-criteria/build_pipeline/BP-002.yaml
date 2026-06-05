@@ -1,4 +1,6 @@
 id: BP-002
+readiness: reviewed
+priority: medium
 title: "install_hooks() emits a single WARNING when pre-commit binary is unresolvable"
 component: build_pipeline
 status: active

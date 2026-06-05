@@ -1,0 +1,35 @@
+id: BP-300a-1
+title: "debug.js dispatches three parallel Explore agents in Phase 1"
+component: build-pipeline
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260602-debug_js_workflow.md"
+criteria: |
+  Given debug.js exists at templates/workflows-js/debug.js
+  When a Claude Code runtime >= 2.1.154 loads /debug
+  Then it executes debug.js (not the prose skill)
+  And it dispatches three parallel Explore agents (database, backend, frontend/docs) in Phase 1
+depends_on:
+  - BP-300a
+doc_links:
+  - path: templates/workflows-js/build-ticket.js
+    relationship: related
+    status: exists
+  - path: templates/skills/debug/SKILL.md
+    relationship: superseded_by
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: BP-300a-2
+expects_from: null
+it_requirements: "Must create templates/workflows-js/debug.js following the same module.exports pattern as build-ticket.js; must use Promise.all for parallel agent dispatch; each investigator agent receives the user's issue description plus its domain scope"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

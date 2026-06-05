@@ -1,4 +1,6 @@
 id: TKT-015
+readiness: reviewed
+priority: medium
 title: "Hook is registered in commit_guardian.json hooks_manifest"
 component: ticket-creation
 status: active

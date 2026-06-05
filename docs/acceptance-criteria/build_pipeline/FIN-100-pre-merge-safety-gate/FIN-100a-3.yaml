@@ -1,0 +1,35 @@
+id: FIN-100a-3
+title: "Temporary baseline worktree is cleaned up on any exit path"
+level: L2
+component: finalize
+status: active
+parent: FIN-100a
+criteria: |
+  Given Step 0 has created a temporary worktree at /tmp/leafcutter-main-baseline-<ts>
+  When the workflow completes successfully (all steps finish)
+  Or the workflow halts early at any subsequent step (conflict, regression, user decline)
+  Then the temporary baseline worktree is removed from disk
+  And the worktree is removed from git's worktree list
+  And no stale /tmp/leafcutter-main-baseline-* directories persist after finalization
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
+assigned_agent: "finalize-feature-workflow"
+estimated_complexity: S
+it_requirements: |
+  - cleanupBaselineWorktree() must be called on every early-exit path (halts at step 2, 3, 4)
+  - Must use git worktree remove --force followed by rm -rf as a belt-and-suspenders cleanup
+  - Must swallow errors silently (best-effort cleanup — never throw from cleanup)
+  - baselineWorktreePath guard variable must be cleared after successful removal in step 0
+  - Path format is /tmp/leafcutter-main-baseline-<timestamp>
+delivers_to: []
+expects_from: []
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relevance: "cleanupBaselineWorktree() function and baselineWorktreePath guard variable"
+  - path: "docs/how-to/finalize-feature.md"
+    relevance: "Step 0 worktree lifecycle description"
+depends_on: []
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

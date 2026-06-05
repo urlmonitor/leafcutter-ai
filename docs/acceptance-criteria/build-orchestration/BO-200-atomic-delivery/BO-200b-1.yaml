@@ -1,0 +1,36 @@
+id: BO-200b-1
+title: "All envelope files are staged and committed as a single atomic unit"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a validated work envelope lists 4 changed files,
+  When the commit phase executes the commit,
+  Then all 4 files appear in a single git commit (not split across multiple commits),
+  And no files outside the envelope's list are included in the commit,
+  And the commit message matches the formatted message from the envelope.
+depends_on: [BO-200b, BO-200a-1]
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must stage only the files listed in the envelope, not the entire working directory"
+  - "Must verify that all listed files exist before staging"
+  - "Must produce exactly one git commit per envelope execution"
+delivers_to:
+  agent: python-coder
+  contract: "Successful git commit SHA, or failure status with error details"
+expects_from:
+  ac_id: BO-200a-1
+  contract: "Validated work envelope with changed_files list and commit_message string"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

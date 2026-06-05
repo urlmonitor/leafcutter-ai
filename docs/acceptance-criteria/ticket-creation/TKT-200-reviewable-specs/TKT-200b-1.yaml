@@ -1,0 +1,41 @@
+id: TKT-200b-1
+title: "Boundary doc states what a component owns and what it does not own"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a feature touches a component named "build-orchestration",
+  When the boundary documentation step runs for that component,
+  Then it produces a document that contains:
+    - a section listing responsibilities the component owns (at least 1 item),
+    - a section listing responsibilities the component does NOT own (at least 1 item),
+    - a section listing adjacent components and how they interact,
+  And each listed responsibility references the AC IDs that assign it to this component.
+depends_on: [TKT-200b]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/architecture/components/ticket-creation.md
+    relationship: describes
+    status: planned
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Must derive all responsibility statements from AC YAML fields, never from general knowledge"
+  - "Must include AC ID references as traceable citations for each responsibility claim"
+  - "Must handle components with no adjacent relationships gracefully"
+delivers_to:
+  agent: llm-expert
+  contract: "Component boundary document (.md) with owns/does-not-own/adjacency sections, each citing AC IDs"
+expects_from:
+  ac_id: TKT-200b
+  contract: "L2/L3 AC YAML files with component field populated, available in a feature folder"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

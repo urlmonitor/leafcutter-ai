@@ -1,0 +1,34 @@
+id: ACS-100c-5
+title: "Parent AC amendment does not invalidate existing child ACs"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an L1 AC "ACS-100a" has 3 L2 children with status "active",
+  When a PO agent amends the L1's criteria field (widening or narrowing scope),
+  Then all 3 child L2 ACs retain their status "active" after the amendment,
+  And the AC validator does not flag the children as invalid
+    solely because the parent's criteria text changed,
+  And the amended_by field is updated only on the parent L1,
+    not propagated to the children.
+depends_on: [ACS-100c, ACS-100c-4]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must not propagate amended_by entries from parent to children"
+  - "Must preserve child status: active when parent criteria change"
+  - "Validator must treat parent-child as loosely coupled (no automatic invalidation cascade)"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

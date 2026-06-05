@@ -60,6 +60,8 @@ _PROSE_FILE_PREFIXES = (
     "tickets\\",
     "docs/retrospectives/",
     "docs\\retrospectives\\",
+    "docs/acceptance-criteria/",
+    "docs\\acceptance-criteria\\",
     "templates/skills/",
     "templates\\skills\\",
 )

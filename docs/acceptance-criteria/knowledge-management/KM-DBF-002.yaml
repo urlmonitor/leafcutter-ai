@@ -1,4 +1,6 @@
 id: KM-DBF-002
+readiness: reviewed
+priority: medium
 title: "Write mode inserts description into frontmatter preserving content"
 component: knowledge-management
 status: active

@@ -1,0 +1,32 @@
+id: INF-600
+title: "Understand any agent without reading its source"
+component: infrastructure
+level: L0
+status: active
+criteria: |
+  Every agent template carries standardized metadata that the build enforces.
+
+  Agent templates follow a consistent self-description contract so that
+  automated tooling can extract profiles without hand-written docs. Templates
+  that fail to declare required metadata are rejected at build time, ensuring
+  the system's agent catalog is always complete and accurate.
+depends_on:
+  - INF-400
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/creating-an-agent-template.md
+    relationship: describes
+    status: exists
+  - path: docs/agents/README.md
+    relationship: describes
+    status: exists
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by:
+  - reason: "split: INF-600 -> INF-600 + INF-900, 2026-06-05"
+  - reason: "fix grouping: swap b<->c so INF-600 keeps infrastructure (a,b,g,h), INF-900 keeps visibility (c,d,e,f)"
+superseded_by: null
+covered_by: [INF-600i, INF-600j, INF-600b, INF-600g, INF-600h]
+implemented_by: []

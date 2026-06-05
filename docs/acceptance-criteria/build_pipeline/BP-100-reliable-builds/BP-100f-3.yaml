@@ -1,0 +1,32 @@
+id: BP-100f-3
+title: "finalize-feature happy path is unchanged inside a valid git worktree"
+component: build-pipeline
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260526-git_check_precondition.md"
+criteria: |
+  Given the finalize-feature agent is invoked inside a valid git worktree
+  When git rev-parse --is-inside-work-tree returns true
+  Then the agent proceeds with all steps unchanged
+  And no new prompts or altered step numbering are introduced beyond the added Step 0
+depends_on:
+  - BP-100f
+doc_links:
+  - path: templates/agents/finalize-feature.md
+    relationship: implements
+    status: exists
+  - path: docs/how-to/finalize-feature.md
+    relationship: related
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+delivers_to: test-runner
+expects_from: BP-100f-1
+it_requirements: "Regression test confirming that the happy path (valid git worktree) is unaffected by the new Step 0 guard; must verify all original steps still execute"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

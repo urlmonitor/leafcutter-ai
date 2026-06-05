@@ -1,0 +1,34 @@
+id: BO-300c-1
+title: "Finalize command uses epic or branch name, not a raw path, in all three locations"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given a completion message is rendered in any of the three locations
+    (build-epic.js, build-feature.md, or build-single-ticket),
+  When the /finalize-feature command is included in the output,
+  Then the command argument is the epic name (e.g. EPIC-Foo) or branch name (e.g. feature/my-ticket),
+  And the command argument is never a raw file path (e.g. tickets/00_inbox/epics/EPIC-Foo),
+  And the user can copy-paste the command directly without path-to-name conversion.
+depends_on: [BO-300c]
+doc_links:
+  - templates/workflows-js/build-epic.js
+  - templates/skills/build-single-ticket/SKILL.md
+  - templates/workflows/build-feature.md
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "build-epic.js must extract the epic name from epicPath using path splitting (not string manipulation on the full path)"
+  - "build-single-ticket must use the BRANCH variable directly"
+  - "build-feature.md must use EPIC_NAME placeholder, not EPIC_FOLDER"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [BO-300c-1-1]
+implemented_by:
+  - tickets/99_done/TICKET-20260604-StandardizeBuildCompletionOutput.md

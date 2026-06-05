@@ -1,4 +1,6 @@
 id: ACS-300k
+readiness: reviewed
+priority: medium
 title: "Agents use components.json as the single source of component knowledge"
 component: ac-store
 level: L1

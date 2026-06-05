@@ -1,0 +1,24 @@
+id: INF-800e
+title: "Clear boundary between writing new code and restructuring existing code"
+component: infrastructure
+level: L1
+status: active
+criteria: |
+  The right specialist handles the right job, every time.
+
+  When a task involves targeted edits within a single module -- adding a
+  function, fixing a bug, extending behavior -- the code writer handles
+  it. When a task involves structural changes that cross module boundaries
+  -- extractions, splits, renames, merges -- the restructuring specialist
+  handles it. The routing boundary is defined in structured agent
+  frontmatter (not prose), so supervisors can dispatch automatically
+  and unambiguously.
+depends_on:
+  - INF-800
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

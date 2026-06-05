@@ -1,0 +1,38 @@
+id: FIN-100e-2
+title: "Ticket creation failure is non-fatal and does not halt the workflow"
+level: L2
+component: finalize
+status: active
+parent: FIN-100e
+criteria: |
+  Given Step 6a is creating tracking tickets for pre-existing failures
+  When the create-ticket agent dispatch throws an error for one entry
+  Or the create-ticket agent returns a response without a ticket_path
+  Then the workflow logs a warning with the test ID and error details
+  And pushes null into created_tracking_tickets as a sentinel
+  And continues processing the remaining triage entries
+  And the workflow does NOT halt — it proceeds to Step 6b (ticket closing)
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
+assigned_agent: "finalize-feature-workflow"
+estimated_complexity: S
+it_requirements: |
+  - Must wrap each create-ticket dispatch in try/catch — errors are non-fatal
+  - On catch: log console.warn with test_id and error.message
+  - Must push null into created_tracking_tickets as a sentinel for failed dispatches
+  - Must also handle missing ticket_path in successful responses (push null + warn)
+  - Loop must continue processing remaining entries regardless of individual failures
+delivers_to: []
+expects_from:
+  - agent: "create-ticket"
+    contract: "returns response with ticket_path field (or may throw/return incomplete response)"
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relevance: "Step 6a error handling — try/catch with null sentinel (lines 688-729)"
+  - path: "templates/workflows/finalize-feature.md"
+    relevance: "Step 6 — non-fatal failure policy for ticket creation"
+depends_on: []
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

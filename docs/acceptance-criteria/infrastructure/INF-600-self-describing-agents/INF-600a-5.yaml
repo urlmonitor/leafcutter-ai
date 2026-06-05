@@ -1,0 +1,50 @@
+id: INF-600a-5
+title: "Agent frontmatter declares structured pre-flight reads"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+criteria: |
+  Given an agent template file that instructs the agent to read
+    specific documents before starting work
+    (e.g. python-coder reads: ticket body, cited ADRs,
+     docs/conventions/*.md files)
+  When the frontmatter is parsed
+  Then it contains a `pre_flight_reads` array
+  And each element in the array has fields:
+    - `source` (string: a path pattern or description,
+       e.g. "ticket_path", "docs/conventions/*.md",
+       "cited ADRs from ticket body")
+    - `required` (boolean: true if the agent must always read this,
+       false if conditional)
+    - `condition` (string, required when `required` is false,
+       e.g. "when ticket references ADR files")
+  And the array includes every document the agent's Pre-Flight Reads
+    section instructs it to read
+  And the card generator can produce the "Pre-Flight Self-Reads" row
+    in the Knowledge Flow table from this array without parsing
+    the template prose body
+depends_on:
+  - INF-600i
+doc_links:
+  - path: docs/agents/cards/python-coder.card.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/python-coder.md
+    relationship: describes
+    status: exists
+  - path: docs/agents/conventions.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A pre_flight_reads array in agent frontmatter that the card generator reads to populate the knowledge-flow table's self-read entries"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

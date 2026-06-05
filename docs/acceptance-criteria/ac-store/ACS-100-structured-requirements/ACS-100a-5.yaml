@@ -1,4 +1,6 @@
 id: ACS-100a-5
+readiness: reviewed
+priority: medium
 title: "superseded_by field enforces conditional constraint with status"
 component: ac-store
 level: L2
@@ -14,7 +16,7 @@ criteria: |
   And when status is "active" or "deprecated", superseded_by must be null
     (a non-null value with status != "superseded_by" fails validation),
   And the error message explains the status/superseded_by coupling rule.
-depends_on: [ACS-100a]
+depends_on: [ACS-100i]
 doc_links: []
 assigned_agent: python-coder
 estimated_complexity: S
@@ -22,7 +24,8 @@ delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-04
-amended_by: []
+amended_by:
+  - "split: ACS-100a -> ACS-100a + ACS-100i, 2026-06-05"
 superseded_by: null
 covered_by: []
 implemented_by: []

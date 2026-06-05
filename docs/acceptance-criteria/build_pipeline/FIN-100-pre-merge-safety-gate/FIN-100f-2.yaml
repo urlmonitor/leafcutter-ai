@@ -1,0 +1,36 @@
+id: FIN-100f-2
+title: "Step execution order is strictly sequential: 2 before 3 before 4"
+level: L2
+component: finalize
+status: active
+parent: FIN-100f
+criteria: |
+  Given finalize-feature.js uses sequential await calls (not parallel dispatch)
+  When the workflow executes
+  Then Step 2 (merge origin/main into worktree) completes before Step 3 begins
+  And Step 3 (run tests + triage) completes before Step 4 begins
+  And no parallel() dispatch is used for Steps 2, 3, or 4
+  And the ordering is enforced by the JavaScript runtime's sequential await semantics
+  So that the test run always validates the post-merge state (not the pre-merge state)
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
+assigned_agent: "finalize-feature-workflow"
+estimated_complexity: S
+it_requirements: |
+  - Steps 2, 3, and 4 must each use sequential await (not parallel() dispatch)
+  - No Promise.all or parallel() invocation may wrap these three steps together
+  - The ordering is enforced by JavaScript's sequential await semantics (single-threaded event loop)
+  - Step 3 test run MUST validate the post-merge state (produced by step 2), not the pre-merge state
+  - The run() function is async and uses top-level sequential awaits for each step
+delivers_to: []
+expects_from: []
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relevance: "Sequential await pattern: step 2 (line 322), step 3 (line 404), step 4 (line 567)"
+  - path: "templates/workflows/finalize-feature.md"
+    relevance: "Step map — sequential ordering guarantee described in step 3 row"
+depends_on: []
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

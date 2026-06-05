@@ -1,4 +1,6 @@
 id: BP-100b-6-i
+readiness: reviewed
+priority: medium
 title: "Parity test failure message names the missing layer and category"
 component: build-pipeline
 level: L3

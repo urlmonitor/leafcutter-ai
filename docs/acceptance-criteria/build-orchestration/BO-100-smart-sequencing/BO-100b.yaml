@@ -1,4 +1,6 @@
 id: BO-100b
+readiness: reviewed
+priority: medium
 title: "Work runs in parallel up to a safe limit you control"
 component: build-orchestration
 level: L1

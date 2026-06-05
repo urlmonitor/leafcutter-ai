@@ -1,0 +1,32 @@
+id: BP-100g-2
+title: "build.py exits non-zero when SKILL.md name does not match directory name"
+component: build-pipeline
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-SkillFrontmatterValidation.md"
+criteria: |
+  Given a SKILL.md where the name key does not match the skill directory name
+  When python scripts/build.py --target-dir <target> is run
+  Then build.py exits non-zero
+  And the error message names the file and states the name mismatch
+depends_on:
+  - BP-100g
+doc_links:
+  - path: scripts/build.py
+    relationship: implements
+    status: exists
+  - path: docs/reference/skill-frontmatter.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: test-writer
+expects_from: null
+it_requirements: "Compare frontmatter 'name' key against the parent directory name; use Path.parent.name for comparison; must be case-sensitive match"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

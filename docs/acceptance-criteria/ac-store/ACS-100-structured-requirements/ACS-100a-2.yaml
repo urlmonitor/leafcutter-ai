@@ -1,4 +1,6 @@
 id: ACS-100a-2
+readiness: reviewed
+priority: medium
 title: "ID field enforces PREFIX-NNN regex pattern"
 component: ac-store
 level: L2

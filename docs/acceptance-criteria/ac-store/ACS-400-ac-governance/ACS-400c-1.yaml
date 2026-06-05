@@ -1,0 +1,40 @@
+id: ACS-400c-1
+title: "New AC creation records origin_agent identifying the author"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a new AC YAML file is staged for commit with a populated criteria field,
+  When the governance check inspects the file,
+  Then the file must contain a non-empty origin_agent field,
+  And the origin_agent value must match the identity of the committing agent,
+  And if origin_agent is absent or empty, the commit is blocked with an error
+    stating "new AC file requires origin_agent to identify the criteria author".
+depends_on: [ACS-400c]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must follow the fail-open convention per docs/reference/claude-code-hooks.md"
+  - "Must detect whether a file is new (not previously committed) vs modified using git status of the staged diff"
+  - "Must validate origin_agent is non-empty but must NOT enforce that it matches the committing agent if the committer is authorized (requirement authors may set origin_agent to their own identity)"
+  - "Must not block when origin_agent is present and non-empty, even if it does not match the detected committer identity"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

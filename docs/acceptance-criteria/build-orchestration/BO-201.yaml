@@ -1,4 +1,6 @@
 id: BO-201
+readiness: reviewed
+priority: medium
 title: "ac-fulfillment-gate phase gate — ok/blocker verdict with per-AC details"
 component: build-orchestration
 status: active

@@ -59,3 +59,25 @@ DECISION HISTORY
 ### Architectural Context Passing
 - **Upstream Agents** (Architects, BAs, Ticket Creators): Must read global architecture (docs/vision.md, docs/components.json) and embed relevant local architecture into the tickets they create.
 - **Downstream Agents** (Coders, Testers): Must strictly follow the architectural constraints provided in the ticket and reject tickets that lack sufficient context.
+
+## AC Store — Write-Access Rules
+
+The AC store (`docs/acceptance-criteria/`) is the authoritative definition of "done".
+Requirement-defining fields are write-locked to authorized agents only.
+
+**Authorized agents for protected fields:** `product-owner-v3`, `business-analyst-v3`, `it-po-v3`, human user (any identity not in `config/agent_registry.json`)
+
+**Protected fields** (only authorized agents may add or modify):
+- `criteria` — the acceptance test definition
+- `title` — the human-readable AC name
+- `req_status` — the requirement lifecycle state
+- `depends_on` — upstream AC dependencies
+
+**Open fields** (any agent may modify):
+- `work_status` — implementation progress state
+- `implemented_by` — list of agents/tickets that implemented this AC
+- `covered_by` — list of test files that cover this AC
+
+**Violation blocks the commit.** The `check-ac-governance` pre-commit hook enforces
+these rules automatically. Any attempt by an implementation agent to modify a
+protected field will exit 1 and output a JSON block decision to stdout.

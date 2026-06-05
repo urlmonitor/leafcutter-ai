@@ -40,11 +40,43 @@ Run `check_ac_schema.py` to validate your changes before committing.
 Add `status: deprecated` to the AC YAML file. Deprecated ACs are retained
 for audit purposes but are excluded from active enforcement.
 
+## Readiness lifecycle
+
+Every AC YAML must carry a `readiness` field that controls whether the
+scanner may pick it up for ticket generation:
+
+| Readiness | Set by | Scanner picks up? |
+|---|---|---|
+| `draft` | product-owner-v3 or business-analyst-v3 | No |
+| `reviewed` | it-po-v3 (after enrichment) | No |
+| `approved` | User (via `/build-ac` or manual edit) | Yes |
+
+New ACs are always created with `readiness: draft`. The scanner
+(`scripts/ac_store/scan_ac_store.py`) silently ignores all ACs that are
+not `readiness: approved`.
+
+## Priority field
+
+Every AC YAML must carry a `priority` field used by the scanner for
+ranking. Valid values: `critical`, `high`, `medium`, `low`.
+
+The scanner sorts ready ACs by priority first (critical → low), then by
+`estimated_complexity` (S → XL) within the same priority tier. Users set
+`priority` at approval time via manual edit.
+
+## Backfill
+
+Existing ACs authored before this field was introduced were backfilled
+with `readiness: reviewed` and `priority: medium` by
+`scripts/ac_store/backfill_readiness.py`. None of these will be picked up
+by the scanner until the user promotes them to `readiness: approved`.
+
 ## Schema enforcement
 
-The `check_ac_schema.py` hook (installed by `build.py`) validates every
-`.yaml` file under this directory against `config/ac_schema.json` on every
-`git commit`. Schema violations block the commit.
+The `validate_ac_schema.py` script (`scripts/ac_store/validate_ac_schema.py`)
+validates every `.yaml` file under this directory, enforcing the required
+`readiness` and `priority` fields on every `git commit`. Schema violations
+block the commit.
 
 See `docs/architecture/adrs/` for the ADR that introduced the AC store
 (search for "ACTraceability").

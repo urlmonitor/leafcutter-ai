@@ -41,6 +41,7 @@ from _signoff_parity_checks import (  # noqa: E402
     VALID_STATUSES,
     _build_signoffs_map,
     _check_done_folder,
+    _check_done_folder_move,
     _check_enum_membership,
     _check_orphans,
     _check_parity,
@@ -67,6 +68,7 @@ __all__ = [
     "VALID_STATUSES",
     "_build_signoffs_map",
     "_check_done_folder",
+    "_check_done_folder_move",
     "_check_enum_membership",
     "_check_orphans",
     "_check_parity",
@@ -115,6 +117,7 @@ def _validate_ticket_content(content: str, ticket_path: str, valid_components: s
         return ["could not parse YAML frontmatter (missing or malformed)"]
 
     violations: list[str] = []
+    violations.extend(_check_done_folder_move(ticket_path))
     violations.extend(validate_ticket_required_fields(fm))
     violations.extend(validate_ticket_type_enum(fm))
     violations.extend(validate_ticket_status_enum(fm))

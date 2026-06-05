@@ -1,4 +1,6 @@
 id: ACS-100e-2
+readiness: reviewed
+priority: medium
 title: "Explicit origin_agent in AC creation overrides the template default"
 component: ac-store
 level: L2

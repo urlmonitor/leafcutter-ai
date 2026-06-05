@@ -1,0 +1,42 @@
+id: INF-600a-6-ii
+title: "related_agent in a behavioral pattern is not constrained to the agent's spawn_allowlist"
+component: infrastructure
+level: L3
+status: active
+work_status: todo
+criteria: |
+  Given an agent template where a behavioral_patterns entry has
+    related_agent set to an agent that is NOT in the template's
+    spawn_allowlist
+    (e.g. python-coder's "Stop-and-Ask" pattern references
+     "sql-coder" as the related_agent, but python-coder does not
+     spawn sql-coder — it halts and reports that sql-coder is needed)
+  When the build system validates the agent template
+  Then validation passes without error
+  And the related_agent field is not cross-checked against
+    spawn_allowlist (because the relationship is "defers to"
+    or "reports need for", not "spawns")
+  And the card generator renders the related_agent as a
+    cross-reference link in the Behavioral Patterns table
+    regardless of whether a spawn relationship exists
+depends_on:
+  - INF-600a-6
+doc_links:
+  - path: docs/agents/cards/python-coder.card.md
+    relationship: describes
+    status: exists
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: INF-600a-6
+  contract: "behavioral_patterns array with related_agent field exists in agent frontmatter"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

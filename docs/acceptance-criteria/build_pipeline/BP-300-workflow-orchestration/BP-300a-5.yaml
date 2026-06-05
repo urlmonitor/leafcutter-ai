@@ -1,0 +1,33 @@
+id: BP-300a-5
+title: "Phase 4 finalize prompts user and respects their choice"
+component: build-pipeline
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260602-debug_js_workflow.md"
+criteria: |
+  Given build-ticket succeeds
+  When Phase 4 (finalize) is reached
+  Then the workflow calls prompt() asking the user whether to finalize or skip
+  And it respects the user's answer before proceeding or returning
+depends_on:
+  - BP-300c
+doc_links:
+  - path: templates/workflows-js/build-ticket.js
+    relationship: related
+    status: exists
+  - path: templates/workflows-js/finalize-feature.js
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: BP-300a-6
+expects_from: BP-300a-4
+it_requirements: "Must call prompt() asking user whether to finalize; must respect the user's answer (yes -> call finalize workflow, no/skip -> return without finalizing); finalize_result in return must be null when skipped"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - "split: BP-300a -> BP-300a + BP-300c, 2026-06-05"
+superseded_by: null
+covered_by: []
+implemented_by: []

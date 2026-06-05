@@ -1,4 +1,6 @@
 id: TKT-100
+readiness: reviewed
+priority: medium
 title: "From idea to ready-to-build spec in minutes"
 component: ticket-creation
 level: L0
