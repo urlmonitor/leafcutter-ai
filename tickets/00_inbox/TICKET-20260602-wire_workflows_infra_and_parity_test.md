@@ -24,16 +24,16 @@ files_touched:
   - docs/build-drift-hook.md
 agents:
   architect-review: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
-  documentation-expert: needed
-  pr-reviewer: needed
+  test-runner: signed_off
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
-  explanation-author: needed
-  how-to-author: needed
+  explanation-author: signed_off
+  how-to-author: signed_off
 ac_traceability:
   l1: BP-100b
   l2:
@@ -122,15 +122,15 @@ Then a .claude/workflows/ row is present
 
 ## Sign-offs
 
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
-- [ ] documentation-expert
-- [ ] pr-reviewer
+- [x] test-writer — 2026-06-05 10:00
+- [x] python-coder — 2026-06-05 10:15
+- [x] test-runner — 2026-06-05 10:20
+- [x] documentation-expert — 2026-06-05 10:30
+- [x] pr-reviewer — 2026-06-05 10:40
 - [ ] commit
 - [ ] pull-request
-- [ ] explanation-author
-- [ ] how-to-author
+- [x] explanation-author — 2026-06-05 10:35
+- [x] how-to-author — 2026-06-05 10:35
 
 ## AC Traceability
 
@@ -152,6 +152,64 @@ Then a .claude/workflows/ row is present
 AC files: `docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100b-*.yaml`
 
 ## Comments
+
+### 2026-06-05 10:00 — ticket-supervisor (status: ok)
+feedback-id: (submit-failed)
+test_requirements empty — test-writer phase skipped (tests/test_build_artifact_parity.py already exists as pre-written deliverable; test-runner will validate at priority 9)
+
+### 2026-06-05 10:15 — python-coder (status: ok)
+feedback-id: fb_2026-06-05_3db971e3
+completion_manifest:
+  shim_map_entry_added: true
+  output_mappings_workflows_js_section: true
+  managed_artifact_dirs_workflows_key: true
+  source_manifests_workflows_key: true
+  check_output_drift_claude_workflows_path: true
+  parity_test_all_pass: true
+
+All four infrastructure layers verified in scripts/build_helpers.py, scripts/build_phases.py, scripts/build.py, and templates/scripts/commit_guardian/check_output_drift.py. Parity test (tests/test_build_artifact_parity.py) passes 5/5 assertions. Deleted build-output files (scripts/commit_guardian/, scripts/doc_compliance/, scripts/feedback/, scripts/sync_platforms/) were restored via git restore — these were cleaned by build.py during worktree setup and are needed as source files. Two pre-existing worktree-specific test failures exist in test_emit_entry_cwd.py (repo root resolution differs in git worktree context — not introduced by this ticket).
+
+### 2026-06-05 10:20 — test-runner (status: ok)
+feedback-id: fb_2026-06-05_9487904e
+completion_manifest:
+  parity_tests_green: true
+  shim_tests_green: true
+  no_regressions_in_ticket_scope: true
+
+Tests run: tests/test_build_artifact_parity.py (5/5 pass, 24 subtests pass) and tests/test_build_shims.py (5/5 pass). Broader suite: 280 pass, 2 pre-existing failures in test_emit_entry_cwd.py (worktree path resolution — not caused by this ticket; passes on main branch). Collection errors in test_known_failing_tests.py and test_transform_decision_history.py (project-specific modules not in portable build — also pre-existing).
+
+### 2026-06-05 10:30 — documentation-expert (status: ok)
+feedback-id: fb_2026-06-05_a978f21b
+completion_manifest:
+  build_pipeline_mermaid_updated: true
+  consolidated_output_root_workflows_row: true
+  build_drift_hook_checklist_section: true
+
+Updated docs/build-pipeline.md mermaid diagram to add build_workflow_scripts phase node outputting to .claude/workflows/. Added .claude/workflows/ row to shimmed outputs table in docs/explanation/consolidated-output-root.md. Added §5.4 developer checklist "Adding a New Template Category" to docs/build-drift-hook.md with the four-layer update requirement and reference to the parity test as enforcement gate.
+
+### 2026-06-05 10:35 — explanation-author (status: ok)
+feedback-id: fb_2026-06-05_ad68680d
+completion_manifest:
+  consolidated_output_root_workflows_explanation: true
+
+docs/explanation/consolidated-output-root.md updated with .claude/workflows/ row in the shimmed outputs table. This explains the new workflow scripts output category to developers adopting leafcutter. No new standalone explanation document was needed — the existing doc was the appropriate home.
+
+### 2026-06-05 10:35 — how-to-author (status: ok)
+feedback-id: fb_2026-06-05_92b4eb71
+completion_manifest:
+  build_drift_hook_new_category_checklist: true
+
+Added §5.4 "Adding a New Template Category — Developer Checklist" to docs/build-drift-hook.md. The checklist enumerates all four infrastructure layers that must be updated (shim map, output mappings, managed artifact dirs, source manifests) and references the parity test as the mechanical enforcement gate. This serves as the definitive how-to for developers adding new build phases.
+
+### 2026-06-05 10:40 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-05_a2594ef9
+completion_manifest:
+  all_acs_satisfied: true
+  tests_green: true
+  docs_complete: true
+  no_scope_violations: true
+
+All 12 ACs (BP-100b-1 through BP-100b-10, BP-100b-5-i, BP-100b-6-i) are satisfied. Core implementation was committed in a6ca06a on main (already on this branch). Documentation additions complete: build-pipeline.md mermaid diagram updated, consolidated-output-root.md shim table updated, build-drift-hook.md §5.4 developer checklist added. Parity tests 5/5 pass. No scope violations detected. The two pre-existing test failures in test_emit_entry_cwd.py are worktree-specific and not caused by this ticket.
 
 ## Implementation Tasks
 
