@@ -1,0 +1,36 @@
+id: ACD-100a-2
+title: "Sequence diagram for /build-ac execution flow (scan -> generate -> build -> link)"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given docs/architecture/diagrams/ is the canonical location for architecture diagrams,
+  When the /build-ac command documentation is reviewed,
+  Then a Mermaid sequence diagram exists at
+    docs/architecture/diagrams/build-ac-flow.md,
+  And it shows the actors: User, build-ac agent, ac_prioritizer.py,
+    generate_ticket_from_ac.py, /build-feature, mark_ac_done.py,
+  And the sequence covers:
+    1. build-ac calls ac_prioritizer.py -> returns top AC
+    2. build-ac presents AC to user with yes/review/skip prompt
+    3. On yes: calls generate_ticket_from_ac.py -> returns ticket path
+    4. Invokes /build-feature on the ticket (or hands off to user)
+    5. On completion: calls mark_ac_done.py -> sets work_status: done
+    6. On skip: sets work_status: deferred -> loops to step 1,
+  And each decision point (yes/review/skip) is shown as an alt block,
+  And the diagram has frontmatter with parent link to agent_delivery_workflows.md.
+depends_on: [ACD-100a]
+doc_links:
+  - docs/architecture/diagrams/build-ac-flow.md
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

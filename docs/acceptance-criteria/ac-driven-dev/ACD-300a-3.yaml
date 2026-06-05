@@ -1,0 +1,33 @@
+id: ACD-300a-3
+title: "Triage detects already-covered requests and surfaces existing ACs"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the user's request is semantically equivalent to ACs that already exist
+    in the store (regardless of readiness state),
+  When the Haiku triage agent evaluates the request against the AC store,
+  Then it classifies the route as "covered",
+  And the response includes the list of existing AC ids and titles that cover
+    the request,
+  And the orchestration workflow presents these to the user with the message:
+    "These existing ACs already cover your request. Would you like to proceed
+    anyway (force new), amend an existing AC, or cancel?",
+  And if the user selects "cancel" no authoring agents are invoked,
+  And if the user selects "amend" the IT PO v3 route is used on the specified AC,
+  And if the user selects "force new" the triage re-evaluates as "strategic"
+    and proceeds with the full pipeline.
+depends_on: [ACD-300a]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,27 @@
+id: ACD-300d
+title: "All authoring output is written to the AC store, never to ticket files"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  The /create-ac workflow produces only AC YAML files in
+  docs/acceptance-criteria/<component>/. It never creates ticket files in
+  tickets/00_inbox/. Ticket generation from ACs is a separate downstream
+  concern handled by the AC scanner (ticket 01). This separation ensures
+  that requirements can be authored, reviewed, and approved independently
+  of implementation scheduling, and that the AC store remains the single
+  source of truth for what the system should do.
+depends_on: [ACD-300, ACD-300b]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-300d-1]
+implemented_by: []

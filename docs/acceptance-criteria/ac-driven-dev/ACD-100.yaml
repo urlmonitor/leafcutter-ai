@@ -1,0 +1,26 @@
+id: ACD-100
+title: "AC-driven development is documented with flow diagrams and user guides"
+component: ac-driven-dev
+level: L0
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the AC-driven development system is implemented,
+  When a new developer or operator reads the documentation,
+  Then they can understand the full lifecycle from user intent to shipped code,
+  And every state transition and actor handoff is documented in a flow diagram,
+  And a how-to guide explains how to use /build-ac and the readiness pipeline.
+depends_on: []
+doc_links:
+  - docs/architecture/agent_delivery_workflows.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-100a, ACD-100b, ACD-100c, ACD-100d]
+implemented_by: []

@@ -1,0 +1,29 @@
+id: ACD-300a-1
+title: "Triage routes 'new feature / strategic' requests to PO v3 first"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the user's request describes a new capability, a product goal, or a
+    strategic change that does not map to any existing L1 AC in the store,
+  When the Haiku triage agent evaluates the request against the AC store,
+  Then it classifies the route as "strategic",
+  And the classification signal includes: no matching L1 parent found,
+    request describes user-observable outcome or new system capability,
+    request does not reference specific existing components or ACs,
+  And the routing decision dispatches to: PO v3 -> BA v3 -> IT PO v3
+    (full pipeline).
+depends_on: [ACD-300a]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

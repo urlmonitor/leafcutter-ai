@@ -1,0 +1,34 @@
+id: ACD-200a
+title: "BA v3 produces documentation ACs when decomposing features with flows or state"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given business-analyst-v3 is decomposing an L1 feature AC into L2/L3 behaviors,
+  When the feature introduces any of:
+    - A new user-facing command or slash command
+    - A new multi-step workflow with more than 2 actors
+    - A new state machine (field with >2 states and explicit transitions)
+    - A new architectural component (new script, agent, or hook),
+  Then the BA v3 MUST also produce at least one documentation AC specifying:
+    - A flow/sequence diagram AC for each multi-actor interaction
+    - A state machine diagram AC for each new state field
+    - A how-to guide AC for each new user-facing command,
+  And documentation ACs are tagged with assigned_agent: architecture-diagram-author
+    or documentation-expert as appropriate,
+  And documentation ACs reference the behavioral ACs they document via depends_on.
+depends_on: [ACD-200]
+doc_links:
+  - templates/agents/business-analyst-v3.md
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-200a-1]
+implemented_by: []
