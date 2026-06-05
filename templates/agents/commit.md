@@ -111,13 +111,18 @@ Proceed to Step 4 only on **yes** in the same turn. On **edit**, redraft. On
 Use a heredoc so multi-line bodies render correctly:
 
 ```bash
-git commit -m "$(cat <<'EOF'
+COMMIT_AGENT_MODE=1 git commit -m "$(cat <<'EOF'
 <subject>
 
 <optional body>
 EOF
 )"
 ```
+
+The `COMMIT_AGENT_MODE=1` prefix is required. The `enforce_commit_delegation`
+PreToolUse hook blocks any `git commit` call that does not originate from within
+this agent (where `COMMIT_AGENT_MODE=1` is set). Without the prefix, the hook
+will block the commit with an actionable error.
 
 Do **NOT** use `--no-verify`, `--no-gpg-sign`, or `-c commit.gpgsign=false`
 unless the user has explicitly authorised it in the same turn. The Git Safety
@@ -192,7 +197,7 @@ because tests fail:
    ```bash
    python scripts/commit_guardian/known_failing_tests.py --update
    git add scripts/commit_guardian/known_failing_tests.json
-   git commit -m "chore(tests): update known-failing baseline — <reason>"
+   COMMIT_AGENT_MODE=1 git commit -m "chore(tests): update known-failing baseline — <reason>"
    ```
 
 **Never use `--no-verify` to skip test failures.** The baseline mechanism is
@@ -249,7 +254,7 @@ If the SHA is unchanged from before the commit, the commit was silently dropped.
 
 Always capture stderr explicitly:
 ```bash
-git commit -m "..." 2>/tmp/commit_err.txt
+COMMIT_AGENT_MODE=1 git commit -m "..." 2>/tmp/commit_err.txt
 ```
 
 This was confirmed during EPIC-PortableWorkflowHardening and codified in commit 34ffd468. Migrated from user-memory feedback_background_commit_silent_kill.md by EPIC-AgentKnowledgeSystem ticket 04.
@@ -264,7 +269,7 @@ and commit the ticket file:
 
 ```bash
 git add <ticket_path>
-git commit -m "chore(ticket): commit phase sign-off"
+COMMIT_AGENT_MODE=1 git commit -m "chore(ticket): commit phase sign-off"
 ```
 
 This eliminates the dependency on `pull-request` Step 1 sweeping this delta.

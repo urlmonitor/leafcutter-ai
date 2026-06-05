@@ -22,6 +22,28 @@ Rules:
 3. Redirect stderr to `/tmp/` (not a relative path).
 4. If a command needs environment variables, use `ENV=val command` syntax — that is a single command, not a chain.
 
+## Commit Delegation — MANDATORY
+
+`git commit` must never be called directly. Dispatch the `commit` agent via
+the Agent tool instead.
+
+Calling `git commit` directly bypasses the confirmation gate, the pre-commit
+hook failure → autofix path, the sign-off recording, and the background-commit
+safety checks that are built into the `commit` agent template. The
+`enforce_commit_delegation` PreToolUse hook will block any direct `git commit`
+call that does not originate from within the `commit` agent.
+
+**Wrong:**
+```bash
+git commit -m "some message"
+```
+
+**Right:**
+```
+# Use the Agent tool to dispatch the commit agent:
+# Agent tool → commit agent → dispatches COMMIT_AGENT_MODE=1 git commit internally
+```
+
 ## Repository Structure
 
 This repo IS the leafcutter-ai package. Origin: `git@github.com-urlmonitor:urlmonitor/leafcutter-ai.git`
