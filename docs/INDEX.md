@@ -9,6 +9,13 @@ This index lists every documentation file in the project.  BA and IT PO agents
 should read this index first, identify which docs are relevant to the current
 task, then pull only those files.
 
+## Skills
+
+| Name | Path | Description |
+|------|------|-------------|
+| knowledge-query | [templates/skills/knowledge-query/SKILL.md](templates/skills/knowledge-query/SKILL.md) | Cross-surface knowledge graph query. Invokes scripts/knowledge_query.py to search nodes across all paths.json surfaces. Supports keyword filter (--query), surface filter (--surface), JSON export (--format json), and edge list (--edges). |
+| roadmap-query | [templates/skills/roadmap-query/SKILL.md](templates/skills/roadmap-query/SKILL.md) | Query ticket alignment against docs/roadmap.json. Lists tickets by phase, current-outcome filter, and unassigned warnings. |
+
 ## Components
 
 | Name | Path | Description |
