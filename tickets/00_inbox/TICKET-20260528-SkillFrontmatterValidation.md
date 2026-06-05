@@ -37,6 +37,16 @@ user_facing_surface: null
 ac_traceability:
   L0: BP-100
   L1: BP-100g
+  l2:
+    - BP-100g-1
+    - BP-100g-2
+    - BP-100g-3
+    - BP-100g-4
+    - BP-100g-5
+    - BP-100g-6
+  l3:
+    - BP-100g-1-i
+    - BP-100g-3-i
   ac_path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100g.yaml
   routing: direct_to_ba
 ---
