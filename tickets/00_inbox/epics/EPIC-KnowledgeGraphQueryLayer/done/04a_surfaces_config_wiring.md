@@ -1,6 +1,6 @@
 ---
 title: "Wire surfaces section into config/paths.json for knowledge graph scripts"
-status: todo
+status: done
 components:
   - knowledge-management
 created: 2026-06-05
@@ -31,7 +31,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 ---
@@ -178,7 +178,7 @@ tests:
 - [x] test-runner — 2026-06-05 10:15
 - [x] pr-reviewer — 2026-06-05 10:20
 - [x] commit — 2026-06-05 10:25
-- [ ] pull-request
+- [x] pull-request — 2026-06-05 10:30
 
 ## Comments
 
@@ -237,3 +237,10 @@ completion_manifest:
   commit_created: true
   pre_commit_hooks_passed: true
 Staged: config/paths.json, unit_tests/test_knowledge_query.py, unit_tests/test_visualise_knowledge_graph.py, docs/acceptance-criteria/knowledge-management/KM-KQS-01[5-9].yaml + KM-KQS-020.yaml + KM-VIS-013.yaml, 04a_surfaces_config_wiring.md (ticket). Commit created on branch EPIC-KnowledgeGraphQueryLayer.
+
+### 2026-06-05 10:30 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_a6e4ac7a
+completion_manifest:
+  branch_pushed: true
+  pr_exists: true
+Pushed commit b4ab9f7 to origin EPIC-KnowledgeGraphQueryLayer (d18bfb1 → b4ab9f7). PR #63 (feat(EPIC-KnowledgeGraphQueryLayer): ...) already open for this branch — commit is now visible in the PR. No new PR needed.
