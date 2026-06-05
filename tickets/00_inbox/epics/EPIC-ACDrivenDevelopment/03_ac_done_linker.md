@@ -28,7 +28,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 source_acs:
   - ACD-600
@@ -143,10 +143,17 @@ And the hook exits 0 (non-fatal skip).
 - [x] python-coder — 2026-06-05 14:30
 - [x] test-runner — 2026-06-05 14:45
 - [x] pr-reviewer — 2026-06-05 15:00
-- [ ] commit
+- [x] commit — 2026-06-05 15:15
 - [ ] pull-request
 
 ## Comments
+
+### 2026-06-05 15:15 — commit (status: ok)
+feedback-id: fb_2026-06-05_277f0925
+completion_manifest:
+  files_staged: true
+  commit_created: true
+Staged 6 files: mark_ac_done.py, check_ac_done_on_merge.py, commit_guardian.json, test_mark_ac_done.py, tests/commit_guardian/__init__.py, test_check_ac_done_on_merge.py. Commit created: feat(ticket-03): implement AC done-linker scripts.
 
 ### 2026-06-05 15:00 — pr-reviewer (status: ok)
 feedback-id: fb_2026-06-05_812dfba0

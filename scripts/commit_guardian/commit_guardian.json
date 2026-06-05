@@ -741,5 +741,17 @@
         "max_states": 10,
         "max_classes": 10,
         "max_boundaries": 4
+    },
+    "post_merge": {
+        "_comment": "Post-merge hook configuration. Hooks in this section fire after git merge completes.",
+        "hooks": [
+            {
+                "id": "check_ac_done_on_merge",
+                "script": "scripts/commit_guardian/hooks/check_ac_done_on_merge.py",
+                "description": "Mark source ACs as work_status: done for all done tickets in the merge diff.",
+                "enabled": true,
+                "exit_on_failure": false
+            }
+        ]
     }
 }
