@@ -91,6 +91,39 @@
             "type": "string",
             "description": "Identity of the agent or workflow that created this AC file. Enum: business-analyst | debug | human | ticket-wiring. Free-form string to allow future agents.",
             "minLength": 1
+        },
+        "work_status": {
+            "oneOf": [
+                {
+                    "type": "string",
+                    "description": "Implementation lifecycle status for this AC. todo = not yet implemented; in_progress = implementation underway; done = implemented and verified.",
+                    "enum": [
+                        "todo",
+                        "in_progress",
+                        "done"
+                    ]
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "level": {
+            "oneOf": [
+                {
+                    "type": "string",
+                    "description": "Hierarchy level of this AC. L0 = top-level composite (portfolio/program); L1 = composite (epic/feature); L2 = implementable leaf (story/task); L3 = fine-grained implementable leaf (sub-task). L0/L1 ACs are composite — fulfillment is derived from children, not directly verified.",
+                    "enum": [
+                        "L0",
+                        "L1",
+                        "L2",
+                        "L3"
+                    ]
+                },
+                {
+                    "type": "null"
+                }
+            ]
         }
     }
 }
