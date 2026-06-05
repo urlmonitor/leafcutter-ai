@@ -1,6 +1,6 @@
 ---
 title: "ACS-400: AC Store Governance — write-lock criteria fields, audit trail, build deployment"
-status: todo
+status: done
 components:
   - ac-store
   - infrastructure
@@ -55,7 +55,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 complexity: standard
@@ -262,7 +262,7 @@ hook implementation; tests only gate `scripts/` deliverables.
 - [x] test-runner — 2026-06-05 15:32
 - [x] pr-reviewer — 2026-06-05 15:35
 - [x] commit — 2026-06-05 15:40
-- [ ] pull-request
+- [x] pull-request — 2026-06-05 15:45
 
 ## Risk & Safety
 
@@ -280,6 +280,14 @@ hook implementation; tests only gate `scripts/` deliverables.
   so it does not interact with the existing `{{config.*}}` resolution path.
 
 ## Comments
+
+### 2026-06-05 15:45 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+  pr_url_recorded: true
+Branch feature/acs400-acstoregovernance pushed to origin. PR opened at https://github.com/urlmonitor/leafcutter-ai/pull/68 — "feat(commit-guardian): add AC store governance hook (ACS-400)".
 
 ### 2026-06-05 15:40 — commit (status: ok)
 feedback-id: (submit-failed)
