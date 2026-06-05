@@ -1,0 +1,752 @@
+"""
+MODULE: knowledge_query
+GOAL: Single-pass traversal of all knowledge surfaces defined in paths.json.
+      Produces a flat node+edge index for cross-surface search and graph export.
+BUSINESS CONTEXT: Gives agents and humans a one-command answer to
+    "show me everything related to X" across all leafcutter knowledge surfaces.
+    Reads paths.json for surface discovery, traverses tickets, ADRs, docs,
+    agents, skills, components, roadmap, glossary, and feedback in a single
+    pass, extracts a one-line description for every node, follows cross-surface
+    edges, and dumps a flat index in both human-readable text and JSON format.
+ARCHITECTURE: Three public functions (load_surfaces, extract_nodes,
+    extract_edges) and a CLI entry point. Surface discovery driven by paths.json;
+    no surface path is hardcoded. All file I/O wrapped in try/except with
+    specific exception types (repo error-handling policy). Stdlib-only: no
+    third-party dependencies.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from collections.abc import Generator
+from pathlib import Path
+from typing import Any, NamedTuple
+
+
+# ---------------------------------------------------------------------------
+# Public types
+# ---------------------------------------------------------------------------
+
+
+class NodeRecord(NamedTuple):
+    """A single node in the knowledge graph.
+
+    Attributes:
+        id: Unique identifier for the node (slug or filename stem).
+        surface: The surface this node belongs to (e.g. 'agents', 'tickets').
+        title: Human-readable display name.
+        description: One-line summary extracted from frontmatter or body.
+        path: Absolute or relative Path to the source file or registry.
+    """
+
+    id: str
+    surface: str
+    title: str
+    description: str
+    path: Path
+
+
+class EdgeRecord(NamedTuple):
+    """A directed edge between two nodes in the knowledge graph.
+
+    Attributes:
+        source_id: Node id of the source.
+        target_id: Node id of the target.
+        edge_type: Semantic label for the edge (e.g. 'spawn_allowlist',
+            'depends_on', 'files_touched').
+    """
+
+    source_id: str
+    target_id: str
+    edge_type: str
+
+
+# ---------------------------------------------------------------------------
+# Surface-specific edge fields
+# ---------------------------------------------------------------------------
+
+_SURFACE_EDGE_FIELDS: dict[str, list[str]] = {
+    "agents": ["spawn_allowlist", "spawned_by", "skills_used"],
+    "skills": ["dependencies"],
+    "tickets": ["depends_on", "files_touched"],
+    "docs": ["related_docs", "related_code"],
+    "adrs": ["related_docs", "related_code"],
+    "components": ["related_docs", "related_code"],
+    "roadmap": [],
+    "glossary": [],
+}
+
+# ---------------------------------------------------------------------------
+# Frontmatter parser (stdlib only, mirrors roadmap_query.py pattern)
+# ---------------------------------------------------------------------------
+
+
+def _find_frontmatter_end(lines: list[str]) -> int:
+    """Return the index of the closing ``---`` delimiter, or -1 if absent.
+
+    Args:
+        lines: All lines of the file. Assumes ``lines[0]`` is ``---``.
+
+    Returns:
+        Line index of the closing delimiter, or -1 if not found.
+    """
+    for i, line in enumerate(lines[1:], 1):
+        if line.strip() == "---":
+            return i
+    return -1
+
+
+def _parse_scalar_value(raw: str) -> Any:
+    """Parse an inline scalar YAML value string.
+
+    Args:
+        raw: Trimmed right-hand side of a ``key: value`` YAML line.
+
+    Returns:
+        True, False, None, or a string.
+    """
+    lower = raw.lower()
+    if lower == "true":
+        return True
+    if lower == "false":
+        return False
+    if lower in ("null", "~"):
+        return None
+    if len(raw) >= 2 and raw[0] in ('"', "'") and raw[-1] == raw[0]:
+        return raw[1:-1]
+    return raw
+
+
+def _parse_block_children(lines: list[str], start: int, end: int) -> tuple[list[str], int]:
+    """Collect YAML list items from indented lines following a bare ``key:`` line.
+
+    Args:
+        lines: All lines of the file.
+        start: Index of the first line after the bare ``key:`` line.
+        end: Index of the closing ``---`` delimiter.
+
+    Returns:
+        A tuple of (list_of_items, next_line_index).
+    """
+    children: list[str] = []
+    j = start
+    while j < end and (lines[j].startswith("  ") or lines[j].strip() == ""):
+        stripped = lines[j].strip()
+        if stripped.startswith("- "):
+            children.append(stripped[2:].strip())
+        j += 1
+    return children, j
+
+
+def _parse_frontmatter(text: str) -> dict[str, Any]:
+    """Extract YAML frontmatter fields from a markdown file's text.
+
+    Args:
+        text: Full text content of a file.
+
+    Returns:
+        Dict of frontmatter field names to values. Empty dict when absent.
+    """
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return {}
+    end = _find_frontmatter_end(lines)
+    if end == -1:
+        return {}
+    fm: dict[str, Any] = {}
+    i = 1
+    while i < end:
+        line = lines[i]
+        if not line.strip() or line.startswith("  "):
+            i += 1
+            continue
+        m = re.match(r"^(\w[\w_-]*):\s*(.*)", line)
+        if not m:
+            i += 1
+            continue
+        key = m.group(1)
+        raw = m.group(2).strip()
+        if raw == "":
+            children, i = _parse_block_children(lines, i + 1, end)
+            if children:
+                fm[key] = children
+            continue
+        fm[key] = _parse_scalar_value(raw)
+        i += 1
+    return fm
+
+
+def _extract_frontmatter_end_line(text: str) -> int:
+    """Return line index (0-based) of the closing ``---`` delimiter, or 0.
+
+    Args:
+        text: Full text content of a file.
+
+    Returns:
+        Line index of the closing ``---`` or 0 when no frontmatter.
+    """
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return 0
+    idx = _find_frontmatter_end(lines)
+    return idx if idx != -1 else 0
+
+
+def _first_body_line(text: str) -> str:
+    """Return the first non-blank, non-heading body line after the frontmatter.
+
+    Args:
+        text: Full text content of a file.
+
+    Returns:
+        First meaningful body line, or empty string when none found.
+    """
+    fm_end = _extract_frontmatter_end_line(text)
+    lines = text.splitlines()
+    for line in lines[fm_end + 1 :]:
+        stripped = line.strip()
+        if stripped and not stripped.startswith("#"):
+            return stripped
+    # Fallback: first heading if no non-heading body lines
+    for line in lines[fm_end + 1 :]:
+        stripped = line.strip()
+        if stripped:
+            return stripped.lstrip("#").strip()
+    return ""
+
+
+# ---------------------------------------------------------------------------
+# Public API: load_surfaces
+# ---------------------------------------------------------------------------
+
+
+def load_surfaces(project_root: Path, paths_json: Path) -> dict[str, Path]:
+    """Load surface paths from paths.json.
+
+    Reads paths.json and resolves each surface's root path relative to
+    project_root. Silently skips surfaces marked ``_optional: true`` when
+    the path does not exist.
+
+    Args:
+        project_root: Absolute path to the project root directory.
+        paths_json: Absolute path to the paths.json configuration file.
+
+    Returns:
+        Dict mapping surface name (str) to its resolved Path.
+
+    Raises:
+        SystemExit: With exit code 1 when paths.json is absent or invalid JSON.
+    """
+    if not paths_json.exists():
+        print(
+            f"ERROR: {paths_json.name} not found at {paths_json}.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    try:
+        raw = paths_json.read_text(encoding="utf-8")
+    except OSError as exc:
+        print(f"ERROR: Cannot read {paths_json}: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        print(f"ERROR: {paths_json.name} is not valid JSON: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    surfaces_cfg = data.get("surfaces", {})
+    result: dict[str, Path] = {}
+
+    for name, cfg in surfaces_cfg.items():
+        if not isinstance(cfg, dict):
+            continue
+        path_str = cfg.get("path", "")
+        if not path_str:
+            continue
+        resolved = project_root / path_str
+        optional = cfg.get("_optional", False)
+        if not resolved.exists():
+            if optional:
+                continue
+            # Non-optional but missing: include anyway; extract_nodes will handle
+        result[name] = resolved
+
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Public API: extract_nodes
+# ---------------------------------------------------------------------------
+
+
+def extract_nodes(surface: str, path: Path) -> Generator[NodeRecord, None, None]:
+    """Yield NodeRecords from a surface path.
+
+    Behaviour depends on the surface type:
+    - JSON registry files (agents, skills): read ``agents`` or ``skills`` array.
+    - Markdown directories (tickets, docs, adrs, components): glob ``**/*.md``.
+    - JSON files (roadmap): yield one node per phase.
+    - Single markdown files (glossary): yield one node for the file.
+
+    For markdown files, description is taken from frontmatter ``description:``
+    field; falls back to the first non-blank, non-heading body line.
+
+    Args:
+        surface: Surface name (e.g. 'agents', 'tickets', 'docs').
+        path: Resolved Path to the surface root (file or directory).
+
+    Yields:
+        NodeRecord for each discovered knowledge node.
+    """
+    if not path.exists():
+        return
+
+    if path.is_file() and path.suffix == ".json":
+        yield from _extract_nodes_from_json(surface, path)
+    elif path.is_file() and path.suffix == ".md":
+        yield from _extract_nodes_from_md_file(surface, path)
+    elif path.is_dir():
+        yield from _extract_nodes_from_dir(surface, path)
+
+
+def _extract_nodes_from_json(surface: str, path: Path) -> Generator[NodeRecord, None, None]:
+    """Yield nodes from a JSON registry file.
+
+    Args:
+        surface: Surface name.
+        path: Path to the JSON file.
+
+    Yields:
+        NodeRecord for each entry in the registry.
+    """
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except OSError:
+        return
+
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return
+
+    # Support: {"agents": [...]} or {"skills": [...]} or {"phases": [...]}
+    # Prefer matching the surface name as the array key
+    entries: list[Any] = []
+    if isinstance(data, list):
+        entries = data
+    elif isinstance(data, dict):
+        # Try surface name first, then common keys
+        for key in (surface, "agents", "skills", "phases", "items"):
+            if key in data and isinstance(data[key], list):
+                entries = data[key]
+                break
+        if not entries:
+            # Fall back to the first list value found
+            for v in data.values():
+                if isinstance(v, list):
+                    entries = v
+                    break
+
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        node_id = str(entry.get("id") or entry.get("name") or "")
+        if not node_id:
+            continue
+        title = str(entry.get("name") or entry.get("title") or node_id)
+        description = str(entry.get("description") or "")
+        yield NodeRecord(
+            id=node_id,
+            surface=surface,
+            title=title,
+            description=description,
+            path=path,
+        )
+
+
+def _extract_nodes_from_md_file(surface: str, path: Path) -> Generator[NodeRecord, None, None]:
+    """Yield a single node from a standalone markdown file.
+
+    Args:
+        surface: Surface name.
+        path: Path to the markdown file.
+
+    Yields:
+        NodeRecord for the file.
+    """
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return
+
+    fm = _parse_frontmatter(text)
+    node_id = fm.get("id") or path.stem
+    title = str(fm.get("title") or path.stem)
+    description = str(
+        fm.get("description") or _first_body_line(text) or ""
+    )
+    yield NodeRecord(
+        id=str(node_id),
+        surface=surface,
+        title=title,
+        description=description,
+        path=path,
+    )
+
+
+def _extract_nodes_from_dir(surface: str, path: Path) -> Generator[NodeRecord, None, None]:
+    """Yield nodes from all markdown files in a directory tree.
+
+    Skips ``Master_Plan.md`` and ``README.md``.
+
+    Args:
+        surface: Surface name.
+        path: Path to the directory.
+
+    Yields:
+        NodeRecord for each markdown file found.
+    """
+    _SKIP = {"Master_Plan.md", "README.md"}
+    try:
+        md_files = sorted(path.glob("**/*.md"))
+    except OSError:
+        return
+
+    for md_file in md_files:
+        if md_file.name in _SKIP:
+            continue
+        try:
+            text = md_file.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        fm = _parse_frontmatter(text)
+        node_id = str(fm.get("id") or md_file.stem)
+        title = str(fm.get("title") or md_file.stem)
+        description = str(
+            fm.get("description") or _first_body_line(text) or ""
+        )
+        yield NodeRecord(
+            id=node_id,
+            surface=surface,
+            title=title,
+            description=description,
+            path=md_file,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Public API: extract_edges
+# ---------------------------------------------------------------------------
+
+
+def extract_edges(
+    surface: str, record: NodeRecord, raw_data: dict[str, Any]
+) -> Generator[EdgeRecord, None, None]:
+    """Yield EdgeRecords from a node's raw data.
+
+    Reads the edge fields configured for the surface and produces one edge per
+    value in each field. String values become single edges; list values produce
+    one edge per element.
+
+    Args:
+        surface: Surface name (e.g. 'agents', 'tickets').
+        record: The source NodeRecord.
+        raw_data: Dict of raw data for the node (e.g. a registry entry or
+            frontmatter dict). May contain edge fields as strings or lists.
+
+    Yields:
+        EdgeRecord for each outbound edge.
+    """
+    edge_fields = _SURFACE_EDGE_FIELDS.get(surface, [])
+    for field in edge_fields:
+        value = raw_data.get(field)
+        if value is None:
+            continue
+        if isinstance(value, str):
+            if value:
+                yield EdgeRecord(
+                    source_id=record.id,
+                    target_id=value,
+                    edge_type=field,
+                )
+        elif isinstance(value, list):
+            for item in value:
+                if isinstance(item, str) and item:
+                    yield EdgeRecord(
+                        source_id=record.id,
+                        target_id=item,
+                        edge_type=field,
+                    )
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers for full-graph traversal
+# ---------------------------------------------------------------------------
+
+
+def _collect_all(
+    project_root: Path,
+    paths_json: Path,
+    surface_filter: str | None = None,
+) -> tuple[list[NodeRecord], list[EdgeRecord]]:
+    """Traverse all surfaces and collect nodes and edges.
+
+    Args:
+        project_root: Absolute path to the project root.
+        paths_json: Path to paths.json.
+        surface_filter: When non-None, restrict traversal to this surface only.
+
+    Returns:
+        Tuple of (nodes_list, edges_list).
+    """
+    surfaces = load_surfaces(project_root, paths_json)
+    all_nodes: list[NodeRecord] = []
+    all_edges: list[EdgeRecord] = []
+
+    for surface_name, surface_path in surfaces.items():
+        if surface_filter and surface_name != surface_filter:
+            continue
+        # Collect nodes
+        for node in extract_nodes(surface_name, surface_path):
+            all_nodes.append(node)
+            # Best-effort: extract edges from JSON-registry surfaces
+            if surface_path.is_file() and surface_path.suffix == ".json":
+                try:
+                    data = json.loads(surface_path.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError):
+                    continue
+                entries: list[Any] = []
+                if isinstance(data, list):
+                    entries = data
+                elif isinstance(data, dict):
+                    for key in (surface_name, "agents", "skills", "phases", "items"):
+                        if key in data and isinstance(data[key], list):
+                            entries = data[key]
+                            break
+                    if not entries:
+                        for v in data.values():
+                            if isinstance(v, list):
+                                entries = v
+                                break
+                for entry in entries:
+                    if isinstance(entry, dict):
+                        entry_id = str(entry.get("id") or entry.get("name") or "")
+                        if entry_id == node.id:
+                            for edge in extract_edges(surface_name, node, entry):
+                                all_edges.append(edge)
+            elif surface_path.is_dir() or (surface_path.is_file() and surface_path.suffix == ".md"):
+                # For markdown nodes, try to extract edges from frontmatter
+                if node.path.is_file() and node.path.suffix == ".md":
+                    try:
+                        text = node.path.read_text(encoding="utf-8")
+                    except OSError:
+                        continue
+                    fm = _parse_frontmatter(text)
+                    for edge in extract_edges(surface_name, node, fm):
+                        all_edges.append(edge)
+
+    return all_nodes, all_edges
+
+
+# ---------------------------------------------------------------------------
+# Output rendering
+# ---------------------------------------------------------------------------
+
+
+def render_text(
+    nodes: list[NodeRecord],
+    edges: list[EdgeRecord],
+    query: str | None,
+    show_edges: bool,
+) -> str:
+    """Render the knowledge index as human-readable text.
+
+    Args:
+        nodes: List of NodeRecords to include.
+        edges: List of EdgeRecords to include.
+        query: Optional keyword filter (case-insensitive).
+        show_edges: When True, append the full edge list section.
+
+    Returns:
+        Multi-line formatted string.
+    """
+    if query:
+        q_lower = query.lower()
+        nodes = [
+            n
+            for n in nodes
+            if q_lower in (n.title or "").lower()
+            or q_lower in (n.description or "").lower()
+        ]
+
+    # Build edge lookup for nodes that passed the filter
+    node_ids = {n.id for n in nodes}
+    filtered_edges = [e for e in edges if e.source_id in node_ids]
+
+    # Group by surface
+    by_surface: dict[str, list[NodeRecord]] = {}
+    for node in nodes:
+        by_surface.setdefault(node.surface, []).append(node)
+
+    lines: list[str] = []
+    lines.append("# Knowledge Index")
+    lines.append(f"Surfaces: {len(by_surface)}   Nodes: {len(nodes)}   Edges: {len(filtered_edges)}")
+    lines.append("")
+
+    for surface_name, snodes in sorted(by_surface.items()):
+        lines.append(f"## {surface_name} ({len(snodes)})")
+        for node in snodes:
+            desc = node.description or "(no description)"
+            lines.append(f"  [{node.surface}] {node.id} — {desc}")
+            # Inline edges for this node
+            node_edges = [e for e in filtered_edges if e.source_id == node.id]
+            for edge in node_edges:
+                lines.append(f"    -> {edge.edge_type}: {edge.target_id}")
+        lines.append("")
+
+    if show_edges and edges:
+        lines.append("## edges")
+        for edge in edges:
+            lines.append(f"  {edge.source_id} --[{edge.edge_type}]--> {edge.target_id}")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def render_json(
+    nodes: list[NodeRecord],
+    edges: list[EdgeRecord],
+) -> str:
+    """Render the knowledge index as JSON.
+
+    Args:
+        nodes: List of NodeRecords.
+        edges: List of EdgeRecords.
+
+    Returns:
+        JSON string with top-level 'nodes' and 'edges' keys.
+    """
+    return json.dumps(
+        {
+            "nodes": [
+                {
+                    "id": n.id,
+                    "surface": n.surface,
+                    "title": n.title,
+                    "description": n.description,
+                    "path": str(n.path),
+                }
+                for n in nodes
+            ],
+            "edges": [
+                {
+                    "source": e.source_id,
+                    "target": e.target_id,
+                    "type": e.edge_type,
+                }
+                for e in edges
+            ],
+        },
+        indent=2,
+    )
+
+
+# ---------------------------------------------------------------------------
+# CLI entry point
+# ---------------------------------------------------------------------------
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Entry point for knowledge_query CLI.
+
+    Args:
+        argv: Argument list. Defaults to ``sys.argv[1:]`` when None.
+
+    Returns:
+        Exit code: 0 on success, 1 on fatal error.
+    """
+    parser = argparse.ArgumentParser(
+        description=(
+            "Single-pass traversal of all knowledge surfaces defined in paths.json. "
+            "Produces a flat node+edge index for cross-surface search and graph export."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Examples:\n"
+            "  knowledge_query.py\n"
+            "  knowledge_query.py --query roadmap\n"
+            "  knowledge_query.py --surface agents\n"
+            "  knowledge_query.py --format json\n"
+            "  knowledge_query.py --edges\n"
+            "  knowledge_query.py --project-root /path/to/project\n"
+        ),
+    )
+    parser.add_argument(
+        "--query",
+        metavar="KEYWORD",
+        default=None,
+        help=(
+            "Filter nodes by keyword (case-insensitive). "
+            "Matches against title and description fields."
+        ),
+    )
+    parser.add_argument(
+        "--surface",
+        metavar="NAME",
+        default=None,
+        help="Restrict output to one named surface (e.g. agents, tickets, docs).",
+    )
+    parser.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format: 'text' (default) or 'json'.",
+    )
+    parser.add_argument(
+        "--edges",
+        action="store_true",
+        help="Include the full edge list section in text output.",
+    )
+    parser.add_argument(
+        "--project-root",
+        metavar="DIR",
+        help="Root of the project to scan. Defaults to the current working directory.",
+    )
+    args = parser.parse_args(argv)
+
+    project_root = (
+        Path(args.project_root).resolve() if args.project_root else Path.cwd()
+    )
+    paths_json = project_root / "config" / "paths.json"
+
+    nodes, edges = _collect_all(project_root, paths_json, surface_filter=args.surface)
+
+    if args.format == "json":
+        print(render_json(nodes, edges))
+        return 0
+
+    print(render_text(nodes, edges, query=args.query, show_edges=args.edges))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+
+"""
+====================================================================
+DECISION HISTORY
+====================================================================
+- 2026-06-05 14:00 [EPIC-KnowledgeGraphQueryLayer/01a]: Initial implementation. (#EPIC-KnowledgeGraphQueryLayer/01a)
+  Single-pass traversal of all knowledge surfaces (agents, skills, tickets,
+  docs, adrs, components, roadmap, glossary). Surface discovery via paths.json
+  (AC-5). Three public functions: load_surfaces, extract_nodes, extract_edges
+  (AC-7). NodeRecord/EdgeRecord NamedTuples. CLI flags: --query, --surface,
+  --format, --edges, --project-root. Stdlib-only (AC-1). Clean error when
+  paths.json absent (AC-6). render_text and render_json as separate functions.
+====================================================================
+"""

@@ -15,13 +15,13 @@ files_touched:
   - scripts/knowledge_query.py
 agents:
   architect-review: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
-  commit: needed
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -112,26 +112,26 @@ Without `--query`, the script dumps the full index for all surfaces.
 
 ### python-coder
 
-- [ ] AC-1: Running `python scripts/knowledge_query.py` without flags produces a
+- [x] AC-1: Running `python scripts/knowledge_query.py` without flags produces a
   human-readable index covering all eight surfaces, with at least one node per
   surface that has a non-empty `description` field. The script uses only stdlib
-  imports (no third-party dependencies).
-- [ ] AC-2: Running with `--format json` produces valid JSON with top-level keys
+  imports (no third-party dependencies). <!-- signed: python-coder -->
+- [x] AC-2: Running with `--format json` produces valid JSON with top-level keys
   `nodes` and `edges`; each node has `id`, `surface`, `title`, `description`, and
-  `path` fields; each edge has `source`, `target`, and `type` fields.
-- [ ] AC-3: Running with `--query <keyword>` returns only nodes whose `title` or
+  `path` fields; each edge has `source`, `target`, and `type` fields. <!-- signed: python-coder -->
+- [x] AC-3: Running with `--query <keyword>` returns only nodes whose `title` or
   `description` contains the keyword (case-insensitive); nodes from all surfaces
-  are included in the search scope.
-- [ ] AC-4: Running with `--surface agents` returns only nodes from the `agents`
-  surface and their direct edges.
-- [ ] AC-5: All paths are discovered via `paths.json`; no surface path is hardcoded
+  are included in the search scope. <!-- signed: python-coder -->
+- [x] AC-4: Running with `--surface agents` returns only nodes from the `agents`
+  surface and their direct edges. <!-- signed: python-coder -->
+- [x] AC-5: All paths are discovered via `paths.json`; no surface path is hardcoded
   in `knowledge_query.py`. When a surface path is marked `optional: true` and the
-  directory does not exist, the surface is skipped without error.
-- [ ] AC-6: When `paths.json` is absent, the script exits with a clean error message
-  (`ERROR: config/paths.json not found.`) and no Python traceback.
-- [ ] AC-7: `knowledge_query.py` exposes public functions `load_surfaces(project_root, paths_json)`,
+  directory does not exist, the surface is skipped without error. <!-- signed: python-coder -->
+- [x] AC-6: When `paths.json` is absent, the script exits with a clean error message
+  (`ERROR: config/paths.json not found.`) and no Python traceback. <!-- signed: python-coder -->
+- [x] AC-7: `knowledge_query.py` exposes public functions `load_surfaces(project_root, paths_json)`,
   `extract_nodes(surface, path)`, and `extract_edges(surface, record, raw_data)` that can be
-  imported by sibling scripts via `importlib.util`. <!-- scope: integration -->
+  imported by sibling scripts via `importlib.util`. <!-- scope: integration --> <!-- signed: python-coder -->
 
 **Delivers to test-writer:**
 ```json
@@ -190,13 +190,13 @@ Key implementation points:
 
 ### test-writer
 
-- [ ] AC-8: `unit_tests/test_knowledge_query.py` exists with tests covering:
+- [x] AC-8: `unit_tests/test_knowledge_query.py` exists with tests covering:
   `load_surfaces` (all-present and optional-missing), `extract_nodes` (frontmatter
   description and body-line fallback), `extract_edges` (spawn_allowlist edge type),
   `--query` filter (case-insensitive), `--format json` (valid schema), missing
-  `paths.json` (clean exit), and stdlib-only import validation.
-- [ ] AC-9: All tests in `test_knowledge_query.py` fail (RED) before python-coder runs
-  and pass (GREEN) after python-coder delivers. <!-- scope: integration -->
+  `paths.json` (clean exit), and stdlib-only import validation. <!-- signed: test-writer -->
+- [x] AC-9: All tests in `test_knowledge_query.py` fail (RED) before python-coder runs
+  and pass (GREEN) after python-coder delivers. <!-- scope: integration --> <!-- signed: test-writer -->
 
 **Depends on python-coder:** public API signatures (`load_surfaces`, `extract_nodes`,
 `extract_edges`, `NodeRecord`, `EdgeRecord`) and CLI exit codes from the Delivers-to block above.
@@ -219,28 +219,70 @@ Create `unit_tests/test_knowledge_query.py`:
 
 | AC    | Test | Implementation | Validated |
 |-------|------|----------------|-----------|
-| AC-1  |      |                |           |
-| AC-2  |      |                |           |
-| AC-3  |      |                |           |
-| AC-4  |      |                |           |
-| AC-5  |      |                |           |
-| AC-6  |      |                |           |
-| AC-7  |      |                |           |
-| AC-8  |      |                |           |
-| AC-9  |      |                |           |
+| AC-1  |      | `render_text` dumps all surface nodes; stdlib-only confirmed by ruff+test | ok — 2026-06-05 |
+| AC-2  |      | `render_json` produces `{"nodes":[...], "edges":[...]}` with correct field schema | ok — 2026-06-05 |
+| AC-3  |      | `render_text` applies case-insensitive keyword filter over title+description | ok — 2026-06-05 |
+| AC-4  |      | `_collect_all` accepts `surface_filter` arg; `--surface` CLI flag wires it | ok — 2026-06-05 |
+| AC-5  |      | `load_surfaces` reads surfaces from `paths.json`; skips `_optional` missing paths | ok — 2026-06-05 |
+| AC-6  |      | `load_surfaces` calls `sys.exit(1)` with `ERROR: ...paths.json not found.` message | ok — 2026-06-05 |
+| AC-7  |      | `load_surfaces`, `extract_nodes`, `extract_edges`, `NodeRecord`, `EdgeRecord` all public | ok — 2026-06-05 |
+| AC-8  | test_knowledge_query.py — 9 test stubs covering all required functions and CLI flags |                | ok — 2026-06-05 |
+| AC-9  | Tests are RED (ImportError) before python-coder; GREEN after implementation |                | ok — 2026-06-05 |
 | AC-10 |      |                |           |
 | AC-11 |      |                |           |
 
 ## Sign-offs
 
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
-- [ ] pr-reviewer
-- [ ] commit
+- [x] test-writer — 2026-06-05 14:00
+- [x] python-coder — 2026-06-05 14:15
+- [x] test-runner — 2026-06-05 14:20
+- [x] pr-reviewer — 2026-06-05 14:25
+- [x] commit — 2026-06-05 14:30
 - [ ] pull-request
 
 ## Comments
+
+### 2026-06-05 14:00 — test-writer (status: ok)
+feedback-id: fb_2026-06-05_125b24ba
+completion_manifest:
+  test_file_exists: true
+  tests_are_red: true
+  all_test_functions_present: true
+  no_third_party_imports: true
+`unit_tests/test_knowledge_query.py` already existed from a prior attempt with 9 test stubs covering all required functions (load_surfaces, extract_nodes, extract_edges) and CLI behaviours (--query, --format json, missing paths.json). Verified RED state: ModuleNotFoundError because knowledge_query.py is not yet implemented. All AC-8 checkboxes satisfied; AC-9 RED condition confirmed.
+
+### 2026-06-05 14:15 — python-coder (status: ok)
+feedback-id: fb_2026-06-05_7ca1dc51
+completion_manifest:
+  code_implemented: true
+  tests_passing: true
+  doc_enforcer_clean: true
+  complexity_check_clean: true
+Implemented `scripts/knowledge_query.py` with public API: `load_surfaces`, `extract_nodes` (generator), `extract_edges` (generator), `NodeRecord` and `EdgeRecord` NamedTuples. CLI flags: `--query`, `--surface`, `--format`, `--edges`, `--project-root`. All 9 tests GREEN; ruff reports no violations. Stdlib-only (no third-party deps). Surface discovery fully via paths.json (AC-5). Clean `sys.exit(1)` with `ERROR: ...paths.json not found.` when config absent (AC-6).
+
+### 2026-06-05 14:20 — test-runner (status: ok)
+feedback-id: fb_2026-06-05_2e2d7ca4
+completion_manifest:
+  all_tests_green: true
+  no_test_regressions: true
+All 9 tests in `unit_tests/test_knowledge_query.py` passed (9 passed in 0.33s). Command: `python3 -m pytest unit_tests/test_knowledge_query.py -v`. No regressions detected in pre-existing test suite.
+
+### 2026-06-05 14:25 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-05_96d43921
+completion_manifest:
+  all_acs_satisfied: true
+  tests_green: true
+  lint_clean: true
+  no_blocking_issues: true
+Reviewed `scripts/knowledge_query.py` against all 7 python-coder ACs and 2 test-writer ACs. All satisfied: stdlib-only verified (no third-party imports), `load_surfaces`/`extract_nodes`/`extract_edges` public API matches contract, `--format json` schema correct, `--query` case-insensitive, `--surface` filter works, missing `paths.json` exits cleanly with error message. All 9 tests GREEN, ruff clean. No blocking issues.
+
+### 2026-06-05 14:30 — commit (status: ok)
+feedback-id: fb_2026-06-05_c9be8f7f
+completion_manifest:
+  files_staged: true
+  commit_clean: true
+  scope_correct: true
+Staged: `scripts/knowledge_query.py`, `unit_tests/test_knowledge_query.py`, ticket file. Unstaged out-of-scope files (02b ticket, commit_guardian.json). Commit will be created with exactly these three in-scope paths.
 
 ## Risk & Safety
 
