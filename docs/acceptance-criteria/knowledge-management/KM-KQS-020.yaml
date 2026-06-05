@@ -1,0 +1,31 @@
+id: KM-KQS-020
+title: "knowledge_query.py produces zero nodes gracefully for an empty surface directory"
+component: knowledge-management
+level: L3
+status: active
+work_status: todo
+criteria: |
+  Given config/paths.json surfaces section includes a surface whose path
+    points to a valid but empty directory
+  When running knowledge_query.py --surface <that-surface-name>
+  Then the output contains zero nodes for that surface
+  And the script exits with code 0 without printing an error or traceback
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must exit with code 0 and produce no traceback for empty directories"
+  - "Must not log errors for empty surfaces — absence of content is a valid state"
+delivers_to: null
+expects_from:
+  ac_id: KM-KQS-015
+  contract: "config/paths.json 'surfaces' section with at least one surface whose 'path' points to a valid but empty directory"
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/04a_surfaces_config_wiring.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

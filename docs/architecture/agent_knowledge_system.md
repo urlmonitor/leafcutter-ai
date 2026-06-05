@@ -3,7 +3,7 @@ title: "Agent Knowledge System"
 type: "reference"
 status: "active"
 created: "2026-05-14"
-last_updated: "2026-05-15"
+last_updated: "2026-06-05"
 flight_level: "L2-Container"
 diagram_type: agent_flow
 components:
@@ -114,6 +114,102 @@ a `knowledge_captured` telemetry event to `agent_telemetry.jsonl`.
 
 ---
 
+## Description Field Convention
+
+Every structured documentation file in the leafcutter project (`docs/**/*.md`,
+`docs/architecture/adrs/*.md`, `docs/architecture/components/*.md`) MUST include
+a `description:` field in its YAML frontmatter. This requirement exists so that
+`knowledge_query.py` and `generate_doc_index.py` can use the structured field
+for all files rather than falling back to body-text parsing.
+
+### Why this matters
+
+`generate_doc_index.py` uses `description:` if present and falls back to the
+first non-blank body line if absent. The fallback produces lower-quality
+summaries — it picks up headers, preamble boilerplate, or context sentences
+rather than a purpose-statement. Consistent `description:` coverage ensures
+every doc surface is queryable via structured metadata.
+
+### Enforcement
+
+The `description:` field requirement is enforced by two mechanisms:
+
+1. **Pre-commit hook** (`check_description_field.py`): Blocks commits that
+   introduce new `.md` files in target directories without a `description:`
+   field. This is the primary mechanical gate for new files. See ticket
+   `02b_description_field_enforcement_hook.md` for implementation details.
+
+2. **Backfill migration script** (`scripts/backfill_descriptions.py`): A
+   one-time migration script that inserts a `description:` field into every
+   existing docs/ADR/component file that lacks one. Run with `--dry-run` first
+   to review candidates, then `--write` to apply.
+
+### What to write in description:
+
+- One sentence (or phrase), ≤ 120 characters.
+- Should capture the **purpose** of the document, not its title or category.
+- Written in plain prose — not metadata labels.
+
+**Good examples:**
+```yaml
+description: "Enumerates all 11 channels through which agents receive context at invocation time."
+description: "Operational runbook for ticket-supervisor: control flow, retry caps, and escalation ladder."
+```
+
+**Avoid:**
+```yaml
+description: "ADR"              # too generic — tells the reader nothing
+description: "Reference"        # category label, not a purpose statement
+```
+
+### Scope
+
+- **Included**: `docs/**/*.md`, `docs/architecture/adrs/*.md`, `docs/architecture/components/*.md`
+- **Excluded**: `tickets/**/*.md` — tickets use `title:` as their primary label.
+  Adding `description:` to tickets is out of scope.
+- **Excluded**: `templates/agents/`, `templates/skills/` — these use their
+  registry entries as the description layer and must not be modified here.
+
+---
+
+## Visualization
+
+The `scripts/visualise_knowledge_graph.py` script generates a self-contained
+D3.js force-directed HTML graph from all knowledge surfaces defined in
+`config/paths.json`. It delegates surface traversal to `knowledge_query.py`
+(sibling module, loaded via `importlib.util`) and embeds node and edge JSON
+directly into an HTML template — no external build step, no files committed to
+the repo.
+
+### Output format
+
+A single `.html` file written to `/tmp/` (default:
+`/tmp/leafcutter_knowledge_graph.html`). The file is self-contained: it
+references D3.js from the CDN (`https://d3js.org/d3.v7.min.js`) and contains
+the full node+edge dataset as an embedded `const DATA = {...}` JSON block.
+Nodes are coloured by surface type and sized proportionally to their edge
+degree (min 4px, max 18px radius). Hovering a node highlights its direct
+neighbours; clicking pins it in place.
+
+### Invocation
+
+```bash
+# Write to default path and open in browser:
+python scripts/visualise_knowledge_graph.py
+
+# Write to a custom path:
+python scripts/visualise_knowledge_graph.py --output /tmp/my_graph.html
+
+# Write without opening the browser (useful in headless CI):
+python scripts/visualise_knowledge_graph.py --no-open
+```
+
+The script exits with code 1 if `knowledge_query.py` is not found at the
+expected sibling path and prints a clean error message (`ERROR: knowledge_query.py
+not found at <path>.`) without a Python traceback.
+
+---
+
 ## References
 
 - **[Agent Knowledge Plane](agent_knowledge_plane.md)** — the injection-side
@@ -123,3 +219,5 @@ a `knowledge_captured` telemetry event to `agent_telemetry.jsonl`.
 - `.claude/skills/capture-learning/SKILL.md` — write executor and error handling
 - `.claude/skills/signoff/SKILL.md` §7 — mandatory knowledge-capture trigger
 - `leafcutter/templates/skills/README.md` — `PROJECT_CONTEXT.md` pattern and **naming convention** (§Naming convention): filename MUST be `PROJECT_CONTEXT.md` (all uppercase, underscore); lowercase `project_context.md` is incorrect.
+- `scripts/backfill_descriptions.py` — one-time migration script; see `## Description Field Convention` above.
+- `scripts/commit_guardian/check_description_field.py` — pre-commit hook enforcing description: presence on new files (ticket 02b).

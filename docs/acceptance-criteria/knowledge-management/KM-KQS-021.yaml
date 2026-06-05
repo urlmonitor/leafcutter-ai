@@ -1,0 +1,44 @@
+id: KM-KQS-021
+title: "Components frontmatter field produces edges from declaring node to component hub node"
+component: knowledge-management
+level: L2
+status: active
+work_status: todo
+criteria: |
+  Given an agent registry entry with `components: ["knowledge-management", "build_pipeline"]`
+  And a ticket file with frontmatter `components: ["knowledge-management"]`
+  And a skill registry entry with `components: ["build_pipeline"]`
+  When the edge extraction function processes each of these nodes
+  Then it produces an edge from the agent node to a node with id "knowledge-management" and type "component_membership"
+  And it produces an edge from the agent node to a node with id "build_pipeline" and type "component_membership"
+  And it produces an edge from the ticket node to a node with id "knowledge-management" and type "component_membership"
+  And it produces an edge from the skill node to a node with id "build_pipeline" and type "component_membership"
+  And each unique component value that appears across all surfaces results in exactly one component hub node in the graph
+  And nodes that share a component value are transitively connected through the shared hub node
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must complete in <200ms for graphs with up to 500 nodes"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must be idempotent — repeated calls with the same input produce the same edge set"
+  - "Must not duplicate hub nodes when the same component value appears across multiple surfaces"
+  - "Must not modify the existing edge extraction behavior for non-component edge types"
+delivers_to:
+  agent: python-coder
+  contract: "Edge list entries with type 'component_membership' linking source node IDs to component hub node IDs; hub nodes added to the nodes array with surface 'components' and auto-generated description"
+expects_from:
+  ac_id: KM-KQS-023
+  contract: "'components' field present in edge_fields arrays for all applicable surfaces in config/paths.json"
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/05a_edge_connectivity_improvements.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

@@ -1,0 +1,47 @@
+id: KM-KQS-023
+title: "Surfaces with empty edge_fields gain components and related_docs fields in paths.json"
+component: knowledge-management
+level: L2
+status: active
+work_status: todo
+criteria: |
+  Given config/paths.json contains the "surfaces" section
+  When the edge_fields for the "docs" surface are inspected
+  Then they include "related_docs" and "components"
+  And when the edge_fields for the "adrs" surface are inspected
+  Then they include "related_docs" and "components"
+  And when the edge_fields for the "components" surface are inspected
+  Then they include "related_docs" and "components"
+  And when the edge_fields for the "tickets" surface are inspected
+  Then they include "components" in addition to the existing "depends_on" and "files_touched"
+  And when the edge_fields for the "agents" surface are inspected
+  Then they include "components" in addition to the existing "spawn_allowlist" and "skills_used"
+  And when the edge_fields for the "skills" surface are inspected
+  Then they include "components" in addition to the existing "dependencies"
+  And the "roadmap" surface edge_fields include "components"
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must produce valid JSON that passes python -m json.tool without error"
+  - "Must not remove any existing edge_fields entries — only append new fields"
+  - "Must be idempotent — re-running produces the same output if fields already present"
+  - "Must not modify any non-surfaces keys in config/paths.json"
+delivers_to:
+  agent: python-coder
+  contract: "Updated config/paths.json where every surface's edge_fields array includes 'components' and applicable surfaces include 'related_docs'; existing edge_fields entries are preserved"
+expects_from:
+  ac_id: KM-KQS-015
+  contract: "config/paths.json 'surfaces' section with 8 surface entries each having an 'edge_fields' array"
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/05a_edge_connectivity_improvements.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

@@ -1,0 +1,35 @@
+id: KM-KQS-028
+title: "depends_on value that is already a bare node ID is passed through unchanged"
+component: knowledge-management
+level: L3
+status: active
+work_status: todo
+criteria: |
+  Given a ticket file with frontmatter:
+    depends_on:
+      - 01a_bar
+  And the value "01a_bar" contains no path separator characters
+  And the graph contains a node with id "01a_bar"
+  When the edge extraction function processes the ticket's depends_on field
+  Then it produces an edge from the ticket node to the node with id "01a_bar" with type "depends_on"
+  And the value is not further stripped or modified
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Path resolution logic must detect bare IDs (no path separators) and pass them through without transformation"
+  - "Must not strip characters from values that contain no path separator"
+  - "Must handle errors gracefully per the project error handling policy"
+delivers_to: null
+expects_from:
+  ac_id: KM-KQS-022
+  contract: "depends_on path resolution logic that conditionally strips file paths — only applies stem extraction when a path separator is present"
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/05a_edge_connectivity_improvements.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

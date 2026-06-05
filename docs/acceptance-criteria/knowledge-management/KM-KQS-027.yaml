@@ -1,0 +1,34 @@
+id: KM-KQS-027
+title: "Component value not matching any existing component doc still produces a hub node"
+component: knowledge-management
+level: L3
+status: active
+work_status: todo
+criteria: |
+  Given an agent registry entry with `components: ["imaginary-component"]`
+  And no file exists at docs/architecture/components/imaginary-component.md
+  When the edge extraction function processes the agent node
+  Then it produces an edge from the agent node to a hub node with id "imaginary-component" and type "component_membership"
+  And the hub node "imaginary-component" appears in the nodes array with surface "components"
+  And the hub node has an empty or auto-generated description (not an error)
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must not perform filesystem existence checks for component hub node creation"
+  - "Hub node creation must be driven solely by the component value in frontmatter, not by file presence"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must not log warnings for components that lack a corresponding documentation file"
+delivers_to: null
+expects_from:
+  ac_id: KM-KQS-021
+  contract: "Component hub node creation logic that creates nodes for each unique component value encountered during edge extraction"
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/05a_edge_connectivity_improvements.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

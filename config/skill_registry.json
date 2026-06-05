@@ -124,6 +124,15 @@
       "dependencies": []
     },
     {
+      "id": "knowledge-query",
+      "name": "Knowledge Query",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/knowledge-query/",
+      "description": "Cross-surface knowledge graph query. Invokes scripts/knowledge_query.py to search nodes across all paths.json surfaces (agents, tickets, docs, skills, ADRs, hooks). Supports keyword filter, surface filter, JSON export, and edge list output.",
+      "dependencies": []
+    },
+    {
       "id": "package-audit",
       "name": "Package Audit",
       "portable": true,

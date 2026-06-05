@@ -1,0 +1,37 @@
+id: KM-VIS-013
+title: "visualise_knowledge_graph.py produces a graph with nodes and edges against the real repository"
+component: knowledge-management
+level: L2
+status: active
+work_status: todo
+criteria: |
+  Given the "surfaces" section has been added to config/paths.json
+  When running visualise_knowledge_graph.py --no-open
+  Then the output HTML file contains embedded JSON with a "nodes" array
+    of length greater than 50
+  And the embedded JSON "edges" array has length greater than 10
+  And every surface represented in the nodes array has at least one
+    corresponding colored circle definition in the HTML
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must complete within 60 seconds for a repository with fewer than 1000 surface items"
+  - "Must produce a self-contained HTML file (no external network dependencies)"
+  - "Must not modify any source files — write-only to the output HTML"
+delivers_to: null
+expects_from:
+  ac_id: KM-KQS-015
+  contract: "config/paths.json 'surfaces' section with 8 entries each having 'path' and 'edge_fields'"
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/04a_surfaces_config_wiring.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

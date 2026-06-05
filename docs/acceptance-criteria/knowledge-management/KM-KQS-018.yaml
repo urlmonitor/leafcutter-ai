@@ -1,0 +1,43 @@
+id: KM-KQS-018
+title: "Edge fields in surfaces config match fields present in each surface source"
+component: knowledge-management
+level: L2
+status: active
+work_status: todo
+criteria: |
+  Given config/paths.json "surfaces" section lists edge_fields for each surface
+  When the edge_fields for "agents" are inspected
+  Then they include "spawn_allowlist" and "skills_used"
+  And when the edge_fields for "skills" are inspected
+  Then they include "dependencies"
+  And when the edge_fields for "tickets" are inspected
+  Then they include "depends_on" and "files_touched"
+  And when the edge_fields for "docs" are inspected
+  Then they include "related_docs"
+  And when the edge_fields for "adrs" are inspected
+  Then they include "related_docs"
+  And when the edge_fields for "components" are inspected
+  Then they include "related_docs"
+  And when the edge_fields for "glossary" are inspected
+  Then the edge_fields array is empty (glossary is a leaf surface with no outbound edges)
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "edge_fields values must exactly match field names present in the source file frontmatter or JSON schema for each surface"
+delivers_to: null
+expects_from:
+  ac_id: KM-KQS-015
+  contract: "JSON 'surfaces' key with 'edge_fields' array populated per surface"
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/04a_surfaces_config_wiring.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

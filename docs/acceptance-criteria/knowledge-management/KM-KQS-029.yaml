@@ -1,0 +1,32 @@
+id: KM-KQS-029
+title: "Node with empty components list produces no component_membership edges"
+component: knowledge-management
+level: L3
+status: active
+work_status: todo
+criteria: |
+  Given a ticket file with frontmatter `components: []`
+  When the edge extraction function processes the ticket node
+  Then it produces zero edges with type "component_membership" for that node
+  And no error is raised
+  And other edge types for that node (depends_on, files_touched) are unaffected
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must treat empty list as a valid no-op input — no edges produced, no errors raised"
+  - "Must not affect processing of other edge types on the same node"
+  - "Must handle errors gracefully per the project error handling policy"
+delivers_to: null
+expects_from:
+  ac_id: KM-KQS-021
+  contract: "Component edge extraction logic that iterates over the components array — empty array produces zero iterations"
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/05a_edge_connectivity_improvements.md"
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []
