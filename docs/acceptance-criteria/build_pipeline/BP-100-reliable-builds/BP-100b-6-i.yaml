@@ -4,7 +4,7 @@ component: build-pipeline
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 created_by: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
 criteria: |
   Given a developer has added a new template category "widgets" to the output
@@ -31,5 +31,7 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - tests/test_build_artifact_parity.py
+implemented_by:
+  - tests/test_build_artifact_parity.py

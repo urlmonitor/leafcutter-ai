@@ -4,7 +4,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 created_by: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
 criteria: |
   Given the workflows output directory contains a file named "obsolete-script.js"
@@ -26,5 +26,7 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - tests/test_build_artifact_parity.py::TestManagedArtifactDirsCoversAllCategories
+implemented_by:
+  - scripts/build_phases.py

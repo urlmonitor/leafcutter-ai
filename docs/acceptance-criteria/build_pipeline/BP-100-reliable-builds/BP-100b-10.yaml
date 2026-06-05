@@ -4,7 +4,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given docs/build-drift-hook.md exists,
   When a developer reads the section titled "Adding a new template category",
@@ -26,4 +26,5 @@ created_by: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_te
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - docs/build-drift-hook.md
