@@ -43,6 +43,7 @@ from build_phases import (
     build_antigravity_instructions,
     build_sync_platforms,
     build_ac_store_docs,
+    build_agent_cards,
     reset_uptodate_count,
     get_uptodate_count,
     clean_stale_artifacts,
@@ -442,6 +443,7 @@ def _run_phases(
         ("Config scaffolds", build_config_scaffolds),
         ("AC store scaffold", build_ac_store_scaffold),
         ("AC store docs", build_ac_store_docs),
+        ("Agent cards", build_agent_cards),
         ("Doc index", build_doc_index),
     ]
 
@@ -923,4 +925,10 @@ if __name__ == "__main__":
 #   build_ac_store_docs) entry to scaffold_phases after ("AC store scaffold",
 #   build_ac_store_scaffold). Installs how-to and reference docs for the AC
 #   Traceability Store into target projects. (#EPIC-ACTraceabilityStore/09)
+# - 2026-06-05 10:30 [python-coder/EPIC-SelfDescribingAgents/02]: Imported
+#   build_agent_cards from build_phases and added ("Agent cards", build_agent_cards)
+#   entry to scaffold_phases after ("AC store docs", build_ac_store_docs) and
+#   before ("Doc index", build_doc_index). Generates .card.md files for all
+#   agent templates into docs/agents/cards/ on every build run.
+#   (#EPIC-SelfDescribingAgents/02)
 # ====================================================================

@@ -1167,6 +1167,40 @@ def build_ac_store_docs(target_root: Path, config: dict[str, Any],
     return written
 
 
+def build_agent_cards(target_root: Path, config: dict[str, Any],
+                      dry_run: bool, force: bool) -> int:
+    """Generate .card.md files for all agent templates.
+
+    Delegates entirely to ``generate_agent_cards.build_agent_cards()``.
+    Reads all ``.md`` files in ``<target_root>/templates/agents/`` (excluding
+    ``_*.md`` helper files), reads YAML frontmatter and the corresponding
+    registry entry from ``config/agent_registry.json``, calls
+    ``generate_card()``, and writes to
+    ``<target_root>/docs/agents/cards/<agent-id>.card.md``.
+
+    Args:
+        target_root: Absolute path to the target project root.
+        config: Build configuration dict (passed through for interface parity).
+        dry_run: When True, logs intent but writes nothing.
+        force: When True, overwrites existing card files.
+
+    Returns:
+        Count of files written (or that would be written in dry-run mode).
+
+    # DECISION HISTORY
+    # - 2026-06-05 10:30 [python-coder/EPIC-SelfDescribingAgents/02]:
+    #   Added build_agent_cards phase. Delegates to generate_agent_cards.py
+    #   to keep build_phases.py a thin dispatcher. Registered in build.py
+    #   scaffold_phases after ("AC store docs", build_ac_store_docs).
+    #   (#EPIC-SelfDescribingAgents/02)
+    """
+    from generate_agent_cards import (  # noqa: PLC0415 — lazy import avoids circular
+        build_agent_cards as _generate_cards,
+    )
+    return _generate_cards(target_root=target_root, config=config,
+                           dry_run=dry_run, force=force)
+
+
 # ---------------------------------------------------------------------------
 # Clean-mode: remove stale artifacts
 # ---------------------------------------------------------------------------

@@ -16,14 +16,14 @@ files_touched:
   - scripts/build.py
   - scripts/build_phases.py
 agents:
-  architect-review: needed
-  test-writer: needed
-  python-coder: needed
+  architect-review: signed_off
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
-  commit: needed
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -105,41 +105,182 @@ And does not write any .card.md files
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
-- [ ] pr-reviewer
-- [ ] commit
+- [x] architect-review — 2026-06-05 10:00
+- [x] test-writer — 2026-06-05 10:15
+- [x] python-coder — 2026-06-05 10:30
+- [x] test-runner — 2026-06-05 10:45
+- [x] pr-reviewer — 2026-06-05 11:00
+- [x] commit — 2026-06-05 11:15
 - [ ] pull-request
 
 ## Comments
+
+### 2026-06-05 10:00 — architect-review (status: ok)
+feedback-id: fb_2026-06-05_91cd0809
+completion_manifest:
+  blast_radius_assessed: true
+  impact_classified: true
+  architectural_note_written: true
+
+**Impact classification: SMALL.**
+3 files in the single `build_pipeline` component (`scripts/generate_agent_cards.py` new, `scripts/build.py` import+call, `scripts/build_phases.py` new function). No always-large triggers fire. No Alembic migration, no public API change, no ADR contract change.
+
+**Architectural decisions delivered to python-coder:**
+
+1. **skills_invoked precedence rule**: When both `skills_invoked` and `skills_used` are present in a registry entry, `render_skills()` MUST use `skills_invoked` exclusively and ignore `skills_used`. This prevents double-listing. When only `skills_used` is present (pre-Ticket-5 agents), use it as the fallback. `python-coder`'s registry entry already has `skills_invoked` (Ticket 1 deliverable) and `skills_used: ["signoff"]` (legacy) — the precedence rule ensures the richer `skills_invoked` data wins.
+
+2. **Mermaid template approach approved**: String template with substitution is the correct approach — no graph library dependency. The generator reads `spawned_by` + `spawn_allowlist` from the registry and generates the `flowchart TD` with `classDef` blocks using f-strings. This keeps the generator dependency-free and consistent with the prototype card.
+
+3. **knowledge_channels source confirmed**: The `knowledge_channels` array in `config/agent_registry.json` (Ticket 1 deliverable) is the sole source. The generator does NOT read `docs/architecture/agent_knowledge_plane.md` at build time — that doc is human-readable reference only. The registry is the machine-readable source.
+
+4. **Integration pattern: build_phases.py function**: Add `build_agent_cards(target_root, config, dry_run, force) -> int` to `build_phases.py` following the `build_vision()` pattern. Import and register it in `build.py`'s `scaffold_phases` list (or `artifact_phases` if cards are to be treated as build artifacts). Recommended: `scaffold_phases` after "AC store docs" since cards are user-visible documentation, not intermediate artifacts.
+
+5. **Overwrite existing cards: approved**: `docs/agents/cards/python-coder.card.md` is now a **generated artifact**. The generator MUST overwrite it on each build (force=True semantics, with compare-before-write guard to skip unchanged files). The prototype card is preserved in git history as of Ticket 1; the generated replacement is the canonical form going forward.
+
+6. **Minimal card for pre-Ticket-5 agents**: When an agent template has none of the new structured fields, the generator produces a card using only `description`, `model`, `tools`, `spawned_by`, and `skills_used` from the registry/template. All render functions must handle absent fields by omitting the section or rendering a minimal placeholder (e.g. `*No data available*`). No `KeyError` allowed.
+
+**No ADR required.** **No diagrams suggested.** Escalation: none.
+
+## Escalation
+
+Branch: none
+Reason: 3 files in one component (build_pipeline); no always-large trigger fired.
+
+### 2026-06-05 10:15 — test-writer (status: ok)
+feedback-id: fb_2026-06-05_cea93688
+completion_manifest:
+  test_stubs_created: true
+  all_tests_red: true
+  red_baseline_captured: true
+  ac_ids_covered: [INF-600b]
+
+## Test Writer — Completion Report
+
+### Tests Written
+| File | Directory | Framework | Status |
+|---|---|---|---|
+| test_generate_agent_cards.py | unit_tests/ | pytest/unittest | written |
+
+### Verification Run
+- Command: `python3 -m pytest unit_tests/test_generate_agent_cards.py -v`
+- Result: red (9 failures — expected; `generate_agent_cards` module not yet implemented)
+
+### Notes
+All 9 tests fail with `ModuleNotFoundError: No module named 'generate_agent_cards'`. This is the correct red state — the module does not yet exist. No test passes immediately. The red_baseline below is the explicit success target for python-coder.
+
+red_baseline:
+  - test_name: TestCardGeneratedForPythonCoder::test_card_generated_for_python_coder_matches_prototype_sections
+    file: unit_tests/test_generate_agent_cards.py
+    error: "ModuleNotFoundError: No module named 'generate_agent_cards'"
+  - test_name: TestCardGeneratedForPythonCoder::test_card_has_yaml_frontmatter
+    file: unit_tests/test_generate_agent_cards.py
+    error: "ModuleNotFoundError: No module named 'generate_agent_cards'"
+  - test_name: TestCardGeneratedForMinimalAgent::test_card_generated_for_minimal_agent
+    file: unit_tests/test_generate_agent_cards.py
+    error: "ModuleNotFoundError: No module named 'generate_agent_cards'"
+  - test_name: TestSkillsPrecedence::test_skills_invoked_takes_precedence_over_skills_used
+    file: unit_tests/test_generate_agent_cards.py
+    error: "ModuleNotFoundError: No module named 'generate_agent_cards'"
+  - test_name: TestKnowledgeFlowTable::test_knowledge_flow_table_populated_from_registry
+    file: unit_tests/test_generate_agent_cards.py
+    error: "ModuleNotFoundError: No module named 'generate_agent_cards'"
+  - test_name: TestDryRunWritesNoFiles::test_dry_run_writes_no_files
+    file: unit_tests/test_generate_agent_cards.py
+    error: "ModuleNotFoundError: No module named 'generate_agent_cards'"
+  - test_name: TestBehavioralPatternsTable::test_behavioral_patterns_produce_table
+    file: unit_tests/test_generate_agent_cards.py
+    error: "ModuleNotFoundError: No module named 'generate_agent_cards'"
+  - test_name: TestBehavioralPatternsTable::test_empty_behavioral_patterns_renders_no_conditional_behaviors_message
+    file: unit_tests/test_generate_agent_cards.py
+    error: "ModuleNotFoundError: No module named 'generate_agent_cards'"
+  - test_name: TestBuildPhaseIntegration::test_build_phase_integration
+    file: unit_tests/test_generate_agent_cards.py
+    error: "ModuleNotFoundError: No module named 'generate_agent_cards'"
+
+### 2026-06-05 10:30 — python-coder (status: ok)
+feedback-id: fb_2026-06-05_14cf2015
+completion_manifest:
+  code_implemented: true
+  tests_passing: true
+  doc_enforcer_clean: true
+  complexity_check_clean: true
+
+Implemented 3 deliverables: (1) `scripts/generate_agent_cards.py` with `generate_card()` public entry point and 8 section-rendering helpers; (2) `build_agent_cards()` thin dispatcher in `scripts/build_phases.py`; (3) wired into `build.py` scaffold_phases as ("Agent cards", build_agent_cards). All 9 red-baseline tests are now green. Real run generated 59 card files including `docs/agents/cards/python-coder.card.md` with all required sections. `skills_invoked` precedence rule, dry-run support, and graceful degradation for minimal agents all implemented per architect-review decisions.
+
+### 2026-06-05 10:45 — test-runner (status: ok)
+feedback-id: fb_2026-06-05_58990b0c
+completion_manifest:
+  tests_green: true
+  no_regressions: true
+
+9/9 new tests in `unit_tests/test_generate_agent_cards.py` pass. Ran broader suite (101 tests excluding 2 pre-existing release module import failures): 100 pass, 1 pre-existing failure in `test_build_workflow_scripts_writes_to_output_root_workflows` which predates this ticket. No regressions introduced.
+
+### 2026-06-05 11:00 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-05_505dc59f
+completion_manifest:
+  diff_reviewed: true
+  no_high_findings: true
+  scope_verified: true
+
+**Review Report**
+
+**Base:** HEAD (staged set)
+**Diff size:** ~6,662 insertions, 322 deletions across 68 files (59 generated card files + 4 implementation files + ticket + test file)
+
+#### High-Confidence Findings
+
+No high-confidence findings.
+
+#### Medium-Confidence Findings
+
+None.
+
+#### Suppression Tally
+
+Suppressed: 0 low-confidence nits, 0 medium findings dropped by Opus.
+
+#### Scope Verification
+
+All 3 `files_touched` entries present in staged set: `scripts/generate_agent_cards.py` (new, 617 lines), `scripts/build.py` (+8 lines), `scripts/build_phases.py` (+34 lines). Generated card files in `docs/agents/cards/` are the intended deliverable. Test file `unit_tests/test_generate_agent_cards.py` is a test-writer deliverable (correct). `config/agent_registry.json` and `scripts/registry_validator.py` have unstaged working-tree changes from Ticket 1 — they are NOT staged for this commit (correct scope isolation).
+
+## Escalation
+
+Branch: none
+Reason: not escalated: 0 medium findings (threshold > 3); ruff fully clean on new code.
+
+### 2026-06-05 11:15 — commit (status: ok)
+feedback-id: fb_2026-06-05_776a255f
+completion_manifest:
+  staged_correctly: true
+  commit_succeeded: true
+
+Staged 64 files in scope: 59 generated card files (docs/agents/cards/*.card.md), scripts/generate_agent_cards.py, scripts/build.py, scripts/build_phases.py, unit_tests/test_generate_agent_cards.py, tickets/.../02-card-generator.md. Out-of-scope changes (config/agent_registry.json, registry_validator.py, ticket 03, ticket 01) left unstaged per commit-scope discipline.
 
 ## Implementation Tasks
 
 ### architect-review
 
-- [ ] Confirm the generator's input reading order: which field wins when both
+- [x] Confirm the generator's input reading order: which field wins when both
   `skills_invoked` and the legacy `skills_used` are present? Define a precedence
   rule so `python-coder` doesn't produce a "double Skills Used" section.
-- [ ] Confirm the spawn graph rendering strategy: the prototype uses a Mermaid
+- [x] Confirm the spawn graph rendering strategy: the prototype uses a Mermaid
   `flowchart TD` with `classDef` style blocks. The generator must read
   `spawned_by` and `spawn_allowlist` from the registry and derive the flowchart.
   Confirm the Mermaid template approach (string template with substitution) vs.
   a proper graph library is acceptable.
-- [ ] Confirm where the knowledge plane mapping lives for the generator: the
+- [x] Confirm where the knowledge plane mapping lives for the generator: the
   `knowledge_channels` array in the registry entry (Ticket 1 deliverable) is the
   source. Confirm the generator does not need to also read
   `docs/architecture/agent_knowledge_plane.md` at build time.
-- [ ] Confirm the dry-run integration point: should `generate_agent_cards.py`
+- [x] Confirm the dry-run integration point: should `generate_agent_cards.py`
   be a new function in `build_phases.py` (matching the pattern of
   `build_vision()`, `build_ticket_lifecycle()`, etc.) or a standalone script
   invoked by `build.py`? Recommend the `build_phases.py` function pattern for
   consistency.
-- [ ] Confirm the output path: `docs/agents/cards/` already contains the
+- [x] Confirm the output path: `docs/agents/cards/` already contains the
   hand-authored `python-coder.card.md`. The generator must overwrite it on
   each build. Confirm this is acceptable (cards are generated, not hand-edited).
-- [ ] Define a minimal card template for agents that have none of the new
+- [x] Define a minimal card template for agents that have none of the new
   structured fields yet (i.e., pre-Ticket-5 agents). The card should still
   compile from the existing `description`, `model`, `tools`, `spawned_by`,
   and `skills_used` fields without erroring.
@@ -148,6 +289,10 @@ And does not write any .card.md files
 and its integration into build.py.
 
 ### test-writer
+
+- [x] Write `unit_tests/test_generate_agent_cards.py` with 9 failing test stubs
+- [x] Verified all 9 tests are RED (ModuleNotFoundError: No module named 'generate_agent_cards')
+- [x] Captured red_baseline with actual error output
 
 Write tests before python-coder begins implementation.
 
@@ -199,6 +344,12 @@ Create `unit_tests/test_generate_agent_cards.py`:
 **Depends on architect-review:** Approved generator architecture.
 
 ### python-coder
+
+- [x] Implemented `scripts/generate_agent_cards.py` with `generate_card()` entry point and all section renderers
+- [x] Added `build_agent_cards()` function to `scripts/build_phases.py`
+- [x] Wired `build_agent_cards` into `scripts/build.py` scaffold_phases
+- [x] All 9 tests green after implementation
+- [x] Verified 59 card files generated; python-coder.card.md has all required sections
 
 **Important:** Do not begin until architect-review and test-writer have signed off.
 

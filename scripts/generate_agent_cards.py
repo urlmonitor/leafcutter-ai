@@ -1,0 +1,617 @@
+"""
+MODULE: generate_agent_cards
+GOAL: Generate .card.md documentation files for agent templates from structured
+    metadata sources (template frontmatter, agent registry entries).
+BUSINESS CONTEXT: Part of the leafcutter build system (INF-600b). Agent cards
+    are a build artifact — never hand-written. Each `python build.py` run
+    regenerates the cards so that documentation stays in sync with
+    the agent definition. The golden output is
+    `docs/agents/cards/python-coder.card.md`.
+ARCHITECTURE: Single public entry point `generate_card()` returns a complete
+    card markdown string for one agent. Section-rendering helpers (one per
+    card section) encapsulate the rendering logic for each block. A top-level
+    `build_agent_cards()` function drives the full-tree pass for `build.py`.
+    YAML frontmatter is parsed with `yaml.safe_load()`. All file I/O is
+    wrapped in `try/except OSError`.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import textwrap
+from datetime import date
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+_log = logging.getLogger(__name__)
+
+_PACKAGE_ROOT = Path(__file__).resolve().parent.parent
+_TEMPLATES_DIR = _PACKAGE_ROOT / "templates"
+_REGISTRY_PATH = _PACKAGE_ROOT / "config" / "agent_registry.json"
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+
+def _load_registry(registry_path: Path) -> list[dict[str, Any]]:
+    """Load and return the agent registry as a list of entry dicts.
+
+    Args:
+        registry_path: Absolute path to agent_registry.json.
+
+    Returns:
+        List of agent registry entry dicts. Empty list on error.
+    """
+    try:
+        with registry_path.open(encoding="utf-8") as fh:
+            data = json.load(fh)
+    except OSError as exc:
+        _log.warning("Cannot read agent registry at %s: %s", registry_path, exc)
+        return []
+    if isinstance(data, list):
+        return data
+    return data.get("agents", [])
+
+
+def _parse_frontmatter(template_text: str) -> dict[str, Any]:
+    """Extract and parse YAML frontmatter between the first two '---' delimiters.
+
+    Args:
+        template_text: Full text of an agent template markdown file.
+
+    Returns:
+        Parsed frontmatter dict, or empty dict if no frontmatter found.
+    """
+    lines = template_text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return {}
+    end_idx = None
+    for i, line in enumerate(lines[1:], start=1):
+        if line.strip() == "---":
+            end_idx = i
+            break
+    if end_idx is None:
+        return {}
+    fm_text = "\n".join(lines[1:end_idx])
+    try:
+        parsed = yaml.safe_load(fm_text)
+    except yaml.YAMLError as exc:
+        _log.warning("YAML parse error in frontmatter: %s", exc)
+        return {}
+    return parsed or {}
+
+
+# ---------------------------------------------------------------------------
+# Section-rendering helpers
+# ---------------------------------------------------------------------------
+
+def render_when_to_use(registry_entry: dict[str, Any]) -> str:
+    """Render the '## When to Use' card section.
+
+    Derives auto-dispatch conditions from the registry ``auto_dispatch``
+    list, ``spawned_by``, and optional negative-use notes.
+
+    Args:
+        registry_entry: Registry entry dict for the agent.
+
+    Returns:
+        Markdown string for the When to Use section.
+    """
+    lines: list[str] = ["## When to Use", ""]
+    auto_dispatch = registry_entry.get("auto_dispatch", [])
+    if auto_dispatch:
+        lines += ["### Auto-Dispatch Conditions", ""]
+        lines += ["| Type | Expression |", "|------|-----------|"]
+        for cond in auto_dispatch:
+            ctype = cond.get("type", "")
+            expr = cond.get("expression", "")
+            lines.append(f"| {ctype} | {expr} |")
+        lines.append("")
+    spawned_by = registry_entry.get("spawned_by", [])
+    if spawned_by:
+        lines += ["### Spawned By", ""]
+        for parent in spawned_by:
+            lines.append(f"- `{parent}`")
+        lines.append("")
+    return "\n".join(lines)
+
+
+def render_knowledge_flow(registry_entry: dict[str, Any]) -> str:
+    """Render the '## Knowledge Flow' card section.
+
+    Builds a table from the ``knowledge_channels`` array in the registry entry.
+
+    Args:
+        registry_entry: Registry entry dict for the agent.
+
+    Returns:
+        Markdown string for the Knowledge Flow section.
+    """
+    channels = registry_entry.get("knowledge_channels", [])
+    if not channels:
+        return "## Knowledge Flow\n\n*No knowledge channels declared.*\n\n"
+
+    lines: list[str] = [
+        "## Knowledge Flow",
+        "",
+        "| Channel | Source | Injection Mode | Description |",
+        "|---------|--------|----------------|-------------|",
+    ]
+    for ch in channels:
+        num = ch.get("channel", "—")
+        source = ch.get("source", "—")
+        mode = ch.get("injection_mode", "—")
+        desc = ch.get("description", "—")
+        lines.append(f"| {num} | {source} | {mode} | {desc} |")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def render_spawn_diagram(registry_entry: dict[str, Any]) -> str:
+    """Render the '## Spawn and Dependency' section with a Mermaid flowchart.
+
+    Reads ``spawned_by`` and ``spawn_allowlist`` from the registry entry and
+    derives a ``flowchart TD`` diagram using string substitution.
+
+    Args:
+        registry_entry: Registry entry dict for the agent.
+
+    Returns:
+        Markdown string for the Spawn and Dependency section.
+    """
+    agent_id = registry_entry.get("id", "unknown")
+    spawned_by = registry_entry.get("spawned_by", [])
+    spawn_allowlist = registry_entry.get("spawn_allowlist", [])
+    tier = registry_entry.get("tier", "phase")
+    priority = registry_entry.get("priority", "?")
+
+    lines: list[str] = ["## Spawn and Dependency", ""]
+    lines += ["```mermaid", "flowchart TD"]
+    lines += [
+        "    classDef supervisor fill:#dbeafe,stroke:#2563eb,stroke-width:2px",
+        "    classDef phase fill:#d1fae5,stroke:#059669,stroke-width:2px",
+        "    classDef utility fill:#f3f4f6,stroke:#4b5563,stroke-width:2px",
+        "    classDef target fill:#fee2e2,stroke:#dc2626,stroke-width:3px",
+        "",
+    ]
+
+    # Parent nodes
+    parent_ids: list[str] = []
+    for parent in spawned_by:
+        node_id = parent.replace("-", "_")
+        parent_tier = "supervisor" if "supervisor" in parent else "phase"
+        lines.append(
+            f'    {node_id}["{parent}\\n({parent_tier} tier)"]:::{parent_tier}'
+        )
+        parent_ids.append(node_id)
+
+    # The agent itself
+    self_id = agent_id.replace("-", "_")
+    lines.append(
+        f'    {self_id}["{agent_id}\\n({tier} tier, priority {priority})"]:::target'
+    )
+
+    # Child nodes
+    child_ids: list[str] = []
+    for child in spawn_allowlist:
+        cid = child.replace("-", "_")
+        child_tier = "utility" if "research" in child else "phase"
+        lines.append(
+            f'    {cid}["{child}\\n({child_tier} tier)"]:::{child_tier}'
+        )
+        child_ids.append(cid)
+
+    lines.append("")
+    # Spawn relationships
+    for pid in parent_ids:
+        lines.append(f"    {pid} -->|dispatches| {self_id}")
+    for cid in child_ids:
+        lines.append(f"    {self_id} -->|spawns| {cid}")
+
+    lines += ["```", ""]
+    return "\n".join(lines)
+
+
+def render_io_contract(template_frontmatter: dict[str, Any]) -> str:
+    """Render the '## Input / Output Contract' card section.
+
+    Builds tables from ``inputs``, ``outputs``, and ``mutates`` arrays in the
+    template frontmatter.
+
+    Args:
+        template_frontmatter: Parsed frontmatter dict from the agent template.
+
+    Returns:
+        Markdown string for the Input / Output Contract section.
+    """
+    lines: list[str] = ["## Input / Output Contract", ""]
+    inputs = template_frontmatter.get("inputs", [])
+    outputs = template_frontmatter.get("outputs", [])
+    mutates = template_frontmatter.get("mutates", [])
+
+    if inputs:
+        lines += ["### Inputs", "", "| Name | Type | Description |", "|------|------|-------------|"]
+        for item in inputs:
+            name = item.get("name", "—")
+            itype = item.get("type", "—")
+            desc = item.get("description", "—")
+            lines.append(f"| `{name}` | {itype} | {desc} |")
+        lines.append("")
+
+    if outputs:
+        lines += ["### Outputs", "", "| Name | Type | Description |", "|------|------|-------------|"]
+        for item in outputs:
+            name = item.get("name", "—")
+            itype = item.get("type", "—")
+            desc = item.get("description", "—")
+            lines.append(f"| `{name}` | {itype} | {desc} |")
+        lines.append("")
+
+    if mutates:
+        lines += ["### Mutates (Side Effects)", "", "| Name | Type | Description |", "|------|------|-------------|"]
+        for item in mutates:
+            name = item.get("name", "—")
+            itype = item.get("type", "—")
+            desc = item.get("description", "—")
+            lines.append(f"| `{name}` | {itype} | {desc} |")
+        lines.append("")
+
+    if not inputs and not outputs and not mutates:
+        lines.append("*No structured I/O contract declared.*\n")
+
+    return "\n".join(lines)
+
+
+def render_skills(
+    template_frontmatter: dict[str, Any],
+    registry_entry: dict[str, Any],
+) -> str:
+    """Render the '## Skills Used' card section.
+
+    Precedence rule: ``skills_invoked`` (structured, from template or registry)
+    takes precedence over the legacy ``skills_used`` string list. This prevents
+    double-listing when both fields are present.
+
+    Args:
+        template_frontmatter: Parsed frontmatter dict from the agent template.
+        registry_entry: Registry entry dict for the agent.
+
+    Returns:
+        Markdown string for the Skills Used section.
+    """
+    # Precedence: skills_invoked from template FM, then from registry, then legacy skills_used
+    skills_invoked: list[dict] | None = (
+        template_frontmatter.get("skills_invoked")
+        or registry_entry.get("skills_invoked")
+    )
+
+    lines: list[str] = ["## Skills Used", ""]
+
+    if skills_invoked:
+        lines += ["| Skill | Mode | Condition |", "|-------|------|-----------|"]
+        for item in skills_invoked:
+            if isinstance(item, dict):
+                skill_id = item.get("skill_id", "—")
+                mode = item.get("mode", "—")
+                condition = item.get("condition", "—")
+            else:
+                skill_id = str(item)
+                mode = "—"
+                condition = "—"
+            lines.append(f"| `{skill_id}` | {mode} | {condition} |")
+        lines.append("")
+        return "\n".join(lines)
+
+    # Fallback: legacy skills_used string list
+    skills_used = (
+        template_frontmatter.get("skills_used")
+        or registry_entry.get("skills_used")
+        or []
+    )
+    if skills_used:
+        lines += ["| Skill | Mode | Condition |", "|-------|------|-----------|"]
+        for skill in skills_used:
+            lines.append(f"| `{skill}` | — | — |")
+        lines.append("")
+    else:
+        lines.append("*No skills declared.*\n")
+
+    return "\n".join(lines)
+
+
+def render_configuration(template_frontmatter: dict[str, Any]) -> str:
+    """Render the '## Configuration' card section.
+
+    Derives configuration entries from the ``config_keys`` frontmatter block.
+
+    Args:
+        template_frontmatter: Parsed frontmatter dict from the agent template.
+
+    Returns:
+        Markdown string for the Configuration section.
+    """
+    config_keys = template_frontmatter.get("config_keys", {})
+    lines: list[str] = ["## Configuration", ""]
+
+    if not config_keys:
+        lines.append("*No configuration keys declared.*\n")
+        return "\n".join(lines)
+
+    lines += ["| Key | Required | Description |", "|-----|----------|-------------|"]
+    for key, meta in config_keys.items():
+        if isinstance(meta, dict):
+            required = "Yes" if meta.get("required", False) else "No"
+            desc = meta.get("description", "—")
+        else:
+            required = "—"
+            desc = str(meta) if meta else "—"
+        lines.append(f"| `{key}` | {required} | {desc} |")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def render_behavioral_patterns(template_frontmatter: dict[str, Any]) -> str:
+    """Render the '## Contributor Notes' card section.
+
+    Renders ``behavioral_patterns`` as a table when the array is non-empty,
+    or a fallback message when the array is empty or absent.
+
+    Args:
+        template_frontmatter: Parsed frontmatter dict from the agent template.
+
+    Returns:
+        Markdown string for the Contributor Notes section.
+    """
+    patterns = template_frontmatter.get("behavioral_patterns", [])
+    lines: list[str] = ["## Contributor Notes", ""]
+
+    if not patterns:
+        lines.append(
+            "No conditional behaviors — this agent follows a single fixed execution path\n"
+        )
+        return "\n".join(lines)
+
+    lines += [
+        "### Key Behavioral Patterns",
+        "",
+        "| Pattern | Trigger | Behavior | Related Agent |",
+        "|---------|---------|----------|---------------|",
+    ]
+    for pat in patterns:
+        name = pat.get("name", "—")
+        trigger = pat.get("trigger", "—")
+        behavior = pat.get("behavior", "—")
+        related = pat.get("related_agent", "—")
+        lines.append(f"| {name} | {trigger} | {behavior} | `{related}` |")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def render_tools(template_frontmatter: dict[str, Any]) -> str:
+    """Render the '## Tools Available' card section.
+
+    Reads the ``tools`` field from template frontmatter.
+
+    Args:
+        template_frontmatter: Parsed frontmatter dict from the agent template.
+
+    Returns:
+        Markdown string for the Tools Available section.
+    """
+    tools_raw = template_frontmatter.get("tools", "")
+    lines: list[str] = ["## Tools Available", ""]
+
+    if not tools_raw:
+        lines.append("*No tools declared.*\n")
+        return "\n".join(lines)
+
+    tools = [t.strip() for t in str(tools_raw).split(",") if t.strip()]
+    lines += ["| Tool |", "|------|"]
+    for tool in tools:
+        lines.append(f"| `{tool}` |")
+    lines.append("")
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Public entry point
+# ---------------------------------------------------------------------------
+
+def generate_card(
+    agent_id: str,
+    template_frontmatter: dict[str, Any],
+    registry_entry: dict[str, Any],
+) -> str:
+    """Generate a complete .card.md string for one agent.
+
+    Reads structured metadata from template frontmatter and registry entry,
+    then renders each card section in canonical order. Every render function
+    handles absent fields gracefully (missing key → omit section or render
+    placeholder). No KeyError is raised for pre-Ticket-5 agents.
+
+    Args:
+        agent_id: Canonical agent identifier (e.g. ``"python-coder"``).
+        template_frontmatter: Parsed frontmatter dict from the agent's
+            template markdown file.
+        registry_entry: Registry entry dict for the agent (from
+            ``config/agent_registry.json``).
+
+    Returns:
+        Complete card markdown string, starting with YAML frontmatter.
+    """
+    today = date.today().isoformat()
+    name = template_frontmatter.get("name", agent_id)
+    description = template_frontmatter.get("description", "")
+    if isinstance(description, str):
+        description = description.strip()
+
+    # Build YAML frontmatter header
+    card_fm = textwrap.dedent(f"""\
+        ---
+        agent_id: {agent_id}
+        title: "Agent Card: {agent_id}"
+        type: card
+        status: active
+        created: {today}
+        card_version: "generated"
+        ---
+        """)
+
+    # Title block
+    title_block = f"# {name}\n\n"
+    if description:
+        title_block += f"**{description}**\n\n"
+
+    # Summary table
+    model = template_frontmatter.get("model", "—")
+    portable = "Yes" if template_frontmatter.get("portable", False) else "No"
+    tier = registry_entry.get("tier", "—")
+    priority = registry_entry.get("priority", "—")
+    signoff = "Yes" if template_frontmatter.get("signoff", False) else "No"
+
+    summary_table = (
+        "| Field | Value |\n"
+        "|-------|-------|\n"
+        f"| Model | {model} |\n"
+        f"| Tier | {tier} |\n"
+        f"| Priority | {priority} |\n"
+        f"| Portable | {portable} |\n"
+        f"| Sign-off capable | {signoff} |\n"
+        "\n---\n\n"
+    )
+
+    # Render all sections
+    sections = [
+        render_when_to_use(registry_entry),
+        "---\n\n",
+        render_knowledge_flow(registry_entry),
+        "---\n\n",
+        render_spawn_diagram(registry_entry),
+        "---\n\n",
+        render_io_contract(template_frontmatter),
+        "---\n\n",
+        render_tools(template_frontmatter),
+        "---\n\n",
+        render_skills(template_frontmatter, registry_entry),
+        "---\n\n",
+        render_configuration(template_frontmatter),
+        "---\n\n",
+        render_behavioral_patterns(template_frontmatter),
+    ]
+
+    return card_fm + title_block + summary_table + "".join(sections)
+
+
+# ---------------------------------------------------------------------------
+# Build-phase entry point (called by build_phases.build_agent_cards)
+# ---------------------------------------------------------------------------
+
+def build_agent_cards(
+    target_root: Path,
+    config: dict[str, Any],  # noqa: ARG001 — accepted for interface parity
+    dry_run: bool,
+    force: bool,
+) -> int:
+    """Generate .card.md files for all agent templates.
+
+    Reads all ``.md`` files in ``<target_root>/templates/agents/`` (excluding
+    ``_*.md`` helper files), reads YAML frontmatter and the corresponding
+    registry entry from ``config/agent_registry.json``, calls
+    ``generate_card()``, and writes to
+    ``<target_root>/docs/agents/cards/<agent-id>.card.md``.
+
+    Respects ``dry_run`` (no writes) and ``force`` (overwrite existing).
+    Returns the count of written (or would-write in dry-run) files.
+
+    Args:
+        target_root: Absolute path to the target project root.
+        config: Build configuration dict (accepted for interface parity;
+            not currently used by this phase).
+        dry_run: When True, logs intent but writes nothing.
+        force: When True, overwrites existing card files.
+
+    Returns:
+        Count of files written (or that would be written in dry-run mode).
+    """
+    agents_template_dir = target_root / "templates" / "agents"
+    if not agents_template_dir.exists():
+        _log.warning(
+            "generate_agent_cards: templates/agents/ not found at %s", target_root
+        )
+        return 0
+
+    registry_path = target_root / "config" / "agent_registry.json"
+    registry_entries = _load_registry(registry_path)
+    registry_map: dict[str, dict[str, Any]] = {
+        entry["id"]: entry for entry in registry_entries if "id" in entry
+    }
+
+    cards_dir = target_root / "docs" / "agents" / "cards"
+    written = 0
+
+    for template_file in sorted(agents_template_dir.glob("*.md")):
+        if template_file.name.startswith("_"):
+            continue  # Skip helper templates
+
+        try:
+            template_text = template_file.read_text(encoding="utf-8")
+        except OSError as exc:
+            _log.warning("Cannot read template %s: %s", template_file, exc)
+            continue
+
+        fm = _parse_frontmatter(template_text)
+        agent_id = fm.get("name") or template_file.stem
+
+        registry_entry = registry_map.get(agent_id, {"id": agent_id})
+
+        try:
+            card_content = generate_card(agent_id, fm, registry_entry)
+        except Exception as exc:  # noqa: BLE001
+            _log.warning("Card generation failed for %s: %s", agent_id, exc)
+            continue
+
+        card_path = cards_dir / f"{agent_id}.card.md"
+
+        if dry_run:
+            print(f"  [DRY-RUN] would write docs/agents/cards/{agent_id}.card.md")
+            written += 1
+            continue
+
+        if not force and card_path.exists():
+            # Compare-before-write: skip byte-identical files
+            try:
+                existing = card_path.read_text(encoding="utf-8")
+                if existing == card_content:
+                    continue
+            except OSError:
+                pass
+
+        try:
+            cards_dir.mkdir(parents=True, exist_ok=True)
+            card_path.write_text(card_content, encoding="utf-8")
+            print(f"  docs/agents/cards/{agent_id}.card.md")
+            written += 1
+        except OSError as exc:
+            _log.warning("Cannot write card %s: %s", card_path, exc)
+
+    return written
+
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-06-05 10:30 [python-coder/EPIC-SelfDescribingAgents/02]:
+#   Initial implementation. skills_invoked takes precedence over
+#   skills_used to prevent double-listing. Mermaid diagram generated
+#   via string template (no graph library dependency). knowledge_channels
+#   array from registry is the sole source for Knowledge Flow table —
+#   docs/architecture/agent_knowledge_plane.md is NOT read at build time.
+#   build_agent_cards() uses overwrite semantics (respects force param)
+#   with compare-before-write guard to skip byte-identical files.
+#   Output path: docs/agents/cards/<agent-id>.card.md.
+#   (#EPIC-SelfDescribingAgents/02)
+# ====================================================================
