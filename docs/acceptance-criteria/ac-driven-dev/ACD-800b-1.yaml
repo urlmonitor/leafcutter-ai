@@ -1,0 +1,31 @@
+id: ACD-800b-1
+title: "Audit finds keyword-and-component matches at medium confidence"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an AC with title "Required fields reject missing values at commit time"
+    and component ac-store,
+  And a done ticket with title "Validate required frontmatter fields"
+    and component ac-store,
+  And the two titles share >= 2 significant keywords (after filtering stop words:
+    the, a, an, is, are, when, then, given, and, or, not),
+  When the cross-reference audit tool is run,
+  Then the match appears in the output with confidence: medium,
+  And the reason field names the overlapping keywords and the matching component
+    (e.g. "title keyword overlap (3/4) + component match (ac-store)").
+depends_on: [ACD-800b]
+doc_links:
+  - tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/05_cross_reference_audit.md
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,26 @@
+id: ACD-900a-4-i
+title: "Empty ready list with --json flag returns a valid JSON object with an empty top array"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given no ready tickets or ACs exist in the backlog,
+  When the pick-next script is run with --json,
+  Then stdout is valid JSON matching: { "top": [] },
+  And the exit code is 0,
+  And no error message is included in the JSON output.
+depends_on: [ACD-900a-4]
+doc_links:
+  - templates/skills/ticket-prioritizer/SKILL.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

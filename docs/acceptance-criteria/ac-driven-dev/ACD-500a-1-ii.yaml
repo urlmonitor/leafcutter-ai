@@ -1,0 +1,28 @@
+id: ACD-500a-1-ii
+title: "Merged output handles AC scanner returning malformed JSON gracefully"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the AC store scanner exits with status 0 but writes invalid JSON
+    to stdout (e.g., truncated output or plain text error),
+  When the AC prioritizer attempts to parse the scanner output,
+  Then it exits with a non-zero status code,
+  And the error output identifies the parse failure
+    ("Failed to parse AC scanner output" or equivalent),
+  And no partial or corrupt JSON is written to stdout.
+depends_on: [ACD-500a-1]
+doc_links:
+  - tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/02_ac_aware_ticket_prioritizer.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

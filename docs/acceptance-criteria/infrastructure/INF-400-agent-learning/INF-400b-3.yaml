@@ -5,6 +5,8 @@ level: L2
 status: active
 req_status: active
 work_status: todo
+priority: high
+readiness: reviewed
 criteria: |
   Given the standard signoff section 7 prompt is designed for phase agents doing
     implementation work ("Did you discover anything during this ticket..."),
@@ -20,6 +22,9 @@ criteria: |
     to help the agent distinguish signal from noise.
 depends_on: [INF-400b, INF-400b-1]
 doc_links:
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
   - path: templates/agents/product-owner-v3.md
     relationship: constrains
     status: exists
@@ -31,10 +36,14 @@ doc_links:
     status: exists
 assigned_agent: llm-expert
 estimated_complexity: S
+it_requirements:
+  - "Must not reference code patterns, test strategies, or implementation details in the prompt"
+  - "Must include 2-3 concrete examples appropriate to the specification domain"
+  - "Prompt wording may differ between PO, BA, and IT PO to reflect each agent's scope"
 delivers_to: null
 expects_from:
   ac_id: INF-400b-1
-  contract: "Knowledge-capture step that contains a domain-specific prompt"
+  contract: "Knowledge-capture step in each template that contains a domain-specific self-reflection prompt"
 origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []

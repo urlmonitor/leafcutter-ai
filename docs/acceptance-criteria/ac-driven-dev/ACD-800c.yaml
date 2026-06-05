@@ -1,0 +1,34 @@
+id: ACD-800c
+title: "The --apply flag atomically backfills high-confidence matches into AC metadata"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the audit has identified matches at high and medium confidence,
+  When the tool is invoked with --apply,
+  Then only high-confidence matches are written to the AC store
+    (implemented_by receives the ticket path, work_status becomes done),
+  And medium-confidence matches are left unmodified for human review,
+  And the operation is idempotent (re-running with the same matches produces no duplicates).
+depends_on: [ACD-800, ACD-800a]
+doc_links:
+  - tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/05_cross_reference_audit.md
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The --apply operation must be idempotent (re-running produces no duplicates in implemented_by)"
+  - "YAML writes must preserve field ordering and comments (ruamel.yaml round-trip mode)"
+  - "Medium-confidence matches must NEVER be auto-applied (safety guard in code)"
+  - "The tool must produce a summary count of applied vs skipped matches on stdout"
+delivers_to: null
+expects_from:
+  ac_id: ACD-800a
+  contract: "High-confidence matches from the audit report"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-800c-1, ACD-800c-2]
+implemented_by: []

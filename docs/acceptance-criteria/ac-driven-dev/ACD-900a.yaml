@@ -1,0 +1,36 @@
+id: ACD-900a
+title: "pick_next.py presents the highest-priority work item from the merged ticket-and-AC list"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the AC-aware prioritizer produces a merged, ranked list of ready
+    tickets and ready ACs,
+  When a developer runs the pick-next script,
+  Then they receive a human-readable recommendation showing the single
+    highest-priority item with its type (AC or ticket), ID, title,
+    assigned agent, priority score, and the action command to start work,
+  And they can request the top N items or machine-readable JSON output,
+  And an empty backlog produces a clear informational message instead of
+    an error.
+depends_on: [ACD-900]
+doc_links:
+  - templates/skills/ticket-prioritizer/SKILL.md
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Script must support --top N and --json flags for machine consumption"
+  - "An empty backlog must exit 0 with an informational message, not exit non-zero"
+  - "Output must include the exact command to start building (e.g. '/build-ac --ac ACD-400a-1')"
+delivers_to: null
+expects_from:
+  ac_id: ACD-500a
+  contract: "Merged prioritized list from ticket-prioritizer with --include-acs"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-900a-1, ACD-900a-2, ACD-900a-3, ACD-900a-4]
+implemented_by: []

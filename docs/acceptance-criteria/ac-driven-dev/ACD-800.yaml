@@ -1,0 +1,30 @@
+id: ACD-800
+title: "Existing implementations are automatically discovered and linked to their ACs"
+component: ac-driven-dev
+level: L0
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the AC store contains ACs that describe behaviours already implemented
+    by tickets created before the AC-driven flow existed,
+  When the cross-reference audit tool is run,
+  Then it discovers which done tickets match which unlinked ACs using text
+    similarity and keyword heuristics,
+  And it produces a reviewable report distinguishing high and medium confidence matches,
+  And it optionally backfills the AC metadata (implemented_by, work_status) for
+    verified matches,
+  So that the scanner does not re-propose work that has already been completed.
+depends_on: []
+doc_links:
+  - tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/05_cross_reference_audit.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-800a, ACD-800b, ACD-800c, ACD-800d]
+implemented_by: []

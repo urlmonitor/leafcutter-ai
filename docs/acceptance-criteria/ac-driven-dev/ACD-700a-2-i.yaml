@@ -1,0 +1,29 @@
+id: ACD-700a-2-i
+title: "Ticket generation failure when AC already has a ticket offers recovery"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given AC id ACS-101a-1 already has a generated ticket at
+    tickets/00_inbox/ACS-101a-1-validate-input-schema.md,
+  And the user answered "yes" to the confirmation prompt for ACS-101a-1,
+  When generate_ticket_from_ac.py is called with --ac ACS-101a-1,
+  And the script exits with a non-zero status indicating a ticket already exists,
+  Then the agent surfaces the existing ticket path to the user,
+  And prompts: "A ticket already exists for this AC. Build the existing ticket instead? (yes / no)",
+  And if the user answers "yes", the build pipeline is invoked on the existing ticket path,
+  And if the user answers "no", the agent returns to the ranking step and proposes the next AC.
+depends_on: [ACD-700a-2]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

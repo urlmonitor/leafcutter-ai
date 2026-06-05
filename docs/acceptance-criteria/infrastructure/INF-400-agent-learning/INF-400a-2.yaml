@@ -5,6 +5,8 @@ level: L2
 status: active
 req_status: active
 work_status: todo
+priority: high
+readiness: reviewed
 criteria: |
   Given a memory file exists at memory/project_infrastructure_conventions.md
     containing a learning captured during a previous BA v3 run
@@ -19,8 +21,14 @@ doc_links:
   - path: docs/architecture/agent_knowledge_plane.md
     relationship: describes
     status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: S
+it_requirements:
+  - "Must rely on the harness's existing Channel 9 auto-memory injection — no custom injection logic"
+  - "Must not require changes to the Claude Code harness or SDK"
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3

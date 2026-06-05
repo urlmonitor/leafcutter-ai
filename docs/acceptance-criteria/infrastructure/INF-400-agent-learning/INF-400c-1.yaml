@@ -5,6 +5,8 @@ level: L2
 status: active
 req_status: active
 work_status: todo
+priority: high
+readiness: reviewed
 criteria: |
   Given the existing feedback infrastructure uses two JSONL sinks:
     - feedback.jsonl (phase-agent sign-off feedback via submit_feedback.py),
@@ -28,11 +30,19 @@ doc_links:
   - path: docs/architecture/agent_knowledge_system.md
     relationship: describes
     status: exists
-assigned_agent: architect-review
+  - path: docs/architecture/adrs/ADR-009-itpo-no-source-code-access.md
+    relationship: describes
+    status: exists
+assigned_agent: adr-author
 estimated_complexity: M
+it_requirements:
+  - "Must follow the existing ADR format established by prior ADRs in docs/architecture/adrs/"
+  - "Must be authored before any harvester implementation begins (INF-400c-2 depends on this)"
+  - "Must reference INF-400b and INF-400c as driving requirements"
+  - "Must consider backward compatibility with existing telemetry consumers (retrospective-agent, feedback-analyst)"
 delivers_to:
   agent: python-coder
-  contract: "An ADR that specifies which sink the harvester reads from, so the harvester can be implemented"
+  contract: "An ADR at docs/architecture/adrs/ADR-NNN-learning-emission-sink.md that specifies: (1) which JSONL sink file the harvester reads from, (2) the event schema the harvester expects, (3) whether existing telemetry consumers need modification"
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05

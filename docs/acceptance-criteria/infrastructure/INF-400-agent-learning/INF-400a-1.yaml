@@ -5,6 +5,8 @@ level: L2
 status: active
 req_status: active
 work_status: todo
+priority: high
+readiness: reviewed
 criteria: |
   Given the product-owner-v3, business-analyst-v3, and it-po-v3 agent templates,
   When an agent is spawned to work on a feature in a specific component
@@ -23,6 +25,9 @@ doc_links:
   - path: docs/architecture/agent_knowledge_plane.md
     relationship: describes
     status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
   - path: templates/agents/product-owner-v3.md
     relationship: constrains
     status: exists
@@ -34,9 +39,14 @@ doc_links:
     status: exists
 assigned_agent: llm-expert
 estimated_complexity: M
+it_requirements:
+  - "Pre-flight step must not add more than 5 seconds to agent startup under normal conditions"
+  - "Must degrade gracefully when context files are absent, corrupted, or exceed 50KB"
+  - "Must not modify any context file during the read phase"
+  - "Must be consistent across all three v3 agent templates — same step structure, same skip behavior"
 delivers_to:
   agent: llm-expert
-  contract: "Three agent templates with pre-flight sections that read domain context files"
+  contract: "Three agent templates (product-owner-v3.md, business-analyst-v3.md, it-po-v3.md) each containing a pre-flight section that reads PROJECT_CONTEXT.md (Channel 3) and per-folder README.md (Channel 2) before the first working step"
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05

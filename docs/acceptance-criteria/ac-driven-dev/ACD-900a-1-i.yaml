@@ -1,0 +1,28 @@
+id: ACD-900a-1-i
+title: "Upstream prioritizer failure produces a diagnostic error and exit code 1"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the upstream prioritizer is unavailable or returns invalid JSON
+    (e.g., a syntax error in stdout or a non-zero exit code),
+  When the pick-next script is run,
+  Then it exits with code 1,
+  And stderr contains a diagnostic message identifying which upstream
+    command failed and the nature of the failure,
+  And no partial recommendation or malformed output is written to stdout.
+depends_on: [ACD-900a-1]
+doc_links:
+  - templates/skills/ticket-prioritizer/SKILL.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

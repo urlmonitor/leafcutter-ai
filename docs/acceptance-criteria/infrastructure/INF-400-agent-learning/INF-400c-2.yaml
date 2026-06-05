@@ -5,6 +5,8 @@ level: L2
 status: active
 req_status: active
 work_status: todo
+priority: high
+readiness: reviewed
 criteria: |
   Given the emission sink (determined by ADR from INF-400c-1) contains
     three knowledge_captured events:
@@ -25,12 +27,22 @@ doc_links:
   - path: docs/architecture/agent_knowledge_system.md
     relationship: describes
     status: exists
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: L
+it_requirements:
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must log operations at appropriate severity levels"
+  - "Must be idempotent — re-running with the same sink content produces no duplicate writes"
+  - "Must complete within 10 seconds for sinks containing up to 1000 events"
+  - "Must not modify the emission sink file — only read from it and track processed offsets separately"
+  - "Must follow the capture-learning write protocol for file creation and append operations"
 delivers_to: null
 expects_from:
   ac_id: INF-400c-1
-  contract: "ADR specifying which sink to read and the event schema to expect"
+  contract: "ADR specifying which JSONL sink file to read, the event schema to parse, and whether events are filtered or consumed wholesale"
 origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []

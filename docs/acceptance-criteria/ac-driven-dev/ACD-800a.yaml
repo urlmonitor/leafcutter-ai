@@ -1,0 +1,34 @@
+id: ACD-800a
+title: "Exact-criteria text matching discovers high-confidence implementations"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an AC has work_status: todo and implemented_by: [],
+  And a done ticket contains an Acceptance Criteria section whose text is
+    >= 90% similar to the AC's criteria field (measured by sequence matching),
+  When the cross-reference audit runs in read-only mode,
+  Then it reports the match with confidence: high,
+  And the matched ticket path is proposed as the implemented_by value.
+depends_on: [ACD-800]
+doc_links:
+  - tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/05_cross_reference_audit.md
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Similarity threshold (90%) must be configurable via CLI argument"
+  - "Sequence matching must use difflib.SequenceMatcher or equivalent stdlib (no external NLP dependencies)"
+  - "Audit must be read-only by default (no writes to AC store without explicit --apply flag)"
+  - "Audit must handle AC store with 100+ files within 30 seconds"
+delivers_to:
+  agent: python-coder
+  contract: "JSON array of {ac_id, ticket_path, confidence, similarity_score, reason} objects"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-800a-1, ACD-800a-2]
+implemented_by: []

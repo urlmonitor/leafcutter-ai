@@ -1,0 +1,29 @@
+id: ACD-800c-2
+title: "--apply is idempotent for already-linked ACs"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given AC ACD-800a-1 already has implemented_by containing
+    "tickets/99_done/EPIC-Example/01_example.md",
+  When the cross-reference audit with --apply finds the same ticket
+    as a high-confidence match for that AC again,
+  Then the ticket path is NOT appended a second time to implemented_by
+    (the list retains exactly one entry for that path),
+  And the tool logs "no-op (already linked)" for that AC,
+  And work_status remains done (not re-set).
+depends_on: [ACD-800c, ACD-800c-1]
+doc_links:
+  - tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/05_cross_reference_audit.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

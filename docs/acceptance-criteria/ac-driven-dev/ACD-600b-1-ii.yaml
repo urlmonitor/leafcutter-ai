@@ -1,0 +1,29 @@
+id: ACD-600b-1-ii
+title: "Post-merge hook ignores non-ticket files touched by the merge"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a merge commit touched files:
+    - scripts/some_script.py (not under tickets/ prefix)
+    - docs/architecture/some_doc.md (not under tickets/ prefix)
+    - tickets/TICKET-A.md with source_ac: ACS-100a-1 and status: done,
+  When the post-merge hook fires after the merge into main,
+  Then only tickets/TICKET-A.md is evaluated for AC marking,
+  And the non-ticket files are ignored entirely,
+  And the hook exits with code 0.
+depends_on: [ACD-600b-1]
+doc_links:
+  - docs/architecture/agent_delivery_workflows.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

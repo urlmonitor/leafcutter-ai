@@ -1,0 +1,42 @@
+id: ACD-700a
+title: "A single /build-ac command sequences prioritization, ticket generation, build, and done-marking"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the AC store contains ready ACs with assigned priorities,
+  When the user invokes /build-ac,
+  Then the system calls the AC prioritizer to find the top-ranked ready AC,
+  And generates a ticket from that AC,
+  And surfaces the ticket path and a one-line summary for user confirmation,
+  And prompts: "Build this ticket now? (yes / review / skip)",
+  And on "yes" dispatches the build pipeline on the generated ticket,
+  And after a successful build marks the AC as work_status: done,
+  And on "skip" defers the current AC and proposes the next candidate,
+  And the agent is a thin coordinator that calls existing scripts — not a
+    new orchestrator.
+depends_on: [ACD-700]
+doc_links:
+  - docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+  - docs/reference/ac-schema.md
+assigned_agent: llm-expert
+estimated_complexity: L
+it_requirements:
+  - "The /build-ac command must not proceed to build without explicit user confirmation"
+  - "On 'skip', the deferred AC must not be re-proposed in the same invocation session"
+  - "The coordinator must call existing scripts (scan_ac_store.py, generate_ticket_from_ac.py, mark_ac_done.py) rather than reimplementing their logic"
+  - "Error at any stage must halt the pipeline with a clear message and leave the AC store in a consistent state"
+delivers_to:
+  agent: ticket-supervisor
+  contract: "A generated ticket path ready for /build-feature dispatch"
+expects_from:
+  ac_id: ACD-500a
+  contract: "AC-aware prioritizer returns a ranked list of ready ACs"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-700a-1, ACD-700a-2, ACD-700a-3, ACD-700a-4, ACD-700a-5]
+implemented_by: []

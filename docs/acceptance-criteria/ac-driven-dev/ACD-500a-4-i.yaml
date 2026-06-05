@@ -1,0 +1,30 @@
+id: ACD-500a-4-i
+title: "Complexity mapping rejects unknown estimated_complexity values with a warning"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an AC has estimated_complexity set to an unexpected value
+    (e.g., "XXL", "micro", or null),
+  When the AC prioritizer attempts to map it to the unified priority scale,
+  Then the AC entry is included in the output with priority "low"
+    (conservative default),
+  And a warning is emitted to stderr naming the AC ID and the unrecognized
+    complexity value,
+  And the prioritizer does NOT exit with an error (the unknown value is
+    non-fatal).
+depends_on: [ACD-500a-4]
+doc_links:
+  - tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/02_ac_aware_ticket_prioritizer.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

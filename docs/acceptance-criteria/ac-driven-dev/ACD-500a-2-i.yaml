@@ -1,0 +1,29 @@
+id: ACD-500a-2-i
+title: "Deduplication handles multiple tickets referencing the same AC without duplicating the ticket"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given AC "ACS-200b-1" appears in the ready AC list,
+  And two ticket files both have frontmatter source_ac: ACS-200b-1
+    (e.g., one in progress and one blocked),
+  When the prioritizer runs with --include-acs enabled and --json output,
+  Then the AC entry for ACS-200b-1 is suppressed (not in the output),
+  And both ticket entries appear in the output (deduplication removes the AC,
+    not the tickets),
+  And no duplicate AC entry is introduced by the multiple-reference scenario.
+depends_on: [ACD-500a-2]
+doc_links:
+  - tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/02_ac_aware_ticket_prioritizer.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

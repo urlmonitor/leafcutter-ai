@@ -29,6 +29,14 @@ agents:
   pr-reviewer: needed
   commit: needed
   pull-request: needed
+source_acs:
+  - ACD-500
+  - ACD-500a
+  - ACD-500a-1
+  - ACD-500a-2
+  - ACD-500a-3
+  - ACD-500a-4
+  - ACD-500a-5
 ---
 
 # 02: AC-aware ticket prioritizer

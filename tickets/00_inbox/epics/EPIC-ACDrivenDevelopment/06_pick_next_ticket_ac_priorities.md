@@ -29,6 +29,15 @@ agents:
   pr-reviewer: needed
   commit: needed
   pull-request: needed
+source_acs:
+  - ACD-900
+  - ACD-900a
+  - ACD-900a-1
+  - ACD-900a-2
+  - ACD-900a-3
+  - ACD-900a-4
+  - ACD-900b
+  - ACD-900b-1
 ---
 
 # 06: pick-next-ticket skill: incorporate AC priorities into ticket selection

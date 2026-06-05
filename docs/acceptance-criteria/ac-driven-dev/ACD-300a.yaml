@@ -18,6 +18,11 @@ depends_on: [ACD-300]
 doc_links: []
 assigned_agent: llm-expert
 estimated_complexity: M
+it_requirements:
+  - "Triage must complete in under 3 seconds (Haiku-tier model, not Opus)"
+  - "Triage must be stateless: no persistent storage between invocations"
+  - "Duplication check must compare against all active ACs in the target component, not just L2s"
+  - "Routing decision must include a rationale field explaining the classification"
 delivers_to:
   agent: create-ac-workflow
   contract: "{ route: strategic|behavioral|technical|covered, existing_acs: string[], rationale: string }"

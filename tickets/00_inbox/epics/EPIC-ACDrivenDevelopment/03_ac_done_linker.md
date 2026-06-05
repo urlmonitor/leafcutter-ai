@@ -29,6 +29,16 @@ agents:
   pr-reviewer: needed
   commit: needed
   pull-request: needed
+source_acs:
+  - ACD-600
+  - ACD-600a
+  - ACD-600a-1
+  - ACD-600a-2
+  - ACD-600a-3
+  - ACD-600a-4
+  - ACD-600b
+  - ACD-600b-1
+  - ACD-600b-2
 ---
 
 # 03: AC done-linker

@@ -1,0 +1,30 @@
+id: ACS-100c-2
+title: "Sparse AC parents receive a non-blocking advisory"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an L0 AC has fewer than 3 L1 children in its feature folder,
+  Or an L1 AC has fewer than 3 L2 children in its feature folder,
+  When the AC validator checks the feature folder,
+  Then it emits a non-blocking advisory (validation still passes),
+  And the advisory names the sparse parent AC and its current child count,
+  And the advisory suggests either adding children to cover missing behaviors
+    or merging the parent into a sibling component.
+depends_on: [ACS-100c]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,29 @@
+id: ACD-400b-2-i
+title: "Back-reference write preserves YAML formatting by using targeted append rather than full rewrite"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an AC YAML file has multi-line criteria with block scalar (|) syntax,
+    comments, and specific field ordering,
+  When the generator writes the implemented_by back-reference,
+  Then the resulting file diff shows ONLY the implemented_by field changed
+    (no field reordering, no quoting style changes, no whitespace reformatting),
+  And the YAML remains parseable by yaml.safe_load after the write,
+  And if the implemented_by field was previously an empty list ([]),
+    it now contains exactly the one new ticket path entry.
+depends_on: [ACD-400b-2]
+doc_links:
+  - docs/reference/ac-schema.md
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

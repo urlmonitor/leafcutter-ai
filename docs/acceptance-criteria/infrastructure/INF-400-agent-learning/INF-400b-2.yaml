@@ -5,6 +5,8 @@ level: L2
 status: active
 req_status: active
 work_status: todo
+priority: high
+readiness: reviewed
 criteria: |
   Given a v3 agent (PO, BA, or IT PO) discovers a learning during its run
     and the post-work knowledge-capture step (INF-400b-1) fires,
@@ -29,12 +31,17 @@ doc_links:
     status: exists
 assigned_agent: llm-expert
 estimated_complexity: S
+it_requirements:
+  - "Must produce valid single-line JSON (no multi-line pretty-printing)"
+  - "Must use ISO-8601 datetime format for the timestamp field"
+  - "Must be schema-compatible with existing knowledge_captured events from phase agents"
+  - "Must append atomically — partial writes must not corrupt the JSONL file"
 delivers_to:
   agent: python-coder
-  contract: "JSONL events in agent_telemetry.jsonl that match the existing knowledge_captured schema"
+  contract: "JSONL events appended to debugging/logs/agent_telemetry.jsonl with schema: { event: \"knowledge_captured\", timestamp: string (ISO-8601), agent: string, component: string, destination: string, entry_kind: string }"
 expects_from:
   ac_id: INF-400b-1
-  contract: "V3 agent templates with knowledge-capture step that calls route-learning and capture-learning"
+  contract: "V3 agent templates with knowledge-capture step that calls route-learning, capture-learning, and emits telemetry"
 origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []

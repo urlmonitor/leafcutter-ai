@@ -5,6 +5,8 @@ level: L2
 status: active
 req_status: active
 work_status: todo
+priority: high
+readiness: reviewed
 criteria: |
   Given a PROJECT_CONTEXT.md file exists alongside the route-knowledge skill
     containing the entry "INF-400 feature folder uses standing-rule-aware decomposition",
@@ -25,10 +27,13 @@ doc_links:
     status: exists
 assigned_agent: llm-expert
 estimated_complexity: S
+it_requirements:
+  - "Must use the canonical PROJECT_CONTEXT.md naming convention (all caps, underscore)"
+  - "Must not modify SKILL.md files — they are portable upstream templates"
 delivers_to: null
 expects_from:
   ac_id: INF-400a-1
-  contract: "Pre-flight step in v3 agent templates that reads PROJECT_CONTEXT.md"
+  contract: "Pre-flight step in v3 agent templates that reads PROJECT_CONTEXT.md co-located with each loaded skill"
 origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []

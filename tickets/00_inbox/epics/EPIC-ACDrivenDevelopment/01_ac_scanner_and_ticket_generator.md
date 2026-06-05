@@ -32,6 +32,16 @@ agents:
   commit: needed
   pull-request: needed
 ac_coverage: 0/6
+source_acs:
+  - ACD-400
+  - ACD-400a
+  - ACD-400a-1
+  - ACD-400a-2
+  - ACD-400b
+  - ACD-400b-1
+  - ACD-400b-2
+  - ACD-400b-3
+  - ACD-400b-4
 ---
 
 # 01: AC scanner and ticket generator

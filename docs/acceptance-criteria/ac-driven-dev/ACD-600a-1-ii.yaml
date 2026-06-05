@@ -1,0 +1,29 @@
+id: ACD-600a-1-ii
+title: "mark_ac_done with --ac directly sets work_status done without needing a ticket"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given AC file ACS-200a-2.yaml exists with:
+    work_status: todo
+    status: active,
+  And no ticket file is involved,
+  When the mark_ac_done script is invoked with --ac ACS-200a-2,
+  Then the AC YAML file is updated so that work_status reads "done",
+  And the script exits with code 0,
+  And stdout contains: "marked ACS-200a-2 work_status=done".
+depends_on: [ACD-600a-1]
+doc_links:
+  - docs/architecture/agent_delivery_workflows.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

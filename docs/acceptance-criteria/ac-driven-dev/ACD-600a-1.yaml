@@ -1,0 +1,33 @@
+id: ACD-600a-1
+title: "mark_ac_done marks the source AC done given a ticket path with source_ac"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a ticket file TICKET-20260605-ACS-100a-1.md exists with frontmatter:
+    source_ac: ACS-100a-1
+    status: done,
+  And AC file ACS-100a-1.yaml exists with:
+    work_status: todo
+    status: active,
+  When the mark_ac_done script is invoked with --ticket pointing to that ticket file,
+  Then the AC YAML file is updated so that work_status reads "done",
+  And no other fields in the AC YAML are modified,
+  And the script exits with code 0,
+  And stdout contains a log line matching:
+    "marked ACS-100a-1 work_status=done (from ticket TICKET-20260605-ACS-100a-1.md)".
+depends_on: [ACD-600a]
+doc_links:
+  - docs/architecture/agent_delivery_workflows.md
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

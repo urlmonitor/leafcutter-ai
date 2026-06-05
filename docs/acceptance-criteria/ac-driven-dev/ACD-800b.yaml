@@ -1,0 +1,27 @@
+id: ACD-800b
+title: "Keyword-and-component matching discovers medium-confidence implementations"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an AC has work_status: todo and implemented_by: [],
+  And a done ticket shares >= 2 significant title keywords with the AC title,
+  And the ticket's components overlap with the AC's component field,
+  When the cross-reference audit runs in read-only mode,
+  Then it reports the match with confidence: medium,
+  And the reason field explains which keywords matched and which component overlapped.
+depends_on: [ACD-800]
+doc_links:
+  - tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/05_cross_reference_audit.md
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-800b-1]
+implemented_by: []

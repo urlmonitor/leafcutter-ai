@@ -1,0 +1,31 @@
+id: ACD-700a-2
+title: "Answering yes triggers ticket generation, build dispatch, and done-marking in sequence"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the agent has proposed AC id ACS-101a-1 to the user,
+  And the user answers "yes" to the confirmation prompt,
+  When the agent proceeds,
+  Then generate_ticket_from_ac.py is called with --ac ACS-101a-1,
+  And the generated ticket file path is captured from the script's output,
+  And the build pipeline is invoked on the generated ticket path
+    (single-ticket mode, not epic mode),
+  And after the build pipeline completes successfully,
+    mark_ac_done.py is called with --ticket <generated-ticket-path>,
+  And the AC's work_status transitions from todo to done.
+depends_on: [ACD-700a, ACD-700a-1]
+doc_links:
+  - docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

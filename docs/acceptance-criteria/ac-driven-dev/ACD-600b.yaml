@@ -1,0 +1,35 @@
+id: ACD-600b
+title: "Post-merge hook automatically marks ACs done for completed tickets in the merge"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a post-merge hook fires after a ticket branch is merged into main,
+  When the merge includes ticket files that have status: done and a source_ac field,
+  Then the hook invokes mark_ac_done for each qualifying ticket,
+  And tickets without source_ac are skipped without error,
+  And the hook always exits 0 (non-fatal) regardless of individual mark failures,
+  And the hook is idempotent (safe to re-run on already-done ACs).
+depends_on: [ACD-600, ACD-600a]
+doc_links:
+  - docs/architecture/agent_delivery_workflows.md
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Hook must ALWAYS exit 0 regardless of individual mark_ac_done failures (non-fatal)"
+  - "Hook must log each skip/success/failure to stderr for observability"
+  - "Hook must be idempotent: safe to re-run on the same merge commit"
+  - "Hook must complete within 10 seconds for up to 20 ticket files in a single merge"
+  - "Hook must not block git operations even if AC store directory is temporarily unavailable"
+delivers_to: null
+expects_from:
+  ac_id: ACD-600a
+  contract: "mark_ac_done script that accepts --ticket <path> and exits 0 on success or no-op"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-600b-1, ACD-600b-2]
+implemented_by: []

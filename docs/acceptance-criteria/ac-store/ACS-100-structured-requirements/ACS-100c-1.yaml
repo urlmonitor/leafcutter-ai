@@ -1,0 +1,29 @@
+id: ACS-100c-1
+title: "AC tree branching factor is capped to keep folders readable"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an L0 AC has more than 7 L1 children in its feature folder,
+  Or an L1 AC has more than 5 L2 children in its feature folder,
+  When the AC validator checks the feature folder,
+  Then validation fails with a message identifying the overcrowded parent AC,
+  And the message states the current child count and the applicable limit,
+  And the message recommends splitting the parent into smaller components.
+depends_on: [ACS-100c]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

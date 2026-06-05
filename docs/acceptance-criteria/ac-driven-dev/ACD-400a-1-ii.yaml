@@ -1,0 +1,29 @@
+id: ACD-400a-1-ii
+title: "Scanner reports unparseable YAML files as diagnostics without crashing"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given docs/acceptance-criteria/ contains 10 valid YAML files and 1 file
+    with invalid YAML syntax (e.g. unclosed quotes or tab indentation errors),
+  When the scanner is invoked with --level leaf --work-status todo,
+  Then the scanner exits with code 1,
+  And the error output names the invalid file path and includes the YAML
+    parse error message,
+  And the 10 valid files are still processed and reported in the output
+    (the invalid file does not prevent scanning of other files).
+depends_on: [ACD-400a-1]
+doc_links:
+  - docs/reference/ac-schema.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

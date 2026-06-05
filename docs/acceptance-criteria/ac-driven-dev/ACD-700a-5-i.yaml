@@ -1,0 +1,32 @@
+id: ACD-700a-5-i
+title: "Explicit --ac flag with non-existent or non-ready AC is rejected"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the user invokes /build-ac --ac ACS-999z-9,
+  And ACS-999z-9 does not exist in the AC store,
+  When the agent attempts to locate the AC,
+  Then it outputs an error: "AC 'ACS-999z-9' not found in the store.",
+  And exits without generating a ticket or invoking the build pipeline.
+
+  Given the user invokes /build-ac --ac ACS-101a-1,
+  And ACS-101a-1 exists but has work_status: done (not ready),
+  When the agent evaluates the AC's readiness,
+  Then it outputs: "AC 'ACS-101a-1' is not in a buildable state (current status: done).",
+  And exits without generating a ticket or invoking the build pipeline.
+depends_on: [ACD-700a-5]
+doc_links:
+  - docs/reference/ac-schema.md
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

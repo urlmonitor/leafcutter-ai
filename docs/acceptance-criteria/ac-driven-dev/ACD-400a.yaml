@@ -1,0 +1,38 @@
+id: ACD-400a
+title: "Scanner identifies todo, unblocked leaf ACs and presents them as a prioritized ready list"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the AC store contains YAML files at levels L0 through L3 with varying
+    work_status and depends_on relationships,
+  When the scanner is invoked with leaf-level and todo filters,
+  Then it returns only L2/L3 ACs that are active, todo, and unblocked
+    (all dependencies have work_status: done),
+  And blocked ACs are reported separately with their blocking dependencies named,
+  And the ready list is sorted by estimated_complexity then AC id,
+  And the output is available in both human-readable and machine-consumable JSON formats.
+depends_on: [ACD-400]
+doc_links:
+  - docs/acceptance-criteria/index.yaml
+  - docs/reference/ac-schema.md
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Scanner must complete in O(n) where n is number of AC files (single pass per file)"
+  - "Scanner must be idempotent: repeated runs produce identical output"
+  - "Scanner must not modify any AC files (read-only operation)"
+  - "Scanner must degrade gracefully if a YAML file is malformed (skip with warning, continue)"
+  - "JSON output must conform to a documented JSON schema"
+delivers_to:
+  agent: python-coder
+  contract: "A sorted list of ready AC objects and a list of blocked AC objects with their blockers"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-400a-1, ACD-400a-2]
+implemented_by: []

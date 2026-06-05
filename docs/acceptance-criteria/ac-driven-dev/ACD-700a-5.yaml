@@ -1,0 +1,26 @@
+id: ACD-700a-5
+title: "/build-ac accepts an explicit --ac flag to bypass the ranking step"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given ACS-100a-2 exists in the AC store with work_status: todo,
+  When the user invokes /build-ac --ac ACS-100a-2,
+  Then the agent does NOT call ac_prioritizer.py,
+  And the agent proposes ACS-100a-2 directly with its id and title,
+  And prompts the user with: "Build this ticket now? (yes / review / skip)",
+  And subsequent yes/skip handling follows the same rules as the ranked path.
+depends_on: [ACD-700a]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

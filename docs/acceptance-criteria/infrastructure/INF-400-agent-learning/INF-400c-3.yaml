@@ -5,6 +5,8 @@ level: L2
 status: active
 req_status: active
 work_status: todo
+priority: high
+readiness: reviewed
 criteria: |
   Given the harvester has already processed 3 events from the emission sink
     and written their learnings to the target files,
@@ -22,10 +24,14 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Must persist the processing watermark or offset to survive process restarts"
+  - "Must handle the case where the watermark file is missing (treat as first run)"
+  - "Must handle errors gracefully per the project error handling policy"
 delivers_to: null
 expects_from:
   ac_id: INF-400c-2
-  contract: "Harvester that processes events and needs an idempotency mechanism"
+  contract: "Harvester that processes events sequentially and needs an idempotency mechanism (watermark, offset, or processed-event-ID list) to avoid re-processing"
 origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []

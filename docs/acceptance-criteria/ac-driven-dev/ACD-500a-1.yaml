@@ -1,0 +1,32 @@
+id: ACD-500a-1
+title: "Merged output contains both ticket and AC entries sorted by unified priority"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the ticket backlog contains 3 ready tickets with priorities
+    high, medium, and low,
+  And the AC store contains 4 ready ACs with estimated_complexity values
+    S, M, L, and XL (none of which have a corresponding ticket with source_ac),
+  When the prioritizer runs with --include-acs enabled and --json output,
+  Then the output ready array contains exactly 7 entries,
+  And each entry has a "source" field with value "ticket" or "ac",
+  And the entries are sorted by unified priority in descending order:
+    critical > high > medium > low,
+  And within the same priority tier the order is deterministic (tickets
+    before ACs at equal priority).
+depends_on: [ACD-500a]
+doc_links:
+  - tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/02_ac_aware_ticket_prioritizer.md
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

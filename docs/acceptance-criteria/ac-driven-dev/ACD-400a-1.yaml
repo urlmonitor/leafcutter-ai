@@ -1,0 +1,33 @@
+id: ACD-400a-1
+title: "Leaf scanner filters to todo, active, unblocked L2/L3 ACs and sorts by complexity then id"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given docs/acceptance-criteria/ contains 100 YAML files at levels L0 through L3,
+    including files with work_status: todo, work_status: done, status: active,
+    and status: deprecated,
+  When the scanner is invoked with --level leaf --work-status todo,
+  Then only files with level L2 or L3 AND work_status: todo AND status: active
+    are included in the ready output,
+  And files whose depends_on references include any AC with work_status != done
+    are excluded from ready and listed in a separate blocked section,
+  And the ready list is sorted by estimated_complexity ascending
+    (S before M before L before XL) then by AC id ascending,
+  And L0 and L1 files are never included regardless of their work_status.
+depends_on: [ACD-400a]
+doc_links:
+  - docs/acceptance-criteria/index.yaml
+  - docs/reference/ac-schema.md
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,27 @@
+id: ACD-900b
+title: "SKILL.md documents the AC-aware prioritization workflow and pick-next script"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the ticket-prioritizer skill has been extended with AC-aware
+    prioritization and the pick-next recommendation script,
+  When a developer reads the skill documentation,
+  Then they can understand how to invoke the merged prioritization,
+  And they can understand the output format and available flags,
+  And they can see how AC complexity maps to the unified priority scale.
+depends_on: [ACD-900]
+doc_links:
+  - templates/skills/ticket-prioritizer/SKILL.md
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-900b-1]
+implemented_by: []

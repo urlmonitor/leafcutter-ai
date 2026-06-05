@@ -14,8 +14,14 @@ depends_on: [BO-100a]
 doc_links: []
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "File-touch intersection must be computed as a set operation (O(n) per pair)"
+  - "Tickets with empty or missing files_touched must be treated as touching all files (conservative isolation)"
+  - "The conflict check must run before dispatch, never after"
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: BO-100a
+  contract: "Ready-set of unblocked tickets with their files_touched metadata"
 origin_agent: business-analyst-v3
 created: 2026-06-04
 amended_by: []

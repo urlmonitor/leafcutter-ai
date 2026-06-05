@@ -46,6 +46,7 @@ source_acs:
   - ACD-300c-3
   - ACD-300d
   - ACD-300d-1
+  - TKT-100g
 ---
 
 # 08: /create-ac workflow — triage, orchestrate, and gate AC authoring

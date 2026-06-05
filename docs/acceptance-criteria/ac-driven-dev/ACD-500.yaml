@@ -1,0 +1,28 @@
+id: ACD-500
+title: "A single priority queue answers 'what to build next' across both tickets and ACs"
+component: ac-driven-dev
+level: L0
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the leafcutter-ai system has both a ticket backlog and an AC store
+    with ready acceptance criteria,
+  When an operator asks "what should I build next?",
+  Then a single ranked list presents ready tickets and ready ACs together,
+  And the ranking uses a unified priority scale so tickets and ACs are
+    directly comparable,
+  And duplicate entries are suppressed when a ticket already exists for an AC.
+depends_on: []
+doc_links:
+  - tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/02_ac_aware_ticket_prioritizer.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-500a]
+implemented_by: []

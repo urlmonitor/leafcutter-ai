@@ -1,0 +1,28 @@
+id: ACD-600a-1-i
+title: "mark_ac_done rejects marking an AC that has status: deprecated"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given AC file ACS-100a-1.yaml exists with:
+    status: deprecated
+    work_status: todo,
+  When the mark_ac_done script is invoked with --ac ACS-100a-1,
+  Then the script exits with code 2,
+  And stderr indicates that the AC cannot be marked done because its status is not active,
+  And the AC YAML file is unchanged on disk.
+depends_on: [ACD-600a-1]
+doc_links:
+  - docs/architecture/agent_delivery_workflows.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

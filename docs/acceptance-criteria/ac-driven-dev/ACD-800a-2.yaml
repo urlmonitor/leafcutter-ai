@@ -1,0 +1,29 @@
+id: ACD-800a-2
+title: "Unrelated tickets produce no matches (false-positive prevention)"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an AC with title "Required fields reject missing values at commit time"
+    and component ac-store,
+  And a done ticket whose title, criteria section, and component share no
+    significant terms with that AC (e.g. a ticket about "Add changelog
+    generation" in component build-pipeline),
+  When the cross-reference audit tool is run,
+  Then the AC does NOT appear in the matches list for that unrelated ticket,
+  And the total match count for that AC is zero.
+depends_on: [ACD-800a]
+doc_links:
+  - tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/05_cross_reference_audit.md
+assigned_agent: test-writer
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

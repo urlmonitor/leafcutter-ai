@@ -1,0 +1,35 @@
+id: ACD-600a
+title: "mark_ac_done script sets work_status to done for a given AC or ticket"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a standalone script accepts --ticket or --ac arguments,
+  When invoked with a valid ticket path that has a source_ac field,
+    or with a valid AC ID directly,
+  Then the referenced AC YAML file is updated to work_status: done,
+  And the script validates preconditions (AC exists, AC is active, ticket has source_ac)
+    before writing,
+  And the script is idempotent (re-running on an already-done AC is a no-op exit 0),
+  And all outcomes are logged to stdout/stderr with structured messages.
+depends_on: [ACD-600]
+doc_links:
+  - docs/architecture/agent_delivery_workflows.md
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Script must be idempotent: re-running on an already-done AC must exit 0 with no changes"
+  - "Script must validate the AC exists and is in active status before writing"
+  - "YAML write must preserve existing field order and comments (use ruamel.yaml round-trip)"
+  - "Script must exit non-zero if the target AC does not exist or has no active status"
+  - "All stdout/stderr output must be structured (parseable by downstream tooling)"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-600a-1, ACD-600a-2, ACD-600a-3, ACD-600a-4]
+implemented_by: []

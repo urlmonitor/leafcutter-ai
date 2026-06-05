@@ -27,6 +27,18 @@ agents:
   pr-reviewer: needed
   commit: needed
   pull-request: needed
+source_acs:
+  - ACD-800
+  - ACD-800a
+  - ACD-800a-1
+  - ACD-800a-2
+  - ACD-800b
+  - ACD-800b-1
+  - ACD-800c
+  - ACD-800c-1
+  - ACD-800c-2
+  - ACD-800d
+  - ACD-800d-1
 ---
 
 # 05: Cross-reference audit — backfill implemented_by from existing tickets

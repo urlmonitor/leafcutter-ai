@@ -1,0 +1,36 @@
+id: ACD-500a-4
+title: "Complexity-to-priority mapping converts AC sizes to the ticket priority scale"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an AC with estimated_complexity: S,
+  When the AC prioritizer maps it to the unified priority schema,
+  Then the priority field in the output entry is "high".
+
+  Given an AC with estimated_complexity: M,
+  When the AC prioritizer maps it to the unified priority schema,
+  Then the priority field in the output entry is "medium".
+
+  Given an AC with estimated_complexity: L,
+  When the AC prioritizer maps it to the unified priority schema,
+  Then the priority field in the output entry is "low".
+
+  Given an AC with estimated_complexity: XL,
+  When the AC prioritizer maps it to the unified priority schema,
+  Then the priority field in the output entry is "low".
+depends_on: [ACD-500a]
+doc_links:
+  - tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/02_ac_aware_ticket_prioritizer.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

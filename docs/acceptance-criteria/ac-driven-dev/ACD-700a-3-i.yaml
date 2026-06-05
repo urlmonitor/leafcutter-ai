@@ -1,0 +1,29 @@
+id: ACD-700a-3-i
+title: "Repeated skips exhaust all candidates and exit cleanly"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the AC store contains exactly 2 ready ACs:
+    - ACS-101a-1 (priority: high)
+    - ACS-102a-1 (priority: medium),
+  And the user answers "skip" to both proposals in sequence,
+  When the agent re-invokes the prioritizer after the second skip,
+  Then the prioritizer returns an empty list (both ACs now deferred),
+  And the agent outputs: "AC store is empty — no unblocked todo ACs found.",
+  And exits without error,
+  And both ACS-101a-1 and ACS-102a-1 have work_status: deferred in their YAML files.
+depends_on: [ACD-700a-3]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

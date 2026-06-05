@@ -32,6 +32,16 @@ agents:
   pr-reviewer: needed
   commit: needed
   pull-request: needed
+source_acs:
+  - ACD-700
+  - ACD-700a
+  - ACD-700a-1
+  - ACD-700a-2
+  - ACD-700a-2-i
+  - ACD-700a-2-ii
+  - ACD-700a-3
+  - ACD-700a-4
+  - ACD-700a-5
 ---
 
 # 04: /build-ac entry point — AC-to-ticket-to-build end-to-end

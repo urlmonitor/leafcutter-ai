@@ -5,6 +5,8 @@ level: L3
 status: active
 req_status: active
 work_status: todo
+priority: high
+readiness: reviewed
 criteria: |
   Given a PROJECT_CONTEXT.md file exists but contains malformed content
     (e.g., binary data, truncated YAML frontmatter, or a file exceeding 50KB),
@@ -19,10 +21,14 @@ doc_links:
     status: exists
 assigned_agent: llm-expert
 estimated_complexity: S
+it_requirements:
+  - "Must handle files exceeding 50KB by skipping them, not by attempting partial reads"
+  - "Must handle binary content without producing garbled output in the agent's context"
+  - "Must log the problematic file path at an appropriate severity level for operator visibility"
 delivers_to: null
 expects_from:
   ac_id: INF-400a-1
-  contract: "Pre-flight step with graceful error handling for unreadable files"
+  contract: "Pre-flight step with graceful error handling: skip unreadable files, log path, continue"
 origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []

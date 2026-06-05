@@ -1,0 +1,32 @@
+id: ACD-400b-3
+title: "Generator is idempotent -- re-run with existing ticket exits non-zero without duplicating"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the generator was already run once for AC id ACS-100a-1 and a ticket
+    exists at tickets/00_inbox/TICKET-<YYYYMMDD>-ACS-100a-1.md,
+  When the generator is invoked again with --ac ACS-100a-1,
+  Then the script exits with a non-zero exit code,
+  And the error output names the existing ticket file path,
+  And no second ticket file is written (the tickets directory contains
+    exactly one file matching *-ACS-100a-1.md),
+  And the source AC YAML's implemented_by list is unchanged
+    (no duplicate path appended).
+depends_on: [ACD-400b, ACD-400b-1, ACD-400b-2]
+doc_links:
+  - docs/reference/ac-schema.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACD-400b-1
+  contract: "Ticket writing logic that the idempotency guard wraps"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

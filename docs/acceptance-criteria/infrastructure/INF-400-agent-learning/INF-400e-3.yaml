@@ -5,6 +5,8 @@ level: L2
 status: active
 req_status: active
 work_status: todo
+priority: high
+readiness: reviewed
 criteria: |
   Given the it-po-v3 agent ran once on the infrastructure component and discovered
     that infrastructure ACs are typically assigned to "llm-expert" for template work
@@ -17,11 +19,19 @@ criteria: |
     component (e.g., does not assign "sql-coder" to infrastructure template ACs).
 depends_on: [INF-400e, INF-400a, INF-400d]
 doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
   - path: templates/agents/it-po-v3.md
     relationship: constrains
     status: exists
 assigned_agent: llm-expert
 estimated_complexity: M
+it_requirements:
+  - "Must demonstrate measurable improvement over baseline (first-run) output"
+  - "Must not skip agent registry validation — learned mappings are heuristics, not overrides"
+  - "Must be verifiable by comparing first-run and second-run agent assignments for the same component"
+  - "Must still assign the correct agent even if the learned mapping is stale (agent registry is authoritative)"
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3

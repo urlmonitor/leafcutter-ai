@@ -1,0 +1,26 @@
+id: ACD-900a-2-i
+title: "The --top N flag with N larger than the ready list returns all available items without error"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the merged ready list contains exactly 2 items,
+  When the pick-next script is run with --top 5,
+  Then exactly 2 items are printed to stdout (all available items),
+  And the exit code is 0,
+  And no error or warning about insufficient items is printed.
+depends_on: [ACD-900a-2]
+doc_links:
+  - templates/skills/ticket-prioritizer/SKILL.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

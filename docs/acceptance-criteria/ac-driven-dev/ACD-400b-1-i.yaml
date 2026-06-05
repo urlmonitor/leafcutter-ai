@@ -1,0 +1,28 @@
+id: ACD-400b-1-i
+title: "Generator rejects an AC that has no criteria field with a descriptive error"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an AC YAML file exists with id: BROKEN-001, work_status: todo,
+    assigned_agent: python-coder, but the criteria field is absent or empty,
+  When the generator is invoked with --ac BROKEN-001,
+  Then the generator exits with a non-zero exit code,
+  And the error output states that the AC is missing a criteria field,
+  And no ticket file is written,
+  And no implemented_by back-reference is written to the source AC.
+depends_on: [ACD-400b-1]
+doc_links:
+  - docs/reference/ac-schema.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

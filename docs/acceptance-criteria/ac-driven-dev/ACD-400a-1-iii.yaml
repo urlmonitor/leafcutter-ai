@@ -1,0 +1,30 @@
+id: ACD-400a-1-iii
+title: "Scanner detects and reports circular dependencies without entering an infinite loop"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given docs/acceptance-criteria/ contains three L2 ACs with circular depends_on:
+    - AC-X with depends_on: [AC-Z]
+    - AC-Y with depends_on: [AC-X]
+    - AC-Z with depends_on: [AC-Y],
+  When the scanner is invoked with --level leaf --work-status todo,
+  Then the scanner exits with code 2,
+  And the error output identifies the cycle by naming all ACs involved
+    (e.g. "Dependency cycle detected: AC-X -> AC-Z -> AC-Y -> AC-X"),
+  And none of the ACs in the cycle appear in the ready list.
+depends_on: [ACD-400a-1]
+doc_links:
+  - docs/reference/ac-schema.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

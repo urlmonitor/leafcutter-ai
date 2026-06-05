@@ -1,0 +1,30 @@
+id: ACD-700a-2-ii
+title: "Build dispatch respects the agent depth-1 limit (ADR-006)"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the build-ac agent is invoked as the executing context at depth 0,
+  And the user answered "yes" to build a ticket,
+  When the agent dispatches the build pipeline for the generated ticket,
+  Then the build pipeline (ticket-supervisor) runs at depth 0 as the executing context,
+  And phase agents are spawned via the Agent tool at depth 1,
+  And no Agent-tool call occurs at depth 2 or beyond,
+  And if the build pipeline cannot be invoked inline without exceeding depth 1,
+    then the agent outputs the ticket path and instructs the user to invoke
+    /build-feature manually rather than calling it as a nested agent.
+depends_on: [ACD-700a-2]
+doc_links:
+  - docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

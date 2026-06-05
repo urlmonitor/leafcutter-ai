@@ -1,0 +1,27 @@
+id: ACD-400a-1-i
+title: "Scanner returns empty ready list when AC store contains no eligible files"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given docs/acceptance-criteria/ contains only L0 and L1 files
+    (no L2 or L3 files exist),
+  When the scanner is invoked with --level leaf --work-status todo,
+  Then the ready list is empty (zero entries),
+  And the blocked list is empty (zero entries),
+  And the scanner exits with code 0 (empty result is not an error).
+depends_on: [ACD-400a-1]
+doc_links:
+  - docs/reference/ac-schema.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

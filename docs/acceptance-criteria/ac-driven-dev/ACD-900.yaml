@@ -1,0 +1,29 @@
+id: ACD-900
+title: "Developers get a single 'what next?' recommendation from the full backlog of tickets and ACs"
+component: ac-driven-dev
+level: L0
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a developer wants to know what to work on next,
+  When they invoke the pick-next-ticket skill,
+  Then they receive a single prioritized recommendation drawn from both
+    the ticket backlog and the AC store,
+  And the recommendation includes the work item type, identity, title,
+    responsible agent, priority score, and the exact command to start building,
+  And the skill documentation explains how AC priorities are unified with
+    ticket priorities.
+depends_on: []
+doc_links:
+  - templates/skills/ticket-prioritizer/SKILL.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-900a, ACD-900b]
+implemented_by: []

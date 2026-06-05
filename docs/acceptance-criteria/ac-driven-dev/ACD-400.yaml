@@ -1,0 +1,31 @@
+id: ACD-400
+title: "The AC store drives the build backlog via automated scanning and ticket generation"
+component: ac-driven-dev
+level: L0
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the AC store contains structured requirements with work_status, depends_on,
+    assigned_agent, and criteria fields,
+  When the system needs to determine what to build next,
+  Then a scanner identifies which leaf-level ACs are ready for implementation
+    (todo, unblocked, active),
+  And a generator produces a valid, wired ticket file from any selected AC,
+  And the generated ticket passes all pre-commit validation without human editing,
+  And a back-reference links the AC to its ticket so provenance is traceable
+    in both directions.
+depends_on: []
+doc_links:
+  - docs/acceptance-criteria/index.yaml
+  - docs/reference/ac-schema.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-400a, ACD-400b]
+implemented_by: []

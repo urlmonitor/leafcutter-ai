@@ -1,0 +1,31 @@
+id: ACD-400b-4
+title: "Generated ticket passes ticket_frontmatter_guard with correct structure and sign-offs"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the generator has produced a ticket file for AC id ACS-100a-1,
+  When the ticket_frontmatter_guard pre-commit hook is run against that file,
+  Then the hook exits with code 0 (no validation errors),
+  And the ticket frontmatter contains requires_diagram and requires_adr fields
+    with boolean values,
+  And the ## Sign-offs section contains exactly the agents whose agents map
+    value is needed (one unchecked checkbox per needed agent),
+  And no agents with map value not_needed appear in Sign-offs.
+depends_on: [ACD-400b, ACD-400b-1]
+doc_links:
+  - docs/reference/ac-schema.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACD-400b-1
+  contract: "Ticket file whose structure is validated by the guard"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

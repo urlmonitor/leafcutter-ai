@@ -1,0 +1,31 @@
+id: ACD-600b-1-i
+title: "Post-merge hook exits 0 even when mark_ac_done fails for one ticket"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a merge commit touched two ticket files:
+    - tickets/TICKET-A.md with source_ac: ACS-100a-1 and status: done
+    - tickets/TICKET-B.md with source_ac: NONEXISTENT and status: done,
+  And AC ACS-100a-1 exists with work_status: todo,
+  And no AC file exists for id NONEXISTENT,
+  When the post-merge hook fires after the merge into main,
+  Then mark_ac_done succeeds for TICKET-A (ACS-100a-1 becomes work_status: done),
+  And mark_ac_done fails for TICKET-B (NONEXISTENT not found),
+  And the hook logs the failure for TICKET-B but does NOT abort,
+  And the hook exits with code 0 (non-fatal; a broken done-linker must not block merges).
+depends_on: [ACD-600b-1]
+doc_links:
+  - docs/architecture/agent_delivery_workflows.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

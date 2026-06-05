@@ -5,6 +5,8 @@ level: L2
 status: active
 req_status: active
 work_status: todo
+priority: high
+readiness: reviewed
 criteria: |
   Given the product-owner-v3, business-analyst-v3, and it-po-v3 agent templates
     all have signoff: false in their frontmatter,
@@ -25,6 +27,9 @@ criteria: |
     (since v3 agents operate on AC files, not tickets).
 depends_on: [INF-400b]
 doc_links:
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
   - path: templates/agents/product-owner-v3.md
     relationship: constrains
     status: exists
@@ -34,14 +39,16 @@ doc_links:
   - path: templates/agents/it-po-v3.md
     relationship: constrains
     status: exists
-  - path: docs/architecture/agent_knowledge_system.md
-    relationship: describes
-    status: exists
 assigned_agent: llm-expert
 estimated_complexity: M
+it_requirements:
+  - "Must be consistent across all three v3 agent templates — same step structure, same skill invocations"
+  - "Must not block agent exit if the knowledge-capture step encounters an error"
+  - "Must emit telemetry events using the existing knowledge_captured schema from signoff section 7"
+  - "Must not depend on ticket_path — v3 agents operate on AC files, not tickets"
 delivers_to:
   agent: llm-expert
-  contract: "Three agent templates with embedded knowledge-capture steps analogous to signoff section 7"
+  contract: "Three agent templates with embedded post-work knowledge-capture steps that invoke route-learning, capture-learning, and emit knowledge_captured telemetry events"
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05

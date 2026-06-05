@@ -1,0 +1,30 @@
+id: ACD-500a-2
+title: "Deduplication suppresses an AC entry when a ticket with source_ac exists"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given AC "ACS-100a-1" appears in the ready AC list from the AC store scanner,
+  And a ticket file "TICKET-20260605-ACS-100a-1.md" exists in the ticket backlog
+    with frontmatter field source_ac: ACS-100a-1,
+  When the prioritizer runs with --include-acs enabled and --json output,
+  Then the ready array does NOT contain an entry for ACS-100a-1 with source: ac,
+  And the ready array DOES contain the ticket entry for
+    TICKET-20260605-ACS-100a-1.md with source: ticket,
+  And the total entry count reflects the deduplication (one fewer than the
+    sum of raw ticket + AC counts).
+depends_on: [ACD-500a]
+doc_links:
+  - tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/02_ac_aware_ticket_prioritizer.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

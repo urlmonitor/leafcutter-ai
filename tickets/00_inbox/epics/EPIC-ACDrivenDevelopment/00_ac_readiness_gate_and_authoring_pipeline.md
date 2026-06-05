@@ -32,6 +32,14 @@ agents:
   pr-reviewer: needed
   commit: needed
   pull-request: needed
+source_acs:
+  - ACS-100a-1
+  - ACD-200a
+  - ACD-200a-1
+  - ACD-200b
+  - ACD-200b-1
+  - ACD-200c
+  - ACD-200c-1
 ---
 
 # 00: AC readiness gate and authoring pipeline

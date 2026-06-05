@@ -5,6 +5,8 @@ level: L3
 status: active
 req_status: active
 work_status: todo
+priority: high
+readiness: reviewed
 criteria: |
   Given the emission sink contains an event with entry_kind "unknown-future-surface"
     that does not match any surface in the route-knowledge taxonomy,
@@ -20,10 +22,15 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Must log unrecognized entry_kind values at WARNING level with the event identifier"
+  - "Must mark skipped events as processed to prevent infinite retry loops"
+  - "Must exit with success status (exit code 0) even when events are skipped"
+  - "Must handle errors gracefully per the project error handling policy"
 delivers_to: null
 expects_from:
   ac_id: INF-400c-2
-  contract: "Harvester that iterates events and must handle unexpected entry_kind values"
+  contract: "Harvester that iterates events and dispatches by entry_kind, with an explicit fallback path for unrecognized values"
 origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []

@@ -5,6 +5,8 @@ level: L2
 status: active
 req_status: active
 work_status: todo
+priority: high
+readiness: reviewed
 criteria: |
   Given a component folder has no PROJECT_CONTEXT.md files,
   And no memory files exist for that component's domain,
@@ -16,6 +18,9 @@ criteria: |
     (i.e., the pre-flight step skips missing files silently and proceeds).
 depends_on: [INF-400a, INF-400a-1]
 doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
   - path: templates/agents/product-owner-v3.md
     relationship: constrains
     status: exists
@@ -27,10 +32,13 @@ doc_links:
     status: exists
 assigned_agent: llm-expert
 estimated_complexity: S
+it_requirements:
+  - "Must not emit user-visible warnings or log messages about absent context files"
+  - "Must not degrade output quality below the template's baseline when no context exists"
 delivers_to: null
 expects_from:
   ac_id: INF-400a-1
-  contract: "Pre-flight step specifies graceful skip for absent context files"
+  contract: "Pre-flight step specifies graceful skip (no error, no warning) for absent context files"
 origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []

@@ -1,0 +1,30 @@
+id: ACD-700
+title: "Building the next unit of work requires no manual ticket authoring"
+component: ac-driven-dev
+level: L0
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the AC store contains prioritized, unblocked acceptance criteria,
+  When a developer wants to build the next most important unit of work,
+  Then a single /build-ac command finds the highest-priority ready AC,
+    generates a ticket from it, builds it through the full agent pipeline,
+    and marks the AC done when the ticket merges,
+  And the developer never needs to manually author a ticket file,
+  And the developer retains control through a confirmation gate before
+    building begins.
+depends_on: []
+doc_links:
+  - docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+  - docs/reference/ac-schema.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-700a]
+implemented_by: []

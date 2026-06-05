@@ -1,0 +1,35 @@
+id: ACD-400a-2
+title: "Scanner JSON output conforms to a defined schema with ready and blocked lists"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the scanner has identified ready and blocked ACs from the AC store,
+  When the scanner is invoked with --level leaf --work-status todo --json,
+  Then the output is valid JSON conforming to the schema:
+    { "ready": [{ "ac_id": str, "title": str, "assigned_agent": str,
+                  "estimated_complexity": str, "path": str }],
+      "blocked": [{ "ac_id": str, "blocked_by": [str] }] },
+  And every ac_id in the ready list resolves to an existing YAML file
+    at the path specified,
+  And every ac_id in the blocked list has at least one entry in blocked_by
+    naming a specific AC id whose work_status is not done.
+depends_on: [ACD-400a, ACD-400a-1]
+doc_links:
+  - docs/reference/ac-schema.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: "Machine-consumable JSON for downstream tooling (generate_ticket_from_ac.py, /build-ac)"
+expects_from:
+  ac_id: ACD-400a-1
+  contract: "The filtering and sorting logic that populates ready and blocked lists"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

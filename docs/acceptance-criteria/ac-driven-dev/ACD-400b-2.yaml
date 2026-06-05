@@ -1,0 +1,32 @@
+id: ACD-400b-2
+title: "Generator writes implemented_by back-reference into source AC without modifying other fields"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the generator has just written a ticket file for AC id ACS-100a-1,
+  When the source AC YAML file is read back after generation,
+  Then the implemented_by field contains the relative path of the newly-written
+    ticket (e.g. tickets/00_inbox/TICKET-20260605-ACS-100a-1.md),
+  And no other fields in the AC YAML were modified (id, title, criteria,
+    depends_on, assigned_agent, status, work_status, and all other fields
+    retain their original values),
+  And the implemented_by list preserves any pre-existing entries
+    (appends rather than overwrites).
+depends_on: [ACD-400b, ACD-400b-1]
+doc_links:
+  - docs/reference/ac-schema.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACD-400b-1
+  contract: "Ticket file path to write into implemented_by"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

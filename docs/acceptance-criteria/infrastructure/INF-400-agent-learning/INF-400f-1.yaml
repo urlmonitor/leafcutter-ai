@@ -5,6 +5,8 @@ level: L2
 status: active
 req_status: active
 work_status: todo
+priority: high
+readiness: reviewed
 criteria: |
   Given the product-owner-v3 agent runs first in the v3 ticket-creation pipeline
     and discovers a user preference during L0/L1 framing
@@ -26,6 +28,10 @@ doc_links:
     status: exists
 assigned_agent: llm-expert
 estimated_complexity: M
+it_requirements:
+  - "Must rely on filesystem-based knowledge transfer via Channel 9 (auto-memory) — no agent-to-agent message passing"
+  - "Must not require changes to the pipeline orchestrator to pass learnings between agents"
+  - "Must work within the same working tree without coordination beyond sequential execution"
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3

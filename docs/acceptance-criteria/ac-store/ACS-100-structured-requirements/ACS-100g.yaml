@@ -1,0 +1,29 @@
+id: ACS-100g
+title: "Bulk AC approval workflow for cold-start bootstrap"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given 292 ACs exist with readiness: reviewed (or no readiness field),
+  When an operator needs to promote a batch to approved for the scanner to find work,
+  Then a script (approve_acs.py) accepts filters:
+    --component <name>, --level <L1|L2|L3>, --feature <folder-slug>, --all-reviewed.
+  And for each matching AC, it sets readiness: approved.
+  And before writing, it shows a summary: "About to approve N ACs in component X. Proceed? [y/N]"
+  And the script is idempotent: re-running on already-approved ACs is a no-op.
+  And this solves the cold-start problem where the scanner finds nothing
+    because no AC has been promoted to approved status.
+depends_on: [ACS-100a]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

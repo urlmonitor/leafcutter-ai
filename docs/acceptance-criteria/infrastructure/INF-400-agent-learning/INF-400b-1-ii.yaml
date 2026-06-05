@@ -5,6 +5,8 @@ level: L3
 status: active
 req_status: active
 work_status: todo
+priority: high
+readiness: reviewed
 criteria: |
   Given the business-analyst-v3 agent discovered during run N that
     "the infrastructure component has no parent in index.yaml"
@@ -24,10 +26,13 @@ doc_links:
     status: exists
 assigned_agent: llm-expert
 estimated_complexity: S
+it_requirements:
+  - "Must rely on route-learning's existing Step 0 deduplication — no custom deduplication logic in templates"
+  - "Must not emit telemetry events for deduplicated learnings"
 delivers_to: null
 expects_from:
   ac_id: INF-400b-1
-  contract: "Knowledge-capture step that invokes route-learning including Step 0 deduplication"
+  contract: "Knowledge-capture step that invokes route-learning, which includes Step 0 duplicate detection with Levenshtein ratio >= 0.85"
 origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []

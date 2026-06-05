@@ -1,0 +1,41 @@
+id: ACD-500a
+title: "The ticket prioritizer merges AC readiness into its output with a single opt-in flag"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the existing ticket-prioritizer skill produces a sorted JSON list of
+    ready tickets from YAML frontmatter and depends_on DAGs,
+  When an operator runs the prioritizer with the --include-acs flag,
+  Then the output contains both ready tickets and ready ACs in a single list,
+  And each entry carries a source field ("ticket" or "ac") so consumers can
+    distinguish origin,
+  And ACs that already have a corresponding ticket are deduplicated out,
+  And the complexity-to-priority mapping (S=high, M=medium, L/XL=low) produces
+    a unified sort key across both entry types,
+  And running without --include-acs preserves the existing ticket-only behavior
+    with no changes to the output schema.
+depends_on: [ACD-500]
+doc_links:
+  - tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/02_ac_aware_ticket_prioritizer.md
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Running without --include-acs must produce byte-identical output to the pre-change version (backward compatibility)"
+  - "Deduplication must be deterministic: if a ticket references an AC via source_ac, the AC entry is suppressed"
+  - "Complexity-to-priority mapping must be documented in the script's docstring"
+  - "The script must not fail if the AC store directory does not exist (graceful degradation)"
+delivers_to:
+  agent: python-coder
+  contract: "Merged JSON array of {id, title, priority, source} objects sorted by unified priority"
+expects_from:
+  ac_id: ACD-400a
+  contract: "Scanner produces a list of ready AC objects in JSON format"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-500a-1, ACD-500a-2, ACD-500a-3, ACD-500a-4, ACD-500a-5]
+implemented_by: []

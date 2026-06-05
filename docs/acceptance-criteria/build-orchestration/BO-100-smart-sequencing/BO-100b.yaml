@@ -14,8 +14,14 @@ depends_on: [BO-100a]
 doc_links: []
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "The default batch cap (3) must be overridable via Master_Plan.md frontmatter"
+  - "Ticket selection within a cap must be deterministic (NN prefix ordering)"
+  - "Cap enforcement must never dispatch more tickets than the configured limit"
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: BO-100a
+  contract: "Ready-set of unblocked tickets from the dependency resolver"
 origin_agent: business-analyst-v3
 created: 2026-06-04
 amended_by: []

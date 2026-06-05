@@ -5,6 +5,8 @@ level: L3
 status: active
 req_status: active
 work_status: todo
+priority: high
+readiness: reviewed
 criteria: |
   Given the product-owner-v3 agent runs first in the pipeline,
   And its knowledge-capture step fires but the PO answers "no" (nothing discovered),
@@ -21,6 +23,10 @@ doc_links:
     status: exists
 assigned_agent: llm-expert
 estimated_complexity: S
+it_requirements:
+  - "Must not depend on upstream agent learnings for correct operation"
+  - "Must not emit errors or warnings about missing upstream learnings"
+  - "Cross-agent knowledge sharing is additive — its absence must not degrade baseline quality"
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3

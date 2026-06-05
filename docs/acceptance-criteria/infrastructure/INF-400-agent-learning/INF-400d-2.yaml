@@ -5,6 +5,8 @@ level: L2
 status: active
 req_status: active
 work_status: todo
+priority: high
+readiness: reviewed
 criteria: |
   Given a v3 agent runs and discovers a learning relevant to the signoff skill
     (e.g., "signoff section 7 does not fire for agents with signoff: false"),
@@ -28,10 +30,16 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Must use the canonical PROJECT_CONTEXT.md naming convention (all caps, underscore)"
+  - "Must never modify SKILL.md files — they are portable upstream templates"
+  - "Must create parent directories if they do not exist"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must append atomically — partial writes must not corrupt the file"
 delivers_to: null
 expects_from:
   ac_id: INF-400c-2
-  contract: "Harvester that invokes capture-learning for agent-frontmatter entry_kind"
+  contract: "Harvester that invokes capture-learning for entry_kind 'agent-frontmatter' with destination paths under .claude/skills/"
 origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []

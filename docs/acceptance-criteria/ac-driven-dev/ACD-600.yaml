@@ -1,0 +1,26 @@
+id: ACD-600
+title: "AC store stays current automatically when implementing tickets are completed"
+component: ac-driven-dev
+level: L0
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the AC-driven development pipeline produces tickets from AC entries,
+  When a ticket is completed and merged into main,
+  Then the source AC's work_status is automatically set to done,
+  And the AC scanner never re-proposes work that has already been built,
+  And the system is fully automated via a post-merge hook requiring no manual intervention.
+depends_on: []
+doc_links:
+  - docs/architecture/agent_delivery_workflows.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-600a, ACD-600b]
+implemented_by: []

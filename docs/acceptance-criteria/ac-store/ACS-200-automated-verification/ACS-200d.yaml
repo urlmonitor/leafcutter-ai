@@ -1,0 +1,34 @@
+id: ACS-200d
+title: "New tickets must reference their source AC"
+component: ac-store
+level: L1
+scope: standing
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a new ticket is created (via /create-ticket, /build-ac, or manual authoring),
+  When the ticket touches a component that has ACs in the store,
+  Then the ticket frontmatter must include a source_acs field listing
+    the AC IDs that motivated this work.
+  And a pre-commit hook validates: if docs/acceptance-criteria/ exists
+    and the ticket's component has active ACs, source_acs must be non-empty.
+  And tickets for components with no ACs yet are exempt (graceful degradation).
+  And this is a standing rule — it applies to ALL future tickets.
+depends_on: [ACS-200b]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Pre-commit hook must complete in under 2 seconds for a single ticket file"
+  - "Hook must not fail when docs/acceptance-criteria/ does not exist (graceful exemption)"
+  - "Hook must only inspect staged files, never the full working tree"
+  - "Hook error message must name the specific ticket file and component missing source_acs"
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -5,6 +5,8 @@ level: L2
 status: active
 req_status: active
 work_status: todo
+priority: high
+readiness: reviewed
 criteria: |
   Given the harvester (INF-400c-2) routes a learning with entry_kind "per-folder-readme"
     and destination "docs/acceptance-criteria/infrastructure/README.md",
@@ -25,12 +27,18 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Must create parent directories if they do not exist"
+  - "Must append atomically — partial writes must not corrupt the file"
+  - "Must handle concurrent append attempts gracefully (file locking or serialized writes)"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must not overwrite existing content when appending new entries"
 delivers_to:
   agent: llm-expert
-  contract: "A README.md file in each component AC directory that v3 agents read in their pre-flight step"
+  contract: "A README.md file at docs/acceptance-criteria/{component}/README.md with a ## Learnings section containing dated, agent-attributed bullet entries, readable by v3 agent pre-flight steps via Channel 2"
 expects_from:
   ac_id: INF-400c-2
-  contract: "Harvester that invokes capture-learning with per-folder-readme as the entry_kind"
+  contract: "Harvester that invokes capture-learning with entry_kind 'per-folder-readme' and a destination path under docs/acceptance-criteria/"
 origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []

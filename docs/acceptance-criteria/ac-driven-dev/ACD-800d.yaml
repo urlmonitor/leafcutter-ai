@@ -1,0 +1,33 @@
+id: ACD-800d
+title: "Every audit run produces a persistent JSON report for human review"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the cross-reference audit has completed (in any mode: read-only or --apply),
+  When the output directory is inspected,
+  Then a JSON file exists at debugging/logs/ac_cross_reference_audit_YYYYMMDD.json,
+  And the file conforms to a defined schema containing run_date, and a matches array
+    where each entry has ac_id, ticket_path, confidence (high or medium), and reason,
+  And the file is valid JSON parseable by any standard JSON library.
+depends_on: [ACD-800]
+doc_links:
+  - tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/05_cross_reference_audit.md
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "JSON output must conform to a documented JSON schema (include schema version field)"
+  - "Report file must be written atomically (write to temp then rename)"
+  - "Report filename must use UTC date (not local time) for cross-timezone consistency"
+delivers_to: null
+expects_from:
+  ac_id: ACD-800a
+  contract: "Match results from exact-criteria and keyword matching passes"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-800d-1]
+implemented_by: []

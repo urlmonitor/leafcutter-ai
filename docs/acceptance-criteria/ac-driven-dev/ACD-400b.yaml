@@ -1,0 +1,39 @@
+id: ACD-400b
+title: "Generator produces a valid, wired ticket from any ready AC with bidirectional traceability"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given any leaf-level AC (L2 or L3) with work_status: todo and all dependencies satisfied,
+  When the generator is invoked with that AC's identifier,
+  Then it produces a ticket file with correct frontmatter (source_ac, files_touched, agents map),
+  And the ticket body contains the AC's Gherkin criteria verbatim,
+  And the source AC is updated with an implemented_by back-reference to the ticket,
+  And the generated ticket passes the ticket_frontmatter_guard pre-commit hook,
+  And re-running the generator for the same AC does not produce duplicates.
+depends_on: [ACD-400]
+doc_links:
+  - docs/acceptance-criteria/index.yaml
+  - docs/reference/ac-schema.md
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Generator must be idempotent: re-running for the same AC must not produce duplicate tickets"
+  - "Generator must write atomically: either both the ticket file and the AC back-reference are written, or neither is"
+  - "Generated ticket must pass ticket_frontmatter_guard without human editing"
+  - "Generator must validate source AC exists and is in todo state before writing"
+  - "Generator must handle concurrent invocations safely (file-level locking or check-then-write)"
+delivers_to:
+  agent: python-coder
+  contract: "A valid ticket file at tickets/00_inbox/ and an updated implemented_by field in the source AC"
+expects_from:
+  ac_id: ACD-400a
+  contract: "Scanner identifies the AC as ready before generator is invoked"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-400b-1, ACD-400b-2, ACD-400b-3, ACD-400b-4]
+implemented_by: []

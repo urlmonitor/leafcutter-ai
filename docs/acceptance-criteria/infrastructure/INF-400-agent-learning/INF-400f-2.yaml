@@ -5,6 +5,8 @@ level: L2
 status: active
 req_status: active
 work_status: todo
+priority: high
+readiness: reviewed
 criteria: |
   Given the business-analyst-v3 agent discovers during L2 decomposition that
     the infrastructure component has a standing rule requiring all ACs to include
@@ -24,11 +26,18 @@ doc_links:
   - path: docs/architecture/agent_knowledge_plane.md
     relationship: describes
     status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
   - path: templates/agents/it-po-v3.md
     relationship: constrains
     status: exists
 assigned_agent: llm-expert
 estimated_complexity: M
+it_requirements:
+  - "Must rely on filesystem-based knowledge transfer via Channels 2/3/9 — no agent-to-agent message passing"
+  - "Must not require changes to the pipeline orchestrator to pass learnings between agents"
+  - "Must work within the same working tree without coordination beyond sequential execution"
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3

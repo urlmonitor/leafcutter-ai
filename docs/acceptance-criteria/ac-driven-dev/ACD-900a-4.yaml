@@ -1,0 +1,28 @@
+id: ACD-900a-4
+title: "Empty ready list produces an informational message and exits successfully"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given no ready tickets exist in the ticket backlog,
+  And no ready ACs exist in the AC store,
+  When the pick-next script is run (with no flags),
+  Then stdout contains the exact message:
+    "Nothing ready to build — all work items are blocked or the store is empty."
+  And the exit code is 0,
+  And no JSON output or partial item data is written to stdout.
+depends_on: [ACD-900a]
+doc_links:
+  - templates/skills/ticket-prioritizer/SKILL.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

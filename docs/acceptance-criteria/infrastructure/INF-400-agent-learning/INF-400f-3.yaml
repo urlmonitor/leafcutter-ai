@@ -5,6 +5,8 @@ level: L2
 status: active
 req_status: active
 work_status: todo
+priority: high
+readiness: reviewed
 criteria: |
   Given the v3 pipeline runs agents sequentially (PO -> BA -> IT PO),
   And each agent persists learnings to the filesystem via capture-learning
@@ -29,6 +31,10 @@ doc_links:
     status: exists
 assigned_agent: llm-expert
 estimated_complexity: S
+it_requirements:
+  - "Must not introduce any new inter-agent communication mechanism"
+  - "Must not require changes to the Claude Code harness or SDK"
+  - "Must rely exclusively on existing knowledge plane channels (2, 3, and 9)"
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3

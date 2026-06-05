@@ -1,0 +1,37 @@
+id: ACD-400b-1
+title: "Generator produces a valid ticket file with correct frontmatter, agents map, and criteria body"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an AC file exists with id: ACS-100a-1, work_status: todo,
+    assigned_agent: python-coder, non-empty criteria containing Gherkin,
+    and doc_links containing entries with local file paths,
+  When the generator is invoked with --ac ACS-100a-1,
+  Then a ticket file is written to tickets/00_inbox/TICKET-<YYYYMMDD>-ACS-100a-1.md
+    where YYYYMMDD is today's date,
+  And the ticket frontmatter contains source_ac: ACS-100a-1,
+  And files_touched is populated from the AC's doc_links entries
+    (filtering to paths that begin with a local directory, excluding http URLs),
+  And the agents map contains the AC's assigned_agent set to needed
+    plus the canonical supporting agents (test-writer, test-runner,
+    pr-reviewer, commit, pull-request) each set to needed,
+  And the ## Acceptance Criteria section contains the AC's criteria field verbatim
+    without modification.
+depends_on: [ACD-400b]
+doc_links:
+  - docs/reference/ac-schema.md
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A well-formed ticket file that downstream build agents can consume"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

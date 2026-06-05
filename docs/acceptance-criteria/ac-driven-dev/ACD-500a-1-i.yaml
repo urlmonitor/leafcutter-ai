@@ -1,0 +1,28 @@
+id: ACD-500a-1-i
+title: "Merged output is empty when both ticket backlog and AC store return zero ready items"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the ticket backlog contains no ready tickets (all are blocked or done),
+  And the AC store scanner returns zero ready ACs,
+  When the prioritizer runs with --include-acs enabled and --json output,
+  Then the output ready array is an empty list ([]),
+  And the exit status is zero (empty result is not an error),
+  And the output JSON structure is still valid (parseable with the same schema
+    as a non-empty result).
+depends_on: [ACD-500a-1]
+doc_links:
+  - tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/02_ac_aware_ticket_prioritizer.md
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

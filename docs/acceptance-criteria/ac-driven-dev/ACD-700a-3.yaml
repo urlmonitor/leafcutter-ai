@@ -1,0 +1,29 @@
+id: ACD-700a-3
+title: "Answering skip defers the current AC and proposes the next candidate"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the agent has proposed AC id ACS-101a-1 (priority: high) to the user,
+  And a second ready AC exists: ACS-102a-1 (priority: medium),
+  And the user answers "skip" to the confirmation prompt,
+  When the agent proceeds,
+  Then ACS-101a-1's work_status is set to deferred in its YAML file,
+  And the agent re-invokes the prioritizer (which now excludes deferred ACs),
+  And outputs ACS-102a-1's id and title as the next proposal,
+  And prompts the user again with: "Build this ticket now? (yes / review / skip)".
+depends_on: [ACD-700a, ACD-700a-1]
+doc_links:
+  - docs/reference/ac-schema.md
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
