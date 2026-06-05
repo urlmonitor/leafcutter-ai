@@ -1,0 +1,43 @@
+id: ACS-400c-2
+title: "Criteria amendment appends the author to amended_by"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an existing AC YAML file has its criteria field changed in the staged diff,
+  When the governance check compares the staged version to the previous version,
+  Then the amended_by list in the staged file must contain a new entry
+    that was not present in the previous version,
+  And that new entry must identify the amending agent and the date
+    (e.g. "amended by business-analyst-v3, 2026-06-05"),
+  And if no new amended_by entry is present, the commit is blocked with an error
+    stating "criteria was modified but amended_by was not updated".
+depends_on: [ACS-400c]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must follow the fail-open convention per docs/reference/claude-code-hooks.md"
+  - "Must compare the amended_by list between the staged version and the HEAD version of the file"
+  - "Must detect criteria changes using YAML-level comparison (not raw text diff) to avoid false positives from whitespace or formatting changes"
+  - "Must not prescribe the exact format of amended_by entries beyond requiring non-empty new content"
+  - "Must handle the case where the file has no prior committed version (new file) -- amended_by check only applies to modifications"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

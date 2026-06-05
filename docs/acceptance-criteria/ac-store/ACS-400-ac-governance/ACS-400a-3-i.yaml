@@ -1,0 +1,38 @@
+id: ACS-400a-3-i
+title: "Human user is always authorized regardless of agent registry membership"
+component: ac-store
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an AC YAML file is staged for commit with a new or changed criteria field,
+  When the committing agent's identity is not in the agent_registry.json
+    (e.g. origin_agent: "BrainCandy" or any string not matching a registered agent ID),
+  Then the governance check treats the committer as a human user,
+  And the commit proceeds without governance violation,
+  And the criteria field change is accepted.
+depends_on: [ACS-400a-3]
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must use config/agent_registry.json as the canonical source of known agent IDs"
+  - "Must treat any identity string not found in agent_registry.json as a human user (allow-by-default for unknown identities)"
+  - "Must not require the agent_registry.json to be loaded on every commit -- caching the agent list per hook invocation is acceptable"
+delivers_to: null
+expects_from:
+  ac_id: ACS-400a-3
+  contract: "Agent identity classification logic that determines whether a given identity string is a known registered agent or should be treated as human"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
