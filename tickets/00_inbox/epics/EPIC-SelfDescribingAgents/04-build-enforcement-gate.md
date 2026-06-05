@@ -1,6 +1,6 @@
 ---
 title: "INF-600 Ticket 4: Add build validation gate rejecting agent templates missing required self-description fields"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-05
@@ -24,8 +24,8 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 source_acs:
@@ -122,10 +122,27 @@ Then this CLI flag overrides the config/agent_registry.json setting
 - [x] python-coder — 2026-06-05 12:30
 - [x] test-runner — 2026-06-05 12:45
 - [x] pr-reviewer — 2026-06-05 13:00
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-05 13:15
+- [x] pull-request — 2026-06-05 13:20
 
 ## Comments
+
+### 2026-06-05 13:20 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_8d17bc54
+completion_manifest:
+  branch_pushed: true
+  pr_open: true
+
+Existing epic PR #65 (`feat(EPIC-SelfDescribingAgents/01): add six self-description metadata fields to python-coder`) on `feature/EPIC-SelfDescribingAgents` is already open. Pushed commit 213d4a4 to the branch — the PR now includes the ticket 04 changes. URL: https://github.com/urlmonitor/leafcutter-ai/pull/65
+
+### 2026-06-05 13:15 — commit (status: ok)
+feedback-id: fb_2026-06-05_6ceeb6df
+completion_manifest:
+  files_staged_correctly: true
+  commit_successful: true
+  no_unintended_files: true
+
+Committed 5 in-scope files on branch `feature/EPIC-SelfDescribingAgents` (SHA 213d4a4): `scripts/build_phases.py`, `scripts/build.py`, `config/agent_registry.json`, `tickets/00_inbox/epics/EPIC-SelfDescribingAgents/04-build-enforcement-gate.md`, `unit_tests/test_agent_self_description_validation.py` (new). No unintended files staged. No pre-commit config present in worktree; `PRE_COMMIT_ALLOW_NO_CONFIG=1` used to bypass the pre-commit framework guard.
 
 ### 2026-06-05 13:00 — pr-reviewer (status: ok)
 feedback-id: fb_2026-06-05_bf0a88d8
