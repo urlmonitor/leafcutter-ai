@@ -1,0 +1,43 @@
+id: ACS-100h-5
+title: "Post-split validation confirms no cycles, no dangling refs, and limits respected"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a split has been executed (files created and modified),
+  When the post-split validation step runs,
+  Then it confirms that both resulting parents are below the child limit
+    (7 for L0, 5 for L1),
+  And it confirms no depends_on cycle was introduced
+    by walking the dependency graph from each modified AC,
+  And it confirms no delivers_to reference points to a non-existent AC,
+  And it confirms no expects_from reference points to a non-existent AC,
+  And if any parent has fewer than 3 children,
+    it emits a non-blocking advisory naming the sparse parent.
+depends_on: [ACS-100h, ACS-100h-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/how-to/ac-traceability-store.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Must perform cycle detection by walking the full dependency graph, not just immediate neighbors"
+  - "Must validate both delivers_to and expects_from references against existing AC files on disk"
+  - "Must emit sparse-parent advisories as non-blocking warnings (do not fail the validation)"
+  - "Must complete validation within 5 seconds for stores with up to 200 AC files"
+delivers_to: null
+expects_from:
+  ac_id: ACS-100h-2
+  contract: "Split result with all AC files in their final state, ready for graph validation"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

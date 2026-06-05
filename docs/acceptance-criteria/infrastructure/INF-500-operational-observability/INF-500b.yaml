@@ -1,0 +1,25 @@
+id: INF-500b
+title: "The feedback analysis pipeline deploys and produces a prioritised report from available data"
+component: infrastructure
+level: L1
+status: active
+work_status: todo
+criteria: |
+  The feedback analysis pipeline is deployed by the build system and produces
+  a prioritised, actionable report from accumulated feedback data.
+
+  The pipeline's core artifacts (skill, scripts, agent, command) deploy
+  correctly. When data exists, trend_report.py groups entries by category,
+  ranks them by severity and frequency, and returns a structured report with
+  actionable recommendations per category. When data is empty or absent, the
+  pipeline exits cleanly with a clear message.
+depends_on:
+  - INF-500
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by:
+  - "split: INF-500b -> INF-500b + INF-500c, 2026-06-05"
+superseded_by: null
+covered_by: []
+implemented_by: []

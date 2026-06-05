@@ -1,0 +1,41 @@
+id: BP-200c-4
+title: "Agents README documents llm-expert in the phase agents table"
+component: build_pipeline
+level: L2
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given docs/agents/README.md is loaded,
+  When the phase agents table is inspected,
+  Then it contains a row for "LLM Expert" with:
+    - tier: "phase"
+    - role: "authoring"
+    - description stating it authors, edits, and audits agent templates, skill bodies,
+      and slash-command markdown files and applies the Prompt-Quality Checklist
+  And the row is positioned alphabetically among other phase agents
+depends_on: [BP-200c]
+doc_links:
+  - path: docs/agents/README.md
+    relationship: describes
+    status: exists
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "README table row must be consistent with the registry entry description field"
+  - "Alphabetical ordering must be maintained relative to existing phase agent rows"
+delivers_to: null
+expects_from:
+  ac_id: BP-200c-1
+  contract: "Registry entry with name, tier, role, and description fields to document in the README table"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/03_registry_and_docs.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "docs/agents/README.md"

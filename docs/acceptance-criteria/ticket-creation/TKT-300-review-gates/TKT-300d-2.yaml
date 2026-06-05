@@ -16,9 +16,19 @@ criteria: |
   And the dispatch order is determined by the depends_on graph,
     not by the alphabetical or positional order of files in the epic folder.
 depends_on: [TKT-300d]
-doc_links: []
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/supervisor-spawn-topology.md
+    relationship: describes
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: S
+it_requirements:
+  - "Dispatch order must be computed from the depends_on DAG, never from file system ordering or alphabetical sorting"
+  - "Must detect and reject cyclic dependencies before dispatch"
+  - "Must handle errors gracefully per the project error handling policy"
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3

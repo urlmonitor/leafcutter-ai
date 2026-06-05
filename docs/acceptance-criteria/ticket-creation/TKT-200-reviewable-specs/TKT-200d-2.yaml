@@ -1,0 +1,35 @@
+id: TKT-200d-2
+title: "Only affected documentation is regenerated, not the entire package"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a feature folder contains 3 AC files across 2 components,
+    with a diagram for each component and a boundary doc for each component,
+  When one AC file is revised and it belongs to component A only,
+  Then only component A's diagram and boundary document are regenerated,
+  And component B's diagram and boundary document remain unchanged,
+  And the review package manifest is updated to reflect the regeneration timestamp.
+depends_on: [TKT-200d, TKT-200d-1]
+doc_links:
+  - path: docs/architecture/components/ticket-creation.md
+    relationship: describes
+    status: planned
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Must scope regeneration to the component(s) affected by the changed AC files"
+  - "Must not modify diagrams or boundary docs for unaffected components"
+  - "Must update the review manifest with regeneration timestamps"
+delivers_to: null
+expects_from:
+  ac_id: TKT-200d-1
+  contract: "Change-detection result identifying stale diagrams and boundary docs per component"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

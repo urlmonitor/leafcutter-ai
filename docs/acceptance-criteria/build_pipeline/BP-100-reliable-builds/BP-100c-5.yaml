@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 created_by: "tickets/00_inbox/TICKET-20260603-ConfigDrivenBuildPaths.md"
 criteria: |
   Given a consumer project with no tickets_inbox_path key in its skills_config.json (config is empty or absent)
@@ -30,4 +30,5 @@ created: 2026-06-05
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - "PR #53 — feat(build): hook integrity check + contract-shrinking self-exclusion"

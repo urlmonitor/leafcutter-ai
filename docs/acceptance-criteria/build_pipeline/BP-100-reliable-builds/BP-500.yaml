@@ -1,0 +1,25 @@
+id: BP-500
+title: "Build-time safety nets catch mistakes before they reach the pipeline"
+component: build-pipeline
+level: L0
+status: active
+criteria: |
+  Guardrails that protect the build from human and agent errors.
+
+  Pre-commit hooks, format validators, and graceful degradation logic form
+  a safety layer around the build pipeline. Hooks never block legitimate
+  changes to their own source code, timestamps conform to machine-parseable
+  formats so audit trails stay queryable, and git-dependent workflows
+  degrade cleanly when invoked outside a repository. These checks run
+  automatically — developers and agents benefit without extra effort.
+depends_on: []
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-100d
+  - BP-100e
+  - BP-100f
+implemented_by: []

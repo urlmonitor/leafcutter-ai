@@ -20,7 +20,8 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-04
-amended_by: []
+amended_by:
+  - "split: ACS-100a -> ACS-100a + ACS-100i, 2026-06-05"
 superseded_by: null
-covered_by: [ACS-100a, ACS-100b, ACS-100c, ACS-100d, ACS-100e, ACS-100f]
+covered_by: [ACS-100a, ACS-100b, ACS-100c, ACS-100d, ACS-100e, ACS-100f, ACS-100g, ACS-100h, ACS-100i]
 implemented_by: []

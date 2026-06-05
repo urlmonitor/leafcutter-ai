@@ -1,0 +1,38 @@
+id: FIN-100b-3
+title: "Already-up-to-date branch skips merge step without error"
+level: L2
+component: finalize
+status: active
+parent: FIN-100b
+criteria: |
+  Given a feature branch whose HEAD already contains all commits from origin/main
+  When Step 2 checks git merge-base --is-ancestor origin/main HEAD
+  And the exit code is 0 (HEAD is a descendant of origin/main)
+  Then the merge step is skipped
+  And the merge_strategy is recorded as "already_up_to_date"
+  And the workflow proceeds directly to Step 3 (test run)
+  And no git merge command is executed
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
+assigned_agent: "finalize-feature-workflow"
+estimated_complexity: S
+it_requirements: |
+  - Must use git merge-base --is-ancestor origin/main HEAD as the up-to-date probe
+  - Exit code 0 means HEAD is descendant of origin/main — skip merge entirely
+  - Must record merge_strategy as "already_up_to_date" in workflow state
+  - Must add step 2 to skippedSteps (not completedSteps) when skipping
+  - Must NOT execute any git merge command when already up-to-date
+delivers_to:
+  - agent: "test-runner"
+    contract: "provides worktree state (unchanged — already contains main) for step 3 tests"
+expects_from: []
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relevance: "Step 2 resumability probe via merge-base --is-ancestor"
+  - path: "templates/workflows/finalize-feature.md"
+    relevance: "Step map row 2 — already_up_to_date skip path"
+depends_on: []
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

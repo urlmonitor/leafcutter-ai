@@ -1,0 +1,32 @@
+id: INF-500b-3-i
+title: "Trend detection uses >20% threshold for rising/falling classification"
+component: infrastructure
+level: L3
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260603-FeedbackAnalysisPipeline.md"
+criteria: |
+  Given feedback entries spanning two 7-day windows
+  When the current window count exceeds the previous by more than 20%
+  Then the trend indicator for that category is "rising"
+  When the current window count is below the previous by more than 20%
+  Then the trend indicator is "falling"
+  When the difference is within 20%
+  Then the trend indicator is "stable"
+depends_on:
+  - INF-500b-3
+doc_links:
+  - path: templates/skills/feedback-analysis/scripts/trend_report.py
+    relationship: implements
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+delivers_to: test-runner
+expects_from: INF-500b-3
+it_requirements: "Test must seed two 7-day windows with controlled counts; verify >20% increase yields 'rising', >20% decrease yields 'falling', within 20% yields 'stable'"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

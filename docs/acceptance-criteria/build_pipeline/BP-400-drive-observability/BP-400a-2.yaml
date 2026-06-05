@@ -1,0 +1,39 @@
+id: BP-400a-2
+title: "emit_event.py creates missing log directories automatically"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-WireSupervisorFeedbackEmission.md"
+criteria: |
+  Given emit_event.py is invoked with --log pointing to a path whose
+    parent directory does not yet exist
+    (e.g. --log /tmp/new_dir/subdir/telemetry.jsonl),
+  When the script attempts to write the log entry,
+  Then it creates the missing directory hierarchy (mkdir -p semantics),
+  And exits with code 0,
+  And the log file exists at the specified path with the appended entry.
+depends_on:
+  - BP-400a
+  - BP-400a-1
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must use mkdir -p semantics (parents=True, exist_ok=True)"
+  - "Must handle race conditions where the directory is created between check and write"
+delivers_to: null
+expects_from:
+  ac_id: BP-400a-1
+  contract: "emit_event.py script with --log argument accepting an arbitrary file path"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

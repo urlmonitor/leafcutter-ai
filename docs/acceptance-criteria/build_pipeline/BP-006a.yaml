@@ -1,0 +1,28 @@
+id: BP-006a
+title: "skill_registry.json includes all skill directories so test_no_orphaned_directories passes"
+component: build_pipeline
+level: L1
+status: active
+req_status: approved
+work_status: done
+criteria: |
+  Given skill_registry.json is loaded by the test harness,
+  When test_no_orphaned_directories compares registered skills against
+  the templates/skills/ directory listing,
+  Then every skill directory (including debug, feedback-analysis, and
+  feedback-review) has a corresponding entry in skill_registry.json,
+  And the test exits with zero failures.
+depends_on:
+  - BP-006
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+created_by_ticket: "tickets/00_inbox/TICKET-20260604-FixFailingBuildPipelineTests.md"
+amended_by: []
+superseded_by: null
+covered_by: [BP-006a-1, BP-006a-2, BP-006a-3]
+implemented_by: []

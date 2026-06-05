@@ -90,11 +90,16 @@ Close a ticket **only** when:
    on speculative completeness.
 
 When both conditions hold:
-1. Update the ticket frontmatter: `status: done` (lowercase, no quotes).
-2. Move the file with `git mv` from `tickets/01_todo/EPIC-<NAME>/N_ticket.md`
-   to `tickets/01_todo/EPIC-<NAME>/done/N_ticket.md` (or the inbox done/
-   subfolder for non-epic tickets).
-3. Report the new path.
+1. Invoke `set_ticket_status.py` to update the ticket frontmatter to `status: done`:
+   ```bash
+   python scripts/set_ticket_status.py --ticket <absolute_ticket_path> --status done
+   ```
+   If the script exits non-zero (e.g. agents still have status `needed`), surface
+   the error to the user as a blocker — do NOT use `--force` without explicit user
+   authorization.
+2. The script stages the file automatically via `git add`. Do NOT use `git mv` to
+   move the file — the ticket remains at its original path (BO-400c-4).
+3. Report the updated status and confirm the ticket file path is unchanged.
 
 **Refuse to mark done** when investigation finds open work. Do not edit the
 frontmatter; list the unconfirmed tasks instead.
@@ -130,10 +135,15 @@ requesting explicit user authorization; the user-gated path is not reached.
 
 1. Print `auto-closed: matched merge commit <sha>` to the user before any
    file mutation.
-2. Apply the existing closing protocol:
-   a. Update ticket frontmatter: `status: done`.
-   b. Move the file with `git mv` to the appropriate `done/` subfolder.
-   c. Report the new path.
+2. Apply the closing protocol:
+   a. Invoke `set_ticket_status.py` to set `status: done`:
+      ```bash
+      python scripts/set_ticket_status.py --ticket <absolute_ticket_path> --status done
+      ```
+      If the script exits non-zero, surface the error and do not auto-close.
+   b. The script stages the file automatically. Do NOT use `git mv` — the ticket
+      remains at its original path (BO-400c-4).
+   c. Report the updated status and confirm path is unchanged.
 3. Append a `## Comments` audit entry:
    ```
    ### YYYY-MM-DD HH:MM — status-checker (status: ok)

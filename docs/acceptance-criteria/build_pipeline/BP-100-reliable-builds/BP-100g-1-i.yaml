@@ -1,0 +1,32 @@
+id: BP-100g-1-i
+title: "Error message for invalid YAML includes the file path in stderr output"
+component: build-pipeline
+level: L3
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-SkillFrontmatterValidation.md"
+criteria: |
+  Given a SKILL.md with broken YAML frontmatter at templates/skills/webapp-testing/SKILL.md
+  When build.py runs and captures stderr
+  Then the stderr output contains the string "templates/skills/webapp-testing/SKILL.md"
+  And the error text identifies the specific YAML parse error
+depends_on:
+  - BP-100g-1
+doc_links:
+  - path: scripts/build.py
+    relationship: implements
+    status: exists
+  - path: docs/reference/skill-frontmatter.md
+    relationship: related
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+delivers_to: test-runner
+expects_from: BP-100g-1
+it_requirements: "Test must create a temporary SKILL.md with broken YAML, invoke build.py via subprocess, and assert the file path appears in captured stderr output"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

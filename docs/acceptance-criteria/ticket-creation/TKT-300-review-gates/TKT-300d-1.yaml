@@ -15,9 +15,18 @@ criteria: |
   And each L1 AC references the L0 in its depends_on field,
   And the L0's covered_by field lists all L1 AC ids in the folder.
 depends_on: [TKT-300d]
-doc_links: []
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: S
+it_requirements:
+  - "The L0-L1 hierarchy must be expressed through covered_by and depends_on fields, not through folder nesting conventions"
+  - "Must handle errors gracefully per the project error handling policy"
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3

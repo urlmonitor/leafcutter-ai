@@ -1,0 +1,22 @@
+id: BP-400a
+title: "Every agent dispatch, retry, and failure is recorded automatically"
+component: build-pipeline
+level: L1
+status: active
+work_status: todo
+criteria: |
+  Agent activity is captured as it happens — nothing goes unrecorded.
+
+  When a supervisor dispatches an agent, retries it, or marks it as blocked,
+  that event is written to a structured log automatically. The telemetry
+  is always-on and non-blocking — it never interrupts the drive, but it
+  always provides the raw material for understanding what happened afterward.
+depends_on:
+  - BP-400
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

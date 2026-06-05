@@ -1,0 +1,34 @@
+id: TKT-200c-2
+title: "Review package cross-references specs to their diagrams and docs"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the review package contains 3 AC files and 1 diagram,
+  When a reviewer opens the manifest,
+  Then each AC file entry links to the diagram that visualizes its component relationships,
+  And each diagram entry links back to the AC files that sourced it,
+  And each boundary document entry names the component it describes
+    and links to the ACs that define that component's responsibilities.
+depends_on: [TKT-200c, TKT-200c-1]
+doc_links:
+  - path: docs/architecture/components/ticket-creation.md
+    relationship: describes
+    status: planned
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Must resolve cross-references bidirectionally (spec-to-diagram and diagram-to-spec)"
+  - "Must handle ACs that do not appear in any diagram without error"
+delivers_to: null
+expects_from:
+  ac_id: TKT-200c-1
+  contract: "Review manifest with all artifacts listed and paths resolved"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

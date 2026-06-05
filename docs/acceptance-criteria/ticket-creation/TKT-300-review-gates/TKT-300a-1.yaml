@@ -15,9 +15,22 @@ criteria: |
     containing a single agent identifier that exists in the agent registry,
   And no AC has more than one agent assigned.
 depends_on: [TKT-300a]
-doc_links: []
+doc_links:
+  - path: docs/architecture/adrs/ADR-009-itpo-no-source-code-access.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: M
+it_requirements:
+  - "Must validate assigned_agent against config/agent_registry.json at enrichment time"
+  - "Must be idempotent — re-running enrichment on an already-enriched AC must not duplicate or corrupt fields"
+  - "Must handle errors gracefully per the project error handling policy"
 delivers_to: null
 expects_from:
   ac_id: TKT-200b

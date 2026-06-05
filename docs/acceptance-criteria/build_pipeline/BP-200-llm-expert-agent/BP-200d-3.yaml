@@ -1,0 +1,53 @@
+id: BP-200d-3
+title: "Prompt-audit skill returns a structured report with violations sorted by line number"
+component: build_pipeline
+level: L2
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given the file templates/skills/prompt-audit/SKILL.md exists,
+  When the audit report format section is read,
+  Then it defines a report schema containing:
+    - template_name: string (from frontmatter name field)
+    - file_path: string (absolute path of audited file)
+    - frontmatter_valid: boolean
+    - tool_allowlist_valid: boolean
+    - no_compound_bash: boolean
+    - signoff_protocol_valid: boolean or null (null when not applicable)
+    - spawn_allowlist_valid: boolean or null
+    - stop_and_ask_valid: boolean or null
+    - violations: array of objects with fields:
+        check_name, severity, line_number, description, suggested_fix
+    - passed_checks: array of check names that produced no errors
+    - summary: object with total_violations, total_errors, total_warnings
+  And violations are sorted by line_number ascending
+  And passed_checks includes only checks that ran and produced zero violations
+depends_on: [BP-200d]
+doc_links:
+  - path: templates/skills/prompt-audit/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Report schema must be stable across versions -- consumers (agent template, batch runner) depend on field names"
+  - "Nullable boolean fields must use null (not absent) to indicate N/A checks per BP-200d-2-i"
+  - "violations array sort must be deterministic -- line_number ascending, then check_name alphabetic for ties"
+delivers_to:
+  agent: llm-expert
+  contract: "Structured report JSON consumed by the agent's completion report (BP-200e-2) and batch runner (BP-200d-5)"
+expects_from:
+  ac_id: BP-200d-2
+  contract: "Six detection checks producing violation objects with check_name, severity, line_number, description, suggested_fix"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/04_prompt_audit_skill.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "templates/skills/prompt-audit/SKILL.md"

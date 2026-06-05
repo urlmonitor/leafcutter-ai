@@ -1,0 +1,37 @@
+id: ACS-400b-2
+title: "Implementation agents can update implemented_by and covered_by fields"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an existing AC YAML file has its implemented_by list changed
+    (e.g. a file path appended) or its covered_by list changed
+    (e.g. a test path appended) in the staged diff,
+  When the committing agent is an implementation agent
+    (e.g. python-coder, test-writer, ac-fulfillment-gate),
+  Then the commit proceeds without governance violation,
+  And the traceability field updates are accepted into the repository.
+depends_on: [ACS-400b]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must follow the fail-open convention per docs/reference/claude-code-hooks.md"
+  - "Must treat implemented_by and covered_by as progress-reporting fields (open to all agents)"
+  - "Must validate that the field change is append-only or a legitimate update, not removal of existing entries (advisory warning only, not blocking)"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

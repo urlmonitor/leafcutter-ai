@@ -1,0 +1,32 @@
+id: BP-100e-2
+title: "Pre-commit hook rejects signed-off lines with imprecise timestamp suffixes"
+component: build-pipeline
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-HardenSignoffTimestamps.md"
+criteria: |
+  Given a ticket commit where a signed-off line reads "- [x] python-coder — 2026-05-28 (current session)"
+  When the pre-commit hook runs in --enforce mode
+  Then the hook exits 1
+  And it emits a violation naming the malformed timestamp
+depends_on:
+  - BP-100e
+doc_links:
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/reference/skill-frontmatter.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: BP-100e-2-i
+expects_from: BP-100e-1
+it_requirements: "Hook must use regex matching for YYYY-MM-DD HH:MM format; must reject any trailing parenthetical text after the timestamp; must exit 1 on first violation with file:line reference"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

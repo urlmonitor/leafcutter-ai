@@ -1,0 +1,24 @@
+id: ACS-100h
+title: "Grow your requirements without outgrowing your folders"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  When a requirements tree gets too large, a guided procedure splits it cleanly —
+  creating smaller, focused groupings while keeping every dependency chain and
+  contract intact. No requirement is lost, no link is broken, and the split itself
+  is recorded for review.
+depends_on: [ACS-100, ACS-100c]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: L
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,28 @@
+id: BP-006c
+title: "build_workflow_scripts() writes compiled workflows to .claude/workflows/, not workflows/"
+component: build_pipeline
+level: L1
+status: active
+req_status: approved
+work_status: done
+criteria: |
+  Given build_phases.py build_workflow_scripts() is called with a target_root,
+  When workflow scripts are compiled and written to disk,
+  Then the output path is target_root / ".claude" / "workflows",
+  And no files are written to target_root / "workflows",
+  And the test_build_workflow_phase test validates the correct output location
+  without failure.
+depends_on:
+  - BP-006
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+created_by_ticket: "tickets/00_inbox/TICKET-20260604-FixFailingBuildPipelineTests.md"
+amended_by: []
+superseded_by: null
+covered_by: [BP-006c-1, BP-006c-2]
+implemented_by: []

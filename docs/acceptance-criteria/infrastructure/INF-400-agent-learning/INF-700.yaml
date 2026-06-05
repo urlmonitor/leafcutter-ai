@@ -1,0 +1,30 @@
+id: INF-700
+title: "Raw agent emissions are routed, recorded, and available for analysis"
+component: infrastructure
+level: L0
+status: active
+criteria: |
+  The plumbing that turns agent output into structured, queryable records.
+
+  Agents emit learnings and telemetry through a standard channel. A dedicated
+  harvester routes each emission to the correct knowledge surface. The
+  telemetry emission script is deployed and functional, and supervisor
+  templates call the feedback pipeline at every adjudication point. The
+  result: a complete, machine-readable record of what happened during every
+  drive — available for trend analysis, retrospectives, and continuous
+  improvement.
+depends_on:
+  - INF-300
+doc_links:
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by:
+  - INF-400c
+  - INF-400g
+  - INF-400h
+implemented_by: []

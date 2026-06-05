@@ -267,6 +267,16 @@
       "description": "Triage, orchestrate, and gate AC authoring for a user's feature request. Dispatches ac-triage (Haiku) to classify the request as strategic / behavioral / technical / covered, then routes through the correct authoring agents (PO v3, BA v3, IT PO v3) with user confirmation gates between stages. All output goes exclusively to the AC store — no ticket files are produced.",
       "invocation_surface": "/create-ac",
       "workflow_script": "scripts/workflows/create-ac.js"
+    },
+    {
+      "id": "ac-tree-split",
+      "name": "AC Tree Split",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/ac-tree-split/",
+      "internal": true,
+      "dependencies": [],
+      "description": "Guided procedure for splitting overcrowded AC trees. Loaded by PO v3 (for L0/L1 splits) and BA v3 (for L2 redistribution). Prompt-based — no enforcement scripts. Covers horizontal splits (same component, new sibling L0) and intermediate splits (L1 split into sibling L1s). Vertical splits (new sub-component) deferred to v2."
     }
   ]
 }

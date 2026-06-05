@@ -1,0 +1,25 @@
+id: ACS-400d
+title: "Governance rules travel with the package into every project"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Write-access rules deploy automatically when leafcutter installs.
+
+  When a project runs build.py to install leafcutter, the AC governance rules
+  are included in the generated CLAUDE.md (or equivalent agent instruction
+  surface) so that every agent in the target project inherits the same
+  write-access boundaries. No manual configuration is required — governance
+  is part of the package, not an afterthought.
+depends_on: [ACS-400a]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACS-400d-1, ACS-400d-2, ACS-400d-2-i]
+implemented_by: []

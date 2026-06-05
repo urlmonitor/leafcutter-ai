@@ -1,0 +1,40 @@
+id: BP-200a-3-i
+title: "Agent constraints section prohibits editing Python, SQL, and frontend files"
+component: build_pipeline
+level: L3
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given the file templates/agents/llm-expert.md exists,
+  When the "Constraints" section is read,
+  Then it prohibits editing files with extensions: .py, .sql, .ts, .tsx, .html, .css
+  And it instructs the agent to decline such edits and surface a "(status: blocker)"
+    comment to the ticket-supervisor
+  And it prohibits editing config/agent_registry.json, scripts/build.py,
+    scripts/build_phases.py, and any commit-guardian manifest
+  And it prohibits using Grep, Glob, or MCP search tools (delegates to research-agent)
+  And it requires reading an existing file before any Edit call
+depends_on: [BP-200a-3]
+doc_links:
+  - path: templates/agents/llm-expert.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "File extension prohibitions must align with the file ownership model in config/agent_registry.json (owns_file_extensions)"
+  - "Blocker escalation must follow the signoff protocol status tags"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/01_agent_template.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "templates/agents/llm-expert.md"

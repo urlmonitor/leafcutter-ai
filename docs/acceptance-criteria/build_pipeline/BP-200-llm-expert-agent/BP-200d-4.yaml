@@ -1,0 +1,34 @@
+id: BP-200d-4
+title: "Prompt-audit skill never modifies the files it audits"
+component: build_pipeline
+level: L2
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given the file templates/skills/prompt-audit/SKILL.md exists,
+  When the constraints section is read,
+  Then it states the skill is "read-only" and must never write to or modify audited files
+  And the allowed-tools list excludes Edit and Write
+  And the skill instructs "Report findings only; do not auto-fix"
+  And the skill states that remediation decisions belong to the llm-expert agent
+depends_on: [BP-200d]
+doc_links:
+  - path: templates/skills/prompt-audit/SKILL.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Read-only constraint is enforced at the tool level via allowed-tools -- not just prose instruction"
+  - "Separation of concerns: audit produces findings, agent decides remediation"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/04_prompt_audit_skill.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "templates/skills/prompt-audit/SKILL.md"

@@ -1,0 +1,25 @@
+id: ACS-400c
+title: "Every criteria change is traceable to the agent that made it"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Full audit trail for every change to what a requirement asks for.
+
+  Whenever the criteria field is created or amended, the origin_agent or
+  amended_by field must record which authorized agent made the change. If
+  a criteria modification is committed without updating the audit trail,
+  the commit is rejected. You can always answer "who changed this requirement
+  and when?"
+depends_on: [ACS-400a]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACS-400c-1, ACS-400c-2, ACS-400c-2-i]
+implemented_by: []

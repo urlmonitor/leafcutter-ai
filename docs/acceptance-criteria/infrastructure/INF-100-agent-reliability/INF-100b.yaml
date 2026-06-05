@@ -1,0 +1,23 @@
+id: INF-100b
+title: "emit_entry resolves repo root correctly in all git checkout forms"
+component: infrastructure
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  The _resolve_repo_root() function in scripts/changelog/emit_entry.py
+  returns the correct repository root directory whether the script is
+  running from a standard checkout (where .git is a directory) or a git
+  worktree (where .git is a file containing a gitdir pointer).
+depends_on: [INF-100]
+doc_links:
+  - path: scripts/changelog/emit_entry.py
+    relationship: implements
+    status: exists
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

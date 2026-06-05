@@ -1,0 +1,25 @@
+id: BP-100f
+title: "Git-dependent workflows degrade gracefully outside a repository"
+component: build-pipeline
+level: L1
+status: active
+work_status: todo
+criteria: |
+  Workflows that need git never crash when git is absent — they warn and skip.
+
+  When a workflow like finalize-feature or changelog-agent is invoked in a
+  directory that is not inside a git work tree, it emits a clear warning
+  identifying the missing context and skips all git-dependent steps without
+  throwing a fatal error. The happy path (valid git context) is unchanged.
+  Operators learn about the problem immediately and can fix it, rather than
+  debugging an unhandled exception stack trace mid-drive.
+depends_on:
+  - BP-500
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by:
+  - "split: BP-100 -> BP-100 + BP-500, 2026-06-05 — reparented from BP-100 to BP-500"
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,29 @@
+id: BP-100e-2-i
+title: "Pre-commit hook rejects failed sign-off lines with prose timestamp suffix"
+component: build-pipeline
+level: L3
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-HardenSignoffTimestamps.md"
+criteria: |
+  Given a ticket commit where a failed line reads "- [ ] python-coder — failed 2026-05-28 (now)"
+  When the pre-commit hook runs in --enforce mode
+  Then the hook exits 1
+  And it emits a violation naming the malformed timestamp on the failed line
+depends_on:
+  - BP-100e-2
+doc_links:
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+delivers_to: test-runner
+expects_from: BP-100e-2
+it_requirements: "Test must exercise the failed sign-off line format specifically (- [ ] agent — failed YYYY-MM-DD prose); must verify both exit code and violation message content"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -20,6 +20,8 @@ signoff: false
 visibility: internal
 domain: null
 config_keys: {}
+skills_used:
+  - ac-tree-split  # Loaded for L2 redistribution when a split L1 is overcrowded (Pattern C steps 1-2, 6).
 adopter_notes: |
   Internal. Spawned by the ticket-creation pipeline after the PO has produced L0/L1
   ACs. Never called directly by users. Produces AC YAML files in the feature folder.
@@ -94,6 +96,47 @@ You NEVER READ:
 
 If you need to understand implementation to write a good AC, that means
 the architecture docs are insufficient. Flag it as a gap — don't read source.
+
+---
+
+## §0 Knowledge Loop — Injection
+
+Before doing anything else, load accumulated context from prior runs of this
+agent and from the component being worked on. All reads are best-effort —
+skip gracefully if a file is absent, unreadable, binary, or exceeds 50 KB.
+
+1. **Identify the component.** Extract the `component` field from the L1 AC
+   you were given (or derive it from the feature folder path).
+
+2. **Read component PROJECT_CONTEXT.md.** Check for a file at:
+   `docs/acceptance-criteria/<component>/PROJECT_CONTEXT.md`
+   If it exists and is ≤ 50 KB of readable text, absorb its contents into your
+   context before §1. If it is absent, binary, or oversized, log:
+   "§0: PROJECT_CONTEXT.md skipped (<reason>)" and continue.
+
+3. **Read component AC folder README.md.** Check for a file at:
+   `docs/acceptance-criteria/<component>/README.md`
+   If it exists, read it. Skip gracefully if absent.
+
+4. **Read per-agent memory files.** Scan the `memory/` directory (in the
+   project root) for any files matching the patterns `*ba*.md`,
+   `*business-analyst*.md`, `*analyst*.md`. Read each match. These files
+   contain learnings from prior runs of this agent. Skip the scan gracefully
+   if the `memory/` directory does not exist.
+
+5. **Read cross-agent memory files from the Product Owner.** If the
+   product-owner-v3 agent ran before you in the same pipeline, it may have
+   persisted learnings about the user's framing preferences or component
+   conventions. Scan the `memory/` directory for files matching the patterns
+   `*po*.md`, `*product*.md`, `*product-owner*.md`. Read each match.
+   Skip gracefully if the directory is absent or no matches are found.
+   These learnings are available because the harness auto-loads memory files
+   at each agent spawn (Channel ⑨) — no explicit hand-off is required.
+   If no PO memory files exist, proceed normally with baseline context.
+
+6. **Proceed.** Continue to §1 with the loaded context available. No error
+   or warning is needed if all files were absent — a first run with no prior
+   context is the normal baseline.
 
 ---
 
@@ -552,6 +595,68 @@ questions:
     context: "<why the docs didn't answer this>"
     options: ["<option A>", "<option B>"]
 ```
+
+---
+
+## §9 Knowledge Loop — Emission
+
+After producing your final AC YAML files but before returning control, run this
+reflection step. It is mandatory but best-effort — a failure here must not block
+your output from reaching the caller.
+
+**Reflection prompt:**
+
+> "Did you discover any component conventions, naming patterns, standing rules,
+> user framing preferences, agent assignment patterns, or decomposition strategies
+> during this run that future agents working in this component would benefit from
+> knowing?"
+
+**On "no":** Proceed — nothing to persist.
+
+**On "yes":** Execute the following steps in order. Wrap the entire block in
+best-effort handling (log a warning and proceed if any step fails):
+
+1. Load `.claude/skills/route-learning/SKILL.md` (or `templates/skills/route-learning/SKILL.md`).
+   Apply its decision tree to classify the learning. If the skill is unavailable,
+   log: "§9: route-learning skill not found — capture skipped." and stop.
+
+2. Load `.claude/skills/capture-learning/SKILL.md` (or `templates/skills/capture-learning/SKILL.md`).
+   Execute the write using the route classification from step 1.
+   If the skill is unavailable, log: "§9: capture-learning skill not found — capture skipped." and stop.
+
+3. Emit a `knowledge_captured` telemetry event. Append to
+   `debugging/logs/agent_telemetry.jsonl` (create the file if absent; skip
+   gracefully if the directory is not writable):
+   ```json
+   {"event": "knowledge_captured", "timestamp": "<ISO-8601>", "agent": "business-analyst-v3", "component": "<component-id>", "destination": "<routed_file_path>", "entry_kind": "<entry_kind from route-learning>"}
+   ```
+
+4. **Capture scope constraint (specification-relevant only):** The reflection
+   prompt asks about specification-relevant discoveries only:
+   - Component conventions and naming patterns
+   - Standing rules and invariants relevant to L2/L3 decomposition
+   - Decomposition strategies that worked well or poorly for this component
+   - Agent assignment patterns observed across similar behaviors
+   - Gherkin clarity patterns that made criteria more testable
+
+   Do NOT capture code-level learnings (implementation patterns, error handling
+   conventions, test strategies). Those are not within this agent's scope.
+
+5. **Duplicate detection:** Before writing, route-learning Step 0 checks for
+   existing entries with equivalent content. If a duplicate is detected, skip
+   the write and log: "§9: duplicate learning detected — not persisted again."
+
+6. **Cross-agent availability note:** Any learning you persist to `memory/`
+   or to the component `PROJECT_CONTEXT.md` will be automatically available
+   to the IT PO v3 agent when it is spawned next — the harness injects all
+   memory files at spawn time (Channel ⑨). Name files using the pattern
+   `*ba*.md` (e.g. `memory/feedback_ba_<component>_conventions.md`) so
+   future runs of this agent also find them. The IT PO specifically scans
+   for `*it-po*.md` files, so write learnings that are agent-assignment
+   or cross-agent-contract patterns in ways the IT PO's scan can discover.
+
+**Constraint — this step is not conditional on `ticket_path`:** The knowledge
+emission step runs whether or not this agent was spawned with a `ticket_path`.
 
 ---
 

@@ -1,0 +1,29 @@
+id: INF-500b-3
+title: "trend_report.py computes week-over-week trend indicators"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260603-FeedbackAnalysisPipeline.md"
+criteria: |
+  Given feedback.jsonl contains entries spanning at least 7 days
+  When trend_report.py is run with --trend week
+  Then the output includes a trend indicator (rising/stable/falling) for each category
+depends_on:
+  - INF-500c
+doc_links:
+  - path: templates/skills/feedback-analysis/scripts/trend_report.py
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: INF-500b-3-i
+expects_from: INF-500b-2
+it_requirements: "Must accept --trend week argument; compare current 7-day window to previous 7-day window; output rising/stable/falling indicator per category; use >20% threshold for classification"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - "split: INF-500b -> INF-500b + INF-500c, 2026-06-05"
+superseded_by: null
+covered_by: []
+implemented_by: []

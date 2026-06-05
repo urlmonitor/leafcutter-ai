@@ -1,0 +1,46 @@
+id: INF-600a-4
+title: "Every config value referenced in the template body is declared in config_keys"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+criteria: |
+  Given an agent template file that references configuration values
+    via Mustache interpolation (e.g. `{{config.file_size_limit_py}}`)
+    or via prose instructions that name a config key
+    (e.g. "reads testing_context.max_test_duration_seconds from skills_config")
+  When the template frontmatter `config_keys` block is inspected
+  Then every config value referenced anywhere in the template body
+    has a corresponding entry in `config_keys`
+  And each config_keys entry has fields:
+    - key name (string matching the referenced name)
+    - `required` (boolean)
+    - `description` (string explaining what the value controls)
+    - `source` (string: "skills_config" | "settings" | "build_injected",
+       indicating where the value is resolved from)
+  And no Mustache variable in the template body resolves to an
+    undeclared config key
+depends_on:
+  - INF-600j
+doc_links:
+  - path: docs/agents/cards/python-coder.card.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/python-coder.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/skills-config-fields.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A complete config_keys block in each agent template that the card generator reads to produce the Configuration table, with no undeclared Mustache variables remaining"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

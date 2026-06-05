@@ -1,0 +1,30 @@
+id: INF-400g-2
+title: "emit_event.py appends a valid JSON line when invoked with valid arguments"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-WireSupervisorFeedbackEmission.md"
+criteria: |
+  Given emit_event.py is invoked with valid arguments
+  When called as: python emit_event.py --agent "ticket-supervisor" --event agent_start --ticket "/path/to/01_schema.md" --phase "python-coder" --log debugging/logs/agent_telemetry.jsonl
+  Then it exits 0
+  And appends exactly one JSON line to the log file
+  And the JSON line contains event_type, timestamp, ticket_path, agent_name, and payload fields
+depends_on:
+  - INF-400g
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: INF-400g-2-i
+expects_from: INF-400g-1
+it_requirements: "Must use argparse for CLI; must output valid JSON (one line per event, json.dumps with ensure_ascii=False); each line must contain event_type, timestamp (ISO 8601), ticket_path, agent_name, and payload fields; must use 'a' mode for file open (append)"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -6,7 +6,7 @@ component: build-pipeline
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 created_by: "tickets/00_inbox/TICKET-20260603-ConfigDrivenBuildPaths.md"
 criteria: |
   Given a project config containing only tickets_inbox_path = "custom/tickets/00_inbox" and no other path overrides
@@ -31,4 +31,5 @@ created: 2026-06-05
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - "PR #53 — feat(build): hook integrity check + contract-shrinking self-exclusion"

@@ -1,0 +1,34 @@
+id: ACS-400e-2
+title: "Only staged AC YAML files are inspected — unmodified files are ignored"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the repository contains 100 AC YAML files under docs/acceptance-criteria/,
+  When a commit is staged that modifies only 2 of those files,
+  Then the governance enforcement hook inspects only the 2 staged AC files,
+  And the remaining 98 files are not parsed or validated by the governance hook,
+  And the hook completes within 2 seconds regardless of total AC store size.
+depends_on: [ACS-400e]
+doc_links:
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must follow the fail-open convention per docs/reference/claude-code-hooks.md"
+  - "Must use the staged file list from the git commit command (available in tool_input.command) or git diff --cached to identify relevant files"
+  - "Must filter to only files matching the pattern docs/acceptance-criteria/**/*.yaml before any YAML parsing"
+  - "Must complete within 2 seconds for repositories with up to 500 AC YAML files"
+  - "Must not scan the filesystem recursively -- use only the staged file list as input"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

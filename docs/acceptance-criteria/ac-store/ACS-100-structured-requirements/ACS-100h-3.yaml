@@ -1,0 +1,39 @@
+id: ACS-100h-3
+title: "Split requires user confirmation at each gate before modifying files"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an agent proposes splitting an L0 into two groups of L1s,
+  When the cluster proposal is ready,
+  Then the agent presents the grouping to the user and pauses,
+  And no files are created or modified until the user approves the grouping,
+  And after file modifications are prepared, the agent presents
+    a blast-radius summary (count of new, modified, and rewired files)
+    and pauses again before writing,
+  And the user can reject at any gate, which aborts the split
+    with no files changed.
+depends_on: [ACS-100h]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Must present confirmation gates as structured prompts (not embedded in prose)"
+  - "Must guarantee zero file modifications until user approval at each gate"
+  - "Must support full abort at any gate with no side effects"
+  - "Must include the blast-radius count (files created, modified, references rewired) at the second gate"
+delivers_to: null
+expects_from:
+  ac_id: ACS-100h-1
+  contract: "Cluster proposal (grouping of L1s into new parents) ready for user presentation"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

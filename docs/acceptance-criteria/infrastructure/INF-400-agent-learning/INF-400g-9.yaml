@@ -1,0 +1,31 @@
+id: INF-400g-9
+title: "aggregate.py returns non-empty output for subagent-quality after an epic drive"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-WireSupervisorFeedbackEmission.md"
+criteria: |
+  Given an epic drive completes (or is halted)
+  When aggregate.py is run as: python scripts/feedback/aggregate.py --category subagent-quality
+  Then the output is non-empty (at least one entry exists from the drive)
+depends_on:
+  - INF-400g
+doc_links:
+  - path: scripts/feedback/aggregate.py
+    relationship: implements
+    status: exists
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: related
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+delivers_to: test-runner
+expects_from: INF-400g-4
+it_requirements: "Integration-level test; must verify that after an epic drive (or simulated drive), aggregate.py --category subagent-quality returns non-empty output; may use a pre-seeded feedback.jsonl fixture"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,35 @@
+id: BO-300a-2
+title: "Step 6 message string contains all four sections in order"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given build-epic.js constructs the completion message in Step 6,
+  When the `message` string is assembled,
+  Then it contains a summary section (epic title and ticket count),
+  And a worktree section (absolute path to the worktree on disk),
+  And a manual tests section (concrete smoke-test suggestions),
+  And a finalize section (copy-pastable /finalize-feature command),
+  And these four sections appear in that exact order: summary, worktree, tests, finalize.
+depends_on: [BO-300a]
+doc_links:
+  - templates/workflows-js/build-epic.js
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Sections must appear in fixed order: Summary, Worktree, Tests, Finalize"
+  - "Each section must be separated by a blank line for readability"
+  - "The message field must be a plain string, not structured markup"
+delivers_to:
+  agent: build-feature
+  contract: "message: string containing all 4 sections in order"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [BO-300a-2-1]
+implemented_by:
+  - tickets/99_done/TICKET-20260604-StandardizeBuildCompletionOutput.md

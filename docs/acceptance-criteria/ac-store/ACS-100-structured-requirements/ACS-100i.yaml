@@ -1,0 +1,27 @@
+id: ACS-100i
+title: "Cross-field constraints and relational references are enforced together"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Structural integrity goes beyond individual fields — the validator catches
+  contradictions between fields, rejects unknown properties that would let the
+  schema drift silently, and blocks dangling references that point to non-existent
+  ACs. No requirement file ships with internal inconsistencies or orphaned pointers.
+depends_on: [ACS-100]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

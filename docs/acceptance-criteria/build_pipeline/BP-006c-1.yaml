@@ -1,0 +1,33 @@
+id: BP-006c-1
+title: "build_workflow_scripts() output directory is target_root/.claude/workflows/"
+component: build_pipeline
+level: L2
+status: active
+req_status: approved
+work_status: done
+criteria: |
+  Given scripts/build_phases.py build_workflow_scripts() is invoked with a target_root path,
+  When workflow scripts are compiled and written to disk,
+  Then the output_dir variable resolves to target_root / ".claude" / "workflows",
+  And all generated workflow files exist under target_root/.claude/workflows/,
+  And no files are created under target_root/workflows/.
+depends_on: [BP-006c]
+doc_links:
+  - scripts/build_phases.py
+  - unit_tests/test_build_workflow_phase.py
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  output_dir must resolve to target_root / ".claude" / "workflows" (not target_root / "workflows").
+  No files may be created under target_root/workflows/ — the .claude prefix is mandatory
+  to keep generated artifacts inside the .claude namespace.
+delivers_to:
+  BP-006c-2: "Provides the corrected path so the test can validate .claude/workflows/ output"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/00_inbox/TICKET-20260604-FixFailingBuildPipelineTests.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

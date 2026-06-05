@@ -18,11 +18,20 @@ criteria: |
   And the user can approve the split, reject it,
     or request a different decomposition before any files are written.
 depends_on: [TKT-300e, TKT-300e-1, TKT-300c-2]
-doc_links: []
+doc_links:
+  - path: docs/architecture/adrs/ADR-009-itpo-no-source-code-access.md
+    relationship: describes
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: S
+it_requirements:
+  - "The split summary must be included in the same confirmation gate as other enrichment — not a separate approval step"
+  - "User rejection of a split must not write any child files to disk"
+  - "Must handle errors gracefully per the project error handling policy"
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: TKT-300e-1
+  contract: "Split decision metadata: original AC id, proposed child count, agent assignment per child"
 origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []

@@ -1,0 +1,24 @@
+id: BP-400
+title: "Understand how every drive performed — never fly blind"
+component: build-pipeline
+level: L0
+status: active
+work_status: todo
+criteria: |
+  Full visibility into drive performance — so every run teaches you something.
+
+  After a drive finishes, you can see exactly what happened: which agents ran,
+  which retried, which blocked, and what patterns emerged across tickets. You
+  can ask for a summary at any time and get a prioritized report of what to fix
+  next. Retrospective analysis works accurately regardless of where the files
+  ended up after finalization. The system accumulates operational wisdom
+  automatically, so each successive drive is more informed than the last.
+depends_on:
+  - BP-100
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

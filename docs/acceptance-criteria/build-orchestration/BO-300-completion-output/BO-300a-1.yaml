@@ -1,0 +1,36 @@
+id: BO-300a-1
+title: "Step 6 return object includes worktree_path and manual_tests fields"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given build-epic.js completes all ticket batches successfully,
+  When the Step 6 return object is constructed,
+  Then the object includes a `worktree_path` field with the absolute path to the epic worktree,
+  And the object includes a `manual_tests` field with an array of smoke-test suggestions,
+  And the existing fields (`message`, `epic_path`, `title`, `batches_run`, `tickets_completed`, `completed_batches`) are preserved unchanged.
+depends_on: [BO-300a]
+doc_links:
+  - templates/workflows-js/build-epic.js
+  - docs/architecture/agent_delivery_workflows.md
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "worktree_path must be an absolute path, not relative"
+  - "manual_tests must be an array of strings, minimum 3 items"
+  - "Existing return fields must not be renamed or removed (backward compat)"
+delivers_to:
+  agent: build-feature
+  contract: "Return object with worktree_path: string and manual_tests: string[]"
+expects_from:
+  agent: ticket-supervisor
+  contract: "Completed ticket results with files_touched and ACs for test derivation"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - tickets/99_done/TICKET-20260604-StandardizeBuildCompletionOutput.md

@@ -1,0 +1,28 @@
+id: BP-300a-6-i
+title: "debug.js is syntactically valid JavaScript"
+component: build-pipeline
+level: L3
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260602-debug_js_workflow.md"
+criteria: |
+  Given debug.js exists at templates/workflows-js/debug.js
+  When node --check templates/workflows-js/debug.js is run
+  Then it exits 0 with no parse errors
+depends_on:
+  - BP-300a-6
+doc_links:
+  - path: templates/workflows-js/build-ticket.js
+    relationship: related
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+delivers_to: test-runner
+expects_from: BP-300a-1
+it_requirements: "Must verify debug.js passes node --check (syntax validation); test should run 'node --check <path>' and assert exit code 0"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,29 @@
+id: INF-400g-2-ii
+title: "emit_event.py appends (not overwrites) on subsequent calls"
+component: infrastructure
+level: L3
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-WireSupervisorFeedbackEmission.md"
+criteria: |
+  Given agent_telemetry.jsonl already contains one event line
+  When emit_event.py is called a second time
+  Then the file now contains two JSON lines
+  And the original first line is unchanged
+depends_on:
+  - INF-400g-2
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: related
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+delivers_to: test-runner
+expects_from: INF-400g-2
+it_requirements: "Test must pre-populate a log file with one JSON line, invoke emit_event.py a second time, then assert the file now contains exactly two lines with the original first line unchanged"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

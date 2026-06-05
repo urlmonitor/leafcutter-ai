@@ -1,0 +1,42 @@
+id: FIN-100c-1
+title: "Failures present in baseline are classified as pre-existing"
+level: L2
+component: finalize
+status: active
+parent: FIN-100c
+criteria: |
+  Given the baseline snapshot recorded N failing tests from main HEAD
+  And the post-merge test run (Step 3) reports a set of failing tests
+  When the triage agent compares post-merge failures against baseline_failures
+  Then any test ID present in BOTH the baseline and post-merge failures
+  Is classified as "pre_existing"
+  And pre_existing failures do NOT block finalization (blocks_finalization remains false)
+  And the triage report includes each pre_existing test ID in the pre_existing array
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
+assigned_agent: "test-failure-triage"
+estimated_complexity: S
+it_requirements: |
+  - Must compute set intersection: pre_existing = post_merge_failures ∩ baseline_failures
+  - Must use exact string matching on test IDs (file::test_name format)
+  - pre_existing entries must NOT set blocks_finalization to true
+  - Each pre_existing test ID must appear in the triage_report.pre_existing array
+  - Category-to-action mapping: pre_existing → create_tracking_ticket
+delivers_to:
+  - agent: "finalize-feature-workflow"
+    contract: "provides triage_report with pre_existing array and blocks_finalization=false when no regressions"
+expects_from:
+  - agent: "finalize-feature-workflow"
+    contract: "provides post_merge_failures, baseline_failures, baseline_sha, feature_branch, changed_files"
+  - agent: "test-runner"
+    contract: "returns structured failure list with test IDs in file::test_name format"
+doc_links:
+  - path: "templates/agents/test-failure-triage.md"
+    relevance: "Step 2 partition and Step 5 pre_existing classification"
+  - path: "templates/workflows/finalize-feature.md"
+    relevance: "Step 3 triage dispatch and blocks_finalization semantics"
+depends_on: []
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

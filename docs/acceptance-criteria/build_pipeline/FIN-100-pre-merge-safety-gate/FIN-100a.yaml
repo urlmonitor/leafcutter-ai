@@ -1,0 +1,30 @@
+id: FIN-100a
+title: "Pre-merge test baseline is captured from main HEAD"
+component: finalize
+level: L1
+status: active
+criteria: |
+  A clean test baseline from main HEAD exists before any merge evaluation begins.
+
+  Given finalize-feature is invoked on a feature branch,
+  When the workflow starts (Step 0),
+  Then it checks out main HEAD and runs the full test suite,
+  And it records every failing test name and its error signature as the
+  "baseline snapshot",
+  And this baseline is persisted for the duration of the finalization run
+  so that later triage can distinguish pre-existing failures from regressions
+  introduced by the feature branch.
+depends_on:
+  - FIN-100
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
+amended_by: []
+superseded_by: null
+covered_by:
+  - FIN-100a-1
+  - FIN-100a-2
+  - FIN-100a-3
+implemented_by:
+  - scripts/finalize-feature.js

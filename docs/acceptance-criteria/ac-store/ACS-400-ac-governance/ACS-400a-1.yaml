@@ -1,0 +1,43 @@
+id: ACS-400a-1
+title: "Authorized requirement agents can create the criteria field"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an AC YAML file is staged for commit with a populated criteria field,
+  When the committing agent's identity is one of:
+    product-owner-v3, business-analyst-v3, it-po-v3, or a human user,
+  Then the commit proceeds without governance violation,
+  And the file is accepted into the repository with the criteria field intact.
+depends_on: [ACS-400a]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must follow the fail-open convention per docs/reference/claude-code-hooks.md"
+  - "Must complete within 500ms for typical commits (fewer than 20 staged AC files)"
+  - "Must detect agent identity without requiring manual configuration by the committing agent"
+  - "Must not introduce runtime dependencies beyond Python stdlib and PyYAML"
+  - "Must be idempotent -- repeated invocations on the same staged state produce the same result"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

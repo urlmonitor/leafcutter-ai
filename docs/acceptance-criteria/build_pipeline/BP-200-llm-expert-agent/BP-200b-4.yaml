@@ -1,0 +1,44 @@
+id: BP-200b-4
+title: "Signoff protocol section documents the three-place parity guard and timestamp format"
+component: build_pipeline
+level: L2
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given the file docs/agents/llm-expert/PROJECT_CONTEXT.md exists,
+  When Section 4 (Signoff Protocol) is read,
+  Then it references signoff SKILL.md sections 2 and 4
+  And it documents the three-place parity rule requiring simultaneous updates to:
+    1. frontmatter agents: map (e.g. "agent-name: signed_off")
+    2. Sign-offs checklist (e.g. "- [x] agent-name -- YYYY-MM-DD HH:MM")
+    3. Implementation Tasks checkboxes (all items flipped to "[x]")
+  And it states the timestamp format is exactly "YYYY-MM-DD HH:MM" (24-hour, no seconds)
+  And it documents the three status tags: "(status: ok)", "(status: blocker)", "(status: question)"
+  And it explains why correct signoffs matter for ticket-supervisor choreography
+depends_on: [BP-200b]
+doc_links:
+  - path: docs/agents/llm-expert/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Parity rule documentation must be consistent with the signoff skill's canonical definition"
+  - "Status tags must match the enum used by ticket-supervisor for dispatch routing"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/02_project_context.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "docs/agents/llm-expert/PROJECT_CONTEXT.md"

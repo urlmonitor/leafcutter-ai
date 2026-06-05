@@ -1,0 +1,32 @@
+id: ACS-100c-4
+title: "Child ACs can be amended without modifying the parent AC"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an L1 AC "ACS-100a" has 3 L2 children,
+  When a BA agent amends the criteria field of L2 AC "ACS-100a-2",
+  Then the amendment succeeds and the L2 file is updated,
+  And the parent L1 file "ACS-100a.yaml" is not modified in the same commit,
+  And the AC validator does not flag the parent as needing revision
+    solely because a child was amended.
+depends_on: [ACS-100c]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must not cascade child amendments to parent files automatically"
+  - "Validator must not flag parent-child criteria divergence as an error"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

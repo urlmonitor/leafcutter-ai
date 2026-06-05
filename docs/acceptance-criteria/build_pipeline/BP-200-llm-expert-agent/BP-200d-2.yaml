@@ -1,0 +1,47 @@
+id: BP-200d-2
+title: "Prompt-audit skill implements six distinct detection checks"
+component: build_pipeline
+level: L2
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given the file templates/skills/prompt-audit/SKILL.md exists,
+  When the audit checks section is read,
+  Then it defines exactly 6 checks:
+    Check 1: Frontmatter Schema Validation (required fields present and valid)
+    Check 2: Tool Allowlist vs Body Usage (cross-reference declared vs used tools)
+    Check 3: Compound Bash Detection (&&, ;, ||, cd-chain, side-effect pipes)
+    Check 4: Signoff Protocol Validation (## Sign-off section exists when signoff: true)
+    Check 5: spawn_allowlist Validation (declared when Agent tool is used)
+    Check 6: Stop-and-Ask Rules (scope boundary documentation exists)
+  And each check documents its detection steps as a numbered list
+  And each check assigns a severity level ("error" or "warning") to each finding type
+depends_on: [BP-200d]
+doc_links:
+  - path: templates/skills/prompt-audit/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/agents/llm-expert/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Check definitions must be 1:1 aligned with the Prompt-Quality Checklist items in the agent template (BP-200a-2)"
+  - "Severity levels must use the two-tier system: error (blocks signoff) and warning (advisory only)"
+  - "Detection steps must be deterministic and reproducible across invocations"
+delivers_to:
+  agent: llm-expert
+  contract: "Six detection check definitions used by the report assembly step (BP-200d-3) and batch invocation (BP-200d-5)"
+expects_from:
+  ac_id: BP-200a-2
+  contract: "Six-item Prompt-Quality Checklist in the agent template defining what the audit checks must detect"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/04_prompt_audit_skill.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "templates/skills/prompt-audit/SKILL.md"

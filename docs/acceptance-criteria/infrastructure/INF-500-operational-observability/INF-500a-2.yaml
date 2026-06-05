@@ -1,0 +1,30 @@
+id: INF-500a-2
+title: "extract_epic_facts.py exits non-zero with clear warning when no commits found"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-HardenExtractEpicFacts.md"
+criteria: |
+  Given an epic folder for which git cannot determine any commits (moved and no rename history available)
+  When extract_epic_facts.py is run
+  Then the script exits with code 1
+  And prints a warning to stderr indicating that dates could not be determined
+  And never silently returns null dates with exit code 0
+depends_on:
+  - INF-500a
+doc_links:
+  - path: scripts/retrospective/extract_epic_facts.py
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: test-writer
+expects_from: INF-500a-1
+it_requirements: "Must exit with code 1 (not 0) when no commits are found; must print warning to stderr (not stdout); must never silently return null dates with exit code 0"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

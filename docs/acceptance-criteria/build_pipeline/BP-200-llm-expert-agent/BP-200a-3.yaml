@@ -1,0 +1,41 @@
+id: BP-200a-3
+title: "Agent template defines stop-and-ask boundaries deferring infrastructure edits"
+component: build_pipeline
+level: L2
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given the file templates/agents/llm-expert.md exists,
+  When the section headed "Stop-and-Ask Rule" is read,
+  Then it names "workflow-architect" as the agent to defer to for:
+    - edits to config/agent_registry.json
+    - edits to scripts/build.py, scripts/build_phases.py, scripts/build_precommit.py
+    - edits to commit_guardian.json
+  And it lists conditions requiring user confirmation:
+    - ambiguous acceptance criteria with multiple interpretations
+    - deletion of an existing agent template or skill (destructive write)
+    - introducing a new mcp__* tool not in the approved tool set
+depends_on: [BP-200a]
+doc_links:
+  - path: docs/agents/llm-expert/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Stop-and-ask boundaries must be consistent with the agent's constraints section (BP-200a-3-i)"
+  - "Deferred file paths must match the actual infrastructure file locations in the repo"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/01_agent_template.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "templates/agents/llm-expert.md"

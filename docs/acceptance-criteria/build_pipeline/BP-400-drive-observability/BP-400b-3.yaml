@@ -1,0 +1,37 @@
+id: BP-400b-3
+title: "CLI SHA override bypasses path-based git log and derives dates from supplied commits"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-HardenExtractEpicFacts.md"
+criteria: |
+  Given --first-commit abc1234 and --merge-commit def5678 are supplied
+    on the command line,
+  When extract_epic_facts.py is run,
+  Then git_first_commit_date is set to the date of the --first-commit SHA,
+  And git_last_commit_date is set to the date of the --merge-commit SHA,
+  And git_commit_count is null (explicit override mode),
+  And the path-based git log query is NOT executed,
+  And the script exits with code 0.
+depends_on:
+  - BP-400b
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must validate that supplied SHAs resolve to real git objects before deriving dates"
+  - "Must set git_commit_count to null (not zero) so callers can distinguish override mode from genuine zero-commit epics"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

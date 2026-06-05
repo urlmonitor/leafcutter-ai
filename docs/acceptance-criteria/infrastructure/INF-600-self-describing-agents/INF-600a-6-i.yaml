@@ -1,0 +1,42 @@
+id: INF-600a-6-i
+title: "Agent with no conditional behaviors has an empty behavioral_patterns array"
+component: infrastructure
+level: L3
+status: active
+work_status: todo
+criteria: |
+  Given an agent template for a utility agent that has no conditional
+    behaviors, gates, or delegation rules
+    (e.g. brainstorm-worker, which receives a question and a
+     perspective lens, then returns a fixed-shape response block
+     without any conditional branching)
+  When the frontmatter is parsed
+  Then the `behavioral_patterns` array is present but empty
+    (behavioral_patterns: [])
+  And the card generator produces a valid card where the
+    Key Behavioral Patterns table is either omitted entirely
+    or displays "No conditional behaviors — this agent follows
+    a single fixed execution path"
+  And the build system does not reject the template for having
+    an empty array (emptiness is a valid state, not an error)
+depends_on:
+  - INF-600a-6
+doc_links:
+  - path: docs/agents/cards/python-coder.card.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/brainstorm-worker.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: INF-600a-6
+  contract: "behavioral_patterns array exists in agent frontmatter"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

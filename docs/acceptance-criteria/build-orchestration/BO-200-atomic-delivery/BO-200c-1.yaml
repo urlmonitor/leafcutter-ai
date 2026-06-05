@@ -1,0 +1,41 @@
+id: BO-200c-1
+title: "Commit message follows the project's conventional-commit format"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a work envelope references a ticket in the "build-orchestration" component
+    and contains 3 changed files,
+  When the commit agent writes the commit message,
+  Then the message starts with a type prefix and component scope
+    (e.g., "feat(build-orchestration):" or "fix(build-orchestration):"),
+  And the first line is 72 characters or fewer,
+  And the message body includes a reference to the ticket path.
+depends_on: [BO-200c]
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/agents/git/commit.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Must enforce the 72-character limit on the subject line"
+  - "Must select the correct conventional-commit type (feat/fix/refactor/docs) based on the change nature"
+  - "Must include the ticket path in the commit body for traceability"
+delivers_to:
+  agent: python-coder
+  contract: "Formatted commit message string: subject line (type(scope): description) + body with ticket reference"
+expects_from:
+  ac_id: BO-200a-1
+  contract: "Work envelope containing ticket_path, changed_files list, and component name"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

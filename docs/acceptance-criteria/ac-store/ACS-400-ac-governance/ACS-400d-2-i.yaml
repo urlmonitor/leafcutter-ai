@@ -1,0 +1,37 @@
+id: ACS-400d-2-i
+title: "Projects without an AC store are not affected by governance rules"
+component: ac-store
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a consumer project runs build.py but has no
+    docs/acceptance-criteria/ directory (the project does not use the AC store),
+  When the governance enforcement hook runs during a commit,
+  Then it exits with no violations and no warnings,
+  And it does not create the docs/acceptance-criteria/ directory,
+  And the commit proceeds as if the governance hook were absent.
+depends_on: [ACS-400d-2]
+doc_links:
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must follow the fail-open convention per docs/reference/claude-code-hooks.md"
+  - "Must check for the existence of docs/acceptance-criteria/ directory early and exit silently (exit 0, no stdout) if absent"
+  - "Must not create any directories or files as a side effect of running the governance check"
+  - "Must complete in under 100ms when the AC store directory does not exist (early exit path)"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

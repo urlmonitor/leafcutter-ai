@@ -1,0 +1,38 @@
+id: BP-400b-2
+title: "Non-zero exit and stderr warning when no commits found after all fallbacks"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-HardenExtractEpicFacts.md"
+criteria: |
+  Given an epic folder path for which git cannot determine any commits
+    (the folder has been moved and no rename history is available),
+  When extract_epic_facts.py is run against that path with no
+    --first-commit or --merge-commit overrides,
+  Then the script exits with code 1,
+  And stderr contains a warning message that includes the epic path
+    and states that dates could not be determined,
+  And stderr mentions the --first-commit / --merge-commit override
+    as a recovery option.
+depends_on:
+  - BP-400b
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must provide actionable guidance in the error message (mention --first-commit / --merge-commit)"
+  - "Must use stderr for warnings, not stdout (stdout is reserved for JSON output)"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

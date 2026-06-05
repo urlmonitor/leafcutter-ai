@@ -1,0 +1,26 @@
+id: INF-100b-1
+title: "_resolve_repo_root() returns correct root when .git is a file (worktree)"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given emit_entry.py is located at scripts/changelog/emit_entry.py in a git worktree,
+  And the worktree's .git entry at parents[2]/.git is a file (not a directory),
+  When _resolve_repo_root() is called,
+  Then it returns parents[2] (the worktree root),
+  And it does NOT fall through to parents[3] (the worktrees/ parent directory).
+depends_on: [INF-100b]
+doc_links:
+  - path: scripts/changelog/emit_entry.py
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

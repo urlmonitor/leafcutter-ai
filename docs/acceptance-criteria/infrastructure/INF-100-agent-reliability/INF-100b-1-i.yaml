@@ -1,0 +1,29 @@
+id: INF-100b-1-i
+title: "Fix uses .exists() not .is_dir() to check .git presence"
+component: infrastructure
+level: L3
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/20260605-emit-entry-worktree-git-root.md"
+criteria: |
+  Given the fix to _resolve_repo_root() in scripts/changelog/emit_entry.py
+  When the code on line 82 is inspected
+  Then the condition uses .exists() (not .is_dir())
+  And the docstring on _resolve_repo_root() mentions that .git may be a file in a worktree
+depends_on:
+  - INF-100b-1
+doc_links:
+  - path: scripts/changelog/emit_entry.py
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: INF-100b-2-i
+expects_from: null
+it_requirements: "Must change .is_dir() to .exists() on line 82 of _resolve_repo_root(); must update the docstring to explain that .git may be a file (not a directory) in a git worktree; must preserve all other behavior of the function"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -6,7 +6,7 @@ component: ac-store
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given an L0 AC has fewer than 3 L1 children in its feature folder,
   Or an L1 AC has fewer than 3 L2 children in its feature folder,
@@ -22,11 +22,18 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Advisory must be non-blocking — validation must still pass regardless of sparse parent count"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Advisory messages must name the sparse parent AC and its current child count"
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/commit_guardian/test_check_ac_limits.py::TestCheckLimitsSparseAdvisory
+  - unit_tests/commit_guardian/test_check_ac_limits.py::TestCheckAcLimitsCLI::test_sparse_advisory_exits_zero
+implemented_by:
+  - scripts/commit_guardian/check_ac_limits.py#_check_limits

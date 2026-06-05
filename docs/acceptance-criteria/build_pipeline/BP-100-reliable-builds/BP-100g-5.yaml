@@ -1,0 +1,33 @@
+id: BP-100g-5
+title: "build.py allows mcp__ prefixed tools in allowed-tools"
+component: build-pipeline
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-SkillFrontmatterValidation.md"
+criteria: |
+  Given a SKILL.md where allowed-tools contains "mcp__my_server__tool"
+  When python scripts/build.py --target-dir <target> is run
+  Then that skill deploys successfully
+  And build.py does not report a validation error for the mcp__ prefixed tool
+depends_on:
+  - BP-100h
+doc_links:
+  - path: scripts/build.py
+    relationship: implements
+    status: exists
+  - path: docs/reference/skill-frontmatter.md
+    relationship: related
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+delivers_to: test-runner
+expects_from: BP-100g-3
+it_requirements: "Test must verify that mcp__ prefixed tools (e.g. mcp__my_server__tool) are allowed through validation without error"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - "split: BP-100g -> BP-100g + BP-100h, 2026-06-05"
+superseded_by: null
+covered_by: []
+implemented_by: []

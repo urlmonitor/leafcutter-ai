@@ -1,0 +1,33 @@
+id: BP-100g-1
+title: "build.py exits non-zero when a SKILL.md has invalid YAML frontmatter"
+component: build-pipeline
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-SkillFrontmatterValidation.md"
+criteria: |
+  Given a SKILL.md with syntactically invalid YAML frontmatter
+  When python scripts/build.py --target-dir <target> is run
+  Then build.py exits non-zero
+  And the error message identifies the offending file path
+  And the broken skill file is not written to the target directory
+depends_on:
+  - BP-100g
+doc_links:
+  - path: scripts/build.py
+    relationship: implements
+    status: exists
+  - path: docs/reference/skill-frontmatter.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: BP-100g-1-i
+expects_from: null
+it_requirements: "Must use yaml.safe_load() with try/except yaml.YAMLError; must print file path and parse error to stderr; must NOT write the broken skill to target directory; must exit non-zero immediately on first error"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

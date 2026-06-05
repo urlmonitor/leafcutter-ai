@@ -1,0 +1,38 @@
+id: ACS-100h-4
+title: "Split leaves an audit trail in amended_by and the git commit message"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a horizontal split of ACS-100 into ACS-100 and ACS-101 is completed,
+  When the split procedure finishes,
+  Then every modified AC file has an amended_by entry
+    stating "split: ACS-100 -> ACS-100 + ACS-101" and the date,
+  And the git commit message follows the format
+    "refactor(ac-store): split ACS-100 [horizontal, 8->4+4]",
+  And a structured summary is produced listing the pattern used,
+    original child count, resulting child counts, files created,
+    files modified, and references rewired.
+depends_on: [ACS-100h, ACS-100h-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Must use ISO 8601 date format in amended_by entries"
+  - "Must follow the exact commit message format: refactor({component}): split {ID} [{pattern}, {old}->{new counts}]"
+  - "Must produce the structured summary suitable for inclusion in a retrospective"
+delivers_to: null
+expects_from:
+  ac_id: ACS-100h-2
+  contract: "Completed split with list of all modified files and the rewiring changes applied"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

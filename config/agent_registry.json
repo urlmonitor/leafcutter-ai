@@ -544,7 +544,7 @@
             ],
             "is_ticket_phase": true,
             "selection_criteria": {
-                "description": "Assign to every ticket that produces a code or documentation change \u2014 this is the final quality gate before commit.",
+                "description": "Assign to every ticket that produces a code or documentation change — this is the final quality gate before commit.",
                 "trigger_conditions": [
                     {
                         "type": "llm",
@@ -1695,6 +1695,24 @@
             "model": "haiku",
             "skills_used": [],
             "description": "Haiku-pinned AC store triage agent. Stage 0 of the /create-ac workflow. Reads active ACs for the relevant component, classifies the user's request as strategic / behavioral / technical / covered, and returns a structured JSON routing decision. Read-only — never writes files. Must complete in < 3s for ≤200 ACs."
+        },
+        {
+            "id": "knowledge-harvester",
+            "name": "Knowledge Harvester",
+            "tier": "utility",
+            "role": "knowledge-management",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "ticket-supervisor",
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/knowledge-harvester.md",
+            "model": "sonnet",
+            "skills_used": []
         }
     ]
 }

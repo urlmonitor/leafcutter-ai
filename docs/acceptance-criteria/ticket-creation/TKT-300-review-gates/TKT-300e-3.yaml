@@ -19,11 +19,24 @@ criteria: |
   And the original AC's status is set to "superseded_by"
     with the superseded_by field listing both child AC ids.
 depends_on: [TKT-300e, TKT-300e-1]
-doc_links: []
+doc_links:
+  - path: docs/architecture/adrs/ADR-007-contract-driven-acs.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: M
+it_requirements:
+  - "delivers_to and expects_from contracts on split children must reference each other's AC IDs correctly"
+  - "The original AC's superseded_by field must be set atomically with the child file creation"
+  - "Contract data shapes on both sides of the boundary must be semantically compatible"
+  - "Must handle errors gracefully per the project error handling policy"
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: TKT-300e-1
+  contract: "Split decision metadata: original AC id, proposed child count, agent assignment per child"
 origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []

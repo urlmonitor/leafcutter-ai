@@ -700,6 +700,18 @@
                 ],
                 "pass_filenames": false,
                 "_comment": "EPIC-ContractDrivenACs/02b: Blocks commits when any staged ticket file has >7 ACs for a single agent block or >20 ACs total. Integration ACs (<!-- scope: integration -->) excluded from per-agent counts. Emits structured JSON ({hook, fix_agent, violations}) for precommit-autofix routing to IT PO. Override: ac_limit_override: true in frontmatter warns but does not block. v1 tickets (no ## Agent Contracts) skipped silently."
+            },
+            {
+                "id": "check-ac-tree-limits",
+                "name": "Check AC Tree Depth Limits (ACS-100c-1/c-2)",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_ac_limits.py",
+                "language": "system",
+                "files": "^docs/acceptance-criteria/.*\\.yaml$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "EPIC-ACTreeSplit: Enforces ACS-100c-1 hard caps (>7 L1s per L0, >5 L2s per L1) and emits ACS-100c-2 sparse advisory (<3 children). Blocks commits that push a parent over its child limit. Fail-open on subprocess/YAML errors. Load ac-tree-split skill to resolve violations."
             }
         ]
     },

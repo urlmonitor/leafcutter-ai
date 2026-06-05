@@ -1,0 +1,35 @@
+id: TKT-200d-3
+title: "Stale documentation is detected before the review checkpoint"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the analysis step has revised 2 AC files after documentation was generated,
+    and the regeneration step has not yet run,
+  When the pipeline attempts to advance to the review checkpoint,
+  Then it blocks advancement with a message identifying the 2 stale artifacts,
+  And it states which AC files changed that invalidated those artifacts,
+  And the pipeline does not reach the review checkpoint until regeneration completes.
+depends_on: [TKT-200d, TKT-200d-1]
+doc_links:
+  - path: docs/architecture/components/ticket-creation.md
+    relationship: describes
+    status: planned
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Must block pipeline advancement, not merely warn"
+  - "Must name both the stale artifacts and the AC files that caused staleness"
+  - "Must unblock automatically once regeneration completes successfully"
+delivers_to: null
+expects_from:
+  ac_id: TKT-200d-1
+  contract: "Change-detection capability that identifies stale documentation artifacts"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

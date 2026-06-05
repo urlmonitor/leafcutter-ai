@@ -1,0 +1,35 @@
+id: BP-200d-2-ii
+title: "Audit check 2 reports overly permissive allowlist as warning, not error"
+component: build_pipeline
+level: L3
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given the prompt-audit skill at templates/skills/prompt-audit/SKILL.md exists,
+  When Check 2 (Tool Allowlist vs Body Usage) detection steps are read,
+  Then an undeclared tool used in the body (tool in body but not in allowlist)
+    is classified as severity "error"
+  And an overly permissive allowlist (tool in allowlist but never used in body)
+    is classified as severity "warning"
+  And the warning note explains: "may be intentional for future use; do not block"
+depends_on: [BP-200d-2]
+doc_links:
+  - path: templates/skills/prompt-audit/SKILL.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Severity asymmetry must be enforced: missing-from-allowlist is always error, extra-in-allowlist is always warning"
+  - "Warning rationale must be included in the violation object's description field"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/04_prompt_audit_skill.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "templates/skills/prompt-audit/SKILL.md"

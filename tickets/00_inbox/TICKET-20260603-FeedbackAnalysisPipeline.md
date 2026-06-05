@@ -30,6 +30,22 @@ agents:
   adr-author: not_needed
   architecture-diagram-author: not_needed
   user-surface-smoker: needed
+ac_traceability:
+  L0: INF-500
+  L1: INF-500b
+  l2:
+    - INF-500b-1
+    - INF-500b-2
+    - INF-500b-3
+    - INF-500b-4
+    - INF-500b-5
+    - INF-500b-6
+  l3:
+    - INF-500b-2-i
+    - INF-500b-2-ii
+    - INF-500b-3-i
+  ac_path: docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500b.yaml
+  routing: direct_to_ba
 ---
 
 # Create feedback-analysis skill, feedback-analyst agent, and /feedback-report command templates

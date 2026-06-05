@@ -1,0 +1,37 @@
+id: BO-200c-2
+title: "Commit message body explains the intent, not just the file changes"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a work envelope contains a ticket with the title
+    "Add validation for work envelope completeness"
+    and 2 changed files,
+  When the commit agent writes the commit message,
+  Then the message body describes what the change delivers
+    (not a list of files modified),
+  And the body connects the change to the ticket's stated goal,
+  And a reader can understand why the change was made
+    without opening the ticket file.
+depends_on: [BO-200c, BO-200c-1]
+doc_links:
+  - path: docs/agents/git/commit.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Must reference the ticket's title or goal in the body, not just the file diff"
+  - "Must not produce a body that merely lists filenames changed"
+delivers_to: null
+expects_from:
+  ac_id: BO-200c-1
+  contract: "Commit message generation capability that accepts envelope data as input"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

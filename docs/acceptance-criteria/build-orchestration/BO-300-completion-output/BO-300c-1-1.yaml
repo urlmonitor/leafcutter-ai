@@ -1,0 +1,31 @@
+id: BO-300c-1-1
+title: "Nested epic path is reduced to just the epic name in the finalize command"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given an epic is located at a nested path such as tickets/00_inbox/epics/EPIC-Foo,
+  When the completion message constructs the /finalize-feature command,
+  Then the command argument is "EPIC-Foo" (the basename of the epic directory),
+  And the command argument does not include any parent directory segments
+    (e.g. not "tickets/00_inbox/epics/EPIC-Foo" or "epics/EPIC-Foo"),
+  And this extraction works regardless of how many parent directories exist in the path.
+depends_on: [BO-300c-1]
+doc_links:
+  - templates/workflows-js/build-epic.js
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Path extraction must handle both Unix and Windows path separators"
+  - "Must work with paths of any depth (tickets/00_inbox/epics/EPIC-Foo and tickets/01_todo/EPIC-Bar)"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - tickets/99_done/TICKET-20260604-StandardizeBuildCompletionOutput.md

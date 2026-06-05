@@ -1,0 +1,36 @@
+id: INF-400g-8
+title: "ticket-supervisor executes feedback emission on adjudication exhaustion (section 3.4)"
+component: infrastructure
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-WireSupervisorFeedbackEmission.md"
+criteria: |
+  Given ticket-supervisor exhausts the adjudication ladder (section 3.4)
+  When no lower-tier case matches or the retry cap is exhausted
+  Then it executes the submit_feedback.py call with category subagent-quality
+  And includes the resulting feedback_id in the blocked payload
+depends_on:
+  - INF-400h
+doc_links:
+  - path: templates/agents/ticket-supervisor.md
+    relationship: implements
+    status: exists
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: related
+    status: exists
+  - path: scripts/feedback/submit_feedback.py
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: INF-400g-9
+expects_from: INF-400g-1
+it_requirements: "Must execute submit_feedback.py with category subagent-quality in section 3.4 (adjudication exhaustion); must include the resulting feedback_id in the blocked payload returned to the user"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - "split: INF-400g -> INF-400g + INF-400h, 2026-06-05"
+superseded_by: null
+covered_by: []
+implemented_by: []

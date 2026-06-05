@@ -1,0 +1,32 @@
+id: BP-100e-5
+title: "Pre-commit hook rejects comment headings with imprecise timestamps"
+component: build-pipeline
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-HardenSignoffTimestamps.md"
+criteria: |
+  Given a ticket commit where a comments heading reads "### 2026-05-28 (now) — python-coder (status: ok)"
+  When the pre-commit hook runs in --enforce mode
+  Then the hook exits 1
+  And it emits a violation naming the malformed heading timestamp
+depends_on:
+  - BP-100e
+doc_links:
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: BP-100e-5-i
+expects_from: BP-100e-1
+it_requirements: "Hook must validate comment headings matching ### YYYY-MM-DD HH:MM pattern; must reject trailing parenthetical prose after the timestamp in heading lines"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

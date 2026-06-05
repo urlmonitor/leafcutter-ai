@@ -1,0 +1,39 @@
+id: BP-200a-5
+title: "Agent template declares exactly three skills with invocation conditions"
+component: build_pipeline
+level: L2
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given the file templates/agents/llm-expert.md exists,
+  When the section headed "Skills" is read,
+  Then it lists exactly 3 skills in a table:
+    - "add-agent-to-package" with condition: new agent template is complete and must be promoted
+    - "add-skill-to-package" with condition: new skill body is complete and must be promoted
+    - "signoff" with condition: end of every ticket phase
+  And the table includes columns for skill name and when to invoke
+  And each row references the SKILL.md file path to load
+depends_on: [BP-200a]
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Skill list must match the skills_used array in the agent's config/agent_registry.json entry"
+  - "SKILL.md file paths must be relative to repo root and resolvable at runtime"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/01_agent_template.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "templates/agents/llm-expert.md"

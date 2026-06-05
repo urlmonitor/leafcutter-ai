@@ -1,0 +1,28 @@
+id: BP-100e-4
+title: "Pre-commit hook accepts failed sign-off lines with valid timestamps"
+component: build-pipeline
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260528-HardenSignoffTimestamps.md"
+criteria: |
+  Given a ticket commit where a failed line reads "- [ ] python-coder — failed 2026-05-28 15:12"
+  When the pre-commit hook runs
+  Then the hook passes with no violations for that line
+depends_on:
+  - BP-100e
+doc_links:
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+delivers_to: test-runner
+expects_from: BP-100e-2
+it_requirements: "Test must exercise the failed line format with valid timestamp (- [ ] agent — failed YYYY-MM-DD HH:MM); ensures hook does not false-positive on the word 'failed'"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

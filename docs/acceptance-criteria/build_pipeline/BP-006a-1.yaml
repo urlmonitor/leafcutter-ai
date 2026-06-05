@@ -1,0 +1,32 @@
+id: BP-006a-1
+title: "Each skill directory has a registry entry with all required fields"
+component: build_pipeline
+level: L2
+status: active
+req_status: approved
+work_status: done
+criteria: |
+  Given config/skill_registry.json is loaded,
+  When the skills array is inspected for entries with id "debug", "feedback-analysis", "feedback-review",
+  Then each entry exists with fields: id, name, portable, domain, template_path, dependencies, description,
+  And template_path points to a valid directory under templates/skills/.
+depends_on: [BP-006a]
+doc_links:
+  - config/skill_registry.json
+  - tests/test_skill_registry.py
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  Each registry entry must include all required fields: id, name, portable, domain,
+  template_path, dependencies, description. The template_path value must resolve to
+  an existing directory under templates/skills/.
+delivers_to:
+  BP-006a-2: "Provides complete registry entries so orphan-detection test can pass"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+created_by_ticket: "tickets/00_inbox/TICKET-20260604-FixFailingBuildPipelineTests.md"
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

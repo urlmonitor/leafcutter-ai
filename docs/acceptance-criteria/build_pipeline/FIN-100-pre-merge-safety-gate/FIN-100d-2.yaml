@@ -1,0 +1,38 @@
+id: FIN-100d-2
+title: "blocks_finalization=false allows workflow to proceed to PR merge"
+level: L2
+component: finalize
+status: active
+parent: FIN-100d
+criteria: |
+  Given the triage report from Step 3 has blocks_finalization=false
+  And all failures are classified as pre_existing or flaky (zero regressions)
+  When the halt gate evaluates the triage report
+  Then the workflow marks Step 3 as completed
+  And proceeds to Step 4 (PR merge confirmation gate)
+  And the triage_report is preserved in workflow state for use in Step 6 (auto-ticketing)
+origin_agent: "business-analyst-v3"
+created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
+assigned_agent: "finalize-feature-workflow"
+estimated_complexity: S
+it_requirements: |
+  - Must check blocks_finalization === false (strict equality, not falsy) before proceeding
+  - Must push step 3 to completedSteps array on this path
+  - triageReport must be preserved in workflow state variable for use in step 6a auto-ticketing
+  - This is the only code path that allows execution to reach step 4
+delivers_to:
+  - agent: "create-ticket"
+    contract: "provides triageReport containing pre_existing/flaky entries for step 6a ticketing"
+expects_from:
+  - agent: "test-failure-triage"
+    contract: "provides triage_report with blocks_finalization=false and pre_existing/flaky arrays"
+doc_links:
+  - path: "templates/workflows-js/finalize-feature.js"
+    relevance: "Step 3 continue path — blocks_finalization=false allows step 4 (line 534)"
+  - path: "templates/workflows/finalize-feature.md"
+    relevance: "Step 3 — triage-driven halt gate semantics"
+depends_on: []
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []

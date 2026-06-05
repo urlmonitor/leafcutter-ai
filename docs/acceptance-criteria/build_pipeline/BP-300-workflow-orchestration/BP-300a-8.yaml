@@ -1,0 +1,30 @@
+id: BP-300a-8
+title: "SKILL.md contains supersession note for debug.js"
+component: build-pipeline
+level: L2
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260602-debug_js_workflow.md"
+criteria: |
+  Given templates/skills/debug/SKILL.md is updated
+  When an agent reads the skill file
+  Then the first section contains a note that this skill is superseded by debug.js for Claude Code >= 2.1.154
+  And the note states the skill acts as a fallback only
+depends_on:
+  - BP-300c
+doc_links:
+  - path: templates/skills/debug/SKILL.md
+    relationship: implements
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: pr-reviewer
+expects_from: BP-300a-7
+it_requirements: "Supersession note must be in the first section of SKILL.md; must state the version threshold (>= 2.1.154) and clarify this skill acts as fallback only"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - "split: BP-300a -> BP-300a + BP-300c, 2026-06-05"
+superseded_by: null
+covered_by: []
+implemented_by: []

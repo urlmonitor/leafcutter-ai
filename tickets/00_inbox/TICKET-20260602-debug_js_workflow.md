@@ -27,6 +27,24 @@ agents:
   commit: needed
   pull-request: needed
   user-surface-smoker: needed
+ac_traceability:
+  L0: BP-300
+  L1: BP-300a
+  l2:
+    - BP-300a-1
+    - BP-300a-2
+    - BP-300a-3
+    - BP-300a-4
+    - BP-300a-5
+    - BP-300a-6
+    - BP-300a-7
+    - BP-300a-8
+  l3:
+    - BP-300a-1-i
+    - BP-300a-4-i
+    - BP-300a-6-i
+  ac_path: docs/acceptance-criteria/build_pipeline/BP-300-workflow-orchestration/BP-300a.yaml
+  routing: direct_to_ba
 ---
 
 # Convert debug skill to composed JS workflow script (debug.js)

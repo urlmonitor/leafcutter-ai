@@ -1,0 +1,29 @@
+id: BP-300a-1-i
+title: "debug.js returns structured error when userInput is empty"
+component: build-pipeline
+level: L3
+status: active
+work_status: todo
+created_by: "tickets/00_inbox/TICKET-20260602-debug_js_workflow.md"
+criteria: |
+  Given debug.js is invoked via /debug
+  When userInput is empty or undefined
+  Then the workflow returns a structured error object asking the user to describe the issue
+  And it does NOT dispatch investigative agents
+depends_on:
+  - BP-300a-1
+doc_links:
+  - path: templates/workflows-js/build-ticket.js
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: test-writer
+expects_from: BP-300a-1
+it_requirements: "Must validate userInput at function entry; return { status: 'error', message: '...' } not throw; must NOT dispatch any agents when input is empty/undefined"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

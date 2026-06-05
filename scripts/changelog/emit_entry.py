@@ -69,17 +69,25 @@ def _resolve_repo_root() -> Path:
     Supports both:
     1. Standalone package development workspace:
        __file__ = <repo_root>/scripts/changelog/emit_entry.py
-       parents[2] = <repo_root> (contains .git/)
+       parents[2] = <repo_root> (contains .git/ as a directory or .git as a file)
     2. Consumer project environment:
        __file__ = <repo_root>/leafcutter/scripts/changelog/emit_entry.py
        parents[3] = <repo_root>
+
+    In a standard git checkout, ``parents[2]/.git`` is a directory.
+    In a git worktree, ``parents[2]/.git`` is a **file** (containing
+    ``gitdir: <path>``). ``.exists()`` returns ``True`` for both cases, so
+    this function correctly identifies the worktree root in both environments.
+    Using ``.is_dir()`` would fail in worktrees because ``.git`` is a file
+    there, causing the function to fall through to the wrong ``parents[3]``
+    path.
 
     Returns:
         Absolute Path of the repository root.
     """
     resolved_self = Path(__file__).resolve()
     p2 = resolved_self.parents[2]
-    if (p2 / ".git").is_dir():
+    if (p2 / ".git").exists():
         return p2
     return resolved_self.parents[3]
 
@@ -140,25 +148,25 @@ def validate_payload(payload: dict[str, Any]) -> None:
     """
     for field in REQUIRED_FIELDS:
         if field not in payload:
-            raise ValueError(
+            raise ValueError(  # noqa: TRY003
                 f"Missing required field: '{field}'. "
                 f"Required fields are: {', '.join(REQUIRED_FIELDS)}"
             )
 
     entry_type = payload["type"]
     if entry_type not in VALID_TYPES:
-        raise ValueError(
+        raise ValueError(  # noqa: TRY003
             f"Unknown type value: '{entry_type}'. "
             f"Allowed values are: {', '.join(sorted(VALID_TYPES))}"
         )
 
     if entry_type == "epic_completion" and "epic" not in payload:
-        raise ValueError(
+        raise ValueError(  # noqa: TRY003
             "Field 'epic' is required when type='epic_completion' but was not provided."
         )
 
     if entry_type == "ticket_completion" and "ticket" not in payload:
-        raise ValueError(
+        raise ValueError(  # noqa: TRY003
             "Field 'ticket' is required when type='ticket_completion' but was not provided."
         )
 
@@ -166,7 +174,7 @@ def validate_payload(payload: dict[str, Any]) -> None:
     if breaking:
         migration_steps = payload.get("migration_steps")
         if not migration_steps or not isinstance(migration_steps, list) or len(migration_steps) == 0:
-            raise ValueError(
+            raise ValueError(  # noqa: TRY003
                 "Field 'migration_steps' must be a non-empty list when breaking=True"
             )
 
@@ -510,4 +518,15 @@ if __name__ == "__main__":
 #   optional_order in build_frontmatter() for stable serialisation position.
 #   Backwards-compatible: existing call sites that omit these fields continue
 #   to work without modification.
+# - 2026-06-05 11:00 [python-coder/TICKET-20260605-emit-entry-worktree-git-root]: (#TICKETLESS reason=standalone-ticket-fix)
+#   Fixed _resolve_repo_root() to support git worktrees. In a worktree, .git
+#   is a file (not a directory), so the original .is_dir() check returned
+#   False and the function incorrectly fell through to parents[3]. Changed
+#   .is_dir() to .exists() so the check passes for both directory (.git/ in
+#   standard checkouts) and file (.git in worktrees). Updated docstring to
+#   explain the worktree layout. Added # noqa: TRY003 to pre-existing
+#   raise ValueError(...) calls in validate_payload() to satisfy the
+#   PostToolUse ruff hook (TRY003 violations were pre-existing). Regression
+#   tests added to test_emit_entry_cwd.py covering AC-1 (worktree file),
+#   AC-2 (standard directory), and a source-inspection guard.
 # ====================================================================

@@ -1,0 +1,25 @@
+id: ACS-400b
+title: "Implementation agents can report progress without changing scope"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Status and traceability fields remain open to any agent that does the work.
+
+  Implementation agents (coders, test-writers, reviewers) may update
+  work_status, implemented_by, and covered_by to record their progress.
+  They may NOT write to criteria, title, req_status, depends_on, or any
+  field that defines what the requirement asks for. Progress reporting and
+  requirement definition are cleanly separated.
+depends_on: [ACS-400]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACS-400b-1, ACS-400b-2, ACS-400b-3, ACS-400b-3-i]
+implemented_by: []

@@ -1,0 +1,30 @@
+id: BP-200c
+title: "The supervisor can dispatch the expert automatically when a prompt file is touched"
+component: build-pipeline
+level: L1
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Fully wired into the delivery workflow — dispatched when prompt files need attention.
+
+  The specialist is registered in the agent registry with the right role,
+  tier, and trigger conditions so that the ticket supervisor can dispatch
+  it automatically whenever a ticket touches agent templates, skill files,
+  or slash-command prompts. No manual invocation required.
+depends_on:
+  - BP-200
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-200c-1
+  - BP-200c-1-i
+  - BP-200c-2
+  - BP-200c-3
+  - BP-200c-4
+implemented_by:
+  - "config/agent_registry.json"
+  - "docs/agents/README.md"
