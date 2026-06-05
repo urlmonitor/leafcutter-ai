@@ -1,4 +1,6 @@
 id: BP-003
+readiness: reviewed
+priority: medium
 title: "_resolve_precommit_cmd() returns a valid command when pre-commit is on PATH"
 component: build_pipeline
 status: active

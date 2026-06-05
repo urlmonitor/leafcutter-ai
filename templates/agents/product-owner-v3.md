@@ -216,6 +216,26 @@ level L1. Key fields (consult the schema for the full list and valid values):
 - `level` — `L1`
 - `criteria` — tagline (under 80 chars) + 1-2 sentence expansion
 - `depends_on` — must include parent L0 ID
+- `readiness` — **always set to `draft` on newly authored L0/L1 ACs.** The user
+  promotes to `approved` when they are ready for the scanner to pick it up.
+- `priority` — **always set to `medium` as the default on new L0/L1 ACs.** The
+  user adjusts to `critical`, `high`, or `low` at approval time based on business
+  urgency. Do NOT set `approved` or a non-`medium` priority without explicit user
+  instruction.
+- `documentation_triggers` — **required on every L1 AC.** Use this field to
+  declare what documentation types are needed for the feature. Valid values:
+  `[how-to, sequence-diagram, state-diagram, component-diagram, reference-doc]`.
+  Rules for population:
+  - New slash command / user-facing command → `[how-to, sequence-diagram]`
+  - New multi-step workflow with > 2 actors → `[sequence-diagram]`
+  - New state machine (field with > 2 states and explicit transitions) → `[state-diagram]`
+  - New architectural component (new script, agent, hook) → `[component-diagram]`
+  - Internal-only change with no user-visible behavior → `[]` with a
+    `documentation_rationale` field explaining why no docs are needed.
+  - When multiple triggers apply, list all of them.
+- `documentation_rationale` — **required when `documentation_triggers` is `[]`.**
+  One sentence explaining why no documentation is needed for this L1.
+  Example: "Internal configuration change — no user-facing behavior introduced."
 
 ### Numbering conventions
 

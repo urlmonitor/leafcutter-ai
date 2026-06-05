@@ -1,4 +1,6 @@
 id: BP-100b-4
+readiness: reviewed
+priority: medium
 title: "Source manifests include workflows for content fingerprinting"
 component: build-pipeline
 level: L2

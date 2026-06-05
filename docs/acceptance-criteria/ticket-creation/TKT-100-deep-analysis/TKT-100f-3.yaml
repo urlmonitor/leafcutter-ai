@@ -1,4 +1,6 @@
 id: TKT-100f-3
+readiness: reviewed
+priority: medium
 title: "BA v3 applies weasel-word self-check to all L2 and L3 criteria"
 component: ticket-creation
 level: L2

@@ -1,4 +1,6 @@
 id: BO-100b-4
+readiness: reviewed
+priority: medium
 title: "NN execution-order prefix breaks ties deterministically within cap"
 component: build-orchestration
 level: L2

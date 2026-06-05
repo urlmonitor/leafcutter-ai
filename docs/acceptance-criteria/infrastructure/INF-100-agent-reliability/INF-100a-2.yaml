@@ -1,4 +1,6 @@
 id: INF-100a-2
+readiness: reviewed
+priority: medium
 title: "PROJECT_CONTEXT.md contains EMU identity guard that switches GitHub account before PR creation"
 component: infrastructure
 level: L2

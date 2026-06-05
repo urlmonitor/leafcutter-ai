@@ -1,4 +1,6 @@
 id: TKT-005
+readiness: reviewed
+priority: medium
 title: "AC YAML files pass schema validation after v2 pipeline creates them"
 component: ticket-creation
 status: active

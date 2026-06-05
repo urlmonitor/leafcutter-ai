@@ -1,4 +1,6 @@
 id: ACS-100c-2
+readiness: reviewed
+priority: medium
 title: "Sparse AC parents receive a non-blocking advisory"
 component: ac-store
 level: L2

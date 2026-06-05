@@ -1,4 +1,6 @@
 id: TKT-013
+readiness: reviewed
+priority: medium
 title: "Hook exits 1 when AC prefix is not registered in index.yaml"
 component: ticket-creation
 status: active

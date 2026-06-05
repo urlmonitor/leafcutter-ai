@@ -1,4 +1,6 @@
 id: ACD-100b-1
+readiness: reviewed
+priority: medium
 title: "Readiness state machine diagram written as Mermaid stateDiagram-v2"
 component: ac-driven-dev
 level: L2

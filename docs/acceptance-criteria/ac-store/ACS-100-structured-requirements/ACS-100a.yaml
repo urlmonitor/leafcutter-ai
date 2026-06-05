@@ -1,4 +1,6 @@
 id: ACS-100a
+readiness: reviewed
+priority: medium
 title: "Every requirement carries its full context in one place"
 component: ac-store
 level: L1

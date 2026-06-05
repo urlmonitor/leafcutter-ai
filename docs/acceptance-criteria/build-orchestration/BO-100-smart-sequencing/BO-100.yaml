@@ -1,4 +1,6 @@
 id: BO-100
+readiness: reviewed
+priority: medium
 title: "Ship changes in the right order without thinking about it"
 component: build-orchestration
 level: L0

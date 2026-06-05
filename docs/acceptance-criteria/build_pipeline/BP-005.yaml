@@ -1,4 +1,6 @@
 id: BP-005
+readiness: reviewed
+priority: medium
 title: "All existing tests/test_install_hooks.py tests continue to pass after the fix"
 component: build_pipeline
 status: active

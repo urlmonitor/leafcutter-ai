@@ -10,7 +10,9 @@
         "component",
         "status",
         "created_by",
-        "criteria"
+        "criteria",
+        "readiness",
+        "priority"
     ],
     "additionalProperties": false,
     "properties": {
@@ -91,6 +93,44 @@
             "type": "string",
             "description": "Identity of the agent or workflow that created this AC file. Enum: business-analyst | debug | human | ticket-wiring. Free-form string to allow future agents.",
             "minLength": 1
+        },
+        "readiness": {
+            "type": "string",
+            "description": "Lifecycle readiness state of this AC. draft = written but not reviewed (scanner ignores); reviewed = IT PO v3 has enriched and approved (scanner ignores); approved = user has signed off (scanner may pick up).",
+            "enum": ["draft", "reviewed", "approved"]
+        },
+        "priority": {
+            "type": "string",
+            "description": "Implementation priority of this AC. Set by the user (or PO v3) at approval time. Used by the scanner for ranking.",
+            "enum": ["critical", "high", "medium", "low"]
+        },
+        "documentation_triggers": {
+            "description": "List of documentation types that must be produced for this feature. Valid on L1 ACs only. Set by product-owner-v3 based on the nature of the feature. Empty array means no docs needed (provide documentation_rationale in that case).",
+            "oneOf": [
+                {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": ["how-to", "sequence-diagram", "state-diagram", "component-diagram", "reference-doc"]
+                    },
+                    "uniqueItems": true
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "documentation_rationale": {
+            "description": "Required when documentation_triggers is empty on an L1 AC. Explains why no documentation is needed.",
+            "oneOf": [
+                {
+                    "type": "string",
+                    "minLength": 1
+                },
+                {
+                    "type": "null"
+                }
+            ]
         },
         "work_status": {
             "oneOf": [

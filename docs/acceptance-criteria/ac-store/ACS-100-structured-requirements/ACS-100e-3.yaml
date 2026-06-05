@@ -1,4 +1,6 @@
 id: ACS-100e-3
+readiness: reviewed
+priority: medium
 title: "Skill metadata can declare a default origin_agent for skill-created ACs"
 component: ac-store
 level: L2

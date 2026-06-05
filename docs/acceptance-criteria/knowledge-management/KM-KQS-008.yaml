@@ -1,4 +1,6 @@
 id: KM-KQS-008
+readiness: reviewed
+priority: medium
 title: "SKILL.md exists with correct frontmatter and documents all CLI flags"
 component: knowledge-management
 status: active

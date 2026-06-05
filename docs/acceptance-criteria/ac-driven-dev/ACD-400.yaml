@@ -1,4 +1,6 @@
 id: ACD-400
+readiness: reviewed
+priority: medium
 title: "The AC store drives the build backlog via automated scanning and ticket generation"
 component: ac-driven-dev
 level: L0

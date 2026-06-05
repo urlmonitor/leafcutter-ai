@@ -1,4 +1,6 @@
 id: ACS-100e
+readiness: reviewed
+priority: medium
 title: "Your team's names appear on requirements automatically"
 component: ac-store
 level: L1

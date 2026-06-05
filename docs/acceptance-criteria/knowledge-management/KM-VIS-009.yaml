@@ -1,4 +1,6 @@
 id: KM-VIS-009
+readiness: reviewed
+priority: medium
 title: "Test file exists with all specified test cases"
 component: knowledge-management
 status: active

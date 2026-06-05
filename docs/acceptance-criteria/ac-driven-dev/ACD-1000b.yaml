@@ -1,4 +1,6 @@
 id: ACD-1000b
+readiness: reviewed
+priority: medium
 title: "Ticket creation understands existing ACs from the start"
 component: ac-driven-dev
 level: L1

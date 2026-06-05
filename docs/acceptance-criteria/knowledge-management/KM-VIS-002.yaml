@@ -1,4 +1,6 @@
 id: KM-VIS-002
+readiness: reviewed
+priority: medium
 title: "Embedded JSON contains nodes and edges with required fields"
 component: knowledge-management
 status: active

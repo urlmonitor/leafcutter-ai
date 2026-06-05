@@ -1,4 +1,6 @@
 id: ACS-100
+readiness: reviewed
+priority: medium
 title: "Requirements that build themselves"
 component: ac-store
 level: L0

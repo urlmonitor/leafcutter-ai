@@ -1,4 +1,6 @@
 id: TKT-007
+readiness: reviewed
+priority: medium
 title: "Template-level test verifies BA-v2 AC store wiring is present"
 component: ticket-creation
 status: active

@@ -1,4 +1,6 @@
 id: ACD-400b-2
+readiness: reviewed
+priority: medium
 title: "Generator writes implemented_by back-reference into source AC without modifying other fields"
 component: ac-driven-dev
 level: L2

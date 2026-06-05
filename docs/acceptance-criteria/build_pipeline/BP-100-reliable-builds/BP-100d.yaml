@@ -1,4 +1,6 @@
 id: BP-100d
+readiness: reviewed
+priority: medium
 title: "Hooks never block their own source code changes"
 component: build-pipeline
 level: L1

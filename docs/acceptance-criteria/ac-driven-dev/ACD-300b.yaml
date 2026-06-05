@@ -1,4 +1,6 @@
 id: ACD-300b
+readiness: reviewed
+priority: medium
 title: "A workflow script orchestrates the authoring agents in sequence based on the triage decision"
 component: ac-driven-dev
 level: L1

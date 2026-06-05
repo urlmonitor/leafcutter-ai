@@ -1,4 +1,6 @@
 id: BO-100b-3
+readiness: reviewed
+priority: medium
 title: "Ready set smaller than cap dispatches all available tickets"
 component: build-orchestration
 level: L2

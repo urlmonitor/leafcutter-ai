@@ -1,4 +1,6 @@
 id: ACD-400a-1-ii
+readiness: reviewed
+priority: medium
 title: "Scanner reports unparseable YAML files as diagnostics without crashing"
 component: ac-driven-dev
 level: L3

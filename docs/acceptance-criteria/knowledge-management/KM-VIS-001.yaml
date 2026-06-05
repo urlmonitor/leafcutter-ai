@@ -1,4 +1,6 @@
 id: KM-VIS-001
+readiness: reviewed
+priority: medium
 title: "Script writes valid HTML with embedded node/edge JSON"
 component: knowledge-management
 status: active

@@ -1,4 +1,6 @@
 id: ACS-100g
+readiness: reviewed
+priority: medium
 title: "Bulk AC approval workflow for cold-start bootstrap"
 component: ac-store
 level: L1

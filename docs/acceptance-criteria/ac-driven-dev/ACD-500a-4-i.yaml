@@ -1,4 +1,6 @@
 id: ACD-500a-4-i
+readiness: reviewed
+priority: medium
 title: "Complexity mapping rejects unknown estimated_complexity values with a warning"
 component: ac-driven-dev
 level: L3

@@ -1,4 +1,6 @@
 id: TKT-100a
+readiness: reviewed
+priority: medium
 title: "The system truly understands what you want before writing specs"
 component: ticket-creation
 level: L1

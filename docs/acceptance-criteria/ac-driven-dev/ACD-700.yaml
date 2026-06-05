@@ -1,4 +1,6 @@
 id: ACD-700
+readiness: reviewed
+priority: medium
 title: "Building the next unit of work requires no manual ticket authoring"
 component: ac-driven-dev
 level: L0

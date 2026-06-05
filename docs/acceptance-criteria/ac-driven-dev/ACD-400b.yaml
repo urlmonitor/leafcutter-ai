@@ -1,4 +1,6 @@
 id: ACD-400b
+readiness: reviewed
+priority: medium
 title: "Generator produces a valid, wired ticket from any ready AC with bidirectional traceability"
 component: ac-driven-dev
 level: L1

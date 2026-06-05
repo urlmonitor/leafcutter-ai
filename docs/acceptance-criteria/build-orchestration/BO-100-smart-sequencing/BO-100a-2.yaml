@@ -1,4 +1,6 @@
 id: BO-100a-2
+readiness: reviewed
+priority: medium
 title: "Linear dependency chain produces one-at-a-time sequential dispatch"
 component: build-orchestration
 level: L2

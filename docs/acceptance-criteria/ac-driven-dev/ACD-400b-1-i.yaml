@@ -1,4 +1,6 @@
 id: ACD-400b-1-i
+readiness: reviewed
+priority: medium
 title: "Generator rejects an AC that has no criteria field with a descriptive error"
 component: ac-driven-dev
 level: L3

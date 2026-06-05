@@ -1,4 +1,6 @@
 id: ACS-300i
+readiness: reviewed
+priority: medium
 title: "Exposed interfaces field documents component boundaries"
 component: ac-store
 level: L1

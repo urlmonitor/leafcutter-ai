@@ -1,4 +1,6 @@
 id: INF-200b-1
+readiness: reviewed
+priority: medium
 title: "[Phase 2] Convention detector scans customer codebase and presents findings"
 component: infrastructure
 level: L2

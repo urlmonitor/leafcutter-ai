@@ -1,4 +1,6 @@
 id: ACD-300
+readiness: reviewed
+priority: medium
 title: "New requirements flow into the AC store through a single command"
 component: ac-driven-dev
 level: L0

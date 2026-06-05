@@ -1,0 +1,570 @@
+#!/usr/bin/env python3
+"""
+scan_ac_store.py — Scan the AC YAML store and list leaf-level todo ACs.
+
+Usage:
+    python3 scripts/ac_store/scan_ac_store.py [options]
+
+Options:
+    --level {leaf,all}          Filter by AC level. 'leaf' selects L2 and L3
+                                only (default: leaf).
+    --work-status {todo,done,all}
+                                Filter by work_status field (default: todo).
+    --json                      Output as JSON instead of human-readable text.
+    --ac-root PATH              Root directory of the AC store (default:
+                                docs/acceptance-criteria/ relative to the
+                                worktree root detected at runtime).
+
+Exit codes:
+    0  Success (even when no ACs match the filter — empty is valid).
+    1  One or more AC YAML files could not be read or parsed. A per-file
+       diagnostic is written to stderr for each bad file.
+    2  A dependency cycle was detected in the depends_on graph. The cycle
+       description is written to stderr.
+
+AC-1: Leaf scanner identifies todo, unblocked L2/L3 ACs.
+AC-5: Scanner JSON output is machine-consumable.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+_LEAF_LEVELS: frozenset[str] = frozenset({"L2", "L3"})
+_COMPLEXITY_ORDER: dict[str, int] = {"S": 0, "M": 1, "L": 2, "XL": 3}
+_PRIORITY_ORDER: dict[str, int] = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+_DEFAULT_AC_ROOT: str = "docs/acceptance-criteria"
+
+# ---------------------------------------------------------------------------
+# Type aliases
+# ---------------------------------------------------------------------------
+
+AcRecord = dict[str, Any]
+
+
+# ---------------------------------------------------------------------------
+# Worktree root detection
+# ---------------------------------------------------------------------------
+
+
+def _find_worktree_root(start: Path) -> Path:
+    """Walk up from *start* until a directory containing a .git file/dir is found.
+
+    Args:
+        start: Starting path for the upward search (typically the script location).
+
+    Returns:
+        The worktree root path.
+
+    Raises:
+        FileNotFoundError: When no .git marker is found before the filesystem root.
+    """
+    current = start.resolve()
+    for parent in [current, *current.parents]:
+        if (parent / ".git").exists():
+            return parent
+    raise FileNotFoundError(  # noqa: TRY003
+        f"Could not locate worktree root from {start}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# AC store walking
+# ---------------------------------------------------------------------------
+
+
+def _walk_ac_yamls(ac_root: Path) -> list[Path]:
+    """Return all .yaml files under *ac_root* (recursive).
+
+    Args:
+        ac_root: Root directory of the AC store.
+
+    Returns:
+        Sorted list of absolute YAML file paths.
+    """
+    return sorted(ac_root.rglob("*.yaml"))
+
+
+def _load_ac(path: Path) -> AcRecord | None:
+    """Load and return a single AC YAML file.
+
+    Args:
+        path: Absolute path to the YAML file.
+
+    Returns:
+        Parsed AC dict, or None when the file cannot be parsed (error to stderr).
+    """
+    try:
+        with open(path, encoding="utf-8") as fh:
+            data = yaml.safe_load(fh)
+        if not isinstance(data, dict):
+            print(f"ERROR: {path}: expected a YAML mapping, got {type(data).__name__}", file=sys.stderr)
+            return None
+        data["_path"] = str(path)
+    except yaml.YAMLError as exc:
+        print(f"ERROR: {path}: YAML parse error: {exc}", file=sys.stderr)
+        return None
+    except OSError as exc:
+        print(f"ERROR: {path}: could not read file: {exc}", file=sys.stderr)
+        return None
+    else:
+        return data
+    return None  # unreachable; satisfies type checkers
+
+
+# ---------------------------------------------------------------------------
+# Filtering
+# ---------------------------------------------------------------------------
+
+
+def _is_leaf(ac: AcRecord) -> bool:
+    """Return True when the AC is at leaf level (L2 or L3).
+
+    Args:
+        ac: Parsed AC dict.
+
+    Returns:
+        True for L2/L3 ACs; False for L0/L1.
+    """
+    return ac.get("level", "") in _LEAF_LEVELS
+
+
+def _matches_work_status(ac: AcRecord, target: str) -> bool:
+    """Return True when the AC's work_status matches *target*.
+
+    Args:
+        ac: Parsed AC dict.
+        target: One of 'todo', 'done', or 'all'.
+
+    Returns:
+        True when the AC matches the filter.
+    """
+    if target == "all":
+        return True
+    return ac.get("work_status", "") == target
+
+
+def _is_active(ac: AcRecord) -> bool:
+    """Return True when the AC has status: active.
+
+    Args:
+        ac: Parsed AC dict.
+
+    Returns:
+        True for active ACs.
+    """
+    return ac.get("status", "") == "active"
+
+
+def _is_approved(ac: AcRecord) -> bool:
+    """Return True when the AC has readiness: approved.
+
+    ACs with readiness: draft or readiness: reviewed are NOT eligible for
+    scanner pickup. Only readiness: approved ACs may be picked up.
+    ACs without a readiness field (pre-backfill) are treated as NOT approved
+    (conservative — scanner ignores them until backfilled and promoted).
+
+    Args:
+        ac: Parsed AC dict.
+
+    Returns:
+        True only for readiness: approved ACs.
+    """
+    return ac.get("readiness", "") == "approved"
+
+
+# ---------------------------------------------------------------------------
+# Dependency resolution
+# ---------------------------------------------------------------------------
+
+
+def _build_id_index(records: list[AcRecord]) -> dict[str, AcRecord]:
+    """Build a mapping from AC id to record dict.
+
+    Args:
+        records: All successfully loaded AC records.
+
+    Returns:
+        Dict mapping id → AcRecord.
+    """
+    index: dict[str, AcRecord] = {}
+    for rec in records:
+        ac_id = rec.get("id")
+        if ac_id:
+            index[ac_id] = rec
+    return index
+
+
+def _is_dep_done(dep_id: str, id_index: dict[str, AcRecord]) -> bool:
+    """Return True when *dep_id* refers to an AC with work_status: done.
+
+    Unknown dep ids are treated as NOT done (conservative / blocking).
+
+    Args:
+        dep_id: The dependency AC id to check.
+        id_index: Full id-to-record mapping.
+
+    Returns:
+        True only when the dep AC exists and has work_status: done.
+    """
+    dep_rec = id_index.get(dep_id)
+    if dep_rec is None:
+        return False
+    return dep_rec.get("work_status", "") == "done"
+
+
+def _classify_ac(
+    ac: AcRecord,
+    id_index: dict[str, AcRecord],
+) -> tuple[str, list[str]]:
+    """Classify *ac* as 'ready' or 'blocked' based on depends_on resolution.
+
+    Args:
+        ac: The AC record to classify.
+        id_index: Full id-to-record mapping (all ACs, not just filtered).
+
+    Returns:
+        A tuple ``('ready', [])`` or ``('blocked', [<blocking_dep_ids>])``.
+    """
+    depends_on: list[str] = ac.get("depends_on") or []
+    blocking: list[str] = [
+        dep for dep in depends_on if not _is_dep_done(dep, id_index)
+    ]
+    if blocking:
+        return "blocked", blocking
+    return "ready", []
+
+
+# ---------------------------------------------------------------------------
+# Cycle detection
+# ---------------------------------------------------------------------------
+
+
+def _detect_cycle(
+    id_index: dict[str, AcRecord],
+) -> list[str] | None:
+    """Return a cycle description if a dependency cycle exists, else None.
+
+    Uses DFS coloring (white/grey/black).
+
+    Args:
+        id_index: Full id-to-record mapping.
+
+    Returns:
+        A list of AC ids forming the cycle, or None when the graph is acyclic.
+    """
+    WHITE, GREY, BLACK = 0, 1, 2
+    color: dict[str, int] = {ac_id: WHITE for ac_id in id_index}
+    parent: dict[str, str | None] = {ac_id: None for ac_id in id_index}
+
+    def _dfs(node: str) -> list[str] | None:
+        color[node] = GREY
+        for dep in id_index[node].get("depends_on") or []:
+            if dep not in color:
+                continue
+            if color[dep] == GREY:
+                # Reconstruct the cycle
+                cycle = [dep, node]
+                cur = node
+                while parent.get(cur) and parent[cur] != dep:
+                    cur = parent[cur]  # type: ignore[assignment]
+                    cycle.append(cur)
+                cycle.append(dep)
+                return list(reversed(cycle))
+            if color[dep] == WHITE:
+                parent[dep] = node
+                result = _dfs(dep)
+                if result is not None:
+                    return result
+        color[node] = BLACK
+        return None
+
+    for ac_id in list(id_index.keys()):
+        if color[ac_id] == WHITE:
+            cycle = _dfs(ac_id)
+            if cycle is not None:
+                return cycle
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Sorting
+# ---------------------------------------------------------------------------
+
+
+def _sort_ready(ready: list[AcRecord]) -> list[AcRecord]:
+    """Sort ready ACs: priority ascending (critical<high<medium<low), then
+    estimated_complexity ascending (S<M<L<XL), then id ascending.
+
+    Args:
+        ready: List of ready AcRecord dicts.
+
+    Returns:
+        Sorted list.
+    """
+    def _sort_key(ac: AcRecord) -> tuple[int, int, str]:
+        priority = ac.get("priority", "medium")
+        priority_order = _PRIORITY_ORDER.get(priority, 99)
+        complexity = ac.get("estimated_complexity", "")
+        complexity_order = _COMPLEXITY_ORDER.get(complexity, 99)
+        return priority_order, complexity_order, ac.get("id", "")
+
+    return sorted(ready, key=_sort_key)
+
+
+# ---------------------------------------------------------------------------
+# Output formatting
+# ---------------------------------------------------------------------------
+
+
+def _to_ready_item(ac: AcRecord) -> dict[str, str]:
+    """Convert a ready AcRecord to the JSON output schema dict.
+
+    Args:
+        ac: Ready AC record.
+
+    Returns:
+        Dict with keys: ac_id, title, assigned_agent, estimated_complexity, path.
+    """
+    return {
+        "ac_id": ac.get("id", ""),
+        "title": ac.get("title", ""),
+        "assigned_agent": ac.get("assigned_agent", ""),
+        "estimated_complexity": ac.get("estimated_complexity", ""),
+        "path": ac.get("_path", ""),
+    }
+
+
+def _to_blocked_item(ac: AcRecord, blocking_deps: list[str]) -> dict[str, Any]:
+    """Convert a blocked AcRecord to the JSON output schema dict.
+
+    Args:
+        ac: Blocked AC record.
+        blocking_deps: List of dep AC ids that are not done.
+
+    Returns:
+        Dict with keys: ac_id, blocked_by.
+    """
+    return {
+        "ac_id": ac.get("id", ""),
+        "blocked_by": blocking_deps,
+    }
+
+
+def _print_human(
+    ready: list[AcRecord],
+    blocked: list[tuple[AcRecord, list[str]]],
+) -> None:
+    """Print human-readable READY and BLOCKED sections to stdout.
+
+    Args:
+        ready: Sorted list of ready AcRecords.
+        blocked: List of (AcRecord, blocking_dep_ids) tuples for blocked ACs.
+    """
+    print(f"READY ({len(ready)}):")
+    if ready:
+        for ac in ready:
+            print(
+                f"  [{ac.get('estimated_complexity', '?'):>2}] "
+                f"{ac.get('id', '?'):30s} {ac.get('title', '')}"
+            )
+    else:
+        print("  (none)")
+
+    print()
+    print(f"BLOCKED ({len(blocked)}):")
+    if blocked:
+        for ac, deps in blocked:
+            print(
+                f"  {ac.get('id', '?'):30s} blocked by: {', '.join(deps)}"
+            )
+    else:
+        print("  (none)")
+
+
+def _print_json(
+    ready: list[AcRecord],
+    blocked: list[tuple[AcRecord, list[str]]],
+) -> None:
+    """Print JSON output conforming to AC-5 schema.
+
+    Args:
+        ready: Sorted list of ready AcRecords.
+        blocked: List of (AcRecord, blocking_dep_ids) tuples for blocked ACs.
+    """
+    output = {
+        "ready": [_to_ready_item(ac) for ac in ready],
+        "blocked": [_to_blocked_item(ac, deps) for ac, deps in blocked],
+    }
+    print(json.dumps(output, indent=2))
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    """Build and return the CLI argument parser.
+
+    Returns:
+        Configured ArgumentParser instance.
+    """
+    parser = argparse.ArgumentParser(
+        description="Scan the AC YAML store and list leaf-level todo ACs.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--level",
+        choices=["leaf", "all"],
+        default="leaf",
+        help="Filter by AC level. 'leaf' selects L2 and L3 only (default: leaf).",
+    )
+    parser.add_argument(
+        "--work-status",
+        choices=["todo", "done", "all"],
+        default="todo",
+        dest="work_status",
+        help="Filter by work_status field (default: todo).",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        dest="json_output",
+        help="Output as JSON instead of human-readable text.",
+    )
+    parser.add_argument(
+        "--ac-root",
+        dest="ac_root",
+        default=None,
+        help=(
+            f"Root directory of the AC store (default: {_DEFAULT_AC_ROOT} relative "
+            "to the worktree root)."
+        ),
+    )
+    parser.add_argument(
+        "--ac-store-dir",
+        dest="ac_root",
+        default=None,
+        help="Alias for --ac-root. Root directory of the AC store.",
+    )
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Entry point for scan_ac_store.py.
+
+    Args:
+        argv: Command-line arguments (default: sys.argv[1:]).
+
+    Returns:
+        Exit code: 0 on success, 1 on YAML errors, 2 on dependency cycle.
+    """
+    parser = _build_parser()
+    args = parser.parse_args(argv)
+
+    # Resolve ac_root
+    if args.ac_root:
+        ac_root = Path(args.ac_root)
+    else:
+        try:
+            worktree = _find_worktree_root(Path(__file__))
+        except FileNotFoundError as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+        ac_root = worktree / _DEFAULT_AC_ROOT
+
+    if not ac_root.exists():
+        print(f"ERROR: AC root directory not found: {ac_root}", file=sys.stderr)
+        return 1
+
+    # Load all YAML files
+    yaml_paths = _walk_ac_yamls(ac_root)
+    all_records: list[AcRecord] = []
+    load_errors = 0
+
+    for path in yaml_paths:
+        record = _load_ac(path)
+        if record is None:
+            load_errors += 1
+        else:
+            all_records.append(record)
+
+    if load_errors:
+        return 1
+
+    # Build id index for dependency resolution
+    id_index = _build_id_index(all_records)
+
+    # Cycle detection
+    cycle = _detect_cycle(id_index)
+    if cycle is not None:
+        print(
+            f"ERROR: dependency cycle detected: {' → '.join(cycle)}",
+            file=sys.stderr,
+        )
+        return 2
+
+    # Filter: level + work_status + status + readiness (approved only)
+    filtered: list[AcRecord] = []
+    for ac in all_records:
+        if args.level == "leaf" and not _is_leaf(ac):
+            continue
+        if not _matches_work_status(ac, args.work_status):
+            continue
+        if not _is_active(ac):
+            continue
+        if not _is_approved(ac):
+            continue
+        filtered.append(ac)
+
+    # Classify ready vs blocked
+    ready: list[AcRecord] = []
+    blocked: list[tuple[AcRecord, list[str]]] = []
+
+    for ac in filtered:
+        status, blocking_deps = _classify_ac(ac, id_index)
+        if status == "ready":
+            ready.append(ac)
+        else:
+            blocked.append((ac, blocking_deps))
+
+    # Sort ready list
+    ready = _sort_ready(ready)
+
+    # Output
+    if args.json_output:
+        _print_json(ready, blocked)
+    else:
+        _print_human(ready, blocked)
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+
+"""
+====================================================================
+DECISION HISTORY
+====================================================================
+- 2026-06-05 [ticket-01]: Initial implementation.
+  Walks docs/acceptance-criteria/, filters by level (L2/L3), work_status
+  (todo), and status (active). Resolves depends_on chains to classify ACs
+  as ready or blocked. Sorts ready ACs by estimated_complexity (S<M<L<XL)
+  then id. Outputs human-readable or JSON. Exits 0 on success, 1 on YAML
+  errors, 2 on dependency cycle.
+====================================================================
+"""

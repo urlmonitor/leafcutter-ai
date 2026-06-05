@@ -1,4 +1,6 @@
 id: INF-300a-1
+readiness: reviewed
+priority: medium
 title: "Knowledge surface map documents all surfaces with when-to-use rules"
 component: infrastructure
 level: L2

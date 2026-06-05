@@ -1,4 +1,6 @@
 id: ACS-200d
+readiness: reviewed
+priority: medium
 title: "New tickets must reference their source AC"
 component: ac-store
 level: L1

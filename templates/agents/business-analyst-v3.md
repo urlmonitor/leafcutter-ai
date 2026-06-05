@@ -478,6 +478,55 @@ implemented_by: []
 
 ---
 
+## §7b Readiness, Priority, and Documentation AC Requirements
+
+### Readiness and Priority Fields (mandatory on all L2/L3 ACs)
+
+Every L2/L3 AC YAML you produce MUST include:
+
+- `readiness: draft` — always set this on newly authored L2/L3 ACs. You never
+  promote to `reviewed` (that is the IT PO's role) and never to `approved`
+  (that is the user's role). The scanner ignores `draft` ACs.
+- `priority` — inherit from the parent L1 AC if it has a `priority` field set.
+  If the parent L1 does not have `priority` or has `priority: medium`, default
+  to `medium`. Valid values: `critical`, `high`, `medium`, `low`.
+
+Example fields to add to every L2/L3 YAML:
+```yaml
+readiness: draft
+priority: medium   # or inherit from parent L1
+```
+
+### Documentation AC Requirements
+
+When the parent L1 has a `documentation_triggers` field set with one or more
+entries, you MUST produce documentation ACs alongside behavioral ACs for each
+triggered type. Rules:
+
+| Trigger | Documentation AC to produce |
+|---|---|
+| `how-to` | A how-to guide AC: `assigned_agent: documentation-expert`, `level: L2` |
+| `sequence-diagram` | A sequence diagram AC: `assigned_agent: architecture-diagram-author`, `level: L2` |
+| `state-diagram` | A state machine diagram AC: `assigned_agent: architecture-diagram-author`, `level: L2` |
+| `component-diagram` | A component diagram AC: `assigned_agent: architecture-diagram-author`, `level: L2` |
+| `reference-doc` | A reference documentation AC: `assigned_agent: documentation-expert`, `level: L2` |
+
+Each documentation AC MUST:
+- Have `depends_on` referencing the behavioral AC it documents.
+- Have `readiness: draft` (same as behavioral ACs).
+- Have `priority` inherited from the parent L1 (or `medium` if unset).
+- Have a `criteria` field describing what the documentation must cover.
+
+If no documentation ACs are produced and the parent L1 had `documentation_triggers`
+set to a non-empty list, include a `rationale` field in your blocked status
+explaining why none are needed. "If no documentation ACs are produced and the L1
+had triggers, the BA must include a rationale field explaining why none are needed."
+
+If `documentation_triggers` is `[]` or absent on the L1, no documentation ACs
+are required. Proceed with behavioral ACs only.
+
+---
+
 ## §8 Sign-Off Protocol
 
 Your sign-off IS the set of AC YAML files you produce.

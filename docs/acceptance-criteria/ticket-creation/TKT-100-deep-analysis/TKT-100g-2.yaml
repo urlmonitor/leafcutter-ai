@@ -1,4 +1,6 @@
 id: TKT-100g-2
+readiness: reviewed
+priority: medium
 title: "Router classifies L1 when criteria describe feature behavior with a single assigned_agent"
 component: ticket-creation
 level: L2

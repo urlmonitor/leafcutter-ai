@@ -1,4 +1,6 @@
 id: TKT-100g-5
+readiness: reviewed
+priority: medium
 title: "Router rejects ACs that span multiple flight levels with a structured error"
 component: ticket-creation
 level: L2

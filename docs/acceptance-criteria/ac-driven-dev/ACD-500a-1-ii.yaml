@@ -1,4 +1,6 @@
 id: ACD-500a-1-ii
+readiness: reviewed
+priority: medium
 title: "Merged output handles AC scanner returning malformed JSON gracefully"
 component: ac-driven-dev
 level: L3

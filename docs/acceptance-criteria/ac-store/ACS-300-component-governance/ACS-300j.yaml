@@ -1,4 +1,6 @@
 id: ACS-300j
+readiness: reviewed
+priority: medium
 title: "Component dependency graph in the registry"
 component: ac-store
 level: L1

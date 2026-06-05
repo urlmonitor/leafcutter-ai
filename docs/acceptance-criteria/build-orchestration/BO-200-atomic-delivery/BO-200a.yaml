@@ -1,4 +1,6 @@
 id: BO-200a
+readiness: reviewed
+priority: medium
 title: "Every commit knows exactly what it contains and why"
 component: build-orchestration
 level: L1

@@ -1,4 +1,6 @@
 id: ACS-100b-4
+readiness: reviewed
+priority: medium
 title: "L2 IDs extend the L1 ID with a hyphen-number suffix"
 component: ac-store
 level: L2

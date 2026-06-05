@@ -1,4 +1,6 @@
 id: ACS-100b-1
+readiness: reviewed
+priority: medium
 title: "Feature folder naming follows PREFIX-NNN-kebab-slug convention"
 component: ac-store
 level: L2
