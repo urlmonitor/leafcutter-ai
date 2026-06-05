@@ -1,6 +1,6 @@
 ---
 title: "Fix check_contract_shrinking false-positive when hook's own source is staged"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-06-05
@@ -22,7 +22,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 ac_traceability:
@@ -81,7 +81,7 @@ AC files: `docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100
 - [x] test-runner — 2026-06-05 00:02
 - [x] pr-reviewer — 2026-06-05 00:03
 - [x] commit — 2026-06-05 00:04
-- [ ] pull-request
+- [x] pull-request — 2026-06-05 00:05
 
 ## Comments
 
@@ -119,4 +119,11 @@ completion_manifest:
   staged_correctly: true
   commit_clean: true
 Staged ticket file with all phase sign-offs. Committing ticket sign-off record for TICKET-20260605-ContractShrinkingSelfExclusion.
+
+### 2026-06-05 00:05 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_468cbb0e
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+PR #57 opened: https://github.com/urlmonitor/leafcutter-ai/pull/57. Branch `feature/contractshrinkingselfexclusion` pushed to origin and tracking set.
 
