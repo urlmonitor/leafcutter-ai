@@ -1,6 +1,6 @@
 ---
 title: "/build-ac entry point — AC-to-ticket-to-build end-to-end"
-status: todo
+status: done
 components:
   - ac-store
   - ticket-creation
@@ -30,8 +30,8 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
 source_acs:
   - ACD-700
   - ACD-700a
@@ -138,8 +138,8 @@ And the agent proposes ACS-100a-2 directly with the yes/review/skip prompt.
 - [x] llm-expert — 2026-06-05 14:15
 - [x] test-runner — 2026-06-05 14:20
 - [x] pr-reviewer — 2026-06-05 14:25
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-05 14:30
+- [x] pull-request — 2026-06-05 14:35
 
 ## Comments
 
@@ -168,6 +168,24 @@ Reason: 4 files in the leafcutter template-authoring component; no always-large 
 ### 2026-06-05 14:01 — ticket-supervisor (status: ok)
 test_requirements empty — test-writer phase skipped (docs-only or config-only ticket)
 Note: ticket has 4 concrete test functions described in ### test-writer under ## Implementation Tasks, but no ## Test Requirements YAML block. The test file tests/test_build_ac_workflow.py remains unwritten. llm-expert phase should include writing this test file as part of its deliverables, or the pr-reviewer should surface this gap.
+
+### 2026-06-05 14:35 — pull-request (status: ok)
+feedback-id: fb_2026-06-05_0ee8110b
+completion_manifest:
+  branch_pushed: true
+  pr_open: true
+  commit_included_in_pr: true
+
+Branch EPIC-ACDrivenDevelopment pushed to origin (19bac9e..c07f9e7). Existing epic PR #61 updated: https://github.com/urlmonitor/leafcutter-ai/pull/61. One PR per epic per project convention — no new PR created. Commit c07f9e7 now included in the PR diff.
+
+### 2026-06-05 14:30 — commit (status: ok)
+feedback-id: fb_2026-06-05_2ea90722
+completion_manifest:
+  files_staged_explicitly: true
+  commit_succeeded: true
+  no_cross_worktree_pollution: true
+
+Staged 5 files explicitly by path (no git add . used): templates/agents/build-ac.md, templates/workflows/build-ac.md, config/agent_registry.json, tests/test_build_ac_workflow.py, tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/04_build_ac_entrypoint.md. Commit c07f9e7 on branch EPIC-ACDrivenDevelopment: "feat(ticket-04): add /build-ac entry-point agent, workflow, and tests". 5 files changed, 697 insertions(+), 18 deletions(-).
 
 ### 2026-06-05 14:25 — pr-reviewer (status: ok)
 feedback-id: fb_2026-06-05_7d8a45b0
