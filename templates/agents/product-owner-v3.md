@@ -20,6 +20,8 @@ signoff: false
 visibility: internal
 domain: null
 config_keys: {}
+skills_used:
+  - ac-tree-split  # Loaded when an L0 or L1 exceeds child limits; provides split patterns A and C.
 adopter_notes: |
   Internal. Spawned by the ticket-creation pipeline when a user request
   needs strategic framing before BA decomposition. Never invoke directly

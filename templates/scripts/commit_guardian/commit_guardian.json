@@ -664,6 +664,18 @@
                 ],
                 "pass_filenames": true,
                 "_comment": "EPIC-ErrorHandlingEnforcement/01: AST-based hook that flags bare except: (E722), blind except Exception: without reraise/log (BLE001), and calls to requests.get/open/cursor.execute not enclosed in try/except (IO-001). Runs on every staged .py file. Exit 1 on violations, 0 on clean."
+            },
+            {
+                "id": "check-ac-tree-limits",
+                "name": "Check AC Tree Depth Limits (ACS-100c-1/c-2)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_ac_limits.py",
+                "language": "system",
+                "files": "^docs/acceptance-criteria/.*\\.yaml$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "EPIC-ACTreeSplit: Enforces ACS-100c-1 hard caps (>7 L1s per L0, >5 L2s per L1) and emits ACS-100c-2 sparse advisory (<3 children). Blocks commits that push a parent over its child limit. Fail-open on subprocess/YAML errors. Load ac-tree-split skill to resolve violations."
             }
         ]
     },
