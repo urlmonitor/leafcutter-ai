@@ -128,7 +128,7 @@ If no directory is configured in PROJECT_CONTEXT, use the OS temp directory.
 Run a syntax check to catch obvious errors before reporting:
 
 ```bash
-python -m py_compile <test_file_path> && echo "syntax OK"
+python -m py_compile <test_file_path>
 ```
 
 If syntax fails, fix before returning.

@@ -159,7 +159,7 @@ blacklisting of every term when the script is invoked without Claude orchestrati
 - Partial results are always written to disk immediately — an interrupted run
   preserves all decisions applied so far.
 - If the final git commit fails, the files are still written. Stage and commit
-  manually: `git add docs/glossary.md docs/glossary_blacklist.md && git commit`.
+  manually: `git add docs/glossary.md docs/glossary_blacklist.md` then `git commit`.
 - Running `--apply-decisions` twice with the same file is safe — idempotency
   guards skip already-present entries.
 

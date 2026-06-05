@@ -42,7 +42,8 @@ Merge the current feature worktree back to main and clean up.
 
 7. **If direct merge chosen**:
    - Switch to the main repo directory
-   - `git checkout main && git pull origin main`
+   - `git checkout main`
+   - `git pull origin main`
    - `git merge --no-ff feature/<name>` (preserve merge commit)
    - `git push origin main`
 

@@ -40,7 +40,7 @@ pipeline.
 # Self-hosting (dev on leafcutter itself):
 ./build-self.sh
 # or equivalently:
-cd leafcutter/ && python leafcutter-ai/scripts/build.py --target-dir .
+python leafcutter-ai/scripts/build.py --target-dir .  # run from the leafcutter/ parent dir
 
 # Installing into a consumer project:
 python leafcutter-ai/scripts/build.py --target-dir /path/to/project

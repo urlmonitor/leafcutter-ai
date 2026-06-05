@@ -87,7 +87,11 @@ On `no`: stop. Report `Finalization halted at merge step. No changes made.`
 ## Step 3 — Sync main locally (shell, not an agent)
 
 ```bash
-git checkout main && git pull
+git checkout main
+```
+
+```bash
+git pull
 ```
 
 Report the current HEAD of main to the user:

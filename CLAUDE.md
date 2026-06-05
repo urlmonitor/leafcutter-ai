@@ -59,7 +59,7 @@ leafcutter/              <- workspace directory (not tracked by this repo)
   scripts/               <- build outputs deployed by build.py
 ```
 
-To rebuild the development environment: `./build-self.sh` (or equivalently, `cd .. && python leafcutter-ai/scripts/build.py --target-dir .`). See [ADR-001](docs/architecture/adrs/ADR-001-self-hosting-boundary.md) for the self-hosting boundary convention.
+To rebuild the development environment: `./build-self.sh` (or equivalently, `python leafcutter-ai/scripts/build.py --target-dir .` from the parent directory). See [ADR-001](docs/architecture/adrs/ADR-001-self-hosting-boundary.md) for the self-hosting boundary convention.
 
 SSH auth uses host alias `github.com-urlmonitor` (key: `~/.ssh/id_urlmonitor`).
 
@@ -215,9 +215,10 @@ remote endpoint, if any) is writable before the drive begins.
 
 ```bash
 # Quick writability probe — should exit 0 and append one line
-echo '{"probe":"pre-drive-check"}' >> debugging/logs/agent_telemetry.jsonl \
-  && echo "Sink OK" || echo "Sink UNREACHABLE — fix before invoking /build-feature"
+echo '{"probe":"pre-drive-check"}' >> debugging/logs/agent_telemetry.jsonl
 ```
+
+If the command exits non-zero, the sink is unreachable — fix before invoking `/build-feature`.
 
 **If the check fails:** Do not start the drive. The most common causes are:
 - The `debugging/logs/` directory does not exist yet (`mkdir -p debugging/logs/`).

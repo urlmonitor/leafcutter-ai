@@ -192,7 +192,7 @@ because tests fail:
    your change. Fix the regression before committing.
 
 3. **If the failing tests pre-existed your change** (and you can confirm this
-   via `git stash && pytest && git stash pop`): update the baseline and commit
+   via `git stash`, then `pytest`, then `git stash pop`): update the baseline and commit
    both changes together:
    ```bash
    python scripts/commit_guardian/known_failing_tests.py --update

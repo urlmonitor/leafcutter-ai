@@ -74,7 +74,7 @@ Same as the Feature Workflow bootstrap (step 5 below):
 
 - Copy `.env` from `$MAIN_REPO`
 - Copy `.mcp.json` from `$MAIN_REPO` if it exists
-- `cd "$WORKTREE_PATH" && poetry install --no-root`
+- `poetry install --no-root` (run from `$WORKTREE_PATH` using absolute path)
 - Verify: `poetry run python -c "import settings; print('Settings OK')"`
 
 #### Build outputs (mandatory)
