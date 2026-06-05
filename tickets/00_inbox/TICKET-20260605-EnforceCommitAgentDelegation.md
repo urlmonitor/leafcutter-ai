@@ -11,7 +11,7 @@ roadmap_phase: phase_1
 advances_current_outcome: true
 requires_diagram: false
 requires_adr: false
-ac_coverage: 0/7
+ac_coverage: 7/7
 files_touched:
   - templates/hooks/enforce_commit_delegation.py
   - templates/settings.json
@@ -19,12 +19,12 @@ files_touched:
   - leafcutter-ai/CLAUDE.md
 agents:
   architect-review: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
-  documentation-expert: needed
-  pr-reviewer: needed
+  test-runner: signed_off
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   adr-author: not_needed
@@ -97,23 +97,23 @@ contract for all `templates/hooks/*.py` scripts.
 
 ### python-coder
 
-- [ ] AC-1: Create `templates/hooks/enforce_commit_delegation.py` — a PreToolUse
+- [x] AC-1: Create `templates/hooks/enforce_commit_delegation.py` — a PreToolUse
   hook that reads stdin JSON, extracts `tool_input.command` (and `tool_input.cmd`
   as fallback), returns 0 silently when the command does not contain `git commit`,
   and when it does contain `git commit` returns a JSON block decision
   `{"decision": "block", "reason": "..."}` unless `os.environ.get("COMMIT_AGENT_MODE")`
   equals `"1"`. On any exception, exits 0 (fail-open). Module docstring includes
   `MODULE:`, `GOAL:`, `BUSINESS CONTEXT:`, `ARCHITECTURE:` sections and a
-  `DECISION HISTORY` block with a timestamped entry.
-- [ ] AC-2: Update `templates/agents/commit.md` Step 4 so that the `git commit`
+  `DECISION HISTORY` block with a timestamped entry. <!-- signed: python-coder -->
+- [x] AC-2: Update `templates/agents/commit.md` Step 4 so that the `git commit`
   call is prefixed with `COMMIT_AGENT_MODE=1` (i.e. `COMMIT_AGENT_MODE=1 git commit -m ...`),
   making the commit agent's own commit exempt from the new hook. The existing
   heredoc form and the `2>/tmp/commit_err.txt` stderr redirect are preserved
-  unchanged.
-- [ ] AC-3: Update `leafcutter-ai/CLAUDE.md` with a new Shell convention rule
+  unchanged. <!-- signed: python-coder -->
+- [x] AC-3: Update `leafcutter-ai/CLAUDE.md` with a new Shell convention rule
   under the Shell — MANDATORY section (or as a separate `## Commit Delegation —
   MANDATORY` section): "`git commit` must never be called directly. Dispatch the
-  `commit` agent via the Agent tool instead."
+  `commit` agent via the Agent tool instead." <!-- signed: python-coder -->
 
 **Delivers to test-writer:**
 ```
@@ -129,7 +129,7 @@ New file: templates/hooks/enforce_commit_delegation.py
 
 ### test-writer
 
-- [ ] AC-4: Add `unit_tests/commit_guardian/test_enforce_commit_delegation.py`
+- [x] AC-4: Add `unit_tests/commit_guardian/test_enforce_commit_delegation.py`
   with the following test cases (pytest style, no mock.patch on builtins beyond
   `os.environ`):
   - `test_allows_non_commit_command` — payload with `command: "git status"` exits
@@ -141,7 +141,7 @@ New file: templates/hooks/enforce_commit_delegation.py
   - `test_fail_open_on_malformed_stdin` — empty/malformed stdin, asserts exits 0
     and no exception raised.
   - `test_fail_open_on_missing_command_key` — payload with no `command` key,
-    asserts exits 0.
+    asserts exits 0. <!-- signed: test-writer -->
 
 **Delivers to test-runner:**
 ```
@@ -154,17 +154,17 @@ exist before tests can import and exercise it.
 
 ### documentation-expert
 
-- [ ] AC-5: Update `templates/settings.json` to register the new hook in the
+- [x] AC-5: Update `templates/settings.json` to register the new hook in the
   `hooks.PreToolUse` array under the `"matcher": "Bash"` entry, using the same
   bash walker pattern as the existing `check_commit_ticket_staged.py` entry
   (replacing `check_commit_ticket_staged.py` with `enforce_commit_delegation.py`
-  in the command string). The existing hooks remain unchanged.
-- [ ] AC-6: Verify (by reading) that the block message in
+  in the command string). The existing hooks remain unchanged. <!-- signed: documentation-expert -->
+- [x] AC-6: Verify (by reading) that the block message in
   `templates/hooks/enforce_commit_delegation.py` explains: (a) what was blocked,
   (b) why, and (c) the exact corrective action (`"Dispatch the commit agent via
   the Agent tool instead of calling git commit directly"`). Confirm the message
   is present and accurate; do not rewrite it — only flag if it is missing or
-  misleading.
+  misleading. <!-- signed: documentation-expert -->
 
 **Delivers to pr-reviewer:**
 ```
@@ -177,9 +177,9 @@ must exist before `settings.json` can reference a real path.
 
 ### test-runner
 
-- [ ] AC-7: Run `python -m pytest unit_tests/commit_guardian/test_enforce_commit_delegation.py -v`
+- [x] AC-7: Run `python -m pytest unit_tests/commit_guardian/test_enforce_commit_delegation.py -v`
   and confirm all 5 test cases pass with exit code 0. Capture and surface the
-  full pytest output. Do not proceed if any test fails.
+  full pytest output. Do not proceed if any test fails. <!-- signed: test-runner -->
 
 **Depends on test-writer:** test file must exist.
 **Depends on python-coder:** implementation must exist.
@@ -188,21 +188,21 @@ must exist before `settings.json` can reference a real path.
 
 | AC   | Test  | Implementation                                    | Validated |
 |------|-------|---------------------------------------------------|-----------|
-| AC-1 | AC-4  | templates/hooks/enforce_commit_delegation.py      |           |
-| AC-2 | —     | templates/agents/commit.md Step 4                 |           |
-| AC-3 | —     | leafcutter-ai/CLAUDE.md Shell rules               |           |
-| AC-4 | AC-7  | unit_tests/commit_guardian/test_enforce_commit_delegation.py |  |
-| AC-5 | —     | templates/settings.json PreToolUse hooks array    |           |
-| AC-6 | —     | enforce_commit_delegation.py block message review |           |
-| AC-7 | —     | pytest run result                                 |           |
+| AC-1 | AC-4  | Created enforce_commit_delegation.py with _is_git_commit_call, _is_commit_agent_mode, main() | |
+| AC-2 | —     | Updated commit.md Step 4: COMMIT_AGENT_MODE=1 git commit prefix added to all 4 git commit calls | |
+| AC-3 | —     | Added ## Commit Delegation — MANDATORY section to CLAUDE.md | |
+| AC-4 | AC-7  | 5 pytest tests: allow-non-commit, block-without-env, allow-with-env, fail-open-malformed, fail-open-missing-key | |
+| AC-5 | —     | Added enforce_commit_delegation.py PreToolUse entry to templates/settings.json | |
+| AC-6 | —     | Block message verified: (a) "blocked", (b) "Why: bypasses...", (c) "Dispatch the commit agent via the Agent tool instead of calling git commit directly" | |
+| AC-7 | —     | pytest -v: 5 passed in 0.07s | |
 
 ## Sign-offs
 
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
-- [ ] documentation-expert
-- [ ] pr-reviewer
+- [x] test-writer — 2026-06-05 09:30
+- [x] python-coder — 2026-06-05 09:30
+- [x] test-runner — 2026-06-05 09:30
+- [x] documentation-expert — 2026-06-05 09:30
+- [x] pr-reviewer — 2026-06-05 09:45
 - [ ] commit
 - [ ] pull-request
 
@@ -283,3 +283,40 @@ Under `hooks.PreToolUse[matcher="Bash"].hooks`, append:
   existing unit tests (the commit agent template is not imported by tests).
 
 ## Comments
+
+### 2026-06-05 09:30 — python-coder (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  ac_1_hook_created: true
+  ac_2_commit_md_updated: true
+  ac_3_claude_md_updated: true
+Created templates/hooks/enforce_commit_delegation.py mirroring check_commit_ticket_staged.py structure. Updated all 4 git commit calls in commit.md to use COMMIT_AGENT_MODE=1 prefix. Added ## Commit Delegation — MANDATORY section to CLAUDE.md. Ruff E722/BLE001/TRY: all checks pass.
+
+### 2026-06-05 09:30 — test-writer (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  ac_4_tests_written: true
+Created unit_tests/commit_guardian/test_enforce_commit_delegation.py with 5 pytest test cases covering: allow-non-commit, block-without-env-var, allow-with-env-var, fail-open-malformed-stdin, fail-open-missing-command-key. All 5 tests dynamically load the hook module from templates/hooks/.
+
+### 2026-06-05 09:30 — test-runner (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  ac_7_tests_green: true
+pytest -v unit_tests/commit_guardian/test_enforce_commit_delegation.py: 5 passed in 0.07s. All AC-4 test cases green. Exit code 0.
+
+### 2026-06-05 09:30 — documentation-expert (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  ac_5_settings_json_updated: true
+  ac_6_block_message_verified: true
+Added enforce_commit_delegation.py entry to templates/settings.json PreToolUse Bash hooks array using the same walker pattern as check_commit_ticket_staged.py. Verified block message in _build_block_message(): (a) "direct git commit is not allowed" — what was blocked; (b) "Why: calling git commit directly bypasses..." — why; (c) "Dispatch the commit agent via the Agent tool instead of calling git commit directly" — exact corrective action. Message is present and accurate.
+
+### 2026-06-05 09:45 — pr-reviewer (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  all_acs_covered: true
+  scope_matches_plan: true
+  tests_green: true
+  hook_fail_open: true
+  ruff_clean: true
+All 7 ACs verified: hook created and ruff-clean (AC-1), commit.md all 4 git commit calls prefixed (AC-2), CLAUDE.md rule added (AC-3), 5 tests written (AC-4), settings.json updated (AC-5), block message verified with all three required elements (AC-6), pytest 5/5 green (AC-7). Scope matches files_touched. Risk: low — fail-open hook, env-var prefix is bash-native, reversible.
