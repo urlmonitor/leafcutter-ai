@@ -1,6 +1,6 @@
 ---
 title: "Write Agent Protocol section in knowledge-query SKILL.md"
-status: todo
+status: in_progress
 components:
   - build_pipeline
 created: 2026-06-06
@@ -19,12 +19,12 @@ agents:
   sql-coder: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
-  llm-expert: needed
+  llm-expert: signed_off
 ac_coverage: 0/8
 ac_traceability:
   l2:
@@ -187,25 +187,41 @@ AC files: `docs/acceptance-criteria/knowledge-management/KM-KQS-032.yaml` throug
 
 ## Sign-offs
 
-- [ ] llm-expert
-- [ ] pr-reviewer
+- [x] llm-expert — 2026-06-06 10:00
+- [x] pr-reviewer — 2026-06-06 10:15
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
 
+### 2026-06-06 10:00 — llm-expert (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  template_written: true
+  prompt_quality_checklist_passed: true
+  convention_violations_resolved: true
+Appended self-contained "Agent Protocol" section to `templates/skills/knowledge-query/SKILL.md` after the existing "Error Behaviour" section. Section covers all 8 ACs (KM-KQS-032 through KM-KQS-039): invocation syntax with Bash-only rule, zero-result and empty-graph handling with exact log messages, graceful error degradation with exact warning format, citation and surface-type deduplication routing, mandatory-invocation rule with rationale (no WHEN/WHICH prescribed), failure mode distinction (script-not-found vs non-zero-exit), and self-contained structure in second-person imperative voice.
+
+### 2026-06-06 10:15 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-05_37f9b334
+completion_manifest:
+  template_written: true
+  prompt_quality_checklist_passed: true
+  convention_violations_resolved: true
+Reviewed diff (+135 lines, 1 file). All 8 ACs verified: invocation syntax (AC-1), zero-result/empty-graph log messages (AC-2), graceful degradation format (AC-3), citation+dedup surface routing (AC-4), mandatory-invocation rule without WHEN/WHICH (AC-5), surface-type distinction (AC-6), failure mode distinction (AC-7), self-contained imperative voice structure (AC-8). No high-confidence findings. Escalation: not escalated (medium count 0).
+
 ## Implementation Tasks
 
-- [ ] Read the current `templates/skills/knowledge-query/SKILL.md` to locate the end of
+- [x] Read the current `templates/skills/knowledge-query/SKILL.md` to locate the end of
   the "Error Behaviour" section — the new "Agent Protocol" section inserts after it.
-- [ ] Draft the Agent Protocol section covering all seven rules in second-person
+- [x] Draft the Agent Protocol section covering all seven rules in second-person
   imperative voice, respecting the exact log message formats from ACs 2, 3, and 4.
-- [ ] Verify that the mandatory-invocation rule (AC-5) explicitly omits WHEN and WHICH
+- [x] Verify that the mandatory-invocation rule (AC-5) explicitly omits WHEN and WHICH
   surfaces to query from the protocol body.
-- [ ] Verify that the self-contained check (AC-8) is satisfied: all seven rules are
+- [x] Verify that the self-contained check (AC-8) is satisfied: all seven rules are
   present, section uses `You MUST` / `You MUST NOT` imperative voice, and there is
   no duplication with the existing "Invocation" or "Error Behaviour" sections.
-- [ ] Write the amended `SKILL.md`.
+- [x] Write the amended `SKILL.md`.
 - [ ] PR review: verify exact log message strings, surface-type routing (AC-6),
   and placement order in the file.
 

@@ -178,3 +178,138 @@ ERROR: Unknown surface '<name>'. Valid surfaces: agents, tickets, docs, skills, 
 ```
 
 No Python traceback is shown for user-facing errors. Internal exceptions are propagated normally so the caller can diagnose unexpected failures.
+
+---
+
+## Agent Protocol
+
+This section defines the standard behaviour every consuming agent MUST follow
+when using the knowledge-query skill. An agent template can reference this
+entire section with a single line such as:
+
+> "Load the knowledge-query skill and follow its Agent Protocol section."
+
+No rules need to be repeated inline — all shared handling logic lives here.
+
+### Invocation
+
+You MUST invoke knowledge-query using the Bash tool. Do NOT use `Read`, `Write`,
+or any other tool for this purpose.
+
+Two invocation patterns are available:
+
+**Keyword query** — search for a term derived from your current context:
+
+```bash
+python scripts/knowledge_query.py --query <term>
+```
+
+**Surface-scoped query** — restrict results to one surface:
+
+```bash
+python scripts/knowledge_query.py --surface <name>
+```
+
+`--project-root` is NOT required when your working directory is the project
+root. Omit it unless you are running from a different directory.
+
+### Zero-Result and Empty-Graph Handling
+
+Two non-error conditions can occur:
+
+- **Zero results** — the graph has nodes but none match your query. Log this
+  message and continue:
+  ```
+  knowledge-query returned 0 nodes for '<query-term>' — proceeding with file-based context only
+  ```
+
+- **Empty graph** — the graph has zero nodes total (fresh project). Log this
+  message and continue:
+  ```
+  knowledge-query: graph contains 0 nodes (fresh project) — proceeding with file-based context only
+  ```
+
+Neither condition triggers a user-facing prompt, a retry, or a `blocked` status.
+You MUST NOT degrade your output quality — no empty or placeholder fields.
+
+### Graceful Error Degradation
+
+Two failure modes are possible:
+
+- **Script not found** — the `knowledge_query.py` script does not exist at the
+  expected path. Use `"script not found"` as the `<error_message>`.
+- **Non-zero exit** — the script ran but exited with a non-zero status. Use the
+  actual script output as the `<error_message>`.
+
+For both modes, capture the error output, log a warning in this exact format,
+and continue:
+
+```
+knowledge-query failed: <error_message> — skipping graph context, proceeding with file-based reads only
+```
+
+You MUST NOT abort, return `blocked`, retry, or surface the error to the user
+unless verbose output was explicitly requested.
+
+### Citation and Deduplication Formats
+
+When query results contain overlapping nodes, cite each matching node using this
+format:
+
+```
+[<surface>] <title>
+```
+
+For example: `[agents] python-coder`.
+
+Present citations at confirmation gates, NOT inline in output YAML.
+
+**Surface-type routing:**
+
+- **AC overlap** (`acs` surface, or id matching the AC ID pattern): emit a
+  deduplication warning in this format:
+  ```
+  <ac-id> already specifies this behavior — skipping or creating a variant
+  ```
+- **Doc or ADR overlap** (`docs` or `adrs` surface): add the path to `doc_links`
+  with `relationship: context`. Do NOT emit a deduplication warning.
+- **Other surfaces** (`agents`, `skills`, `hooks`): cite the node for information
+  only. Do NOT emit a deduplication warning and do NOT add to `doc_links`.
+
+When a single query returns both an overlapping AC and an overlapping doc, you
+MUST present BOTH the deduplication warning AND the `doc_links` addition in the
+same confirmation gate output.
+
+When no overlapping nodes are found, log this message and present no deduplication
+warning:
+
+```
+knowledge-query returned no related nodes for '<query-term>' — proceeding with file-based context only
+```
+
+### Mandatory-Invocation Rule
+
+You MUST invoke knowledge-query during your knowledge-acquisition phase **even if
+prior file reads appear to provide sufficient context**. File reads cannot detect:
+
+- Cross-component overlap with other agents or skills
+- Recently-registered agents or skills added since the last template update
+- ACs authored in sibling components since the last template update
+
+The only acceptable reason to skip knowledge-query is script failure (covered by
+the error-handling rules above). This protocol does NOT prescribe WHEN or WHICH
+surfaces to query — those remain agent-specific decisions.
+
+### Failure Mode Distinction
+
+The consuming agent can distinguish between the two failure modes by the Bash
+tool output:
+
+- **Script not found**: the Bash tool returns a non-zero exit with a
+  file-not-found message (e.g. `No such file or directory`). Use
+  `"script not found"` as `<error_message>`.
+- **Non-zero exit**: the script ran and produced output before failing. Use that
+  actual output as `<error_message>`.
+
+The degradation path is identical for both modes: log the warning, skip graph
+context, and continue with file-based reads.
