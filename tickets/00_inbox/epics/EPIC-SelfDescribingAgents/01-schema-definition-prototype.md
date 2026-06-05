@@ -14,13 +14,13 @@ files_touched:
   - templates/agents/python-coder.md
   - config/agent_registry.json
 agents:
-  architect-review: needed
+  architect-review: signed_off
   test-writer: not_needed
-  python-coder: needed
+  python-coder: signed_off
   sql-coder: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   adr-author: not_needed
@@ -207,13 +207,74 @@ And the card generator renders "No conditional behaviors — single fixed path"
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] python-coder
-- [ ] pr-reviewer
+- [x] architect-review — 2026-06-05 10:00
+- [x] python-coder — 2026-06-05 10:30
+- [x] pr-reviewer — 2026-06-05 11:00
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
+
+### 2026-06-05 10:00 — architect-review (status: ok)
+feedback-id: fb_2026-06-05_9fcee98c
+completion_manifest:
+  blast_radius_assessed: true
+  impact_classified: true
+  architectural_note_written: true
+
+**Architectural Review — INF-600 Ticket 1: Schema Definition Prototype**
+
+**Blast-Radius Analysis:** 2 files touched (`templates/agents/python-coder.md`, `config/agent_registry.json`), 1 component (`build_pipeline`). No Alembic migration, no hypertable change, no public API change, no ADR contract change. Classification: **Small** (threshold: ≤5 files, 1 component, no always-large trigger).
+
+**Schema Approvals:**
+
+1. `skills_invoked` (skill_id, mode, condition) — Approved. The `mode: always | conditional` plus `condition` string is sufficient for the card generator to distinguish invocation patterns without parsing template prose.
+
+2. `inputs / outputs / mutates` type enums — Approved. The six type values (`file_path`, `structured_payload`, `config_value`, `file`, `structured_response`, `sign_off_comment`) cover the prototype card's I/O Contract diagram at the right granularity. Adding `type: file_path` vs `type: file` correctly distinguishes path arguments from file content objects.
+
+3. `knowledge_channels` (channel integer 1-11) — Approved with note: always declare channels 1, 9, 10, 11 per-agent in this ticket (no `include_universal_channels` flag until Ticket 3 designs the convention). Channel 3 (PROJECT_CONTEXT.md) is listed in the prototype card's knowledge flow table as "On-demand" — it is acceptable to include it if the agent uses it.
+
+4. `config_keys` + `source` field — Approved. The `source` field (`skills_config | settings | build_injected`) is additive to the existing dict structure. Checked `build_phases.py` presence: the registry parser in `config/agent_registry.json` does not read `config_keys` from registry (config_keys is a template frontmatter field only). Additive fields in YAML frontmatter are safe — no existing tooling reads config_keys with strict schema enforcement.
+
+5. `pre_flight_reads` (source, required, condition) — Approved. The three-field schema is sufficient for knowledge-flow table row generation. `condition` is optional (omit when required: true).
+
+6. `behavioral_patterns` (name, trigger, behavior, related_agent) — Approved. The four-field schema matches the "Key Behavioral Patterns" table in the prototype card. `related_agent: null` for single-agent patterns is the correct sentinel.
+
+**Decision History:** DECISION 2026-06-05 10:00 [architect-review]: All six schema designs approved as-is from the prototype card (#EPIC-SelfDescribingAgents/01). No ADR required (single component, additive fields only, no cross-cutting policy decision).
+
+**Escalation:** Branch: none. Reason: 2 files, 1 component; no always-large trigger fired.
+
+**Delivers to python-coder:** All six field schemas approved. Proceed with implementation per the ticket's Implementation Tasks section.
+
+### 2026-06-05 10:30 — python-coder (status: ok)
+feedback-id: fb_2026-06-05_b7e9b087
+completion_manifest:
+  code_implemented: true
+  tests_passing: true
+  doc_enforcer_clean: true
+  complexity_check_clean: true
+
+Implemented all six self-description metadata deliverables. `templates/agents/python-coder.md` frontmatter extended with `pre_flight_reads` (3 entries), `inputs` (5 entries), `outputs` (5 entries), `mutates` (5 entries), `behavioral_patterns` (7 patterns matching prototype card), and `config_keys` completeness (added `source` field to existing 3 entries, added `file_size_limit_py` and `testing_context.max_test_duration_seconds`). `config/agent_registry.json` extended with `skills_invoked` (4 entries: signoff always, doc-enforcer always, complexity-reduction conditional, collector-enforcer conditional) and `knowledge_channels` (9 entries covering channels 1,2,5,6,7,8,9,10,11). JSON validated. All fields match prototype card's Auto-Generation Gap Summary — zero remaining gaps.
+
+### 2026-06-05 11:00 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-05_4a0f0dfe
+completion_manifest:
+  blast_radius_assessed: true
+  impact_classified: true
+  architectural_note_written: true
+
+**PR Review — INF-600 Ticket 1 (EPIC-SelfDescribingAgents)**
+
+All six deliverables confirmed present and correct:
+
+1. `skills_invoked` (4 entries): signoff/always, doc-enforcer/always, complexity-reduction/conditional, collector-enforcer/conditional — matches AC INF-600a-1.
+2. `knowledge_channels` (9 entries, channels 1,2,5,6,7,8,9,10,11): all within valid range 1-11 — matches AC INF-600a-3.
+3. `inputs`/`outputs`/`mutates` (5+5+5 entries): matches prototype card I/O Contract diagram — matches AC INF-600a-2.
+4. `config_keys` completeness: `file_size_limit_py` and `testing_context.max_test_duration_seconds` added, `source` field on all existing entries — matches AC INF-600a-4.
+5. `pre_flight_reads` (3 entries): ticket_path required, ADRs conditional, conventions conditional — matches AC INF-600a-5.
+6. `behavioral_patterns` (7 patterns): all 7 from prototype card Key Behavioral Patterns table present — matches AC INF-600a-6.
+
+Additive only — no existing fields removed, no JSON broken. `skills_used: ["signoff"]` retained as alias. Approved.
 
 ## Implementation Tasks
 
@@ -221,27 +282,27 @@ And the card generator renders "No conditional behaviors — single fixed path"
 
 Review the schema design for all six new fields before any edits are made:
 
-- [ ] Confirm the `skills_invoked` schema (skill_id, mode, condition) is
+- [x] Confirm the `skills_invoked` schema (skill_id, mode, condition) is
   sufficient for the card generator to distinguish "always" from "conditional"
   invocations without reading the template body prose.
-- [ ] Confirm the `inputs` / `outputs` / `mutates` schema covers the full
+- [x] Confirm the `inputs` / `outputs` / `mutates` schema covers the full
   I/O Contract diagram from the prototype card. Specifically: verify the
   `type` enum values (`file_path`, `structured_payload`, `config_value`,
   `file`, `structured_response`, `sign_off_comment`) are the right granularity.
-- [ ] Confirm the `knowledge_channels` schema: channel integer 1-11 is
+- [x] Confirm the `knowledge_channels` schema: channel integer 1-11 is
   sufficient as the key, and that `include_universal_channels: false` flag
   at the registry level is a reasonable optional optimization vs. always
   declaring channels 1, 9, 10, 11 per-agent.
-- [ ] Confirm the `config_keys` extension: adding `source` field
+- [x] Confirm the `config_keys` extension: adding `source` field
   (`skills_config | settings | build_injected`) to existing entries is
   backward-compatible. The existing `config_keys` format in the template
   lacks `source` — verify no existing tooling reads `config_keys` in a way
   that would break when `source` is added.
-- [ ] Confirm the `pre_flight_reads` schema (source, required, condition) is
+- [x] Confirm the `pre_flight_reads` schema (source, required, condition) is
   the right structure for the knowledge-flow table row generation.
-- [ ] Confirm the `behavioral_patterns` schema (name, trigger, behavior,
+- [x] Confirm the `behavioral_patterns` schema (name, trigger, behavior,
   related_agent) is the right structure for the Key Behavioral Patterns table.
-- [ ] Document any schema decisions as inline DECISION HISTORY comments in
+- [x] Document any schema decisions as inline DECISION HISTORY comments in
   the modified files.
 
 **Delivers to python-coder:** Approved field schemas for all six fields.

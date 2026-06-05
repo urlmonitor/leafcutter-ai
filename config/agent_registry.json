@@ -335,6 +335,70 @@
             "skills_used": [
                 "signoff"
             ],
+            "skills_invoked": [
+                {"skill_id": "signoff", "mode": "always"},
+                {"skill_id": "doc-enforcer", "mode": "always"},
+                {"skill_id": "complexity-reduction", "mode": "conditional",
+                 "condition": "when flagged functions exceed complexity threshold"},
+                {"skill_id": "collector-enforcer", "mode": "conditional",
+                 "condition": "when paths under collector/ are edited"}
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "Root CLAUDE.md",
+                    "injection_mode": "always",
+                    "description": "Project instructions, error handling policy, shell conventions"
+                },
+                {
+                    "channel": 2,
+                    "source": "Per-folder README.md",
+                    "injection_mode": "on-demand",
+                    "description": "Module-level context when cwd overlaps edited module folder"
+                },
+                {
+                    "channel": 5,
+                    "source": "signoff SKILL.md; doc-enforcer SKILL.md; complexity-reduction; collector-enforcer",
+                    "injection_mode": "on-demand",
+                    "description": "Sign-off protocol, docstring enforcement, complexity scoring, collector pattern enforcement"
+                },
+                {
+                    "channel": 6,
+                    "source": "Agent frontmatter",
+                    "injection_mode": "spawn-scoped",
+                    "description": "Model: sonnet, tools: Bash/Read/Edit/Write/Agent, signoff: true, config_keys, portable: true"
+                },
+                {
+                    "channel": 7,
+                    "source": "skills_config.json + settings.json",
+                    "injection_mode": "spawn-scoped",
+                    "description": "test_command, collector_enforcer_paths, file_size_limit_py"
+                },
+                {
+                    "channel": 8,
+                    "source": "Ticket frontmatter",
+                    "injection_mode": "ticket-scoped",
+                    "description": "Agents map, files_touched, depends_on, ACs, Agent Contracts section"
+                },
+                {
+                    "channel": 9,
+                    "source": "Auto-memory (memory/*.md)",
+                    "injection_mode": "always",
+                    "description": "Persistent cross-session learnings"
+                },
+                {
+                    "channel": 10,
+                    "source": "MCP server prompts + tool descriptions",
+                    "injection_mode": "always",
+                    "description": "Available tool surface and usage guidance"
+                },
+                {
+                    "channel": 11,
+                    "source": "Glossary (docs/glossary.md)",
+                    "injection_mode": "always",
+                    "description": "Project jargon definitions via CLAUDE.md ref"
+                }
+            ],
             "priority": 6,
             "priority_rationale": "Primary implementation agent; runs after architectural review is complete",
             "requires_ticket_section": true,
