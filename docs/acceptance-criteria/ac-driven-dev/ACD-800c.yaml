@@ -1,4 +1,6 @@
 id: ACD-800c
+readiness: reviewed
+priority: medium
 title: "The --apply flag atomically backfills high-confidence matches into AC metadata"
 component: ac-driven-dev
 level: L1

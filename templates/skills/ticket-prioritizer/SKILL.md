@@ -84,6 +84,133 @@ Parse the `ready` array. Each entry maps to a ticket path. Apply
 the `files_touched` disjoint-set gate (per building-epics §1.2)
 on the ready set before dispatching.
 
+## AC-aware prioritization
+
+The `--include-acs` flag extends `prioritize.py` to merge open Acceptance
+Criteria from the AC store into the ranked ticket list. When passed, the
+script loads AC YAML files from the AC store directory, converts each
+unimplemented AC's complexity to a priority level using the mapping below,
+and emits AC entries alongside ticket entries in the `ready` array.
+
+### Complexity-to-priority mapping
+
+| AC complexity | Mapped priority |
+|---|---|
+| `S` (small) | `high` |
+| `M` (medium) | `medium` |
+| `L` (large) | `low` |
+| `XL` (extra-large) | `low` |
+| _(absent)_ | `medium` |
+
+### Invocation with AC-aware output
+
+```bash
+# Merged ticket + AC list (human-readable)
+python .agents/skills/ticket-prioritizer/scripts/prioritize.py \
+  --all --include-acs
+
+# JSON output for machine consumers
+python .agents/skills/ticket-prioritizer/scripts/prioritize.py \
+  --all --include-acs --json
+```
+
+The JSON output schema is extended with a `source` field on each item:
+
+```json
+{
+  "ready": [
+    {"path": "02_add_logic.md", "title": "Add logic", "priority": "high",
+     "source": "ticket"},
+    {"id": "ACS-100a-1", "title": "Required fields reject missing values",
+     "priority": "high", "assigned_agent": "python-coder",
+     "source": "ac"}
+  ],
+  "blocked": [...],
+  "done": [...]
+}
+```
+
+AC entries carry `id`, `title`, `priority`, `assigned_agent`, and
+`source: "ac"`. Ticket entries carry `path`, `title`, `priority`, and
+`source: "ticket"`. Both lists are sorted together by priority level
+(`critical > high > medium > low`).
+
+See also: `scripts/ac_store/ac_prioritizer.py` for the AC complexity
+ranking logic that `prioritize.py --include-acs` delegates to internally.
+
+---
+
+## pick_next.py — human recommendation
+
+`pick_next.py` is a thin presentation layer that calls `prioritize.py
+--all --include-acs --json` and formats the top result(s) as a
+human-readable recommendation block.
+
+### Invocation
+
+```bash
+# Print the single highest-priority ready item (default)
+python .agents/skills/ticket-prioritizer/scripts/pick_next.py
+
+# Print the top 3 ready items
+python .agents/skills/ticket-prioritizer/scripts/pick_next.py --top 3
+
+# Machine-readable JSON output
+python .agents/skills/ticket-prioritizer/scripts/pick_next.py --json
+
+# Override root paths (useful when running from a non-standard working dir)
+python .agents/skills/ticket-prioritizer/scripts/pick_next.py \
+  --ac-root /path/to/ac_store \
+  --tickets-root /path/to/tickets
+```
+
+### Human output format (default)
+
+```
+Next recommended work item:
+  Type:   AC              (or "ticket")
+  ID:     ACS-100a-1
+  Title:  "Required fields reject missing values at commit time"
+  Agent:  python-coder
+  Score:  high priority, S complexity
+  Action: run /build-ac --ac ACS-100a-1   (or /build-feature <path>)
+```
+
+When `--top N` is passed, `N` blocks are printed in priority order,
+each with the same Type / ID / Title / Agent / Score / Action structure.
+
+### JSON output format (`--json`)
+
+```json
+{
+  "top": [
+    {
+      "type": "ac",
+      "id": "ACS-100a-1",
+      "title": "Required fields reject missing values at commit time",
+      "assigned_agent": "python-coder",
+      "priority": "high",
+      "action": "/build-ac --ac ACS-100a-1"
+    }
+  ]
+}
+```
+
+For `type: "ticket"` entries, the `id` field is absent and `action` is
+`/build-feature <path>` where `<path>` is the relative ticket path.
+
+### Empty ready list
+
+When no ready tickets or ACs exist, `pick_next.py` prints:
+
+```
+Nothing ready to build — all work items are blocked or the store is empty.
+```
+
+and exits with code 0.
+
+---
+
 ## Architecture
 
 ```mermaid

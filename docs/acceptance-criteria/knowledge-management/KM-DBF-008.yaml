@@ -1,4 +1,6 @@
 id: KM-DBF-008
+readiness: reviewed
+priority: medium
 title: "Hook registered in commit-guardian configuration"
 component: knowledge-management
 status: active

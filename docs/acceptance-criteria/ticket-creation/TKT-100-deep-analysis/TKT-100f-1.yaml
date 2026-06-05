@@ -1,4 +1,6 @@
 id: TKT-100f-1
+readiness: reviewed
+priority: medium
 title: "BA v3 produces 3-5 L2 ACs per L1 with concrete Gherkin scenarios"
 component: ticket-creation
 level: L2

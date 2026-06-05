@@ -1,4 +1,6 @@
 id: ACD-900a-2
+readiness: reviewed
+priority: medium
 title: "The --top N flag lists exactly N items in priority order"
 component: ac-driven-dev
 level: L2

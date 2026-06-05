@@ -1,4 +1,6 @@
 id: TKT-400
+readiness: reviewed
+priority: medium
 title: "Agents do better work when they only see what matters to their job"
 component: ticket-creation
 level: L0

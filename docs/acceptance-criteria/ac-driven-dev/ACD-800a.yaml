@@ -1,4 +1,6 @@
 id: ACD-800a
+readiness: reviewed
+priority: medium
 title: "Exact-criteria text matching discovers high-confidence implementations"
 component: ac-driven-dev
 level: L1

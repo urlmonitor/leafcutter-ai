@@ -1,4 +1,6 @@
 id: BP-100a-2
+readiness: reviewed
+priority: medium
 title: "Build emits no integrity warnings when all hook scripts are present"
 component: build-pipeline
 level: L2

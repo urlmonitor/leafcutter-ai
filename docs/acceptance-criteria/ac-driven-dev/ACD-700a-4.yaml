@@ -1,4 +1,6 @@
 id: ACD-700a-4
+readiness: reviewed
+priority: medium
 title: "/build-ac exits cleanly when no ready ACs exist in the store"
 component: ac-driven-dev
 level: L2

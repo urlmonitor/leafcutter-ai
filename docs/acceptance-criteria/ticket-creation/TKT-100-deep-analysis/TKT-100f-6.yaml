@@ -1,4 +1,6 @@
 id: TKT-100f-6
+readiness: reviewed
+priority: medium
 title: "BA v3 classifies extending L2 as amends-existing"
 component: ticket-creation
 level: L2

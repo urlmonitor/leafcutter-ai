@@ -1,4 +1,6 @@
 id: KM-DBF-006
+readiness: reviewed
+priority: medium
 title: "Backfill script uses only stdlib Python"
 component: knowledge-management
 status: active

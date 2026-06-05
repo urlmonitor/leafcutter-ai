@@ -1,4 +1,6 @@
 id: TKT-300a-3
+readiness: reviewed
+priority: medium
 title: "IT PO wires delivers_to and expects_from contracts at cross-agent boundaries"
 component: ticket-creation
 level: L2

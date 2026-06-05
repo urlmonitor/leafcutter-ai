@@ -143,7 +143,7 @@
             "template_path": "templates/agents/business-analyst-v2.md",
             "model": "opus",
             "skills_used": [],
-            "description": "Enhanced Opus BA for v2 ticket-creation pipeline. Parallel test path \u2014 does not replace business-analyst.md."
+            "description": "Enhanced Opus BA for v2 ticket-creation pipeline. Parallel test path — does not replace business-analyst.md."
         },
         {
             "id": "create-ticket-v2",
@@ -166,7 +166,7 @@
             "skills_used": [
                 "ticket-authoring"
             ],
-            "description": "V2 parallel ticket-creation pipeline orchestrator. Routes by complexity (trivial/simple \u2192 refinement, standard/novel \u2192 it-po). Does not modify v1 templates."
+            "description": "V2 parallel ticket-creation pipeline orchestrator. Routes by complexity (trivial/simple → refinement, standard/novel → it-po). Does not modify v1 templates."
         },
         {
             "id": "brainstorm-lead",
@@ -544,7 +544,7 @@
             ],
             "is_ticket_phase": true,
             "selection_criteria": {
-                "description": "Assign to every ticket that produces a code or documentation change \u2014 this is the final quality gate before commit.",
+                "description": "Assign to every ticket that produces a code or documentation change — this is the final quality gate before commit.",
                 "trigger_conditions": [
                     {
                         "type": "llm",
@@ -1487,7 +1487,7 @@
             "priority": 11.5,
             "priority_rationale": "Final AC coverage gate; runs after pr-reviewer (11) and before commit (12) to verify all ACs are evidenced before the worktree is locked",
             "requires_ticket_section": false,
-            "description": "Reads ticket ACs, the working diff, and test output; produces a coverage verdict (ok / blocker / question). Never implements \u2014 read-only on code files, edits only the ticket file."
+            "description": "Reads ticket ACs, the working diff, and test output; produces a coverage verdict (ok / blocker / question). Never implements — read-only on code files, edits only the ticket file."
         },
         {
             "id": "ac-fulfillment-gate",
@@ -1656,6 +1656,45 @@
             "model": "opus",
             "skills_used": [],
             "description": "IT Product Owner for v3 ticket-creation pipeline. Enriches L2/L3 AC YAML files with technical fields: assigned_agent, it_requirements, estimated_complexity, delivers_to/expects_from contracts, and doc_links."
+        },
+        {
+            "id": "build-ac",
+            "name": "Build AC",
+            "tier": "utility",
+            "role": "orchestration",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/build-ac.md",
+            "model": "sonnet",
+            "skills_used": [],
+            "description": "AC-to-ticket-to-build entry-point coordinator. Calls ac_prioritizer.py to find the top-ranked ready AC, generates a ticket via generate_ticket_from_ac.py, surfaces the ticket to the user for confirmation (yes / review / skip), and documents how to mark the AC done after a successful build. Does NOT call /build-feature inline — depth-cap constraint (ADR-006). Invoked by /build-ac slash command.",
+            "invocation_surface": [
+                "/build-ac"
+            ]
+        },
+        {
+            "id": "ac-triage",
+            "name": "AC Triage",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "create-ac"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/ac-triage.md",
+            "model": "haiku",
+            "skills_used": [],
+            "description": "Haiku-pinned AC store triage agent. Stage 0 of the /create-ac workflow. Reads active ACs for the relevant component, classifies the user's request as strategic / behavioral / technical / covered, and returns a structured JSON routing decision. Read-only — never writes files. Must complete in < 3s for ≤200 ACs."
         },
         {
             "id": "knowledge-harvester",

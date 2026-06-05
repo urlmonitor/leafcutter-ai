@@ -1,4 +1,6 @@
 id: ACS-100c
+readiness: reviewed
+priority: medium
 title: "The right person owns each level of detail"
 component: ac-store
 level: L1

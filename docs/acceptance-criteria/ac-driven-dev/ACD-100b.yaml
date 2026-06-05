@@ -1,4 +1,6 @@
 id: ACD-100b
+readiness: reviewed
+priority: medium
 title: "Readiness state machine diagram shows all states, transitions, and actors"
 component: ac-driven-dev
 level: L1

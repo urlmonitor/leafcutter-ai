@@ -1,4 +1,6 @@
 id: ACD-300a
+readiness: reviewed
+priority: medium
 title: "A fast triage agent classifies the request and checks for duplicates before authoring begins"
 component: ac-driven-dev
 level: L1

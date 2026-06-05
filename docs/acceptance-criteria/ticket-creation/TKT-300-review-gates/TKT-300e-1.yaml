@@ -1,4 +1,6 @@
 id: TKT-300e-1
+readiness: reviewed
+priority: medium
 title: "Split is triggered when criteria cross agent boundaries"
 component: ticket-creation
 level: L2

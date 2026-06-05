@@ -1,4 +1,6 @@
 id: ACD-900a-2-i
+readiness: reviewed
+priority: medium
 title: "The --top N flag with N larger than the ready list returns all available items without error"
 component: ac-driven-dev
 level: L3

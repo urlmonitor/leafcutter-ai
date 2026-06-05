@@ -1,4 +1,6 @@
 id: ACS-100a-4
+readiness: reviewed
+priority: medium
 title: "Additional properties are rejected to prevent schema drift"
 component: ac-store
 level: L2

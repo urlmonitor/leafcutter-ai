@@ -1,4 +1,6 @@
 id: ACD-700a
+readiness: reviewed
+priority: medium
 title: "A single /build-ac command sequences prioritization, ticket generation, build, and done-marking"
 component: ac-driven-dev
 level: L1

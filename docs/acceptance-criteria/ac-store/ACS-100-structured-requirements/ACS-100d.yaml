@@ -1,4 +1,6 @@
 id: ACS-100d
+readiness: reviewed
+priority: medium
 title: "Named authorship on every requirement"
 component: ac-store
 level: L1

@@ -1,4 +1,6 @@
 id: ACD-300b-2
+readiness: reviewed
+priority: medium
 title: "The behavioral and technical routes skip upstream agents and start at the correct stage"
 component: ac-driven-dev
 level: L2

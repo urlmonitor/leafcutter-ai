@@ -1,4 +1,6 @@
 id: ACD-800d
+readiness: reviewed
+priority: medium
 title: "Every audit run produces a persistent JSON report for human review"
 component: ac-driven-dev
 level: L1

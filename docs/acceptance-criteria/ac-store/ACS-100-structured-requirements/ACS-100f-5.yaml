@@ -1,4 +1,6 @@
 id: ACS-100f-5
+readiness: reviewed
+priority: medium
 title: "Children lookup returns all ACs that depend on a given AC"
 component: ac-store
 level: L2

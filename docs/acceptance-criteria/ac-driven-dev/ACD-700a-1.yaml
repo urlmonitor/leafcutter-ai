@@ -1,4 +1,6 @@
 id: ACD-700a-1
+readiness: reviewed
+priority: medium
 title: "/build-ac surfaces the top-ranked AC with its id and title"
 component: ac-driven-dev
 level: L2

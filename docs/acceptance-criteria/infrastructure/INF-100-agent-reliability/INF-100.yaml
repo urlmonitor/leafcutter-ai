@@ -1,4 +1,6 @@
 id: INF-100
+readiness: reviewed
+priority: medium
 title: "Agents work without manual intervention"
 component: infrastructure
 level: L0

@@ -1,4 +1,6 @@
 id: ACD-100d-1
+readiness: reviewed
+priority: medium
 title: "C4 component diagram written at docs/architecture/diagrams/ac-driven-pipeline.md"
 component: ac-driven-dev
 level: L2

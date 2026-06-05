@@ -1,4 +1,6 @@
 id: KM-DBF-003
+readiness: reviewed
+priority: medium
 title: "Backfill is idempotent — second write makes no changes"
 component: knowledge-management
 status: active

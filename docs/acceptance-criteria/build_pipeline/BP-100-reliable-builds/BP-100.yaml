@@ -1,4 +1,6 @@
 id: BP-100
+readiness: reviewed
+priority: medium
 title: "Ship changes confidently — every build produces exactly what you expect"
 component: build-pipeline
 level: L0

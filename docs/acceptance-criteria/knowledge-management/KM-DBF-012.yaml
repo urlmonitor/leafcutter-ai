@@ -1,4 +1,6 @@
 id: KM-DBF-012
+readiness: reviewed
+priority: medium
 title: "generate_doc_index uses frontmatter descriptions with zero fallbacks"
 component: knowledge-management
 status: active

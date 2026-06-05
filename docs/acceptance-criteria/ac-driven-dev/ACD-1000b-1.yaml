@@ -1,4 +1,6 @@
 id: ACD-1000b-1
+readiness: reviewed
+priority: medium
 title: "/po slash command invokes PO v3 with AC store context"
 component: ac-driven-dev
 level: L2

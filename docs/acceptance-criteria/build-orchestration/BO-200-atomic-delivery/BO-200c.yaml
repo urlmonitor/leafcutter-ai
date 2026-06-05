@@ -1,4 +1,6 @@
 id: BO-200c
+readiness: reviewed
+priority: medium
 title: "Every commit message tells you what changed and why it matters"
 component: build-orchestration
 level: L1

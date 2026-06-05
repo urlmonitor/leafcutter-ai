@@ -1,4 +1,6 @@
 id: BP-100a-5
+readiness: reviewed
+priority: medium
 title: "Test verifies no warning is emitted when all hook scripts exist"
 component: build-pipeline
 level: L3

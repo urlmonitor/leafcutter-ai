@@ -1,4 +1,6 @@
 id: BP-100a
+readiness: reviewed
+priority: medium
 title: "Every registered hook has a real script behind it"
 component: build-pipeline
 level: L1

@@ -1,4 +1,6 @@
 id: ACD-1000b-2
+readiness: reviewed
+priority: medium
 title: "/ba slash command invokes BA v3 for L2/L3 decomposition"
 component: ac-driven-dev
 level: L2

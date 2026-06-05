@@ -1,4 +1,6 @@
 id: TKT-100g-1
+readiness: reviewed
+priority: medium
 title: "Router classifies L0 when criteria describe business outcome without implementation detail"
 component: ticket-creation
 level: L2

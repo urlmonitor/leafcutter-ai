@@ -439,6 +439,52 @@ original's status.
   `delivers_to`, `expects_from`, and `doc_links` fields
 - For splits: write new files, then update original with `superseded_by`
 - Validate that every enriched file has a non-null `assigned_agent`
+- **After enriching an AC with all technical fields, set `readiness: reviewed`.**
+  Do NOT set `readiness: approved` — only the user may promote to `approved`.
+  The scanner ignores `reviewed` ACs; the user must explicitly approve before
+  the scanner will pick them up.
+
+---
+
+## S7b Documentation Gate (mandatory — runs BEFORE S8 Self-Review)
+
+Before marking any AC batch as enriched, check for missing documentation ACs.
+
+**Step 1 — Identify triggered documentation types.**
+
+For each behavioral AC in the batch, check if its parent L1 has a
+`documentation_triggers` field set with one or more entries. Collect the
+union of all triggered types across the batch.
+
+**Step 2 — Verify documentation ACs exist.**
+
+For each triggered type, check whether the batch contains a corresponding
+documentation AC (with the correct `assigned_agent` and `level: L2`):
+
+| Trigger | Expected documentation AC |
+|---|---|
+| `how-to` | `assigned_agent: documentation-expert` |
+| `sequence-diagram` | `assigned_agent: architecture-diagram-author` |
+| `state-diagram` | `assigned_agent: architecture-diagram-author` |
+| `component-diagram` | `assigned_agent: architecture-diagram-author` |
+| `reference-doc` | `assigned_agent: documentation-expert` |
+
+**Step 3 — Fill the gap.**
+
+If a triggered type has no corresponding documentation AC:
+
+**Option A (preferred):** Create the missing documentation AC yourself. Write
+it to the same feature folder with the correct `assigned_agent`, `level: L2`,
+`readiness: reviewed`, and `depends_on` referencing the behavioral AC it
+documents.
+
+**Option B:** Refuse to set `readiness: reviewed` on the batch until the gap
+is resolved. Log which documentation types were missing and for which feature.
+
+**The invariant:** "Batches without documentation coverage for triggered
+categories MUST NOT receive `readiness: reviewed`."
+
+If `documentation_triggers` is `[]` or absent on all parent L1s, skip this gate.
 
 ---
 
@@ -458,6 +504,10 @@ Before presenting the confirmation gate, verify:
 [ ] 9. estimated_complexity is set on every AC.
 [ ] 10. Split ACs have correct depends_on ordering and superseded_by on the original.
 [ ] 11. Caveats are logged for every ambiguity found.
+[ ] 12. Every enriched AC has readiness: reviewed (not draft, not approved).
+[ ] 13. Documentation gate (S7b) passed: all triggered documentation types have
+       a corresponding documentation AC in the batch, or Option B was invoked
+       with explicit logging of missing types.
 ```
 
 ---

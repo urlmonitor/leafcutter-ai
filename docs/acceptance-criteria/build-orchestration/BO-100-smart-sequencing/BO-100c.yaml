@@ -1,4 +1,6 @@
 id: BO-100c
+readiness: reviewed
+priority: medium
 title: "Parallel work never creates merge conflicts"
 component: build-orchestration
 level: L1

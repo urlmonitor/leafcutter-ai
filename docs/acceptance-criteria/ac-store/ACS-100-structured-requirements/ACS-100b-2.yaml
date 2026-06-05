@@ -1,4 +1,6 @@
 id: ACS-100b-2
+readiness: reviewed
+priority: medium
 title: "L0 file uses the folder's base ID as its own ID"
 component: ac-store
 level: L2

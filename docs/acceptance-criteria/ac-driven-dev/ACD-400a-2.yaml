@@ -1,4 +1,6 @@
 id: ACD-400a-2
+readiness: reviewed
+priority: medium
 title: "Scanner JSON output conforms to a defined schema with ready and blocked lists"
 component: ac-driven-dev
 level: L2

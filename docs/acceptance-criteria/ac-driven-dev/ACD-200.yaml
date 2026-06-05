@@ -1,4 +1,6 @@
 id: ACD-200
+readiness: reviewed
+priority: medium
 title: "The AC authoring pipeline guarantees documentation ACs for every feature"
 component: ac-driven-dev
 level: L0
