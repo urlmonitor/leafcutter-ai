@@ -1,6 +1,6 @@
 ---
 title: "Dependency wiring — AC depends_on to ticket depends_on with cycle detection"
-status: in_progress
+status: done
 components:
   - ac-driven-dev
 created: 2026-06-05
