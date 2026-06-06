@@ -1,0 +1,33 @@
+id: PER-100
+readiness: draft
+priority: medium
+title: "Always know exactly who you are building for"
+component: persona-management
+level: L0
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_2
+criteria: |
+  Every feature targets a named persona with documented needs, so the team never builds in a vacuum.
+
+  Personas live as first-class entities in the project. Every AC can declare which
+  persona it serves. The PO, BA, and UX designer all see the same shared understanding
+  of who the user is and what they care about. Over time, this builds a knowledge graph
+  that answers "what do we offer persona X?" — useful for product decisions, sales
+  positioning, and eventual site customization.
+depends_on: []
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-06
+amended_by: []
+superseded_by: null
+covered_by:
+  - PER-100a
+  - PER-100b
+  - PER-100c
+  - PER-100d
+  - PER-100e
+implemented_by: []

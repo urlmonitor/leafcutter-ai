@@ -1,0 +1,48 @@
+id: KM-KQS-033
+readiness: draft
+priority: medium
+title: "Agent Protocol specifies zero-result and empty-graph handling as non-error conditions"
+component: knowledge-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the knowledge-query SKILL.md contains an "Agent Protocol" section,
+  When a consuming agent reads the Agent Protocol to determine how to handle
+    a query that returns zero matching nodes,
+  Then the protocol distinguishes two scenarios:
+    (a) "zero results" — the graph contains nodes but none match the query,
+    (b) "empty graph" — the graph contains zero nodes total (fresh project),
+  And for both scenarios the protocol specifies the same continuation behavior:
+    the agent logs an assumption and proceeds without error,
+  And the protocol specifies the exact log message format for zero results:
+    "knowledge-query returned 0 nodes for '<query-term>' — proceeding with
+    file-based context only",
+  And the protocol specifies the exact log message format for empty graph:
+    "knowledge-query: graph contains 0 nodes (fresh project) — proceeding
+    with file-based context only",
+  And the protocol states that neither condition triggers a user-facing prompt,
+    a retry, or a blocked status,
+  And the protocol states that the agent's output quality must not degrade
+    (no empty or placeholder fields) when graph context is unavailable.
+depends_on: [KM-KQS-040]
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: context
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to:
+  agent: llm-expert
+  contract: "Agent Protocol section containing zero-result and empty-graph handling rules with exact log message templates"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

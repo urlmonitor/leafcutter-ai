@@ -1,0 +1,27 @@
+id: BP-700b
+title: "Projects without frontend work are never bothered"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  The agent exists in every install but only activates when relevant.
+
+  Backend-only or data-only projects never see this agent dispatched. The
+  system determines whether frontend work is present and routes accordingly,
+  so the agent adds no noise to projects where it has nothing to contribute.
+depends_on:
+  - BP-700
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Dispatch logic is internal routing — no user-facing behavior introduced beyond the absence of noise."

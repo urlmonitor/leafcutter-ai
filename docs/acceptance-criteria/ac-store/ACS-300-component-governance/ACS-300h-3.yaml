@@ -1,0 +1,39 @@
+id: ACS-300h-3
+title: "Ordering in agent_affinity conveys implementor priority"
+component: ac-store
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given a component entry has agent_affinity: ["python-coder", "frontend-coder"],
+  When the IT PO reads the entry to assign an agent to a ticket,
+  Then the first element ("python-coder") is treated as the primary implementor,
+  And subsequent elements are secondary or fallback choices.
+  And the components.json schema documentation (or a companion doc)
+    explicitly states that array order represents priority --
+    first element is the preferred agent, subsequent elements are
+    used when the primary is unavailable or the ticket spans multiple
+    implementation domains.
+depends_on: [ACS-300h-1]
+doc_links:
+  - path: docs/components.json
+    relationship: extends
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must document the ordering convention in components.json itself (e.g. a top-level comment or companion schema doc)"
+  - "Must populate agent_affinity arrays with agents listed in descending priority order for all 20 entries"
+delivers_to: null
+expects_from:
+  ac_id: ACS-300h-1
+  contract: "Every component entry has an agent_affinity array field present"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,50 @@
+id: ACD-1200a-2
+readiness: reviewed
+priority: medium
+title: "One ticket file is generated per leaf AC in the collected set"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the tree traversal for goal ACD-050 has identified 3 leaf ACs:
+    - ACD-050a-1 (title: "Validate input schema")
+    - ACD-050a-2-i (title: "Reject oversized payloads")
+    - ACD-050b-1 (title: "Return 404 for unknown IDs")
+  When the system generates tickets for the collected leaves,
+  Then it produces exactly 3 ticket files (one per leaf AC)
+  And each ticket file contains the ac_coverage field referencing its source AC ID
+  And each ticket's title derives from the source AC's title
+  And the ticket generation uses the same mechanism as the single-AC /build-ac path
+    (generate_ticket_from_ac.py per AC).
+depends_on: [ACD-1200a, ACD-1200a-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/diagrams/c2-004-build-ac-flow.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must invoke generate_ticket_from_ac.py once per leaf AC (reusing existing script, not reimplementing)"
+  - "Must handle errors gracefully if generate_ticket_from_ac.py fails for one AC — report the failure and continue with remaining ACs"
+  - "Must write the implemented_by back-reference to each AC YAML file per ADR-010 convention"
+  - "Must complete batch generation in <5 seconds for up to 50 leaf ACs"
+delivers_to:
+  agent: python-coder
+  contract: "list[str] — absolute file paths of generated ticket .md files on disk, one per leaf AC. Each ticket contains frontmatter with source_ac: <ac_id> and ac_coverage: [<ac_id>]."
+expects_from:
+  ac_id: ACD-1200a-1
+  contract: "list[str] — ordered list of leaf AC IDs to generate tickets from"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

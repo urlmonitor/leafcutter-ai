@@ -1,0 +1,22 @@
+id: BP-600b
+title: "Quality assurance without the ceremony"
+component: build-pipeline
+level: L1
+status: active
+work_status: todo
+criteria: |
+  A formal acceptance criterion is created — permanent and auditable.
+
+  The workflow produces a real AC YAML file in the AC store under
+  docs/acceptance-criteria/, capturing what the fix proves. This AC persists
+  after the fix is done, so future regressions of the same bug are caught
+  by the standing test infrastructure.
+depends_on:
+  - BP-600
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

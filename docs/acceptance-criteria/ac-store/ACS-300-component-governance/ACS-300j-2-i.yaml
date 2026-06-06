@@ -1,0 +1,37 @@
+id: ACS-300j-2-i
+title: "Circular dependency is detected and rejected with cycle identification"
+component: ac-store
+level: L3
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given docs/components.json contains components X, Y, Z where:
+    X depends_on: [Y], Y depends_on: [Z], Z depends_on: [X],
+  When the validator builds the dependency graph,
+  Then it rejects the file with a non-zero exit code,
+  And the error message identifies the cycle with the full path:
+    "Dependency cycle detected: X -> Y -> Z -> X",
+  And all components participating in the cycle are named.
+depends_on: [ACS-300j-2]
+doc_links:
+  - path: docs/components.json
+    relationship: extends
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must report the full cycle path in the error message (not just the first node)"
+  - "Must handle multiple disconnected cycles in the same graph (report all of them)"
+delivers_to: null
+expects_from:
+  ac_id: ACS-300j-2
+  contract: "Graph construction and acyclicity check logic that this edge case exercises"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

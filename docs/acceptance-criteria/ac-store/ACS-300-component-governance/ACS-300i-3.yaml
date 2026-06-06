@@ -1,0 +1,39 @@
+id: ACS-300i-3
+title: "Interface type values are restricted to the enumerated set"
+component: ac-store
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given a component entry has an exposed_interfaces element with
+    type: "random_string" (a value not in the allowed set),
+  When the validator checks the type field,
+  Then the entry is rejected with an error naming the invalid type value
+    and listing the 7 allowed values:
+    file_contract, json_schema, function_signature, cli_command,
+    hook_protocol, event, data_shape.
+  And the error identifies the component ID and interface name
+    where the violation occurred.
+depends_on: [ACS-300i-1]
+doc_links:
+  - path: docs/components.json
+    relationship: extends
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must define the 7 allowed type values as a constant (not hard-coded in multiple places)"
+  - "Error message must list all 7 allowed values to aid the author in correcting the entry"
+delivers_to: null
+expects_from:
+  ac_id: ACS-300i-1
+  contract: "Schema validation logic that parses exposed_interfaces elements"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,27 @@
+id: BP-800c
+title: "Best practices grow over time"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_2
+criteria: |
+  Language knowledge is curated separately and improves with each package update.
+
+  The behavioral best practices for each language are maintained as an
+  independent knowledge layer. When the package updates, your generated agents
+  get smarter automatically — without you editing config or re-running setup.
+depends_on:
+  - BP-800
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - reference-doc

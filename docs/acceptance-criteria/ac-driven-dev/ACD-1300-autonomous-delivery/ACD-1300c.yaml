@@ -1,0 +1,32 @@
+id: ACD-1300c
+readiness: draft
+priority: medium
+title: "Blocked agents save their work and ask for help without losing progress"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  When an agent cannot continue, it preserves everything and tells you what it needs.
+
+  If an agent encounters ambiguity, a missing answer, or a test failure it
+  cannot resolve, it saves all its work in its feature workspace (no progress
+  is lost), then submits a structured request explaining what it needs to
+  continue. The request includes enough context for you to answer without
+  re-reading the agent's entire history.
+depends_on:
+  - ACD-1300
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - sequence-diagram

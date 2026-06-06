@@ -1,0 +1,31 @@
+id: ACD-1300f
+readiness: draft
+priority: medium
+title: "Only fully refined work enters the build queue"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  The autopilot never builds ambiguous or incomplete requirements.
+
+  Only ACs that have passed through all authoring stages (PO, BA, IT PO),
+  have readiness set to approved, and have no unanswered questions are
+  eligible for the build queue. Everything else stays in the backlog until
+  it is fully refined. This guarantees that agents start building with
+  clear, complete instructions every time.
+depends_on:
+  - ACD-1300
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Enforces an existing readiness gate -- no new user-facing behavior to document."

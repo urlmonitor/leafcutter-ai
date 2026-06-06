@@ -1,0 +1,48 @@
+id: ACS-300k-2
+title: "Agent templates referencing index.yaml for component metadata are migrated to components.json"
+component: ac-store
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given three agent templates currently reference
+    docs/acceptance-criteria/index.yaml for component metadata:
+    business-analyst-v3, business-analyst-v2, product-owner-v3,
+  When those templates are updated as a one-time migration,
+  Then they reference docs/components.json (or the {{components_table}} placeholder)
+    for component names, types, descriptions, and agent affinity.
+  And any remaining index.yaml references in those templates are scoped
+    solely to looking up the AC file-naming prefix for a given component.
+  And this migration is verified by manual review of the three templates
+    (no ongoing pre-commit hook enforcement is required).
+depends_on: [ACS-300k-1]
+doc_links:
+  - path: docs/components.json
+    relationship: governs
+    status: exists
+  - path: docs/acceptance-criteria/index.yaml
+    relationship: scopes
+    status: exists
+  - path: docs/how-to/creating-an-agent-template.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Must update templates/agents/business-analyst-v3.md, templates/agents/business-analyst-v2.md, and templates/agents/product-owner-v3.md"
+  - "Must replace component metadata lookup instructions to reference {{components_table}} or docs/components.json"
+  - "Must preserve any index.yaml references that are solely for AC-prefix lookup"
+  - "Must not break the templates' existing frontmatter or prompt structure"
+delivers_to: null
+expects_from:
+  ac_id: ACS-300k-1
+  contract: "The {{components_table}} placeholder mechanism exists so templates can reference it"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

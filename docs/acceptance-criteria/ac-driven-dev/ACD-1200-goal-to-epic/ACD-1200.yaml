@@ -1,0 +1,34 @@
+id: ACD-1200
+readiness: draft
+priority: medium
+title: "Turn any goal into a ready-to-build work package with one command"
+component: ac-driven-dev
+level: L0
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Ship a complete feature by pointing at the goal — no hand-assembling tickets.
+
+  When you have defined a goal (L0) or feature (L1) in the AC store with its
+  full tree of behavioral and technical ACs beneath it, a single command turns
+  that tree into a complete epic folder with wired tickets, correct dependency
+  order, and target_epic tags. You never manually create ticket files, wire
+  dependencies, or remember which ACs still need approval. The gap between
+  "requirements are defined" and "work is buildable" disappears.
+depends_on: [ACD-700]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1200a
+  - ACD-1200b
+  - ACD-1200c
+  - ACD-1200d
+  - ACD-1200e
+implemented_by: []

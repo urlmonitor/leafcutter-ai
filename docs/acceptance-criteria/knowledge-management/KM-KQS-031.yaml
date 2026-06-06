@@ -1,0 +1,39 @@
+id: KM-KQS-031
+readiness: draft
+priority: medium
+title: "Agents know how and when to invoke the knowledge query"
+component: knowledge-management
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given agents (PO v3, BA v3, IT PO v3) need to query the knowledge graph
+    during their knowledge-acquisition phases,
+  When the knowledge-query SKILL.md is loaded by any consuming agent,
+  Then the SKILL.md contains an "Agent Protocol" section that defines:
+    the standard invocation syntax, the mandatory-invocation rule, and the
+    self-contained structure for single-line delegation,
+  And each consuming agent template delegates to "follow the Agent Protocol
+    in knowledge-query SKILL.md" rather than repeating the invocation logic inline,
+  And agent-specific concerns (which surfaces to query, when to query,
+    what to do with results) remain in each agent template.
+depends_on: []
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: context
+    status: exists
+assigned_agent: null
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by:
+  - reason: "split: KM-KQS-031 -> KM-KQS-031 + KM-KQS-040, 2026-06-06"
+superseded_by: null
+covered_by: [KM-KQS-032, KM-KQS-036, KM-KQS-039]
+implemented_by: []

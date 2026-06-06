@@ -1,0 +1,52 @@
+id: ACD-300e-2-i
+readiness: approved
+priority: medium
+title: "Agent proceeds with baseline context when knowledge-query returns no matching nodes"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given any of the three authoring agents (PO v3, BA v3, IT PO v3) invokes
+    knowledge-query with a keyword or component name during S1,
+  When the knowledge-query script returns zero matching nodes
+    (the graph contains nodes but none match the query),
+  Then the agent logs the assumption: "knowledge-query returned 0 nodes for
+    '<query-term>' — no related context discovered, proceeding with
+    file-based reads only",
+  And the agent continues its normal S1 workflow without error or retry,
+  And the agent does not present a deduplication warning to the user,
+  And the agent does not add any doc_links derived from the empty result,
+  And the final AC output is structurally identical to what the agent would
+    produce without the knowledge-query feature (no empty or placeholder fields).
+depends_on: [ACD-300e-2]
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/product-owner-v3.md
+    relationship: modifies
+    status: exists
+  - path: templates/agents/business-analyst-v3.md
+    relationship: modifies
+    status: exists
+  - path: templates/agents/it-po-v3.md
+    relationship: modifies
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Must add the zero-result handling prose to all three agent templates, not just one"
+  - "Must not introduce any user-facing prompts or confirmation gates when results are empty"
+  - "Must ensure the fallback behavior is consistent across all three templates — same log message format, same continuation behavior"
+delivers_to: null
+expects_from:
+  ac_id: ACD-300e-2
+  contract: "PO v3 template contains a knowledge-query invocation block in S1 that this AC's zero-result handling augments"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

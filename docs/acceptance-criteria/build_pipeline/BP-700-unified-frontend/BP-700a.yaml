@@ -1,0 +1,28 @@
+id: BP-700a
+title: "Design quality is built in, not bolted on"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  The frontend specialist applies visual and UX principles by default.
+
+  When the agent is dispatched for frontend work, it arrives with design
+  best practices already loaded — typographic hierarchy, spacing, colour
+  choices, and component personality. No separate skill activation needed.
+depends_on:
+  - BP-700
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - component-diagram

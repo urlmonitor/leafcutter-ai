@@ -1,0 +1,42 @@
+id: BP-600b-3
+title: "Quick-fix AC persists after the fix ticket lifecycle closes"
+component: build-pipeline
+level: L2
+status: active
+readiness: reviewed
+priority: medium
+work_status: todo
+criteria: |
+  Given the quick-fix workflow has completed end-to-end (fix committed
+    and ticket closed),
+  When the user lists AC files under docs/acceptance-criteria/,
+  Then the AC YAML file created by the quick-fix workflow still exists,
+  And its status field is "active",
+  And it is not deleted or moved by the ticket lifecycle close step.
+depends_on:
+  - BP-600b
+  - BP-600b-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: workflow-architect
+estimated_complexity: S
+it_requirements:
+  - "Must operate at depth 0 per ADR-006 — phase agents dispatched at depth 1 via the Agent tool"
+  - "Requires Claude Code >= 2.1.154 for JS workflow script support"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Ticket lifecycle close must never delete or modify AC store files"
+delivers_to: null
+expects_from:
+  ac_id: BP-600b-1
+  contract: "AC YAML file path created during the AC phase — must not be included in any cleanup or archival logic"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

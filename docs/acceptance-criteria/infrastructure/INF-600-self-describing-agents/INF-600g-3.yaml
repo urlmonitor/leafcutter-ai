@@ -1,0 +1,54 @@
+id: INF-600g-3
+title: "Build cross-references skills_invoked against actual skill usage in agent template body"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given an agent registry entry for "research-agent" with skills_invoked
+    containing only an entry for "signoff"
+  And the agent's template body contains an instruction to invoke the
+    knowledge-query skill (e.g. a directive like "load the knowledge-query
+    skill" or a Skill tool invocation pattern referencing "knowledge-query")
+  When the build cross-references each agent's skills_invoked array
+    against skill references found in its template body
+  Then it emits a warning for each skill referenced in the template
+    but absent from skills_invoked:
+    "research-agent: template references skill 'knowledge-query' but
+     skills_invoked does not declare it"
+  And it emits a warning for each skill declared in skills_invoked
+    but not referenced anywhere in the template body:
+    "research-agent: skills_invoked declares 'orphan-skill' but
+     no reference found in template body"
+  And both warning directions are checked (template -> registry AND
+    registry -> template)
+depends_on:
+  - INF-600g
+  - INF-600a-1
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+  - path: templates/agents/research-agent.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+  agent: python-coder
+  contract: "A bidirectional cross-reference check between skills_invoked declarations and template body skill references"
+expects_from:
+  ac_id: INF-600a-1
+  contract: "skills_invoked array exists in registry entries"
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

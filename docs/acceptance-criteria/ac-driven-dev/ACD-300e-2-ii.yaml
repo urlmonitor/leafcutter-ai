@@ -1,0 +1,55 @@
+id: ACD-300e-2-ii
+readiness: approved
+priority: medium
+title: "Agent degrades gracefully when knowledge-query fails with an error"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given any of the three authoring agents (PO v3, BA v3, IT PO v3) invokes
+    knowledge-query during S1,
+  When the knowledge-query script exits with a non-zero exit code
+    (e.g., paths.json is absent, the script file is missing, or an unknown
+    surface name was passed),
+  Then the agent captures the error message from the script's output,
+  And the agent logs a warning: "knowledge-query failed: <error message> —
+    skipping graph context, proceeding with file-based reads only",
+  And the agent does NOT abort its workflow or return a blocked status,
+  And the agent does NOT retry the failed query,
+  And the agent continues through the remainder of S1 and produces its
+    AC output normally using only file-based context,
+  And the agent does NOT present the error to the user unless the user
+    has requested verbose output.
+depends_on: [ACD-300e-2]
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/product-owner-v3.md
+    relationship: modifies
+    status: exists
+  - path: templates/agents/business-analyst-v3.md
+    relationship: modifies
+    status: exists
+  - path: templates/agents/it-po-v3.md
+    relationship: modifies
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Must add the error-handling prose to all three agent templates, not just one"
+  - "Must not introduce retry logic — single attempt, then degrade"
+  - "Must not cause the agent to return status: blocked when the knowledge-query script is unavailable"
+  - "Must handle both 'script not found' and 'script exits non-zero' scenarios in the template instructions"
+delivers_to: null
+expects_from:
+  ac_id: ACD-300e-2
+  contract: "PO v3 template contains a knowledge-query invocation block in S1 that this AC's error-handling augments"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

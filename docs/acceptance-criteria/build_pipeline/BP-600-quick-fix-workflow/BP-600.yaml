@@ -1,0 +1,29 @@
+id: BP-600
+title: "Fix known bugs in minutes, not hours — without losing quality discipline"
+component: build-pipeline
+level: L0
+status: active
+work_status: todo
+criteria: |
+  Go from "I know exactly what is wrong" to "fixed, tested, and closed" in one shot.
+
+  When you have already diagnosed a bug — you know the root cause, you know
+  the file and line — you should not have to navigate the full build pipeline
+  to get it fixed properly. A single command takes your diagnosis, ensures the
+  fix is backed by a formal acceptance criterion, proves correctness through
+  tests, and closes the full lifecycle (commit, PR, ticket done) without ever
+  leaving your current branch. Speed and discipline are not in tension.
+depends_on:
+  - BP-300
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-600a
+  - BP-600b
+  - BP-600c
+  - BP-600d
+  - BP-600e
+implemented_by: []

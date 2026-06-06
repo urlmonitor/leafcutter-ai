@@ -1,0 +1,36 @@
+id: ACS-300g-1-ii
+title: "Entry with detail_ref pointing to a non-existent file is rejected"
+component: ac-store
+level: L3
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given a new component entry has detail_ref set to
+    "docs/architecture/components/nonexistent.md",
+  When check_components_integrity.py validates the entry,
+  Then the entry is rejected with an error message naming the missing file path,
+  And the error includes both the component ID and the unreachable detail_ref value.
+depends_on: [ACS-300g-1]
+doc_links:
+  - path: docs/components.json
+    relationship: governs
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must verify detail_ref path existence relative to the repository root"
+  - "Must include both the component ID and the invalid path in the error message"
+  - "Must exit with non-zero code when a detail_ref path is unreachable"
+delivers_to: null
+expects_from:
+  ac_id: ACS-300g-1
+  contract: "Schema validation logic that this edge case exercises"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

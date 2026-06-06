@@ -1,0 +1,60 @@
+id: ACD-300e-5
+readiness: approved
+priority: medium
+title: "Agents cite knowledge-graph findings in their output to support deduplication and cross-referencing"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given any of the three authoring agents (PO v3, BA v3, IT PO v3) has
+    received results from a knowledge-query invocation during S1,
+  When the agent detects that a knowledge-graph node overlaps with a behavior
+    it is about to author or enrich,
+  Then it presents the overlap to the user before proceeding, stating:
+    the overlapping node's surface, title, and id (e.g., "[agents] python-coder"
+    or "[docs] architecture/components/build-orchestration.md"),
+  And when the overlap is with an existing AC, the agent includes the
+    overlapping AC's id and title in a deduplication warning
+    ("ACD-200a-1 already specifies this behavior — skipping or creating a variant"),
+  And when the overlap is with a doc or ADR, the agent adds the path to the
+    new AC's doc_links field with relationship: "context",
+  And if no overlapping nodes are found, the agent logs an assumption:
+    "knowledge-query returned no related nodes for <query> — proceeding
+    with file-based context only" and does not block.
+depends_on: [ACD-300e, ACD-300e-2, ACD-300e-3, ACD-300e-4]
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/product-owner-v3.md
+    relationship: modifies
+    status: exists
+  - path: templates/agents/business-analyst-v3.md
+    relationship: modifies
+    status: exists
+  - path: templates/agents/it-po-v3.md
+    relationship: modifies
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Must add citation and deduplication behavior to all three agent templates"
+  - "Must specify a consistent citation format across all three templates — same surface/title/id structure"
+  - "Must not introduce blocking confirmation gates that halt the agent when overlap is found — present the overlap, then continue"
+  - "Must ensure the deduplication warning is surfaced at the user confirmation gate, not suppressed"
+  - "Must handle the case where knowledge-query returns nodes from multiple surfaces in a single result set"
+delivers_to: null
+expects_from:
+  ac_id: ACD-300e-2
+  contract: "PO v3 template contains a knowledge-query invocation block that produces results for this AC's citation logic to consume"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,39 @@
+id: KM-KQS-040
+readiness: draft
+priority: medium
+title: "Agents handle knowledge-query failures and format results consistently"
+component: knowledge-management
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given agents need to handle failure modes and format knowledge-graph
+    results during their knowledge-acquisition phases,
+  When the knowledge-query script returns zero results, encounters an
+    empty graph, fails to run, or returns overlapping nodes,
+  Then the Agent Protocol section in SKILL.md defines the exact handling
+    behavior for each case: log messages for zero-result and empty-graph
+    conditions, graceful degradation on script failure, and citation and
+    deduplication formats for overlapping findings,
+  And agents proceed without error in all non-success cases using
+    file-based context as a fallback.
+depends_on: []
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: context
+    status: exists
+assigned_agent: null
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-06
+amended_by:
+  - reason: "split: KM-KQS-031 -> KM-KQS-031 + KM-KQS-040, 2026-06-06"
+superseded_by: null
+covered_by: [KM-KQS-033, KM-KQS-034, KM-KQS-035]
+implemented_by: []

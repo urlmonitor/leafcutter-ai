@@ -1,0 +1,48 @@
+id: ACS-300g-1
+title: "Each backfilled component entry satisfies the minimum schema"
+component: ac-store
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given docs/components.json receives a new component entry for a subsystem
+    (e.g. id: "supervisor_system"),
+  When the entry is validated by check_components_integrity.py,
+  Then it contains all required fields:
+    id (string, snake_case),
+    name (string),
+    type (one of "infrastructure", "utility", "orchestration", "coding",
+          "review", "documentation", "analysis"),
+    description (string, >= 10 characters),
+    status (one of "active", "reviewed", "planned"),
+    and primary_code (array of >= 1 path string).
+  And detail_ref is either a valid path to an on-disk Markdown file
+    or null (indicating no architecture doc exists yet).
+depends_on: []
+doc_links:
+  - path: docs/components.json
+    relationship: governs
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must extend the existing check_components_integrity.py hook rather than creating a new validator"
+  - "Must validate all fields listed in criteria without false positives on existing valid entries"
+  - "Must complete validation of the full components.json in <1s"
+  - "Must handle errors gracefully per the project error handling policy"
+delivers_to:
+  agent: python-coder
+  contract: "Schema validation logic in check_components_integrity.py that validates required fields (id, name, type, description, status, primary_code) and detail_ref (string path or null) for each component entry"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,41 @@
+id: ACS-300h-2-i
+title: "Stale agent ID detection after registry removal"
+component: ac-store
+level: L3
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given a component entry has agent_affinity: ["deprecated-agent"],
+  When "deprecated-agent" is removed from config/agent_registry.json
+    and the component integrity validator is run,
+  Then the validation fails with an error:
+    "Component '<component_id>' references agent 'deprecated-agent'
+    which is not in agent_registry.json".
+  And the error lists the component ID, the stale agent ID,
+    and the file path of the offending entry.
+depends_on: [ACS-300h-2]
+doc_links:
+  - path: docs/components.json
+    relationship: extends
+    status: exists
+  - path: config/agent_registry.json
+    relationship: validates-against
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must detect stale references at validation time (not just at entry creation time)"
+  - "Must report all stale references in a single run, not fail on the first one"
+delivers_to: null
+expects_from:
+  ac_id: ACS-300h-2
+  contract: "Cross-reference validation logic that this edge case exercises"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

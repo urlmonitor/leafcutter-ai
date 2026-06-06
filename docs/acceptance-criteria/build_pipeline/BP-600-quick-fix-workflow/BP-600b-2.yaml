@@ -1,0 +1,47 @@
+id: BP-600b-2
+title: "Quick-fix AC uses the correct component prefix and sequential ID"
+component: build-pipeline
+level: L2
+status: active
+readiness: reviewed
+priority: medium
+work_status: todo
+criteria: |
+  Given the AC store for component "build-pipeline" already contains ACs
+    with IDs BP-001 through BP-006,
+  When the quick-fix workflow creates a new AC for a bug in the
+    build-pipeline component,
+  Then the new AC has the prefix "BP" matching the component's prefix
+    in index.yaml,
+  And its numeric suffix is the next available sequential integer
+    (never reusing a retired or existing ID).
+depends_on:
+  - BP-600b
+  - BP-600b-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/index.yaml
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: workflow-architect
+estimated_complexity: S
+it_requirements:
+  - "Must operate at depth 0 per ADR-006 — phase agents dispatched at depth 1 via the Agent tool"
+  - "Requires Claude Code >= 2.1.154 for JS workflow script support"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "ID allocation must be atomic — no race condition if multiple quick-fix workflows run concurrently"
+delivers_to: null
+expects_from:
+  ac_id: BP-600b-1
+  contract: "AC creation logic that reads index.yaml for component prefix and scans existing AC files for the highest numeric suffix"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,30 @@
+id: ACD-1300b
+readiness: draft
+priority: medium
+title: "Multiple features build at the same time up to a limit you choose"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  The system works on several features in parallel, each in its own workspace.
+
+  Rather than building one feature at a time, the autopilot runs multiple
+  builds concurrently -- each in an isolated workspace so they cannot interfere
+  with each other. You configure the concurrency limit based on your resources
+  and comfort level. The system respects dependency order within the limit.
+depends_on:
+  - ACD-1300
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - how-to

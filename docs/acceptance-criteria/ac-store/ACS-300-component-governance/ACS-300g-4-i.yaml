@@ -1,0 +1,38 @@
+id: ACS-300g-4-i
+title: "Write tooling rejects duplicate component ID"
+component: ac-store
+level: L3
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given docs/components.json already contains an entry with id "build_pipeline",
+  When the write tooling is invoked with a new definition that also has
+    id "build_pipeline",
+  Then the operation fails with exit code 1,
+  And an error message identifies the duplicate:
+    "Component 'build_pipeline' already exists in components.json",
+  And docs/components.json is not modified.
+depends_on: [ACS-300g-4a]
+doc_links:
+  - path: docs/components.json
+    relationship: governs
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must check for duplicate IDs before any write operation"
+  - "Must leave components.json completely unmodified on duplicate rejection (no partial writes)"
+  - "Must exit with code 1 (not 2 or other) for duplicate ID specifically"
+delivers_to: null
+expects_from:
+  ac_id: ACS-300g-4a
+  contract: "Write tooling Python script that this edge case exercises"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

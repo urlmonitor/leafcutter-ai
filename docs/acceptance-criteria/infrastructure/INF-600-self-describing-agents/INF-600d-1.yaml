@@ -1,0 +1,47 @@
+id: INF-600d-1
+title: "spawn_allowlist excludes agents whose capability is performed via a skill rather than delegation"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given an agent (e.g. "python-coder") that performs test execution
+    directly via its own Bash tool calls (running pytest itself)
+    rather than spawning a separate "test-runner" agent
+  When the agent's registry entry is inspected
+  Then spawn_allowlist does NOT include agents whose work
+    the agent performs itself via a skill or direct tool invocation
+  And specifically: if the agent runs tests directly (via a skill
+    or via inline pytest invocation), "test-runner" is absent from
+    its spawn_allowlist
+  And the skill-based capability is reflected in skills_invoked
+    (e.g. a "run-tests" skill entry) rather than in spawn_allowlist
+  And the spawn diagram generated from this registry entry does NOT
+    show a spawn edge to the agent whose capability is self-performed
+depends_on:
+  - INF-600d
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+  - path: docs/agents/cards/python-coder.card.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: "Registry spawn_allowlist accurately reflects only agents that are actually spawned, not capabilities performed via skills"
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

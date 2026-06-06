@@ -1,0 +1,29 @@
+id: ACD-1200e
+readiness: draft
+priority: medium
+title: "The existing command just gets smarter"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  No new command to learn — /build-ac detects whether the target is a leaf or a goal and does the right thing.
+
+  When invoked with a leaf-level AC, the command behaves as it does today
+  (single ticket, single build). When invoked with an L0 or L1 AC, it
+  switches to epic-generation mode automatically. The user's mental model
+  stays the same: "build-ac means build from the AC store."
+depends_on: [ACD-1200a, ACD-700a]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - how-to

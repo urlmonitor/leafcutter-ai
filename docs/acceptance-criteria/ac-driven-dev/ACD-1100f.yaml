@@ -1,0 +1,31 @@
+id: ACD-1100f
+readiness: approved
+priority: high
+title: "Existing AC stores and tickets continue working after upgrade"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Existing work survives the version bump without manual fixup.
+
+  AC stores, ticket files, and in-progress workflows created under v1.x
+  continue to function after upgrading to v2.0. No data migration is
+  required. Historical references to old agent names in existing files
+  (such as origin_agent: business-analyst-v2 in AC YAML) remain valid as
+  provenance — they are not rewritten and do not cause validation errors.
+  The upgrade path is: install v2.0, rebuild, and keep working.
+depends_on: [ACD-1100]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1100f-1
+implemented_by: []

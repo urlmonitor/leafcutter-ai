@@ -1,0 +1,29 @@
+id: BO-1200a
+readiness: draft
+priority: medium
+title: "The stable version is always ready to show"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  A released, tagged version that works and can be demonstrated at any time.
+
+  There is always a production version of the product that is known-good. It
+  only changes when you deliberately cut a release. Between releases, the
+  stable version is frozen and trustworthy -- nothing lands in it automatically.
+depends_on:
+  - BO-1200
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - how-to

@@ -1,0 +1,54 @@
+id: ACD-300e-5-i
+readiness: approved
+priority: medium
+title: "Agents do not block when the knowledge graph is entirely empty (fresh project)"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a freshly installed project where paths.json exists but no surfaces
+    contain any indexed nodes (zero agents, zero tickets, zero docs, zero skills),
+  When any of the three authoring agents invokes knowledge-query during S1
+    without a keyword filter (requesting the full graph),
+  Then the knowledge-query script returns an empty node list with zero nodes
+    and zero edges,
+  And the agent treats the empty result identically to a "no matching nodes"
+    result (logs the assumption and proceeds),
+  And the agent does NOT prompt the user with "the knowledge graph is empty —
+    should I continue?" or any equivalent confirmation,
+  And the agent produces valid AC output using only its file-based
+    context reads (S0 memory files, component docs, AC store files),
+  And the absence of graph context does not cause any field in the output
+    AC YAML to be left blank or set to a placeholder value.
+depends_on: [ACD-300e-5]
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/product-owner-v3.md
+    relationship: modifies
+    status: exists
+  - path: templates/agents/business-analyst-v3.md
+    relationship: modifies
+    status: exists
+  - path: templates/agents/it-po-v3.md
+    relationship: modifies
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Must ensure the empty-graph handling is consistent with the zero-result handling from ACD-300e-2-i — same log format, same continuation behavior"
+  - "Must not introduce any user-facing prompts or confirmation gates when the graph is empty"
+  - "Must ensure the agent template instructions explicitly state that an empty graph is a normal condition, not an error"
+delivers_to: null
+expects_from:
+  ac_id: ACD-300e-5
+  contract: "All three agent templates contain citation/deduplication logic that this AC's empty-graph handling augments"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

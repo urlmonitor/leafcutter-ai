@@ -1,0 +1,46 @@
+id: KM-KQS-038
+readiness: draft
+priority: medium
+title: "Agent Protocol distinguishes script-not-found from non-zero-exit in the warning message"
+component: knowledge-management
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the Agent Protocol section specifies error handling for two failure modes,
+  When a consuming agent encounters the script-not-found condition
+    (the Bash tool reports that scripts/knowledge_query.py does not exist),
+  Then the agent's warning message includes the literal text
+    "script not found" as the error_message portion:
+    "knowledge-query failed: script not found — skipping graph context,
+    proceeding with file-based reads only",
+  And when a consuming agent encounters the non-zero-exit condition
+    (the script exists but returns exit code != 0 with an error message
+    on stdout/stderr),
+  Then the agent's warning message includes the script's actual output
+    as the error_message portion:
+    "knowledge-query failed: <actual script output> — skipping graph context,
+    proceeding with file-based reads only",
+  And in both cases the continuation behavior is identical: no abort,
+    no retry, no blocked status, no user-facing prompt,
+  And the protocol makes clear that the consuming agent can distinguish
+    these two failure modes by the Bash tool's output format (command-not-found
+    error vs. non-zero exit with output), but the degradation path is the same.
+depends_on: [KM-KQS-034]
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: modifies
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: KM-KQS-034
+  contract: "Error handling rules in the Agent Protocol that define the warning format with <error_message> placeholder"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

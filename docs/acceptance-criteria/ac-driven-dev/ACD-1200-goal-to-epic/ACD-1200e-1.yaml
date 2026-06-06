@@ -1,0 +1,41 @@
+id: ACD-1200e-1
+readiness: reviewed
+priority: medium
+title: "/build-ac with a leaf AC continues the existing single-ticket behavior unchanged"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given AC ACS-101a-1 exists in the store with level: L2 and covered_by: []
+    (a leaf AC with no children),
+  When /build-ac is invoked with --ac ACS-101a-1,
+  Then the system detects that ACS-101a-1 is a leaf AC
+  And it follows the existing single-ticket path (ACD-700a behavior):
+    propose the AC, prompt for confirmation, generate one ticket, build it
+  And it does NOT invoke the epic-generation mode
+  And it does NOT create an EPIC- folder
+  And it does NOT display a readiness report or approval gate.
+depends_on: [ACD-1200e]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/diagrams/c2-004-build-ac-flow.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Must preserve backward compatibility with the existing /build-ac leaf path (ACD-700a behavior)"
+  - "Must not introduce regressions in the single-ticket flow when adding the epic-generation mode"
+  - "Must detect leaf status by checking covered_by is empty or absent"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

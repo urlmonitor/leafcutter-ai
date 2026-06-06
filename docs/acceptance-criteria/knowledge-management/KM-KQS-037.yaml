@@ -1,0 +1,41 @@
+id: KM-KQS-037
+readiness: draft
+priority: medium
+title: "Agent Protocol deduplication warning distinguishes AC overlap from doc/skill overlap"
+component: knowledge-management
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the Agent Protocol section specifies citation and deduplication formats,
+  When a consuming agent finds that knowledge-query returns nodes from
+    multiple surfaces (e.g., one AC node and one doc node for the same keyword),
+  Then the agent presents each overlapping node using the citation format
+    "[<surface>] <title>" grouped by surface,
+  And the agent applies the deduplication warning format ONLY to nodes whose
+    surface is "acs" or whose id matches the AC ID pattern (e.g., "ACD-200a-1"),
+  And the agent applies the doc_links auto-population rule ONLY to nodes
+    whose surface is "docs" or "adrs",
+  And nodes from other surfaces (agents, skills, hooks) are cited for
+    information but do not trigger deduplication warnings or doc_links additions,
+  And when a single query returns both an overlapping AC and an overlapping doc,
+    the agent presents BOTH the deduplication warning AND adds the doc to
+    doc_links in the same confirmation gate output.
+depends_on: [KM-KQS-035]
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: modifies
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: KM-KQS-035
+  contract: "Citation format and deduplication warning templates defined in the Agent Protocol section"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

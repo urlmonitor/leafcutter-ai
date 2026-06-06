@@ -29,3 +29,11 @@ components:
     prefix: INF
     description: "ACs for cross-cutting infrastructure: agent context injection, pre-commit hooks, and project conventions"
     owner: null
+  - id: ux-prototyping
+    prefix: UXP
+    description: "ACs for the UX prototyping agent: component-aware static mockups, user validation gates, and design-to-implementation handoff"
+    owner: null
+  - id: persona-management
+    prefix: PER
+    description: "ACs for persona definitions, AC targeting by persona, and persona knowledge graph queries"
+    owner: null

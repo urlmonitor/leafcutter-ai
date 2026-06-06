@@ -1,0 +1,40 @@
+id: ACS-300k-1-i
+title: "build.py fails gracefully when components.json is missing"
+component: ac-store
+level: L3
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given docs/components.json does not exist on disk
+    (deleted or not yet created),
+  When build.py attempts to compile an agent template
+    containing {{components_table}},
+  Then build.py exits with a non-zero code,
+  And the error message identifies the missing file:
+    "docs/components.json not found -- required for
+    {{components_table}} injection",
+  And no partially-compiled agent files are written to the output directory.
+depends_on: [ACS-300k-1]
+doc_links:
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must check for file existence before attempting to parse (fail fast)"
+  - "Must not write any output files when the build fails (atomic: all or nothing)"
+  - "Must handle errors gracefully per the project error handling policy"
+delivers_to: null
+expects_from:
+  ac_id: ACS-300k-1
+  contract: "The components.json injection phase that this failure mode exercises"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

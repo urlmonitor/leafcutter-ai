@@ -1,0 +1,40 @@
+id: ACS-300j-2
+title: "Dependency graph is verified as acyclic"
+component: ac-store
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given docs/components.json contains components A, B, and C where:
+    A depends_on: [B], B depends_on: [C], C depends_on: [],
+  When the validator builds a directed graph from all depends_on fields,
+  Then the graph is verified as acyclic (a topological sort succeeds),
+  And no error is emitted,
+  And the validator completes with exit code 0.
+depends_on: [ACS-300j-1]
+doc_links:
+  - path: docs/components.json
+    relationship: extends
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must use stdlib-only graph algorithm (no external graph library dependency)"
+  - "Must complete cycle detection in <1s for up to 100 components"
+  - "Must report the full cycle path when a cycle is detected (not just 'cycle found')"
+  - "Must handle disconnected subgraphs (not all components need to be in one connected graph)"
+delivers_to:
+  agent: python-coder
+  contract: "Directed graph construction from depends_on fields and topological sort with cycle path reporting"
+expects_from:
+  ac_id: ACS-300j-1
+  contract: "All depends_on references are valid component IDs before graph construction"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,39 @@
+id: ACS-300j-1
+title: "depends_on field references only valid component IDs"
+component: ac-store
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given a component entry has depends_on: ["agent_registry", "ac_store"],
+  When the validator cross-references each element against the set of
+    all component IDs in docs/components.json,
+  Then both "agent_registry" and "ac_store" are found as valid component IDs.
+  And if any depends_on value is not a valid component ID,
+    the validator rejects with an error naming:
+    the invalid reference, the component that declared it,
+    and the list of valid component IDs available.
+depends_on: []
+doc_links:
+  - path: docs/components.json
+    relationship: extends
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must validate depends_on as an array of strings (reject non-array or non-string elements)"
+  - "Must check that depends_on references exist within the same components.json file (self-contained validation)"
+  - "Error messages must list available component IDs to aid correction"
+delivers_to:
+  agent: python-coder
+  contract: "Reference validation logic ensuring all depends_on values are valid component IDs within the same components.json"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

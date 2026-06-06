@@ -1,0 +1,28 @@
+id: PER-100e
+readiness: draft
+priority: medium
+title: "New personas emerge from discovery, not guesswork"
+component: persona-management
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_2
+criteria: |
+  Personas are created and refined based on evidence, not assumptions.
+
+  The persona expert creates and refines personas based on user requests,
+  feature patterns, and market signals. Persona documents grow and sharpen
+  over time as the product evolves — they are living artifacts, not one-time
+  guesses frozen at project start.
+depends_on: [PER-100]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: [how-to]

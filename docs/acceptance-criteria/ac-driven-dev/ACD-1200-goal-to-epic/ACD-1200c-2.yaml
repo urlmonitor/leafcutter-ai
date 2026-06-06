@@ -1,0 +1,47 @@
+id: ACD-1200c-2
+readiness: reviewed
+priority: medium
+title: "Multi-hop dependency chains produce transitive ticket ordering"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given 4 leaf ACs form a chain:
+    - ACD-050a-1 (no AC-level depends_on to other leaves)
+    - ACD-050a-2 (depends_on includes ACD-050a-1)
+    - ACD-050a-3 (depends_on includes ACD-050a-2)
+    - ACD-050a-4 (depends_on includes ACD-050a-3)
+  When tickets are generated for all 4,
+  Then the ticket for ACD-050a-2 depends_on the ticket for ACD-050a-1
+  And the ticket for ACD-050a-3 depends_on the ticket for ACD-050a-2
+  And the ticket for ACD-050a-4 depends_on the ticket for ACD-050a-3
+  And the numeric prefixes on ticket filenames reflect this order:
+    01 < 02 < 03 < 04
+  And the supervisor can build them sequentially without consulting the AC store.
+depends_on: [ACD-1200c, ACD-1200c-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must produce a topological sort that respects all transitive dependencies"
+  - "Must assign monotonically increasing numeric prefixes to ticket filenames based on topological order"
+  - "Must handle diamond dependencies (A->B, A->C, B->D, C->D) without duplicate tickets"
+  - "Must be deterministic — same input produces same ordering on repeated runs"
+delivers_to: null
+expects_from:
+  ac_id: ACD-1200c-1
+  contract: "dict[str, list[str]] — mapping from leaf AC ID to list of leaf AC IDs it depends on (resolved inter-leaf edges)"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

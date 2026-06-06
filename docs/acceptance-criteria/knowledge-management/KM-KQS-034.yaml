@@ -1,0 +1,46 @@
+id: KM-KQS-034
+readiness: draft
+priority: medium
+title: "Agent Protocol specifies graceful degradation when the knowledge-query script fails"
+component: knowledge-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the knowledge-query SKILL.md contains an "Agent Protocol" section,
+  When a consuming agent reads the Agent Protocol to determine how to handle
+    a failed knowledge-query invocation,
+  Then the protocol covers two failure modes:
+    (a) script not found — scripts/knowledge_query.py does not exist on disk
+        (e.g., the leafcutter build has not been run),
+    (b) non-zero exit — the script exists but exits with a non-zero code
+        (e.g., paths.json is absent, an unknown surface name was passed),
+  And for both failure modes the protocol specifies the same degradation behavior:
+    the agent captures the error output, logs a warning, and continues,
+  And the protocol specifies the exact warning format:
+    "knowledge-query failed: <error_message> — skipping graph context,
+    proceeding with file-based reads only",
+  And the protocol states that the agent MUST NOT abort its workflow,
+    return a blocked status, retry the failed query, or present the error
+    to the user unless the user has requested verbose output,
+  And the protocol states that the agent continues its remaining
+    knowledge-acquisition steps and produces output using file-based
+    context alone.
+depends_on: [KM-KQS-040]
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: modifies
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to:
+  agent: llm-expert
+  contract: "Agent Protocol section containing error handling rules covering script-not-found and non-zero-exit with exact warning format"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

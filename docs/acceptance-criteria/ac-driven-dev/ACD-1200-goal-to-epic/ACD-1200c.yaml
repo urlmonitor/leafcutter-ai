@@ -1,0 +1,28 @@
+id: ACD-1200c
+readiness: draft
+priority: medium
+title: "Tickets arrive in the right build order"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  The generated epic wires ticket dependencies from the AC dependency chains automatically.
+
+  Each ticket's depends_on field reflects the depends_on relationships defined
+  in the source ACs, so the supervisor builds tickets in the correct sequence
+  without manual ordering or dependency discovery.
+depends_on: [ACD-1200a]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Dependency wiring is automatic and invisible to the user — no new user-facing behavior to document."

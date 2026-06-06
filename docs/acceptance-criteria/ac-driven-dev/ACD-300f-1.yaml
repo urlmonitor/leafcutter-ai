@@ -1,0 +1,48 @@
+id: ACD-300f-1
+readiness: draft
+priority: medium
+title: "SKILL.md defines three standard invocation patterns in an Agent Consumption Protocol section"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the knowledge-query SKILL.md currently contains "When to Use",
+    "Invocation", "Output Modes", "Surfaces Queried", and "Error Behaviour"
+    sections,
+  When the SKILL.md is extended with a new "Agent Consumption Protocol" section
+    positioned after the existing "Error Behaviour" section,
+  Then the protocol section defines exactly three invocation patterns:
+    (a) keyword query — "python scripts/knowledge_query.py --query <term>"
+        with instructions to derive <term> from the user's request or the
+        AC title being worked on,
+    (b) surface-filtered query — "python scripts/knowledge_query.py --surface <name>"
+        with instructions to use this when the agent needs all nodes from a
+        single surface (e.g., "agents" for agent discovery, "docs" for
+        documentation discovery),
+    (c) component-scoped query — "python scripts/knowledge_query.py --query <component>"
+        with instructions to use the component ID from the AC being authored,
+  And each pattern includes a one-sentence description of when to use it,
+  And the section is written as prose instructions addressed to "the consuming
+    agent" (not to a specific agent template),
+  And the section does NOT duplicate the existing "Invocation" section's CLI
+    reference — it references it instead ("see Invocation above for full flag
+    reference").
+depends_on: [ACD-300f]
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: modifies
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to:
+  agent: llm-expert
+  contract: "SKILL.md contains an 'Agent Consumption Protocol' section with three named invocation patterns that downstream ACs reference"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

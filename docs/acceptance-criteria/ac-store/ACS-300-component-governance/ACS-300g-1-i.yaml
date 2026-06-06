@@ -1,0 +1,34 @@
+id: ACS-300g-1-i
+title: "Entry with null detail_ref is accepted without error"
+component: ac-store
+level: L3
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given a new component entry has detail_ref set to null,
+  When check_components_integrity.py validates the entry,
+  Then the entry is accepted without error,
+  And no warning is emitted about the missing documentation file.
+depends_on: [ACS-300g-1]
+doc_links:
+  - path: docs/components.json
+    relationship: governs
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must treat null as a valid value for detail_ref (not as a missing field)"
+  - "Must not emit any output (warning or error) for null detail_ref entries"
+delivers_to: null
+expects_from:
+  ac_id: ACS-300g-1
+  contract: "Schema validation logic that this edge case exercises"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

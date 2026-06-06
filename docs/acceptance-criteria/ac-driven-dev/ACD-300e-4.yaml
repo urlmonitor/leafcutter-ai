@@ -1,0 +1,61 @@
+id: ACD-300e-4
+readiness: approved
+priority: medium
+title: "IT PO v3 queries the knowledge graph during S1 to discover agent capabilities and architecture relationships"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the it-po-v3 agent has reached S1 (Knowledge Acquisition)
+    and has read the L2/L3 AC files it was given for enrichment,
+  When the agent executes its knowledge-acquisition steps,
+  Then it invokes knowledge-query with a surface filter of "agents" to list
+    all registered agents and their descriptions,
+  And it invokes knowledge-query with a surface filter of "skills" to list
+    all registered skills and their descriptions,
+  And it invokes knowledge-query with the component name to discover
+    architecture docs, ADRs, and hook registrations related to the component,
+  And it uses the returned node list to inform:
+    (a) assigned_agent selection — matching AC behaviors to agent capabilities
+        discovered in the graph rather than relying solely on agent_registry.json,
+    (b) delivers_to/expects_from contract design — identifying existing
+        inter-agent contracts in sibling ACs that the new contracts must align with,
+    (c) doc_links population — adding architecture docs and ADRs discovered
+        via the graph that the implementing agent will need to read,
+  And the agent does not skip the query even if the S1 registry reads
+    return sufficient context on their own.
+depends_on: [ACD-300e, ACD-300e-1]
+doc_links:
+  - path: templates/agents/it-po-v3.md
+    relationship: modifies
+    status: exists
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-009-itpo-no-source-code-access.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Must integrate the knowledge-query invocation into the existing S1 section structure without breaking the step numbering or flow"
+  - "Must preserve all existing S1 instructions — the knowledge-query step is additive"
+  - "Must specify the exact Bash invocation syntax per the knowledge-query SKILL.md"
+  - "Must not introduce dependencies on tools not already in the agent's allowed-tools list"
+  - "Must position the knowledge-query step after the AC file reads but before the agent registry read, so graph results can supplement registry data"
+  - "Must not violate ADR-009 — the added instructions must not direct the IT PO to read source code files"
+delivers_to: null
+expects_from:
+  ac_id: ACD-300e-1
+  contract: "knowledge-query is listed in skills_used frontmatter of it-po-v3.md so the skill is available at runtime"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

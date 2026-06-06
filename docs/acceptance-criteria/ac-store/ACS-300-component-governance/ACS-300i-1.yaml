@@ -1,0 +1,41 @@
+id: ACS-300i-1
+title: "Interface descriptor schema is enforced on exposed_interfaces elements"
+component: ac-store
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given a component entry includes an exposed_interfaces array,
+  When each element is validated,
+  Then every element contains exactly four fields:
+    name (string, non-empty),
+    type (one of "file_contract", "json_schema", "function_signature",
+         "cli_command", "hook_protocol", "event", "data_shape"),
+    path (string, non-empty),
+    shape (string, non-empty, describing the data contract).
+  And an element missing any of these four fields is rejected
+    with an error naming the missing field and the component it belongs to.
+depends_on: []
+doc_links:
+  - path: docs/components.json
+    relationship: extends
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must validate each element in the exposed_interfaces array independently"
+  - "Must report all missing fields per element in a single validation pass (not fail on first)"
+  - "Must validate field types (all must be non-empty strings)"
+delivers_to:
+  agent: python-coder
+  contract: "Schema validation logic for exposed_interfaces elements with name/type/path/shape field presence and type checking"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

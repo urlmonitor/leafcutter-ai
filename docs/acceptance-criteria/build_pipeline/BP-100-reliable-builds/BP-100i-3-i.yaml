@@ -1,0 +1,38 @@
+id: BP-100i-3-i
+readiness: draft
+priority: high
+title: "Parity check degrades gracefully when the deployed output directory does not exist"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100i.yaml"
+criteria: |
+  Given the canonical template directory exists and contains hook scripts
+  And the deployed output directory does NOT exist (e.g. a fresh clone
+    where build.py has not yet been run)
+  When the parity check runs at pre-commit time
+  Then it skips the deployed-output comparison entirely
+  And it still performs the runtime-vs-canonical and manifest parity checks
+  And if no other violations are found, the hook exits with code 0
+  And a single-line informational message is emitted noting that the
+    deployed output directory was not found and that comparison was skipped
+depends_on:
+  - BP-100i-3
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100i-3.yaml"
+    relationship: parent
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-100i-3
+  contract: "The deployment-parity function that this edge case extends with a missing-directory guard"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

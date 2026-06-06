@@ -1,0 +1,44 @@
+id: BP-600b-1-i
+title: "Quick-fix workflow detects when an equivalent AC already exists"
+component: build-pipeline
+level: L3
+status: active
+readiness: reviewed
+priority: medium
+work_status: todo
+criteria: |
+  Given the AC store already contains BP-001.yaml with criteria describing
+    "_resolve_precommit_cmd returns None when no executable is found",
+  When the user invokes /quick-fix with a diagnosis that describes the
+    same behavioral criterion,
+  Then the workflow warns the user that an existing AC (BP-001) appears
+    to cover this behavior,
+  And it offers to proceed with a new AC or reuse the existing one,
+  And it does not silently create a duplicate AC.
+depends_on:
+  - BP-600b-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: workflow-architect
+estimated_complexity: M
+it_requirements:
+  - "Must operate at depth 0 per ADR-006 — phase agents dispatched at depth 1 via the Agent tool"
+  - "Requires Claude Code >= 2.1.154 for JS workflow script support"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Duplicate detection must use LLM-based semantic comparison of criteria fields, not exact text matching"
+  - "Must complete duplicate scan within 5 seconds for typical AC stores (< 200 ACs per component)"
+delivers_to: null
+expects_from:
+  ac_id: BP-600b-1
+  contract: "AC creation logic that scans existing ACs in the target component directory for semantic overlap before writing"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

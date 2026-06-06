@@ -1,0 +1,47 @@
+id: ACD-1200e-2
+readiness: reviewed
+priority: medium
+title: "/build-ac with an L0 or L1 AC automatically switches to epic-generation mode"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given AC ACD-050 exists in the store with level: L0
+    and covered_by: [ACD-050a, ACD-050b] (a composite goal with children),
+  When /build-ac is invoked with --ac ACD-050,
+  Then the system detects that ACD-050 is a goal-level AC (level L0 or L1)
+  And it switches to epic-generation mode:
+    tree traversal, readiness gate, ticket generation, dependency wiring,
+    target_epic stamping, and epic folder assembly
+  And it does NOT follow the single-ticket path
+  And the user sees: "ACD-050 is a goal — generating epic from all leaf ACs beneath it."
+
+  Given AC ACD-050a exists in the store with level: L1
+    and covered_by: [ACD-050a-1, ACD-050a-2] (a composite feature with children),
+  When /build-ac is invoked with --ac ACD-050a,
+  Then the system also switches to epic-generation mode
+  And scopes the epic to only the leaves beneath ACD-050a.
+depends_on: [ACD-1200e, ACD-1200a-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/diagrams/c2-004-build-ac-flow.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Must detect goal vs leaf by checking both the level field and the covered_by field (a composite AC has non-empty covered_by)"
+  - "Must clearly communicate the mode switch to the user before beginning the epic flow"
+  - "Must use the same tree traversal function as ACD-1200a-1 (no separate traversal implementation)"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

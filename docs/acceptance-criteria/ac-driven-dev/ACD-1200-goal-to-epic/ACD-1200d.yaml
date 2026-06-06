@@ -1,0 +1,29 @@
+id: ACD-1200d
+readiness: draft
+priority: medium
+title: "Every touched AC knows which epic it ships in"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  The command stamps all ACs in scope with a target_epic tag linking them to the generated epic.
+
+  After the epic is generated, every leaf AC included in the batch carries a
+  target_epic value matching the epic folder name. This makes it clear which
+  shipping batch each AC belongs to and enables future scope additions to
+  land in the right place.
+depends_on: [ACD-1200a, ACD-1000a]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Tagging is automatic and follows ACD-1000a conventions — no new user-facing workflow to document."

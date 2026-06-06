@@ -1,0 +1,48 @@
+id: BP-600d-4
+title: "Quick-fix workflow pushes to origin and closes the ticket lifecycle"
+component: build-pipeline
+level: L2
+status: active
+readiness: reviewed
+priority: medium
+work_status: todo
+criteria: |
+  Given the commit agent has completed successfully,
+  When the workflow reaches the close phase,
+  Then it pushes the committed changes to the current branch's remote
+    tracking branch,
+  And if a PR exists for the current branch the PR is updated with
+    the new commit automatically,
+  And a minimal ticket file is created (or updated if one was provided)
+    with "status: done" in its frontmatter and a reference to the AC ID.
+depends_on:
+  - BP-600d
+  - BP-600d-3
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/build-single-ticket/SKILL.md
+    relationship: contrast
+    status: exists
+assigned_agent: workflow-architect
+estimated_complexity: M
+it_requirements:
+  - "Must operate at depth 0 per ADR-006 — phase agents dispatched at depth 1 via the Agent tool"
+  - "Requires Claude Code >= 2.1.154 for JS workflow script support"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must handle git push failures gracefully (e.g., no remote tracking branch, auth failure) and report to user"
+  - "Must use gh pr list to detect existing PRs for the current branch before attempting PR update"
+delivers_to: null
+expects_from:
+  ac_id: BP-600d-3
+  contract: "Committed changeset on the current branch — ready to push to origin"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

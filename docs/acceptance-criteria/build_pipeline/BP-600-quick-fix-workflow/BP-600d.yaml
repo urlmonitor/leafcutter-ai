@@ -1,0 +1,23 @@
+id: BP-600d
+title: "One command from diagnosis to done"
+component: build-pipeline
+level: L1
+status: active
+work_status: todo
+criteria: |
+  A single entry point orchestrates the full fix lifecycle.
+
+  You provide your diagnosis (what is wrong, where, and why) and the workflow
+  handles everything: AC creation, test writing, fix application, test
+  verification, commit, PR update, and ticket lifecycle close. The ticket
+  ends up in done/ with status complete. No manual steps between invocation
+  and resolution.
+depends_on:
+  - BP-600
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

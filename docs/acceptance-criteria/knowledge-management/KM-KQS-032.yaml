@@ -1,0 +1,42 @@
+id: KM-KQS-032
+readiness: draft
+priority: medium
+title: "Agent Protocol specifies standard invocation syntax with keyword and surface parameters"
+component: knowledge-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the knowledge-query SKILL.md contains an "Agent Protocol" section,
+  When a consuming agent reads the Agent Protocol to determine how to invoke
+    the knowledge-query script,
+  Then the protocol specifies two invocation patterns:
+    (a) keyword query: "python scripts/knowledge_query.py --query <term>"
+        where <term> is derived from the agent's current context
+        (user request keywords, component name, or L1 title),
+    (b) surface-scoped query: "python scripts/knowledge_query.py --surface <name>"
+        where <name> is one of the valid surface keys from paths.json,
+  And the protocol states that agents MUST use the Bash tool to execute
+    these commands (not Read or any other tool),
+  And the protocol states that the --project-root flag is NOT required
+    when the agent's working directory is the project root,
+  And the protocol provides at least one concrete example of each
+    invocation pattern with realistic parameter values.
+depends_on: [KM-KQS-031]
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: modifies
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to:
+  agent: llm-expert
+  contract: "An 'Agent Protocol' section in SKILL.md containing two named invocation patterns with concrete Bash syntax examples"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

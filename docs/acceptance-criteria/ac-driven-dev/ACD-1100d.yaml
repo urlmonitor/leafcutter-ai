@@ -1,0 +1,30 @@
+id: ACD-1100d
+readiness: approved
+priority: high
+title: "Retired agents (product-owner-agent, test-planner) are removed"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Agents that no longer serve a purpose are removed entirely.
+
+  The product-owner-agent (roadmap audit role) and test-planner agent are
+  deleted from templates, the agent registry, and all referencing docs.
+  Their responsibilities are either handled by other agents or no longer
+  needed. The agent registry contains only agents that are actively
+  dispatched.
+depends_on: [ACD-1100]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1100d-1
+implemented_by: []

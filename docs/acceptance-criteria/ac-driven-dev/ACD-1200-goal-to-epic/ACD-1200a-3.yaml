@@ -1,0 +1,50 @@
+id: ACD-1200a-3
+readiness: reviewed
+priority: medium
+title: "Generated tickets are assembled into a named EPIC folder ready for the supervisor"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given 3 ticket files have been generated for goal ACD-050 (title: "Validate API inputs"),
+  When the system assembles the epic folder,
+  Then it creates a folder named EPIC-ValidateApiInputs (derived from the goal's title)
+    under the tickets inbox directory
+  And all 3 generated ticket files are placed inside that folder
+  And each ticket file is named with a numeric prefix reflecting dependency order
+    (e.g., 01_validate-input-schema.md, 02_reject-oversized-payloads.md)
+  And the folder structure is immediately usable by ticket-supervisor
+    (no further manual assembly required).
+depends_on: [ACD-1200a, ACD-1200a-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must derive the epic folder name from the goal AC's title using PascalCase with no spaces or special characters"
+  - "Must create the folder under the configured tickets inbox directory (tickets/00_inbox/epics/)"
+  - "Must assign numeric prefixes based on topological sort order from dependency resolution"
+  - "Must produce a folder structure compatible with ticket-supervisor's epic-walking algorithm"
+  - "Must handle errors gracefully if the epic folder already exists — report conflict, do not overwrite"
+delivers_to:
+  agent: python-coder
+  contract: "str — absolute path to the created EPIC- folder (e.g. tickets/00_inbox/epics/EPIC-ValidateApiInputs/) containing ordered ticket .md files ready for ticket-supervisor."
+expects_from:
+  ac_id: ACD-1200a-2
+  contract: "list[str] — absolute file paths of generated ticket .md files on disk, one per leaf AC"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

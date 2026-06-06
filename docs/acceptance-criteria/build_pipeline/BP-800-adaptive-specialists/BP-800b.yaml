@@ -1,0 +1,30 @@
+id: BP-800b
+title: "Each detected technology gets its own specialist"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_2
+criteria: |
+  A purpose-built agent is generated for every detected language or framework.
+
+  For each technology discovered in the project, the build produces a
+  specialist agent loaded with behavioral best practices for that ecosystem —
+  covering style, testing conventions, idioms, and tooling preferences.
+depends_on:
+  - BP-800
+  - BP-800a
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - sequence-diagram
+  - component-diagram

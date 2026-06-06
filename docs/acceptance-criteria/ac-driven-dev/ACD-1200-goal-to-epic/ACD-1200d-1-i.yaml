@@ -1,0 +1,39 @@
+id: ACD-1200d-1-i
+readiness: reviewed
+priority: medium
+title: "AC already tagged with a different target_epic triggers a conflict warning"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given leaf AC ACD-050a-1 already has target_epic: EPIC-OldBatch,
+  And it appears in the leaf set for a new goal-to-epic generation
+    that would assign target_epic: EPIC-ValidateApiInputs,
+  When the system attempts to stamp target_epic on ACD-050a-1,
+  Then it detects the existing target_epic value differs from the new one
+  And outputs a warning:
+    "ACD-050a-1 already belongs to EPIC-OldBatch. Overwrite with EPIC-ValidateApiInputs? (yes / skip)"
+  And if the user answers "yes", the target_epic is updated to EPIC-ValidateApiInputs
+  And if the user answers "skip", the AC retains its original target_epic
+    and a ticket is still generated for it in the new epic (without modifying the AC tag).
+depends_on: [ACD-1200d-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must detect existing target_epic conflicts before overwriting"
+  - "Must prompt the user per-AC (not batch) when conflicts are detected"
+  - "Must not block ticket generation on the skip path — the ticket is still created regardless of the tag decision"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,49 @@
+id: ACS-300j-3
+title: "Known minimum dependency set is captured in the registry"
+component: ac-store
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given docs/components.json is fully populated with all 20 components,
+  When the depends_on fields are inspected,
+  Then these dependency relationships exist (at minimum):
+    - ticket_creation_pipeline depends_on includes: agent_registry, ac_store
+    - supervisor_system depends_on includes: agent_registry, ticket_creation_pipeline, git_vcs_operations
+    - python_coding depends_on includes: testing_quality
+    - sql_coding depends_on includes: testing_quality
+    - frontend_coding depends_on includes: testing_quality
+    - review_system depends_on includes: agent_registry
+    - documentation_system depends_on includes: ac_store
+    - build_pipeline depends_on includes: config_loader, agent_registry, skills_system
+    - precommit_hooks depends_on includes: config_loader
+    - llm_authoring depends_on includes: agent_registry, skills_system
+    - product_ownership depends_on includes: agent_registry, ac_store
+  And additional dependencies beyond this minimum set may exist.
+depends_on: [ACS-300g-3]
+doc_links:
+  - path: docs/components.json
+    relationship: extends
+    status: exists
+  - path: config/agent_registry.json
+    relationship: derives-from
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must populate depends_on arrays for all 20 components (empty array for components with no dependencies)"
+  - "Must ensure the resulting dependency graph is acyclic (validated by ACS-300j-2)"
+  - "Dependency relationships must reflect actual runtime or build-time consumption, not co-location"
+delivers_to: null
+expects_from:
+  ac_id: ACS-300g-3
+  contract: "All 20 component entries exist before dependency completeness can be verified"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

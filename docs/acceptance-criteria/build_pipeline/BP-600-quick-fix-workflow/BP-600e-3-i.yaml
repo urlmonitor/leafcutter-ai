@@ -1,0 +1,44 @@
+id: BP-600e-3-i
+title: "Quick-fix workflow does not leave partial commits when escalating"
+component: build-pipeline
+level: L3
+status: active
+readiness: reviewed
+priority: medium
+work_status: todo
+criteria: |
+  Given the workflow has paused with a scope warning after the fix was
+    applied but before the commit phase,
+  When the user chooses to escalate rather than continue,
+  Then the workflow does not commit any code changes,
+  And the AC YAML and test file remain on disk as unstaged changes,
+  And the fix applied by python-coder remains as an unstaged modification,
+  And the user is informed which files are preserved and that none
+    were committed.
+depends_on:
+  - BP-600e-3
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: workflow-architect
+estimated_complexity: S
+it_requirements:
+  - "Must operate at depth 0 per ADR-006 — phase agents dispatched at depth 1 via the Agent tool"
+  - "Requires Claude Code >= 2.1.154 for JS workflow script support"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must not invoke the commit agent or call git commit during escalation"
+  - "Must not run git checkout, git restore, or git clean on any files — all changes remain as-is on disk"
+delivers_to: null
+expects_from:
+  ac_id: BP-600e-3
+  contract: "Escalation path that exits the workflow cleanly without staging or committing any files"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

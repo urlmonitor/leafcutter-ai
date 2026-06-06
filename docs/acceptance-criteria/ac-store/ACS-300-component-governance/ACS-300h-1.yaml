@@ -1,0 +1,39 @@
+id: ACS-300h-1
+title: "Agent affinity field is present on every component entry"
+component: ac-store
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given docs/components.json contains N component entries (where N >= 20),
+  When a validator checks the registry for completeness,
+  Then every component entry contains an agent_affinity field,
+  And agent_affinity is a JSON array (even if empty),
+  And no entry has agent_affinity omitted or set to null.
+depends_on: []
+doc_links:
+  - path: docs/components.json
+    relationship: extends
+    status: exists
+  - path: config/agent_registry.json
+    relationship: validates-against
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must add agent_affinity validation to check_components_integrity.py"
+  - "Must reject null as a value for agent_affinity (only [] or a populated array are valid)"
+  - "Must validate that agent_affinity is an array type, not a string or object"
+delivers_to:
+  agent: python-coder
+  contract: "Validation logic ensuring agent_affinity is a present JSON array on every component entry"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

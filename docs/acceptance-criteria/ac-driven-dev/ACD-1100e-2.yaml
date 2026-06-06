@@ -1,0 +1,40 @@
+id: ACD-1100e-2
+readiness: approved
+priority: high
+title: "Build output references the package version"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given config/version.json contains version "2.0.0",
+  When the build script (scripts/build.py) is executed with a target directory,
+  Then the build output includes a reference to version "2.0.0" in at least
+    one of: a deployed version file, a build log message, or a generated
+    CLAUDE.md section,
+  And a user examining the deployed output can determine they are running
+    leafcutter v2.0.0 without reading the source package directly.
+depends_on:
+  - ACD-1100e
+  - ACD-1100e-1
+doc_links:
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must read version from config/version.json at build time (not hardcode the version string)"
+  - "Must handle errors gracefully if config/version.json is missing or malformed"
+  - "Version reference in build output must be visible to the end user without requiring package source access"
+delivers_to: null
+expects_from:
+  ac_id: ACD-1100e-1
+  contract: "config/version.json containing { \"version\": \"2.0.0\" } as valid JSON; consumer reads the version field at build time"
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

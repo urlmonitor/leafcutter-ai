@@ -1,0 +1,36 @@
+id: ACS-300j-1-i
+title: "Self-referencing dependency is rejected"
+component: ac-store
+level: L3
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given a component entry "agent_registry" has
+    depends_on: ["agent_registry"],
+  When the validator checks the depends_on field,
+  Then it rejects the entry with an error:
+    "Component 'agent_registry' cannot depend on itself",
+  And docs/components.json is not accepted in its current state.
+depends_on: [ACS-300j-1]
+doc_links:
+  - path: docs/components.json
+    relationship: extends
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Self-reference check must run before the full graph cycle detection (fast path rejection)"
+  - "Must check each component's depends_on for self-inclusion individually"
+delivers_to: null
+expects_from:
+  ac_id: ACS-300j-1
+  contract: "Reference validation logic that this edge case exercises"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

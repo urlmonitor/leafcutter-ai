@@ -1,0 +1,48 @@
+id: BP-100i-3
+readiness: draft
+priority: high
+title: "Deployed output parity: every hook in the canonical template also appears in the build output directory"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100i.yaml"
+criteria: |
+  Given the canonical template directory contains 5 hook scripts:
+    - check_alpha.py
+    - check_beta.py
+    - check_gamma.py
+    - check_delta.py
+    - run_hook.py
+  And the deployed output directory (where build.py writes commit guardian
+    files for the consumer project) contains only 3 of those scripts:
+    - check_alpha.py
+    - check_beta.py
+    - run_hook.py
+  (check_gamma.py and check_delta.py were not deployed)
+  When the parity check runs at pre-commit time
+  Then the commit is blocked with exit code 1
+  And the error message lists "check_gamma.py" and "check_delta.py" as scripts
+    present in the canonical template but absent from the deployed output
+  And the error message names the deployed output directory that was checked
+depends_on:
+  - BP-100i
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100i.yaml"
+    relationship: parent
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: test-writer
+  contract: "A deployment-parity function that compares canonical template contents against build output contents"
+expects_from:
+  ac_id: BP-100i-1
+  contract: "The same directory-scanning utility used for script parity"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

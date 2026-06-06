@@ -1,0 +1,29 @@
+id: ACD-1200b
+readiness: draft
+priority: medium
+title: "See what needs approval before you can build"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Before generating tickets, the system reports which ACs under the goal are not yet approved.
+
+  If any ACs in the tree have readiness below approved, the command surfaces
+  a count and offers to dispatch IT PO v3 for review and enrichment. You
+  choose whether to proceed with only the approved subset or to bulk-review
+  the rest before generating the epic.
+depends_on: [ACD-1200]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - how-to

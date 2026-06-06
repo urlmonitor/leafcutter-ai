@@ -1,0 +1,27 @@
+id: BP-700c
+title: "Nothing is lost from the old setup"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  All design knowledge and coding capabilities are preserved in the unified agent.
+
+  Every behavioural rule, design principle, and coding convention that existed
+  across the separate frontend-coder agent and frontend-design skill is carried
+  forward. Adopters upgrading from the old structure lose no functionality.
+depends_on:
+  - BP-700
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - reference-doc

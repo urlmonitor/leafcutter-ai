@@ -1,0 +1,42 @@
+id: ACD-1200d-1
+readiness: reviewed
+priority: medium
+title: "All in-scope leaf ACs receive target_epic matching the generated epic folder name"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given goal ACD-050 (title: "Validate API inputs") produces an epic folder
+    named EPIC-ValidateApiInputs,
+  And 3 leaf ACs are in scope: ACD-050a-1, ACD-050a-2-i, ACD-050b-1,
+  And none of these ACs have a target_epic field set,
+  When the epic generation completes and the folder is assembled,
+  Then all 3 AC YAML files are updated with target_epic: EPIC-ValidateApiInputs
+  And the target_epic field is written to each AC's YAML file on disk
+  And the target_epic value exactly matches the epic folder name (case-sensitive).
+depends_on: [ACD-1200d, ACD-1200a-3, ACD-1000a]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must use targeted field update (not full yaml.dump round-trip) to avoid noisy diffs per ADR-010 convention"
+  - "Must write target_epic only after epic folder creation succeeds (no partial stamps on failure)"
+  - "Must be idempotent — re-running with same epic name does not produce duplicate values or malformed YAML"
+delivers_to: null
+expects_from:
+  ac_id: ACD-1200a-3
+  contract: "str — epic folder name (e.g. 'EPIC-ValidateApiInputs') to use as the target_epic value"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

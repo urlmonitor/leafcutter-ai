@@ -1,0 +1,44 @@
+id: ACD-1100d-1
+readiness: approved
+priority: high
+title: "product-owner-agent and test-planner are fully removed"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given the package contains agent templates and registry entries for
+    "product-owner-agent" and "test-planner",
+  When the v2.0 migration removes retired agents,
+  Then templates/agents/product-owner-agent.md does not exist,
+  And templates/agents/test-planner.md does not exist,
+  And config/agent_registry.json contains no entry with id
+    "product-owner-agent" or "test-planner",
+  And no remaining agent's spawn_allowlist or spawned_by array references
+    either "product-owner-agent" or "test-planner",
+  And docs/agents/README.md (if it exists) contains no section describing
+    either removed agent.
+depends_on:
+  - ACD-1100d
+doc_links:
+  - path: docs/agents/README.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Registry file must remain valid JSON after removing entries"
+  - "Must clean up spawn_allowlist and spawned_by references to these agents in all remaining registry entries"
+  - "Must handle the case where template files or registry entries are already absent (idempotent)"
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

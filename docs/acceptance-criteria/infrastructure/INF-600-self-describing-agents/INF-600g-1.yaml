@@ -1,0 +1,50 @@
+id: INF-600g-1
+title: "Build validates that spawned_by entries are reciprocal with spawn_allowlist entries"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given an agent registry where agent "python-coder" lists "sql-coder"
+    in its spawned_by array
+  And agent "sql-coder" has "python-coder" in its spawn_allowlist
+  But the intended spawn relationship is incorrect (sql-coder should
+    not spawn python-coder in the current architecture)
+  When the build validates the registry for spawn-graph consistency
+  Then it checks every spawned_by entry for agent A referencing agent B
+    against agent B's spawn_allowlist
+  And it checks every spawn_allowlist entry for agent B listing agent A
+    against agent A's spawned_by
+  And if agent A's spawned_by lists agent B but agent B's spawn_allowlist
+    does NOT include agent A, validation fails with:
+    "asymmetric spawn: A.spawned_by includes B, but B.spawn_allowlist
+     does not include A"
+  And if agent B's spawn_allowlist lists agent A but agent A's spawned_by
+    does NOT include agent B, validation fails with:
+    "asymmetric spawn: B.spawn_allowlist includes A, but A.spawned_by
+     does not include B"
+  And the error names both agents involved in the asymmetry
+depends_on:
+  - INF-600g
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+  - path: docs/agents/README.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A build validation step that rejects registries with asymmetric spawn relationships"
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

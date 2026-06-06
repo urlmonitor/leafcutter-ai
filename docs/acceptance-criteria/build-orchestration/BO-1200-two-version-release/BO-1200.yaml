@@ -1,0 +1,35 @@
+id: BO-1200
+readiness: draft
+priority: medium
+title: "A version you can always demo and a version that is always being improved"
+component: build-orchestration
+level: L0
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Two clear states: stable prod for real users, dev on main for continuous agent delivery.
+
+  Your product always has two faces. The stable production version is the one
+  you show to people, demo to stakeholders, and trust to work. The dev version
+  (main) is where agents continuously land completed features. A deliberate
+  release process promotes work from dev to prod -- not a timer, not a
+  merge-when-green, but a conscious decision backed by the AC lineage that
+  proves what shipped and why. Every feature's journey is traceable: AC
+  authored, feature built, landed in dev, promoted to prod.
+depends_on: []
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-06
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1200a
+  - BO-1200b
+  - BO-1200c
+  - BO-1200d
+  - BO-1200e
+implemented_by: []

@@ -1,0 +1,47 @@
+id: ACD-1100c-1
+readiness: approved
+priority: high
+title: "Skill directory and registry entry use the name plan-feature"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given the package previously had a skill directory at
+    templates/skills/create-ac/ with SKILL.md and associated workflow at
+    scripts/workflows/create-ac.js,
+  When the v2.0 migration renames the planning command,
+  Then the skill directory exists at templates/skills/plan-feature/SKILL.md,
+  And the workflow script exists at scripts/workflows/plan-feature.js
+    (or the equivalent new name),
+  And the skill registry (config/skill_registry.json or equivalent) contains
+    an entry with id "plan-feature" and no entry with id "create-ac",
+  And templates/skills/create-ac/ directory no longer exists,
+  And templates/commands/plan-feature.md exists (if command templates are used).
+depends_on:
+  - ACD-1100c
+doc_links:
+  - path: docs/reference/skill-frontmatter.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/workflow-constraints.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Workflow script must keep the .js extension and reside in scripts/workflows/"
+  - "SKILL.md content must be updated to reflect the new command name /plan-feature"
+  - "Must update internal references within the SKILL.md (if it mentions /create-ac or create-ac as an identifier)"
+  - "Must handle the case where the old directory is already absent (idempotent)"
+delivers_to:
+  agent: python-coder
+  contract: "Skill directory at templates/skills/plan-feature/ with SKILL.md; workflow script at scripts/workflows/plan-feature.js; command template at templates/commands/plan-feature.md; skill registry entry with id plan-feature"
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

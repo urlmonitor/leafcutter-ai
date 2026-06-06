@@ -1,0 +1,38 @@
+id: ACD-1200b-1-i
+readiness: reviewed
+priority: medium
+title: "When all leaf ACs are already approved the readiness gate is skipped entirely"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given goal ACD-050 has 3 leaf ACs beneath it:
+    - ACD-050a-1 (readiness: approved)
+    - ACD-050a-2 (readiness: approved)
+    - ACD-050b-1 (readiness: approved)
+  When /build-ac is invoked with --ac ACD-050,
+  And the tree traversal completes and all 3 leaves have readiness: approved,
+  Then no readiness report is displayed
+  And no approval prompt is shown to the user
+  And ticket generation proceeds immediately with all 3 ACs
+  And the user sees: "All 3 leaf ACs are approved. Generating epic..."
+depends_on: [ACD-1200b-1]
+doc_links:
+  - path: docs/architecture/diagrams/c2-003-ac-readiness-states.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must detect all-approved condition without prompting the user"
+  - "Must proceed directly to ticket generation with no user interaction delay"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

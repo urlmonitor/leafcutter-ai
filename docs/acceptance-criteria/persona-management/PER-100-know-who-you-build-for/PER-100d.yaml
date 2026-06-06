@@ -1,0 +1,28 @@
+id: PER-100d
+readiness: draft
+priority: medium
+title: "Persona context is available to every agent that needs it"
+component: persona-management
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_2
+criteria: |
+  Agents always know who they are building for — persona detail on demand.
+
+  The PO, BA, and UX designer can pull persona information into their working
+  context. A summary is injected by default so agents always have audience
+  awareness, with full detail available on demand when deeper understanding
+  is needed.
+depends_on: [PER-100]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: [sequence-diagram, component-diagram]

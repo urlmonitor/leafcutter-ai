@@ -1,0 +1,43 @@
+id: BP-100i-4
+readiness: draft
+priority: high
+title: "Hook fires at pre-commit when commit_guardian files are staged"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100i.yaml"
+criteria: |
+  Given the hooks_manifest in commit_guardian.json contains an entry for
+    the parity check hook with:
+    - id: "check-hook-parity"
+    - files pattern matching staged changes under scripts/commit_guardian/
+      or templates/scripts/commit_guardian/ or templates/commit-guardian/
+    - stages: ["pre-commit"]
+  And a developer stages a new file "scripts/commit_guardian/check_new_hook.py"
+    without also staging "templates/scripts/commit_guardian/check_new_hook.py"
+  When the pre-commit hook framework executes the parity check
+  Then the parity check detects the staged file has no template counterpart
+  And the commit is blocked before the commit object is created
+  And the developer sees an actionable error message explaining which file
+    to add and where
+depends_on:
+  - BP-100i
+  - BP-100i-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100i.yaml"
+    relationship: parent
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-100i-1
+  contract: "The parity-checking function invoked by the hook entry point"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

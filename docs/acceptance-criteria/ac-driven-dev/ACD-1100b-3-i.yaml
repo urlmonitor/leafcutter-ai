@@ -1,0 +1,38 @@
+id: ACD-1100b-3-i
+readiness: approved
+priority: high
+title: "Edge case: no agent in the entire registry carries any version suffix"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given the v2.0 migration has completed all rename and removal operations,
+  When the full list of agent "id" values in config/agent_registry.json is
+    examined,
+  Then no id matches the pattern /-v[0-9]+$/ (no trailing version suffix),
+  And no id contains the substrings "-v1", "-v2", or "-v3" anywhere in the
+    identifier,
+  And the registry remains valid JSON that parses without errors.
+depends_on:
+  - ACD-1100b-3
+doc_links:
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Validation must check ALL entries in the agents array, not just the three promoted ones"
+  - "Must treat the check as a post-condition assertion, not a transformation"
+delivers_to: null
+expects_from:
+  ac_id: ACD-1100b-3
+  contract: "config/agent_registry.json with all cross-references updated to canonical names; consumer verifies zero version suffixes remain in any agent id"
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

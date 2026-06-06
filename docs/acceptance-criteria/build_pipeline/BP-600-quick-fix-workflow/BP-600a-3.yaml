@@ -1,0 +1,44 @@
+id: BP-600a-3
+title: "Quick-fix workflow rejects invocation when target file has uncommitted changes"
+component: build-pipeline
+level: L2
+status: active
+readiness: reviewed
+priority: medium
+work_status: todo
+criteria: |
+  Given the user's worktree has unstaged changes in the file
+    "scripts/build_helpers.py",
+  When the user invokes /quick-fix with a diagnosis targeting
+    "scripts/build_helpers.py",
+  Then the workflow halts before any AC creation or code changes,
+  And it reports the conflicting uncommitted changes in the target file,
+  And it suggests the user commit or stash before retrying.
+depends_on:
+  - BP-600a
+  - BP-600a-1
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: workflow-architect
+estimated_complexity: S
+it_requirements:
+  - "Must operate at depth 0 per ADR-006 — phase agents dispatched at depth 1 via the Agent tool"
+  - "Requires Claude Code >= 2.1.154 for JS workflow script support"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Dirty-tree check must be idempotent and scoped to the target file only"
+  - "Must use git status or git diff to detect uncommitted changes, not file-system timestamps"
+delivers_to: null
+expects_from:
+  ac_id: BP-600d-1
+  contract: "Structured diagnosis object: { file_path: string, location: string|null, symptom: string, root_cause: string }"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

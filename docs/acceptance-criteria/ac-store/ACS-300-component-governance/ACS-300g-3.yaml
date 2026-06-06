@@ -1,0 +1,46 @@
+id: ACS-300g-3
+title: "Every agent-backed subsystem has a corresponding component entry"
+component: ac-store
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given config/agent_registry.json lists 60+ agents grouped into roles
+    (orchestration, coding, review, documentation, quality, analysis),
+  When the set of component IDs in docs/components.json is compared to
+    the set of subsystems that own 2+ files or have a dedicated agent,
+  Then zero subsystems are unrepresented.
+  And specifically, the following 17 IDs all exist as top-level keys
+    in the components object:
+    supervisor_system, ticket_creation_pipeline, python_coding, sql_coding,
+    frontend_coding, testing_quality, review_system, documentation_system,
+    git_vcs_operations, research_analysis, onboarding, precommit_hooks,
+    llm_authoring, product_ownership, ac_store, agent_registry, skills_system.
+depends_on: [ACS-300g-1]
+doc_links:
+  - path: docs/components.json
+    relationship: governs
+    status: exists
+  - path: config/agent_registry.json
+    relationship: derives-from
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must populate all 17 component entries with accurate primary_code paths derived from the project structure"
+  - "Must assign appropriate type values from the enumerated set for each subsystem"
+  - "Must write descriptions that are >= 10 characters and accurately describe the subsystem"
+  - "Must not break the existing check_components_integrity.py validation"
+delivers_to: null
+expects_from:
+  ac_id: ACS-300g-1
+  contract: "Schema validation logic that ensures each entry has the required fields before this AC checks completeness"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

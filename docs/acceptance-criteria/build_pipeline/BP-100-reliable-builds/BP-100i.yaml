@@ -1,0 +1,30 @@
+id: BP-100i
+readiness: draft
+priority: high
+title: "Commit guardian hooks ship identically across all template directories — no silent gaps between runtime and consumer deployments"
+component: build-pipeline
+level: L1
+status: active
+work_status: todo
+criteria: |
+  Every commit guardian hook exists in all four locations that matter — no partial deployments.
+
+  When a hook script or manifest entry exists in the runtime source directory,
+  it must also exist in the canonical template directory that the build system
+  reads when deploying to consumer projects. A pre-commit hook detects parity
+  violations at commit time and blocks the commit with a clear error naming
+  the missing file or manifest entry and the directory where it is expected.
+  The check covers scripts (*.py files), manifest entries (hook registrations
+  in commit_guardian.json), and ensures the canonical template, legacy template,
+  and runtime source all agree on what hooks are available. Without this guard,
+  a hook can pass all tests in the package repo while never reaching consumers
+  — as happened with check_ac_governance.py during ACS-400.
+depends_on:
+  - BP-100
+doc_links: []
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

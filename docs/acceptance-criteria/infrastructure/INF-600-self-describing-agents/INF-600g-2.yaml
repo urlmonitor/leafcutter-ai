@@ -1,0 +1,42 @@
+id: INF-600g-2
+title: "Build detects phase agents redundantly listed alongside __ticket_phase_agents__ macro"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given an agent registry where "ticket-supervisor" has spawn_allowlist
+    containing both "__ticket_phase_agents__" and "llm-expert"
+  And the registry entry for "llm-expert" has is_ticket_phase set to true
+  When the build validates the registry
+  Then validation emits a warning:
+    "ticket-supervisor.spawn_allowlist: llm-expert is redundantly listed
+     because it is already included in __ticket_phase_agents__
+     (is_ticket_phase: true)"
+  And the warning identifies the agent with the redundant spawn_allowlist
+  And the warning names each individually-listed agent that is already
+    covered by the __ticket_phase_agents__ macro
+depends_on:
+  - INF-600g
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+  - path: docs/agents/cards/ticket-supervisor.card.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: "A build validation warning that surfaces redundant individual entries alongside the phase-agents macro"
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,33 @@
+id: BO-1200c
+readiness: draft
+priority: medium
+title: "Promoting from dev to prod is a deliberate act with full traceability"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  A release process bundles completed features into a new stable version with AC lineage.
+
+  When you decide to release, the process collects all features that have
+  landed in dev since the last stable version, traces each one back to the
+  ACs it fulfilled, and produces a new tagged stable release. The release
+  notes write themselves from the AC lineage. You know exactly what is in
+  each version and why it was built.
+depends_on:
+  - BO-1200a
+  - BO-1200b
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - sequence-diagram

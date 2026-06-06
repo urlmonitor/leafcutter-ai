@@ -1,0 +1,45 @@
+id: ACS-300k-1
+title: "build.py injects components data into agent templates via a placeholder"
+component: ac-store
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given a template agent file contains the placeholder {{components_table}},
+  When build.py compiles the template into a runtime agent prompt,
+  Then the placeholder is replaced with a formatted representation of
+    all entries from docs/components.json (including at minimum:
+    id, name, type, description, and agent_affinity for each component).
+  And the compiled output contains zero occurrences of the literal
+    string "{{components_table}}".
+  And the format is human-readable within the agent prompt context
+    (e.g. a Markdown table or structured list, not raw JSON).
+depends_on: []
+doc_links:
+  - path: docs/components.json
+    relationship: governs
+    status: exists
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must not break build.py's existing placeholder injection system (inject_config phase)"
+  - "Must render the table deterministically (sorted by component ID) for reproducible builds"
+  - "Must include at minimum: id, name, type, description, agent_affinity per component"
+  - "Must handle errors gracefully per the project error handling policy when components.json is missing or malformed"
+  - "Must produce output that fits within agent prompt token budgets (compact Markdown table format preferred)"
+delivers_to:
+  agent: llm-expert
+  contract: "A build.py injection phase that reads docs/components.json and replaces {{components_table}} in any template with a formatted Markdown table of component metadata (id, name, type, description, agent_affinity)"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

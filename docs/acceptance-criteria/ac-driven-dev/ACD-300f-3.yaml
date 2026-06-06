@@ -1,0 +1,46 @@
+id: ACD-300f-3
+readiness: draft
+priority: medium
+title: "Agent Consumption Protocol defines error handling as graceful degradation without abort or retry"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the SKILL.md contains the "Agent Consumption Protocol" section
+    (from ACD-300f-1),
+  When an error-handling subsection is added to the protocol,
+  Then the subsection states:
+    "When the knowledge-query invocation exits with a non-zero exit code
+    (paths.json absent, script not found, unknown surface name), the consuming
+    agent logs: 'knowledge-query failed: <error-message> — skipping graph
+    context, proceeding with file-based reads only' and continues without
+    aborting its workflow",
+  And the subsection explicitly prohibits three behaviors:
+    (a) aborting the agent's workflow or returning a blocked status,
+    (b) retrying the failed invocation,
+    (c) surfacing the error to the user unless the user has requested
+        verbose output,
+  And the log message format uses the exact template shown (with
+    <error-message> as the variable placeholder from the script's output)
+    so all consuming agents produce consistent log output.
+depends_on: [ACD-300f, ACD-300f-1]
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: modifies
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to:
+  agent: llm-expert
+  contract: "SKILL.md Agent Consumption Protocol contains an error-handling subsection with prescribed degradation behavior and log message template"
+expects_from:
+  ac_id: ACD-300f-1
+  contract: "Agent Consumption Protocol section exists in SKILL.md as the container for this subsection"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

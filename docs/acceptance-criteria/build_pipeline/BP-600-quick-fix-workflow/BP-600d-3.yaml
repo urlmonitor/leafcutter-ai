@@ -1,0 +1,46 @@
+id: BP-600d-3
+title: "Quick-fix workflow dispatches commit agent after green-phase verification"
+component: build-pipeline
+level: L2
+status: active
+readiness: reviewed
+priority: medium
+work_status: todo
+criteria: |
+  Given the green-phase test verification has passed (all tests green),
+  When the workflow reaches the commit phase,
+  Then it dispatches the commit agent (never calls git commit directly),
+  And the commit stages only the files touched by the quick-fix
+    (AC YAML file, test file, fixed source file, and minimal ticket file),
+  And the commit message references the AC ID created during the
+    AC-creation phase.
+depends_on:
+  - BP-600d
+  - BP-600c-3
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: workflow-architect
+estimated_complexity: S
+it_requirements:
+  - "Must operate at depth 0 per ADR-006 — phase agents dispatched at depth 1 via the Agent tool"
+  - "Requires Claude Code >= 2.1.154 for JS workflow script support"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must dispatch the commit agent via the Agent tool — never call git commit directly (per CLAUDE.md commit delegation policy)"
+  - "Must pass the AC ID to the commit agent so it appears in the commit message"
+delivers_to:
+  agent: workflow-architect
+  contract: "Committed changeset on the current branch containing: AC YAML, test file, fixed source file, and optional ticket file"
+expects_from:
+  ac_id: BP-600c-3
+  contract: "Green-phase result: { all_passed: boolean } — must be true to proceed to commit"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

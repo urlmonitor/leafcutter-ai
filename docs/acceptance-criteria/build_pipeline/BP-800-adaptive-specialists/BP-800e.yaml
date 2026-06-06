@@ -1,0 +1,30 @@
+id: BP-800e
+title: "Earlier versions migrate automatically"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_2
+criteria: |
+  A compatibility check at build time migrates old project context into the new structure.
+
+  Projects using the old hardcoded agent structure get an automatic migration
+  when they upgrade. The build detects the earlier layout, transfers project
+  context into the new generation-based structure, and the user continues
+  working without manual steps.
+depends_on:
+  - BP-800
+  - BP-800d
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - sequence-diagram

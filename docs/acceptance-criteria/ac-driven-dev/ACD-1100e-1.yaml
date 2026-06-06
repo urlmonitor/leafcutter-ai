@@ -1,0 +1,38 @@
+id: ACD-1100e-1
+readiness: approved
+priority: high
+title: "Version file exists with semver 2.0.0"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given the package previously had no version marker file,
+  When the v2.0 migration adds a version marker,
+  Then config/version.json exists and is valid JSON,
+  And it contains a top-level "version" field with the string value "2.0.0",
+  And the file contains no other required fields beyond "version"
+    (additional metadata fields are permitted but not required).
+depends_on:
+  - ACD-1100e
+doc_links:
+  - path: docs/reference/skill-frontmatter.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "File must be valid JSON parseable by Python json.loads() and Node JSON.parse()"
+  - "Version string must follow semver format (MAJOR.MINOR.PATCH)"
+  - "Must be idempotent — creating the file when it already exists with correct content produces no error"
+delivers_to:
+  agent: python-coder
+  contract: "config/version.json containing { \"version\": \"2.0.0\" } as valid JSON"
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

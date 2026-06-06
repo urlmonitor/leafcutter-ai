@@ -1,0 +1,42 @@
+id: ACD-1200a-1-i
+readiness: reviewed
+priority: medium
+title: "Traversal from an L1 collects only the leaves beneath that L1, not the whole L0 tree"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the AC store contains:
+    - ACD-050 (level: L0, covered_by: [ACD-050a, ACD-050b])
+    - ACD-050a (level: L1, covered_by: [ACD-050a-1, ACD-050a-2])
+      - ACD-050a-1 (level: L2)
+      - ACD-050a-2 (level: L2)
+    - ACD-050b (level: L1, covered_by: [ACD-050b-1])
+      - ACD-050b-1 (level: L2)
+  When /build-ac is invoked with --ac ACD-050a (the L1, not the L0),
+  Then the system collects only ACD-050a-1 and ACD-050a-2
+  And it does NOT include ACD-050b-1 (which is under a sibling L1)
+  And the generated epic contains exactly 2 tickets.
+depends_on: [ACD-1200a-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must scope traversal to the subtree rooted at the target AC only"
+  - "Must not traverse sibling branches of the target AC's parent"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

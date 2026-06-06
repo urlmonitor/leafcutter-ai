@@ -1,0 +1,42 @@
+id: BP-600d-4-i
+title: "Quick-fix workflow handles the case when no PR exists for the current branch"
+component: build-pipeline
+level: L3
+status: active
+readiness: reviewed
+priority: medium
+work_status: todo
+criteria: |
+  Given the commit has completed and the workflow reaches the close phase,
+  When no open PR exists for the current branch,
+  Then the workflow pushes the commit to origin but does not attempt
+    to create a new PR,
+  And it reports to the user: "Changes pushed. No open PR found for
+    this branch -- create one with /pull-request if needed.",
+  And the ticket lifecycle still closes normally with status: done.
+depends_on:
+  - BP-600d-4
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: workflow-architect
+estimated_complexity: S
+it_requirements:
+  - "Must operate at depth 0 per ADR-006 — phase agents dispatched at depth 1 via the Agent tool"
+  - "Requires Claude Code >= 2.1.154 for JS workflow script support"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must not create a new PR — only detect and report the absence of one"
+delivers_to: null
+expects_from:
+  ac_id: BP-600d-4
+  contract: "Close-phase logic that uses gh pr list --head <branch> to check for existing PR — empty result triggers this edge case"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,41 @@
+id: BP-100i-2-i
+readiness: draft
+priority: high
+title: "Disabled hooks in the legacy manifest still require canonical presence"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100i.yaml"
+criteria: |
+  Given the legacy template commit_guardian.json registers a hook:
+    - id: "check-future-feature"
+    - enabled: false
+  And the canonical template commit_guardian.json does NOT contain
+    an entry with id "check-future-feature"
+  When the parity check runs at pre-commit time
+  Then the commit is blocked with exit code 1
+  And the error message names "check-future-feature" as a hook present
+    in the legacy manifest (with enabled: false) but absent from the
+    canonical manifest
+  And the error makes clear that disabled hooks still require parity
+    because build.py reads the canonical manifest regardless of enabled state
+depends_on:
+  - BP-100i-2
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100i-2.yaml"
+    relationship: parent
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-100i-2
+  contract: "The manifest-comparison function that this edge case validates treats disabled hooks the same as enabled ones"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -21,7 +21,7 @@ criteria: |
     - the structural shape (directory pattern: "docs/architecture/**")
   And the specialist produces a one-time message for this commit
     while also logging the unmatched shape for future learning (BO-1100d).
-depends_on: [BO-1100a, BO-1100a-1, BO-1100d-1]
+depends_on: [BO-1100a, BO-1100a-1]
 doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes

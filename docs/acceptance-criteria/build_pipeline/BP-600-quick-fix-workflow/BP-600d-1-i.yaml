@@ -1,0 +1,42 @@
+id: BP-600d-1-i
+title: "Quick-fix workflow rejects input that lacks a file path or root cause"
+component: build-pipeline
+level: L3
+status: active
+readiness: reviewed
+priority: medium
+work_status: todo
+criteria: |
+  Given the user invokes /quick-fix with text "the build is broken",
+  When the workflow attempts to parse the diagnosis,
+  Then it identifies the missing fields (no file path, no root cause),
+  And it halts with a structured prompt asking the user to provide:
+    (1) the file containing the bug, (2) what is going wrong, and
+    (3) why it is happening,
+  And it does not proceed to AC creation.
+depends_on:
+  - BP-600d-1
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: workflow-architect
+estimated_complexity: S
+it_requirements:
+  - "Must operate at depth 0 per ADR-006 — phase agents dispatched at depth 1 via the Agent tool"
+  - "Requires Claude Code >= 2.1.154 for JS workflow script support"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Validation must require at minimum file_path and root_cause — location and symptom may be inferred"
+delivers_to: null
+expects_from:
+  ac_id: BP-600d-1
+  contract: "Input parser that validates required diagnosis fields and returns { valid: boolean, missing_fields: string[] }"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

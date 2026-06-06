@@ -1,0 +1,39 @@
+id: ACD-1300
+readiness: draft
+priority: medium
+title: "Walk away and come back to finished work"
+component: ac-driven-dev
+level: L0
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Priorities steer the build queue -- agents work continuously without babysitting.
+
+  When you set priorities on goals and features (L0/L1), the system continuously
+  picks the most important refined work and builds it. Multiple features build
+  in parallel up to a configurable limit. When an agent hits a blocker, it saves
+  its work, submits a structured request, and moves on to the next item. You
+  collect pending requests from one place, answer them, and the agent resumes
+  with full context. The gap between "requirements are done" and "code is
+  shipped" becomes your priority list plus time.
+depends_on:
+  - ACD-1200
+  - ACD-700
+  - ACD-500
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-06
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1300a
+  - ACD-1300b
+  - ACD-1300c
+  - ACD-1300d
+  - ACD-1300e
+  - ACD-1300f
+implemented_by: []

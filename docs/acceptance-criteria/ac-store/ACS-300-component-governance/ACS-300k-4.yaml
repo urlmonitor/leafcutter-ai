@@ -1,0 +1,43 @@
+id: ACS-300k-4
+title: "Compiled agents reflect current component data after rebuild"
+component: ac-store
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given docs/components.json has been updated with a new component entry
+    (e.g. id: "supervisor_system" with agent_affinity: ["epic-supervisor"]),
+  When build.py is executed,
+  Then every compiled agent that uses {{components_table}} contains
+    the new "supervisor_system" entry in its rendered output.
+  And removing an entry from components.json and re-running build.py
+    causes that entry to disappear from all compiled agent outputs.
+  And the compiled output is deterministic -- running build.py twice
+    with the same input produces byte-identical output.
+depends_on: [ACS-300k-1]
+doc_links:
+  - path: docs/components.json
+    relationship: governs
+    status: exists
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must verify build output determinism (same input = same output, byte-for-byte)"
+  - "Must not cache stale component data between build runs"
+  - "Must re-read components.json fresh on every build invocation"
+delivers_to: null
+expects_from:
+  ac_id: ACS-300k-1
+  contract: "The {{components_table}} injection mechanism that this AC verifies end-to-end"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

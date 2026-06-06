@@ -1,0 +1,56 @@
+id: ACD-300e-3
+readiness: approved
+priority: medium
+title: "BA v3 queries the knowledge graph during S1 to discover related L2/L3 patterns and cross-component behaviors"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the business-analyst-v3 agent has reached Section 1 (Knowledge Acquisition)
+    and has read the L1 AC it was given plus its parent L0,
+  When the agent executes its knowledge-acquisition steps,
+  Then it invokes knowledge-query with the component name to discover all nodes
+    related to the target component across all surfaces,
+  And it invokes knowledge-query with keywords extracted from the L1 title
+    to discover cross-component behaviors that share similar concerns,
+  And it uses the returned node list to identify:
+    (a) existing L2/L3 ACs in sibling components that address similar behaviors
+        (to avoid cross-component duplication),
+    (b) skills and agents that are already registered for the target domain
+        (to inform agent assignment suggestions),
+    (c) architecture docs and ADRs that constrain the behaviors being decomposed,
+  And any cross-component L2 patterns discovered are noted in the agent's
+    assumption log with a source citation of "knowledge-query result",
+  And the agent does not skip the query even if the Section 1 file reads
+    return sufficient context on their own.
+depends_on: [ACD-300e, ACD-300e-1]
+doc_links:
+  - path: templates/agents/business-analyst-v3.md
+    relationship: modifies
+    status: exists
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Must integrate the knowledge-query invocation into the existing Section 1 structure without breaking the section numbering or flow"
+  - "Must preserve all existing Section 1 instructions — the knowledge-query step is additive"
+  - "Must specify the exact Bash invocation syntax per the knowledge-query SKILL.md"
+  - "Must not introduce dependencies on tools not already in the agent's allowed-tools list"
+  - "Must position the knowledge-query step after the L1/L0 read steps but before the decomposition planning step"
+delivers_to: null
+expects_from:
+  ac_id: ACD-300e-1
+  contract: "knowledge-query is listed in skills_used frontmatter of business-analyst-v3.md so the skill is available at runtime"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

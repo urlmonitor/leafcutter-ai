@@ -1,0 +1,36 @@
+id: ACS-300i-2
+title: "Components with no external interfaces have an empty array"
+component: ac-store
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given a component is purely internal (it exposes no contracts
+    consumed by other components),
+  When the component entry is written to docs/components.json,
+  Then exposed_interfaces is set to an empty array [],
+  And it is never omitted or set to null.
+  And the validator rejects any entry where exposed_interfaces
+    is absent or null, requiring an explicit empty array for
+    components that have considered and found no external interfaces.
+depends_on: []
+doc_links:
+  - path: docs/components.json
+    relationship: extends
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must reject null and absent values for exposed_interfaces (same pattern as agent_affinity)"
+  - "Must treat empty array [] as a valid explicit declaration"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

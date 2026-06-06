@@ -1,0 +1,34 @@
+id: ACD-300e
+readiness: approved
+priority: medium
+title: "Authoring agents query the knowledge graph before making AC decisions"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Each AC-authoring agent (PO v3, BA v3, IT PO v3) queries the cross-surface
+  knowledge graph via the knowledge-query skill during its knowledge-acquisition
+  phase, before producing or enriching any AC YAML. The query results inform
+  deduplication checks, cross-component awareness, and agent/skill discovery
+  so that authoring decisions are grounded in the full project context rather
+  than limited to the files each agent reads directly.
+depends_on: [ACD-300, ACD-300b]
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: context
+    status: exists
+assigned_agent: null
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [ACD-300e-1, ACD-300e-2, ACD-300e-3, ACD-300e-4, ACD-300e-5]
+implemented_by: []

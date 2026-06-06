@@ -1,0 +1,52 @@
+id: BP-600b-1
+title: "Quick-fix workflow creates an AC YAML file in the AC store"
+component: build-pipeline
+level: L2
+status: active
+readiness: reviewed
+priority: medium
+work_status: todo
+criteria: |
+  Given the user invokes /quick-fix with diagnosis "In scripts/build_helpers.py
+    line 42, _resolve_precommit_cmd() returns a non-executable path because
+    the executability probe is missing",
+  When the workflow completes the AC creation phase,
+  Then a new YAML file exists under docs/acceptance-criteria/ in the component
+    directory matching the diagnosed file,
+  And the file contains the required fields: id, title, component,
+    status (set to "active"), and criteria with Given/When/Then structure,
+  And the criteria field describes the specific bug behavior that the fix
+    will prevent from recurring.
+depends_on:
+  - BP-600b
+  - BP-600a-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/index.yaml
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: workflow-architect
+estimated_complexity: M
+it_requirements:
+  - "Must operate at depth 0 per ADR-006 — phase agents dispatched at depth 1 via the Agent tool"
+  - "Requires Claude Code >= 2.1.154 for JS workflow script support"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Generated AC must conform to the AC YAML schema defined in docs/reference/ac-schema.md"
+  - "Must read docs/acceptance-criteria/index.yaml to resolve component prefix"
+delivers_to:
+  agent: workflow-architect
+  contract: "AC YAML file absolute path (string) that the test-writer phase consumes as input. File contains: { id: string, title: string, component: string, level: 'L2', status: 'active', criteria: string (Gherkin) }"
+expects_from:
+  ac_id: BP-600d-1
+  contract: "Structured diagnosis object: { file_path: string, location: string|null, symptom: string, root_cause: string }"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

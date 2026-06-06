@@ -1,0 +1,47 @@
+id: ACD-1100a-3
+readiness: approved
+priority: high
+title: "No workflow or skill dispatches a removed legacy agent"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given the seven legacy agents have been removed (create-ticket,
+    create-ticket-v2, business-analyst (v1), business-analyst-v2,
+    create-epic, refinement, it-po v1/v2),
+  When all workflow scripts, skill files, and command templates are scanned
+    for references to these agent ids,
+  Then zero files under templates/skills/, templates/commands/, or
+    scripts/workflows/ contain any of those seven agent ids as dispatch
+    targets, spawn_allowlist entries, or spawned_by values,
+  And the remaining agent registry entries contain zero references to
+    removed agent ids in their spawn_allowlist or spawned_by arrays.
+depends_on:
+  - ACD-1100a
+  - ACD-1100a-2
+doc_links:
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/workflow-constraints.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must scan all file types under templates/skills/, templates/commands/, and scripts/workflows/ (not just .py)"
+  - "Must update spawn_allowlist and spawned_by arrays in remaining registry entries without corrupting other fields"
+  - "Registry file must remain valid JSON after edits"
+  - "Must not remove references to agents that share a substring with removed agents but are distinct (e.g. 'business-analyst-v3' is distinct from 'business-analyst')"
+delivers_to: null
+expects_from:
+  ac_id: ACD-1100a-2
+  contract: "config/agent_registry.json with the 7 legacy agent entries already removed; consumer cleans remaining cross-references in non-removed entries"
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

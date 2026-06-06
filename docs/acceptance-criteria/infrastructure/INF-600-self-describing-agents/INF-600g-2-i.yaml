@@ -1,0 +1,36 @@
+id: INF-600g-2-i
+title: "Non-phase agent individually listed alongside __ticket_phase_agents__ is valid"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given an agent registry where "ticket-supervisor" has spawn_allowlist
+    containing both "__ticket_phase_agents__" and "brainstorm-lead"
+  And the registry entry for "brainstorm-lead" has is_ticket_phase
+    set to false
+  When the build validates the registry
+  Then validation passes without warning for the "brainstorm-lead" entry
+  And no redundancy warning is emitted because brainstorm-lead is NOT
+    a member of __ticket_phase_agents__ (its is_ticket_phase is false)
+depends_on:
+  - INF-600g-2
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: INF-600g-2
+  contract: "The __ticket_phase_agents__ redundancy check exists and can be tested against non-phase agents"
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

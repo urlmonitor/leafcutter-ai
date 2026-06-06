@@ -1,0 +1,27 @@
+id: UXP-100b
+readiness: draft
+priority: medium
+title: "Know immediately when a new component is needed"
+component: ux-prototyping
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_2
+criteria: |
+  Missing components are flagged and researched, never silently improvised.
+
+  When the prototype requires something that does not exist in the component
+  library, the agent flags the gap and starts research for a suitable solution
+  rather than improvising a poor substitute that will need to be rebuilt later.
+depends_on: [UXP-100]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: [sequence-diagram]

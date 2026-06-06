@@ -1,0 +1,30 @@
+id: BP-700
+title: "One agent handles both the look and the code for your frontend"
+component: build-pipeline
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A single frontend specialist that applies design best practices automatically.
+
+  Every project gets one agent that handles both visual quality and code
+  implementation for frontend work. Design principles are built in rather than
+  bolted on as a separate skill you might forget to load. The agent is always
+  available in every install but only dispatched when the project has frontend
+  files to work on — backend-only projects are never bothered by it.
+depends_on: []
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-06
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-700a
+  - BP-700b
+  - BP-700c
+  - BP-700d
+implemented_by: []

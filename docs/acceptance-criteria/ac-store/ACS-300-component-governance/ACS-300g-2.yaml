@@ -1,0 +1,35 @@
+id: ACS-300g-2
+title: "Existing component entries are preserved unmodified during backfill"
+component: ac-store
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given docs/components.json already contains entries for
+    sync_platforms, build_pipeline, and config_loader,
+  When 17 new subsystem entries are added to the components object,
+  Then the three pre-existing entries remain byte-for-byte identical
+    (same field values, same field order).
+  And the total component count equals 20 (3 existing + 17 new).
+depends_on: []
+doc_links:
+  - path: docs/components.json
+    relationship: governs
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must not reorder, reformat, or modify any field of the 3 existing entries"
+  - "Must preserve JSON key ordering within existing entries"
+  - "Must be verifiable by a byte-level comparison of existing entries before and after"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

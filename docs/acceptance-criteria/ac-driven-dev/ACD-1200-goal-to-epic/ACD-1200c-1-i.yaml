@@ -1,0 +1,41 @@
+id: ACD-1200c-1-i
+readiness: reviewed
+priority: medium
+title: "Circular dependency among leaf ACs is detected and reported before ticket generation"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given 3 leaf ACs have a circular dependency chain:
+    - ACD-050a-1 (depends_on includes ACD-050a-3)
+    - ACD-050a-2 (depends_on includes ACD-050a-1)
+    - ACD-050a-3 (depends_on includes ACD-050a-2)
+  When the system attempts to resolve dependency ordering for ticket generation,
+  Then it detects the cycle before any ticket files are written
+  And outputs an error identifying the cycle:
+    "Circular dependency detected: ACD-050a-1 -> ACD-050a-3 -> ACD-050a-2 -> ACD-050a-1"
+  And no epic folder is created
+  And no ticket files are generated
+  And the AC store is left unmodified (no target_epic tags stamped).
+depends_on: [ACD-1200c-1]
+doc_links:
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must detect cycles before any file system writes (ticket generation or target_epic stamping)"
+  - "Must include the full cycle path in the error message (not just 'cycle detected')"
+  - "Must exit with non-zero status code to signal failure to calling processes"
+  - "Must complete cycle detection in <100ms for graphs with up to 200 nodes"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,37 @@
+id: ACD-1200a-3-i
+readiness: reviewed
+priority: medium
+title: "Goal with zero leaf ACs beneath it produces an error, not an empty epic"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the AC store contains goal ACD-060 (level: L0) with covered_by: [ACD-060a]
+  And ACD-060a (level: L1) has covered_by: [] and no L2/L3 children exist beneath it,
+  When /build-ac is invoked with --ac ACD-060,
+  And the tree traversal finds zero leaf-level ACs (L1 is composite, not a leaf),
+  Then the system outputs an error:
+    "No leaf-level ACs found beneath ACD-060. Decompose the L1s into L2/L3 ACs first."
+  And no epic folder is created
+  And no ticket files are generated.
+depends_on: [ACD-1200a-3, ACD-1200a-1]
+doc_links:
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must detect the zero-leaf condition before any file system writes occur"
+  - "Must exit with non-zero status code to signal failure to calling processes"
+  - "Must log the error at appropriate severity level per project error handling policy"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

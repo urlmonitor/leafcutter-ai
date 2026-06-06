@@ -1,0 +1,47 @@
+id: ACD-1100f-1-i
+readiness: approved
+priority: high
+title: "Edge case: origin_agent accepts any historical agent name without allowlist"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given AC YAML files exist in an AC store with various historical
+    origin_agent values including:
+    - "business-analyst" (v1 name, now reused for promoted v3)
+    - "business-analyst-v2" (deleted agent)
+    - "business-analyst-v3" (old v3 name, now canonical as "business-analyst")
+    - "create-ticket" (deleted agent)
+    - "refinement" (deleted agent)
+    - "BrainCandy" (human author)
+    - "ticket-wiring" (still-active workflow)
+  When the AC schema validator runs against each of these files,
+  Then all pass validation without error,
+  And the origin_agent field is treated as a free-form provenance string
+    (not validated against the current agent registry),
+  And no data migration or rewrite of existing origin_agent values is
+    performed during the v2.0 upgrade.
+depends_on:
+  - ACD-1100f-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must verify all seven example values listed in the criteria pass validation"
+  - "Must confirm no data migration step rewrites origin_agent values in existing AC files"
+  - "Must treat this as a verification/assertion, not a transformation"
+delivers_to: null
+expects_from:
+  ac_id: ACD-1100f-1
+  contract: "AC schema validator accepting free-form origin_agent strings; consumer verifies the full range of historical values"
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,45 @@
+id: ACS-300h-2
+title: "Every agent ID in agent_affinity exists in the agent registry"
+component: ac-store
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given a component entry has agent_affinity: ["python-coder", "test-writer"],
+  When a validator cross-references each element against
+    config/agent_registry.json,
+  Then both "python-coder" and "test-writer" are found as registered agent IDs.
+  And if any element is not found in the agent registry,
+    the validator rejects the entry with an error naming:
+    the invalid agent ID, the component it belongs to,
+    and the list of valid agent IDs as a suggestion.
+depends_on: [ACS-300h-1]
+doc_links:
+  - path: docs/components.json
+    relationship: extends
+    status: exists
+  - path: config/agent_registry.json
+    relationship: validates-against
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must load agent_registry.json and extract the set of all valid agent IDs"
+  - "Must cross-reference each agent_affinity element against the valid set"
+  - "Error messages must include the invalid ID, the component ID, and the list of valid IDs"
+  - "Must handle errors gracefully if agent_registry.json is missing or malformed"
+delivers_to:
+  agent: python-coder
+  contract: "Cross-reference validation logic that verifies agent_affinity IDs exist in agent_registry.json"
+expects_from:
+  ac_id: ACS-300h-1
+  contract: "Every component entry has an agent_affinity array field present"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

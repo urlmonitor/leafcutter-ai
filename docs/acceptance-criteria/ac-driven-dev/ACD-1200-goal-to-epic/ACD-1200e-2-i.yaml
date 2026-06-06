@@ -1,0 +1,38 @@
+id: ACD-1200e-2-i
+readiness: reviewed
+priority: medium
+title: "L1 AC with no children is treated as a leaf, not a goal"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given AC ACD-070a exists in the store with level: L1
+    and covered_by: [] (no L2/L3 children exist beneath it),
+  When /build-ac is invoked with --ac ACD-070a,
+  Then the system detects that ACD-070a has level L1 but no children
+  And because there are no leaves to collect, it does NOT switch to epic mode
+  And it outputs:
+    "ACD-070a is an L1 with no leaf ACs beneath it. Decompose into L2/L3 first,
+    or use /ba to generate behavioral specifications."
+  And no ticket is generated
+  And no epic folder is created.
+depends_on: [ACD-1200e-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Must distinguish between 'L1 with empty covered_by' (error) and 'L2/L3 leaf' (single-ticket path)"
+  - "Must suggest a remedial action to the user (decompose via /ba)"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

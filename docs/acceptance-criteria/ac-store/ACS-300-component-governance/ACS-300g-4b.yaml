@@ -1,0 +1,43 @@
+id: ACS-300g-4b
+title: "Skill wrapper for the add-component script"
+component: ac-store
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the standalone Python script for adding component entries exists,
+  When an agent needs to add a component entry during a workflow,
+  Then a skill wraps the script, providing the agent-facing interface
+    so that agents can invoke it during workflows without knowing the
+    script path or argument format.
+depends_on: [ACS-300g-1, ACS-300g-4a]
+doc_links:
+  - path: docs/components.json
+    relationship: governs
+    status: exists
+  - path: docs/how-to/creating-a-skill.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/skill-frontmatter.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Skill SKILL.md must conform to the skill frontmatter schema documented in docs/reference/skill-frontmatter.md"
+  - "Skill must delegate all validation and write logic to the Python script -- no duplicate business logic in the skill body"
+  - "Skill must document the required input parameters and their types in the SKILL.md body"
+  - "Skill must be portable (no hard-coded absolute paths)"
+delivers_to: null
+expects_from:
+  ac_id: ACS-300g-4a
+  contract: "A working Python script that accepts structured input (id, name, type, description, primary_code, detail_ref, status) and appends a validated entry to docs/components.json. Exit 0 on success, exit 1 on duplicate or validation failure."
+origin_agent: it-po-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

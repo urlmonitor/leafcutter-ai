@@ -1,0 +1,54 @@
+id: KM-KQS-039
+readiness: draft
+priority: medium
+title: "Agent Protocol section is structured so agent templates can delegate to it with a single reference"
+component: knowledge-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the knowledge-query SKILL.md contains an "Agent Protocol" section
+    covering invocation syntax, error handling, zero-result handling,
+    citation format, deduplication warnings, empty-graph normalization,
+    and mandatory-invocation rule,
+  When an agent template author (implementing ACD-300e-2, ACD-300e-3,
+    ACD-300e-4, or ACD-300e-5) needs to add knowledge-query consumption
+    behavior to a template,
+  Then the Agent Protocol section is self-contained: an agent template
+    can reference it with a single instruction line such as
+    "Load the knowledge-query skill and follow its Agent Protocol section"
+    without needing to repeat any of the seven protocol rules inline,
+  And the Agent Protocol section clearly delineates what it prescribes
+    (shared handling logic) from what the agent template must still specify
+    (which surfaces to query, when in the workflow to query, what to do
+    with the results),
+  And the Agent Protocol section is located after the existing "Invocation"
+    and "Error Behaviour" sections in SKILL.md so that it builds on
+    previously-defined concepts without duplicating them,
+  And the Agent Protocol section uses second-person imperative voice
+    ("You MUST...", "You MUST NOT...") consistent with agent template
+    instruction style, not third-person descriptive voice.
+depends_on: [KM-KQS-031, KM-KQS-032, KM-KQS-033, KM-KQS-034, KM-KQS-035, KM-KQS-036]
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: modifies
+    status: exists
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-300e-2.yaml
+    relationship: context
+    status: exists
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-300e-5.yaml
+    relationship: context
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to:
+  agent: llm-expert
+  contract: "A self-contained Agent Protocol section in SKILL.md that agent templates can reference with one line, with clear boundary between shared and agent-specific concerns"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

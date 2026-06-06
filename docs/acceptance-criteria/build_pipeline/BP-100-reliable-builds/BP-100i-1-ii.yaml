@@ -1,0 +1,41 @@
+id: BP-100i-1-ii
+readiness: draft
+priority: high
+title: "Non-hook utility files (e.g. __init__.py, README.md) are excluded from script parity checks"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100i.yaml"
+criteria: |
+  Given the runtime source directory contains these files:
+    - check_alpha.py
+    - __init__.py
+    - README.md
+    - __pycache__/check_alpha.cpython-312.pyc
+  And the canonical template directory contains only:
+    - check_alpha.py
+  When the parity check runs at pre-commit time
+  Then no violation is reported for "__init__.py", "README.md", or the __pycache__ contents
+  And the hook exits with code 0
+  And only files matching the hook script naming pattern (e.g. check_*.py,
+    run_hook.py, regenerate_*.py) are compared for parity
+depends_on:
+  - BP-100i-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100i-1.yaml"
+    relationship: parent
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-100i-1
+  contract: "The parity-checking function whose file filter this edge case validates"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

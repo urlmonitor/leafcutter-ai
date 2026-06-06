@@ -1,0 +1,27 @@
+id: PER-100b
+readiness: draft
+priority: medium
+title: "Every AC declares who it is for"
+component: persona-management
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_2
+criteria: |
+  Acceptance criteria carry a persona reference — no more building for "someone."
+
+  Each AC can declare which persona it serves. Orphaned ACs (those targeting no
+  persona) are visible and actionable, making it easy to spot gaps in audience
+  coverage during planning.
+depends_on: [PER-100]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: [how-to, reference-doc]

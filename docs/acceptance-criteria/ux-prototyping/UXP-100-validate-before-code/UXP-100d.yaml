@@ -1,0 +1,27 @@
+id: UXP-100d
+readiness: draft
+priority: medium
+title: "Design decisions carry forward into implementation"
+component: ux-prototyping
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_2
+criteria: |
+  What the user approved is what gets built — no re-interpretation gap.
+
+  Layout, flow, terminology, and hierarchy decisions captured in the approved
+  prototype are handed off in a form the frontend-coder agent can consume
+  directly. The implemented product matches what was signed off.
+depends_on: [UXP-100]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: [sequence-diagram, component-diagram]

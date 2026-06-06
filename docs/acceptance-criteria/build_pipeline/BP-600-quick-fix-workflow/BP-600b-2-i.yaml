@@ -1,0 +1,42 @@
+id: BP-600b-2-i
+title: "Quick-fix workflow infers component from diagnosed file path when not provided"
+component: build-pipeline
+level: L3
+status: active
+readiness: reviewed
+priority: medium
+work_status: todo
+criteria: |
+  Given the user invokes /quick-fix with a diagnosis specifying file
+    "scripts/build_helpers.py" but no explicit component name,
+  When the workflow determines which component to create the AC under,
+  Then it infers the component from the file path using index.yaml
+    component-to-directory mappings,
+  And if no mapping is found it asks the user to specify the component
+    before proceeding.
+depends_on:
+  - BP-600b-2
+doc_links:
+  - path: docs/acceptance-criteria/index.yaml
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: workflow-architect
+estimated_complexity: S
+it_requirements:
+  - "Must operate at depth 0 per ADR-006 — phase agents dispatched at depth 1 via the Agent tool"
+  - "Requires Claude Code >= 2.1.154 for JS workflow script support"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must fall back to user prompt if file path does not match any component mapping"
+delivers_to: null
+expects_from:
+  ac_id: BP-600b-2
+  contract: "Component prefix lookup logic that maps file paths to component IDs via index.yaml directory_patterns field"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

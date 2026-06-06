@@ -1,0 +1,31 @@
+id: ACD-1100
+readiness: approved
+priority: high
+title: "The AC-driven development pipeline is the only pipeline — no legacy alternatives remain"
+component: ac-driven-dev
+level: L0
+status: active
+req_status: approved
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  The v3 authoring pipeline (PO, BA, IT PO) and its command surface
+  (/plan-feature, /build-ac) are the only requirements-to-code path in the
+  package. All v1 and v2 pipeline agents, commands, and transitional
+  scaffolding have been removed. Agent names carry no version suffixes.
+  The package ships as version 2.0. Existing AC stores, tickets, and
+  workflows created under v1.x continue working without manual fixup.
+depends_on: []
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1100a
+  - ACD-1100b
+  - ACD-1100c
+  - ACD-1100d
+  - ACD-1100e
+  - ACD-1100f
+implemented_by: []

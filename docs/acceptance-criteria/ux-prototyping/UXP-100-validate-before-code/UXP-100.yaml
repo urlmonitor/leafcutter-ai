@@ -1,0 +1,34 @@
+id: UXP-100
+readiness: draft
+priority: medium
+title: "See what you are getting before a single line of code is written"
+component: ux-prototyping
+level: L0
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_2
+criteria: |
+  Validate the user experience with a clickable prototype before engineering begins.
+
+  When the PO has framed a feature and UX involvement is warranted, a prototype
+  appears — built from known page types and reusable components — that the user
+  can review and approve. If the prototype reveals a need for new components,
+  research begins immediately. Engineering never starts on a feature the user
+  has not seen and confirmed. The UX designer runs in parallel with the BA,
+  sharing resources so neither blocks the other.
+depends_on: []
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-06
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-100a
+  - UXP-100b
+  - UXP-100c
+  - UXP-100d
+  - UXP-100e
+implemented_by: []

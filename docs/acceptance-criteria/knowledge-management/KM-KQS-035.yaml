@@ -1,0 +1,49 @@
+id: KM-KQS-035
+readiness: draft
+priority: medium
+title: "Agent Protocol specifies citation and deduplication formats for knowledge-graph findings"
+component: knowledge-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the knowledge-query SKILL.md contains an "Agent Protocol" section,
+  When a consuming agent reads the Agent Protocol to determine how to present
+    knowledge-graph findings to the user,
+  Then the protocol specifies a citation format for overlapping nodes:
+    "[<surface>] <title>" (e.g., "[agents] python-coder" or
+    "[docs] architecture/components/build-orchestration.md"),
+  And the protocol specifies that citations are presented at confirmation gates
+    where the agent pauses for user review (not inline in output YAML),
+  And the protocol specifies a deduplication warning format for overlapping ACs:
+    "<ac-id> already specifies this behavior — skipping or creating a variant"
+    (e.g., "ACD-200a-1 already specifies this behavior — skipping or creating
+    a variant"),
+  And the protocol specifies that when overlap is with a documentation node
+    or ADR, the agent adds the path to the new AC's doc_links field with
+    relationship: "context",
+  And the protocol specifies that when no overlapping nodes are found,
+    the agent logs: "knowledge-query returned no related nodes for
+    '<query-term>' — proceeding with file-based context only"
+    and does not present any deduplication warning to the user.
+depends_on: [KM-KQS-040]
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: context
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to:
+  agent: llm-expert
+  contract: "Agent Protocol section containing citation format template, deduplication warning template, and doc_links auto-population rule"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

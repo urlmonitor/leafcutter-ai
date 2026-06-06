@@ -1,0 +1,33 @@
+id: BP-800
+title: "Get a specialist for every language in your project without configuring one"
+component: build-pipeline
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_2
+criteria: |
+  Project-adaptive agent generation — zero-config language specialists.
+
+  Instead of maintaining a fixed list of language-specific agents, the system
+  discovers what your project uses at build time and provisions a specialist
+  for each — pre-loaded with behavioral best practices for that language and
+  framework. You add a Go service or a graph database, and the next build
+  gives you an agent that knows how to work in that world. No manual agent
+  configuration, no stale templates for languages you stopped using.
+depends_on: []
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-06
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-800a
+  - BP-800b
+  - BP-800c
+  - BP-800d
+  - BP-800e
+  - BP-800f
+implemented_by: []

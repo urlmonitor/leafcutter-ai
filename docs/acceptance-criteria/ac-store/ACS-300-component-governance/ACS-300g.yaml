@@ -50,7 +50,7 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by: [it-po-v3]
 superseded_by: null
-covered_by: []
+covered_by: [ACS-300g-1, ACS-300g-2, ACS-300g-3, ACS-300g-4a, ACS-300g-4b]
 implemented_by: []

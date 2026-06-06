@@ -1,0 +1,44 @@
+id: ACS-300k-3
+title: "index.yaml is scoped solely to AC-prefix assignment"
+component: ac-store
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given docs/acceptance-criteria/index.yaml contains fields:
+    id, prefix, description, owner,
+  When any agent reads index.yaml,
+  Then it uses only the prefix field (to determine the file-naming prefix
+    for AC files in that component namespace).
+  And component metadata (name, type, agent_affinity, exposed_interfaces,
+    depends_on) is never derived from index.yaml -- those are sourced
+    exclusively from docs/components.json.
+  And the index.yaml header comment explicitly states its limited scope:
+    "This file maps component IDs to AC-prefix only. For full component
+    metadata, see docs/components.json."
+depends_on: [ACS-300k-2]
+doc_links:
+  - path: docs/acceptance-criteria/index.yaml
+    relationship: scopes
+    status: exists
+  - path: docs/components.json
+    relationship: governs
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must add a header comment to both the template and deployed versions of index.yaml"
+  - "Must not modify the functional content of index.yaml (id, prefix mappings stay the same)"
+delivers_to: null
+expects_from:
+  ac_id: ACS-300k-2
+  contract: "Agent templates no longer use index.yaml for metadata, so scoping is complete"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

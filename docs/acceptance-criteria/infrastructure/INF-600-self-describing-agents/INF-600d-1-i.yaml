@@ -1,0 +1,44 @@
+id: INF-600d-1-i
+title: "Agent that delegates to a specialist for complex cases AND has a fallback skill declares both"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given an agent (e.g. "documentation-expert") that can spawn a
+    specialist agent ("how-to-author") for complex documentation tasks
+  And the same agent also writes simple documentation updates directly
+    without spawning the specialist
+  When the registry entry is inspected
+  Then the specialist agent ("how-to-author") appears in spawn_allowlist
+    because delegation does occur for complex cases
+  And the direct-writing capability appears in skills_invoked or is
+    documented in behavioral_patterns with a trigger describing when
+    delegation occurs versus when the agent handles it directly
+  And the spawn diagram shows the delegation edge to the specialist
+  And the behavioral_patterns table explains the decision boundary
+    (e.g. "delegates to how-to-author when the guide exceeds N steps")
+depends_on:
+  - INF-600d-1
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+  - path: docs/agents/cards/documentation-expert.card.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: INF-600d-1
+  contract: "The distinction between skill-based capability and spawn delegation is established in the registry"
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

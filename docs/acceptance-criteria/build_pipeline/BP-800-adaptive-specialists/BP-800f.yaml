@@ -1,0 +1,30 @@
+id: BP-800f
+title: "Database specialists go beyond relational"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_2
+criteria: |
+  The system recognizes and provisions specialists for relational, document, and graph databases.
+
+  When the project uses a NoSQL document store or a graph database, the
+  system detects it and generates an appropriate specialist — not just
+  agents for relational SQL. Each database paradigm gets its own behavioral
+  best practices.
+depends_on:
+  - BP-800
+  - BP-800a
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+  - component-diagram

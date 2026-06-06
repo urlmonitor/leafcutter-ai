@@ -1,0 +1,54 @@
+id: ACD-1200b-2
+readiness: reviewed
+priority: medium
+title: "User can proceed with approved-only subset or request bulk review"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the readiness report shows 2 of 5 leaf ACs are unapproved,
+  When the system prompts the user with:
+    "Proceed with 3 approved ACs only? (yes / review-all / cancel)"
+  And the user answers "yes",
+  Then ticket generation proceeds with only the 3 approved ACs
+  And the 2 unapproved ACs are excluded from the epic
+  And a summary confirms: "Generating epic with 3 of 5 ACs (2 excluded as unapproved)."
+
+  Given the same readiness report,
+  When the user answers "review-all",
+  Then the system dispatches IT PO v3 to enrich and review the 2 unapproved ACs
+  And after IT PO v3 completes, the readiness check is re-evaluated
+  And any newly-approved ACs are added to the generation set.
+
+  Given the same readiness report,
+  When the user answers "cancel",
+  Then no epic is generated
+  And no tickets are created
+  And no ACs are modified.
+depends_on: [ACD-1200b, ACD-1200b-1]
+doc_links:
+  - path: docs/architecture/diagrams/c2-003-ac-readiness-states.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/diagrams/c2-004-build-ac-flow.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Must present exactly three choices (yes / review-all / cancel) with no ambiguous aliases"
+  - "The review-all path must terminate cleanly if IT PO v3 does not promote all ACs to approved — re-present the readiness report with updated counts"
+  - "Must not modify AC YAML files on the cancel path"
+  - "Must re-read AC readiness values from disk after IT PO v3 completes (not from cached state)"
+delivers_to: null
+expects_from:
+  ac_id: ACD-1200b-1
+  contract: "dict with keys { approved: list[str], unapproved: list[dict] } where unapproved entries contain { id: str, readiness: str }"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

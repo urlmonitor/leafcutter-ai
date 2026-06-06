@@ -15,7 +15,7 @@ criteria: |
   And the skill does NOT read the full unfiltered git log,
   And the returned commits are limited to those where at least one
     changed file matches the provided directory pattern.
-depends_on: [BO-1100e, BO-1100d-4]
+depends_on: [BO-1100e]
 doc_links: []
 assigned_agent: python-coder
 estimated_complexity: M

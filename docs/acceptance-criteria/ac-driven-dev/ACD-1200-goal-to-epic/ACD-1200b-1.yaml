@@ -1,0 +1,50 @@
+id: ACD-1200b-1
+readiness: reviewed
+priority: medium
+title: "Readiness report surfaces count and IDs of unapproved ACs before generation"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given goal ACD-050 has 5 leaf ACs beneath it:
+    - ACD-050a-1 (readiness: approved)
+    - ACD-050a-2 (readiness: approved)
+    - ACD-050a-2-i (readiness: draft)
+    - ACD-050b-1 (readiness: reviewed)
+    - ACD-050b-2 (readiness: approved)
+  When /build-ac is invoked with --ac ACD-050,
+  And the tree traversal completes,
+  Then the system outputs a readiness report:
+    "3 of 5 leaf ACs are approved. 2 ACs need approval:
+      - ACD-050a-2-i (readiness: draft)
+      - ACD-050b-1 (readiness: reviewed)"
+  And the report appears BEFORE any ticket generation begins
+  And the user is prompted with a choice before proceeding.
+depends_on: [ACD-1200b, ACD-1200a-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/diagrams/c2-003-ac-readiness-states.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must read the readiness field from each leaf AC YAML without modifying any files"
+  - "Must classify ACs into approved vs unapproved groups before presenting the report"
+  - "Must complete readiness check in <500ms for up to 100 leaf ACs"
+delivers_to:
+  agent: python-coder
+  contract: "dict with keys { approved: list[str], unapproved: list[dict] } where unapproved entries contain { id: str, readiness: str }. Used by ACD-1200b-2 to present the user choice."
+expects_from:
+  ac_id: ACD-1200a-1
+  contract: "list[str] — leaf AC IDs with their readiness field values accessible from disk"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

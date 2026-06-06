@@ -1,0 +1,40 @@
+id: ACS-300i-1-i
+title: "Interface path referencing a non-existent file emits a warning but is accepted"
+component: ac-store
+level: L3
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given a component entry has an exposed_interfaces element with
+    path: "config/nonexistent_schema.json",
+  When the validator checks path reachability,
+  Then the validator emits a warning (not a blocking error) that the path
+    is unreachable on disk,
+  And the entry is still accepted (the contract may describe a future file
+    or a runtime artifact not committed to the repo).
+  And the warning includes the component ID, interface name, and the
+    unreachable path value.
+depends_on: [ACS-300i-1]
+doc_links:
+  - path: docs/components.json
+    relationship: extends
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must emit warning to stderr (not stdout) so it does not interfere with machine-readable output"
+  - "Warning must not cause a non-zero exit code (the entry is accepted)"
+  - "Must check path relative to the repository root"
+delivers_to: null
+expects_from:
+  ac_id: ACS-300i-1
+  contract: "Schema validation logic that this edge case exercises"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: [it-po-v3]
+superseded_by: null
+covered_by: []
+implemented_by: []

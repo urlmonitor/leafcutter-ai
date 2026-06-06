@@ -1,0 +1,48 @@
+id: BP-600c-3
+title: "Quick-fix workflow runs the test after the fix and confirms it passes (green phase)"
+component: build-pipeline
+level: L2
+status: active
+readiness: reviewed
+priority: medium
+work_status: todo
+criteria: |
+  Given the python-coder has applied the fix to the diagnosed file,
+  When the workflow reaches the green-phase verification step,
+  Then it dispatches the test-runner agent targeting the same test file
+    from the red phase,
+  And the test-runner reports all tests PASSED,
+  And if the test still fails the workflow halts with a warning:
+    "The fix did not resolve the failing test -- the root cause may be
+    different than diagnosed."
+depends_on:
+  - BP-600c
+  - BP-600c-2
+  - BP-600d-2
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: workflow-architect
+estimated_complexity: M
+it_requirements:
+  - "Must operate at depth 0 per ADR-006 — phase agents dispatched at depth 1 via the Agent tool"
+  - "Requires Claude Code >= 2.1.154 for JS workflow script support"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must reuse the same test file path from the red phase — no re-discovery"
+  - "Must halt the workflow (not just warn) if the fix does not resolve the failing test"
+delivers_to:
+  agent: workflow-architect
+  contract: "Green-phase result: { test_file: string, all_passed: boolean, failures: string[] }"
+expects_from:
+  ac_id: BP-600c-2
+  contract: "Red-phase result containing test_file path to reuse for green-phase verification"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

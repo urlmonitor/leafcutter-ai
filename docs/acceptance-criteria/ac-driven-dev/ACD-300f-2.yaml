@@ -1,0 +1,48 @@
+id: ACD-300f-2
+readiness: draft
+priority: medium
+title: "Agent Consumption Protocol defines zero-result and empty-graph handling as non-error conditions"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the SKILL.md contains the "Agent Consumption Protocol" section
+    (from ACD-300f-1),
+  When zero-result and empty-graph handling subsections are added to the
+    protocol,
+  Then the zero-result subsection states:
+    "When a query returns zero matching nodes, the consuming agent logs:
+    'knowledge-query returned 0 nodes for <query-term> — proceeding with
+    file-based reads only' and continues its normal workflow without error,
+    retry, or user prompt",
+  And the empty-graph subsection states:
+    "When the graph contains zero nodes across all surfaces (fresh project),
+    this is a normal condition. The consuming agent treats it identically to
+    a zero-result query — log and proceed. Do not prompt the user to confirm
+    continuation",
+  And neither subsection prescribes a blocked status, a retry loop, or a
+    confirmation gate,
+  And the log message format uses the exact template shown (with <query-term>
+    as the variable placeholder) so all consuming agents produce consistent
+    log output.
+depends_on: [ACD-300f, ACD-300f-1]
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: modifies
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to:
+  agent: llm-expert
+  contract: "SKILL.md Agent Consumption Protocol contains zero-result and empty-graph handling subsections with prescribed log message templates"
+expects_from:
+  ac_id: ACD-300f-1
+  contract: "Agent Consumption Protocol section exists in SKILL.md as the container for these subsections"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

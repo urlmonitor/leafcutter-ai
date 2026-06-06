@@ -1,0 +1,30 @@
+id: BO-1200b
+readiness: draft
+priority: medium
+title: "Dev is where agents deliver -- always moving forward"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Main is the continuous delivery target for autonomous agent builds.
+
+  Agents land completed, tested features on main. The dev version is always
+  ahead of stable -- it contains work that has passed quality gates but has
+  not yet been promoted to a production release. It may contain multiple
+  features in varying states of user-readiness.
+depends_on:
+  - BO-1200
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Describes the existing main branch convention -- no new user-facing workflow to document."

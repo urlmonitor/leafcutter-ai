@@ -1,0 +1,48 @@
+id: BP-600d-1
+title: "Quick-fix workflow accepts a structured diagnosis as input"
+component: build-pipeline
+level: L2
+status: active
+readiness: reviewed
+priority: medium
+work_status: todo
+criteria: |
+  Given the user invokes /quick-fix with text containing "In
+    scripts/build_helpers.py line 42, _resolve_precommit_cmd() returns
+    a non-executable path because the executability probe is skipped
+    when shutil.which returns None",
+  When the workflow parses the input,
+  Then it extracts the target file path ("scripts/build_helpers.py"),
+    the location hint ("line 42"), the symptom ("returns a
+    non-executable path"), and the root cause ("executability probe
+    is skipped"),
+  And it uses these fields to drive AC creation, test writing, and
+    fix application in subsequent phases.
+depends_on:
+  - BP-600d
+  - BP-600a-1
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: workflow-architect
+estimated_complexity: M
+it_requirements:
+  - "Must operate at depth 0 per ADR-006 — phase agents dispatched at depth 1 via the Agent tool"
+  - "Requires Claude Code >= 2.1.154 for JS workflow script support"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Diagnosis parsing should use LLM-based extraction, not rigid regex — natural language input is expected"
+  - "Must validate that file_path resolves to an existing file in the repository before proceeding"
+delivers_to:
+  agent: workflow-architect
+  contract: "Structured diagnosis object: { file_path: string, location: string|null, symptom: string, root_cause: string } — consumed by AC creation (BP-600b-1), dirty-tree check (BP-600a-3), test-writing (BP-600c-1), and fix-application (BP-600d-2) phases"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

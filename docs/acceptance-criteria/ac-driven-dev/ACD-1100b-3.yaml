@@ -1,0 +1,50 @@
+id: ACD-1100b-3
+readiness: approved
+priority: high
+title: "All cross-references to v3 agent names are updated to canonical names"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given the v3 agents have been promoted to canonical names
+    (product-owner-v3 -> product-owner, business-analyst-v3 -> business-analyst,
+    it-po-v3 -> it-po),
+  When all skill files, workflow scripts, command templates, and documentation
+    under templates/ and docs/ are scanned,
+  Then zero files contain the strings "product-owner-v3", "business-analyst-v3",
+    or "it-po-v3" as agent identifiers,
+  And the /ba skill file references "business-analyst" (not "business-analyst-v3"),
+  And the /po skill file references "product-owner" (not "product-owner-v3"),
+  And the /it-po skill file references "it-po" (not "it-po-v3"),
+  And the create-ac workflow script dispatches "product-owner", "business-analyst",
+    and "it-po" (not v3-suffixed variants).
+depends_on:
+  - ACD-1100b
+  - ACD-1100b-1
+  - ACD-1100b-2
+doc_links:
+  - path: docs/reference/workflow-constraints.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must scan all file types under templates/ and docs/ (including .md, .js, .json)"
+  - "Must replace only agent identifier occurrences, not substrings in unrelated contexts (e.g. prose discussing migration history)"
+  - "Must not modify files in docs/acceptance-criteria/ (historical origin_agent values are preserved per ACD-1100f)"
+  - "Must be idempotent — running against files already using canonical names produces no changes"
+delivers_to: null
+expects_from:
+  ac_id: ACD-1100b-2
+  contract: "config/agent_registry.json with canonical ids (product-owner, business-analyst, it-po) already in place; consumer updates all other files to match"
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

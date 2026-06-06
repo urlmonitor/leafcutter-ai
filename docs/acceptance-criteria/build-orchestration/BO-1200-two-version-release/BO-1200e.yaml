@@ -1,0 +1,31 @@
+id: BO-1200e
+readiness: draft
+priority: medium
+title: "You always know what is in dev that has not reached prod yet"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  A release candidate view showing features landed in dev but not yet promoted to stable.
+
+  At any time, you can see the list of features that have been completed and
+  merged to main but have not yet been included in a stable release. This is
+  your release candidate view -- it tells you what the next stable version
+  would contain if you released right now.
+depends_on:
+  - BO-1200b
+  - BO-1200c
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-06
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - how-to

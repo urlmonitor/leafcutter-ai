@@ -1,0 +1,56 @@
+id: INF-600b-2
+title: "Generated card surfaces per-agent AC assignments so agents can work AC-by-AC"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: high
+criteria: |
+  Given a ticket that references multiple L2/L3 ACs via its
+    ac_traceability frontmatter field
+    (e.g. ac_traceability: [INF-600g-1, INF-600g-2, INF-600g-3])
+  And the ticket's agents map assigns multiple agents
+    (e.g. python-coder: needed, test-writer: needed)
+  And each AC YAML file has an assigned_agent field
+    (e.g. INF-600g-1.yaml has assigned_agent: python-coder,
+     INF-600g-2.yaml has assigned_agent: python-coder,
+     INF-600g-3.yaml has assigned_agent: test-writer)
+  When the ticket body or agent card is generated
+  Then it includes a per-agent AC assignment section that groups ACs
+    by their assigned_agent:
+    "### python-coder
+     - INF-600g-1: spawned_by/spawn_allowlist reciprocity validation
+     - INF-600g-2: __ticket_phase_agents__ redundancy detection
+     ### test-writer
+     - INF-600g-3: skills_invoked cross-reference"
+  And each agent can identify exactly which ACs it is responsible for
+    without inspecting ACs assigned to other agents
+  And the grouping enables agents to implement one AC at a time
+    (sequentially within their assigned set) rather than attempting
+    all ticket work at once
+depends_on:
+  - INF-600b
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+  - path: docs/agents/cards/python-coder.card.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+  agent: python-coder
+  contract: "A per-agent AC grouping section in the ticket body or card that scopes each agent's work to its assigned ACs only"
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

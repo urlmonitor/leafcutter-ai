@@ -1,0 +1,38 @@
+id: INF-600g-3-i
+title: "Project-local skill referenced in skills_invoked resolves via .claude/skills/ fallback"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given an agent registry entry where skills_invoked contains
+    skill_id "custom-project-skill"
+  And "custom-project-skill" does not exist in templates/skills/
+  But it does exist at .claude/skills/custom-project-skill/SKILL.md
+  When the build validates the skills_invoked cross-reference
+  Then validation passes without error for "custom-project-skill"
+  And the resolution order is:
+    1. templates/skills/{skill_id}/SKILL.md (package-level)
+    2. .claude/skills/{skill_id}/SKILL.md (project-local)
+  And only if neither path resolves does the build emit an error
+depends_on:
+  - INF-600g-3
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: INF-600g-3
+  contract: "The skills_invoked cross-reference validation exists and resolves skill paths"
+origin_agent: BrainCandy
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
