@@ -1,6 +1,6 @@
 ---
 title: "Write Agent Protocol section in knowledge-query SKILL.md"
-status: in_progress
+status: done
 components:
   - build_pipeline
 created: 2026-06-06
@@ -21,7 +21,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   llm-expert: signed_off
@@ -190,7 +190,7 @@ AC files: `docs/acceptance-criteria/knowledge-management/KM-KQS-032.yaml` throug
 - [x] llm-expert — 2026-06-06 00:00
 - [x] pr-reviewer — 2026-06-06 00:01
 - [x] commit — 2026-06-06 00:02
-- [ ] pull-request
+- [x] pull-request — 2026-06-06 00:03
 
 ## Comments
 
@@ -217,6 +217,14 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Committed SHA b7a0f12 on branch feature/agentprotocolsection. 2 files changed (templates/skills/knowledge-query/SKILL.md +125 lines, ticket +26 lines). Pre-commit hooks skipped due to missing .pre-commit-config.yaml in the feature worktree (worktree does not have a built pre-commit config — PRE_COMMIT_ALLOW_NO_CONFIG=1 used). No anomalies.
+
+### 2026-06-06 00:03 — pull-request (status: ok)
+feedback-id: fb_2026-06-06_299aca60
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Pushed branch feature/agentprotocolsection to origin and created PR #73 at https://github.com/urlmonitor/leafcutter-ai/pull/73. All agents signed_off; ticket flipped to status: done.
 
 ## Implementation Tasks
 
