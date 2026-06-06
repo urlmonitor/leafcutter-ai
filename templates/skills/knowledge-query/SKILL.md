@@ -178,3 +178,128 @@ ERROR: Unknown surface '<name>'. Valid surfaces: agents, tickets, docs, skills, 
 ```
 
 No Python traceback is shown for user-facing errors. Internal exceptions are propagated normally so the caller can diagnose unexpected failures.
+
+---
+
+## Agent Protocol
+
+This section is the single reference for how any agent template should invoke
+`knowledge-query` and handle its results. An agent template can reference the
+full protocol with one line:
+
+> "Load the `knowledge-query` skill and follow its **Agent Protocol** section."
+
+No inline repetition of these rules is needed.
+
+### Invocation
+
+You MUST invoke `knowledge-query` using the Bash tool — not `Read`, `Write`,
+or any other tool. Two standard patterns are:
+
+**Keyword query** (use the term most relevant to your current task):
+
+```bash
+python scripts/knowledge_query.py --query <term>
+```
+
+`<term>` is derived from your current context — the ticket goal, the
+component name, the concept you are working with. Choose a term that
+narrows the graph to nodes related to your task.
+
+**Surface-scoped query** (use when you need all nodes in one surface):
+
+```bash
+python scripts/knowledge_query.py --surface <name>
+```
+
+`--project-root` is not required when your working directory is the
+project root. Omit it in the standard case.
+
+### Zero-Result Handling
+
+Two non-error conditions may occur after a successful script invocation.
+Neither triggers a user-facing prompt, a retry, or a `blocked` status.
+Your output quality MUST NOT degrade — no empty or placeholder fields:
+
+- **Zero results** — the graph has nodes but none match your query. Log:
+  `"knowledge-query returned 0 nodes for '<query-term>' — proceeding with file-based context only"`
+- **Empty graph** — the graph has zero nodes total (fresh project). Log:
+  `"knowledge-query: graph contains 0 nodes (fresh project) — proceeding with file-based context only"`
+
+Continue with file-based reads in both cases.
+
+### Graceful Error Degradation
+
+Two failure modes may occur. In both cases You MUST capture the error
+output, log a warning, and continue. You MUST NOT abort, return
+`blocked`, retry, or surface the error to the user unless verbose output
+was explicitly requested:
+
+- **Script not found** — the Bash tool returns a "command not found" or
+  "No such file or directory" error. Use the literal text `"script not found"`
+  as the `<error_message>` portion of the warning.
+- **Non-zero exit** — the script exits with a non-zero code. Use the
+  script's actual output as `<error_message>`.
+
+Warning format (identical degradation path for both modes):
+
+```
+knowledge-query failed: <error_message> — skipping graph context, proceeding with file-based reads only
+```
+
+The consuming agent can distinguish the two modes by the Bash tool output
+format, but the degradation behaviour is the same.
+
+### Citation and Deduplication
+
+**Citation format** for overlapping nodes (use at confirmation gates, not
+inline in output YAML):
+
+```
+[<surface>] <title>
+```
+
+Example: `[agents] python-coder`
+
+**Deduplication warning** (applies ONLY to nodes whose surface is `acs`
+or whose id matches the AC ID pattern):
+
+```
+<ac-id> already specifies this behavior — skipping or creating a variant
+```
+
+**`doc_links` auto-population** (applies ONLY to `docs` or `adrs` surface
+nodes): when a query returns a `docs` or `adrs` node that overlaps with
+your work, add the path to `doc_links` with `relationship: context`.
+
+**Nodes from other surfaces** (`agents`, `skills`, `hooks`): cite for
+information only — they do NOT trigger deduplication warnings or
+`doc_links` additions.
+
+When a single query returns both an overlapping AC and an overlapping doc,
+You MUST present BOTH the deduplication warning AND add the doc to
+`doc_links` in the same confirmation gate output.
+
+When no overlapping nodes are found, log:
+
+```
+knowledge-query returned no related nodes for '<query-term>' — proceeding with file-based context only
+```
+
+and present no deduplication warning.
+
+### Mandatory-Invocation Rule
+
+You MUST invoke `knowledge-query` during your knowledge-acquisition phase
+even if prior file reads appear to provide sufficient context.
+
+**Rationale:** file reads cannot detect cross-component overlap, recently
+registered agents or skills, or ACs authored in sibling components since the
+last template update. Skipping `knowledge-query` when files seem sufficient
+produces invisible gaps in cross-surface awareness.
+
+The only acceptable reason to skip `knowledge-query` is a script failure
+covered by the error-handling rules above.
+
+This protocol does NOT prescribe WHEN or WHICH surfaces to query — those
+decisions remain agent-specific and depend on the task at hand.
