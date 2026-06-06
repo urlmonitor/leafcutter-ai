@@ -1,0 +1,33 @@
+id: BO-1100c-3-i
+title: "Missing routing config file causes graceful fallback to current commit behavior"
+component: build-orchestration
+level: L3
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the routing configuration file does not exist at the expected path
+    (e.g. fresh project install, or the file was deleted),
+  When the commit agent is invoked with staged files,
+  Then the agent does not crash or abort,
+  And the agent falls back to its existing message-generation behavior
+    (the LLM-based commit message composition that existed before the router),
+  And the agent logs a single warning indicating the config file was not found
+    and that default behavior is being used.
+depends_on: [BO-1100c-3]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

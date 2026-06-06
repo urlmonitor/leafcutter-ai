@@ -1,0 +1,34 @@
+id: BO-1100d-4
+title: "Specialist examines recent commit history for structurally similar commits"
+component: build-orchestration
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given an unmatched shape has been detected with directory pattern "docs/architecture/**",
+    and the filtering skill (BO-1100e) is available,
+  When the specialist agent analyses the unmatched shape,
+  Then the specialist invokes the filtering skill with the directory pattern "docs/architecture/**",
+  And the specialist receives a list of candidate commits (subject line + file list per commit),
+  And the specialist examines the subject lines of returned commits to extract
+    recurring message patterns (e.g. "docs(architecture): ..." appearing in 7 of 12 candidates),
+  And the extracted pattern (if consistent) is used as the template for the proposed routing rule.
+depends_on: [BO-1100d, BO-1100e-1]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to:
+  agent: llm-expert
+  contract: "A message template inferred from historical commit patterns for this shape"
+expects_from:
+  ac_id: BO-1100e-1
+  contract: "Filtered list of commits touching the same directory set, each with subject line and file list"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

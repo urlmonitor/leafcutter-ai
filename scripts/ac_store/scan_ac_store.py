@@ -411,6 +411,109 @@ def _print_json(
 
 
 # ---------------------------------------------------------------------------
+# Tree traversal (ACD-1200a-1, ACD-1200a-1-i)
+# ---------------------------------------------------------------------------
+
+
+def _load_ac_by_id(ac_store_root: Path, ac_id: str) -> AcRecord | None:
+    """Load and return the AC YAML record with the given id, or None if not found.
+
+    Searches *ac_store_root* recursively for a YAML file whose ``id`` field
+    matches *ac_id*.
+
+    Args:
+        ac_store_root: Root directory of the AC YAML store.
+        ac_id: The AC id to look up.
+
+    Returns:
+        Parsed AC dict if found; ``None`` when the id is absent or the file
+        cannot be parsed.
+    """
+    for yaml_path in sorted(ac_store_root.rglob("*.yaml")):
+        record = _load_ac(yaml_path)
+        if record is not None and record.get("id") == ac_id:
+            return record
+    return None
+
+
+def traverse_ac_tree(
+    root_id: str,
+    ac_store_root: Path,
+) -> list[str]:
+    """Return the ordered list of leaf AC ids beneath *root_id*.
+
+    A leaf is an AC whose ``covered_by`` field is empty or absent.
+    The traversal is **depth-first** with **alphabetical sibling ordering**
+    at every level.
+
+    When *root_id* itself is a leaf (no ``covered_by`` children), the function
+    returns ``[root_id]``.
+
+    When *root_id* cannot be found in *ac_store_root*, the function returns an
+    empty list and emits a warning to stderr — it does NOT raise.
+
+    Performance: completes in under 200ms for trees up to 200 nodes when each
+    AC YAML is small (< 4 KB) and *ac_store_root* is on a local filesystem.
+
+    Args:
+        root_id: The AC id to start traversal from (may be L0, L1, or deeper).
+        ac_store_root: Absolute path to the root of the AC YAML store.
+
+    Returns:
+        Ordered list of leaf AC ids, depth-first alphabetical-sibling order.
+        Returns ``[]`` when *root_id* is not found.
+    """
+    # Build a full id → record index for O(1) child lookups.
+    id_index: dict[str, AcRecord] = {}
+    for yaml_path in sorted(ac_store_root.rglob("*.yaml")):
+        record = _load_ac(yaml_path)
+        if record is not None:
+            ac_id = record.get("id")
+            if ac_id:
+                id_index[ac_id] = record
+
+    if root_id not in id_index:
+        print(
+            f"WARNING: traverse_ac_tree: root_id {root_id!r} not found in {ac_store_root}",
+            file=sys.stderr,
+        )
+        return []
+
+    leaves: list[str] = []
+    _dfs_collect_leaves(root_id, id_index, leaves)
+    return leaves
+
+
+def _dfs_collect_leaves(
+    node_id: str,
+    id_index: dict[str, AcRecord],
+    result: list[str],
+) -> None:
+    """Recursive DFS helper that appends leaf ids to *result*.
+
+    Visits children in alphabetical order (depth-first, alphabetical siblings).
+
+    Args:
+        node_id: Current AC id being visited.
+        id_index: Full id-to-record mapping built from the AC store.
+        result: Accumulator list — leaf ids are appended here in traversal order.
+    """
+    record = id_index.get(node_id)
+    if record is None:
+        return
+
+    children: list[str] = record.get("covered_by") or []
+    if not children:
+        # Leaf — no covered_by children (empty list or absent field)
+        result.append(node_id)
+        return
+
+    # Visit children in alphabetical order for deterministic depth-first output
+    for child_id in sorted(children):
+        _dfs_collect_leaves(child_id, id_index, result)
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 

@@ -1,0 +1,29 @@
+id: BO-1100d
+readiness: draft
+priority: medium
+title: "Unfamiliar commit shapes are analysed and learned over time"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Unrecognized file groupings are not ignored -- they trigger pattern analysis.
+
+  When staged files do not match any known routing pattern, a specialist
+  examines recent commit history for structurally similar commits. After 10
+  occurrences of the same unmatched shape, a new routing rule is proposed for
+  addition to the configuration. The system gets smarter with use without
+  requiring manual rule authoring.
+depends_on: [BO-1100c]
+doc_links: []
+assigned_agent: null
+estimated_complexity: L
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

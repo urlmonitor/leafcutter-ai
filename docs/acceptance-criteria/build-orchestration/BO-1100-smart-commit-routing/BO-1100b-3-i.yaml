@@ -1,0 +1,33 @@
+id: BO-1100b-3-i
+title: "Confirmed mixed commit message indicates the mixed nature"
+component: build-orchestration
+level: L3
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the user has confirmed a mixed commit after the mixed-change warning,
+    and the staging area contains files in groups "tickets" and "implementation",
+  When the commit agent composes the message for the confirmed mixed commit,
+  Then the subject line or body includes an indicator that this was an intentionally
+    mixed commit (e.g. a "mixed:" prefix, a "Mixed commit:" body header, or a
+    note listing both groups),
+  And the history reader can distinguish this commit from a single-group commit
+    by reading the message alone,
+  And the message still references the specific files or identifiers from each group.
+depends_on: [BO-1100b-3]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-1100b-3
+  contract: "User confirmation that the mixed commit should proceed"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,28 @@
+id: BO-1100b
+readiness: draft
+priority: medium
+title: "Unrelated changes in the same commit are flagged before they land"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Mixed staged sets are caught before they produce a misleading message.
+
+  If the staged files belong to multiple unrelated groups (e.g., a ticket move
+  plus an unrelated code change), the system warns the user instead of mashing
+  them into one commit with a generic or inaccurate message. The user can then
+  split the commit or confirm the mixed set intentionally.
+depends_on: [BO-1100]
+doc_links: []
+assigned_agent: null
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

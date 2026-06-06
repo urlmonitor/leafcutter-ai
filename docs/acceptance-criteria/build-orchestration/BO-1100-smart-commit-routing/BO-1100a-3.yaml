@@ -1,0 +1,42 @@
+id: BO-1100a-3
+title: "Router delegates to the pattern-learning specialist when no group matches"
+component: build-orchestration
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the routing config contains 5 entries (tickets, new-acs, shipped-acs, implementation, status-changes),
+    and the staged files are:
+      - docs/architecture/components/new-component.md
+      - docs/architecture/diagrams/new-component-c4.mmd
+    and neither file matches any configured path_pattern,
+  When the commit agent attempts to classify the staged files,
+  Then the commit agent does NOT produce a generic "update files" subject line,
+  And the commit agent delegates to the pattern-learning specialist agent,
+  And the delegation includes:
+    - the list of unmatched file paths
+    - the structural shape (directory pattern: "docs/architecture/**")
+  And the specialist produces a one-time message for this commit
+    while also logging the unmatched shape for future learning (BO-1100d).
+depends_on: [BO-1100a, BO-1100a-1, BO-1100d-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to:
+  agent: llm-expert
+  contract: "Handoff payload containing unmatched file paths and their structural shape, consumed by the pattern-learning specialist"
+expects_from:
+  ac_id: BO-1100a-1
+  contract: "Classification result indicating zero files matched any known group"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

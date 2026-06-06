@@ -1,0 +1,44 @@
+id: BO-1100a-2
+title: "Matched routing group produces its pattern-specific commit subject line"
+component: build-orchestration
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given all staged files are classified into the single group "tickets",
+    and the routing config entry for "tickets" has template: "chore(tickets): {action} {ticket_ids}",
+    and the staged files are:
+      - tickets/02_in_progress/TICKET-001.md (moved from 00_inbox)
+      - tickets/02_in_progress/TICKET-002.md (moved from 00_inbox)
+  When the commit agent composes the message subject line,
+  Then the subject line matches the template pattern: "chore(tickets): move TICKET-001, TICKET-002 to 02_in_progress"
+  And the subject line does not say "update files" or any generic phrasing,
+  And the subject line is under 72 characters (standard git subject limit).
+
+  Given all staged files are classified into the single group "new-acs",
+    and the routing config entry for "new-acs" has template: "feat(acs): author {ac_ids}",
+    and the staged files are:
+      - docs/acceptance-criteria/build-orchestration/BO-1100-smart-commit-routing/BO-1100c-1.yaml
+  When the commit agent composes the message subject line,
+  Then the subject line is: "feat(acs): author BO-1100c-1"
+  And the AC ID is extracted from the file's id field.
+depends_on: [BO-1100a, BO-1100a-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-1100a-1
+  contract: "File-to-group classification result with all staged files assigned to a single group"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

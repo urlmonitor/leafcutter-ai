@@ -1,0 +1,31 @@
+id: BO-1100e-1-i
+title: "Fewer than 10 commits in filtered path set returns all available without error"
+component: build-orchestration
+level: L3
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given a repository has only 3 commits that touch files under "docs/architecture/**",
+    and the configured bound is 50 candidates,
+  When the filtering skill is invoked with pattern "docs/architecture/**",
+  Then the skill returns all 3 available commits,
+  And the skill does NOT raise an error or warning about insufficient data,
+  And the result count (3) is less than the bound (50) and this is a valid outcome,
+  And the specialist proceeds with the 3 candidates for pattern analysis.
+depends_on: [BO-1100e-1]
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-1100e-1
+  contract: "Path-scoped git log query that may return fewer results than the bound"
+origin_agent: business-analyst-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

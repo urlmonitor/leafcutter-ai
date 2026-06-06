@@ -1,0 +1,31 @@
+id: BO-1100
+readiness: draft
+priority: medium
+title: "Commit messages match the kind of change automatically -- no manual formatting decisions"
+component: build-orchestration
+level: L0
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Every commit gets the right message pattern for its content automatically.
+
+  When work is committed, the system examines what files are staged and picks
+  the appropriate message convention for that type of change. Ticket moves get
+  ticket-move messages, new features get feature messages, status updates get
+  housekeeping messages. Nobody decides the format manually. Over time, the
+  system recognizes new recurring commit shapes and proposes additional routing
+  rules, reducing LLM calls and improving readability for everyone who reads
+  the history.
+depends_on: [BO-200c]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: [BO-1100a, BO-1100b, BO-1100c, BO-1100d, BO-1100e]
+implemented_by: []

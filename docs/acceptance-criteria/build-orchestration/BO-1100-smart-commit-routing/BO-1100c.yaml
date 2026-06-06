@@ -1,0 +1,28 @@
+id: BO-1100c
+readiness: draft
+priority: medium
+title: "Message patterns are defined in one place you can read and edit"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  A single configuration file lists all known routing patterns.
+
+  Adding a new commit-message pattern is a one-line configuration edit, not a
+  prompt rewrite. The file is human-readable, version-controlled, and the
+  commit agent consults it on every invocation to determine which pattern
+  applies to the current staged set.
+depends_on: [BO-1100]
+doc_links: []
+assigned_agent: null
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
