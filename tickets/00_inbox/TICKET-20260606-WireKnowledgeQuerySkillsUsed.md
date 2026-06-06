@@ -1,6 +1,6 @@
 ---
 title: "Add knowledge-query to skills_used in v3 agent templates and registry"
-status: in_progress
+status: done
 components:
   - build_pipeline
 created: 2026-06-06
@@ -24,7 +24,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
   llm-expert: signed_off
@@ -110,7 +110,7 @@ AC files: `docs/acceptance-criteria/ac-driven-dev/ACD-300e-1.yaml`
 - [x] llm-expert — 2026-06-06 00:00
 - [x] pr-reviewer — 2026-06-06 00:00
 - [x] commit — 2026-06-06 00:00
-- [ ] pull-request
+- [x] pull-request — 2026-06-06 00:00
 
 ## Comments
 
@@ -137,6 +137,14 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Committed 5 files as SHA 2b0cbb3: feat(agents): add knowledge-query to skills_used in v3 agent templates and registry. Pre-commit hooks ran (PRE_COMMIT_ALLOW_NO_CONFIG=1 used because the worktree lacks .pre-commit-config.yaml — the config exists in the main repo). No autofix needed.
+
+### 2026-06-06 00:00 — pull-request (status: ok)
+feedback-id: fb_2026-06-06_1c72426c
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Branch `feature/wireknowledgequeryskillsused` pushed to origin. PR #74 created at https://github.com/urlmonitor/leafcutter-ai/pull/74. All four ACs satisfied. Ticket marked done — all agents signed_off or not_needed.
 
 ## Implementation Tasks
 
