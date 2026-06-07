@@ -22,6 +22,7 @@ domain: null
 config_keys: {}
 skills_used:
   - ac-tree-split  # Loaded for L2 redistribution when a split L1 is overcrowded (Pattern C steps 1-2, 6).
+  - knowledge-query  # Loaded during S1 to query agents, skills, and component docs.
 adopter_notes: |
   Internal. Spawned by the ticket-creation pipeline after the PO has produced L0/L1
   ACs. Never called directly by users. Produces AC YAML files in the feature folder.
