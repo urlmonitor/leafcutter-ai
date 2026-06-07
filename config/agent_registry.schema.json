@@ -127,6 +127,20 @@
           },
           "default": [],
           "description": "File extensions (with leading dot) this agent is the primary implementer for. Consumed by commit-guardian hooks (e.g. check_complexity.py) to emit AUTOFIX_AGENT hints that route hook failures to the correct coder. Empty or absent means the agent does not own any file type by extension. Multiple agents may share an extension only if their scopes are mutually exclusive (e.g. tests vs production)."
+        },
+        "produces": {
+          "type": "string",
+          "enum": [
+            "production_code",
+            "documentation",
+            "configuration",
+            "prompt",
+            "review_verdict",
+            "orchestration",
+            "test_artifact",
+            "analysis"
+          ],
+          "description": "The primary artifact type this agent produces. Used for capability inference, tooling integrations, and audit reporting. Enum values: production_code (coders producing executable/importable source), documentation (doc authors, ADR authors, diagram authors), configuration (config-only changes), prompt (agent templates, skill bodies, slash-command files), review_verdict (reviewer agents producing ok/blocker verdicts), orchestration (supervisors and commit-chain agents), test_artifact (test writers, runners, and validators), analysis (research, triage, and planning agents)."
         }
       },
       "additionalProperties": false
