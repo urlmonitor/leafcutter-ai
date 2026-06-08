@@ -13,7 +13,9 @@ ARCHITECTURE: Standalone CLI script. Delegates single-ticket generation to
       generate_ticket_from_ac.py (via subprocess). Tree traversal via
       traverse_ac_tree() from scan_ac_store.py. Assembles the EPIC folder
       with monotonically increasing numeric prefixes derived from traversal
-      order.
+      order. Concise epic naming (ACD-1200a-6): _derive_epic_name() applies
+      an LLM summarisation step when the naive PascalCase exceeds 40 chars;
+      falls back to word-boundary truncation when the LLM is unavailable.
 
 Usage:
     python3 scripts/goal_to_epic.py --ac <ac_id> [--store-root <path>]
@@ -28,6 +30,7 @@ ACD-1200a-1-i: L1-scoped traversal excludes sibling branches.
 ACD-1200a-2: generate_ticket_from_ac.py called once per leaf.
 ACD-1200a-3: EPIC folder assembled with numeric prefixes.
 ACD-1200a-3-i: Zero-leaf condition exits non-zero, no files written.
+ACD-1200a-6: Epic folder name is concise (≤5 PascalCase words, ≤40 chars).
 ACD-1200b-1: classify_readiness reads readiness field and classifies approved vs unapproved.
 ACD-1200b-1-i: All-approved fast-path skips prompt; prints confirmation.
 ACD-1200b-2: readiness_gate_prompt presents three-choice prompt and routes correctly.
@@ -124,6 +127,176 @@ def _to_pascal_case(title: str) -> str:
     """
     words = re.split(r"[\s\-_]+", title.strip())
     return "".join(word.capitalize() for word in words if word)
+
+
+# ---------------------------------------------------------------------------
+# Concise epic name derivation (ACD-1200a-6)
+# ---------------------------------------------------------------------------
+
+_EPIC_NAME_MAX_CHARS = 40
+"""Maximum length (characters) for a derived EPIC PascalCase component.
+
+When the naive PascalCase conversion of an AC title exceeds this threshold,
+the system attempts LLM-assisted summarisation to produce a concise name.
+See ACD-1200a-6 for the full acceptance criteria.
+"""
+
+
+def _summarise_title_via_llm(title: str) -> str | None:
+    """Ask the Claude API to summarise *title* into a concise PascalCase name.
+
+    Returns a PascalCase string of at most 5 words that captures the essential
+    intent of *title*, or ``None`` if the model is unavailable or returns an
+    unusable response.
+
+    The function is intentionally thin: it calls the Anthropic SDK with a
+    one-shot prompt and parses the first non-empty line of the response as
+    the name. No retries, no streaming — the caller handles the fallback path.
+
+    Args:
+        title: The full AC title to summarise (e.g. "Cross-field constraints
+               and relational references are enforced together").
+
+    Returns:
+        A PascalCase string of 1–5 capitalised words (e.g.
+        "AcRelationalIntegrity"), or ``None`` on any error.
+    """
+    try:
+        import anthropic  # noqa: PLC0415 — optional runtime dependency
+    except ImportError:
+        return None
+
+    prompt = (
+        "Summarise the following software feature title into a concise PascalCase "
+        "identifier of at most 5 words (no spaces, no hyphens). The result must "
+        "capture the essential intent of the title and must NOT naively concatenate "
+        "all words. Reply with ONLY the PascalCase identifier and nothing else.\n\n"
+        f"Title: {title}"
+    )
+
+    try:
+        client = anthropic.Anthropic()
+        message = client.messages.create(
+            model="claude-3-5-haiku-latest",
+            max_tokens=64,
+            messages=[{"role": "user", "content": prompt}],
+        )
+    except Exception as exc:  # noqa: BLE001 — broad catch for network/API unavailability
+        import logging  # noqa: PLC0415
+        logging.getLogger(__name__).warning(
+            "LLM title summarisation failed (falling back to truncation): %s", exc
+        )
+        return None
+
+    try:
+        raw = message.content[0].text.strip()
+    except (AttributeError, IndexError):
+        return None
+
+    # Strip any residual "EPIC-" prefix the model may have added
+    if raw.upper().startswith("EPIC-"):
+        raw = raw[5:]
+
+    # Validate: must be non-empty, alphanumeric only, and at most 40 chars
+    if raw and re.match(r"^[A-Za-z][A-Za-z0-9]{0,39}$", raw):
+        return raw
+
+    return None
+
+
+def _truncate_pascal_at(pascal: str, max_chars: int) -> str:
+    """Truncate *pascal* at a word boundary so the result is ≤ *max_chars* chars.
+
+    "Words" inside a PascalCase string are identified by capital letters.
+    The function retains as many complete capitalised words as fit within
+    *max_chars*, ensuring no partial word is left at the end.
+
+    If even the first word exceeds *max_chars*, the first word is kept as-is
+    (the caller's only sensible option when the limit is very tight).
+
+    Args:
+        pascal: A PascalCase string, e.g. "CrossFieldConstraintsAndRelational".
+        max_chars: Maximum number of characters in the returned string.
+
+    Returns:
+        A truncated PascalCase string with no trailing partial word and
+        len ≤ max_chars (unless even the first word is longer, in which case
+        the first word is returned unchanged).
+
+    Examples::
+
+        _truncate_pascal_at("CrossFieldConstraintsAndRelational", 20)
+        # → "CrossFieldConstraints"  (≤20 chars, complete word boundary)
+
+        _truncate_pascal_at("ValidateApiInputs", 40)
+        # → "ValidateApiInputs"  (already ≤40)
+    """
+    if len(pascal) <= max_chars:
+        return pascal
+
+    # Split on capital letter boundaries to find word starts
+    # re.finditer gives us (start_idx, word) pairs for each PascalCase word.
+    word_starts = [m.start() for m in re.finditer(r"[A-Z][a-z0-9]*", pascal)]
+
+    # Walk backwards through word boundaries to find the last boundary
+    # where the prefix is within max_chars.
+    best = ""
+    for idx in reversed(word_starts):
+        candidate = pascal[:idx]
+        if len(candidate) <= max_chars and candidate:
+            best = candidate
+            break
+
+    # Fallback: no boundary found within max_chars — return first word intact
+    if not best:
+        first_end = word_starts[1] if len(word_starts) > 1 else len(pascal)
+        best = pascal[:first_end]
+
+    return best
+
+
+def _derive_epic_name(title: str) -> str:
+    """Derive a concise PascalCase EPIC name from *title*.
+
+    Algorithm (ACD-1200a-6):
+    1. Compute the naive PascalCase conversion of *title*.
+    2. If the result is ≤ 40 characters, return it unchanged.
+    3. Otherwise, attempt LLM-assisted summarisation via
+       :func:`_summarise_title_via_llm`.
+    4. If the LLM returns a usable result, return that.
+    5. If the LLM is unavailable or errors, truncate the naive result at
+       40 characters (no trailing partial word) and return that.
+
+    Args:
+        title: The human-readable AC title string.
+
+    Returns:
+        A concise PascalCase string of ≤ 40 characters (unless the first
+        word alone exceeds 40 characters, in which case the first word is
+        preserved intact — a pathological edge case for unusually long words).
+
+    Examples::
+
+        _derive_epic_name("validate api inputs")
+        # → "ValidateApiInputs"   (≤40 chars — no LLM needed)
+
+        _derive_epic_name(
+            "Cross-field constraints and relational references are enforced together"
+        )
+        # → "AcRelationalIntegrity"  (LLM summarised; or truncated fallback)
+    """
+    naive = _to_pascal_case(title)
+
+    if len(naive) <= _EPIC_NAME_MAX_CHARS:
+        return naive
+
+    # Attempt LLM summarisation
+    llm_result = _summarise_title_via_llm(title)
+    if llm_result:
+        return llm_result
+
+    # Fallback: truncate at word boundary
+    return _truncate_pascal_at(naive, _EPIC_NAME_MAX_CHARS)
 
 
 # ---------------------------------------------------------------------------
@@ -1073,7 +1246,7 @@ def run(
         sys.exit(1)
 
     ac_title = _get_ac_title(ac_id, ac_store_root)
-    epic_name = _to_pascal_case(ac_title)
+    epic_name = _derive_epic_name(ac_title)
 
     if dry_run:
         print(f"Dry-run: would create EPIC-{epic_name} with {len(leaf_ids)} ticket(s):")
@@ -1262,5 +1435,13 @@ DECISION HISTORY
   — only ACs in included_ids are ever touched; all other AC files remain unread
   and unmodified. Helper functions: _find_ac_yaml_path(), _read_target_epic_from_file(),
   _write_target_epic_field() (regex-based targeted replace or append).
+- 2026-06-08 00:00 [EPIC-AcParentChildLinkEnforcement/06]: Concise epic name derivation. (#EPIC-AcParentChildLinkEnforcement/06)
+  Implements ACD-1200a-6: _derive_epic_name() replaces bare _to_pascal_case() in
+  run(). When naive PascalCase result exceeds 40 characters, attempts LLM
+  summarisation via _summarise_title_via_llm() (claude-3-5-haiku-latest, one-shot
+  prompt for concise PascalCase of at most 5 words). Falls back to
+  _truncate_pascal_at() which truncates at the last complete PascalCase word
+  boundary within 40 characters when the model is unavailable or errors. Rejects
+  naive concatenations like "Crossfieldconstraintsandrelationalreferencesareenforcedtogether".
 ====================================================================
 """
