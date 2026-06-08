@@ -4,11 +4,14 @@ Pre-commit hook: components.json integrity guard.
 MODULE: check_components_integrity
 GOAL: Block commits that add a new top-level component to docs/components.json
       without providing a detail_ref pointing to a real on-disk doc AND a
-      flight_level in that doc's frontmatter.
+      flight_level in that doc's frontmatter. Also validates that ALL component
+      entries satisfy the minimum required schema fields (ACS-300g-1).
 BUSINESS CONTEXT: Prevents the registry from drifting ahead of the documentation
       tree — a component added to the registry must have a doc in the same
       commit (or already have one). This closes the "9 undocumented components"
-      class of drift.
+      class of drift. Additionally ensures every component entry carries the
+      minimum fields needed for the AC store to cross-reference components
+      bidirectionally.
 ARCHITECTURE: Not needed.
 
 Logic:
@@ -19,12 +22,15 @@ Logic:
        a. `detail_ref` must be present and non-empty.
        b. The path pointed to by `detail_ref` must exist on disk.
        c. The referenced doc must have `flight_level` in its frontmatter.
-    5. Existing components (no diff) are NOT checked — legacy drift is accepted;
-       backfilling is handled by Phase 4 tickets.
+    5. For ALL keys (new and existing) in the staged version:
+       a. Validate minimum required fields: id, name, type, description,
+          status, primary_code.
+       b. Validate field values against allowed enums.
+       c. Validate that detail_ref is either null or a valid on-disk path.
 
 Exit codes:
-    0 - All new components are valid
-    1 - One or more new components fail validation
+    0 - All components are valid
+    1 - One or more components fail validation
 
 Usage (invoked by pre-commit):
     python scripts/commit_guardian/check_components_integrity.py
@@ -38,6 +44,9 @@ DECISION HISTORY:
   - 2026-05-12 00:00 [Agent]: Created components.json integrity guard
     (EPIC-ArchitectureDocs ticket 21). Only enforces on newly-added keys to
     avoid blocking legacy work-in-progress.
+  - 2026-06-08 00:00 [python-coder]: Extended with minimum schema validation for
+    ALL entries per ACS-300g-1. Validates required fields and detail_ref invariant.
+    (EPIC-Completecomponentcoverageintheregistry ticket 01).
 """
 
 from __future__ import annotations
@@ -55,6 +64,20 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 COMPONENTS_JSON_PATH = "docs/components.json"
+
+# Minimum required fields for every component entry (ACS-300g-1).
+REQUIRED_FIELDS = ("id", "name", "type", "description", "status", "primary_code")
+
+# Allowed values for the ``type`` field (ACS-300g-1).
+ALLOWED_TYPES = frozenset(
+    {"infrastructure", "utility", "orchestration", "coding", "review", "documentation", "analysis"}
+)
+
+# Allowed values for the ``status`` field (ACS-300g-1).
+ALLOWED_STATUSES = frozenset({"active", "reviewed", "planned"})
+
+# Minimum length for the ``description`` field (ACS-300g-1).
+DESCRIPTION_MIN_LEN = 10
 
 # ---------------------------------------------------------------------------
 # Git helpers
@@ -227,6 +250,117 @@ def validate_new_component(
     return errors
 
 
+def validate_component_minimum_schema(
+    component_id: str,
+    component_data: dict,
+) -> list[str]:
+    """Validate that a component entry satisfies the minimum required schema.
+
+    Checks all entries in the staged components.json — not just newly-added
+    ones — to ensure the registry never drifts below the minimum schema bar
+    defined in ACS-300g-1.
+
+    Required fields: id, name, type, description (>= 10 chars), status,
+    primary_code (non-empty array of strings).
+    Optional: detail_ref must be either null or a valid on-disk Markdown path.
+
+    Args:
+        component_id: The top-level key name of the component.
+        component_data: The component's dict value from components.json.
+
+    Returns:
+        List of error message strings; empty list if the component is valid.
+    """
+    errors: list[str] = []
+
+    if not isinstance(component_data, dict):
+        errors.append(
+            f"  Component '{component_id}' entry is not a JSON object."
+        )
+        return errors
+
+    # 1. Check all required fields are present and non-empty
+    for field in REQUIRED_FIELDS:
+        value = component_data.get(field)
+        if value is None or value == "" or value == []:
+            errors.append(
+                f"  Component '{component_id}' is missing required field '{field}' "
+                f"or it is empty."
+            )
+
+    # 2. Validate id is a snake_case string matching the top-level key
+    id_value = component_data.get("id")
+    if isinstance(id_value, str):
+        if id_value != component_id:
+            errors.append(
+                f"  Component '{component_id}': 'id' field ('{id_value}') does not "
+                f"match the top-level key '{component_id}'."
+            )
+
+    # 3. Validate type enum
+    type_value = component_data.get("type")
+    if isinstance(type_value, str) and type_value not in ALLOWED_TYPES:
+        errors.append(
+            f"  Component '{component_id}': 'type' value '{type_value}' is not one "
+            f"of the allowed types: {', '.join(sorted(ALLOWED_TYPES))}."
+        )
+
+    # 4. Validate description length
+    desc_value = component_data.get("description")
+    if isinstance(desc_value, str) and len(desc_value) < DESCRIPTION_MIN_LEN:
+        errors.append(
+            f"  Component '{component_id}': 'description' must be at least "
+            f"{DESCRIPTION_MIN_LEN} characters (got {len(desc_value)})."
+        )
+
+    # 5. Validate status enum
+    status_value = component_data.get("status")
+    if isinstance(status_value, str) and status_value not in ALLOWED_STATUSES:
+        errors.append(
+            f"  Component '{component_id}': 'status' value '{status_value}' is not "
+            f"one of the allowed statuses: {', '.join(sorted(ALLOWED_STATUSES))}."
+        )
+
+    # 6. Validate primary_code is a non-empty array of strings
+    primary_code = component_data.get("primary_code")
+    if primary_code is not None:
+        if not isinstance(primary_code, list):
+            errors.append(
+                f"  Component '{component_id}': 'primary_code' must be an array "
+                f"of path strings."
+            )
+        elif len(primary_code) == 0:
+            errors.append(
+                f"  Component '{component_id}': 'primary_code' array must contain "
+                f"at least one path string."
+            )
+        else:
+            non_strings = [v for v in primary_code if not isinstance(v, str)]
+            if non_strings:
+                errors.append(
+                    f"  Component '{component_id}': 'primary_code' must contain only "
+                    f"strings (found non-string values: {non_strings})."
+                )
+
+    # 7. Validate detail_ref is null or a valid on-disk Markdown path
+    detail_ref = component_data.get("detail_ref")
+    if "detail_ref" in component_data and detail_ref is not None:
+        if not isinstance(detail_ref, str):
+            errors.append(
+                f"  Component '{component_id}': 'detail_ref' must be a string path "
+                f"or null."
+            )
+        else:
+            doc_path = REPO_ROOT / detail_ref
+            if not doc_path.exists():
+                errors.append(
+                    f"  Component '{component_id}': 'detail_ref' path does not exist "
+                    f"on disk: {detail_ref}. Use null if no architecture doc exists yet."
+                )
+
+    return errors
+
+
 # ---------------------------------------------------------------------------
 # Main entry point
 # ---------------------------------------------------------------------------
@@ -235,8 +369,15 @@ def validate_new_component(
 def main() -> int:
     """Run the components.json integrity check against the staged index.
 
+    Two validation passes are performed (ACS-300g-1):
+    1. New-component pass: newly-added entries must have detail_ref pointing to an
+       on-disk doc with flight_level frontmatter.
+    2. Minimum-schema pass: ALL entries (new and existing) must satisfy the required
+       field set (id, name, type, description, status, primary_code) and the
+       detail_ref invariant (null or valid on-disk path).
+
     Returns:
-        Exit code: 0 on success, 1 if any new component fails validation.
+        Exit code: 0 on success, 1 if any component fails validation.
     """
     if not _is_components_json_staged():
         # File not staged — nothing to check
@@ -251,45 +392,76 @@ def main() -> int:
 
     before_keys = _parse_component_keys(before_content)
     after_keys = _parse_component_keys(after_content)
-
-    added_keys = after_keys - before_keys
-
-    if not added_keys:
-        return 0  # No new components — nothing to enforce
-
     after_components = _parse_components_json(after_content)
 
     all_errors: list[str] = []
+
+    # -----------------------------------------------------------------------
+    # Pass 1: New-component validation (detail_ref + flight_level required)
+    # -----------------------------------------------------------------------
+    added_keys = after_keys - before_keys
+    new_component_errors: list[str] = []
     for component_id in sorted(added_keys):
         component_data = after_components.get(component_id, {})
         errors = validate_new_component(component_id, component_data)
-        all_errors.extend(errors)
+        new_component_errors.extend(errors)
+
+    # -----------------------------------------------------------------------
+    # Pass 2: Minimum-schema validation (ALL entries, ACS-300g-1)
+    # -----------------------------------------------------------------------
+    schema_errors: list[str] = []
+    for component_id in sorted(after_keys):
+        component_data = after_components.get(component_id, {})
+        errors = validate_component_minimum_schema(component_id, component_data)
+        schema_errors.extend(errors)
+
+    all_errors = new_component_errors + schema_errors
 
     if not all_errors:
-        print(
-            f"[components-integrity] {len(added_keys)} new component(s) validated OK: "
-            f"{', '.join(sorted(added_keys))}"
+        msg_parts: list[str] = []
+        if added_keys:
+            msg_parts.append(
+                f"{len(added_keys)} new component(s) validated OK: "
+                f"{', '.join(sorted(added_keys))}"
+            )
+        msg_parts.append(
+            f"{len(after_keys)} total component(s) passed minimum-schema check."
         )
+        print(f"[components-integrity] {'; '.join(msg_parts)}")
         return 0
 
-    print("\n🔒 Components Integrity Check Failed\n", file=sys.stderr)
-    print(
-        f"   {len(added_keys)} new component(s) detected in docs/components.json:\n"
-        f"   {', '.join(sorted(added_keys))}\n",
-        file=sys.stderr,
-    )
-    for error in all_errors:
-        print(f"❌ {error}\n", file=sys.stderr)
+    print("\nComponents Integrity Check Failed\n", file=sys.stderr)
 
-    print(
-        "   RULE: Every new component added to docs/components.json must have:\n"
-        "     1. A 'detail_ref' field pointing to an on-disk architecture doc.\n"
-        "     2. That doc must exist at the referenced path.\n"
-        "     3. That doc must have 'flight_level' in its YAML frontmatter.\n"
-        "   This ensures the registry and the documentation tree stay in sync.\n"
-        "   Existing components (no diff) are not checked — legacy state is accepted.",
-        file=sys.stderr,
-    )
+    if new_component_errors:
+        print(
+            f"   {len(added_keys)} new component(s) detected in docs/components.json:\n"
+            f"   {', '.join(sorted(added_keys))}\n",
+            file=sys.stderr,
+        )
+        for error in new_component_errors:
+            print(f"[new-component] {error}\n", file=sys.stderr)
+        print(
+            "   RULE (new components): Every new component added to docs/components.json must have:\n"
+            "     1. A 'detail_ref' field pointing to an on-disk architecture doc.\n"
+            "     2. That doc must exist at the referenced path.\n"
+            "     3. That doc must have 'flight_level' in its YAML frontmatter.\n"
+            "   This ensures the registry and the documentation tree stay in sync.",
+            file=sys.stderr,
+        )
+
+    if schema_errors:
+        for error in schema_errors:
+            print(f"[minimum-schema] {error}\n", file=sys.stderr)
+        print(
+            "   RULE (minimum schema, ACS-300g-1): Every component in docs/components.json must have:\n"
+            "     Required: id (snake_case), name, type (one of: infrastructure, utility,\n"
+            "               orchestration, coding, review, documentation, analysis),\n"
+            "               description (>= 10 chars), status (one of: active, reviewed, planned),\n"
+            "               primary_code (non-empty array of path strings).\n"
+            "     Optional: detail_ref must be null or a valid on-disk Markdown path.",
+            file=sys.stderr,
+        )
+
     return 1
 
 

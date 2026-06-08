@@ -286,6 +286,15 @@
       "internal": true,
       "dependencies": [],
       "description": "Guided procedure for splitting overcrowded AC trees. Loaded by PO v3 (for L0/L1 splits) and BA v3 (for L2 redistribution). Prompt-based — no enforcement scripts. Covers horizontal splits (same component, new sibling L0) and intermediate splits (L1 split into sibling L1s). Vertical splits (new sub-component) deferred to v2."
+    },
+    {
+      "id": "add-component",
+      "name": "Add Component",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/add-component/",
+      "dependencies": [],
+      "description": "Agent-facing wrapper around scripts/add_component.py. Provides a structured interface so agents can add a new entry to docs/components.json during a workflow without knowing the script path or argument format."
     }
   ]
 }
