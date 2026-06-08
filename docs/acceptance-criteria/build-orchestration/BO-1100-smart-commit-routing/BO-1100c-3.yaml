@@ -3,7 +3,7 @@ title: "Commit agent reloads the routing config on every invocation"
 component: build-orchestration
 level: L2
 status: active
-readiness: draft
+readiness: reviewed
 priority: medium
 req_status: active
 work_status: todo
@@ -20,15 +20,21 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: templates/agents/commit.md
+    relationship: describes
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: S
+it_requirements:
+  - "The commit agent template must read the config file at invocation time, not cache across sessions"
+  - "Must not require a build step or agent restart to pick up config changes"
 delivers_to: null
 expects_from:
   ac_id: BO-1100c-1
-  contract: "The JSON routing config file that is read fresh on each invocation"
+  contract: "The JSON routing config file at a known, documented path that can be read fresh on each invocation"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by: [it-po-v3]
 superseded_by: null
 covered_by: []
 implemented_by: []

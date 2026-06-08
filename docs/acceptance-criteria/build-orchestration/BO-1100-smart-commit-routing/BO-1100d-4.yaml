@@ -3,7 +3,7 @@ title: "Specialist examines recent commit history for structurally similar commi
 component: build-orchestration
 level: L2
 status: active
-readiness: draft
+readiness: reviewed
 priority: medium
 req_status: active
 work_status: todo
@@ -17,18 +17,25 @@ criteria: |
     recurring message patterns (e.g. "docs(architecture): ..." appearing in 7 of 12 candidates),
   And the extracted pattern (if consistent) is used as the template for the proposed routing rule.
 depends_on: [BO-1100d, BO-1100e-1]
-doc_links: []
+doc_links:
+  - path: templates/agents/commit.md
+    relationship: describes
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: M
+it_requirements:
+  - "Must invoke the commit-pattern-filter skill to obtain historical commit data"
+  - "Must determine pattern consistency before proposing a template (e.g., majority prefix threshold)"
+  - "Must handle the case where the filtering skill returns zero candidates gracefully"
 delivers_to:
   agent: llm-expert
-  contract: "A message template inferred from historical commit patterns for this shape"
+  contract: "Pattern analysis result: {consistent: bool, template: string | null, top_prefixes: [{prefix: string, count: int}, ...]} inferred from historical commit patterns for the shape"
 expects_from:
   ac_id: BO-1100e-1
-  contract: "Filtered list of commits touching the same directory set, each with subject line and file list"
+  contract: "Structured commit data: [{hash: string, subject: string, files: string[]}, ...] bounded list of commits touching the target directory pattern"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by: [it-po-v3]
 superseded_by: null
 covered_by: []
 implemented_by: []

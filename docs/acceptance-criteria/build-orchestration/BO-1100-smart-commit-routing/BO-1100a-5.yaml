@@ -3,7 +3,7 @@ title: "Commit body enumerates all staged files for a single-group commit"
 component: build-orchestration
 level: L2
 status: active
-readiness: draft
+readiness: reviewed
 priority: medium
 req_status: active
 work_status: todo
@@ -23,15 +23,22 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: templates/agents/commit.md
+    relationship: describes
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: S
+it_requirements:
+  - "Must list all staged files or their derived identifiers without omission"
+  - "Must separate subject and body with exactly one blank line per git convention"
+  - "Must not exceed reasonable body length (truncate with '... and N more' if >20 items)"
 delivers_to: null
 expects_from:
   ac_id: BO-1100a-1
-  contract: "File-to-group classification with all files and their group assignment"
+  contract: "JSON classification result: {matched: true, groups: [{group: string, files: string[], template: string}]} with the full file list"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by: [it-po-v3]
 superseded_by: null
 covered_by: []
 implemented_by: []

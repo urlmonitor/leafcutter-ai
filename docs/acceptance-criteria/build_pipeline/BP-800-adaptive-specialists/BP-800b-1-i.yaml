@@ -1,0 +1,33 @@
+id: BP-800b-1-i
+title: "Duplicate technology entries in manifest do not produce duplicate agents"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the technology manifest contains two entries for "python" (one from file-extension detection, one from pyproject.toml manifest detection)
+  When the agent generator processes the manifest
+  Then it produces exactly one "python-coder" specialist (not two)
+  And the agent uses the highest-confidence detection source to inform its metadata
+  And no error or warning about duplicates is emitted (deduplication is silent)
+depends_on:
+  - BP-800b-1
+doc_links:
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-800b-1
+  contract: "Agent generation logic that this deduplication edge case exercises"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

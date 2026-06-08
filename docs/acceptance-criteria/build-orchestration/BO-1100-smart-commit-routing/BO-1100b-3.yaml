@@ -3,7 +3,7 @@ title: "User can confirm a mixed commit or abort to split"
 component: build-orchestration
 level: L2
 status: active
-readiness: draft
+readiness: reviewed
 priority: medium
 req_status: active
 work_status: todo
@@ -19,16 +19,23 @@ criteria: |
   And if the user selects "Abort", no commit is made and no message is composed,
   And the prompt does not auto-select either option without user input.
 depends_on: [BO-1100b, BO-1100b-2]
-doc_links: []
+doc_links:
+  - path: templates/agents/commit.md
+    relationship: describes
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: M
+it_requirements:
+  - "Must require explicit user input before proceeding (no auto-selection or timeout)"
+  - "Must integrate with the existing commit agent confirmation gate pattern"
+  - "Abort path must cleanly exit without side effects (no partial state, no shape logging)"
 delivers_to: null
 expects_from:
   ac_id: BO-1100b-1
-  contract: "Mixed-change detection result with group names and file lists"
+  contract: "Mixed-change detection result with group names and file lists, ready for user presentation"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by: [it-po-v3]
 superseded_by: null
 covered_by: []
 implemented_by: []

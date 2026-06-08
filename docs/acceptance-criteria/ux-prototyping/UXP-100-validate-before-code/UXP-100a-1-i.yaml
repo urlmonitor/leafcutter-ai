@@ -1,0 +1,32 @@
+id: UXP-100a-1-i
+title: "Empty or missing component library catalog halts prototype assembly with a diagnostic"
+component: ux-prototyping
+level: L3
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the component library catalog file does not exist or contains zero entries,
+  When the UX designer agent attempts to compose a prototype,
+  Then the agent does not produce any prototype output
+  And the agent returns a diagnostic message stating "Component library catalog
+    is empty or missing — cannot assemble a prototype without known components"
+  And the diagnostic identifies the expected catalog file location
+depends_on:
+  - UXP-100a-1
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100a-1.yaml
+    relationship: parent
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

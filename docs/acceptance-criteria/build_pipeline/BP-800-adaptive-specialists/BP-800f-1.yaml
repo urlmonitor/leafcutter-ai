@@ -1,0 +1,37 @@
+id: BP-800f-1
+title: "Graph database detected and specialist generated with graph-specific best practices"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a project with "neo4j" listed in pyproject.toml dependencies
+  And a best-practice knowledge file exists for "neo4j" with paradigm "graph"
+  When the technology detector scans the project and the agent generator runs
+  Then a "neo4j-coder" specialist is generated
+  And the specialist includes graph-specific best practices: Cypher query patterns, traversal idioms, graph schema design, index strategies for graph lookups
+  And the specialist does NOT include relational SQL patterns (no JOIN, no normalization advice)
+  And the specialist is distinct from the general "sql-coder" or any relational specialist
+depends_on:
+  - BP-800f
+  - BP-800a-3
+  - BP-800b-1
+doc_links:
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BP-800a-3
+  contract: "Database detection with paradigm classification"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

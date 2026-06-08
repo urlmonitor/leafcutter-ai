@@ -1,0 +1,38 @@
+id: UXP-100b-1
+title: "Gap detection produces a named list of missing components with usage context"
+component: ux-prototyping
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the component library catalog contains "navigation-bar", "data-table",
+    and "form-panel",
+  When the UX designer agent composes a prototype for a feature that requires
+    a "timeline-view" and a "progress-indicator" (neither in the catalog),
+  Then the agent produces a gap report listing each missing component by name:
+    "timeline-view", "progress-indicator"
+  And each gap entry includes the context of where the component would be used
+    in the prototype (e.g. "main content area, showing event sequence")
+  And the agent does not substitute an improvised replacement for any missing component
+depends_on:
+  - UXP-100b
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100b.yaml
+    relationship: parent
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+delivers_to:
+  ac_id: UXP-100b-2
+  contract: "A structured gap report with component names and usage contexts"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-100b-1-i
+implemented_by: []

@@ -1,0 +1,35 @@
+id: PER-100e-1-i
+title: "Persona expert refuses to create a persona with an ambiguous name"
+component: persona-management
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a user provides the request: "Create a persona for a user"
+  When the persona expert agent processes the request
+  Then it does NOT create a persona directory
+  And it responds with a clarifying question asking for:
+    - A more specific role or job title
+    - At least one distinguishing characteristic (industry, task, or environment)
+  And no files are written to docs/personas/ until the user provides a more specific description
+depends_on:
+  - PER-100e-1
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: PER-100e-1
+  contract: "Persona expert agent that this edge case exercises"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

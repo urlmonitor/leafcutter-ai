@@ -1,0 +1,39 @@
+id: UXP-100c-5
+title: "How-to guide for reviewing and deciding on a prototype"
+component: ux-prototyping
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given UXP-100c describes a user-facing approval gate for prototypes,
+  When a how-to guide is produced for the prototype review workflow,
+  Then the guide covers: how the prototype is presented, what each decision
+    option means (Approve, Reject, Request changes), what happens after each
+    decision, and how revision cycles work
+  And the guide includes guidance on when to reject versus request changes
+  And the guide explains how to write actionable change-request feedback
+    that the UX designer agent can execute
+depends_on:
+  - UXP-100c
+  - UXP-100c-1
+  - UXP-100c-3
+  - UXP-100c-4
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100c.yaml
+    relationship: parent
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: UXP-100c-1
+  contract: "Behavioral ACs describing the review and decision workflow"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

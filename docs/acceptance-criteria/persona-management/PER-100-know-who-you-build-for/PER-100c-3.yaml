@@ -1,0 +1,36 @@
+id: PER-100c-3
+title: "How-to guide for querying capabilities by persona"
+component: persona-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a PO, UX designer, or sales team member who wants to see what a persona can do
+  When they consult the how-to guide at docs/how-to/persona-management.md
+  Then the guide includes a section on querying by persona with:
+    - The command to run the persona query (with example persona slug)
+    - How to read the grouped output (component and level breakdown)
+    - How to interpret the summary line (total capabilities, total components)
+    - Example output for a sample persona showing at least two components
+depends_on:
+  - PER-100c
+  - PER-100c-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: PER-100c-1
+  contract: "Completed persona query script to document"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

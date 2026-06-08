@@ -1,0 +1,34 @@
+id: PER-100d-1-i
+title: "Persona summary injection gracefully handles zero defined personas"
+component: persona-management
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a project with the persona-management component installed
+  And the docs/personas/ directory is empty (no persona subdirectories exist)
+  When the product-owner-v3 agent is spawned
+  Then the agent's context includes a persona summary block stating: "0 personas defined. Create personas under docs/personas/ to enable audience-aware planning."
+  And no error is raised during agent spawn
+  And the agent can proceed with its task without persona context
+depends_on:
+  - PER-100d-1
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: PER-100d-1
+  contract: "Persona summary injection mechanism that this edge case exercises"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

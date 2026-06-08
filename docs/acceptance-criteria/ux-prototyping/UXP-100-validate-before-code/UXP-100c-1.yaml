@@ -1,0 +1,35 @@
+id: UXP-100c-1
+title: "Prototype is presented to the user with three explicit decision options"
+component: ux-prototyping
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the UX designer agent has produced a complete prototype for a feature,
+  When the prototype is presented to the user for review,
+  Then the user sees the rendered prototype alongside three labeled options:
+    "Approve", "Reject", and "Request changes"
+  And the presentation includes a summary of which components were used,
+    which page type was selected, and any gap-report items still pending research
+  And no option is pre-selected — the user must make an active choice
+depends_on:
+  - UXP-100c
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100c.yaml
+    relationship: parent
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+delivers_to:
+  ac_id: UXP-100c-2
+  contract: "A user decision (approve, reject, or request-changes) with optional feedback text"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

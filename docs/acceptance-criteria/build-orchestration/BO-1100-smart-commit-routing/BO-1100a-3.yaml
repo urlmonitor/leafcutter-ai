@@ -3,7 +3,7 @@ title: "Router delegates to the pattern-learning specialist when no group matche
 component: build-orchestration
 level: L2
 status: active
-readiness: draft
+readiness: reviewed
 priority: medium
 req_status: active
 work_status: todo
@@ -21,22 +21,29 @@ criteria: |
     - the structural shape (directory pattern: "docs/architecture/**")
   And the specialist produces a one-time message for this commit
     while also logging the unmatched shape for future learning (BO-1100d).
-depends_on: [BO-1100a, BO-1100a-1]
+depends_on: [BO-1100a, BO-1100a-1, BO-1100d-1]
 doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: templates/agents/commit.md
+    relationship: describes
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: M
+it_requirements:
+  - "Must delegate to the specialist only when the classifier returns zero matched groups"
+  - "The delegation payload must be structured (not free-text) for reliable specialist parsing"
+  - "Must still produce a valid commit message even if the specialist is unavailable (graceful degradation)"
 delivers_to:
   agent: llm-expert
-  contract: "Handoff payload containing unmatched file paths and their structural shape, consumed by the pattern-learning specialist"
+  contract: "Handoff payload: {unmatched_files: string[], structural_shape: {dir_pattern: string, extensions: string[]}} consumed by the pattern-learning specialist"
 expects_from:
   ac_id: BO-1100a-1
-  contract: "Classification result indicating zero files matched any known group"
+  contract: "JSON classification result: {matched: false, groups: [], unmatched_files: string[], structural_shape: {dir_pattern: string, extensions: string[]}}"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by: [it-po-v3]
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -1,0 +1,32 @@
+id: TKT-500a-2
+readiness: approved
+priority: medium
+title: "Agent reads criteria from the AC YAML at dispatch time"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a phase agent has been dispatched with an AC file path
+  When the agent begins its work
+  Then it reads the criteria field directly from the AC YAML file on disk
+  And it does NOT read criteria from any ticket body, message, or embedded text
+  And the criteria text it operates against is byte-identical to what is in the YAML file
+assigned_agent: llm-expert
+estimated_complexity: M
+depends_on: [TKT-500a-1]
+doc_links:
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: constrains
+delivers_to: []
+expects_from: [TKT-500a-1]
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+it_requirements:
+  - "Agent template must not embed criteria text — must read from file"
+  - "Template modification must reference AC path variable, not a copied string"

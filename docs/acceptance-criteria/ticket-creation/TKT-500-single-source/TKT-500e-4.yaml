@@ -1,0 +1,28 @@
+id: TKT-500e-4
+readiness: approved
+priority: medium
+title: "Agent retains memory of files it modified in prior ACs within the goal"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a coder agent has modified files during AC-N within a goal
+  When it receives AC-N+1
+  Then it can reference files it created or modified during AC-N
+  And it does not need to re-read those files from scratch
+  And its understanding of the codebase state is continuous
+assigned_agent: llm-expert
+estimated_complexity: M
+depends_on: [TKT-500e-2]
+doc_links: []
+delivers_to: []
+expects_from: [TKT-500e-2]
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+it_requirements: []

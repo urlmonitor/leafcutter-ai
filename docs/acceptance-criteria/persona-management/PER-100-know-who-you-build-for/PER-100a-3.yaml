@@ -1,0 +1,40 @@
+id: PER-100a-3
+title: "Persona schema validation rejects malformed persona files"
+component: persona-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a persona.yaml file that is missing the required "identity" section
+  When the persona validation script is run against the file
+  Then it exits with a non-zero status
+  And the error message names the missing section: "identity"
+  And the error message includes the file path that failed validation
+
+  Given a persona.yaml file where the "goals" section is present but empty (null value)
+  When the persona validation script is run against the file
+  Then it exits with a non-zero status
+  And the error message states that "goals" must be a non-empty list
+depends_on:
+  - PER-100a
+  - PER-100a-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: PER-100a-1
+  contract: "Persona YAML schema definition that lists required sections"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - PER-100a-3-i
+implemented_by: []

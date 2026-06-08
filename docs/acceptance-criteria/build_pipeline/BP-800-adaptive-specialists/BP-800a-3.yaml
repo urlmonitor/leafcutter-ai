@@ -1,0 +1,39 @@
+id: BP-800a-3
+title: "Database technology detection from connection strings and driver dependencies"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a project with:
+    - pyproject.toml listing "neo4j" in dependencies
+    - package.json listing "mongodb" in dependencies
+    - pyproject.toml listing "psycopg2" in dependencies
+  When the technology detector scans the project at build time
+  Then it reports detected databases: ["neo4j", "mongodb", "postgresql"]
+  And each database is categorized by paradigm: neo4j -> "graph", mongodb -> "document", postgresql -> "relational"
+  And the detection source is recorded for each (dependency manifest path and package name)
+depends_on:
+  - BP-800a
+  - BP-800a-1
+doc_links:
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "Database detection results with paradigm classification, consumed by BP-800f specialist generation"
+expects_from:
+  ac_id: BP-800a-1
+  contract: "Manifest parsing infrastructure from language detector"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

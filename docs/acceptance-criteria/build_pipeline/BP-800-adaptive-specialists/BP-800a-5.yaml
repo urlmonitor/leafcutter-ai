@@ -1,0 +1,38 @@
+id: BP-800a-5
+title: "How-to guide for technology detection"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the technology detection feature is implemented (BP-800a-1 through BP-800a-4)
+  When a documentation-expert produces the how-to guide
+  Then the guide covers:
+    - How to verify which technologies the build detected in your project
+    - How to read and interpret the technology manifest
+    - How to add a new language or framework that the detector does not yet recognize
+    - How to exclude directories from the scan (e.g. vendor/, node_modules/)
+  And the guide is written for a user who has never configured the system before
+  And the guide is placed under docs/how-to/
+depends_on:
+  - BP-800a
+  - BP-800a-4
+doc_links:
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: context
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-800a-4
+  contract: "Completed detection feature with manifest output to document"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

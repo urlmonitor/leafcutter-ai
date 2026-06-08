@@ -1,0 +1,37 @@
+id: UXP-100e-3
+title: "Neither agent's completion gates the other from finishing"
+component: ux-prototyping
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the UX designer agent is producing a prototype and the BA agent is
+    decomposing L1 ACs into L2 behaviors,
+  When the BA agent completes its L2 decomposition before the prototype is finished,
+  Then the BA agent's output (L2 AC YAML files) is written and available immediately
+  And the UX designer agent continues working without interruption
+  And conversely, when the UX designer finishes the prototype before the BA completes,
+    the prototype is available for user review immediately without waiting for
+    the BA to finish
+depends_on:
+  - UXP-100e
+  - UXP-100e-1
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100e.yaml
+    relationship: parent
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-100e-1
+  contract: "Both agents running independently without completion gates"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

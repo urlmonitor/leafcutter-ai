@@ -3,7 +3,7 @@ title: "Malformed routing config is rejected with a specific parse error"
 component: build-orchestration
 level: L3
 status: active
-readiness: draft
+readiness: reviewed
 priority: medium
 req_status: active
 work_status: todo
@@ -30,13 +30,17 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Error messages must include actionable detail (file path, entry index, missing field name)"
+  - "Must distinguish between JSON syntax errors and schema validation errors"
 delivers_to: null
 expects_from:
   ac_id: BO-1100c-1
-  contract: "The JSON routing config schema that defines required fields per entry"
+  contract: "The JSON routing config schema defining required fields per entry: group (string), path_pattern (string), template (string)"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by: [it-po-v3]
 superseded_by: null
 covered_by: []
 implemented_by: []

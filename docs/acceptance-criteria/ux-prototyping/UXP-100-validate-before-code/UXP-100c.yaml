@@ -1,5 +1,5 @@
 id: UXP-100c
-readiness: draft
+readiness: approved
 priority: medium
 title: "Approve or reject before any code is written"
 component: ux-prototyping
@@ -22,6 +22,13 @@ origin_agent: product-owner-v3
 created: 2026-06-06
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - UXP-100c-1
+  - UXP-100c-2
+  - UXP-100c-3
+  - UXP-100c-4
+  - UXP-100c-2-i
+  - UXP-100c-5
+  - UXP-100c-6
 implemented_by: []
 documentation_triggers: [how-to, sequence-diagram]

@@ -3,7 +3,7 @@ title: "Staged files spanning two or more routing groups trigger a warning befor
 component: build-orchestration
 level: L2
 status: active
-readiness: draft
+readiness: reviewed
 priority: medium
 req_status: active
 work_status: todo
@@ -18,16 +18,23 @@ criteria: |
     "Mixed commit detected: staged files belong to 2 groups."
   And the warning is presented BEFORE any subject line is drafted.
 depends_on: [BO-1100b, BO-1100a-1]
-doc_links: []
+doc_links:
+  - path: templates/agents/commit.md
+    relationship: describes
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: M
+it_requirements:
+  - "Must present the warning before any message composition step begins"
+  - "Must not proceed to message drafting without user acknowledgment"
+  - "Must work within the existing commit agent confirmation gate pattern"
 delivers_to: null
 expects_from:
   ac_id: BO-1100a-1
-  contract: "File-to-group classification result showing files assigned to multiple groups"
+  contract: "JSON classification result: {matched: true, groups: [{group: string, files: string[]}, {group: string, files: string[]}]} with 2+ group entries indicating a mixed commit"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by: [it-po-v3]
 superseded_by: null
 covered_by: []
 implemented_by: []

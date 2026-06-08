@@ -1,0 +1,33 @@
+id: PER-100d-2-i
+title: "Requesting detail for a non-existent persona returns an informative error"
+component: persona-management
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given no persona directory exists at docs/personas/unknown-persona/
+  When an agent invokes the persona-detail skill with argument "unknown-persona"
+  Then the skill returns an error message: "Persona 'unknown-persona' not found. Available personas: field-service-engineer, product-manager"
+  And the error lists all available persona slugs (derived from existing directories under docs/personas/)
+  And the agent's execution is not terminated (the error is informational, not fatal)
+depends_on:
+  - PER-100d-2
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: PER-100d-2
+  contract: "Persona-detail skill that this edge case exercises"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

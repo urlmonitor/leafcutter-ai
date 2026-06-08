@@ -5,7 +5,7 @@ level: L0
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_2
 criteria: |

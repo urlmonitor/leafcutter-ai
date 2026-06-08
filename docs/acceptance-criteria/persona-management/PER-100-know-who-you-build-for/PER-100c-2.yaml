@@ -1,0 +1,38 @@
+id: PER-100c-2
+title: "Persona capability inventory groups results by component and level"
+component: persona-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given an AC store with ACs targeting persona "field-service-engineer" across two components:
+    - build-pipeline: 2 L0 ACs, 3 L1 ACs
+    - persona-management: 1 L0 AC, 2 L1 ACs
+  When a user requests the capability inventory for "field-service-engineer"
+  Then the output groups ACs by component, showing:
+    - build-pipeline: 2 L0, 3 L1
+    - persona-management: 1 L0, 2 L1
+  And each group lists individual AC IDs and titles
+  And the output includes a summary line: "8 capabilities for field-service-engineer across 2 components"
+depends_on:
+  - PER-100c
+  - PER-100c-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: PER-100c-1
+  contract: "Persona query function that returns matching ACs"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

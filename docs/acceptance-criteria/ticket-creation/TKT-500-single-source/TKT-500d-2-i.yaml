@@ -1,0 +1,28 @@
+id: TKT-500d-2-i
+readiness: approved
+priority: medium
+title: "L0 with a mix of L1 and L2 children — done requires all leaves, not just direct children"
+component: ticket-creation
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given an L0 has both L1 children (with their own L2 children) and direct L2 children
+  When evaluating whether the L0 is done
+  Then the check traverses the full tree to find ALL leaf nodes
+  And the L0 is done only when every leaf has work_status: done
+  And intermediate L1s with undone leaves do not count as done
+assigned_agent: python-coder
+estimated_complexity: S
+depends_on: [TKT-500d-2]
+doc_links: []
+delivers_to: []
+expects_from: []
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+it_requirements: []

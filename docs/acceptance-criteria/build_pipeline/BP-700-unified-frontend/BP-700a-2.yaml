@@ -1,0 +1,40 @@
+id: BP-700a-2
+title: "Agent applies design principles without explicit skill activation"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a project that has never run the /onboard wizard
+  And the project has no .claude/skills/frontend-design/SKILL.md file
+  When the unified frontend agent is dispatched for a ticket with
+    files_touched containing a .tsx file
+  Then the agent applies the embedded design principles (font pairing,
+    colour personality, negative space, interactive states, component detail)
+    during implementation
+  And the agent's completion report includes a "design_principles_applied: true"
+    entry in the optional skills section
+  And no "frontend-design: not installed" warning appears in the output
+depends_on:
+  - BP-700a
+  - BP-700a-1
+doc_links:
+  - path: templates/agents/frontend-coder.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-700a-1
+  contract: "Unified template with embedded design principles"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

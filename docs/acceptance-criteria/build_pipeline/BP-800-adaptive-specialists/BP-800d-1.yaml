@@ -1,0 +1,40 @@
+id: BP-800d-1
+title: "Legacy hardcoded agent is superseded when a generated specialist exists for the same technology"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the project previously deployed a hardcoded "python-coder" agent template (from the legacy fixed agent set)
+  And the technology detector detects "python" in the project
+  And the agent generator produces a new "python-coder" specialist from the best-practice knowledge layer
+  When the build completes
+  Then the generated specialist replaces the legacy template at the same dispatch name ("python-coder")
+  And the legacy template file is renamed with a ".legacy" suffix (not deleted)
+  And the build output reports: "Superseded legacy agent: python-coder (replaced by generated specialist)"
+  And dispatching "python-coder" by name invokes the generated specialist, not the legacy one
+depends_on:
+  - BP-800d
+  - BP-800b-1
+doc_links:
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "Legacy replacement logic that ensures continuity of dispatch names"
+expects_from:
+  ac_id: BP-800b-1
+  contract: "Agent generator that produces the replacement specialist"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-800d-1-i
+implemented_by: []

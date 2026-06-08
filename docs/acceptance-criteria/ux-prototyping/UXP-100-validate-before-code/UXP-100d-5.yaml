@@ -1,0 +1,41 @@
+id: UXP-100d-5
+title: "Component diagram showing the handoff artifact structure and consumers"
+component: ux-prototyping
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given UXP-100d describes a handoff from UX design to frontend implementation,
+  When a component diagram is produced for this handoff system,
+  Then the diagram shows the handoff artifact as a central data store with four
+    sections: layout, flow, terminology, and hierarchy
+  And the diagram shows the UX designer agent as the producer (writes the artifact
+    on approval)
+  And the diagram shows the frontend-coder agent as the consumer (reads the artifact
+    at implementation time)
+  And the diagram shows the component library catalog as a reference source that
+    both agents read (UX designer for composition, frontend-coder for version checking)
+  And the diagram follows the C4 component diagram conventions used in this project
+depends_on:
+  - UXP-100d
+  - UXP-100d-1
+  - UXP-100d-2
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100d.yaml
+    relationship: parent
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: UXP-100d-1
+  contract: "Behavioral ACs describing the handoff artifact structure"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

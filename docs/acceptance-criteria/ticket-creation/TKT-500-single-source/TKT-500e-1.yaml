@@ -1,0 +1,33 @@
+id: TKT-500e-1
+readiness: approved
+priority: medium
+title: "Coder agent persists across sequential ACs within the same goal"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a goal (L0) has multiple leaf ACs assigned to the same coder type
+  When the coder finishes AC-N and AC-N+1 is next in dependency order
+  Then the same agent instance receives AC-N+1
+  And the agent retains its conversation context from AC-N
+  And no new agent spawn occurs
+assigned_agent: llm-expert
+estimated_complexity: L
+depends_on: [TKT-500e, TKT-500d-1]
+doc_links:
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: constrains
+delivers_to: []
+expects_from: [TKT-500d-1]
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: [TKT-500e-1-i]
+implemented_by: []
+it_requirements:
+  - "May require SendMessage to inject next AC into running agent"
+  - "Must respect ADR-006 depth-1 constraint"
+  - "If Agent SDK does not support keep-alive, use supervisor-loops-to-single-agent pattern"

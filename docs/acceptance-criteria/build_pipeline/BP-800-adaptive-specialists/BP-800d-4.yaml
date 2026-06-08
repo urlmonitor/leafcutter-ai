@@ -1,0 +1,39 @@
+id: BP-800d-4
+title: "How-to guide for legacy agent retirement"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the legacy retirement feature is implemented (BP-800d-1 through BP-800d-3)
+  When a documentation-expert produces the how-to guide
+  Then the guide covers:
+    - What happens to your existing python-coder/sql-coder/frontend-coder agents after upgrading
+    - How to verify that the migration completed and no behavioral content was lost
+    - How to access the .legacy backup files if something went wrong
+    - How to restore a legacy agent if the generated specialist is not satisfactory
+    - How user customizations are preserved and where to find them in the new template
+  And the guide is written for users upgrading from a pre-adaptive-specialists version
+  And the guide is placed under docs/how-to/
+depends_on:
+  - BP-800d
+  - BP-800d-3
+doc_links:
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: context
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-800d-3
+  contract: "Completed retirement feature to document"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

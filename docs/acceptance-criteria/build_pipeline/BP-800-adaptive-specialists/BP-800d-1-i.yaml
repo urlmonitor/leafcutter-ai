@@ -1,0 +1,34 @@
+id: BP-800d-1-i
+title: "Legacy agent with user customizations preserves those customizations"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the legacy "python-coder" agent template has been manually modified by the user (contains custom project-specific rules appended after a "# User Customizations" marker)
+  When the supersession process runs and replaces the legacy template with a generated specialist
+  Then the user customization section is extracted and appended to the generated specialist template
+  And the generated template clearly separates package content from user customizations with a visible marker
+  And the build output warns: "Preserved user customizations from legacy python-coder — review for compatibility"
+  And the user's custom rules continue to be loaded when the specialist is dispatched
+depends_on:
+  - BP-800d-1
+doc_links:
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BP-800d-1
+  contract: "Supersession logic that this customization-preservation edge case exercises"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,38 @@
+id: BP-800c-1
+title: "Best-practice files are versioned independently from agent templates"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the package contains a best-practice knowledge file for "python" at version 2
+  And a project previously generated a "python-coder" specialist from version 1
+  When the package is updated to a new release containing version 2 of the python best practices
+  And the build runs again on the same project
+  Then the generated "python-coder" specialist incorporates the version 2 best practices
+  And the version of the best-practice content is recorded in the generated template metadata
+  And the previous version 1 content is fully replaced (not appended)
+depends_on:
+  - BP-800c
+  - BP-800b-1
+doc_links:
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "Versioned knowledge layer that the generator reads at build time"
+expects_from:
+  ac_id: BP-800b-1
+  contract: "Agent generator that consumes best-practice content"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

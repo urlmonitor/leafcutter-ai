@@ -1,0 +1,37 @@
+id: PER-100b-1-i
+title: "persona_for field with non-string value is rejected by schema validator"
+component: persona-management
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given an AC YAML file with persona_for set to an integer value (e.g., persona_for: 42)
+  When the AC schema validator (check_ac_schema.py) runs against the file
+  Then the file fails validation
+  And the error message states that persona_for must be a string or null
+
+  Given an AC YAML file with persona_for set to a list (e.g., persona_for: ["a", "b"])
+  When the AC schema validator runs against the file
+  Then the file fails validation
+  And the error message states that persona_for must be a string or null, not a list
+depends_on:
+  - PER-100b-1
+doc_links:
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: PER-100b-1
+  contract: "JSON Schema definition for persona_for field that this test exercises"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

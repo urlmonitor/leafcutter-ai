@@ -1,0 +1,33 @@
+id: PER-100c-1-i
+title: "Query for a persona with no matching ACs returns an empty result"
+component: persona-management
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given an AC store where no AC files contain persona_for: "ceo"
+  When a user queries the AC store with persona filter "ceo"
+  Then the result is an empty list with zero entries
+  And the output states: "0 capabilities found for persona 'ceo'"
+  And the exit code is 0 (not an error — absence of results is a valid outcome)
+depends_on:
+  - PER-100c-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: PER-100c-1
+  contract: "Persona query function that this edge case exercises"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

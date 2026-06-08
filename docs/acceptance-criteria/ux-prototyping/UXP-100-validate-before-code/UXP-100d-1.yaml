@@ -1,0 +1,43 @@
+id: UXP-100d-1
+title: "Approved prototype produces a structured handoff artifact with layout and flow"
+component: ux-prototyping
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the user has approved a prototype that contains a navigation-bar at the top,
+    a data-table in the main content area with filters in a left sidebar, and a
+    form-panel accessible via a row-click action,
+  When the approval is recorded,
+  Then the system produces a handoff artifact that includes:
+    - layout: the spatial arrangement of components (navigation-bar: top,
+      sidebar: left, data-table: center, form-panel: modal-on-row-click)
+    - flow: the user interaction sequence (list view -> click row -> form opens
+      -> save returns to list)
+    - terminology: the exact labels used in the prototype (e.g. "Equipment List",
+      "Edit Details", "Save Changes")
+    - hierarchy: the component nesting structure (page contains sidebar + content-area;
+      content-area contains data-table)
+  And the handoff artifact is stored as a file that can be read by subsequent agents
+depends_on:
+  - UXP-100d
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100d.yaml
+    relationship: parent
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: L
+delivers_to:
+  ac_id: UXP-100d-2
+  contract: "A structured handoff artifact file with layout, flow, terminology, and hierarchy"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-100d-1-i
+implemented_by: []

@@ -1,0 +1,39 @@
+id: BP-800a-4
+title: "Detection produces a stable technology manifest"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the technology detector has completed scanning a project with Python, Go, FastAPI, and PostgreSQL
+  When the detection results are persisted
+  Then a technology manifest is written as a structured data file
+  And the manifest contains entries for each detected technology with fields: name, category (language/framework/database), paradigm (if database), confidence, detection_source
+  And running the detector a second time on an unchanged project produces a byte-identical manifest
+  And downstream consumers (agent generator) can read the manifest without re-running detection
+depends_on:
+  - BP-800a
+  - BP-800a-1
+  - BP-800a-2
+  - BP-800a-3
+doc_links:
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: "A stable manifest file that the agent generator reads to determine which specialists to produce"
+expects_from:
+  ac_id: BP-800a-1
+  contract: "Raw detection results from language, framework, and database detectors"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

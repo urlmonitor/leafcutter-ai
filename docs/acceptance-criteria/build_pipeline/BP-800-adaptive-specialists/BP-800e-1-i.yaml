@@ -1,0 +1,35 @@
+id: BP-800e-1-i
+title: "Migration failure does not leave the project in an inconsistent state"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a project with the legacy agent layout
+  And the migration process starts but fails partway through (e.g. a knowledge file write fails due to a permission error)
+  When the build detects the migration failure
+  Then it rolls back any partial changes (restores renamed legacy files to their original names)
+  And the project is left in the same state as before the migration attempt
+  And an error is emitted identifying the failure point and the rollback action taken
+  And the next build run re-detects the legacy layout and retries the migration from the beginning
+depends_on:
+  - BP-800e-1
+doc_links:
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BP-800e-1
+  contract: "Migration process that this failure-recovery edge case exercises"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

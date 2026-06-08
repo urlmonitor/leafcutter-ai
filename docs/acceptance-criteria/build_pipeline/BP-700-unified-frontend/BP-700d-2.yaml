@@ -1,0 +1,35 @@
+id: BP-700d-2
+title: "Onboard wizard no longer offers frontend-design as a separate optional skill"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the /onboard wizard presents optional skills for the adopter to choose
+  And previously the wizard listed "frontend-design" as an opt-in skill
+  When the adopter runs /onboard with the new package version
+  Then the wizard does NOT list "frontend-design" as a separate installable skill
+  And the wizard does NOT ask "install frontend-design? (y/n)"
+  And the wizard still lists webapp-testing as an optional skill (unchanged)
+  And if the adopter opts into frontend capabilities, the unified agent
+    is deployed without additional skill files
+depends_on:
+  - BP-700d
+doc_links:
+  - path: templates/agents/frontend-coder.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,37 @@
+id: PER-100a-4
+title: "How-to guide for creating and maintaining personas"
+component: persona-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a user who wants to add a new persona to the project
+  When they consult the how-to guide at docs/how-to/persona-management.md
+  Then the guide provides step-by-step instructions for:
+    - Creating a new persona directory under docs/personas/
+    - Filling in each required section of persona.yaml (identity, goals, frustrations, context)
+    - Adding phase-specific detail sections (discovery, design, development, marketing)
+    - Running the validation script to confirm the persona file is well-formed
+  And each step includes a concrete example using a sample persona
+depends_on:
+  - PER-100a
+  - PER-100a-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: PER-100a-1
+  contract: "Completed persona.yaml schema and validation script to document"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

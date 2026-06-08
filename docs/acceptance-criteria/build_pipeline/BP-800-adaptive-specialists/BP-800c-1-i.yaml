@@ -1,0 +1,34 @@
+id: BP-800c-1-i
+title: "Corrupted best-practice file does not crash the build"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the package knowledge layer contains a best-practice file for "go" that is malformed (missing metadata header, invalid structure)
+  When the agent generator attempts to read and process this file
+  Then the build does not crash or abort entirely
+  And a warning is emitted identifying the corrupted file and the specific validation failure
+  And the "go-coder" specialist is either skipped (not generated) or generated with the previous valid version if available
+  And all other specialists (for technologies with valid best-practice files) are generated normally
+depends_on:
+  - BP-800c-1
+doc_links:
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-800c-1
+  contract: "Versioned knowledge layer reading logic that this error case exercises"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

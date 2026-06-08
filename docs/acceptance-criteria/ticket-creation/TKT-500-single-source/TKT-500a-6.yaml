@@ -1,0 +1,27 @@
+id: TKT-500a-6
+readiness: approved
+priority: low
+title: "Component diagram: AC-as-dispatch-artifact architecture"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given TKT-500a behavioral ACs are implemented
+  When documentation is generated
+  Then a component diagram shows the AC store, ac-supervisor, and phase agents
+  with arrows indicating the read path from AC YAML to agent
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+depends_on: [TKT-500a-1]
+doc_links: []
+delivers_to: []
+expects_from: []
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+it_requirements: []

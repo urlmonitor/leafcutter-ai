@@ -1,0 +1,33 @@
+id: UXP-100d-1-i
+title: "Handoff artifact is not produced for a rejected or pending-changes prototype"
+component: ux-prototyping
+level: L3
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given a prototype has been presented to the user and the user selected "Reject"
+    or "Request changes",
+  When the system processes the decision,
+  Then no handoff artifact is produced
+  And any previously existing handoff artifact for this feature (from a prior
+    approval cycle that was later superseded) is marked as "invalidated"
+  And the frontend-coder agent cannot find a valid handoff artifact for this feature
+depends_on:
+  - UXP-100d-1
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100d-1.yaml
+    relationship: parent
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

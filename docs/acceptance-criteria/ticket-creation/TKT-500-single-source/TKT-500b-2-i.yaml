@@ -1,0 +1,27 @@
+id: TKT-500b-2-i
+readiness: approved
+priority: medium
+title: "Coder dispatched to a tests-after AC does not wait for nonexistent test sign-off"
+component: ticket-creation
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given an AC has tests_after: true
+  When the coder agent is dispatched
+  Then the coder does not wait for a test-writer sign-off that has not happened
+  And the blocking gate correctly recognizes tests_after removes the pre-coder gate
+assigned_agent: python-coder
+estimated_complexity: S
+depends_on: [TKT-500b-3]
+doc_links: []
+delivers_to: []
+expects_from: []
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+it_requirements: []

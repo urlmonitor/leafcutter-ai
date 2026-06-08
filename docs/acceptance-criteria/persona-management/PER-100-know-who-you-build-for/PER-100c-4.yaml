@@ -1,0 +1,38 @@
+id: PER-100c-4
+title: "Sequence diagram for persona capability query workflow"
+component: persona-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the persona query workflow involves: user invocation, AC store scan, persona filter, grouping, and output rendering
+  When the architecture diagram author produces the sequence diagram
+  Then the diagram shows the following participants and interactions:
+    - User invokes the persona query command with a persona slug
+    - The query script reads all AC YAML files from the AC store
+    - The script filters ACs where persona_for matches the requested slug
+    - The script groups results by component and level
+    - The script renders the grouped output to the user
+  And the diagram is a Mermaid sequence diagram placed in docs/architecture/
+depends_on:
+  - PER-100c
+  - PER-100c-1
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: PER-100c-1
+  contract: "Completed persona query workflow to diagram"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

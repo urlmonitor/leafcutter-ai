@@ -1,0 +1,38 @@
+id: UXP-100b-2
+title: "Research is initiated for each missing component rather than improvising"
+component: ux-prototyping
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the gap report identifies "timeline-view" as a missing component
+    needed in the "main content area" of the prototype,
+  When the UX designer agent processes the gap report,
+  Then the agent dispatches a research request for "timeline-view" that includes:
+    the usage context, the visual role it must fill, and any constraints from
+    the existing design system (spacing, color palette, typography scale)
+  And the agent does not generate a placeholder or ad-hoc markup for the missing component
+  And the prototype output marks the position as "pending: timeline-view research"
+    rather than filling it with an approximation
+depends_on:
+  - UXP-100b
+  - UXP-100b-1
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100b.yaml
+    relationship: parent
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: UXP-100b-1
+  contract: "Structured gap report with component names and usage contexts"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

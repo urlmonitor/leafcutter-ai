@@ -1,0 +1,37 @@
+id: UXP-100a-2
+title: "Prototype output preserves visual and structural consistency with existing pages"
+component: ux-prototyping
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the component library catalog defines a "card-grid" component with
+    properties: column-count, card-spacing, and card-border-style,
+  When the UX designer agent composes a prototype that includes "card-grid",
+  Then the prototype uses the same property values as existing pages that use "card-grid"
+  And the prototype does not override default property values unless the feature
+    request explicitly requires a variation
+  And the generated layout structure matches the established page type hierarchy
+    (header, content-area, sidebar, footer) used across the product
+depends_on:
+  - UXP-100a
+  - UXP-100a-1
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100a.yaml
+    relationship: parent
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: UXP-100a-1
+  contract: "Prototype that references only catalog-listed components"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,38 @@
+id: BP-800b-7
+title: "Component diagram for the specialist generation subsystem"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the specialist generation feature is implemented
+  When an architecture-diagram-author produces the component diagram
+  Then the diagram shows:
+    - The agent generator component with inputs (technology manifest, best-practice knowledge layer) and outputs (agent template files)
+    - The relationship between the generator and the technology detector (BP-800a)
+    - The relationship between generated agents and the build system's dispatch mechanism
+    - The knowledge layer as a separate component consumed by the generator
+  And the diagram follows C4 component-level notation
+  And the diagram is placed under docs/architecture/
+depends_on:
+  - BP-800b
+  - BP-800b-1
+doc_links:
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: context
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-800b-1
+  contract: "Completed generation subsystem to diagram"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,5 +1,5 @@
 id: UXP-100
-readiness: draft
+readiness: approved
 priority: medium
 title: "See what you are getting before a single line of code is written"
 component: ux-prototyping

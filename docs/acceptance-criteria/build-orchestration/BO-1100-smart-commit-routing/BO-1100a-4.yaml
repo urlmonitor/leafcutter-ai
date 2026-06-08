@@ -3,7 +3,7 @@ title: "Router skips pattern application when a user-approved subject line alrea
 component: build-orchestration
 level: L2
 status: active
-readiness: draft
+readiness: reviewed
 priority: medium
 req_status: active
 work_status: todo
@@ -22,13 +22,22 @@ doc_links:
   - path: docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200c-4.yaml
     relationship: constrains
     status: exists
+  - path: templates/agents/commit.md
+    relationship: describes
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: S
+it_requirements:
+  - "Must check for existing user-approved subject before invoking any classification logic"
+  - "Must be compatible with the precommit-autofix loop (hooks may re-stage files multiple times)"
+  - "Must preserve the subject verbatim including case, punctuation, and whitespace"
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: BO-200c-4
+  contract: "A boolean signal or state flag indicating the user has already approved a subject line in the current commit workflow invocation"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by: [it-po-v3]
 superseded_by: null
 covered_by: []
 implemented_by: []

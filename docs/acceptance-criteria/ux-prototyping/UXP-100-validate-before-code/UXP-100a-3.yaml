@@ -1,0 +1,39 @@
+id: UXP-100a-3
+title: "How-to guide for assembling prototypes from the component library"
+component: ux-prototyping
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given UXP-100a-1 and UXP-100a-2 describe how prototypes are composed from
+    the component library catalog,
+  When a how-to guide is produced for the UX prototyping workflow,
+  Then the guide covers: how to read the component library catalog, how to
+    select components for a feature, how to assemble a prototype from those
+    components, and how to verify consistency with existing pages
+  And the guide includes at least one worked example showing a feature request
+    mapped to a specific set of catalog components
+  And the guide is written for a user who has never used the prototyping workflow before
+depends_on:
+  - UXP-100a
+  - UXP-100a-1
+  - UXP-100a-2
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100a.yaml
+    relationship: parent
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: UXP-100a-1
+  contract: "Behavioral ACs describing catalog lookup and composition rules"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,38 @@
+id: BP-800d-2
+title: "Legacy agent knowledge is migrated into the best-practice knowledge layer"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the legacy "python-coder" agent template contains behavioral guidance sections (style rules, testing conventions, idioms)
+  And the best-practice knowledge layer does not yet have a "python" entry
+  When the migration process runs (triggered by the first build after package upgrade)
+  Then a best-practice knowledge file for "python" is created in the knowledge layer
+  And the file contains all behavioral content extracted from the legacy template (style, testing, idioms, tooling sections)
+  And the migration records which legacy template was the source (for audit purposes)
+  And subsequent builds generate the python specialist from this migrated knowledge file
+depends_on:
+  - BP-800d
+  - BP-800c-2
+doc_links:
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+  agent: python-coder
+  contract: "Migrated best-practice files that populate the knowledge layer from legacy content"
+expects_from:
+  ac_id: BP-800c-2
+  contract: "Knowledge layer file structure to write migrated content into"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

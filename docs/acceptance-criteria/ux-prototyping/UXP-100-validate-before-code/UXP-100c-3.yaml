@@ -1,0 +1,40 @@
+id: UXP-100c-3
+title: "Request-changes feedback produces a revised prototype incorporating the feedback"
+component: ux-prototyping
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the user reviews a prototype and selects "Request changes" with
+    feedback text: "Move the sidebar filters above the data table and
+    remove the card-grid section entirely",
+  When the UX designer agent processes the change request,
+  Then it produces a revised prototype that applies the requested changes:
+    sidebar filters appear above the data table, and the card-grid section
+    is removed
+  And the revised prototype is presented for a new review cycle with the
+    same three decision options (Approve, Reject, Request changes)
+  And the revision history records the original prototype and the change
+    request text for traceability
+depends_on:
+  - UXP-100c
+  - UXP-100c-1
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100c.yaml
+    relationship: parent
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: L
+delivers_to: null
+expects_from:
+  ac_id: UXP-100c-1
+  contract: "A user decision of type request-changes with feedback text"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

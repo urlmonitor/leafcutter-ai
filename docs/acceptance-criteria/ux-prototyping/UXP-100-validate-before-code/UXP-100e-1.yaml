@@ -1,0 +1,36 @@
+id: UXP-100e-1
+title: "UX designer and BA are dispatched concurrently after PO completes L0/L1 framing"
+component: ux-prototyping
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the PO agent has completed L0 and L1 AC authoring for a feature
+    and the L1 ACs have readiness: approved,
+  When the pipeline determines that UX involvement is warranted for this feature,
+  Then the UX designer agent and the BA agent are both dispatched in the same
+    orchestration step (not sequentially)
+  And neither agent's dispatch is gated on the other agent having started or finished
+  And both agents receive the same L0/L1 ACs as their input context
+depends_on:
+  - UXP-100e
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100e.yaml
+    relationship: parent
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+delivers_to:
+  ac_id: UXP-100e-2
+  contract: "Both agents running concurrently with shared L0/L1 context"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-100e-1-i
+implemented_by: []

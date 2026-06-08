@@ -3,7 +3,7 @@ title: "Files matching multiple groups are escalated to mixed-change handling"
 component: build-orchestration
 level: L3
 status: active
-readiness: draft
+readiness: reviewed
 priority: medium
 req_status: active
 work_status: todo
@@ -28,13 +28,17 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Must not regress the first-match-wins invariant under any input combination"
+  - "Must surface secondary match information in the classification output metadata"
+  - "Must handle errors gracefully per the project error handling policy"
 delivers_to: null
 expects_from:
   ac_id: BO-1100a-1
-  contract: "First-match-wins classification logic from the ordered config array"
+  contract: "First-match-wins classification logic from the ordered config array, returning per-file group assignment and any secondary match metadata"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by: [it-po-v3]
 superseded_by: null
 covered_by: []
 implemented_by: []

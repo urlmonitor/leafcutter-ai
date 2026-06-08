@@ -1,5 +1,5 @@
 id: PER-100d
-readiness: draft
+readiness: approved
 priority: medium
 title: "Persona context is available to every agent that needs it"
 component: persona-management

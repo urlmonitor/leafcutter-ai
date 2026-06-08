@@ -1,0 +1,42 @@
+id: UXP-100e-4
+title: "Sequence diagram showing parallel dispatch of UX designer and BA agents"
+component: ux-prototyping
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given UXP-100e describes parallel execution of the UX designer and BA agents
+    after PO framing is complete,
+  When a sequence diagram is produced for this parallel workflow,
+  Then the diagram shows the following actors: PO agent, pipeline orchestrator,
+    UX designer agent, BA agent, and prototype artifact store
+  And the diagram shows: (1) PO completes L0/L1 ACs, (2) orchestrator dispatches
+    UX designer and BA in parallel (shown as a par fragment), (3) UX designer
+    writes prototype artifact, (4) BA reads partial prototype while decomposing,
+    (5) both agents complete independently
+  And the diagram shows the optional path where UX is not warranted:
+    orchestrator dispatches BA only, UX designer is not invoked
+depends_on:
+  - UXP-100e
+  - UXP-100e-1
+  - UXP-100e-2
+  - UXP-100e-3
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100e.yaml
+    relationship: parent
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: UXP-100e-1
+  contract: "Behavioral ACs describing parallel dispatch and shared artifact access"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

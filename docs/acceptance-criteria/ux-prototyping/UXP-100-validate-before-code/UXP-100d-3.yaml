@@ -1,0 +1,39 @@
+id: UXP-100d-3
+title: "Handoff artifact includes component version references for drift detection"
+component: ux-prototyping
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the approved prototype uses "data-table" from the component library
+    catalog at version "v2" (with sortable columns and pagination),
+  When the handoff artifact is produced,
+  Then each component reference in the artifact includes the catalog version
+    that was used at approval time (e.g. "data-table@v2")
+  And if the component library catalog is updated after approval (e.g.
+    "data-table" moves to "v3" with breaking layout changes), the handoff
+    artifact retains the "v2" reference
+  And the frontend-coder agent can detect the version mismatch and flag it
+    for user review before proceeding
+depends_on:
+  - UXP-100d
+  - UXP-100d-1
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100d.yaml
+    relationship: parent
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: UXP-100d-1
+  contract: "Handoff artifact with component references"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

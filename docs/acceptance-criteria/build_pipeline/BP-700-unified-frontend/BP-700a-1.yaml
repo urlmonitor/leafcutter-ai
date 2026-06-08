@@ -1,0 +1,44 @@
+id: BP-700a-1
+title: "Unified agent template embeds design principles directly"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the unified frontend agent template file exists in templates/agents/
+  When a reader inspects the template content
+  Then the template body contains the five design principles currently defined
+    in the frontend-design skill:
+    - Custom font pairing (not browser default)
+    - Primary colour with deliberate personality (not Tailwind blue #3B82F6)
+    - Intentional negative space (minimum spacing rules)
+    - Deliberate interactive states (hover, focus-visible, active)
+    - Component-level personality through detail
+  And the template contains the 6-question pre-write checklist
+  And there is no instruction to load an external frontend-design SKILL.md file
+depends_on:
+  - BP-700a
+doc_links:
+  - path: templates/skills/frontend-design/SKILL.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/frontend-coder.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A unified agent template file that python-coder (build.py) deploys"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-700a-1-i
+implemented_by: []

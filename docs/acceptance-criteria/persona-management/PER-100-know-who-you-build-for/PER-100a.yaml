@@ -1,5 +1,5 @@
 id: PER-100a
-readiness: draft
+readiness: approved
 priority: medium
 title: "Personas are documented once and referenced everywhere"
 component: persona-management
@@ -23,6 +23,11 @@ origin_agent: product-owner-v3
 created: 2026-06-06
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - PER-100a-1
+  - PER-100a-2
+  - PER-100a-3
+  - PER-100a-4
+  - PER-100a-5
 implemented_by: []
 documentation_triggers: [how-to, reference-doc]

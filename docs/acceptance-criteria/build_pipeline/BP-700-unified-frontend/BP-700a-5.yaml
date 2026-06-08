@@ -1,0 +1,37 @@
+id: BP-700a-5
+title: "Component diagram shows unified agent in the dispatch topology"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given BP-700a is implemented (unified agent replaces the split)
+  When an architect or adopter views the architecture documentation
+  Then a component diagram exists in docs/architecture/ showing:
+    - The unified frontend agent as a single box at priority 8
+    - No separate frontend-design skill box in the dispatch topology
+    - The relationship between the agent and PROJECT_CONTEXT.md
+    - The relationship between the agent and the optional webapp-testing skill
+depends_on:
+  - BP-700a
+  - BP-700a-1
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-700a-1
+  contract: "Unified agent template exists in the registry"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

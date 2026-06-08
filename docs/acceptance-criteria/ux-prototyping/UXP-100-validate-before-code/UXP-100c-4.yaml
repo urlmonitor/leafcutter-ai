@@ -1,0 +1,39 @@
+id: UXP-100c-4
+title: "Rejection stops the pipeline and records the rejection rationale"
+component: ux-prototyping
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the user reviews a prototype and selects "Reject" with rationale:
+    "This feature does not solve the problem I described — the workflow
+    is backwards",
+  When the rejection is recorded,
+  Then the pipeline sets the feature status to "ux-rejected"
+  And no implementation work is dispatched for this feature
+  And the rejection rationale is stored alongside the prototype artifact
+    so the PO can review why the feature was rejected
+  And the PO is notified that the feature requires re-framing before
+    another prototype can be attempted
+depends_on:
+  - UXP-100c
+  - UXP-100c-1
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100c.yaml
+    relationship: parent
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: UXP-100c-1
+  contract: "A user decision of type reject with rationale text"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

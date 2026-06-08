@@ -1,0 +1,34 @@
+id: PER-100a-3-i
+title: "Persona file with invalid YAML syntax produces a parse error"
+component: persona-management
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a persona.yaml file containing invalid YAML syntax (e.g., a tab character where spaces are expected)
+  When the persona validation script is run against the file
+  Then it exits with a non-zero status
+  And the error message indicates a YAML parse failure
+  And the error message includes the file path and the line number where parsing failed
+  And the error is distinct from a schema-validation error (it is reported as a syntax error, not a missing-field error)
+depends_on:
+  - PER-100a-3
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: PER-100a-3
+  contract: "Persona validation script that this edge case exercises"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

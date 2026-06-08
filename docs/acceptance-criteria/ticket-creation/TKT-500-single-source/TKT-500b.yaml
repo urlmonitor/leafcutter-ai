@@ -1,0 +1,29 @@
+id: TKT-500b
+readiness: approved
+priority: medium
+title: "Tests are written before code, by default"
+component: ticket-creation
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  The build sequence always starts with test-writing unless explicitly overridden.
+
+  When work begins on a requirement, the test-writer agent is dispatched first.
+  Code-writing agents cannot start until test-writer has signed off. The only
+  exception is when the technical reviewer explicitly marks a requirement as
+  "tests-after" — and that exception is visible in the requirement's state.
+depends_on: [TKT-500]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: [TKT-500b-1, TKT-500b-2, TKT-500b-3, TKT-500b-4, TKT-500b-5, TKT-500b-6]
+implemented_by: []
+documentation_triggers: [how-to, sequence-diagram]

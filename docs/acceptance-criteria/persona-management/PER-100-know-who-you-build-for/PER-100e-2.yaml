@@ -1,0 +1,41 @@
+id: PER-100e-2
+title: "Persona expert refines an existing persona with new evidence"
+component: persona-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given an existing persona at docs/personas/field-service-engineer/persona.yaml with:
+    - goals: ["Minimize equipment downtime", "Complete repairs on first visit"]
+    - frustrations: ["Incomplete service history"]
+  When the persona expert agent is invoked with: "Add a goal about mobile connectivity and a frustration about documentation gaps"
+  Then the persona.yaml file is updated to include:
+    - goals now contains the original 2 goals plus a new goal related to mobile connectivity
+    - frustrations now contains the original 1 frustration plus a new frustration about documentation gaps
+  And the identity section is preserved unchanged
+  And the updated file passes the persona validation script
+  And a changelog entry is appended to the persona directory (e.g., docs/personas/field-service-engineer/history.md)
+    documenting what changed and why
+depends_on:
+  - PER-100e
+  - PER-100e-1
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: PER-100e-1
+  contract: "Persona expert agent that can read and write persona.yaml files"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - PER-100e-2-i
+implemented_by: []

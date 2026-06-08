@@ -1,0 +1,39 @@
+id: PER-100a-5
+title: "Reference doc for persona YAML schema"
+component: persona-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a developer or agent that needs to understand the persona file format
+  When they consult docs/reference/persona-schema.md
+  Then the document lists every field in persona.yaml with:
+    - field name
+    - data type (string, list, mapping)
+    - whether it is required or optional
+    - a description of what the field represents
+    - an example value
+  And the document includes a complete example persona.yaml file
+  And the document references the validation script and its exit codes
+depends_on:
+  - PER-100a
+  - PER-100a-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: PER-100a-1
+  contract: "Finalized persona.yaml schema to document as reference material"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,38 @@
+id: UXP-100d-2
+title: "Frontend-coder agent consumes the handoff artifact without human translation"
+component: ux-prototyping
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given a handoff artifact exists specifying layout: "navigation-bar: top,
+    sidebar: left with filters, data-table: center" and terminology:
+    "Equipment List" as the page title,
+  When the frontend-coder agent receives a ticket referencing this handoff artifact,
+  Then the agent reads the artifact and produces markup that places the navigation-bar
+    at the top, the sidebar on the left, and the data-table in the center
+  And the agent uses "Equipment List" as the page title in the generated markup
+  And the agent does not require any additional human clarification about layout
+    or terminology to begin implementation
+depends_on:
+  - UXP-100d
+  - UXP-100d-1
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100d.yaml
+    relationship: parent
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: UXP-100d-1
+  contract: "Structured handoff artifact with layout, flow, terminology, and hierarchy"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

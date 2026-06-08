@@ -1,0 +1,38 @@
+id: PER-100a-1
+title: "Persona directory contains a structured YAML definition file"
+component: persona-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a project with the persona-management component installed
+  When a persona named "field-service-engineer" is created
+  Then a directory exists at docs/personas/field-service-engineer/
+  And the directory contains a persona.yaml file with required sections:
+    - identity (name, role, archetype)
+    - goals (primary goals as a list of strings)
+    - frustrations (pain points as a list of strings)
+    - context (environment, tools, constraints)
+  And each section is a top-level YAML key with a non-empty value
+depends_on:
+  - PER-100a
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A persona.yaml schema definition and a creation/validation script"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - PER-100a-1-i
+implemented_by: []

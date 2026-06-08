@@ -1,0 +1,31 @@
+id: TKT-500c-1
+readiness: approved
+priority: medium
+title: "work_status transitions from todo to in_progress when first agent is dispatched"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given an AC has work_status: todo
+  When the ac-supervisor dispatches the first phase agent for this AC
+  Then the AC's work_status field is atomically updated to in_progress
+  And the update is written to the AC YAML file on disk
+assigned_agent: python-coder
+estimated_complexity: M
+depends_on: [TKT-500c]
+doc_links:
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: constrains
+delivers_to: [TKT-500c-3]
+expects_from: []
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+it_requirements:
+  - "YAML write must use targeted field replacement, not full dump"
+  - "Atomic update: no partial-write states observable"

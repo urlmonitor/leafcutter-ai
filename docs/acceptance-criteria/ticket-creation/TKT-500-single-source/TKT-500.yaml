@@ -1,0 +1,29 @@
+id: TKT-500
+readiness: approved
+priority: medium
+title: "Your approved requirements are always what agents execute against — never a stale copy"
+component: ticket-creation
+level: L0
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  One source of truth from approval through delivery — no copies, no drift.
+
+  When you approve a requirement, that exact text is what every agent reads,
+  signs off against, and delivers. There is no intermediate document that can
+  go stale, contradict the original, or lose context in translation. The
+  requirement itself carries its own dispatch state, progress tracking, and
+  sign-off history. What you approved is what gets built — guaranteed.
+depends_on: [ACS-100]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: [TKT-500a, TKT-500b, TKT-500c, TKT-500d, TKT-500e]
+implemented_by: []

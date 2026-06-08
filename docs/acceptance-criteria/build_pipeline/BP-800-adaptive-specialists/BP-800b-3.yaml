@@ -1,0 +1,36 @@
+id: BP-800b-3
+title: "Technology with no best-practice file produces a minimal specialist with a warning"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the technology manifest contains an entry for "elixir" with category "language"
+  And no best-practice knowledge file exists for "elixir" in the package knowledge layer
+  When the agent generator processes the manifest
+  Then it produces an agent template for "elixir-coder" with a generic structure (no language-specific best practices)
+  And the template includes a placeholder section noting that best practices are not yet available for this technology
+  And a warning is emitted: "No best-practice knowledge found for elixir — generating minimal specialist"
+  And the build does not fail or skip the technology
+depends_on:
+  - BP-800b
+  - BP-800b-1
+doc_links:
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-800b-1
+  contract: "Agent generation logic that this edge case exercises"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

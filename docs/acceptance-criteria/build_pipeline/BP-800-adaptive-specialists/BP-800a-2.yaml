@@ -1,0 +1,38 @@
+id: BP-800a-2
+title: "Framework detection from dependency declarations"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a project with:
+    - pyproject.toml listing "fastapi" and "sqlalchemy" in [project.dependencies]
+    - package.json listing "react" in dependencies and "next" in dependencies
+  When the technology detector scans the project at build time
+  Then it reports detected frameworks: ["fastapi", "sqlalchemy", "react", "nextjs"]
+  And each framework is associated with its parent language ("fastapi" -> "python", "react" -> "typescript")
+  And frameworks are detected from manifest files only (not from import statements in source code)
+depends_on:
+  - BP-800a
+  - BP-800a-1
+doc_links:
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "Framework detection results with parent-language associations, consumed alongside language results by agent generator"
+expects_from:
+  ac_id: BP-800a-1
+  contract: "Language detection infrastructure (shared scanning logic and manifest parsers)"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -3,7 +3,7 @@ title: "Adding a new routing pattern requires only a single entry addition"
 component: build-orchestration
 level: L2
 status: active
-readiness: draft
+readiness: reviewed
 priority: medium
 req_status: active
 work_status: todo
@@ -23,13 +23,16 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "The config file must be appendable without affecting existing entries"
+  - "Must not require any code changes or agent template edits to activate a new pattern"
 delivers_to: null
 expects_from:
   ac_id: BO-1100c-1
-  contract: "The JSON routing config file schema with its array-of-entries structure"
+  contract: "The JSON routing config file schema with its array-of-entries structure, supporting append-only extension"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by: [it-po-v3]
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -1,0 +1,30 @@
+id: TKT-500d-4
+readiness: approved
+priority: medium
+title: "Cross-goal isolation is enforced via separate branches"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given two L0 goals are ready for work
+  When the system dispatches work for both
+  Then each L0's work happens on its own git branch (worktree)
+  And two concurrent goals never share a branch
+  And changes from goal-A cannot affect goal-B until merged to main
+assigned_agent: python-coder
+estimated_complexity: M
+depends_on: [TKT-500d-1]
+doc_links: []
+delivers_to: [TKT-500e-3]
+expects_from: []
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+it_requirements:
+  - "One git worktree per L0 goal"
+  - "Branch naming convention must include the L0 AC ID"

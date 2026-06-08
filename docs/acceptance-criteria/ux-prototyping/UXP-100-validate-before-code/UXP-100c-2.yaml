@@ -1,0 +1,36 @@
+id: UXP-100c-2
+title: "Pipeline blocks until the user provides an explicit prototype decision"
+component: ux-prototyping
+level: L2
+status: active
+readiness: draft
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given a prototype has been presented to the user for review,
+  When no decision has been recorded yet (no "Approve", "Reject", or
+    "Request changes" response exists),
+  Then the pipeline does not proceed to the implementation phase
+  And the pipeline does not dispatch any coding agents for this feature
+  And the feature's status remains "awaiting-ux-approval" until a decision arrives
+depends_on:
+  - UXP-100c
+  - UXP-100c-1
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100c.yaml
+    relationship: parent
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: UXP-100c-1
+  contract: "Presentation has been shown and a decision is pending"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-100c-2-i
+implemented_by: []

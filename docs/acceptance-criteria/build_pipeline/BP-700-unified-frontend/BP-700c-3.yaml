@@ -1,0 +1,41 @@
+id: BP-700c-3
+title: "Webapp-testing skill integration preserved as optional"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the webapp-testing skill remains a separate optional skill
+    (it is NOT merged into the unified agent template)
+  When the unified frontend agent is dispatched for a ticket
+  Then the agent checks for webapp-testing via the same file-existence
+    detection method as before:
+    checking .claude/skills/webapp-testing/SKILL.md
+  And if the file exists, the agent invokes the webapp-testing protocol
+    (screenshot capture, console-log check)
+  And if the file does not exist, the agent notes the absence in the
+    completion report and proceeds without browser verification
+  And the Antigravity environment variable override is preserved
+depends_on:
+  - BP-700c
+doc_links:
+  - path: templates/agents/frontend-coder.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/frontend-design/SKILL.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

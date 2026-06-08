@@ -1,0 +1,37 @@
+id: PER-100d-5
+title: "Component diagram for persona management system"
+component: persona-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the persona management system includes: persona files, validation script, persona query script, persona summary injector, and persona-detail skill
+  When the architecture diagram author produces the component diagram
+  Then the diagram shows the following components and their relationships:
+    - docs/personas/ (persona file store)
+    - Persona validation script (validates persona.yaml files)
+    - Persona query script (filters AC store by persona_for)
+    - Persona summary injector (reads personas at startup, injects summary at spawn)
+    - Persona-detail skill (loads full persona on demand)
+    - AC store (read by persona query script)
+    - Agent context window (receives persona summary and on-demand detail)
+  And the diagram is a Mermaid C4 component diagram placed in docs/architecture/
+depends_on:
+  - PER-100d
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,41 @@
+id: BP-800b-6
+title: "Sequence diagram for the specialist generation pipeline"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the specialist generation feature is implemented
+  When an architecture-diagram-author produces the sequence diagram
+  Then the diagram shows the temporal flow:
+    1. Build system invokes the technology detector
+    2. Detector scans project files and manifests
+    3. Detector writes the technology manifest
+    4. Build system invokes the agent generator with the manifest
+    5. Generator reads best-practice knowledge for each technology
+    6. Generator writes agent template files
+    7. Build system registers generated agents for dispatch
+  And the diagram identifies each actor (build system, detector, generator, knowledge layer)
+  And the diagram is placed under docs/architecture/
+depends_on:
+  - BP-800b
+  - BP-800b-1
+doc_links:
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: context
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-800b-1
+  contract: "Completed generation pipeline to diagram"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

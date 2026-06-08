@@ -1,0 +1,42 @@
+id: BP-700c-4
+title: "Agent registry entry preserves all existing selection criteria and metadata"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the current frontend-coder entry in agent_registry.json has:
+    - id: "frontend-coder"
+    - tier: "phase"
+    - priority: 8
+    - owns_file_extensions: [".tsx", ".jsx", ".vue", ".svelte", ".html", ".css", ".scss"]
+    - spawn_allowlist: ["research-agent"]
+    - requires_verification: true
+    - category: "implementation"
+  When the unified frontend agent replaces the old entry
+  Then all the fields listed above are preserved with the same values
+  And the skills_invoked list no longer references "frontend-design" as a
+    conditional skill (since it is now embedded)
+  And the skills_used list no longer includes "frontend-design"
+  And the skills_invoked list still includes "webapp-testing" as conditional
+    and "signoff" as conditional
+depends_on:
+  - BP-700c
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

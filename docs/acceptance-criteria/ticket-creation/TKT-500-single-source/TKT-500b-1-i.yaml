@@ -1,0 +1,29 @@
+id: TKT-500b-1-i
+readiness: approved
+priority: medium
+title: "No test-writer in agent registry for this AC's language — supervisor halts"
+component: ticket-creation
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a leaf AC targets a language with no registered test-writer agent
+  When the ac-supervisor attempts to dispatch test-writer
+  Then the supervisor halts with a structured error
+  And the AC is marked as blocked with a clear reason
+  And no coder agent is dispatched
+assigned_agent: python-coder
+estimated_complexity: S
+depends_on: [TKT-500b-1]
+doc_links: []
+delivers_to: []
+expects_from: []
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+it_requirements:
+  - "Error must name the target language and the registry lookup result"
