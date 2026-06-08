@@ -243,6 +243,55 @@ internally as part of its implementation loop. `ticket-supervisor` does NOT trac
 these optional skills as separate phases — they are internal to `frontend-coder`'s
 execution. Only `frontend-coder` itself appears in the ticket's `agents:` map.
 
+### Produces-Trait Guardrail Dispatch
+
+Before dispatching any phase agent, the ticket-supervisor MUST read that agent's
+`produces` trait from `config/agent_registry.json` (or `leafcutter/config/agent_registry.json`
+in consumer installs) and use it to determine which guardrails apply. The registry
+is loaded once per ticket run (cached in memory across the agent loop).
+
+**Guardrail mapping by produces value:**
+
+| `produces` value | TDD guardrails apply? | Notes |
+|---|---|---|
+| `production_code` | YES | Inject `test-writer` (priority 5) before the agent and `test-runner` (priority 9) after. If the ticket already has these agents in `agents:` map as `not_needed`, skip injection (explicit ticket override wins). |
+| `documentation` | NO | Neither `test-writer` nor `test-runner` are required. Docs-only agents produce human-readable artifacts, not executable logic. |
+| `prompt` | NO (TDD) | TDD guardrails do NOT apply. Prompt-quality guardrails apply instead (see llm-expert's `## Prompt-Quality Checklist`). The `test-writer` skip rule already handles this via the `## Test Requirements` block absence check. |
+| `test_artifact` | NO | Agent IS the test artifact producer — it would be circular to wrap it in test-writer/test-runner. |
+| `review_verdict` | NO | Review agents produce verdicts, not executable artifacts. |
+| `analysis` | NO | Analysis agents produce reports/recommendations, not executable logic. |
+| `orchestration` | NO | Orchestrators drive other agents; no test guardrails apply. |
+| `configuration` | CONDITIONAL | Apply TDD guardrails only if the configuration change is consumed by tested code (supervisor judgment). |
+| `null` (ambiguous) | WARN + proceed as NO | Log a warning and apply the same behavior as `documentation`. Do NOT block on ambiguous trait. |
+
+**Reading the trait (pseudocode):**
+
+```python
+# At dispatch time, before spawning next_agent:
+registry = load_json("config/agent_registry.json")
+entry = next(a for a in registry["agents"] if a["id"] == next_agent_name)
+produces = entry.get("produces")
+
+if produces == "production_code":
+    # TDD guardrails apply
+    # If test-writer is not in agents map at all (dynamically injected ticket),
+    # add it as needed before next_agent; add test-runner after.
+    # If test-writer is already signed_off or not_needed, skip.
+    pass
+elif produces is None:
+    # Warn but do not block
+    log_warning(f"Agent {next_agent_name} has produces: null in registry — TDD guardrails skipped.")
+else:
+    # No TDD guardrails
+    pass
+```
+
+**Interaction with existing skip rules:**
+The test-writer skip rule (below) runs on the TICKET'S `## Test Requirements` block and
+can skip test-writer even for `production_code` agents if the ticket explicitly has no
+test requirements. The produces-trait check is the AGENT-LEVEL rule; the test requirements
+check is the TICKET-LEVEL rule. The ticket-level rule always wins when it says "skip".
+
 ### Docs-only / config-only test-writer skip rule
 
 Before dispatching `test-writer` (priority 5), read the ticket's `## Test Requirements` block.
