@@ -535,6 +535,101 @@ for the full integration protocol).
 
 ---
 
+### AC BP-600c-3 — Test-runner confirms green phase after fix is applied
+
+After the python-coder has applied the fix to the diagnosed file (AC BP-600d-2), the quick-fix
+workflow MUST dispatch the `test-runner` agent a second time to verify that the fix actually
+resolves the failing test. The Gherkin contract:
+
+```gherkin
+Given the python-coder has applied the fix to the diagnosed file,
+When the workflow reaches the green-phase verification step,
+Then it dispatches the test-runner agent targeting the same test file
+  from the red phase,
+And the test-runner reports all tests PASSED,
+And if the test still fails the workflow halts with a warning:
+  "The fix did not resolve the failing test -- the root cause may be
+  different than diagnosed."
+```
+
+**Dispatch contract (Agent-tool input to `test-runner` at depth 1 — green phase):**
+
+| Input field | Value | Source |
+|---|---|---|
+| `ticket_path` | Absolute path to the quick-fix workflow's internal ticket file | Workflow context at depth 0 |
+| `test_file` | Absolute path to the test file written by test-writer (from BP-600c-1) | test-writer phase output (same file as red phase) |
+| `expected_outcome` | `"green"` — the test must pass after the fix | Hardcoded in quick-fix.js for the green-phase step |
+
+**Green-phase outcome routing:**
+
+| test-runner result | Workflow action |
+|---|---|
+| All tests **PASSED** | Proceed to commit phase — the fix is confirmed correct |
+| Any test **FAILED** (fix did not resolve) | Halt the workflow immediately with the structured warning below |
+| Test file not found / runner error | Halt the workflow with a structured error; do not proceed to commit |
+
+**Halt message for persistent failure (fix did not resolve):**
+
+```
+/quick-fix halted: green-phase verification failed.
+
+  Test file: <absolute path to test file>
+  Result:    FAILED (at least one test still fails after the fix)
+
+  Warning: The fix did not resolve the failing test -- the root cause may be
+  different than diagnosed.
+
+  Possible causes:
+    1. The fix targeted the wrong location in the file (check location_hint).
+    2. The root cause is in a different file than diagnosed.
+    3. The fix is incomplete -- the logic branch requires additional changes.
+
+  Suggested next steps:
+    - Review the failing test output and the python-coder's diff.
+    - Re-invoke /quick-fix with a refined diagnosis targeting the actual root
+      cause, or fix the target file manually and commit.
+```
+
+**Ordering invariant:**
+
+The green-phase test-runner invocation MUST run after the python-coder completes
+(BP-600d-2) and BEFORE the commit phase starts. This sequencing is enforced by the
+phase chain in `quick-fix.js`:
+
+```
+build-ac (depth 1) → test-writer (depth 1) → test-runner/red-phase (depth 1)
+  → python-coder/fix (depth 1) → test-runner/green-phase (depth 1) → commit (depth 1)
+```
+
+The depth-0 executing context controls the ordering: `test-runner/green-phase` is
+dispatched only after the `python-coder` Agent-tool call returns with a successful
+sign-off. The `commit` phase is dispatched only after the green-phase `test-runner`
+reports all tests PASSED. Any other outcome halts the workflow before commit is
+ever invoked.
+
+**Why this guard is necessary:**
+
+Without the green-phase verification step, the quick-fix workflow could commit a
+"fix" that does not actually resolve the diagnosed bug. The commit would record a
+passing test suite (because the test from BP-600c-1 is the only new test), giving
+a false green signal. The green-phase check enforces that:
+
+1. The fix genuinely resolves the diagnosed defect (the test transitions from red to green).
+2. The commit records a meaningful state transition — the bug is actually fixed.
+3. The audit trail is trustworthy: test-red before fix, test-green after fix, then commit.
+
+**Contrast with red-phase (BP-600c-2):**
+
+| Phase | `expected_outcome` | Halt condition |
+|---|---|---|
+| Red (BP-600c-2) | `"red"` — test must FAIL | Halt if test unexpectedly passes |
+| Green (BP-600c-3) | `"green"` — test must PASS | Halt if test still fails |
+
+Both phases dispatch the same `test-runner` agent targeting the same `test_file`;
+only the `expected_outcome` field and the halt-message copy differ.
+
+---
+
 ### AC BP-600d-1 — Structured diagnosis input parsing
 
 Before any phase runs, `/quick-fix` MUST parse the user-provided diagnosis text and extract
@@ -796,6 +891,7 @@ modification constraint ensures:
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-08 [llm-expert]: Added AC BP-600c-3 green-phase verification section to Section 5: Gherkin contract, dispatch contract table, outcome routing table, halt message for persistent failure, ordering invariant, contrast table with red-phase, and rationale. (#EPIC-QuickFixWorkflow/11)
 - 2026-06-08 [llm-expert]: Added AC BP-600d-2 python-coder fix-application dispatch section to Section 5: Gherkin contract, dispatch contract table, single-file scope constraint table, ordering invariant, and rationale. (#EPIC-QuickFixWorkflow/10)
 - 2026-06-08 [llm-expert]: Added AC BP-600c-2 red-phase verification section to Section 5: Gherkin contract, dispatch contract table, outcome routing table, halt message for unexpected green, ordering invariant, and rationale. (#EPIC-QuickFixWorkflow/08)
 - 2026-06-08 [llm-expert]: Added AC BP-600c-1 test-writer dispatch section to Section 5: Gherkin contract, dispatch contract table, test file requirements, red-phase assertion, ordering invariant, and covered_by update protocol. (#EPIC-QuickFixWorkflow/07)

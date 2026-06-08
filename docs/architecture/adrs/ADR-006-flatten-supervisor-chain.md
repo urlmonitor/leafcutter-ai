@@ -508,6 +508,56 @@ See `docs/architecture/agent_delivery_workflows.md` §5 "AC BP-600d-1 — Struct
 input parsing" for the full field table, parsing contract, validation rules, and downstream
 consumer mapping.
 
+### AC BP-600c-3 — Test-runner confirms green phase after fix is applied (2026-06-08)
+
+```gherkin
+Given the python-coder has applied the fix to the diagnosed file,
+When the workflow reaches the green-phase verification step,
+Then it dispatches the test-runner agent targeting the same test file
+  from the red phase,
+And the test-runner reports all tests PASSED,
+And if the test still fails the workflow halts with a warning:
+  "The fix did not resolve the failing test -- the root cause may be
+  different than diagnosed."
+```
+
+**Relationship to the depth model (this ADR):**
+
+The green-phase test-runner invocation is the fifth and final Agent-tool dispatch in the
+`/quick-fix` phase chain (after `build-ac`, `test-writer`, `test-runner/red-phase`, and
+`python-coder`). The depth-0 executing context controls the ordering: `test-runner/green-phase`
+is dispatched at depth 1 only after the `python-coder` Agent-tool call has returned with a
+successful sign-off confirming the fix was applied. The commit phase is dispatched only after
+the green-phase confirms all tests pass.
+
+Key constraints under the ADR-006 depth model:
+
+- **Ordering guarantee**: the depth-0 executing context owns the phase chain. The
+  green-phase `test-runner` is dispatched sequentially at depth 1 after `python-coder`
+  returns. It is never dispatched concurrently with any other phase agent.
+- **Halt-before-commit contract**: if the green-phase `test-runner` reports a failure,
+  the depth-0 context halts the workflow before dispatching `commit`. The commit agent
+  is never started unless the green-phase check succeeds.
+- **Same test file, different `expected_outcome`**: the green-phase dispatch uses the
+  same `test_file` path as the red-phase dispatch (from BP-600c-2) but with
+  `expected_outcome: "green"`. The distinction is enforced by the depth-0 orchestration
+  context — phase agents themselves do not know which phase they are executing.
+- **TDD completion at depth 0**: the full red→fix→green cycle is controlled by the
+  executing context. Phase agents at depth 1 receive structured inputs and return
+  structured outputs; the invariant (test red before fix, test green after fix) is
+  maintained by the depth-0 phase chain, not by inter-agent negotiation.
+
+Complete phase chain after this addendum:
+
+```
+build-ac (depth 1) → test-writer (depth 1) → test-runner/red-phase (depth 1)
+  → python-coder/fix (depth 1) → test-runner/green-phase (depth 1) → commit (depth 1)
+```
+
+See `docs/architecture/agent_delivery_workflows.md` §5 "AC BP-600c-3 — Test-runner confirms
+green phase after fix is applied" for the full dispatch contract table, outcome routing table,
+halt message for persistent failure, ordering invariant, and red/green contrast table.
+
 ---
 
 ## References
