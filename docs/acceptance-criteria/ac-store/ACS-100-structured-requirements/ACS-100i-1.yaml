@@ -1,0 +1,53 @@
+id: ACS-100i-1
+title: "Parent ID is derived from child ID by stripping the last segment"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an AC YAML file with id "ACS-300h-1",
+  When the validator parses the ID to determine its parent,
+  Then it derives the parent ID as "ACS-300h"
+    by stripping the last hyphen-delimited segment ("-1").
+
+  And given an AC YAML file with id "ACS-300h-2-i",
+  When the validator parses the ID to determine its parent,
+  Then it derives the parent ID as "ACS-300h-2"
+    by stripping the last hyphen-delimited segment ("-i").
+
+  And given an AC YAML file with id "ACS-100",
+  When the validator parses the ID to determine its parent,
+  Then it determines the AC has no parent
+    because the ID matches the root pattern (PREFIX-NNN with no additional segments).
+
+  And given an AC YAML file with id "ACS-100a",
+  When the validator parses the ID to determine its parent,
+  Then it derives the parent ID as "ACS-100"
+    by stripping the last hyphen-delimited segment ("-a" after PREFIX-NNN).
+depends_on: [ACS-100i]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: specifies
+    status: exists
+  - path: scripts/ac_store/ac_parent_id.py
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - "unit_tests/ac_store/test_ac_parent_id.py::TestDeriveParentIdGherkinScenarios::test_scenario_1_strip_numeric_suffix"
+  - "unit_tests/ac_store/test_ac_parent_id.py::TestDeriveParentIdGherkinScenarios::test_scenario_2_strip_letter_suffix"
+  - "unit_tests/ac_store/test_ac_parent_id.py::TestDeriveParentIdGherkinScenarios::test_scenario_3_root_has_no_parent"
+  - "unit_tests/ac_store/test_ac_parent_id.py::TestDeriveParentIdGherkinScenarios::test_scenario_4_strip_alpha_sublevel_suffix"
+implemented_by:
+  - "scripts/ac_store/ac_parent_id.py#derive_parent_id"
