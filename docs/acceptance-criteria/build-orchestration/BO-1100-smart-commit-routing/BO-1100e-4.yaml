@@ -1,0 +1,60 @@
+id: BO-1100e-4
+title: "History filter is invoked by the learning pipeline and enforces a positive commit bound"
+component: build-orchestration
+level: L2
+status: active
+readiness: reviewed
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given an unmatched shape with directory pattern "docs/architecture/**" has reached
+    the proposal threshold (10 occurrences),
+  And the learning pipeline is evaluating whether to propose a new routing rule,
+  When the pipeline prepares historical commit data for pattern inference,
+  Then the pipeline invokes the history-filtering function with the directory pattern,
+  And the filtering function returns a bounded list of candidate commits,
+  And the pipeline uses these candidates to infer a message template for the proposed rule,
+  And the filtering function is NOT bypassed or duplicated by inline git queries.
+
+  Given the history filter is invoked with a maximum-commits bound of 50,
+  And a repository has 200 commits touching the target directory,
+  When the filter queries git history,
+  Then the filter returns at most 50 commits (most recent first),
+  And the bound is enforced regardless of how many matching commits exist.
+
+  Given the history filter is invoked with a maximum-commits bound of 0,
+  When the filter validates the bound,
+  Then the filter rejects the invocation with an error stating the bound must be
+    a positive integer,
+  And the filter does NOT query git history with an unbounded or unlimited request.
+depends_on: [BO-1100e, BO-1100e-1, BO-1100e-2, BO-1100d-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-1100-smart-commit-routing/BO-1100e-1.yaml
+    relationship: constrains
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-1100-smart-commit-routing/BO-1100d-2.yaml
+    relationship: constrains
+    status: exists
+  - path: docs/agents/git/commit.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must complete the filtering step within 2 seconds for repositories with up to 10,000 commits"
+  - "Must validate the max_commits bound before spawning any subprocess"
+  - "Must handle errors from git subprocess gracefully per the project error handling policy"
+  - "Must not duplicate git query logic already encapsulated in the filter function"
+delivers_to:
+  agent: llm-expert
+  contract: "A bounded, validated list of historical commits consumed by the rule-proposal step"
+expects_from:
+  ac_id: BO-1100e-1
+  contract: "Path-scoped git log query function that accepts a directory pattern and commit bound"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: [BO-1100e-4-i]
+implemented_by: []

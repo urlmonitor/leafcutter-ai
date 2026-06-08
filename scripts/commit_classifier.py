@@ -172,10 +172,27 @@ def load_patterns(config_path: Path | None = None) -> dict[FileGroup, str]:
 # ---------------------------------------------------------------------------
 
 #: Maps each FileGroup to the commit subject prefix template.
-#: Loaded from ``config/commit_message_patterns.json`` at import time.
-#: Callers may override individual entries by passing ``patterns`` to
-#: ``classify_staged_files()``.
+#: Populated once at import time for callers that import this symbol directly.
+#: ``classify_staged_files()`` does NOT read from this constant — it calls
+#: ``load_patterns()`` on every invocation so that on-disk changes to
+#: ``config/commit_message_patterns.json`` are reflected immediately
+#: (AC BO-1100c-4 — pattern config reflects current file on every call).
 DEFAULT_PATTERNS: dict[FileGroup, str] = load_patterns()
+
+
+def _get_current_patterns() -> dict[FileGroup, str]:
+    """Return freshly loaded patterns from the on-disk config file.
+
+    Called on every invocation of ``classify_staged_files()`` so that edits to
+    ``config/commit_message_patterns.json`` are picked up without requiring a
+    Python process restart.
+
+    Returns
+    -------
+    Dict mapping each FileGroup to its commit-subject template string, as
+    returned by ``load_patterns()``.
+    """
+    return load_patterns()
 
 # ---------------------------------------------------------------------------
 # Path-matching rules (declaration order = priority)
@@ -184,15 +201,15 @@ DEFAULT_PATTERNS: dict[FileGroup, str] = load_patterns()
 #: Each entry is (pattern, FileGroup).  The patterns are applied in order;
 #: the first match wins for a given file path.
 _PATH_RULES: list[tuple[re.Pattern[str], FileGroup]] = [
-    # Ticket inbox / done folders
-    (re.compile(r"tickets/"), FileGroup.TICKETS),
-    # AC store YAML files that appear to be new (net-new keys)
-    # We cannot tell "new" vs "shipped" from the path alone; callers that
-    # inspect the diff content can use group_files_by_type() directly and
-    # then override.  Path heuristic: new_ prefix or added status.
-    (re.compile(r"config/ac_store/"), FileGroup.SHIPPED_ACS),
-    # Any other AC-store paths
-    (re.compile(r"config/ac"), FileGroup.SHIPPED_ACS),
+    # Ticket inbox / done folders — anchored to top-level only (^tickets/)
+    # prevents matching mid-path segments like 'archived/old-tickets/readme.md'.
+    (re.compile(r"^tickets/"), FileGroup.TICKETS),
+    # AC store YAML files — exact path 'config/ac_store/' only.
+    # The pattern is anchored to ^config/ac_store/ so that:
+    #   - 'config/ac_store_backup/' does NOT match (directory name is not ac_store)
+    #   - 'config/accounting/' does NOT match (not the ac_store subdirectory)
+    #   - 'my-config/ac_store/' does NOT match (top-level dir is not config)
+    (re.compile(r"^config/ac_store/"), FileGroup.SHIPPED_ACS),
     # Status-only files (set_ticket_status outputs, known-failing baseline)
     (re.compile(r"known_failing_tests\.json$"), FileGroup.STATUS_CHANGES),
     # Test files
@@ -203,8 +220,9 @@ _PATH_RULES: list[tuple[re.Pattern[str], FileGroup]] = [
     # Documentation
     (re.compile(r"(^|/)docs/"), FileGroup.DOCS),
     (re.compile(r"\.md$"), FileGroup.DOCS),
-    # Configuration files
-    (re.compile(r"(^|/)config/"), FileGroup.CONFIG),
+    # Configuration files — anchored to top-level only (^config/) to prevent
+    # matching 'vendor/some-lib/config/setup.py' via a mid-path segment.
+    (re.compile(r"^config/"), FileGroup.CONFIG),
     (re.compile(r"\.json$"), FileGroup.CONFIG),
     (re.compile(r"\.ya?ml$"), FileGroup.CONFIG),
     (re.compile(r"pyproject\.toml$"), FileGroup.CONFIG),
@@ -408,7 +426,10 @@ def classify_staged_files(
         - suggested_subject: the formatted commit subject.
         - specific_pattern_matched: True unless the UNKNOWN fallback fired.
     """
-    effective_patterns = dict(DEFAULT_PATTERNS)
+    # Re-read patterns from disk on every call so that changes to
+    # config/commit_message_patterns.json are reflected without a restart
+    # (AC BO-1100c-4).
+    effective_patterns = _get_current_patterns()
     if patterns:
         effective_patterns.update(patterns)
 

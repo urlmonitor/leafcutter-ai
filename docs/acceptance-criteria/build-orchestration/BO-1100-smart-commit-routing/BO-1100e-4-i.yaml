@@ -1,0 +1,48 @@
+id: BO-1100e-4-i
+title: "Negative max_commits value is rejected before querying git history"
+component: build-orchestration
+level: L3
+status: active
+readiness: reviewed
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the history filter is invoked with max_commits set to -1,
+  When the filter validates its input parameters,
+  Then the filter rejects the invocation with an error stating that max_commits
+    must be a positive integer greater than zero,
+  And the filter does NOT pass -1 to the underlying git query
+    (which would silently return unlimited history),
+  And no git subprocess is spawned for this invocation.
+
+  Given the history filter is invoked with max_commits set to -100,
+  When the filter validates its input parameters,
+  Then the same rejection occurs as for -1,
+  And no git subprocess is spawned.
+depends_on: [BO-1100e-4]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-1100-smart-commit-routing/BO-1100e-4.yaml
+    relationship: constrains
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-1100-smart-commit-routing/BO-1100e-2.yaml
+    relationship: constrains
+    status: exists
+  - path: docs/agents/git/commit.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Validation must occur before any subprocess is spawned -- a fail-fast guard"
+  - "Must handle errors gracefully per the project error handling policy"
+delivers_to: null
+expects_from:
+  ac_id: BO-1100e-4
+  contract: "Input validation gate that runs before any git query is dispatched"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

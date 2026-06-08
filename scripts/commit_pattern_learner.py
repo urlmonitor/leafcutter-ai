@@ -237,6 +237,10 @@ def filter_history_by_shape(
     ``"subject"`` (first commit-message line).  Empty list on error or
     when no commits match.
     """
+    if max_commits < 1:
+        msg = f"max_commits must be a positive integer, got {max_commits}"
+        raise ValueError(msg)
+
     if not shape:
         return []
 
@@ -342,8 +346,9 @@ def record_unknown_shape(
         with path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(record) + "\n")
     except OSError as exc:
+        # Log the failure but do NOT re-raise — observation store write
+        # failures must not crash the commit workflow (AC BO-1100d-5).
         logger.warning("Failed to write to observation store %s: %s", path, exc)
-        raise
 
     return shape
 
@@ -391,8 +396,10 @@ def count_shape_occurrences(
                 if sorted(record.get("shape", [])) == target:
                     count += 1
     except OSError as exc:
+        # Log the failure but return 0 — a read failure is treated as zero
+        # observations so the caller can continue safely (AC BO-1100d-5).
         logger.warning("Failed to read observation store %s: %s", path, exc)
-        raise
+        return 0
 
     return count
 
@@ -402,7 +409,10 @@ def count_shape_occurrences(
 # ---------------------------------------------------------------------------
 
 
-def propose_rule(shape: tuple[str, ...]) -> dict[str, str]:
+def propose_rule(
+    shape: tuple[str, ...],
+    history: list[dict[str, str]] | None = None,
+) -> dict[str, str]:
     """Generate a proposed routing-rule dict for an unrecognised shape.
 
     The proposal is a dict ready to be written as a new entry in
@@ -417,6 +427,11 @@ def propose_rule(shape: tuple[str, ...]) -> dict[str, str]:
     ----------
     shape:
         Shape tuple as returned by ``extract_shape``.
+    history:
+        Optional list of relevant git commits (dicts with ``"hash"`` and
+        ``"subject"`` keys) as returned by ``filter_history_by_shape()``.
+        Passed through for callers that want to inspect the history alongside
+        the proposal; not used for key generation in the current implementation.
 
     Returns
     -------
@@ -462,6 +477,7 @@ def maybe_propose_rule(
     staged_paths: Sequence[str],
     obs_path: Path | None = None,
     threshold: int = PROPOSAL_THRESHOLD,
+    classification_was_unknown: bool = True,
 ) -> dict[str, str] | None:
     """Record an UNKNOWN observation and return a rule proposal when threshold is met.
 
@@ -470,9 +486,16 @@ def maybe_propose_rule(
     the UNKNOWN fallback fired).
 
     Steps:
-    1. Record the observation.
-    2. Count total occurrences of the shape.
-    3. If ``count >= threshold``, return ``propose_rule(shape)``; else return ``None``.
+    1. Guard — when ``classification_was_unknown=False`` the shape was already
+       handled by a known rule; skip recording entirely and return ``None``.
+    2. Record the observation in the JSONL store.  OSError is caught, logged,
+       and swallowed so a write failure never crashes the commit workflow
+       (AC BO-1100d-5).
+    3. Count total occurrences of the shape.
+    4. If ``count >= threshold``, call ``filter_history_by_shape(shape)`` to
+       retrieve relevant git history (AC BO-1100e-4), then return
+       ``propose_rule(shape, history=...)``.
+    5. Otherwise return ``None``.
 
     Parameters
     ----------
@@ -483,14 +506,34 @@ def maybe_propose_rule(
     threshold:
         Number of occurrences required before a proposal is generated.
         Defaults to ``PROPOSAL_THRESHOLD`` (10).
+    classification_was_unknown:
+        When ``False``, the staged files were already matched by a known
+        routing rule; the function returns ``None`` immediately without
+        writing to the observation store (AC BO-1100d-6).  Defaults to
+        ``True`` for backward compatibility.
 
     Returns
     -------
     A proposal dict (see ``propose_rule``) when the threshold is reached,
-    or ``None`` when the shape has not yet accumulated enough observations.
+    or ``None`` when the shape has not yet accumulated enough observations,
+    or ``None`` when ``classification_was_unknown=False``.
     """
-    shape = record_unknown_shape(staged_paths, obs_path=obs_path)
+    # AC BO-1100d-6 — known shapes must not pollute the observation store.
+    if not classification_was_unknown:
+        return None
+
+    # AC BO-1100d-5 — write failure must not propagate to caller.
+    try:
+        shape = record_unknown_shape(staged_paths, obs_path=obs_path)
+    except OSError as exc:
+        logger.warning(
+            "Observation store write failed; skipping learning pipeline: %s", exc
+        )
+        return None
+
     count = count_shape_occurrences(shape, obs_path=obs_path)
     if count >= threshold:
-        return propose_rule(shape)
+        # AC BO-1100e-4 — filter relevant history before generating the proposal.
+        history = filter_history_by_shape(shape)
+        return propose_rule(shape, history=history)
     return None
