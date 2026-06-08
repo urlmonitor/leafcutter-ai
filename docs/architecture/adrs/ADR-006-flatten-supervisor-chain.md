@@ -330,6 +330,31 @@ keep it atomic and under the depth-0 serialization lock. See
 `docs/reference/ac-schema.md` §`/quick-fix` workflow — ID assignment (AC BP-600b-2)
 for the full algorithm.
 
+### AC BP-600b-3 — AC YAML file persists after the fix ticket lifecycle closes (2026-06-08)
+
+```gherkin
+Given the quick-fix workflow has completed end-to-end (fix committed
+  and ticket closed),
+When the user lists AC files under docs/acceptance-criteria/,
+Then the AC YAML file created by the quick-fix workflow still exists,
+And its status field is "active",
+And it is not deleted or moved by the ticket lifecycle close step.
+```
+
+This invariant applies at the depth-0 executing context level: the `/quick-fix`
+workflow's ticket-close step — which sets `status: done` on the internal workflow
+ticket via `set_ticket_status.py` — MUST NOT touch any AC YAML file. The close
+step is scoped strictly to the ticket markdown file.
+
+The AC YAML file written during the AC creation phase (AC BP-600b-1) is a permanent
+traceability artefact. It is committed to the repository as a standalone file and
+remains `status: active` until a human or agent explicitly deprecates or supersedes it
+in a separate commit. No automated close-out, archival, or cleanup step in the `/quick-fix`
+workflow may modify, move, or delete it.
+
+See `docs/reference/ac-schema.md` §AC persistence guarantee after ticket lifecycle close
+for the full implementation constraint and rationale.
+
 ### AC BP-600d-1 — Structured diagnosis input parsing (2026-06-08)
 
 A fourth invariant accompanies BP-600a-1, BP-600a-2, and BP-600a-3:

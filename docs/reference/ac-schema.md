@@ -353,6 +353,50 @@ docs/acceptance-criteria/<component-id>/.quick-fix-lock if the process
 is no longer running.
 ```
 
+### AC persistence guarantee after ticket lifecycle close (AC BP-600b-3)
+
+When the quick-fix workflow completes end-to-end — fix committed and the
+workflow's internal ticket closed — the AC YAML file created during the AC
+creation phase MUST remain untouched in the store.
+
+**Invariant:**
+
+```
+Given the quick-fix workflow has completed end-to-end (fix committed
+  and ticket closed),
+When the user lists AC files under docs/acceptance-criteria/,
+Then the AC YAML file created by the quick-fix workflow still exists,
+And its status field is "active",
+And it is not deleted or moved by the ticket lifecycle close step.
+```
+
+**Implementation constraint for the ticket lifecycle close step:**
+
+The step that marks the quick-fix workflow's internal ticket as `done` (e.g.
+flipping `status: in_progress → done` via `set_ticket_status.py`) MUST NOT
+touch or reference any AC YAML file. Specifically:
+
+- The close step operates only on the ticket markdown file (`*.md`) and the
+  git index for that file.
+- It MUST NOT delete, rename, move, or overwrite any file under
+  `docs/acceptance-criteria/`.
+- It MUST NOT set the AC's `status` field to `deprecated` or `superseded_by`
+  as a side-effect of the ticket closing.
+
+The AC lifecycle (active → deprecated → superseded_by) is governed exclusively
+by human or agent intent expressed in separate commits. A ticket closing is not
+a trigger for AC lifecycle transitions.
+
+**Why this guarantee is necessary:**
+
+The quick-fix workflow creates an AC YAML file as a permanent traceability
+artefact. The AC documents what bug was fixed and what criterion the fix must
+satisfy going forward. If the ticket lifecycle close step were to delete or
+deactivate the AC, the traceability record would be destroyed, the pre-commit
+`check_ac_coverage.py` hook would lose its anchor, and any test tagged
+`# covers: <id>` would reference a ghost criterion. The persistence guarantee
+ensures the AC outlives the workflow that created it.
+
 ---
 
 ## Component Registry (`index.yaml`)
