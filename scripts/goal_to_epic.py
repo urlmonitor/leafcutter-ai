@@ -28,6 +28,7 @@ ACD-1200a-1-i: L1-scoped traversal excludes sibling branches.
 ACD-1200a-2: generate_ticket_from_ac.py called once per leaf.
 ACD-1200a-3: EPIC folder assembled with numeric prefixes.
 ACD-1200a-3-i: Zero-leaf condition exits non-zero, no files written.
+ACD-1200a-8: generate_master_plan() writes Master_Plan.md into the EPIC folder.
 ACD-1200b-1: classify_readiness reads readiness field and classifies approved vs unapproved.
 ACD-1200b-1-i: All-approved fast-path skips prompt; prints confirmation.
 ACD-1200b-2: readiness_gate_prompt presents three-choice prompt and routes correctly.
@@ -592,6 +593,201 @@ def assemble_epic_folder(
 
 
 # ---------------------------------------------------------------------------
+# Master_Plan.md generation (ACD-1200a-8)
+# ---------------------------------------------------------------------------
+
+
+def _read_ticket_title(ticket_path: Path) -> str:
+    """Extract the title field from a ticket file's YAML frontmatter.
+
+    Reads the YAML frontmatter block (between the first pair of ``---``
+    delimiters) and returns the ``title`` field. Falls back to the ticket
+    file's stem (without numeric prefix) if no title is found or the
+    frontmatter cannot be parsed.
+
+    Args:
+        ticket_path: Absolute path to the ticket markdown file.
+
+    Returns:
+        The ticket title string.
+    """
+    try:
+        content = ticket_path.read_text(encoding="utf-8")
+    except OSError:
+        return ticket_path.stem
+
+    lines = content.splitlines()
+    # Frontmatter must start with '---' on line 0
+    if not lines or lines[0].strip() != "---":
+        return ticket_path.stem
+
+    # Find the closing '---'
+    end_index = None
+    for i, line in enumerate(lines[1:], start=1):
+        if line.strip() == "---":
+            end_index = i
+            break
+
+    if end_index is None:
+        return ticket_path.stem
+
+    frontmatter_text = "\n".join(lines[1:end_index])
+    try:
+        data = yaml.safe_load(frontmatter_text)
+    except yaml.YAMLError:
+        return ticket_path.stem
+
+    if isinstance(data, dict) and data.get("title"):
+        return str(data["title"])
+    return ticket_path.stem
+
+
+def _read_ac_criteria(ac_id: str, store_root: Path) -> str:
+    """Read the ``criteria`` field from the AC YAML file for *ac_id*.
+
+    Returns an empty string if the AC is not found or has no criteria field.
+    Malformed YAML files are silently skipped.
+
+    Args:
+        ac_id: The AC identifier whose criteria text is needed.
+        store_root: Root directory of the AC YAML store.
+
+    Returns:
+        The criteria text as a string, or an empty string if not available.
+    """
+    for yaml_path in sorted(store_root.rglob("*.yaml")):
+        try:
+            with open(yaml_path, encoding="utf-8") as fh:
+                data = yaml.safe_load(fh)
+        except (yaml.YAMLError, OSError):
+            continue
+        else:
+            if isinstance(data, dict) and data.get("id") == ac_id:
+                criteria = data.get("criteria")
+                if criteria:
+                    return str(criteria).strip()
+                return ""
+    return ""
+
+
+def generate_master_plan(
+    epic_folder: Path,
+    epic_name: str,
+    source_ac_id: str,
+    goal_criteria: str,
+    numbered_tickets: list[Path],
+    dep_graph: dict[str, list[str]],
+    leaf_ids: list[str],
+) -> Path:
+    """Write a Master_Plan.md file into the EPIC folder (ACD-1200a-8).
+
+    The generated file contains:
+    - The EPIC name and source AC id (identity block).
+    - The goal AC's criteria text (purpose statement).
+    - An ordered list of all sub-ticket filenames with their titles.
+    - The dependency graph edges expressed as ``depends_on`` per ticket,
+      mapping each ticket filename to the ticket filenames it depends on.
+
+    The write is idempotent: if ``Master_Plan.md`` already exists with
+    identical content, the file is not rewritten. If the existing content
+    differs (e.g. a partial prior run), it is overwritten with the new
+    content.
+
+    Args:
+        epic_folder: Absolute path to the EPIC folder (must exist).
+        epic_name: Human-readable EPIC name (PascalCase, without the
+                   ``EPIC-`` prefix, e.g. ``"ValidateApiInputs"``).
+        source_ac_id: The goal or L1 AC id that triggered epic generation
+                      (e.g. ``"ACD-1200a"``).
+        goal_criteria: The criteria text from the source AC's YAML file.
+                       Used as the purpose statement section.
+        numbered_tickets: Ordered list of ticket file Paths as they appear
+                          in the EPIC folder (with numeric prefixes,
+                          e.g. ``01_TICKET-foo.md``).
+        dep_graph: Leaf AC id → list of leaf AC ids it depends on.
+                   Keys are AC ids (e.g. ``"ACD-1200a-2"``); values are
+                   lists of AC ids that must be completed first.
+        leaf_ids: Ordered list of leaf AC ids corresponding to
+                  *numbered_tickets* (same length, same order).
+
+    Returns:
+        Absolute path to the written ``Master_Plan.md`` file.
+
+    Raises:
+        OSError: If the file cannot be written.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    # Build ac_id → ticket filename mapping for dependency cross-reference
+    ac_to_filename: dict[str, str] = {}
+    for ac_id, ticket_path in zip(leaf_ids, numbered_tickets):
+        ac_to_filename[ac_id] = ticket_path.name
+
+    lines: list[str] = []
+
+    # --- Identity block ---
+    lines.append(f"# EPIC-{epic_name}")
+    lines.append("")
+    lines.append(f"source_ac: {source_ac_id}")
+    lines.append("")
+
+    # --- Purpose statement ---
+    lines.append("## Purpose")
+    lines.append("")
+    if goal_criteria:
+        lines.append(goal_criteria)
+    else:
+        lines.append(f"_(No criteria text found for {source_ac_id})_")
+    lines.append("")
+
+    # --- Ordered sub-ticket list ---
+    lines.append("## Sub-Tickets")
+    lines.append("")
+    for ticket_path in numbered_tickets:
+        title = _read_ticket_title(ticket_path)
+        lines.append(f"- {ticket_path.name}: {title}")
+    lines.append("")
+
+    # --- Dependency graph ---
+    lines.append("## Dependency Graph")
+    lines.append("")
+    lines.append("Each sub-ticket's depends_on list (expressed as ticket filenames):")
+    lines.append("")
+    for ac_id, ticket_path in zip(leaf_ids, numbered_tickets):
+        dep_ac_ids = dep_graph.get(ac_id, [])
+        dep_filenames = [ac_to_filename[d] for d in dep_ac_ids if d in ac_to_filename]
+        if dep_filenames:
+            deps_str = ", ".join(dep_filenames)
+            lines.append(f"- {ticket_path.name} depends_on: [{deps_str}]")
+        else:
+            lines.append(f"- {ticket_path.name} depends_on: []")
+    lines.append("")
+
+    content = "\n".join(lines)
+    master_plan_path = epic_folder / "Master_Plan.md"
+
+    # Idempotency check: skip write if content is unchanged
+    if master_plan_path.exists():
+        try:
+            existing = master_plan_path.read_text(encoding="utf-8")
+        except OSError:
+            existing = None
+        if existing == content:
+            return master_plan_path.resolve()
+
+    try:
+        master_plan_path.write_text(content, encoding="utf-8")
+    except OSError as exc:
+        logger.warning(
+            "Cannot write Master_Plan.md to %s: %s", epic_folder, exc
+        )
+        raise
+
+    return master_plan_path.resolve()
+
+
+# ---------------------------------------------------------------------------
 # AC YAML store lookup helper
 # ---------------------------------------------------------------------------
 
@@ -1133,7 +1329,30 @@ def run(
         print(f"ERROR: {exc}", file=sys.stderr)
         sys.exit(1)
 
+    # --- Master_Plan.md generation (ACD-1200a-8) ---
+    # Build the ordered list of numbered ticket paths from the assembled folder.
+    # The numeric-prefixed files are in the same topo_order as topo_order.
+    numbered_tickets: list[Path] = sorted(
+        [p for p in epic_folder.iterdir() if p.suffix == ".md" and p.name != "Master_Plan.md"],
+        key=lambda p: p.name,
+    )
+    goal_criteria = _read_ac_criteria(ac_id, ac_store_root)
+    try:
+        master_plan_path = generate_master_plan(
+            epic_folder=epic_folder,
+            epic_name=epic_name,
+            source_ac_id=ac_id,
+            goal_criteria=goal_criteria,
+            numbered_tickets=numbered_tickets,
+            dep_graph=dep_graph,
+            leaf_ids=topo_order,
+        )
+    except OSError as exc:
+        print(f"ERROR: Could not write Master_Plan.md: {exc}", file=sys.stderr)
+        sys.exit(1)
+
     print(f"EPIC folder created: {epic_folder}")
+    print(f"Master_Plan.md written: {master_plan_path}")
     return epic_folder
 
 
@@ -1262,5 +1481,16 @@ DECISION HISTORY
   — only ACs in included_ids are ever touched; all other AC files remain unread
   and unmodified. Helper functions: _find_ac_yaml_path(), _read_target_epic_from_file(),
   _write_target_epic_field() (regex-based targeted replace or append).
+- 2026-06-08 [EPIC-GoalToEpic/08]: Master_Plan.md generation. (#EPIC-GoalToEpic/08)
+  Implements ACD-1200a-8: generate_master_plan() writes Master_Plan.md into the
+  assembled EPIC folder immediately after assemble_epic_folder() completes. File
+  includes: epic name and source AC id (identity block), goal AC criteria text
+  (purpose statement via _read_ac_criteria()), ordered sub-ticket list with titles
+  (via _read_ticket_title() parsing frontmatter YAML), and dependency graph edges
+  expressed as depends_on per ticket filename. Idempotent: existing Master_Plan.md
+  with identical content is not rewritten. OSError on write is caught and surfaces
+  as a non-zero CLI exit. Helper functions: _read_ticket_title(), _read_ac_criteria(),
+  generate_master_plan(). Integration point: run() calls generate_master_plan()
+  after epic_folder is created, using the already-computed dep_graph and topo_order.
 ====================================================================
 """
