@@ -231,6 +231,193 @@
       "primary_code": [
         "scripts/injection_builders.py"
       ]
+    },
+    "supervisor_system": {
+      "id": "supervisor_system",
+      "name": "Supervisor System",
+      "type": "orchestration",
+      "description": "Ticket and epic supervisor agents that drive phase agents through the ticket lifecycle, handle failure adjudication, and enforce canonical phase ordering.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "templates/agents/ticket-supervisor.md",
+        "templates/agents/epic-supervisor.md",
+        ".claude/skills/building-epics/SKILL.md"
+      ]
+    },
+    "ticket_creation_pipeline": {
+      "id": "ticket_creation_pipeline",
+      "name": "Ticket Creation Pipeline",
+      "type": "orchestration",
+      "description": "Pipeline for creating, refining, and planning epic tickets from AC store entries through business-analyst and refinement agents.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "templates/agents/business-analyst.md",
+        "templates/agents/refinement.md",
+        "scripts/set_ticket_status.py"
+      ]
+    },
+    "python_coding": {
+      "id": "python_coding",
+      "name": "Python Coding",
+      "type": "coding",
+      "description": "Standards-enforcing Python implementation subsystem covering the python-coder agent and associated TDD, doc-enforcer, and complexity-reduction workflows.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "templates/agents/python-coder.md",
+        "templates/workflows/python-coder.md"
+      ]
+    },
+    "sql_coding": {
+      "id": "sql_coding",
+      "name": "SQL Coding",
+      "type": "coding",
+      "description": "SQL implementation subsystem covering the sql-coder and sql-query agents for database schema changes and ad-hoc queries.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "templates/agents/sql-coder.md",
+        "templates/agents/sql-query.md"
+      ]
+    },
+    "frontend_coding": {
+      "id": "frontend_coding",
+      "name": "Frontend Coding",
+      "type": "coding",
+      "description": "Frontend implementation subsystem covering the frontend-coder agent with webapp-testing and frontend-design skill integrations.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "templates/agents/frontend-coder.md"
+      ]
+    },
+    "testing_quality": {
+      "id": "testing_quality",
+      "name": "Testing and Quality",
+      "type": "infrastructure",
+      "description": "Test authoring and execution subsystem covering test-writer, test-runner, and ac-validator agents ensuring TDD discipline and AC coverage.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "templates/agents/test-writer.md",
+        "templates/agents/test-runner.md",
+        "templates/agents/ac-validator.md"
+      ]
+    },
+    "review_system": {
+      "id": "review_system",
+      "name": "Review System",
+      "type": "review",
+      "description": "Code and architecture review subsystem covering pr-reviewer, architect-review, and change-scope-reviewer agents.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "templates/agents/pr-reviewer.md",
+        "templates/agents/architect-review.md",
+        "templates/agents/change-scope-reviewer.md"
+      ]
+    },
+    "documentation_system": {
+      "id": "documentation_system",
+      "name": "Documentation System",
+      "type": "documentation",
+      "description": "Documentation authoring subsystem covering documentation-expert, explanation-author, how-to-author, and reference-author agents.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "templates/agents/documentation-expert.md",
+        "templates/agents/explanation-author.md",
+        "templates/agents/how-to-author.md",
+        "templates/agents/reference-author.md"
+      ]
+    },
+    "git_vcs_operations": {
+      "id": "git_vcs_operations",
+      "name": "Git VCS Operations",
+      "type": "infrastructure",
+      "description": "Git version control operations subsystem covering commit and pull-request agents with commit serialization lock and staging discipline.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "templates/agents/commit.md",
+        "templates/agents/pull-request.md",
+        "scripts/epic_lock.py"
+      ]
+    },
+    "research_analysis": {
+      "id": "research_analysis",
+      "name": "Research and Analysis",
+      "type": "analysis",
+      "description": "Research and analysis subsystem covering research-agent for cross-file lookups, blast-radius queries, and knowledge graph traversal.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "templates/agents/research-agent.md",
+        "scripts/knowledge_query.py"
+      ]
+    },
+    "onboarding": {
+      "id": "onboarding",
+      "name": "Onboarding",
+      "type": "utility",
+      "description": "Self-onboarding subsystem covering bootstrap installation, project initialization, and consumer project setup workflows.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "scripts/bootstrap_install.py",
+        "build-self.sh",
+        "docs/how-to/"
+      ]
+    },
+    "precommit_hooks": {
+      "id": "precommit_hooks",
+      "name": "Pre-commit Hooks",
+      "type": "infrastructure",
+      "description": "Pre-commit hook system enforcing parity guards, contract-shrinking checks, doc compliance, and ticket sign-off validation before every commit.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "scripts/commit_guardian/",
+        ".claude/hooks/",
+        "templates/commit-guardian/"
+      ]
+    },
+    "llm_authoring": {
+      "id": "llm_authoring",
+      "name": "LLM Authoring",
+      "type": "coding",
+      "description": "LLM prompt authoring subsystem covering the llm-expert agent for writing, evaluating, and iterating on prompt artifacts.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "templates/agents/llm-expert.md"
+      ]
+    },
+    "product_ownership": {
+      "id": "product_ownership",
+      "name": "Product Ownership",
+      "type": "orchestration",
+      "description": "Product ownership subsystem covering it-po agent for per-agent contract generation and acceptance criteria management.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "templates/agents/it-po.md"
+      ]
+    },
+    "skills_system": {
+      "id": "skills_system",
+      "name": "Skills System",
+      "type": "infrastructure",
+      "description": "Skill definition and dispatch subsystem covering skill SKILL.md files, the skill registry, and the skill routing infrastructure used by all agents.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "config/skill_registry.json",
+        "templates/skills/",
+        ".claude/skills/"
+      ]
     }
   }
 }
