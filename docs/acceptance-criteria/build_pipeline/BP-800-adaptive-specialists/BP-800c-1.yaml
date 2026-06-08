@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given the package contains a best-practice knowledge file for "python" at version 2
@@ -19,17 +19,26 @@ depends_on:
   - BP-800c
   - BP-800b-1
 doc_links:
-  - path: docs/architecture/components/build-epic-workflow-dispatch.md
-    relationship: context
+  - path: docs/architecture/components/adaptive-specialists-generation.md
+    relationship: describes
+    status: planned
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Version must be an integer (monotonically increasing) stored in the knowledge file metadata header"
+  - "Must compare current knowledge version against the version recorded in the generated template metadata to detect staleness"
+  - "Must fully regenerate the template when version changes (not patch/merge — clean replacement)"
+  - "Must be idempotent — if versions match, regeneration produces identical output and may be skipped"
+  - "Must handle errors gracefully per the project error handling policy if the knowledge file is unreadable"
 delivers_to:
   agent: python-coder
-  contract: "Versioned knowledge layer that the generator reads at build time"
+  contract: "Versioned knowledge file at knowledge/<tech>.md with metadata header: {technology_id: str, version: int, category: str} — consumed by the agent generator at build time"
 expects_from:
   ac_id: BP-800b-1
-  contract: "Agent generator that consumes best-practice content"
+  contract: "Agent generator that reads knowledge files and produces templates — this AC adds version-aware regeneration to that generator"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

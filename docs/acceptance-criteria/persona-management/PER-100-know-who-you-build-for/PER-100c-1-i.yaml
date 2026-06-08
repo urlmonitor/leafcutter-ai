@@ -5,7 +5,7 @@ level: L3
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given an AC store where no AC files contain persona_for: "ceo"
@@ -21,10 +21,13 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Must return exit code 0 for empty results (no matches is not an error condition)"
+  - "Must handle errors gracefully per the project error handling policy"
 delivers_to: null
 expects_from:
   ac_id: PER-100c-1
-  contract: "Persona query function that this edge case exercises"
+  contract: "Persona query script at scripts/persona_query.py that this edge case exercises"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

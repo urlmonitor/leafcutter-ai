@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given an AC YAML file with the field persona_for: "field-service-engineer"
@@ -25,11 +25,18 @@ doc_links:
   - path: config/ac_store_schema.json
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Must add persona_for to config/ac_store_schema.json as type: [string, null] with no additional constraints"
+  - "Must not break validation of existing AC YAML files that lack the field"
+  - "Must complete schema validation of a single AC file in <100ms"
 delivers_to:
   agent: python-coder
-  contract: "Updated AC YAML JSON Schema that includes persona_for as an optional string field"
+  contract: "Updated AC YAML JSON Schema at config/ac_store_schema.json that includes persona_for as an optional field of type string or null"
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-08

@@ -3,7 +3,7 @@ title: "Prototype output preserves visual and structural consistency with existi
 component: ux-prototyping
 level: L2
 status: active
-readiness: draft
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo
@@ -23,15 +23,23 @@ doc_links:
   - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100a.yaml
     relationship: parent
     status: exists
-assigned_agent: frontend-coder
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: planned
+assigned_agent: llm-expert
 estimated_complexity: M
+it_requirements:
+  - "Agent template must reference existing page instances to derive default property values"
+  - "Must not override catalog-defined defaults unless the feature request explicitly calls for a variation"
+  - "Layout structure must conform to the established page type hierarchy documented in the component library"
 delivers_to: null
 expects_from:
   ac_id: UXP-100a-1
-  contract: "Prototype that references only catalog-listed components"
+  contract: "Prototype artifact file that references only catalog-listed components with their catalog-defined property values"
 origin_agent: business-analyst-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+  - reason: "it-po-v3 enrichment: reassigned frontend-coder -> llm-expert (agent template composition rules), 2026-06-08"
 superseded_by: null
 covered_by: []
 implemented_by: []

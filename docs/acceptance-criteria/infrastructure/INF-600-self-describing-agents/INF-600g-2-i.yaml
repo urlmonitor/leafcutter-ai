@@ -5,7 +5,7 @@ level: L3
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given an agent registry where "ticket-supervisor" has spawn_allowlist

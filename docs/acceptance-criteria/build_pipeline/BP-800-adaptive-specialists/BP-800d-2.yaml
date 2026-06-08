@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given the legacy "python-coder" agent template contains behavioral guidance sections (style rules, testing conventions, idioms)
@@ -19,17 +19,24 @@ depends_on:
   - BP-800d
   - BP-800c-2
 doc_links:
-  - path: docs/architecture/components/build-epic-workflow-dispatch.md
-    relationship: context
-    status: exists
+  - path: docs/architecture/components/adaptive-specialists-generation.md
+    relationship: describes
+    status: planned
 assigned_agent: python-coder
 estimated_complexity: L
+it_requirements:
+  - "Must parse the legacy template and map content sections to the standard knowledge file structure (BP-800c-2)"
+  - "Must set version: 1 in the metadata header of newly migrated knowledge files"
+  - "Must record migration provenance (source_template path and migration timestamp) in the metadata"
+  - "Must validate the resulting knowledge file against the schema (BP-800c-2) before persisting"
+  - "Must handle errors gracefully if legacy template content does not map cleanly to required sections (create the section with placeholder content and log a warning)"
+  - "Must be idempotent — if a knowledge file already exists for the technology, do not overwrite it"
 delivers_to:
   agent: python-coder
-  contract: "Migrated best-practice files that populate the knowledge layer from legacy content"
+  contract: "Migrated best-practice knowledge files at knowledge/<tech>.md conforming to the BP-800c-2 schema — ready for consumption by the agent generator"
 expects_from:
   ac_id: BP-800c-2
-  contract: "Knowledge layer file structure to write migrated content into"
+  contract: "Knowledge layer file schema and validation function — migrated files must conform to this structure"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

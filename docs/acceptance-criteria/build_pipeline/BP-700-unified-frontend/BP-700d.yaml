@@ -21,7 +21,11 @@ origin_agent: product-owner-v3
 created: 2026-06-06
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - BP-700d-1
+  - BP-700d-2
+  - BP-700d-3
+  - BP-700d-4
 implemented_by: []
 documentation_triggers:
   - how-to

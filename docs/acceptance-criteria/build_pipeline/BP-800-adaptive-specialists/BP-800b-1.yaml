@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given the technology manifest contains an entry for "go" with category "language"
@@ -22,14 +22,27 @@ doc_links:
   - path: docs/architecture/components/build-epic-workflow-dispatch.md
     relationship: context
     status: exists
+  - path: docs/architecture/components/adaptive-specialists-generation.md
+    relationship: describes
+    status: planned
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: L
+it_requirements:
+  - "Generated template must include a 'generated-by: adaptive-specialists' metadata marker to distinguish from legacy templates"
+  - "Must include a version field in the generated template metadata referencing the knowledge file version used"
+  - "Must handle errors gracefully per the project error handling policy if the output directory is not writable"
+  - "Must produce valid Markdown agent template format consistent with existing templates in templates/agents/"
+  - "Must be idempotent — regenerating from the same manifest and knowledge version produces identical output"
+  - "Must not modify agent_registry.json directly — registration is handled by the build system's existing add-agent-to-package mechanism"
 delivers_to:
   agent: python-coder
-  contract: "A deployable agent template file per detected technology, ready for dispatch"
+  contract: "Agent template Markdown file at <templates_dir>/<tech>-coder.md with frontmatter metadata: {generated_by: 'adaptive-specialists', technology: str, knowledge_version: int, generated_at: ISO-8601}"
 expects_from:
   ac_id: BP-800a-4
-  contract: "Technology manifest with detected languages, frameworks, and databases"
+  contract: "Technology manifest JSON file at .leafcutter/technology_manifest.json with schema: {schema_version, generated_at, technologies: list[{name, category, paradigm, confidence, detection_source}]}"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

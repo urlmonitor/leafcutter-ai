@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 criteria: |
   Given a ticket that references multiple L2/L3 ACs via its
@@ -30,8 +30,7 @@ criteria: |
   And the grouping enables agents to implement one AC at a time
     (sequentially within their assigned set) rather than attempting
     all ticket work at once
-depends_on:
-  - INF-600b
+depends_on: []
 doc_links:
   - path: config/agent_registry.json
     relationship: describes

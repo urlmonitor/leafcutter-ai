@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given an agent registry where "ticket-supervisor" has spawn_allowlist
@@ -19,8 +19,7 @@ criteria: |
   And the warning identifies the agent with the redundant spawn_allowlist
   And the warning names each individually-listed agent that is already
     covered by the __ticket_phase_agents__ macro
-depends_on:
-  - INF-600g
+depends_on: []
 doc_links:
   - path: config/agent_registry.json
     relationship: describes

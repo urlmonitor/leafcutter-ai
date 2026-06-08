@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given the persona context injection involves: harness startup, persona directory scan, summary generation, agent spawn, and optional on-demand detail loading
@@ -28,6 +28,10 @@ doc_links:
     status: exists
 assigned_agent: architecture-diagram-author
 estimated_complexity: S
+it_requirements:
+  - "Must follow the leafcutter Mermaid diagram convention (C4 or sequence as appropriate)"
+  - "Must be placed in docs/architecture/diagrams/ with a descriptive filename"
+  - "Must show both the spawn-time injection path and the on-demand skill invocation path"
 delivers_to: null
 expects_from:
   ac_id: PER-100d-1

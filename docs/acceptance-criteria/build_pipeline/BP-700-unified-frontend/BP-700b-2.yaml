@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -28,10 +28,14 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Trigger conditions must include both DSL-type (file extension matching) and LLM-type (semantic intent detection) rules per ADR-018 two-tier format"
+  - "Must use the owns_file_extensions list as the canonical set for DSL triggers"
+  - "Must not break existing trigger conditions for any other agent"
 delivers_to: null
 expects_from:
   ac_id: BP-700b-1
-  contract: "Registry entry with default_status not_needed and DSL trigger conditions"
+  contract: "Registry entry with default_status not_needed and DSL trigger conditions for frontend extensions"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

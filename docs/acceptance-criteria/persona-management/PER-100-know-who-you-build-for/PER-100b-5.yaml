@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given a developer or agent that needs to understand the persona_for AC field
@@ -26,10 +26,13 @@ doc_links:
     status: exists
 assigned_agent: documentation-expert
 estimated_complexity: S
+it_requirements:
+  - "Must add the persona_for row to the existing field table in docs/reference/ac-schema.md"
+  - "Must follow the existing column format in the reference doc (field, type, required, description, example)"
 delivers_to: null
 expects_from:
   ac_id: PER-100b-1
-  contract: "Finalized persona_for field spec to document"
+  contract: "Finalized persona_for field spec at config/ac_store_schema.json to document"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

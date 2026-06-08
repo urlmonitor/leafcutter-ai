@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given an AC YAML file with persona_for: "field-service-engineer"
@@ -28,10 +28,14 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Must emit a warning (not an error) for unresolvable personas so builds are not blocked by missing persona directories"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must scan the docs/personas/ directory to determine the set of valid persona slugs"
 delivers_to: null
 expects_from:
   ac_id: PER-100a-1
-  contract: "Persona directories at docs/personas/<slug>/ that serve as the reference target"
+  contract: "Persona directories at docs/personas/<slug>/ that serve as the reference target for validation"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

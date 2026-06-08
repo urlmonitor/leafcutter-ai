@@ -1,0 +1,32 @@
+id: PER-100g
+readiness: approved
+priority: medium
+title: "Get the full persona story whenever you need it"
+component: persona-management
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_2
+criteria: |
+  Deep persona detail available on demand — not just the summary.
+
+  When an agent needs more than the automatic persona summary, it can request
+  the full persona profile including goals, frustrations, context, and phase-
+  specific insights. This on-demand access gives agents the depth they need
+  for nuanced decisions without bloating every agent's startup context.
+depends_on: [PER-100]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - PER-100d-2
+  - PER-100d-2a
+  - PER-100d-2b
+  - PER-100d-5
+implemented_by: []
+documentation_triggers: [sequence-diagram, component-diagram]

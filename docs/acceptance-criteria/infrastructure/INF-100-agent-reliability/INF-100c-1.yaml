@@ -1,0 +1,37 @@
+id: INF-100c-1
+readiness: approved
+priority: medium
+title: "Config resolution uses the script's own location as anchor"
+component: infrastructure
+level: L2
+status: draft
+req_status: active
+work_status: not_started
+criteria: |
+  Given submit_feedback.py is running from a deployed location at <project>/.leafcutter/scripts/feedback/,
+  When the script resolves the path to feedback_categories.yaml,
+  Then it finds the file at <project>/.leafcutter/config/feedback_categories.yaml,
+  And feedback submission succeeds.
+depends_on:
+  - INF-100c
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must resolve config relative to the script file's own directory, not the working directory"
+  - "Must work correctly on both WSL2 (Windows path mount) and native Linux"
+  - "Must not break existing callers that invoke the script from the source repo location"
+  - "Must follow the project error handling policy for filesystem operations"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by:
+  - INF-100c-1-i
+implemented_by: []

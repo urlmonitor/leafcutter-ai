@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -23,15 +23,22 @@ doc_links:
   - path: config/agent_registry.json
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-005-frontend-coder-agent.md
+    relationship: describes
+    status: exists
 assigned_agent: test-writer
 estimated_complexity: S
+it_requirements:
+  - "Test must verify zero side effects -- no log entries, no output artifacts, no spawned processes"
+  - "Must cover the scenario where the agent template file exists on disk but is not dispatched"
 delivers_to: null
 expects_from:
   ac_id: BP-700b-1
-  contract: "Registry entry with default_status not_needed"
+  contract: "Registry entry with default_status not_needed ensuring the agent is never dispatched for non-frontend projects"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260608-BP-700b-3.md

@@ -1,5 +1,5 @@
 id: BP-100i-1-i
-readiness: draft
+readiness: reviewed
 priority: high
 title: "Scripts listed in a parity-exclusion allowlist do not trigger violations"
 component: build-pipeline
@@ -24,15 +24,31 @@ doc_links:
   - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100i-1.yaml"
     relationship: parent
     status: exists
+  - path: "docs/build-drift-hook.md"
+    relationship: describes
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "docs/build-pipeline.md"
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Must read the exclusion list from the hook_parity configuration section in commit_guardian.json, not from a hardcoded list"
+  - "Must apply exclusions before violation detection so that excluded scripts never appear in error output"
 delivers_to: null
 expects_from:
   ac_id: BP-100i-1
-  contract: "The parity-checking function that this edge case extends with an exclusion filter"
+  contract: "The parity-checking function that accepts a set[str] exclusion list parameter and filters excluded filenames before comparing directory contents"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - it-po-v3
 superseded_by: null
 covered_by: []
 implemented_by: []

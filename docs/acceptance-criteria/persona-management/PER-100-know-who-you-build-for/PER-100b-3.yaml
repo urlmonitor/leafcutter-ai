@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given an AC store containing 5 active AC files:
@@ -27,10 +27,15 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Must complete scanning of the full AC store in <2 seconds for up to 500 AC files"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must treat both absent persona_for field and persona_for: null as orphaned"
+  - "Must output results in a structured format suitable for both human reading and scripted consumption"
 delivers_to: null
 expects_from:
   ac_id: PER-100b-1
-  contract: "AC schema with persona_for field that the scanner reads"
+  contract: "AC schema with persona_for field at config/ac_store_schema.json that the scanner reads"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

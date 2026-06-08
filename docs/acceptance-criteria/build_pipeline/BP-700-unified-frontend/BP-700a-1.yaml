@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -29,11 +29,19 @@ doc_links:
   - path: templates/agents/frontend-coder.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-005-frontend-coder-agent.md
+    relationship: describes
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: M
+it_requirements:
+  - "Must preserve all five design principles verbatim from the existing skill -- no weakening or rewording that changes meaning"
+  - "Must not reference or load any external SKILL.md file for design principles"
+  - "Must follow the existing agent template structure conventions (frontmatter, sections, sign-off protocol)"
+  - "Must remain platform-agnostic -- no framework-specific instructions baked into the principles"
 delivers_to:
   agent: python-coder
-  contract: "A unified agent template file that python-coder (build.py) deploys"
+  contract: "File at templates/agents/frontend-coder.md -- a complete agent template with embedded design principles, pre-write checklist, and no external skill loading instruction"
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-08

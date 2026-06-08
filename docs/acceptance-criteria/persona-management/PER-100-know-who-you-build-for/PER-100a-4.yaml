@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given a user who wants to add a new persona to the project
@@ -25,6 +25,10 @@ doc_links:
     status: exists
 assigned_agent: documentation-expert
 estimated_complexity: S
+it_requirements:
+  - "Must follow the leafcutter how-to guide format (problem statement, prerequisites, numbered steps, verification)"
+  - "Must reference the validation script by its actual path"
+  - "Must include at least one complete, copy-pasteable persona.yaml example"
 delivers_to: null
 expects_from:
   ac_id: PER-100a-1

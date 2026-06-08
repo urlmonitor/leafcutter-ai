@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given the project previously deployed a hardcoded "python-coder" agent template (from the legacy fixed agent set)
@@ -20,17 +20,26 @@ depends_on:
   - BP-800d
   - BP-800b-1
 doc_links:
-  - path: docs/architecture/components/build-epic-workflow-dispatch.md
-    relationship: context
+  - path: docs/architecture/components/adaptive-specialists-generation.md
+    relationship: describes
+    status: planned
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Must detect legacy templates by the ABSENCE of 'generated-by' metadata in the agent file"
+  - "Must rename (not delete) legacy files — use .legacy suffix for user recovery"
+  - "Must update dispatch routing so the generated specialist is resolved when the agent name is invoked"
+  - "Must be idempotent — re-running on an already-superseded project does not re-rename or produce warnings"
+  - "Must handle errors gracefully per the project error handling policy if the rename operation fails"
 delivers_to:
   agent: python-coder
-  contract: "Legacy replacement logic that ensures continuity of dispatch names"
+  contract: "Supersession logic that renames legacy files and installs generated replacements — consumed by BP-800d-1-i (customization preservation) and BP-800e-1 (migration trigger)"
 expects_from:
   ac_id: BP-800b-1
-  contract: "Agent generator that produces the replacement specialist"
+  contract: "Agent generator output — generated template file at <templates_dir>/<tech>-coder.md with 'generated-by' metadata"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

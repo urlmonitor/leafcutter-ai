@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given the migration feature is implemented
@@ -26,15 +26,20 @@ depends_on:
   - BP-800e
   - BP-800e-2
 doc_links:
-  - path: docs/architecture/components/build-epic-workflow-dispatch.md
-    relationship: context
-    status: exists
+  - path: docs/architecture/components/adaptive-specialists-generation.md
+    relationship: describes
+    status: planned
 assigned_agent: architecture-diagram-author
 estimated_complexity: S
+it_requirements:
+  - "Must use Mermaid sequenceDiagram syntax (consistent with existing architecture docs)"
+  - "Must show the alternative path (manifest exists) as an alt/opt block in the sequence diagram"
+  - "Must include the rollback path from BP-800e-1-i as a break block or note"
+  - "Must clearly distinguish the migration-only steps from the normal build steps"
 delivers_to: null
 expects_from:
   ac_id: BP-800e-2
-  contract: "Completed migration flow to diagram"
+  contract: "Completed migration flow with defined temporal ordering to represent in the diagram"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

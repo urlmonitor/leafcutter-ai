@@ -3,7 +3,7 @@ title: "Confirmed mixed commit message indicates the mixed nature"
 component: build-orchestration
 level: L3
 status: active
-readiness: reviewed
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo

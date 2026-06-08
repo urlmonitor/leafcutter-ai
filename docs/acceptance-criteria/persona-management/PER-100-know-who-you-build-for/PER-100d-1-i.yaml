@@ -5,7 +5,7 @@ level: L3
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given a project with the persona-management component installed
@@ -22,6 +22,10 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must not raise an exception or return a non-zero exit code when no personas exist"
+  - "The empty-state message must be actionable (tell the user how to create personas)"
 delivers_to: null
 expects_from:
   ac_id: PER-100d-1

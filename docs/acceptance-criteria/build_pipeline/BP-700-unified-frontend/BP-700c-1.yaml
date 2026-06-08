@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -30,13 +30,23 @@ doc_links:
   - path: templates/agents/frontend-coder.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-005-frontend-coder-agent.md
+    relationship: describes
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: M
-delivers_to: null
+it_requirements:
+  - "Must perform a complete section-by-section comparison between the skill and the unified template"
+  - "Every behavioral rule must have a traceable corresponding instruction -- no silent drops"
+  - "The project-context hook must use the same design_system key name and same precedence semantics"
+delivers_to:
+  agent: documentation-expert
+  contract: "Verified list of all design principles and behavioral rules preserved in the unified template, for use in reference documentation (BP-700c-5)"
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260608-BP-700c-1.md

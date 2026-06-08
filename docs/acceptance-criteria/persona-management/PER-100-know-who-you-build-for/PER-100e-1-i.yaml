@@ -5,7 +5,7 @@ level: L3
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given a user provides the request: "Create a persona for a user"
@@ -16,17 +16,20 @@ criteria: |
     - At least one distinguishing characteristic (industry, task, or environment)
   And no files are written to docs/personas/ until the user provides a more specific description
 depends_on:
-  - PER-100e-1
+  - PER-100e-1a
 doc_links:
   - path: docs/architecture/agent_knowledge_plane.md
     relationship: describes
     status: exists
-assigned_agent: python-coder
+assigned_agent: llm-expert
 estimated_complexity: S
+it_requirements:
+  - "Must be enforced in the agent template instructions (not in the supporting script)"
+  - "The ambiguity detection must trigger on generic terms like 'user', 'customer', 'person' without qualifying context"
 delivers_to: null
 expects_from:
-  ac_id: PER-100e-1
-  contract: "Persona expert agent that this edge case exercises"
+  ac_id: PER-100e-1a
+  contract: "Persona expert agent template that this edge case exercises"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

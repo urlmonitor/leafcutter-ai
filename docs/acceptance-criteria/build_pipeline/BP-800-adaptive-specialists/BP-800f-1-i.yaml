@@ -5,7 +5,7 @@ level: L3
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given a project with "clickhouse-driver" listed in pyproject.toml dependencies
@@ -18,15 +18,20 @@ criteria: |
 depends_on:
   - BP-800f-1
 doc_links:
-  - path: docs/architecture/components/build-epic-workflow-dispatch.md
-    relationship: context
-    status: exists
+  - path: docs/architecture/components/adaptive-specialists-detection.md
+    relationship: describes
+    status: planned
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Must default to 'unclassified' paradigm for any database driver not in the known mapping"
+  - "Must not log an error or warning for unclassified paradigm — this is expected for new databases"
+  - "Must treat unclassified paradigm identically to known paradigms in the generation pipeline"
+  - "Must include the unclassified paradigm in the technology manifest (not omit it)"
 delivers_to: null
 expects_from:
   ac_id: BP-800a-3
-  contract: "Database detection logic that this unknown-paradigm edge case exercises"
+  contract: "Database detection logic with paradigm mapping — this edge case verifies the fallback to 'unclassified' when the driver is not in the known mapping"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

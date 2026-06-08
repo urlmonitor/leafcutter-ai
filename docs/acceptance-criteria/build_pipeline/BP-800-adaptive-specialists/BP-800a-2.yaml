@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given a project with:
@@ -22,14 +22,23 @@ doc_links:
   - path: docs/architecture/components/build-epic-workflow-dispatch.md
     relationship: context
     status: exists
+  - path: docs/architecture/components/adaptive-specialists-detection.md
+    relationship: describes
+    status: planned
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Must support pyproject.toml, requirements.txt, package.json, and go.mod as manifest sources"
+  - "Must maintain a configurable mapping of package names to framework identifiers (not hardcoded inline)"
+  - "Must handle errors gracefully when manifest files contain invalid syntax"
+  - "Must not perform source code analysis (import parsing) — manifest-only detection"
+  - "Must produce deterministic output for the same set of manifest files"
 delivers_to:
   agent: python-coder
-  contract: "Framework detection results with parent-language associations, consumed alongside language results by agent generator"
+  contract: "list[dict] where each entry has: {name: str, category: 'framework', parent_language: str, confidence: 'manifest', detection_source: str (manifest file path)}"
 expects_from:
   ac_id: BP-800a-1
-  contract: "Language detection infrastructure (shared scanning logic and manifest parsers)"
+  contract: "Shared manifest file discovery logic — list of manifest file paths found during language detection scan"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

@@ -1,5 +1,5 @@
 id: BP-100i-1-ii
-readiness: draft
+readiness: reviewed
 priority: high
 title: "Non-hook utility files (e.g. __init__.py, README.md) are excluded from script parity checks"
 component: build-pipeline
@@ -27,15 +27,31 @@ doc_links:
   - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100i-1.yaml"
     relationship: parent
     status: exists
+  - path: "docs/build-drift-hook.md"
+    relationship: describes
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "docs/build-pipeline.md"
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Must filter files by a well-defined naming pattern before comparison; the pattern must exclude __init__.py, __pycache__/ contents, README.md, and other non-hook utility files"
+  - "Must not traverse subdirectories (e.g. __pycache__/) when scanning for hook scripts"
 delivers_to: null
 expects_from:
   ac_id: BP-100i-1
-  contract: "The parity-checking function whose file filter this edge case validates"
+  contract: "The file-filtering function within the parity checker that determines which .py filenames are hook scripts vs utility files, using a naming pattern (e.g. check_*.py, run_hook.py, regenerate_*.py)"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - it-po-v3
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -3,7 +3,7 @@ title: "Mixed commit with 3+ groups lists all groups in the warning"
 component: build-orchestration
 level: L3
 status: active
-readiness: reviewed
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo

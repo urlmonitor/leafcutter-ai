@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given the technology detection feature is implemented (BP-800a-1 through BP-800a-4)
@@ -21,15 +21,19 @@ depends_on:
   - BP-800a2
   - BP-800a-4
 doc_links:
-  - path: docs/architecture/components/build-epic-workflow-dispatch.md
-    relationship: context
-    status: exists
+  - path: docs/architecture/components/adaptive-specialists-detection.md
+    relationship: describes
+    status: planned
 assigned_agent: documentation-expert
 estimated_complexity: S
+it_requirements:
+  - "Must follow the existing how-to document format and structure in docs/how-to/"
+  - "Must include concrete examples of manifest output (not just abstract descriptions)"
+  - "Must reference the technology manifest JSON schema for readers who want the full specification"
 delivers_to: null
 expects_from:
   ac_id: BP-800a-4
-  contract: "Completed detection feature with manifest output to document"
+  contract: "Completed detection feature with manifest output — the guide documents this feature's usage and extension points"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by:

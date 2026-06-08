@@ -3,7 +3,7 @@ title: "Shapes differing only in file count are treated as the same shape"
 component: build-orchestration
 level: L3
 status: active
-readiness: reviewed
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo

@@ -3,7 +3,7 @@ title: "BA can reference the in-progress prototype when decomposing L2 behaviors
 component: ux-prototyping
 level: L2
 status: active
-readiness: draft
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo
@@ -24,15 +24,24 @@ doc_links:
   - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100e.yaml
     relationship: parent
     status: exists
-assigned_agent: frontend-coder
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: planned
+assigned_agent: llm-expert
 estimated_complexity: M
+it_requirements:
+  - "BA agent template must include a pre-flight step to check for and read partial prototype artifacts"
+  - "Must handle the case where no prototype exists yet (BA proceeds without prototype context)"
+  - "Must not block or wait for prototype completion — read whatever is available at the time"
+  - "Prototype artifact store must support concurrent read-write (UX designer writing while BA reads)"
 delivers_to: null
 expects_from:
   ac_id: UXP-100e-1
-  contract: "Both agents running concurrently with access to shared artifacts"
+  contract: "Both agents running concurrently with shared prototype artifact store path accessible to both"
 origin_agent: business-analyst-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+  - reason: "it-po-v3 enrichment: reassigned frontend-coder -> llm-expert (BA agent template update), 2026-06-08"
 superseded_by: null
 covered_by: []
 implemented_by: []

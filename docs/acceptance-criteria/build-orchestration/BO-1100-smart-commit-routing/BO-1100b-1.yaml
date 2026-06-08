@@ -3,7 +3,7 @@ title: "Staged files spanning two or more routing groups trigger a warning befor
 component: build-orchestration
 level: L2
 status: active
-readiness: reviewed
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo

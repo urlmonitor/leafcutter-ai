@@ -3,7 +3,7 @@ title: "Research is initiated for each missing component rather than improvising
 component: ux-prototyping
 level: L2
 status: active
-readiness: draft
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo
@@ -24,15 +24,23 @@ doc_links:
   - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100b.yaml
     relationship: parent
     status: exists
-assigned_agent: frontend-coder
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: planned
+assigned_agent: llm-expert
 estimated_complexity: M
+it_requirements:
+  - "Research request must include usage context, visual role, and design system constraints"
+  - "Must not generate placeholder or ad-hoc markup for missing components"
+  - "Pending positions must be clearly marked in the prototype artifact with the component name"
 delivers_to: null
 expects_from:
   ac_id: UXP-100b-1
-  contract: "Structured gap report with component names and usage contexts"
+  contract: "Structured gap report: list of { component_name: string, usage_context: string, classification: 'near-match' | 'new-component', near_match_base: string | null }"
 origin_agent: business-analyst-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+  - reason: "it-po-v3 enrichment: reassigned frontend-coder -> llm-expert (agent template research dispatch), 2026-06-08"
 superseded_by: null
 covered_by: []
 implemented_by: []

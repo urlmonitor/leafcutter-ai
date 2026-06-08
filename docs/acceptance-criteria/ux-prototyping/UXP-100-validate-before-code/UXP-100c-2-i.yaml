@@ -3,7 +3,7 @@ title: "Prototype with pending component research cannot be approved — only de
 component: ux-prototyping
 level: L3
 status: active
-readiness: draft
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo
@@ -23,13 +23,21 @@ doc_links:
   - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100c-2.yaml
     relationship: parent
     status: exists
-assigned_agent: frontend-coder
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: planned
+assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Must scan the prototype artifact for 'pending' markers before allowing approval"
+  - "Validation message must list the count and names of pending components"
+  - "Must not block 'Request changes' or 'Reject' decisions when components are pending"
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+  - reason: "it-po-v3 enrichment: reassigned frontend-coder -> python-coder (pipeline validation logic), 2026-06-08"
 superseded_by: null
 covered_by: []
 implemented_by: []

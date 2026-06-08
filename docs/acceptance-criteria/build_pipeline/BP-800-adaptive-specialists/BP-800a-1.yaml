@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given a project directory containing:
@@ -22,11 +22,20 @@ doc_links:
   - path: docs/architecture/components/build-epic-workflow-dispatch.md
     relationship: context
     status: exists
+  - path: docs/architecture/components/adaptive-specialists-detection.md
+    relationship: describes
+    status: planned
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Must complete scan in <5 seconds for projects with up to 10,000 files"
+  - "Must ignore directories listed in .gitignore (vendor/, node_modules/, .venv/, etc.)"
+  - "Must handle errors gracefully per the project error handling policy when manifest files are unreadable"
+  - "Must produce deterministic output — same project state yields identical detection results"
+  - "Must not require any runtime dependencies beyond the Python standard library and packages already in the leafcutter dependency set"
 delivers_to:
   agent: python-coder
-  contract: "A structured list of detected technologies with confidence levels, consumed by the agent generator (BP-800b)"
+  contract: "list[dict] where each entry has: {name: str, category: 'language', confidence: 'manifest'|'file-extension', detection_source: str (file path that triggered detection)}"
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-08

@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given an AC store with ACs targeting persona "field-service-engineer" across two components:
@@ -26,10 +26,14 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Must reuse the persona query function from PER-100c-1 (not duplicate the AC store scanning logic)"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must sort components alphabetically and levels in L0 > L1 > L2 > L3 order within each group"
 delivers_to: null
 expects_from:
   ac_id: PER-100c-1
-  contract: "Persona query function that returns matching ACs"
+  contract: "Persona query script at scripts/persona_query.py that returns matching ACs as JSON list of {id, title, component, level}"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

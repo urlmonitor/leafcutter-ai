@@ -1,5 +1,5 @@
 id: BP-100i-3
-readiness: draft
+readiness: reviewed
 priority: high
 title: "Deployed output parity: every hook in the canonical template also appears in the build output directory"
 component: build-pipeline
@@ -32,17 +32,33 @@ doc_links:
   - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100i.yaml"
     relationship: parent
     status: exists
+  - path: "docs/build-drift-hook.md"
+    relationship: describes
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "docs/build-pipeline.md"
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
-delivers_to:
-  agent: test-writer
-  contract: "A deployment-parity function that compares canonical template contents against build output contents"
+it_requirements:
+  - "Must exit 0 (fail-open) on unexpected errors such as unreadable directories; must exit 1 only on detected parity violations"
+  - "Must complete within 2 seconds for directories with up to 50 hook scripts"
+  - "Must be idempotent -- repeated runs with the same directory state produce the same result"
+  - "Must determine the deployed output directory path from commit_guardian.json or skills_config.json, not hardcode it"
+delivers_to: null
 expects_from:
   ac_id: BP-100i-1
-  contract: "The same directory-scanning utility used for script parity"
+  contract: "Reusable directory-scanning function that returns a set[str] of .py filenames found in a given directory, applying the same filename filter (hook script naming pattern) used for runtime-vs-canonical comparison"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - it-po-v3
 superseded_by: null
 covered_by: []
 implemented_by: []

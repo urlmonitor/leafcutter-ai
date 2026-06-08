@@ -3,7 +3,7 @@ title: "Commit body enumerates all staged files for a single-group commit"
 component: build-orchestration
 level: L2
 status: active
-readiness: reviewed
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo

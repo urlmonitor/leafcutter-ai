@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given the technology detector has completed scanning a project with Python, Go, FastAPI, and PostgreSQL
@@ -23,14 +23,23 @@ doc_links:
   - path: docs/architecture/components/build-epic-workflow-dispatch.md
     relationship: context
     status: exists
+  - path: docs/architecture/components/adaptive-specialists-detection.md
+    relationship: describes
+    status: planned
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Manifest must be JSON format for machine-readability by downstream consumers"
+  - "Must sort entries deterministically (e.g. alphabetically by name) to ensure byte-identical output on repeated runs"
+  - "Must include a schema_version field in the manifest for future compatibility"
+  - "Must write the manifest atomically (write to temp file, then rename) to prevent partial reads"
+  - "Must handle errors gracefully per the project error handling policy if the output directory is not writable"
 delivers_to:
   agent: python-coder
-  contract: "A stable manifest file that the agent generator reads to determine which specialists to produce"
+  contract: "JSON file at a well-known path (e.g. .leafcutter/technology_manifest.json) with schema: {schema_version: str, generated_at: ISO-8601 str, technologies: list[{name: str, category: str, paradigm: str|null, confidence: str, detection_source: str}]}"
 expects_from:
   ac_id: BP-800a-1
-  contract: "Raw detection results from language, framework, and database detectors"
+  contract: "Combined detection results from language (BP-800a-1), framework (BP-800a-2), and database (BP-800a-3) detectors as list[dict]"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by:

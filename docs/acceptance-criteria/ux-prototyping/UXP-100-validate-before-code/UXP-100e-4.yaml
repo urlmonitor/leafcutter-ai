@@ -3,7 +3,7 @@ title: "Sequence diagram showing parallel dispatch of UX designer and BA agents"
 component: ux-prototyping
 level: L2
 status: active
-readiness: draft
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo
@@ -28,15 +28,27 @@ doc_links:
   - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100e.yaml
     relationship: parent
     status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: planned
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
 assigned_agent: architecture-diagram-author
 estimated_complexity: M
+it_requirements:
+  - "Must follow the project's sequence diagram conventions"
+  - "Must show parallel dispatch using a UML par fragment"
+  - "Must show the optional UX-not-warranted path as an alt fragment"
+  - "Must include all five actors: PO agent, pipeline orchestrator, UX designer agent, BA agent, prototype artifact store"
 delivers_to: null
 expects_from:
   ac_id: UXP-100e-1
-  contract: "Behavioral ACs describing parallel dispatch and shared artifact access"
+  contract: "Behavioral ACs describing parallel dispatch and shared artifact access, available as diagram source material"
 origin_agent: business-analyst-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+  - reason: "it-po-v3 enrichment: added it_requirements and doc_links, 2026-06-08"
 superseded_by: null
 covered_by: []
 implemented_by: []

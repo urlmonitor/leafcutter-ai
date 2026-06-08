@@ -5,7 +5,7 @@ level: L3
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given a persona.yaml file containing invalid YAML syntax (e.g., a tab character where spaces are expected)
@@ -22,10 +22,14 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Parse error messages must include the file path and line number from the YAML parser"
+  - "Must use a distinct exit code from schema-validation errors so callers can differentiate"
 delivers_to: null
 expects_from:
   ac_id: PER-100a-3
-  contract: "Persona validation script that this edge case exercises"
+  contract: "Persona validation script at scripts/persona_validate.py that this edge case exercises"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

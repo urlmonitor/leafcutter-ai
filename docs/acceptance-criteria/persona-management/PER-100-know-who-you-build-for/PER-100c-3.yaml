@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given a PO, UX designer, or sales team member who wants to see what a persona can do
@@ -24,10 +24,14 @@ doc_links:
     status: exists
 assigned_agent: documentation-expert
 estimated_complexity: S
+it_requirements:
+  - "Must follow the leafcutter how-to guide format (problem statement, prerequisites, numbered steps, verification)"
+  - "Must reference the persona query script by its actual path"
+  - "Must include realistic example output, not placeholder text"
 delivers_to: null
 expects_from:
   ac_id: PER-100c-1
-  contract: "Completed persona query script to document"
+  contract: "Completed persona query script at scripts/persona_query.py to document"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

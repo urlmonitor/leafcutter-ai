@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 criteria: |
   Given the persona management system includes: persona files, validation script, persona query script, persona summary injector, and persona-detail skill
@@ -20,18 +20,23 @@ criteria: |
     - Agent context window (receives persona summary and on-demand detail)
   And the diagram is a Mermaid C4 component diagram placed in docs/architecture/
 depends_on:
-  - PER-100d
+  - PER-100g
 doc_links:
   - path: docs/architecture/agent_knowledge_plane.md
     relationship: describes
     status: exists
 assigned_agent: architecture-diagram-author
 estimated_complexity: M
+it_requirements:
+  - "Must follow the C4 component diagram convention used in the project"
+  - "Must be placed in docs/architecture/diagrams/ with a descriptive filename"
+  - "Must show all six persona-management components and their data flow relationships"
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+  - reason: "split: PER-100d -> PER-100d + PER-100g, 2026-06-08"
 superseded_by: null
 covered_by: []
 implemented_by: []

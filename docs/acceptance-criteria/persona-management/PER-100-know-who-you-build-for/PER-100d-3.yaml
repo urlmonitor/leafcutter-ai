@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given the agent_registry.json lists agents with role "coding" (python-coder, sql-coder, frontend-coder)
@@ -23,10 +23,15 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Must read the injection scope from skills_config.json (key: persona_injection_agents)"
+  - "Must default to a sensible agent list if the config key is absent (product-owner-v3, business-analyst-v3, documentation-expert)"
+  - "Must not inject persona summary into agents not on the list"
+  - "Must handle errors gracefully per the project error handling policy"
 delivers_to: null
 expects_from:
   ac_id: PER-100d-1
-  contract: "Persona summary injection mechanism that this AC constrains"
+  contract: "Persona summary injection mechanism that this AC constrains to a configurable agent scope"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

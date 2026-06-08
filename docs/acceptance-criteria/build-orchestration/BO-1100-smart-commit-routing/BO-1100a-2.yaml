@@ -3,7 +3,7 @@ title: "Matched routing group produces its pattern-specific commit subject line"
 component: build-orchestration
 level: L2
 status: active
-readiness: reviewed
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo

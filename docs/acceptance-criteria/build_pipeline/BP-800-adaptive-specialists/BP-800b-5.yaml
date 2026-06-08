@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given the specialist generation feature is implemented (BP-800b-1 through BP-800b-4)
@@ -21,15 +21,19 @@ depends_on:
   - BP-800g
   - BP-800b-1
 doc_links:
-  - path: docs/architecture/components/build-epic-workflow-dispatch.md
-    relationship: context
-    status: exists
+  - path: docs/architecture/components/adaptive-specialists-generation.md
+    relationship: describes
+    status: planned
 assigned_agent: documentation-expert
 estimated_complexity: S
+it_requirements:
+  - "Must follow the existing how-to document format and structure in docs/how-to/"
+  - "Must include concrete CLI examples showing how to dispatch a generated specialist"
+  - "Must cross-reference the detection how-to guide (BP-800a-5) for the upstream detection step"
 delivers_to: null
 expects_from:
   ac_id: BP-800b-1
-  contract: "Completed agent generation feature to document"
+  contract: "Completed agent generation feature with deployable template files to document"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by:

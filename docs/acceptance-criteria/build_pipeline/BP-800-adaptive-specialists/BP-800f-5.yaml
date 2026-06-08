@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given the multi-paradigm database support is implemented
@@ -22,15 +22,23 @@ depends_on:
   - BP-800f
   - BP-800f-3
 doc_links:
-  - path: docs/architecture/components/build-epic-workflow-dispatch.md
-    relationship: context
-    status: exists
+  - path: docs/architecture/components/adaptive-specialists-detection.md
+    relationship: describes
+    status: planned
+  - path: docs/architecture/components/adaptive-specialists-generation.md
+    relationship: describes
+    status: planned
 assigned_agent: architecture-diagram-author
 estimated_complexity: S
+it_requirements:
+  - "Must use Mermaid syntax for the diagram (consistent with existing architecture docs)"
+  - "Must follow C4 component-level notation conventions established in the project"
+  - "Must show the paradigm classifier as a distinct sub-component (not merged into the detector)"
+  - "Must reference the detection component diagram (BP-800a-6) as the parent context"
 delivers_to: null
 expects_from:
   ac_id: BP-800f-3
-  contract: "Completed multi-paradigm subsystem to diagram"
+  contract: "Completed multi-paradigm database subsystem with defined paradigm classification boundaries to represent in the diagram"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

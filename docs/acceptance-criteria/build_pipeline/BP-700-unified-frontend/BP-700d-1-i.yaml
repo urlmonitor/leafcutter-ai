@@ -5,7 +5,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -24,15 +24,23 @@ doc_links:
   - path: templates/agents/frontend-coder.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Must handle the absence of legacy files gracefully -- no FileNotFoundError or similar"
+  - "Build must exit with code 0 on the fresh-install path"
+  - "Must not create the frontend-design skill directory as a side effect"
 delivers_to: null
 expects_from:
   ac_id: BP-700d-1
-  contract: "build.py migration logic handles both fresh-install and upgrade paths"
+  contract: "build.py migration logic handles both fresh-install and upgrade paths without error"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260608-BP-700d-1-i.md

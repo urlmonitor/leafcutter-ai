@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given an AC store where 8 ACs reference persona_for: "field-service-engineer"
@@ -18,22 +18,28 @@ criteria: |
     - Coverage gaps: persona sections (e.g., "marketing") that have no corresponding ACs
   And the suggestion is presented to the user for approval before any persona file is modified
 depends_on:
-  - PER-100e
+  - PER-100f
   - PER-100c-1
-  - PER-100e-1
+  - PER-100e-1a
 doc_links:
   - path: docs/architecture/agent_knowledge_plane.md
     relationship: describes
     status: exists
 assigned_agent: python-coder
 estimated_complexity: L
+it_requirements:
+  - "Must reuse the persona query function from PER-100c-1 (not duplicate AC store scanning)"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must present suggestions to the user for approval before writing any changes"
+  - "Must complete analysis of up to 50 ACs in <5 seconds"
 delivers_to: null
 expects_from:
   ac_id: PER-100c-1
-  contract: "Persona query function that returns all ACs for a given persona"
+  contract: "Persona query script at scripts/persona_query.py that returns all ACs for a given persona slug"
 origin_agent: business-analyst-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+  - reason: "split: PER-100e -> PER-100e + PER-100f, 2026-06-08"
 superseded_by: null
 covered_by: []
 implemented_by: []

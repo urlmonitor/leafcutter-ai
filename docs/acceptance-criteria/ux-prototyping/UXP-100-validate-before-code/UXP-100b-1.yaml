@@ -3,7 +3,7 @@ title: "Gap detection produces a named list of missing components with usage con
 component: ux-prototyping
 level: L2
 status: active
-readiness: draft
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo
@@ -23,15 +23,23 @@ doc_links:
   - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100b.yaml
     relationship: parent
     status: exists
-assigned_agent: frontend-coder
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: planned
+assigned_agent: llm-expert
 estimated_complexity: M
+it_requirements:
+  - "Gap report must be a structured artifact (not free-text) with fields: component_name, usage_context, classification"
+  - "Must never substitute an improvised replacement — missing components are flagged, not faked"
+  - "Must follow the leafcutter agent template conventions for structured output"
 delivers_to:
   ac_id: UXP-100b-2
-  contract: "A structured gap report with component names and usage contexts"
+  contract: "Structured gap report: list of { component_name: string, usage_context: string, classification: 'near-match' | 'new-component', near_match_base: string | null }"
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+  - reason: "it-po-v3 enrichment: reassigned frontend-coder -> llm-expert (agent template gap detection), 2026-06-08"
 superseded_by: null
 covered_by:
   - UXP-100b-1-i

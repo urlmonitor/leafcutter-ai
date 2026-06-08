@@ -5,7 +5,7 @@ level: L3
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given a project directory that contains only a README.md and a .gitignore (no source files, no manifests)
@@ -20,12 +20,19 @@ doc_links:
   - path: docs/architecture/components/build-epic-workflow-dispatch.md
     relationship: context
     status: exists
+  - path: docs/architecture/components/adaptive-specialists-detection.md
+    relationship: describes
+    status: planned
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Must handle errors gracefully per the project error handling policy — no exceptions on empty input"
+  - "Must log the informational message at INFO level, not WARNING or ERROR"
+  - "Must return the same data structure as a successful detection (empty list, not None or a different type)"
 delivers_to: null
 expects_from:
   ac_id: BP-800a-1
-  contract: "Technology detection function that this edge case exercises"
+  contract: "Technology detection function signature: detect_technologies(project_path: Path) -> list[dict] — this edge case verifies it returns [] for empty projects"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

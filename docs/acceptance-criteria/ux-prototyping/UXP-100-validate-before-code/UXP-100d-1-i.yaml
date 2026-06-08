@@ -3,7 +3,7 @@ title: "Handoff artifact is not produced for a rejected or pending-changes proto
 component: ux-prototyping
 level: L3
 status: active
-readiness: draft
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo
@@ -21,13 +21,21 @@ doc_links:
   - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100d-1.yaml
     relationship: parent
     status: exists
-assigned_agent: frontend-coder
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: planned
+assigned_agent: llm-expert
 estimated_complexity: S
+it_requirements:
+  - "Must not produce a handoff artifact for non-approved decisions"
+  - "Must invalidate any prior handoff artifact for the same feature if the prototype is rejected or revised"
+  - "Invalidation must be detectable by the frontend-coder agent (e.g., status field or file removal)"
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+  - reason: "it-po-v3 enrichment: reassigned frontend-coder -> llm-expert (agent template edge case), 2026-06-08"
 superseded_by: null
 covered_by: []
 implemented_by: []

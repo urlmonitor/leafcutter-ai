@@ -16,12 +16,13 @@ criteria: |
   context into the new generation-based structure, and the user continues
   working without manual steps.
 depends_on:
-  - BP-800
+  - BP-810
   - BP-800d
 doc_links: []
 origin_agent: product-owner-v3
 created: 2026-06-06
-amended_by: []
+amended_by:
+  - reason: "split: BP-800 -> BP-800 + BP-810, 2026-06-08 — moved from BP-800 to BP-810"
 superseded_by: null
 covered_by:
   - BP-800e-1

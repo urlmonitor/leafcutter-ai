@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given a project with two defined personas:
@@ -26,12 +26,18 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Must use an injection channel compatible with the Agent Knowledge Plane (channel 2, 4, or 9)"
+  - "Must complete persona directory scanning and summary generation in <500ms for up to 50 personas"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must not block agent spawn if the docs/personas/ directory does not exist"
+  - "Summary must be concise enough to fit within 500 tokens of context"
 delivers_to:
-  agent: python-coder
-  contract: "A persona summary injection mechanism that loads at agent spawn time"
+  agent: llm-expert
+  contract: "Persona summary text block available for injection into agent context at spawn time; format: one line per persona with name and archetype"
 expects_from:
   ac_id: PER-100a-1
-  contract: "Persona directories with persona.yaml containing identity section"
+  contract: "Persona directories at docs/personas/<slug>/ containing persona.yaml with an identity section"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

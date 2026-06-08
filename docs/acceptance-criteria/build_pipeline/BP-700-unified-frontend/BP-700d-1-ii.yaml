@@ -5,7 +5,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -25,15 +25,23 @@ doc_links:
   - path: templates/agents/frontend-coder.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "build.py must never modify, move, or delete PROJECT_CONTEXT.md files in any agent directory"
+  - "The migration must only remove the frontend-design skill directory and overwrite the agent template"
+  - "Must be verifiable by checking file modification timestamps before and after build"
 delivers_to: null
 expects_from:
   ac_id: BP-700d-1
-  contract: "build.py migration does not touch PROJECT_CONTEXT.md"
+  contract: "build.py migration does not touch PROJECT_CONTEXT.md -- only removes skill directory and overwrites template"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260608-BP-700d-1-ii.md

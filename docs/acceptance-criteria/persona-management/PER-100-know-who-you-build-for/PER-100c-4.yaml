@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given the persona query workflow involves: user invocation, AC store scan, persona filter, grouping, and output rendering
@@ -26,10 +26,13 @@ doc_links:
     status: exists
 assigned_agent: architecture-diagram-author
 estimated_complexity: S
+it_requirements:
+  - "Must follow the leafcutter Mermaid diagram convention (C4 or sequence as appropriate)"
+  - "Must be placed in docs/architecture/diagrams/ with a descriptive filename"
 delivers_to: null
 expects_from:
   ac_id: PER-100c-1
-  contract: "Completed persona query workflow to diagram"
+  contract: "Completed persona query workflow at scripts/persona_query.py to diagram"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

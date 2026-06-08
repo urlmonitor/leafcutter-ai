@@ -5,7 +5,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -25,12 +25,18 @@ doc_links:
   - path: templates/agents/frontend-coder.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-005-frontend-coder-agent.md
+    relationship: describes
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: S
+it_requirements:
+  - "The platform-agnostic constraint must be explicit in the template text -- not merely implied"
+  - "Template must instruct the agent to detect the project's framework from existing files before writing code"
 delivers_to: null
 expects_from:
   ac_id: BP-700c-2
-  contract: "Unified template preserves platform-agnostic constraint"
+  contract: "Unified template preserves platform-agnostic constraint from the existing agent"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

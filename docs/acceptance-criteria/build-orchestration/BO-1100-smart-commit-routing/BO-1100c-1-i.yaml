@@ -3,7 +3,7 @@ title: "Malformed routing config is rejected with a specific parse error"
 component: build-orchestration
 level: L3
 status: active
-readiness: reviewed
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo

@@ -2,7 +2,7 @@ id: PER-100e-1
 title: "Persona expert agent creates new persona from a user request"
 component: persona-management
 level: L2
-status: active
+status: superseded_by
 req_status: active
 work_status: todo
 readiness: draft
@@ -37,7 +37,9 @@ expects_from:
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []
-superseded_by: null
+superseded_by:
+  - PER-100e-1a
+  - PER-100e-1b
 covered_by:
   - PER-100e-1-i
 implemented_by: []

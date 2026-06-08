@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given the technology manifest contains entries for "python", "typescript", and "go"
@@ -19,15 +19,20 @@ depends_on:
   - BP-800b
   - BP-800b-1
 doc_links:
-  - path: docs/architecture/components/build-epic-workflow-dispatch.md
-    relationship: context
-    status: exists
+  - path: docs/architecture/components/adaptive-specialists-generation.md
+    relationship: describes
+    status: planned
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Each generated agent must be self-contained — no shared mutable state between generation runs"
+  - "Must support parallel generation (no sequential dependency between individual agent file writes)"
+  - "Must handle errors gracefully per the project error handling policy — failure generating one agent must not prevent generation of others"
+  - "Must produce deterministic output regardless of manifest entry ordering"
 delivers_to: null
 expects_from:
   ac_id: BP-800b-1
-  contract: "Agent generation logic that this test exercises with multiple inputs"
+  contract: "Agent generation function that this independence test exercises with multiple technology entries"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

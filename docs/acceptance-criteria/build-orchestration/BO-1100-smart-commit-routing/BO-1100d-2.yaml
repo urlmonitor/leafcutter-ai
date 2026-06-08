@@ -3,7 +3,7 @@ title: "After 10 occurrences of the same unmatched shape, a new routing rule is 
 component: build-orchestration
 level: L2
 status: active
-readiness: reviewed
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo

@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given the technology detection subsystem has been implemented
@@ -21,15 +21,19 @@ depends_on:
   - BP-800a2
   - BP-800a-4
 doc_links:
-  - path: docs/architecture/components/build-epic-workflow-dispatch.md
-    relationship: context
-    status: exists
+  - path: docs/architecture/components/adaptive-specialists-detection.md
+    relationship: describes
+    status: planned
 assigned_agent: architecture-diagram-author
 estimated_complexity: S
+it_requirements:
+  - "Must use Mermaid syntax for the diagram (consistent with existing architecture docs)"
+  - "Must follow the C4 component diagram conventions established in the project"
+  - "Must clearly label the interface boundary between detection and generation subsystems"
 delivers_to: null
 expects_from:
   ac_id: BP-800a-4
-  contract: "Completed detection subsystem to diagram"
+  contract: "Completed detection subsystem with defined component boundaries to represent in the diagram"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by:

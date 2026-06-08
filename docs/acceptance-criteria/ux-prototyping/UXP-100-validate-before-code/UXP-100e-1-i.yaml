@@ -3,7 +3,7 @@ title: "Feature without UX involvement skips UX designer dispatch entirely"
 component: ux-prototyping
 level: L3
 status: active
-readiness: draft
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo
@@ -23,13 +23,21 @@ doc_links:
   - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100e-1.yaml
     relationship: parent
     status: exists
-assigned_agent: frontend-coder
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: planned
+assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "UX-warranted heuristic must correctly identify backend-only features and skip UX dispatch"
+  - "BA must not be blocked or delayed when UX is not warranted"
+  - "Pipeline must proceed directly to implementation phase without a UX approval gate for backend features"
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+  - reason: "it-po-v3 enrichment: reassigned frontend-coder -> python-coder (pipeline orchestration edge case), 2026-06-08"
 superseded_by: null
 covered_by: []
 implemented_by: []

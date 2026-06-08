@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given a user who wants to use the persona expert agent to manage personas
@@ -17,8 +17,8 @@ criteria: |
     - How the persona history file tracks changes over time
     - An explanation that the agent asks for user approval before writing changes
 depends_on:
-  - PER-100e
-  - PER-100e-1
+  - PER-100f
+  - PER-100e-1a
   - PER-100e-2
 doc_links:
   - path: docs/architecture/agent_knowledge_plane.md
@@ -26,13 +26,17 @@ doc_links:
     status: exists
 assigned_agent: documentation-expert
 estimated_complexity: S
+it_requirements:
+  - "Must follow the leafcutter how-to guide format (problem statement, prerequisites, numbered steps, verification)"
+  - "Must include example prompts that match the persona expert agent's expected invocation patterns"
 delivers_to: null
 expects_from:
-  ac_id: PER-100e-1
-  contract: "Completed persona expert agent to document"
+  ac_id: PER-100e-1a
+  contract: "Completed persona expert agent template to document"
 origin_agent: business-analyst-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+  - reason: "split: PER-100e -> PER-100e + PER-100f, 2026-06-08"
 superseded_by: null
 covered_by: []
 implemented_by: []

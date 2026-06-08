@@ -1,5 +1,5 @@
 id: BP-100i-2
-readiness: draft
+readiness: reviewed
 priority: high
 title: "Manifest parity: every hook registered in one commit_guardian.json appears in all commit_guardian.json files"
 component: build-pipeline
@@ -33,15 +33,31 @@ doc_links:
   - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100i.yaml"
     relationship: parent
     status: exists
+  - path: "docs/build-drift-hook.md"
+    relationship: describes
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "docs/build-pipeline.md"
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
-delivers_to:
-  agent: test-writer
-  contract: "A manifest-comparison function that extracts hook IDs from both JSON files and returns the set difference"
+it_requirements:
+  - "Must exit 0 (fail-open) on unexpected errors such as missing or malformed commit_guardian.json files; must exit 1 only on detected parity violations"
+  - "Must complete within 2 seconds for manifests with up to 100 hook entries"
+  - "Must be idempotent -- repeated runs with the same manifest state produce the same result"
+  - "Must read manifest file paths from commit_guardian.json configuration, not hardcode paths"
+delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - it-po-v3
 superseded_by: null
 covered_by: []
 implemented_by: []

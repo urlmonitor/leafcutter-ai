@@ -5,7 +5,7 @@ level: L3
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given an existing persona at docs/personas/field-service-engineer/persona.yaml with:
@@ -22,8 +22,11 @@ doc_links:
   - path: docs/architecture/agent_knowledge_plane.md
     relationship: describes
     status: exists
-assigned_agent: python-coder
+assigned_agent: llm-expert
 estimated_complexity: S
+it_requirements:
+  - "Must be enforced in the agent template instructions (destructive change detection is an LLM judgment call)"
+  - "Must present a clear diff showing what would be removed before confirming"
 delivers_to: null
 expects_from:
   ac_id: PER-100e-2

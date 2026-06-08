@@ -5,7 +5,7 @@ level: L3
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given a project with the legacy agent layout
@@ -18,15 +18,22 @@ criteria: |
 depends_on:
   - BP-800e-1
 doc_links:
-  - path: docs/architecture/components/build-epic-workflow-dispatch.md
-    relationship: context
-    status: exists
+  - path: docs/architecture/components/adaptive-specialists-generation.md
+    relationship: describes
+    status: planned
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Must implement transactional semantics — track all file operations and reverse them on failure"
+  - "Must handle errors gracefully per the project error handling policy during both the migration and the rollback"
+  - "Rollback must restore file contents and names exactly (not just names — content must be preserved)"
+  - "Must log at ERROR level on migration failure with the specific exception and rollback summary"
+  - "Must leave no partial state (no half-renamed files, no incomplete knowledge files)"
+  - "Must ensure the next build cleanly re-detects legacy layout (no stale markers from the failed attempt)"
 delivers_to: null
 expects_from:
   ac_id: BP-800e-1
-  contract: "Migration process that this failure-recovery edge case exercises"
+  contract: "Migration trigger and pipeline that this failure-recovery edge case exercises — specifically the file operation sequence that must be reversible"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

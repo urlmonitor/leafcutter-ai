@@ -5,7 +5,7 @@ level: L3
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given no persona directory exists at docs/personas/unknown-persona/
@@ -21,10 +21,14 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must list available persona slugs in the error message so the agent can self-correct"
+  - "Must return a non-fatal error (the calling agent continues execution)"
 delivers_to: null
 expects_from:
-  ac_id: PER-100d-2
-  contract: "Persona-detail skill that this edge case exercises"
+  ac_id: PER-100d-2b
+  contract: "Persona-detail script at scripts/persona_detail.py that this edge case exercises"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

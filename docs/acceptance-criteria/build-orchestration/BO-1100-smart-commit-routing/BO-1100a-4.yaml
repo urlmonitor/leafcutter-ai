@@ -3,7 +3,7 @@ title: "Router skips pattern application when a user-approved subject line alrea
 component: build-orchestration
 level: L2
 status: active
-readiness: reviewed
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo

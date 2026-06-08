@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given a project that uses PostgreSQL (relational), Neo4j (graph), and MongoDB (document)
@@ -20,15 +20,20 @@ depends_on:
   - BP-800f-1
   - BP-800f-2
 doc_links:
-  - path: docs/architecture/components/build-epic-workflow-dispatch.md
-    relationship: context
-    status: exists
+  - path: docs/architecture/components/adaptive-specialists-generation.md
+    relationship: describes
+    status: planned
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Must generate each database specialist independently (no umbrella agent that combines paradigms)"
+  - "Must verify paradigm isolation across all three generated specialists"
+  - "Must support an arbitrary number of database technologies in the same project (not limited to 3)"
+  - "Must produce deterministic output regardless of database detection ordering"
 delivers_to: null
 expects_from:
   ac_id: BP-800a-3
-  contract: "Database detection with multi-paradigm classification"
+  contract: "Database detection results as list[dict] — multiple entries with different paradigms from a single project scan"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

@@ -9,20 +9,23 @@ req_status: draft
 work_status: todo
 roadmap_phase: phase_2
 criteria: |
-  Personas are created and refined based on evidence, not assumptions.
+  Personas are created based on evidence, not assumptions.
 
-  The persona expert creates and refines personas based on user requests,
-  feature patterns, and market signals. Persona documents grow and sharpen
-  over time as the product evolves — they are living artifacts, not one-time
-  guesses frozen at project start.
+  The persona expert creates new personas based on user requests and structured
+  input. A new persona starts with a clear identity, goals, frustrations, and
+  context — all derived from your description and validated before saving.
 depends_on: [PER-100]
 doc_links: []
 delivers_to: null
 expects_from: null
 origin_agent: product-owner-v3
 created: 2026-06-06
-amended_by: []
+amended_by:
+  - reason: "split: PER-100e -> PER-100e + PER-100f, 2026-06-08"
 superseded_by: null
-covered_by: []
+covered_by:
+  - PER-100e-1
+  - PER-100e-1a
+  - PER-100e-1b
 implemented_by: []
 documentation_triggers: [how-to]

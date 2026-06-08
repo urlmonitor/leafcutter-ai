@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given the build has detected a legacy agent layout in the project
@@ -20,15 +20,22 @@ depends_on:
   - BP-800e
   - BP-800e-1
 doc_links:
-  - path: docs/architecture/components/build-epic-workflow-dispatch.md
-    relationship: context
-    status: exists
+  - path: docs/architecture/components/adaptive-specialists-generation.md
+    relationship: describes
+    status: planned
 assigned_agent: python-coder
 estimated_complexity: L
+it_requirements:
+  - "Must discover PROJECT_CONTEXT.md files in all legacy locations (.claude/, per-agent directories, project root)"
+  - "Must preserve PROJECT_CONTEXT.md content verbatim during transfer (no reformatting or content changes)"
+  - "Must produce a structured migration summary (JSON or YAML) listing: source_path, destination_path, artifact_type for each migrated item"
+  - "Must handle errors gracefully per the project error handling policy if source files are unreadable"
+  - "Must be atomic with respect to the overall migration — if context transfer fails, the entire migration rolls back (per BP-800e-1-i)"
+  - "Must complete the full migration (detection + knowledge extraction + context transfer + generation) within <60 seconds for typical projects"
 delivers_to: null
 expects_from:
   ac_id: BP-800e-1
-  contract: "Migration trigger that invokes this transfer logic"
+  contract: "Migration trigger that invokes this context transfer as part of the full migration pipeline"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

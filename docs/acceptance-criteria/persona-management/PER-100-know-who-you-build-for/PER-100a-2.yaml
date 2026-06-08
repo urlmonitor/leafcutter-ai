@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given a persona.yaml file for persona "field-service-engineer"
@@ -26,10 +26,14 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Phase-specific sections must be added to the persona JSON Schema at config/persona_schema.json"
+  - "Each phase section key must be present in the schema as an optional mapping with no required sub-fields"
+  - "Must be backward-compatible with persona.yaml files that lack phase sections (validation passes with a warning, not an error)"
 delivers_to: null
 expects_from:
   ac_id: PER-100a-1
-  contract: "Base persona.yaml structure with identity, goals, frustrations, context sections"
+  contract: "Base persona.yaml JSON Schema at config/persona_schema.json with identity, goals, frustrations, context sections"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

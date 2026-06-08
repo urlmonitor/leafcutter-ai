@@ -1,5 +1,5 @@
 id: BP-100i-4
-readiness: draft
+readiness: reviewed
 priority: high
 title: "Hook fires at pre-commit when commit_guardian files are staged"
 component: build-pipeline
@@ -29,15 +29,34 @@ doc_links:
   - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100i.yaml"
     relationship: parent
     status: exists
+  - path: "docs/build-drift-hook.md"
+    relationship: describes
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "docs/build-pipeline.md"
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Must register the hook in commit_guardian.json hooks_manifest.hooks[] following the existing entry pattern (id, name, entry, language, stages, pass_filenames, files)"
+  - "Must use the run_hook.py entry point pattern consistent with other commit guardian hooks"
+  - "The files pattern in the manifest entry must match staged changes under scripts/commit_guardian/, templates/scripts/commit_guardian/, and templates/commit-guardian/"
+  - "Must exit 0 (fail-open) on unexpected errors; must exit 1 only on detected parity violations"
+  - "Must add a configuration section to commit_guardian.json for hook-specific settings (directory paths, exclusion lists)"
 delivers_to: null
 expects_from:
   ac_id: BP-100i-1
-  contract: "The parity-checking function invoked by the hook entry point"
+  contract: "The parity-checking entry-point function that accepts directory paths from configuration and returns a list of violation records, each containing the missing filename and the directory where it is expected"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - it-po-v3
 superseded_by: null
 covered_by: []
 implemented_by: []

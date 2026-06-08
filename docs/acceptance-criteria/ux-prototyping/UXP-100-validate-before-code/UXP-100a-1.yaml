@@ -3,7 +3,7 @@ title: "Prototype composition reads the component library catalog before assembl
 component: ux-prototyping
 level: L2
 status: active
-readiness: draft
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo
@@ -20,15 +20,27 @@ doc_links:
   - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100a.yaml
     relationship: parent
     status: exists
-assigned_agent: frontend-coder
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: planned
+  - path: docs/architecture/adrs/ADR-005-frontend-coder-agent.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
 estimated_complexity: M
+it_requirements:
+  - "Agent template must read the component library catalog as a pre-flight step before any composition output"
+  - "Must not produce inline component definitions — only catalog references are permitted"
+  - "Must follow the leafcutter agent template conventions (frontmatter, signoff protocol, stop-and-ask rules)"
+  - "Must be idempotent — repeated invocations with the same feature request and catalog produce equivalent prototypes"
 delivers_to:
   ac_id: UXP-100a-2
-  contract: "A prototype artifact that references only catalog-listed components"
+  contract: "A prototype artifact file referencing only catalog-listed components, stored at a well-known path relative to the feature folder"
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+  - reason: "it-po-v3 enrichment: reassigned frontend-coder -> llm-expert (agent template work), 2026-06-08"
 superseded_by: null
 covered_by:
   - UXP-100a-1-i

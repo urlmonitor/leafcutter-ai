@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given a developer or agent that needs to understand the persona file format
@@ -27,10 +27,14 @@ doc_links:
     status: exists
 assigned_agent: documentation-expert
 estimated_complexity: S
+it_requirements:
+  - "Must follow the leafcutter reference-doc format (field table with type, required, description, example columns)"
+  - "Must be auto-generatable or at least verifiable against config/persona_schema.json"
+  - "Must include exit code documentation for the validation script"
 delivers_to: null
 expects_from:
   ac_id: PER-100a-1
-  contract: "Finalized persona.yaml schema to document as reference material"
+  contract: "Finalized persona.yaml JSON Schema at config/persona_schema.json to document as reference material"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

@@ -3,7 +3,7 @@ title: "Sequence diagram showing prototype-to-implementation handoff data flow"
 component: ux-prototyping
 level: L2
 status: active
-readiness: draft
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo
@@ -27,15 +27,26 @@ doc_links:
   - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100d.yaml
     relationship: parent
     status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: planned
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
 assigned_agent: architecture-diagram-author
 estimated_complexity: M
+it_requirements:
+  - "Must follow the project's sequence diagram conventions"
+  - "Must show the version-match and version-drift paths as distinct branches"
+  - "Must include all four actors: UX designer agent, handoff artifact store, frontend-coder agent, component library catalog"
 delivers_to: null
 expects_from:
   ac_id: UXP-100d-1
-  contract: "Behavioral ACs describing the handoff artifact and consumption"
+  contract: "Behavioral ACs describing the handoff artifact production and consumption, available as diagram source material"
 origin_agent: business-analyst-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+  - reason: "it-po-v3 enrichment: added it_requirements and doc_links, 2026-06-08"
 superseded_by: null
 covered_by: []
 implemented_by: []

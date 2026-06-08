@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given a project with the persona-management component installed
@@ -23,11 +23,19 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Must define the persona.yaml schema as a JSON Schema file at config/persona_schema.json"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must use stdlib-only dependencies (no external packages beyond PyYAML)"
+  - "Must be portable across projects that adopt the persona-management component"
 delivers_to:
   agent: python-coder
-  contract: "A persona.yaml schema definition and a creation/validation script"
+  contract: "A persona.yaml JSON Schema at config/persona_schema.json and a creation/validation script at scripts/persona_validate.py"
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-08

@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -26,15 +26,22 @@ doc_links:
   - path: templates/agents/frontend-coder.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-005-frontend-coder-agent.md
+    relationship: describes
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: S
+it_requirements:
+  - "The completion report must include design_principles_applied in a machine-parseable section"
+  - "Must not emit warnings about missing optional skills for functionality that is now embedded"
 delivers_to: null
 expects_from:
   ac_id: BP-700a-1
-  contract: "Unified template with embedded design principles"
+  contract: "Unified template with embedded design principles that activate unconditionally"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260608-BP-700a-2.md

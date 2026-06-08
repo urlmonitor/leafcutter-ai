@@ -3,7 +3,7 @@ title: "Neither agent's completion gates the other from finishing"
 component: ux-prototyping
 level: L2
 status: active
-readiness: draft
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo
@@ -23,15 +23,26 @@ doc_links:
   - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100e.yaml
     relationship: parent
     status: exists
-assigned_agent: frontend-coder
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: planned
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Pipeline orchestration must not impose completion gates between the two parallel agents"
+  - "Each agent's output must be written and available as soon as that agent finishes, regardless of the other"
+  - "Must handle the case where one agent fails while the other succeeds (failure isolation)"
 delivers_to: null
 expects_from:
   ac_id: UXP-100e-1
-  contract: "Both agents running independently without completion gates"
+  contract: "Both agents dispatched in parallel without completion gates between them"
 origin_agent: business-analyst-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+  - reason: "it-po-v3 enrichment: reassigned frontend-coder -> python-coder (pipeline orchestration), 2026-06-08"
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given a persona.yaml file that is missing the required "identity" section
@@ -27,10 +27,15 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Validation errors must be structured: include file path, field name, and violation description"
+  - "Must return distinct exit codes for schema violations vs YAML parse failures"
+  - "Must complete validation of a single file in <100ms"
 delivers_to: null
 expects_from:
   ac_id: PER-100a-1
-  contract: "Persona YAML schema definition that lists required sections"
+  contract: "Persona YAML JSON Schema at config/persona_schema.json that lists required sections"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

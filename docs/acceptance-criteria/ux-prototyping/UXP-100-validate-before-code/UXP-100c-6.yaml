@@ -3,7 +3,7 @@ title: "Sequence diagram showing the prototype approval gate lifecycle"
 component: ux-prototyping
 level: L2
 status: active
-readiness: draft
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo
@@ -30,16 +30,28 @@ doc_links:
   - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100f.yaml
     relationship: parent
     status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: planned
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
 assigned_agent: architecture-diagram-author
 estimated_complexity: M
+it_requirements:
+  - "Must follow the project's sequence diagram conventions"
+  - "Must show all three decision paths (approve, reject, request-changes) as distinct branches"
+  - "Must show the revision loop repeating until approve or reject"
+  - "Must include all four actors: UX designer agent, user, pipeline orchestrator, PO agent"
 delivers_to: null
 expects_from:
   ac_id: UXP-100c-1
-  contract: "Behavioral ACs describing all three decision paths"
+  contract: "Behavioral ACs describing all three decision paths, available as diagram source material"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by:
   - reason: "split: UXP-100c -> UXP-100c + UXP-100f, 2026-06-08"
+  - reason: "it-po-v3 enrichment: added it_requirements and doc_links, 2026-06-08"
 superseded_by: null
 covered_by: []
 implemented_by: []

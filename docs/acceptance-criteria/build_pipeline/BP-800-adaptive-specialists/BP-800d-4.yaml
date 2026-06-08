@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given the legacy retirement feature is implemented (BP-800d-1 through BP-800d-3)
@@ -22,15 +22,20 @@ depends_on:
   - BP-800d
   - BP-800d-3
 doc_links:
-  - path: docs/architecture/components/build-epic-workflow-dispatch.md
-    relationship: context
-    status: exists
+  - path: docs/architecture/components/adaptive-specialists-generation.md
+    relationship: describes
+    status: planned
 assigned_agent: documentation-expert
 estimated_complexity: S
+it_requirements:
+  - "Must follow the existing how-to document format and structure in docs/how-to/"
+  - "Must include a troubleshooting section for common migration issues"
+  - "Must include the exact file locations of .legacy backup files and the migration report"
+  - "Must cross-reference the upgrade how-to (BP-800e-4) for the full upgrade workflow"
 delivers_to: null
 expects_from:
   ac_id: BP-800d-3
-  contract: "Completed retirement feature to document"
+  contract: "Completed retirement feature with migration report format to document"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []

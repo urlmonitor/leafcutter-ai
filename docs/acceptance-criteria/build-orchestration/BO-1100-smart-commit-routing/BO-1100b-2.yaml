@@ -3,7 +3,7 @@ title: "Mixed-change warning names the conflicting groups and lists files per gr
 component: build-orchestration
 level: L2
 status: active
-readiness: reviewed
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo

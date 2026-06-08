@@ -1,0 +1,37 @@
+id: INF-100c-3-i
+readiness: approved
+priority: medium
+title: "Unknown agent is still rejected with a clear error"
+component: infrastructure
+level: L3
+status: draft
+req_status: active
+work_status: not_started
+criteria: |
+  Given an agent name that is not listed in any allowed_writers list,
+  When that agent attempts to submit feedback,
+  Then the submission is rejected,
+  And the error message names both the agent and the category it attempted to write to.
+depends_on:
+  - INF-100c-3
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Error message must be actionable -- naming both the rejected agent and the category"
+  - "Must follow the project error handling policy (log at WARNING or higher, raise typed exception)"
+  - "Must not leak the full allowed_writers list in the error message (information exposure)"
+delivers_to: null
+expects_from:
+  ac_id: INF-100c-3
+  contract: "Updated allowed_writers lists in feedback_categories.yaml that this edge case validates against"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by: []

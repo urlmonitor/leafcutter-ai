@@ -3,7 +3,7 @@ title: "Files matching multiple groups are escalated to mixed-change handling"
 component: build-orchestration
 level: L3
 status: active
-readiness: reviewed
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo
