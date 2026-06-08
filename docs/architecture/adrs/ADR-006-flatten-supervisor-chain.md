@@ -648,6 +648,62 @@ red-phase test reveals a deeper root cause" for the full divergence classificati
 heuristics table, warning message format, user confirmation routing table, re-diagnosis
 halt message, and ordering invariant.
 
+### AC BP-600d-3 — Commit agent dispatched after green-phase verification (2026-06-08)
+
+```gherkin
+Given the green-phase test verification has passed (all tests green),
+When the workflow reaches the commit phase,
+Then it dispatches the commit agent (never calls git commit directly),
+And the commit stages only the files touched by the quick-fix
+  (AC YAML file, test file, fixed source file, and minimal ticket file),
+And the commit message references the AC ID created during the
+  AC-creation phase.
+```
+
+**Relationship to the depth model (this ADR):**
+
+The commit-agent dispatch is the final Agent-tool invocation in the `/quick-fix` phase
+chain (after `build-ac`, `test-writer`, `test-runner/red-phase`, `python-coder/fix`, and
+`test-runner/green-phase`). The depth-0 executing context dispatches the commit agent at
+depth 1 only after the green-phase `test-runner` has returned with all tests PASSED. The
+commit is never invoked unless the full red→fix→green cycle has completed successfully.
+
+Key constraints under the ADR-006 depth model:
+
+- **Ordering guarantee**: the depth-0 executing context owns the phase chain. The commit
+  agent is the last sequential dispatch at depth 1. It is never dispatched concurrently
+  with any other phase agent.
+- **No direct `git commit` calls**: the `enforce_commit_delegation` PreToolUse hook
+  blocks any direct `git commit` call originating from the depth-0 executing context.
+  Commit must go through the commit agent at depth 1 to preserve the sign-off audit trail,
+  the pre-commit hook autofix loop, and the staged-files discipline.
+- **Explicit path staging only**: the commit agent stages only the four files identified
+  during the workflow (`ac_path`, `test_file`, `source_file`, `ticket_path`). The depth-0
+  context passes these paths as structured inputs so the commit agent never needs to
+  `git add .` — which could sweep in unrelated working-tree changes from parallel sessions.
+- **AC ID in commit message**: the commit message includes the `Resolves AC <ac_id>:` line,
+  linking the commit to the AC YAML file traceability artefact. This link is validated by
+  the `check_test_ac_tags.py` pre-commit hook.
+
+Complete phase chain after all `/quick-fix` addenda (BP-600a through BP-600e):
+
+```
+build-ac (depth 1) → test-writer (depth 1)
+  → test-runner/red-phase (depth 1)
+  → [BP-600c-2 gate at depth 0: test must fail]
+  → [BP-600e-2 gate at depth 0: failure must match diagnosis]
+  → python-coder/fix (depth 1)
+  → [BP-600e-1 gate at depth 0: multi-file scope check]
+  → test-runner/green-phase (depth 1)
+  → [BP-600c-3 gate at depth 0: all tests must pass]
+  → commit (depth 1)  ← BP-600d-3
+```
+
+See `docs/architecture/agent_delivery_workflows.md` §5 "AC BP-600d-3 — Commit agent
+dispatched after green-phase verification" for the full dispatch contract table, staged-files
+constraint table, commit message format, rationale for agent dispatch over direct git commit,
+and ordering invariant.
+
 ---
 
 ## References

@@ -1144,6 +1144,104 @@ the user the choice to either:
   message is unexpected), or
 - Stop and re-diagnose with better information from the actual test output.
 
+### AC BP-600d-3 — Commit agent dispatched after green-phase verification
+
+After the green-phase test-runner has confirmed all tests pass (AC BP-600c-3), the quick-fix
+workflow MUST dispatch the `commit` agent to finalise the change. The Gherkin contract:
+
+```gherkin
+Given the green-phase test verification has passed (all tests green),
+When the workflow reaches the commit phase,
+Then it dispatches the commit agent (never calls git commit directly),
+And the commit stages only the files touched by the quick-fix
+  (AC YAML file, test file, fixed source file, and minimal ticket file),
+And the commit message references the AC ID created during the
+  AC-creation phase.
+```
+
+**Dispatch contract (Agent-tool input to `commit` at depth 1):**
+
+| Input field | Value | Source |
+|---|---|---|
+| `ticket_path` | Absolute path to the quick-fix workflow's internal ticket file | Workflow context at depth 0 |
+| `ac_path` | Absolute path to the AC YAML file created by `build-ac` | AC creation phase output |
+| `test_file` | Absolute path to the test file written by `test-writer` | BP-600c-1 output |
+| `source_file` | Absolute path to the source file fixed by `python-coder` | BP-600d-2 output (same as `target_file`) |
+| `ac_id` | The AC identifier (e.g. `BP-600d-3`) assigned during AC creation | build-ac phase output |
+
+**Staged-files constraint (explicit path staging only):**
+
+The commit agent MUST stage only the following files — never with `git add .` or `git add -A`:
+
+| File | Description |
+|---|---|
+| AC YAML file (`ac_path`) | The traceability artefact created during AC-creation phase |
+| Test file (`test_file`) | The failing-then-passing test written by test-writer |
+| Fixed source file (`source_file`) | The single file modified by python-coder |
+| Ticket file (`ticket_path`) | The minimal sign-off record for the quick-fix workflow |
+
+No other files may be staged in the commit phase. If `git status --short` shows additional
+modified files not in this list, the commit agent MUST surface them to the user before
+committing — never sweep them in silently.
+
+**Commit message format:**
+
+The commit message MUST include the AC ID assigned during the AC-creation phase. The
+canonical format is:
+
+```
+fix(<component>): <one-sentence description of the fix>
+
+Resolves AC <ac_id>: <AC title or Gherkin Given clause>
+
+Files changed:
+  - <source_file>  (fix)
+  - <test_file>    (test)
+  - <ac_path>      (AC traceability)
+```
+
+The `Resolves AC <ac_id>:` line is the machine-readable link between the commit and the
+AC YAML file. The `check_test_ac_tags.py` pre-commit hook validates this reference.
+
+**Why the commit agent is dispatched (not called directly):**
+
+The commit agent template enforces three properties that a raw `git commit` call would bypass:
+
+1. **Sign-off recording** — the commit agent invokes the `signoff` skill and appends a
+   `## Comments` entry to the ticket file. A direct `git commit` call skips this audit trail.
+2. **Pre-commit hook failure → autofix path** — the commit agent implements the
+   `precommit-autofix` skill loop: if a pre-commit hook fails, the agent attempts one
+   autofix round before surfacing the failure to the user. A direct call has no retry path.
+3. **Staged-files discipline** — the commit agent template instructs explicit path staging,
+   never `git add .`. A depth-0 `git commit` call has no enforcement mechanism for the
+   staged-files constraint above.
+
+The depth-0 executing context (`/quick-fix`) MUST NOT call `git commit` directly. Any
+direct `git commit` call inside `quick-fix.js` is a protocol violation and will be
+blocked by the `enforce_commit_delegation` PreToolUse hook.
+
+**Ordering invariant:**
+
+```
+build-ac (depth 1) → test-writer (depth 1) → test-runner/red-phase (depth 1)
+  → python-coder/fix (depth 1) → test-runner/green-phase (depth 1)
+  → [green-phase passes: all tests PASSED]
+  → commit (depth 1)
+```
+
+The commit agent is the final phase-agent dispatch in the `/quick-fix` phase chain. It is
+dispatched only after the green-phase `test-runner` has returned with all tests PASSED. Any
+other outcome (any test still FAILED, test file not found, runner error) halts the workflow
+before commit is ever invoked.
+
+**Why commit is dispatched only after green-phase (not after python-coder):**
+
+Without the green-phase gate, the commit could record a broken state: the fix was applied
+but the test still fails. The commit would appear green (the test is new and was not
+previously in the test suite) while leaving the diagnosed bug actually unresolved. The
+green-phase verification is the contract that the commit is a genuine resolution — not
+merely a change that compiles.
+
 ---
 
 ## Key Design Principles
@@ -1166,6 +1264,7 @@ the user the choice to either:
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-08 [llm-expert]: Added AC BP-600d-3 commit-agent dispatch section: Gherkin contract, dispatch contract table, staged-files constraint table, commit message format, rationale for agent-dispatch over direct git commit, and ordering invariant. (#EPIC-QuickFixWorkflow/12)
 - 2026-06-08 [llm-expert]: Added AC BP-600e-2 red-phase root-cause divergence warning section: Gherkin contract, divergence classification heuristics table, warning message format, user confirmation routing table, re-diagnosis halt message, relationship to BP-600c-2 contrast table, ordering invariant, and rationale. (#EPIC-QuickFixWorkflow/15)
 - 2026-06-08 [llm-expert]: Added AC BP-600e-1 multi-file warning section: Gherkin contract, trigger condition, warning message format, user confirmation routing table, escalation halt message, depth-0 enforcement rationale, relationship to BP-600d-2, and ordering invariant. (#EPIC-QuickFixWorkflow/14)
 - 2026-06-08 [llm-expert]: Added AC BP-600c-3 green-phase verification section to Section 5: Gherkin contract, dispatch contract table, outcome routing table, halt message for persistent failure, ordering invariant, contrast table with red-phase, and rationale. (#EPIC-QuickFixWorkflow/11)
