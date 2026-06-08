@@ -312,6 +312,32 @@ truth.
 All files are written to the same feature folder as the L1 AC:
 `docs/acceptance-criteria/{component}/{PREFIX-NNN-feature-slug}/`
 
+### Parent covered_by update (mandatory)
+
+When writing a new L2 or L3 AC file, you MUST also update the parent AC file
+in the same write batch. This maintains the parent-child link from both
+directions.
+
+**Protocol:**
+
+1. Derive the parent ID: strip the last segment from the child ID.
+   Use `derive_parent_id()` from `scripts/ac_store/ac_parent_id.py` — do NOT
+   re-implement this logic. If the result is `None`, skip steps 2–4.
+2. Locate the parent YAML file in the same feature folder.
+3. Append the new child ID to the parent's `covered_by` list. Skip if the
+   child ID is already present (idempotent — never add duplicates).
+4. Update the parent using an `Edit` call that modifies ONLY the `covered_by`
+   field. Do NOT overwrite the parent file — all other fields must be preserved.
+
+**Child requirements:**
+
+- The child's `depends_on` field MUST include the parent AC ID.
+- The write to the child file and the update to the parent's `covered_by` MUST
+  happen in the same agent turn (same write batch).
+
+Failure to perform this update will cause `scan_ac_orphans.py` to report the
+child as an orphan and `check_ac_parent_covered_by.py` to block the commit.
+
 ### Gherkin criteria rules
 
 Every `criteria` field MUST follow these rules:

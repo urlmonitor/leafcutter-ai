@@ -356,6 +356,32 @@ confirm, return the final L0 + L1 YAML payloads.
 
 ---
 
+## S6b Parent covered_by update (mandatory when writing L1 files)
+
+When you write a new L1 YAML file (child of an L0), you MUST also update the
+parent L0 file's `covered_by` list to include the new L1 ID. This step is part
+of the same write batch as writing the L1 file itself.
+
+**Protocol:**
+
+1. Locate the parent L0 YAML file in the same feature folder.
+2. Append the new L1 ID to the L0's `covered_by` list. Skip if the ID is
+   already present (idempotent — never add duplicates).
+3. Update using an `Edit` call that modifies ONLY the `covered_by` field.
+   Do NOT use `Write` to overwrite the L0 file — all other fields must be
+   preserved exactly as-is.
+
+**Child requirements:**
+
+- Every new L1 file's `depends_on` field MUST include the parent L0 ID.
+- The update to the parent's `covered_by` and the write of the L1 file happen
+  in the same agent turn (same write batch).
+
+Refer to `docs/reference/ac-schema.md` — "Authoring agents — parent
+covered_by update" for the full protocol and rationale.
+
+---
+
 ## S7 Handoff
 
 After user confirmation, return the complete set of L0 and L1 YAML files as

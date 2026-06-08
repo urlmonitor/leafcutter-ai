@@ -188,6 +188,56 @@ Advisory only; never blocks a commit.
 
 ## Agent Integration Points
 
+### Authoring agents — parent covered_by update (mandatory)
+
+Every requirement-authoring agent (`business-analyst-v3`, `product-owner-v3`,
+`it-po-v3`) that writes a new child AC file MUST, in the same write batch,
+also update the parent AC file to record the new child. This is the canonical
+mechanic for building the parent-child link from the parent's direction.
+
+**Protocol (applied by any authoring agent when creating a child AC):**
+
+1. Derive the parent ID using `derive_parent_id()` from
+   `scripts/ac_store/ac_parent_id.py`. If the result is `None` (root-level
+   AC), skip steps 2–4.
+2. Locate the parent AC YAML file at
+   `docs/acceptance-criteria/<component>/<feature-folder>/<parent-id>.yaml`.
+3. Append the child AC ID to the parent's `covered_by` list, ONLY if the
+   child ID is not already present (idempotent — no duplicate entries).
+4. Write the update using an `Edit` call that modifies ONLY the `covered_by`
+   field. Do NOT overwrite the parent file with `Write` — all other fields
+   and values MUST be preserved exactly.
+
+**Child AC requirements:**
+
+- The child's `depends_on` field MUST include the parent AC ID.
+- The child is written in the same write batch as the parent update —
+  both writes are part of the same agent turn, not two separate passes.
+
+**Why this matters:** The `covered_by` field on a parent AC is the forward
+pointer from parent to child. Without it, `scan_ac_orphans.py` will report
+the child as an orphan. The `check_ac_parent_covered_by.py` pre-commit hook
+verifies this link at commit time; missing links block the commit.
+
+**Example (creating `ACS-100i-3` as a child of `ACS-100i`):**
+
+```yaml
+# Before (ACS-100i.yaml excerpt):
+covered_by: []
+
+# After (ACS-100i.yaml excerpt — only covered_by changes):
+covered_by:
+  - ACS-100i-3
+
+# New child file (ACS-100i-3.yaml excerpt):
+id: ACS-100i-3
+depends_on:
+  - ACS-100i
+covered_by: []
+```
+
+---
+
 ### business-analyst
 
 When authoring a ticket that introduces new functionality, the
@@ -197,6 +247,27 @@ files to `docs/acceptance-criteria/<component>/`.
 
 **Key behaviour:** the agent validates the file against `check_ac_schema.py`
 before finalising. If validation fails, the agent self-corrects the YAML.
+
+### business-analyst-v3
+
+The `business-analyst-v3` agent produces L2/L3 AC YAML files from L1 ACs.
+When writing a new L2 or L3 file, it applies the parent covered_by update
+protocol described above: the child's `depends_on` includes the parent ID,
+and the parent's `covered_by` list is updated in the same write batch.
+
+### product-owner-v3
+
+The `product-owner-v3` agent produces L0 and L1 AC YAML files. When writing
+a new L1 file (child of an L0), it applies the parent covered_by update
+protocol: the L1's `depends_on` includes the L0 ID, and the L0's `covered_by`
+list is updated to include the new L1 ID.
+
+### it-po-v3
+
+The `it-po-v3` agent enriches existing L2/L3 AC files. When it creates new
+AC files (e.g. split ACs), it applies the parent covered_by update protocol
+for any newly created child AC, ensuring the parent's `covered_by` list is
+updated to include the new child.
 
 ### test-writer
 
