@@ -136,7 +136,14 @@ def _load_categories(config_path: Path | None = None) -> dict:
         with open(path, encoding="utf-8") as fh:
             data = yaml.safe_load(fh)
     except OSError as exc:
-        print(f"ERROR: Cannot read categories file {path}: {exc}", file=sys.stderr)
+        checked_path = Path(path).resolve()
+        print(
+            f"ERROR: Cannot read feedback_categories.yaml.\n"
+            f"  Checked path: {checked_path}\n"
+            f"  OS error: {exc}\n"
+            f"  To fix: Place feedback_categories.yaml at {checked_path}",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     cats: dict = {}
@@ -552,6 +559,14 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-06-08 12:30 [python-coder/EPIC-FeedbackPortability/04_TICKET-20260608-INF-100c-4]:
+#   Improved _load_categories() error message to satisfy AC INF-100c-4: when
+#   feedback_categories.yaml is not found, the error now prints three lines:
+#   (1) a header line, (2) "Checked path: <absolute-path>", and (3)
+#   "To fix: Place feedback_categories.yaml at <path>".  This makes the error
+#   actionable by labelling the checked path explicitly and providing a
+#   copy-pasteable remediation command, rather than embedding the path only
+#   inside an OSError string. (#EPIC-FeedbackPortability)
 # - 2026-06-08 00:00 [python-coder/EPIC-FeedbackPortability/TICKET-20260608-INF-100c-1]:
 #   Added _find_config_root() helper that anchors config path resolution to the
 #   script's own location (Path(__file__).resolve().parents[2] / "config") rather
