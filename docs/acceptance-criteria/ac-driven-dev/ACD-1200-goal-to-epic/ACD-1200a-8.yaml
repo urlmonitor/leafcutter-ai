@@ -1,0 +1,49 @@
+id: ACD-1200a-8
+readiness: approved
+priority: high
+title: "Epic folder includes a Master_Plan.md so /build-feature can drive it"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given goal_to_epic.py has assembled an EPIC folder with numbered ticket files,
+  When the epic folder assembly step completes,
+  Then the folder also contains a Master_Plan.md file
+  And Master_Plan.md includes:
+    - The epic name and source AC id
+    - The goal AC's criteria text (purpose statement)
+    - An ordered list of all sub-ticket filenames with their titles
+    - The dependency graph edges expressed as depends_on per ticket
+  And /build-feature <EPIC-Name> accepts the folder without error
+  And ticket-supervisor can read Master_Plan.md to determine sub-ticket inventory.
+depends_on: [ACD-1200a-3]
+doc_links:
+  - path: docs/architecture/diagrams/c2-005-goal-to-epic-dispatch.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Master_Plan.md must satisfy /build-feature's resolution rule — its presence is the gate that determines whether a folder is treated as a driveable epic"
+  - "Must be idempotent — re-running goal_to_epic on the same input must produce an identical Master_Plan.md without corrupting existing content"
+  - "Must handle file-system I/O errors gracefully per the project error handling policy"
+  - "The sub-ticket list in Master_Plan.md must be parseable by ticket-supervisor's batching algorithm (one filename per line with depends_on metadata)"
+delivers_to: null
+expects_from:
+  ac_id: ACD-1200a-3
+  contract: "str — absolute path to the created EPIC- folder (e.g. tickets/00_inbox/epics/EPIC-ValidateApiInputs/) containing ordered NN_*.md ticket files; this AC writes Master_Plan.md into that folder"
+origin_agent: BrainCandy
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260608-ACD-1200a-8.md
