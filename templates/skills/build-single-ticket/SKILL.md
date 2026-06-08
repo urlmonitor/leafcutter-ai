@@ -386,6 +386,40 @@ directory created (AC BP-600a-1).
 
 See `docs/architecture/agent_delivery_workflows.md` §5 for the full quick-fix workflow diagram.
 
+### Close phase of `/quick-fix` vs. this skill (AC BP-600d-4)
+
+The `/quick-fix` close phase (AC BP-600d-4) runs three inline operations at depth 0
+after the `commit` agent returns:
+
+1. **Push** — `git push origin HEAD` sends the committed change to the remote
+   tracking branch.
+2. **PR check** — `gh pr list --head <branch>` logs the PR URL if one exists. If
+   no PR exists, the close phase logs a URL for the user to open one manually. The
+   push makes the commit visible to the PR automatically — no `gh pr update` command
+   is needed.
+3. **Ticket close** — `python scripts/set_ticket_status.py --ticket <ticket_path> --status done`
+   marks the internal quick-fix ticket as done in its frontmatter.
+
+These three steps are the quick-fix equivalent of this skill's `pull-request` phase agent
+(Step 4) and `finalize-feature.js` Step 5 (ticket lifecycle reconciliation). The key
+difference: `/quick-fix` performs all three inline at depth 0 rather than dispatching
+dedicated phase agents, because the quick-fix close phase produces no reviewable
+artefacts and needs no sign-off audit trail beyond the commit message.
+
+**Idempotency:** all three close-phase operations are idempotent. A re-drive of
+`/quick-fix` after a partial close (e.g. push succeeded but `set_ticket_status.py`
+failed) completes the remaining steps without duplicating the push or logging a
+spurious PR URL.
+
+**Push failure halt:** if `git push origin HEAD` fails, the close phase halts and
+prints a structured recovery message. The ticket is NOT marked done until the push
+succeeds. This preserves consistency: `status: done` implies the change is visible
+on the remote, not just committed locally.
+
+See `docs/architecture/agent_delivery_workflows.md` §5 "AC BP-600d-4" for the full
+push contract, PR update contract, ticket close contract, ordering invariant, and
+push failure halt message.
+
 ### Handling `/quick-fix` escalation (AC BP-600e-3)
 
 When the `/quick-fix` workflow escalates to the full build pipeline — either because the

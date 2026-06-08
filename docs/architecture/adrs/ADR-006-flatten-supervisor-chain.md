@@ -764,6 +764,76 @@ preserves progress when escalating to full build pipeline" for the full preserve
 table, escalation summary output format, AC ID downstream reference, and BP-600e-1 vs
 BP-600e-2 comparison table.
 
+### AC BP-600d-4 — Quick-fix workflow pushes to origin and closes the ticket lifecycle (2026-06-08)
+
+```gherkin
+Given the commit agent has completed successfully,
+When the workflow reaches the close phase,
+Then it pushes the committed changes to the current branch's remote
+  tracking branch,
+And if a PR exists for the current branch the PR is updated with
+  the new commit automatically,
+And a minimal ticket file is created (or updated if one was provided)
+  with "status: done" in its frontmatter and a reference to the AC ID.
+```
+
+**Relationship to the depth model (this ADR):**
+
+The close phase runs entirely at depth 0 (the `/quick-fix` executing context) after the
+commit agent (depth 1) returns successfully. Three operations execute inline:
+
+1. `git push origin HEAD` — pushes the committed change to the remote tracking branch.
+2. `gh pr list --head <branch>` — checks for an open PR; logs the PR URL if found.
+3. `set_ticket_status.py --status done` — marks the internal quick-fix ticket as done.
+
+All three operations are depth-0 inline calls. No additional Agent-tool dispatch is needed
+for the close phase. This is consistent with the ADR-006 pattern: orchestration control
+logic (including the terminal exit path) lives at depth 0; phase agents at depth 1 perform
+implementation work and return structured outputs to the depth-0 context.
+
+Key constraints under the ADR-006 depth model:
+
+- **No Agent-tool dispatch in close phase**: the push, PR check, and ticket close are
+  not phase-agent responsibilities. They are lightweight, deterministic Git/GH operations
+  that run inline in the executing context after the last Agent-tool call (commit) returns.
+  Dispatching a phase agent for these three steps would consume the depth-1 budget
+  unnecessarily and add sign-off protocol overhead to operations that do not produce
+  reviewable artefacts.
+- **Ordering guarantee**: the close phase runs strictly after the commit agent returns
+  with a successful sign-off. If the commit fails, the close phase never executes — the
+  workflow halts at the commit phase and the ticket remains in-progress. This sequencing
+  is enforced by the depth-0 phase chain, not by inter-agent negotiation.
+- **Idempotent ticket close**: `set_ticket_status.py --status done` is idempotent. A
+  re-drive of `/quick-fix` on an already-closed ticket exits 0 without modifying the
+  ticket file. This property allows the close phase to be safely retried if the push
+  or PR check fails after the commit has already landed.
+- **Push failure halts at depth 0**: if `git push origin HEAD` fails (e.g. network
+  error, non-fast-forward rejection), the depth-0 context halts and prints a structured
+  recovery message. The PR check and ticket close do not execute. The commit is preserved
+  locally and the user is directed to resolve the push error manually.
+
+Updated complete phase chain after all `/quick-fix` addenda (BP-600a through BP-600d-4):
+
+```
+build-ac (depth 1) → test-writer (depth 1)
+  → test-runner/red-phase (depth 1)
+  → [BP-600c-2 gate at depth 0: test must fail]
+  → [BP-600e-2 gate at depth 0: failure must match diagnosis]  ← user may choose R → [BP-600e-3 exit]
+  → python-coder/fix (depth 1)
+  → [BP-600e-1 gate at depth 0: multi-file scope check]  ← user may choose E → [BP-600e-3 exit]
+  → test-runner/green-phase (depth 1)
+  → [BP-600c-3 gate at depth 0: all tests must pass]
+  → commit (depth 1)  ← BP-600d-3
+  → git push origin HEAD (depth 0)  ← BP-600d-4
+  → gh pr list check + log (depth 0)  ← BP-600d-4
+  → set_ticket_status.py --status done (depth 0)  ← BP-600d-4
+```
+
+See `docs/architecture/agent_delivery_workflows.md` §5 "AC BP-600d-4 — Quick-fix workflow
+pushes to origin and closes the ticket lifecycle" for the full push contract, PR update
+contract, ticket lifecycle close contract, ordering invariant, push failure halt message,
+and contrast table with `build-single-ticket` Step 4b.
+
 ---
 
 ## References

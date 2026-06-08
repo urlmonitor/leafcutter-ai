@@ -1144,6 +1144,159 @@ the user the choice to either:
   message is unexpected), or
 - Stop and re-diagnose with better information from the actual test output.
 
+### AC BP-600d-4 — Quick-fix workflow pushes to origin and closes the ticket lifecycle
+
+After the commit agent has completed successfully (AC BP-600d-3), the quick-fix workflow
+MUST push the committed changes to the current branch's remote tracking branch, update any
+existing PR, and close the ticket lifecycle by writing a minimal ticket file with
+`status: done`. The Gherkin contract:
+
+```gherkin
+Given the commit agent has completed successfully,
+When the workflow reaches the close phase,
+Then it pushes the committed changes to the current branch's remote
+  tracking branch,
+And if a PR exists for the current branch the PR is updated with
+  the new commit automatically,
+And a minimal ticket file is created (or updated if one was provided)
+  with "status: done" in its frontmatter and a reference to the AC ID.
+```
+
+**Push contract:**
+
+The close phase pushes to the remote tracking branch of the current branch using:
+
+```bash
+git push origin HEAD
+```
+
+If the branch has no upstream set, the push command establishes tracking via
+`git push --set-upstream origin <current-branch>`. The workflow MUST NOT use
+`git push --force` — the quick-fix commit is always a fast-forward from the
+remote's perspective since no other agent modifies the branch concurrently.
+
+**PR update contract:**
+
+After the push, the close phase checks whether a PR exists for the current branch:
+
+```bash
+gh pr list --head <current-branch> --state open --json number,url
+```
+
+If a PR exists, the newly pushed commit is automatically included in the PR by
+GitHub — no additional `gh` command is needed. The close phase logs the PR URL
+so the user can confirm the update:
+
+```
+/quick-fix close: pushed commit to <current-branch>.
+  PR #<N> updated automatically: <PR-URL>
+```
+
+If no PR exists for the current branch, the close phase logs:
+
+```
+/quick-fix close: pushed commit to <current-branch>.
+  No open PR found for this branch. Open one at:
+  https://github.com/<owner>/<repo>/compare/<current-branch>
+```
+
+**Ticket lifecycle close contract:**
+
+The close phase writes (or updates) a minimal ticket file with `status: done`
+in its frontmatter and a reference to the AC ID. The minimal ticket file
+captures the quick-fix artefacts as a permanent audit record.
+
+Ticket file location: `tickets/00_inbox/<ac_id>-quickfix.md` (created by
+the `/quick-fix` workflow at the start of the run if not already present).
+
+Required frontmatter fields:
+
+```yaml
+---
+status: done
+source_ac: <ac_id>
+title: "Quick-fix: <symptom (≤ 60 chars)>"
+created: <YYYY-MM-DD of the quick-fix run>
+files_touched:
+  - <source_file>
+  - <test_file>
+  - <ac_path>
+---
+```
+
+The `status: done` field is written by calling `set_ticket_status.py`:
+
+```bash
+python scripts/set_ticket_status.py --ticket <ticket_path> --status done
+```
+
+This call is idempotent: if the ticket was already `done` from a previous
+close attempt, the script exits 0 with `status: done -> done (no change)`.
+
+**Ordering invariant:**
+
+```
+commit (depth 1) → [BP-600d-3: commit succeeds]
+  → git push origin HEAD (depth 0)
+  → gh pr list check + log (depth 0)
+  → set_ticket_status.py --status done (depth 0)
+```
+
+All three close-phase operations run inline at depth 0 (no additional Agent-tool
+dispatch). They execute synchronously in the listed order: push first, PR check
+second, ticket close third. If the push fails (e.g. remote rejects a
+non-fast-forward), the workflow halts before the PR check or ticket close —
+preserving a consistent state where the commit exists locally but has not been
+falsely marked done.
+
+**Halt message for push failure:**
+
+```
+/quick-fix halted: push to origin failed.
+
+  Branch:  <current-branch>
+  Remote:  origin
+  Error:   <git push stderr output>
+
+  The commit was applied locally (see git log). To complete the quick-fix,
+  resolve the push error and run:
+    git push origin HEAD
+  Then mark the ticket done:
+    python scripts/set_ticket_status.py --ticket <ticket_path> --status done
+```
+
+**Why the close phase runs at depth 0 (not via a phase agent):**
+
+The push, PR check, and ticket close are all lightweight Git/GH operations that do not
+require the complexity of a phase-agent dispatch. Running them inline at depth 0:
+
+1. Keeps the close phase deterministic — no Agent-tool nesting, no sign-off protocol,
+   no feedback submission.
+2. Preserves the depth-1 slot budget for the commit agent itself (the last Agent-tool
+   call in the phase chain).
+3. Makes the ordering invariant explicit and auditable — the three close-phase steps
+   are sequential inline operations, not asynchronous agent returns.
+
+**Relationship to `build-single-ticket` skill (standalone ticket path):**
+
+The `/quick-fix` close phase is a simplified version of `build-single-ticket` Step 4b
+(changelog entry). Key differences:
+
+| Aspect | `/quick-fix` close (BP-600d-4) | `build-single-ticket` Step 4b |
+|--------|-------------------------------|-------------------------------|
+| Worktree | Current worktree — no new directory | New isolated worktree |
+| Push | Inline `git push origin HEAD` | Done by `pull-request` phase agent |
+| PR | Checked and logged — no creation | Created by `pull-request` phase agent |
+| Ticket close | `set_ticket_status.py --status done` inline | Ticket moved to `done/` by finalize-feature.js |
+| Changelog | Not written — quick-fix is a single-commit fix | Written by `emit_entry.py` |
+
+The quick-fix close phase is deliberately lighter: it does not open a new PR (the
+branch may already have one), does not write a changelog entry (the commit message
+and AC YAML are the audit record), and closes the ticket inline rather than deferring
+to a `finalize-feature` merge step.
+
+---
+
 ### AC BP-600d-3 — Commit agent dispatched after green-phase verification
 
 After the green-phase test-runner has confirmed all tests pass (AC BP-600c-3), the quick-fix
@@ -1377,6 +1530,7 @@ terminates cleanly after printing the summary.
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-08 [llm-expert]: Added AC BP-600d-4 quick-fix close phase section: Gherkin contract, push contract, PR update contract, ticket lifecycle close contract, ordering invariant, push failure halt message, depth-0 rationale, and contrast table with build-single-ticket Step 4b. (#EPIC-QuickFixWorkflow/13)
 - 2026-06-08 [llm-expert]: Added AC BP-600d-3 commit-agent dispatch section: Gherkin contract, dispatch contract table, staged-files constraint table, commit message format, rationale for agent-dispatch over direct git commit, and ordering invariant. (#EPIC-QuickFixWorkflow/12)
 - 2026-06-08 [llm-expert]: Added AC BP-600e-3 escalation progress-preservation section: Gherkin contract, preserved artefacts table, escalation summary output format, AC ID reference in downstream commands, relationship to BP-600b-3 and BP-600e-1/e-2, BP-600e-1 vs BP-600e-2 escalation comparison table, and ordering invariant. (#EPIC-QuickFixWorkflow/16)
 - 2026-06-08 [llm-expert]: Added AC BP-600e-2 red-phase root-cause divergence warning section: Gherkin contract, divergence classification heuristics table, warning message format, user confirmation routing table, re-diagnosis halt message, relationship to BP-600c-2 contrast table, ordering invariant, and rationale. (#EPIC-QuickFixWorkflow/15)
