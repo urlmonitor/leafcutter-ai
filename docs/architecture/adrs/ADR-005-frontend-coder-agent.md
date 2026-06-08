@@ -40,7 +40,9 @@ The optional-skill integration contract (webapp-testing, frontend-design) also n
 `frontend-coder` detects installed optional skills by checking file existence at the expected path. The detection logic is:
 
 - **webapp-testing**: if `.claude/skills/webapp-testing/SKILL.md` exists, invoke the skill after making UI changes to capture a screenshot and verify no console errors.
-- **frontend-design**: if `.claude/skills/frontend-design/SKILL.md` exists, load the skill *before* writing any markup, CSS, or component code and apply its design principles.
+- **frontend-design (legacy)**: the `frontend-design` skill is **no longer loaded** by `frontend-coder`, regardless of whether `.claude/skills/frontend-design/SKILL.md` exists on disk. Design principles are embedded directly in the agent template (see `## Embedded Design Principles` section). If a project still has `.claude/skills/frontend-design/SKILL.md` from a previous install, `frontend-coder` ignores it entirely.
+
+This change was introduced to satisfy AC `BP-700a-1-i`: when the unified frontend agent template is deployed, it uses only its embedded design principles, preventing the agent from applying design constraints twice (once from the embedded principles and once from the external skill file).
 
 File-existence detection is chosen over a registry lookup because:
 - It requires zero infrastructure beyond the filesystem.
