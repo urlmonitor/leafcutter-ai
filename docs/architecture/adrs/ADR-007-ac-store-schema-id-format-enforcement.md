@@ -1,9 +1,10 @@
 ---
 title: "ADR-007: AC Store — YAML Schema, ID Format, and Bidirectional Enforcement Model"
+description: "Defines the AC YAML schema, hierarchical ID format with parent derivation algorithm, status lifecycle, and stdlib-only commit-time enforcement model for the leafcutter AC Traceability Store."
 type: "adr"
 status: "accepted"
 created: "2026-06-04"
-last_updated: "2026-06-04"
+last_updated: "2026-06-08"
 components:
   - build_pipeline
 ---
@@ -79,7 +80,35 @@ following fields:
   Once assigned, they never change — not on rename, deprecation, or
   supersession. This provides a stable cross-reference anchor for
   `covered_by` and `implemented_by` arrays.
-- Regex: `^[A-Z]{2,6}-[0-9]{3}$`.
+- Root regex: `^[A-Z]{2,6}-[0-9]{3}$`.
+
+### Hierarchical ID Extension and Parent Derivation
+
+Root-level IDs (`PREFIX-NNN`) are extended to form a hierarchy. Each level
+appends a new segment. The segments and their derivation rules are:
+
+| Level | Format | Example | Parent |
+|---|---|---|---|
+| L0 (root) | `PREFIX-NNN` | `ACS-100` | (none) |
+| L1 (alpha suffix) | `PREFIX-NNNx` | `ACS-100a` | `ACS-100` |
+| L2 (hyphen-numeric) | `PREFIX-NNNx-N` | `ACS-100a-1` | `ACS-100a` |
+| L3+ (hyphen-ext) | `PREFIX-NNNx-N-y...` | `ACS-100a-1-i` | `ACS-100a-1` |
+
+**Parent ID derivation algorithm (ACS-100i-1):**
+
+The parent ID is derived from a child ID by stripping the last segment:
+
+1. If the ID matches `^[A-Z]{2,6}-[0-9]{3}$`: no parent (`None`).
+2. If the ID matches `^[A-Z]{2,6}-[0-9]{3}[a-z]+$` (alpha suffix directly on
+   numeric part, no hyphen before the letters): strip trailing letters.
+   Example: `ACS-100a` → `ACS-100`.
+3. Otherwise: strip the last hyphen-delimited segment.
+   Examples: `ACS-300h-1` → `ACS-300h`; `ACS-300h-2-i` → `ACS-300h-2`.
+
+The canonical implementation of this algorithm is `derive_parent_id()` in
+`scripts/ac_store/scan_ac_store.py`. All parent-child enforcement features
+(pre-commit hooks, store-wide scans, agent auto-updates) MUST call this
+function rather than re-implementing the parsing logic.
 
 ### Status Lifecycle
 

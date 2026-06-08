@@ -1,9 +1,10 @@
 ---
 title: "Reference: AC Traceability Store Schema"
+description: "Field-by-field reference for AC YAML files, the hierarchical ID format and parent derivation algorithm, status lifecycle, and pre-commit hooks that enforce the AC store at commit time."
 type: reference
 status: active
 created: 2026-06-04
-last_updated: 2026-06-04
+last_updated: 2026-06-08
 components:
   - build_pipeline
 related_docs:
@@ -78,7 +79,34 @@ AC IDs follow the pattern `PREFIX-NNN`:
 AC is deprecated, its ID remains reserved so that historical references
 (e.g. in commit messages or tickets) remain resolvable.
 
-**Regex:** `^[A-Z]{2,6}-[0-9]{3}$`
+**Root-level regex:** `^[A-Z]{2,6}-[0-9]{3}$`
+
+### Hierarchical AC IDs and Parent Derivation
+
+ACs form a hierarchy. Child ACs extend the root pattern with additional
+segments. The parent ID is derived from the child ID by stripping the last
+segment. This derivation is implemented in `scripts/ac_store/ac_parent_id.py`
+and is the canonical algorithm for all parent-child enforcement (pre-commit
+hooks, store-wide scans, agent auto-updates).
+
+| Level | Format | Example | Parent |
+|---|---|---|---|
+| L0 (root) | `PREFIX-NNN` | `ACS-100` | (none) |
+| L1 (alpha) | `PREFIX-NNNx` | `ACS-100a` | `ACS-100` |
+| L2 (numeric) | `PREFIX-NNNx-N` | `ACS-100a-1` | `ACS-100a` |
+| L3 (extension) | `PREFIX-NNNx-N-y` | `ACS-100a-1-i` | `ACS-100a-1` |
+
+**Derivation rules (ACS-100i-1):**
+
+1. If the ID matches `^[A-Z]{2,6}-[0-9]{3}$` (root pattern): no parent (`None`).
+2. If the ID matches `^[A-Z]{2,6}-[0-9]{3}[a-z]+$` (alpha suffix directly on the
+   numeric part, no hyphen): strip the trailing lowercase letters.
+   Example: `ACS-100a` → `ACS-100`.
+3. Otherwise: strip the last hyphen-delimited segment (everything after the final `-`).
+   Examples: `ACS-300h-1` → `ACS-300h`; `ACS-300h-2-i` → `ACS-300h-2`.
+
+Use `derive_parent_id(ac_id)` from `scripts/ac_store/ac_parent_id.py` rather than
+re-implementing this logic inline.
 
 ---
 
