@@ -1,5 +1,5 @@
 id: BP-100i-2
-readiness: reviewed
+readiness: approved
 priority: high
 title: "Manifest parity: every hook registered in one commit_guardian.json appears in all commit_guardian.json files"
 component: build-pipeline

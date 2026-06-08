@@ -13,7 +13,7 @@ criteria: |
   to include it — so contributors always have an accurate picture of the
   build's moving parts.
 depends_on:
-  - BP-100
+  - BP-101
 doc_links: []
 origin_agent: BrainCandy
 created: 2026-06-08

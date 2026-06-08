@@ -1,7 +1,7 @@
 ---
 epic_name: EPIC-FeedbackPortability
 created: 2026-06-08
-status: in_progress
+status: done
 components:
   - infrastructure
 source_ac: INF-100c
