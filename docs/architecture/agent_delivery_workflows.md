@@ -407,6 +407,66 @@ infrastructure adds 30–60 seconds of overhead and introduces branch-switch rac
 when the user is mid-work on an active epic branch. The invariant is verifiable:
 `git branch --show-current` must return the same branch name before and after the workflow.
 
+### AC BP-600a-3 — Uncommitted changes guard
+
+Before executing any phase, `/quick-fix` MUST check whether the target file has
+uncommitted changes in the working tree. The Gherkin contract:
+
+```gherkin
+Given the user's worktree has unstaged changes in the file
+  "scripts/build_helpers.py",
+When the user invokes /quick-fix with a diagnosis targeting
+  "scripts/build_helpers.py",
+Then the workflow halts before any AC creation or code changes,
+And it reports the conflicting uncommitted changes in the target file,
+And it suggests the user commit or stash before retrying.
+```
+
+**Implementation contract:**
+
+The guard runs as the **first step** of `/quick-fix`, immediately after parsing the
+diagnosis input and resolving the target file path. Before any AC creation, test writing,
+or code modification:
+
+1. Run `git status --porcelain <target_file>`.
+2. If the output is non-empty (the file has unstaged or staged changes):
+   a. Print a structured halt message identifying the target file and the conflicting
+      change (modified `M`, untracked `??`, staged `A`, etc.).
+   b. Print the suggested remediation: `git commit` the current changes or
+      `git stash push <target_file>` before retrying.
+   c. Exit the workflow immediately — no AC file is written, no test is created, no
+      code is changed.
+3. If the output is empty, the target file is clean — proceed normally.
+
+**Why this guard is necessary:**
+
+Without it, `/quick-fix` could write a new failing test and apply a code fix to a file
+that already contains in-progress work. The subsequent commit would bundle both the
+user's uncommitted work and the quick-fix changes into a single commit, obscuring the
+audit trail and potentially corrupting in-progress feature work. The guard enforces a
+clean-slate assumption: `/quick-fix` is a rapid-fix tool, not a merge tool.
+
+**Output format (halt message):**
+
+```
+/quick-fix halted: target file has uncommitted changes.
+
+  File:    scripts/build_helpers.py
+  Status:  M  (modified, unstaged)
+
+  The quick-fix workflow requires a clean working tree for the target file.
+  Please resolve the uncommitted changes before retrying:
+
+    Option A — commit the changes:
+      git add scripts/build_helpers.py
+      git commit -m "wip: save in-progress changes before quick-fix"
+
+    Option B — stash the changes:
+      git stash push scripts/build_helpers.py
+
+  Then re-invoke: /quick-fix <your-diagnosis>
+```
+
 ---
 
 ## Key Design Principles
@@ -429,6 +489,7 @@ when the user is mid-work on an active epic branch. The invariant is verifiable:
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-08 [llm-expert]: Added AC BP-600a-3 uncommitted changes guard section to Section 5: guard contract, implementation steps, halt message format, and rationale. (#EPIC-QuickFixWorkflow/03)
 - 2026-06-08 [llm-expert]: Added AC BP-600a-2 documentation to Section 5: prohibited isolation infrastructure table, no-worktree-agent/no-feature-skill constraint, and rationale for the exclusion. (#EPIC-QuickFixWorkflow/02)
 - 2026-06-08 [llm-expert]: Added /quick-fix to high-level overview (§1) and Section 5 documenting the current-worktree-only flow, worktree invariant (BP-600a-1), contrast table with /build-feature, and Mermaid flow diagram. (#EPIC-QuickFixWorkflow/01)
 - 2026-05-13 [Antigravity]: Added test-planner spawn to ticket-creation diagram (§2) and test-writer to phase-agent dispatch order (§4) per ADR-018 and ticket 36 (test-expert injection).

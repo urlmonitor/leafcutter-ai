@@ -277,6 +277,38 @@ The phase agents dispatched by `/quick-fix` (`build-ac`, `test-writer`, `python-
 `test-runner`, `commit`) are all worktree-agnostic — they operate on files in the current
 directory and do not require an isolated branch context to function correctly.
 
+### AC BP-600a-3 — Uncommitted changes guard
+
+A third invariant accompanies BP-600a-1 and BP-600a-2:
+
+```gherkin
+Given the user's worktree has unstaged changes in the file
+  "scripts/build_helpers.py",
+When the user invokes /quick-fix with a diagnosis targeting
+  "scripts/build_helpers.py",
+Then the workflow halts before any AC creation or code changes,
+And it reports the conflicting uncommitted changes in the target file,
+And it suggests the user commit or stash before retrying.
+```
+
+This guard protects the clean-slate assumption: `/quick-fix` is a rapid-fix tool
+designed to operate on a known-good baseline. If the target file already has
+uncommitted changes:
+
+- The audit trail would be corrupted — the resulting commit would bundle the user's
+  in-progress work with the quick-fix changes.
+- The red-phase test might pass or fail for reasons unrelated to the diagnosed bug.
+- The "fix" could silently overwrite work in progress.
+
+**Implementation:** The guard runs as the first step of `/quick-fix`, before any AC
+creation or code change. It calls `git status --porcelain <target_file>`. A non-empty
+result halts the workflow immediately with a structured error message identifying the
+conflicting file and suggesting `git commit` or `git stash push <target_file>` as the
+remediation path.
+
+See `docs/architecture/agent_delivery_workflows.md` §5 "AC BP-600a-3 — Uncommitted
+changes guard" for the full output format specification.
+
 ---
 
 ## References
