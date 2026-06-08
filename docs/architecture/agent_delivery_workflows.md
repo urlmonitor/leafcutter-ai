@@ -3,7 +3,7 @@ title: "Agent Code Delivery Workflows"
 type: "reference"
 status: "active"
 created: "2026-05-11"
-last_updated: "2026-05-15"
+last_updated: "2026-06-08"
 flight_level: "L3-Component"
 diagram_type: agent_flow
 components:
@@ -467,6 +467,90 @@ clean-slate assumption: `/quick-fix` is a rapid-fix tool, not a merge tool.
   Then re-invoke: /quick-fix <your-diagnosis>
 ```
 
+### AC BP-600d-1 — Structured diagnosis input parsing
+
+Before any phase runs, `/quick-fix` MUST parse the user-provided diagnosis text and extract
+four structured fields. The Gherkin contract:
+
+```gherkin
+Given the user invokes /quick-fix with text containing "In
+  scripts/build_helpers.py line 42, _resolve_precommit_cmd() returns
+  a non-executable path because the executability probe is skipped
+  when shutil.which returns None",
+When the workflow parses the input,
+Then it extracts the target file path ("scripts/build_helpers.py"),
+  the location hint ("line 42"), the symptom ("returns a
+  non-executable path"), and the root cause ("executability probe
+  is skipped"),
+And it uses these fields to drive AC creation, test writing, and
+  fix application in subsequent phases.
+```
+
+**Parsed fields and their downstream consumers:**
+
+| Field | Example value | Consumed by |
+|---|---|---|
+| `target_file` | `scripts/build_helpers.py` | Uncommitted changes guard (BP-600a-3), python-coder, test-writer |
+| `location_hint` | `line 42` | python-coder (narrows the fix scope), test-writer (anchors the failing assertion) |
+| `symptom` | `returns a non-executable path` | AC creation (describes observable failure), test-writer (names the expected vs actual) |
+| `root_cause` | `executability probe is skipped` | AC creation (names the cause), python-coder (targets the exact logic branch to fix) |
+
+**Parsing contract:**
+
+The workflow accepts two input forms:
+
+1. **Natural-language sentence** — the canonical form. The parser uses the following
+   structural markers to identify fields:
+   - `In <path>` or `In <path> line <N>` → `target_file` + optional `location_hint`
+   - `<function>() returns ...` or similar verb phrase → `symptom`
+   - `because ...` or `when ...` → `root_cause`
+
+2. **Structured JSON** — an alternative form for programmatic invocation:
+   ```json
+   {
+     "target_file": "scripts/build_helpers.py",
+     "location_hint": "line 42",
+     "symptom": "returns a non-executable path",
+     "root_cause": "executability probe is skipped when shutil.which returns None"
+   }
+   ```
+
+**Validation rules:**
+
+- `target_file` MUST resolve to an existing file in the current worktree. If the file
+  does not exist, the workflow halts with:
+  ```
+  /quick-fix halted: target file not found.
+    File: <target_file>
+    The diagnosis references a file that does not exist in the current worktree.
+  ```
+- `symptom` and `root_cause` MUST be non-empty strings. If either is absent after
+  parsing, the workflow halts and asks the user to clarify:
+  ```
+  /quick-fix needs clarification: could not extract symptom and root cause from diagnosis.
+    Parsed so far: target_file=<value>, location_hint=<value or (none)>
+    Please rephrase: "In <file> [line N], <function>() <symptom> because <root_cause>."
+  ```
+- `location_hint` is optional. If absent, the downstream agents receive `null` for
+  this field and must handle it gracefully (i.e. they do not require a line number to
+  proceed; they use the symptom and root cause alone).
+
+**How the parsed fields drive downstream phases:**
+
+1. **AC creation** (`build-ac` agent) — receives `target_file`, `symptom`, and
+   `root_cause` as structured inputs. Uses them to populate the AC Gherkin template:
+   - Given: the target file exists and the buggy function is present
+   - When: the triggering condition (derived from `root_cause`)
+   - Then: the expected correct behaviour (derived from `symptom` negation)
+
+2. **Test writing** (`test-writer` agent) — receives all four fields. Uses
+   `target_file` and `location_hint` to locate the test anchor, and `symptom` to
+   name the assertion (`assert result != <symptom-value>`).
+
+3. **Fix implementation** (`python-coder` agent) — receives all four fields. Uses
+   `location_hint` to narrow the edit scope and `root_cause` to identify the logic
+   branch to repair.
+
 ---
 
 ## Key Design Principles
@@ -489,6 +573,7 @@ clean-slate assumption: `/quick-fix` is a rapid-fix tool, not a merge tool.
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-08 [llm-expert]: Added AC BP-600d-1 structured diagnosis input parsing section to Section 5: Gherkin contract, four parsed fields table, two input forms, validation rules, and downstream consumer mapping. (#EPIC-QuickFixWorkflow/09)
 - 2026-06-08 [llm-expert]: Added AC BP-600a-3 uncommitted changes guard section to Section 5: guard contract, implementation steps, halt message format, and rationale. (#EPIC-QuickFixWorkflow/03)
 - 2026-06-08 [llm-expert]: Added AC BP-600a-2 documentation to Section 5: prohibited isolation infrastructure table, no-worktree-agent/no-feature-skill constraint, and rationale for the exclusion. (#EPIC-QuickFixWorkflow/02)
 - 2026-06-08 [llm-expert]: Added /quick-fix to high-level overview (§1) and Section 5 documenting the current-worktree-only flow, worktree invariant (BP-600a-1), contrast table with /build-feature, and Mermaid flow diagram. (#EPIC-QuickFixWorkflow/01)

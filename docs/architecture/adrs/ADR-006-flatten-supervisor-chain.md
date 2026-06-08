@@ -3,7 +3,7 @@ title: "ADR-006: Flatten the Supervisor Chain — ticket-supervisor at Depth 0"
 type: "adr"
 status: "accepted"
 created: "2026-05-29"
-last_updated: "2026-05-29"
+last_updated: "2026-06-08"
 components:
   - build_pipeline
 ---
@@ -308,6 +308,43 @@ remediation path.
 
 See `docs/architecture/agent_delivery_workflows.md` §5 "AC BP-600a-3 — Uncommitted
 changes guard" for the full output format specification.
+
+### AC BP-600d-1 — Structured diagnosis input parsing (2026-06-08)
+
+A fourth invariant accompanies BP-600a-1, BP-600a-2, and BP-600a-3:
+
+```gherkin
+Given the user invokes /quick-fix with text containing "In
+  scripts/build_helpers.py line 42, _resolve_precommit_cmd() returns
+  a non-executable path because the executability probe is skipped
+  when shutil.which returns None",
+When the workflow parses the input,
+Then it extracts the target file path ("scripts/build_helpers.py"),
+  the location hint ("line 42"), the symptom ("returns a
+  non-executable path"), and the root cause ("executability probe
+  is skipped"),
+And it uses these fields to drive AC creation, test writing, and
+  fix application in subsequent phases.
+```
+
+This AC specifies the **input contract** for `/quick-fix`: the workflow must be able to
+consume a structured natural-language diagnosis and decompose it into four machine-usable
+fields (`target_file`, `location_hint`, `symptom`, `root_cause`). The parsed fields are
+then forwarded to downstream phase agents as structured inputs — not as raw text — so that
+each agent can operate precisely on the relevant portion of the diagnosis.
+
+**Relationship to the depth model (this ADR):**
+
+The structured parsing step is the first operation at depth 0 (the `/quick-fix` executing
+context), before any phase agent is dispatched. The parsed struct is passed as part of the
+Agent-tool input when phase agents are spawned at depth 1. This is consistent with the
+depth-1 constraint: the orchestration logic (parsing, field validation, guard checks)
+executes inline at depth 0; the implementation agents receive the clean structured inputs
+at depth 1.
+
+See `docs/architecture/agent_delivery_workflows.md` §5 "AC BP-600d-1 — Structured diagnosis
+input parsing" for the full field table, parsing contract, validation rules, and downstream
+consumer mapping.
 
 ---
 
