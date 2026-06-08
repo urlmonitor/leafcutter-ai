@@ -471,6 +471,45 @@ and halt the ticket run. Do NOT spawn any phase agent if the status transition f
     (done | halted-for-user | escalated-to-brainstorm-lead-and-waiting).
 ```
 
+### §2.1.1a Produces-Trait Guardrail Rules
+
+At dispatch time, the ticket-supervisor reads the `produces` field from the
+dispatched agent's registry entry and applies the guardrail rules below. This
+read happens once per agent dispatch, before the agent is spawned.
+
+**Guardrail mapping:**
+
+| `produces` value | TDD guardrails apply? | Behaviour |
+|---|---|---|
+| `production_code` | YES | Ensure `test-writer` runs before this agent (priority 5) and `test-runner` runs after (priority 9). If either is already `not_needed` or `signed_off` in the ticket's `agents:` map, the explicit ticket setting wins — do NOT re-inject. |
+| `documentation` | NO | Neither `test-writer` nor `test-runner` are required. Skip both silently. |
+| `prompt` | NO (TDD) | TDD guardrails do NOT apply. Prompt-quality guardrails apply instead (defined in the `llm-expert` template). The existing test-writer skip rule handles this via the `## Test Requirements` absence check. |
+| `test_artifact` | NO | Wrapping a test-producing agent in test-writer/test-runner would be circular. |
+| `review_verdict` | NO | Review agents produce verdicts, not executable code. |
+| `analysis` | NO | Analysis agents produce reports/recommendations, not executable logic. |
+| `orchestration` | NO | Orchestrators drive other agents; TDD guardrails do not apply. |
+| `configuration` | CONDITIONAL | Apply TDD guardrails only if the configuration change is consumed by tested code (supervisor judgment). Default: NO. |
+| `null` | WARN + NO | Log a warning that the agent has an ambiguous or missing produces trait, then treat as `documentation` (no TDD guardrails). Do NOT block the dispatch. |
+
+**Priority of rules (ticket-level overrides agent-level):**
+
+1. **Ticket-level explicit `not_needed`**: If `agents.test-writer: not_needed` is set in the
+   ticket's frontmatter, test-writer is NEVER spawned, regardless of the produces trait.
+2. **Ticket-level `## Test Requirements` block**: If the block is absent or `tests: []`, the
+   docs-only skip rule fires and test-writer is skipped (marked `signed_off`) regardless of
+   produces value.
+3. **Registry produces trait**: If neither ticket-level rule fires, the produces trait determines
+   whether TDD guardrails apply.
+
+**Warning format for null produces:**
+
+```
+### YYYY-MM-DD HH:MM — ticket-supervisor (status: ok)
+produces-trait-warning: agent '<agent-name>' has produces: null in registry.
+TDD guardrails skipped (default: documentation behaviour). Resolve the ambiguity
+in config/agent_registry.json before the next epic drive.
+```
+
 ### §2.1.1 Canonical Phase Ordering Table
 
 The priority column is the authoritative ordering for dispatch ties. Lower numbers run first.

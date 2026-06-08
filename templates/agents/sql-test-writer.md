@@ -37,7 +37,7 @@ behavioral_patterns:
   name: Conditional Behavior
   related_agent: null
   trigger: any of these are missing
-
+produces: test_artifact
 ---
 
 You are `sql-test-writer`, the SQL test authoring specialist. You author test

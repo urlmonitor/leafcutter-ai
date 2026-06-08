@@ -12,6 +12,7 @@ tools: Bash, Read, Edit
 portable: true
 signoff: true
 domain: null
+produces: review_verdict
 config_keys: {}
 adopter_notes: |
   Phase agent. Invoked by ticket-supervisor after coders, before pr-reviewer.

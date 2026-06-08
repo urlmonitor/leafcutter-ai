@@ -94,6 +94,31 @@ flowchart TD
 - Phases already `signed_off` in the planner's JSON response are skipped
   without re-running, providing crash-resume behaviour.
 
+## Produces-Trait Guardrail Integration
+
+At dispatch time, the ticket-supervisor (or `build-ticket.js` planner agent)
+reads each phase agent's `produces` field from `config/agent_registry.json`
+and applies trait-driven guardrail rules before the agent is spawned:
+
+| `produces` value | TDD guardrails? | Rationale |
+|---|---|---|
+| `production_code` | YES — test-writer before, test-runner after | Executable code requires TDD verification |
+| `documentation` | NO | Docs produce human-readable artifacts, not executable logic |
+| `prompt` | NO (TDD) — prompt-quality guardrails apply | LLM instructions are quality-checked by llm-expert's Prompt-Quality Checklist |
+| `test_artifact` | NO | Circular — wrapping a test producer in test-writer/test-runner makes no sense |
+| `review_verdict` | NO | Reviewers produce verdicts, not executable artifacts |
+| `analysis` | NO | Analysis agents produce reports/recommendations |
+| `orchestration` | NO | Orchestrators drive other agents |
+| `null` | WARN + NO | Ambiguous trait — warn but do not block; treat as documentation |
+
+**Ticket-level settings always override agent-level trait rules.** If a ticket
+explicitly sets `agents.test-writer: not_needed` or has no `## Test Requirements`
+block, the test-writer skip rule fires before the produces-trait check.
+
+See `building-epics` SKILL.md §2.1.1a for the full guardrail mapping and
+override priority rules. See `ticket-supervisor` template §Produces-Trait
+Guardrail Dispatch for the pseudocode implementation.
+
 ## Related
 
 See also: [Supervisor Spawn Topology](./supervisor-spawn-topology.md) — the

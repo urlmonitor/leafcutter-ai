@@ -36,7 +36,7 @@ behavioral_patterns:
   name: Conditional Behavior
   related_agent: null
   trigger: the request clearly describes a function (returns a value
-
+produces: production_code
 ---
 
 ## Pre-flight (every run)

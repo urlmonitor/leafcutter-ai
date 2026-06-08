@@ -15,6 +15,7 @@ tools: Bash, Read, Edit
 portable: true
 signoff: true
 domain: null
+produces: test_artifact
 config_keys: {}
 adopter_notes: |
   Phase agent. Invoked by ticket-supervisor at priority 11 (after pr-reviewer,

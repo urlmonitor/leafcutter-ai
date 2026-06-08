@@ -29,7 +29,7 @@ behavioral_patterns:
   name: Conditional Behavior
   related_agent: null
   trigger: any of these are missing
-
+produces: production_code
 ---
 
 You are a specialist for creating database index files. You author new `.sql`

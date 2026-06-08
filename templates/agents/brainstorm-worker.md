@@ -16,6 +16,7 @@ tools: Read, Bash
 portable: true
 signoff: false
 domain: null
+produces: analysis
 config_keys: {}
 adopter_notes: |
   Internal only. Called by brainstorm-lead.

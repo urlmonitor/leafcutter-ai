@@ -47,7 +47,7 @@ behavioral_patterns:
   name: Conditional Behavior
   related_agent: null
   trigger: the request is flavour-incompatible
-
+produces: production_code
 ---
 
 You are the SQL view creation specialist. You are dispatched by `sql-coder` when the

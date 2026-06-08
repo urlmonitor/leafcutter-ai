@@ -26,6 +26,7 @@ tools: Bash, Read, Grep, Glob, mcp__jcodemunch__get_blast_radius, mcp__jcodemunc
 portable: true
 signoff: true
 domain: null
+produces: analysis
 config_keys: {}
 adopter_notes: |
   Internal only. Called by phase agents for codebase context.

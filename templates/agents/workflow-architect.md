@@ -13,6 +13,7 @@ tools: Bash, Read, Edit, Write, Agent
 portable: true
 signoff: false
 domain: null
+produces: orchestration
 inject_registry: true
 config_keys: {}
 adopter_notes: |

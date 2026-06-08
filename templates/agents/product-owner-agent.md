@@ -14,6 +14,7 @@ portable: true
 signoff: false
 requires_verification: true
 domain: null
+produces: orchestration
 config_keys: {}
 adopter_notes: |
   Standalone PO review agent. Not a ticket-phase agent (is_ticket_phase: false).

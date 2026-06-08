@@ -38,7 +38,7 @@ behavioral_patterns:
   name: Conditional Behavior
   related_agent: null
   trigger: any of these are ambiguous
-
+produces: production_code
 ---
 
 You are `sql-query`, the ad-hoc SQL query authoring specialist. You produce

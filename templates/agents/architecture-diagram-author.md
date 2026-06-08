@@ -12,6 +12,7 @@ tools: Bash, Read, Edit, Write, Skill
 portable: true
 signoff: true
 domain: null
+produces: documentation
 config_keys: {}
 adopter_notes: |
   Phase agent. Invoked by ticket-supervisor via documentation-expert.

@@ -10,6 +10,7 @@ tools: Bash, Agent
 portable: true
 signoff: false
 domain: null
+produces: orchestration
 config_keys: {}
 adopter_notes: |
   Invoked via /finalize-feature. Requires a feature branch with an open or

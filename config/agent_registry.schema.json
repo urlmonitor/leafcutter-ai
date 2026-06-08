@@ -127,6 +127,62 @@
           },
           "default": [],
           "description": "File extensions (with leading dot) this agent is the primary implementer for. Consumed by commit-guardian hooks (e.g. check_complexity.py) to emit AUTOFIX_AGENT hints that route hook failures to the correct coder. Empty or absent means the agent does not own any file type by extension. Multiple agents may share an extension only if their scopes are mutually exclusive (e.g. tests vs production)."
+        },
+        "produces": {
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": [
+                "production_code",
+                "documentation",
+                "configuration",
+                "prompt",
+                "review_verdict",
+                "orchestration",
+                "test_artifact",
+                "analysis"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The primary artifact type this agent produces. Null means llm-expert flagged this agent as ambiguous and the value needs human resolution (see llm_ambiguity_comment). Used for capability inference, tooling integrations, and audit reporting. Enum values: production_code (coders producing executable/importable source), documentation (doc authors, ADR authors, diagram authors), configuration (config-only changes), prompt (agent templates, skill bodies, slash-command files), review_verdict (reviewer agents producing ok/blocker verdicts), orchestration (supervisors and commit-chain agents), test_artifact (test writers, runners, and validators), analysis (research, triage, and planning agents)."
+        },
+        "llm_ambiguity_comment": {
+          "type": "object",
+          "description": "Structured comment added by llm-expert when it cannot unambiguously infer the produces trait (AC BO-510-4-i). Present only when produces is null. Must be removed once a human resolves the ambiguity.",
+          "required": ["agent_id", "conflicting_signals", "candidate_values"],
+          "properties": {
+            "agent_id": {
+              "type": "string",
+              "description": "The agent ID that was flagged as ambiguous."
+            },
+            "conflicting_signals": {
+              "type": "string",
+              "description": "One sentence describing the conflicting signals that made inference impossible."
+            },
+            "candidate_values": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "production_code",
+                  "documentation",
+                  "configuration",
+                  "prompt",
+                  "review_verdict",
+                  "orchestration",
+                  "test_artifact",
+                  "analysis"
+                ]
+              },
+              "minItems": 2,
+              "maxItems": 2,
+              "description": "The two most likely enum values — the human must choose one of these."
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false

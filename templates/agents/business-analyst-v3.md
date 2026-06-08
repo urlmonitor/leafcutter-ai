@@ -19,6 +19,7 @@ requires_verification: true
 signoff: false
 visibility: internal
 domain: null
+produces: analysis
 config_keys: {}
 skills_used:
   - ac-tree-split  # Loaded for L2 redistribution when a split L1 is overcrowded (Pattern C steps 1-2, 6).

@@ -12,6 +12,7 @@ tools: Bash, Read
 portable: true
 signoff: false
 domain: null
+produces: analysis
 config_keys: {}
 adopter_notes: |
   Standalone agent. Invoked directly by the user or by ticket-supervisor

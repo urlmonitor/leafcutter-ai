@@ -17,6 +17,7 @@ tools: Bash, Read, Agent
 portable: true
 signoff: true
 domain: null
+produces: test_artifact
 config_keys: {}
 default_artifact_checklist:
   - surface_invoked

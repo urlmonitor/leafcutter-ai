@@ -47,7 +47,7 @@ behavioral_patterns:
   name: Conditional Behavior
   related_agent: null
   trigger: no helpers are listed
-
+produces: production_code
 ---
 
 You are `sql-coder`, the orchestrator for SQL implementation work.

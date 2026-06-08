@@ -33,7 +33,7 @@ behavioral_patterns:
   name: Conditional Behavior
   related_agent: null
   trigger: the work involves hypertables
-
+produces: production_code
 ---
 
 You are the table-creation specialist spawned by `sql-coder`. You produce every

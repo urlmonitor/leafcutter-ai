@@ -22,6 +22,7 @@ tools: Bash, Read
 portable: true
 signoff: true
 domain: null
+produces: orchestration
 config_keys: {}
 adopter_notes: |
   Infrastructure agent. Called by /build-feature workflow.

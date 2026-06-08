@@ -23,6 +23,7 @@ tools: Bash, Read, Write
 portable: true
 signoff: false
 domain: null
+produces: orchestration
 config_keys:
   changelog_folder: "changelogs/"
   changelog_categories_path: ".claude/changelog_categories.md"
