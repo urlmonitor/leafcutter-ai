@@ -1,0 +1,29 @@
+id: TKT-500d
+readiness: draft
+priority: medium
+title: "A goal is the unit of delivery that supervisors walk"
+component: ticket-creation
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  The goal (L0) and its children replace the epic folder as the dispatch boundary.
+
+  When a supervisor begins a batch of work, it walks the children of an L0 AC
+  in dependency order. The L0 is "done" when all its leaf-level children have
+  signed off. No separate epic folder or ticket grouping mechanism is needed —
+  the AC hierarchy itself is the work breakdown structure.
+depends_on: [TKT-500]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: [TKT-500d-1, TKT-500d-2, TKT-500d-3, TKT-500d-4, TKT-500d-5, TKT-500d-6, TKT-500d-7, TKT-500d-8, TKT-500d-9]
+implemented_by: []
+documentation_triggers: [sequence-diagram, component-diagram]
