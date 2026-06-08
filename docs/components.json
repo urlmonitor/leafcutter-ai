@@ -29,9 +29,23 @@
       "name": "Config Loader",
       "type": "utility",
       "description": "Loads and validates skills_config.json.",
+      "detail_ref": null,
       "status": "active",
       "primary_code": [
         "scripts/config_loader.py"
+      ]
+    },
+    "ac_store": {
+      "id": "ac_store",
+      "name": "AC Store",
+      "type": "analysis",
+      "description": "Acceptance criteria traceability store persisting ACs as YAML files with bidirectional links to tests and implementations.",
+      "detail_ref": null,
+      "status": "active",
+      "primary_code": [
+        "docs/acceptance-criteria/",
+        "scripts/ac_store/",
+        "config/ac_store_schema.json"
       ]
     }
   }
