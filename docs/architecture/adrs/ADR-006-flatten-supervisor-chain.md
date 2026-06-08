@@ -309,6 +309,27 @@ remediation path.
 See `docs/architecture/agent_delivery_workflows.md` §5 "AC BP-600a-3 — Uncommitted
 changes guard" for the full output format specification.
 
+### AC BP-600b-2 — Correct component prefix and sequential ID (2026-06-08)
+
+```gherkin
+Given the AC store for component "build-pipeline" already contains ACs
+  with IDs BP-001 through BP-006,
+When the quick-fix workflow creates a new AC for a bug in the
+  build-pipeline component,
+Then the new AC has the prefix "BP" matching the component's prefix
+  in index.yaml,
+And its numeric suffix is the next available sequential integer
+  (never reusing a retired or existing ID).
+```
+
+The `/quick-fix` workflow derives the component prefix by reading `index.yaml`
+at depth 0 (before any Agent-tool dispatch) and constructs the ID by scanning
+existing AC filenames for the highest occupied numeric suffix. This scan-and-assign
+operation runs entirely within the executing context (no phase-agent dispatch) to
+keep it atomic and under the depth-0 serialization lock. See
+`docs/reference/ac-schema.md` §`/quick-fix` workflow — ID assignment (AC BP-600b-2)
+for the full algorithm.
+
 ### AC BP-600d-1 — Structured diagnosis input parsing (2026-06-08)
 
 A fourth invariant accompanies BP-600a-1, BP-600a-2, and BP-600a-3:

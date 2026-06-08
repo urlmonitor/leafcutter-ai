@@ -293,6 +293,66 @@ created by the ticket-wiring workflow (e.g. from a ticket's Gherkin block).
 The `ticket-wiring` skill reads existing ACs and skips creation when an
 equivalent AC already exists in the store.
 
+### /quick-fix workflow — ID assignment (AC BP-600b-2)
+
+The `/quick-fix` workflow creates a new AC YAML file as part of its AC creation
+phase (AC BP-600b-1). When assigning the AC ID, the workflow MUST follow the
+algorithm below to ensure the correct component prefix and a strictly sequential,
+non-reusing numeric suffix.
+
+#### Step 1 — Resolve the component prefix
+
+Read `docs/acceptance-criteria/index.yaml`. Locate the entry whose `id` matches
+the target component (e.g. `build-pipeline`). Use its `prefix` field as the
+ID prefix (e.g. `BP`).
+
+If no matching entry exists in `index.yaml`, halt the AC creation phase and
+surface a structured error to the user:
+
+```
+Error: component '<id>' not found in docs/acceptance-criteria/index.yaml.
+Add the component entry before running /quick-fix.
+```
+
+#### Step 2 — Scan existing AC files for the highest numeric suffix
+
+Scan all YAML files directly under `docs/acceptance-criteria/<component-id>/`
+(non-recursively — only root-level L0 and L1 files; subdirectories are skipped).
+Parse each filename matching the pattern `PREFIX-NNN*.yaml`. Extract the numeric
+part `NNN` (zero-padded, three digits) and track the highest value found.
+
+If no existing files match the prefix, start at `001`.
+
+**Retired/deprecated AC IDs are reserved and MUST NOT be reused.** The scan
+reads the `status` field of each matched file. Whether `active`, `deprecated`,
+or `superseded_by`, the numeric slot is permanently occupied. The next
+available integer is `max(occupied_slots) + 1`.
+
+#### Step 3 — Assign the new ID
+
+Assign `ID = PREFIX + "-" + zero_pad(max_seen + 1, width=3)`.
+
+**Example:** if `build-pipeline` already contains `BP-001.yaml` through
+`BP-006.yaml` (including any deprecated files), the next ID is `BP-007`.
+
+#### Step 4 — Atomicity constraint
+
+ID allocation MUST be atomic with respect to concurrent `/quick-fix` invocations.
+Implement atomicity using a file-based lock at
+`docs/acceptance-criteria/<component-id>/.quick-fix-lock` before the scan
+(step 2) and release it after the file is written. Use `O_CREAT | O_EXCL` for
+lock acquisition. Release the lock unconditionally in all exit paths (success
+and error).
+
+If the lock cannot be acquired within 5 seconds, surface an error to the user:
+
+```
+Error: AC store for '<component-id>' is locked by another process.
+Retry after the concurrent quick-fix completes, or manually remove
+docs/acceptance-criteria/<component-id>/.quick-fix-lock if the process
+is no longer running.
+```
+
 ---
 
 ## Component Registry (`index.yaml`)
@@ -306,6 +366,7 @@ component IDs to their prefix and description.
 | `prefix` | string | **yes** | 2–6 ALL-CAPS letters used in AC file names. |
 | `description` | string | **yes** | Human-readable description of the component. |
 | `owner` | string or null | no | Team or agent identifier responsible for this namespace. |
+| `directory_patterns` | list of strings | no | Glob patterns for source file paths that belong to this component. Used by `/quick-fix` to infer the component from a diagnosed file path when no explicit component is provided (AC BP-600b-2-i). Example: `["scripts/build_*.py", "scripts/build_phases.py"]`. If absent or empty, component inference falls back to user prompt. |
 
 ---
 
