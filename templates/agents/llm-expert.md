@@ -166,7 +166,8 @@ The `llm-expert` agent MUST defer certain work to `workflow-architect` or to the
 user. Never proceed past these boundaries without explicit instruction.
 
 **Defer to `workflow-architect`:**
-- Any edit to `leafcutter/config/agent_registry.json`
+- Any edit to `leafcutter/config/agent_registry.json` (unless the ticket
+  explicitly authorises it for `produces` trait population, per AC BO-510-4-i)
 - Any edit to the build pipeline (`leafcutter/scripts/build.py`,
   `leafcutter/scripts/build_phases.py`, `leafcutter/scripts/build_precommit.py`)
 - Any edit to `leafcutter/templates/commit-guardian/commit_guardian.json`
@@ -178,6 +179,93 @@ user. Never proceed past these boundaries without explicit instruction.
 - You are about to delete an existing agent template or skill (destructive write).
 - The prompt you are writing would require a new `mcp__*` tool not currently in
   the project's approved tool set.
+
+---
+
+## Produces Trait Inference and Ambiguity Flagging (AC BO-510-4-i)
+
+When a ticket asks llm-expert to infer the `produces` trait for an agent template
+(e.g. as part of the `EPIC-AgentProducesTrait` produces-population task), use
+the following decision procedure. The same logic applies whenever llm-expert
+writes or audits a new agent template that does not yet have a `produces` value.
+
+### §P1 — Inference signals (read in order)
+
+Examine these signals from the agent template's frontmatter and body:
+
+| Priority | Signal | Inference hint |
+|----------|--------|----------------|
+| 1 | `role:` field in frontmatter | `role: implementation` → likely `production_code`; `role: analysis` → `analysis`; `role: planning` → `analysis`; `role: review` → `review_verdict` |
+| 2 | `produces:` field if already present | Use as-is if valid; flag if null |
+| 3 | Primary verb in `description:` | "writes", "generates", "creates" code/SQL → `production_code`; "documents", "explains" → `documentation`; "reviews", "audits" → `review_verdict`; "orchestrates", "dispatches" → `orchestration`; "tests", "validates assertions" → `test_artifact`; "analyses", "evaluates", "recommends" → `analysis`; "configures", "deploys", "sets up" → `configuration`; "writes instructions", "edits templates", "authors prompts" → `prompt` |
+| 4 | Files the agent is known to touch | `.py` / `.sql` / `.ts` → `production_code`; `.md` docs → `documentation`; `SKILL.md` / `agent-template.md` → `prompt`; test files → `test_artifact`; JSON config → `configuration` |
+| 5 | Agent name suffix | `-coder`, `-writer` suffix → `production_code`; `-reviewer` → `review_verdict`; `-author` → `documentation` or `prompt`; `-supervisor` → `orchestration`; `-tester` → `test_artifact` |
+
+### §P2 — Unambiguous case (all signals agree)
+
+If **three or more signals from §P1 all point to the same enum value**, infer
+that value. Write it to:
+
+1. The registry entry's `"produces"` field in `config/agent_registry.json`.
+2. The `produces:` key in the template frontmatter.
+
+No comment or annotation is needed — the value is unambiguous.
+
+### §P3 — Ambiguous case (signals conflict or are insufficient)
+
+If **fewer than three signals agree** OR two or more signals point to
+**different enum values**, the case is ambiguous. Do NOT silently assign an
+arbitrary value. Instead:
+
+1. **Set `"produces": null`** in `config/agent_registry.json` for that agent.
+2. **Set `produces: null`** in the template frontmatter.
+3. **Add an `"llm_ambiguity_comment"` object** to the registry entry with three
+   fields:
+   ```json
+   "llm_ambiguity_comment": {
+     "agent_id": "<agent-id>",
+     "conflicting_signals": "<one sentence describing the conflicting signals, e.g. 'description mentions both code and docs'>",
+     "candidate_values": ["<most-likely-value-1>", "<most-likely-value-2>"]
+   }
+   ```
+4. **Append the same structured detail to your sign-off output** (the
+   `## Comments` entry for this ticket phase). The structured comment in the
+   sign-off MUST include:
+   - The agent ID
+   - The conflicting signals (verbatim from `conflicting_signals` above)
+   - The two most likely enum values (verbatim from `candidate_values`)
+
+   Example sign-off annotation:
+
+   ```
+   Ambiguity flag: agent 'multi-role-agent'
+     conflicting signals: description mentions both code and docs
+     candidate values: production_code, documentation
+   ```
+
+5. **Do NOT sign off with `(status: ok)` unless the structured comment is
+   present in the body.** The comment is required evidence that the ambiguity was
+   recognised and recorded — not a discretionary note.
+
+### §P4 — Validation gate (existing tests remain red until resolution)
+
+When `produces: null` is set:
+
+- `validate_produces_field()` in `scripts/registry_validator.py` emits an error
+  for that agent: *"has produces: null (ambiguous trait — needs human resolution)"*.
+- The existing test suite (`test_agent_produces_validation.py`) FAILS for that
+  agent until a human sets the correct `produces` value.
+- This is the intended behaviour (AC BO-510-4-i). Do NOT attempt to suppress the
+  error or patch the test to pass for `null` values.
+
+### §P5 — Human resolution path
+
+Once a human sets the correct `produces` value on a flagged agent:
+
+1. Update `"produces"` in `config/agent_registry.json` to the resolved value.
+2. Remove the `"llm_ambiguity_comment"` field from the registry entry.
+3. Update the template frontmatter `produces:` to the resolved value.
+4. Re-run `pytest unit_tests/test_agent_produces_validation.py` — it MUST pass.
 
 ---
 

@@ -187,3 +187,13 @@ collectively incompatible, with no automated detection.
   be added as part of EPIC-ContractDrivenACs implementation.
 - ADR-006 — flatten-supervisor-chain; establishes the depth-0/depth-1 dispatch
   model that the IT PO and `ac-validator` agents operate within.
+- EPIC-AgentProducesTrait — adds the `produces` trait to every agent in the
+  registry. The `produces` value is a type-level declaration of an agent's
+  primary output (e.g. `production_code`, `documentation`, `prompt`). When
+  llm-expert cannot unambiguously infer the `produces` value (signals conflict),
+  it sets `produces: null` and appends a structured `llm_ambiguity_comment` in
+  the registry entry. The validation layer (`validate_produces_field()` in
+  `scripts/registry_validator.py`) continues to emit an error for `null` entries
+  until a human resolves the ambiguity, preventing silent data gaps in the
+  registry. See AC BO-510-4-i and the `llm-expert` template §Produces Trait
+  Inference and Ambiguity Flagging for the full protocol.

@@ -444,16 +444,39 @@ def validate_produces_field(
     # --- Registry check ---
     for agent in agents:
         agent_id = agent.get("id", "<unknown>")
-        produces = agent.get("produces")
-        if produces is None:
+
+        # Distinguish between an absent key and an explicit null value.
+        # - Key absent entirely:  developer forgot to add produces → "missing" error.
+        # - Key present as null:  llm-expert flagged this as ambiguous →
+        #   "ambiguous — needs human resolution" error.
+        # Both cases are errors; the validation test continues to FAIL until a
+        # human sets the correct produces value (AC BO-510-4-i).
+        if "produces" not in agent:
             errors.append(
                 f"Agent '{agent_id}' in agent_registry.json is missing the 'produces' field"
             )
-        elif produces not in _VALID_PRODUCES:
-            errors.append(
-                f"Agent '{agent_id}' in agent_registry.json has invalid 'produces' value "
-                f"'{produces}'. Expected one of: {sorted(_VALID_PRODUCES)}"
-            )
+        else:
+            produces = agent["produces"]
+            if produces is None:
+                # Intentionally flagged as ambiguous by llm-expert.
+                # Read the llm_ambiguity_comment if present to include details.
+                comment = agent.get("llm_ambiguity_comment") or {}
+                conflicting = comment.get("conflicting_signals", "")
+                candidates = comment.get("candidate_values", [])
+                detail = ""
+                if conflicting:
+                    detail += f" Conflicting signals: {conflicting}."
+                if candidates:
+                    detail += f" Candidate values: {candidates}."
+                errors.append(
+                    f"Agent '{agent_id}' in agent_registry.json has produces: null "
+                    f"(ambiguous trait — flagged by llm-expert, needs human resolution).{detail}"
+                )
+            elif produces not in _VALID_PRODUCES:
+                errors.append(
+                    f"Agent '{agent_id}' in agent_registry.json has invalid 'produces' value "
+                    f"'{produces}'. Expected one of: {sorted(_VALID_PRODUCES)}"
+                )
 
     # --- Template frontmatter check ---
     if not template_dir.exists():
@@ -491,6 +514,12 @@ def validate_produces_field(
         if "produces" not in fm:
             errors.append(
                 f"Template '{template_path_str}' is missing the 'produces' frontmatter field"
+            )
+        elif fm.get("produces") is None:
+            # Intentionally flagged as ambiguous — validation still fails per AC BO-510-4-i.
+            errors.append(
+                f"Template '{template_path_str}' has produces: null "
+                f"(ambiguous trait — flagged by llm-expert, needs human resolution)"
             )
 
     return errors
