@@ -123,7 +123,9 @@ On every invocation, before touching any file:
    (path injected by `build.py` from `skills_config.json`). If the file is
    absent, log one debug line:
    `PROJECT_CONTEXT.md not found for frontend-coder; running template-only`
-   and continue.
+   and continue. If the file is present, extract the `design_system` key (if
+   any) — you will use it in the Embedded Design Principles / Project Design
+   System Override step to override colour and font defaults.
 4. **Optional-skill detection** — check for installed optional skills (webapp-testing
    only; see Optional-Skill Integration below). Do NOT read
    `.claude/skills/frontend-design/SKILL.md` — see Embedded Design Principles.
@@ -155,6 +157,57 @@ invocation. **Do NOT read `.claude/skills/frontend-design/SKILL.md`** — even
 if that file exists on disk (legacy install artefact). Apply only the
 principles below; loading the external file and these principles simultaneously
 would duplicate constraints and produce conflicting guidance.
+
+### Project Design System Override (read before applying principles below)
+
+Before applying any embedded principle, check whether PROJECT_CONTEXT.md
+defines a `design_system` key. If you already read PROJECT_CONTEXT.md in the
+Pre-Flight Reads step (step 3), extract the `design_system` block from it now.
+
+**Detection (two separate Bash calls):**
+```bash
+# Call 1: check for design_system key
+grep -q "design_system" "{{frontend.project_context_path}}"
+# Call 2: read it if exit code 0 (file contains key)
+grep -A 10 "design_system:" "{{frontend.project_context_path}}"
+```
+
+**If `design_system` is found:**
+
+Read the `design_system` key from PROJECT_CONTEXT.md. Its values **override**
+the corresponding embedded principle defaults. Specifically:
+
+- `primary_colour` in `design_system` → use this value as `--color-primary`
+  (overrides the "primary colour with deliberate personality" guidance below).
+- `font_heading` in `design_system` → use this font for headings h1–h3
+  (overrides the "custom font pairing" guidance below).
+- `font_body` in `design_system` → use this font for body text
+  (overrides the "custom font pairing" guidance below).
+- Any other design_system key (e.g. `border_radius`, `spacing_unit`) → honour
+  it as a project-level constraint.
+
+Apply the embedded principles below **only for aspects not covered** by the
+project design system (e.g. negative space, interactive states, accessibility
+contrast rules, component detail). Do NOT override design_system values with
+the embedded defaults.
+
+**Example PROJECT_CONTEXT.md design_system block:**
+```yaml
+design_system:
+  primary_colour: "#1E40AF"
+  font_heading: "Roboto Slab"
+  font_body: "Roboto"
+```
+When this block is present, your CSS must use `--color-primary: #1E40AF` and
+the Roboto Slab / Roboto font pairing — not the embedded font or colour
+guidance. All other embedded principles (spacing, accessibility, interactive
+states, component structure) still apply.
+
+**If no `design_system` key is found:**
+
+Apply all embedded principles below without modification.
+
+---
 
 ### Layout and spacing
 - Prefer CSS custom properties (`--spacing-sm`, `--color-primary`, etc.) over
@@ -310,23 +363,28 @@ and then split — pre-commit hooks may reject the commit.
 
 ## Implementation Sequence
 
-1. **Apply embedded design principles** (see Embedded Design Principles above).
-   These are always active — no skill-loading required.
-2. **Detect optional skills** (webapp-testing only) per Optional-Skill Integration above.
-3. **Read pre-flight docs** (Pre-Flight Reads above).
-4. **Activate contract-aware mode** if `## Agent Contracts` is present (see above).
-5. **Delegate any cross-file lookups** to `research-agent`.
-6. **Write or edit the frontend files** per the ticket's acceptance criteria.
-7. **If webapp-testing is installed:** run the skill protocol after edits
+1. **Read pre-flight docs** (Pre-Flight Reads above). This includes reading
+   PROJECT_CONTEXT.md and extracting the `design_system` key if present.
+2. **Apply project design system overrides** (see Project Design System Override
+   above). If PROJECT_CONTEXT.md has a `design_system` block, those values
+   supersede the embedded colour and font defaults.
+3. **Apply remaining embedded design principles** for all aspects not covered
+   by the project design system (spacing, accessibility, interactive states,
+   component structure). These are always active — no skill-loading required.
+4. **Detect optional skills** (webapp-testing only) per Optional-Skill Integration above.
+5. **Activate contract-aware mode** if `## Agent Contracts` is present (see above).
+6. **Delegate any cross-file lookups** to `research-agent`.
+7. **Write or edit the frontend files** per the ticket's acceptance criteria.
+8. **If webapp-testing is installed:** run the skill protocol after edits
    (screenshot + console-log check).
-8. **Run frontend test command** if configured:
+9. **Run frontend test command** if configured:
    ```bash
    {{frontend.test_command}}
    ```
    If `frontend.test_command` is empty or not set, skip this step and note the
    absence in your response payload.
-9. **Run pre-completion checks** (see below).
-10. **Emit the response payload** (see below).
+10. **Run pre-completion checks** (see below).
+11. **Emit the response payload** (see below).
 
 ## Pre-Completion Checks (required before declaring done)
 
@@ -355,6 +413,7 @@ Your final response MUST include a structured section:
 
 ### Design principles
 - embedded: always applied (see Embedded Design Principles section)
+- project_design_system: <found — overrides applied for: <keys overridden> | not found — embedded defaults used>
 - frontend-design legacy file: ignored (even if present on disk)
 
 ### Optional skills

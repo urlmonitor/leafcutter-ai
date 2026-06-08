@@ -3,7 +3,7 @@ title: "ADR-005: frontend-coder as a First-Class Sibling Implementation Agent"
 type: "adr"
 status: "active"
 created: "2026-05-28"
-last_updated: "2026-05-28"
+last_updated: "2026-06-08"
 components:
   - build_pipeline
 ---
@@ -45,6 +45,24 @@ The optional-skill integration contract (webapp-testing, frontend-design) also n
 This change was introduced to satisfy AC `BP-700a-1-i`: when the unified frontend agent template is deployed, it uses only its embedded design principles, preventing the agent from applying design constraints twice (once from the embedded principles and once from the external skill file).
 
 To satisfy AC `BP-700a-2`, the `frontend-coder` agent always reports `design_principles_applied: true` in the `### Optional skills` block of its completion report. This entry is unconditional — design principles are always embedded and always applied, so no conditional flag or "not installed" message is needed or produced.
+
+### Project design system override (AC BP-700a-3)
+
+To satisfy AC `BP-700a-3`, `frontend-coder` supports a project-level design system override via `PROJECT_CONTEXT.md`. When the file at `{{frontend.project_context_path}}` contains a `design_system` key, the agent uses those values to override the corresponding embedded defaults:
+
+- `design_system.primary_colour` overrides the "primary colour" embedded principle.
+- `design_system.font_heading` overrides the heading typeface in the "custom font pairing" embedded principle.
+- `design_system.font_body` overrides the body typeface in the "custom font pairing" embedded principle.
+
+The embedded principles remain active for every aspect **not** covered by the project design system (negative space, accessibility contrast, interactive states, component structure, performance). This gives adopters a way to enforce brand consistency without sacrificing the quality guardrails that the embedded principles provide.
+
+**Override precedence chain (highest → lowest):**
+
+1. `PROJECT_CONTEXT.md` `design_system` values — project-specific brand constraints.
+2. Embedded design principles — package-level quality defaults.
+3. Browser/framework defaults — last resort, never intentional.
+
+The override is read during the Pre-Flight Reads step and applied in the Embedded Design Principles / Project Design System Override section of the agent template. No additional configuration is required beyond populating `design_system` in PROJECT_CONTEXT.md.
 
 File-existence detection is chosen over a registry lookup because:
 - It requires zero infrastructure beyond the filesystem.
