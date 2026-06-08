@@ -345,6 +345,42 @@ Key constraints under the ADR-006 depth model:
 See `docs/architecture/agent_delivery_workflows.md` §5 "AC BP-600c-1" for the full dispatch
 contract table, test file requirements, and red-phase assertion specification.
 
+### AC BP-600c-2 — Test-runner confirms red phase before fix code is applied (2026-06-08)
+
+```gherkin
+Given the test-writer has produced a test file for the diagnosed bug,
+When the workflow reaches the red-phase verification step,
+Then it dispatches the test-runner agent targeting the new test file,
+And the test-runner reports at least one FAILED result for the new test,
+And if the test unexpectedly passes the workflow halts with a warning:
+  "The test passes before the fix was applied -- the diagnosis may be
+  incorrect or the bug is already fixed."
+```
+
+**Relationship to the depth model (this ADR):**
+
+The red-phase test-runner invocation is the third sequential Agent-tool dispatch in the
+`/quick-fix` phase chain (after `build-ac` and `test-writer`). The depth-0 executing
+context controls the ordering: `test-runner` is dispatched at depth 1 only after the
+`test-writer` Agent-tool call has returned with a successful sign-off. This sequencing
+is an application of the depth-1 constraint documented in this ADR:
+
+- **Ordering is guaranteed**: the depth-0 executing context owns the phase chain.
+  Because `test-writer` and `test-runner/red-phase` are sequential dispatches at depth 1
+  (not concurrent), the test file is guaranteed to exist when `test-runner` is invoked.
+- **Halt-before-fix contract**: if the test-runner reports an unexpected pass, the
+  depth-0 context halts the workflow before dispatching `python-coder` / `sql-coder`.
+  The fix-implementation agent is never started unless the red-phase check succeeds.
+- **TDD enforcement at depth 0**: the orchestration logic that enforces the red→fix→green
+  sequence lives entirely at depth 0 (the executing context). Phase agents at depth 1
+  (`test-writer`, `test-runner`, `python-coder`) do not coordinate with each other — they
+  receive structured inputs from depth 0 and return structured outputs. The invariant is
+  maintained by the depth-0 phase chain, not by inter-agent negotiation.
+
+See `docs/architecture/agent_delivery_workflows.md` §5 "AC BP-600c-2 — Test-runner confirms
+red phase" for the full dispatch contract table, outcome routing table, halt message format,
+and rationale.
+
 ### AC BP-600b-2 — Correct component prefix and sequential ID (2026-06-08)
 
 ```gherkin

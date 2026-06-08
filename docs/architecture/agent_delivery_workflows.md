@@ -618,6 +618,92 @@ The workflow accepts two input forms:
    `location_hint` to narrow the edit scope and `root_cause` to identify the logic
    branch to repair.
 
+### AC BP-600c-2 — Test-runner confirms red phase before fix code is applied
+
+After the test-writer has produced the failing test (AC BP-600c-1), the quick-fix workflow
+MUST dispatch the `test-runner` agent to verify that the new test actually fails against the
+unfixed codebase. The Gherkin contract:
+
+```gherkin
+Given the test-writer has produced a test file for the diagnosed bug,
+When the workflow reaches the red-phase verification step,
+Then it dispatches the test-runner agent targeting the new test file,
+And the test-runner reports at least one FAILED result for the new test,
+And if the test unexpectedly passes the workflow halts with a warning:
+  "The test passes before the fix was applied -- the diagnosis may be
+  incorrect or the bug is already fixed."
+```
+
+**Dispatch contract (Agent-tool input to `test-runner` at depth 1):**
+
+The test-runner agent is dispatched with the following structured inputs:
+
+| Input field | Value | Source |
+|---|---|---|
+| `ticket_path` | Absolute path to the quick-fix workflow's internal ticket file | Workflow context at depth 0 |
+| `test_file` | Absolute path to the test file written by test-writer (from BP-600c-1) | test-writer phase output |
+| `expected_outcome` | `"red"` — the test must fail | Hardcoded in quick-fix.js for the red-phase step |
+
+**Red-phase outcome routing:**
+
+| test-runner result | Workflow action |
+|---|---|
+| At least one test **FAILED** | Proceed to fix-implementation phase (`python-coder` / `sql-coder`) — this is the expected red state |
+| All tests **PASSED** (unexpected green) | Halt the workflow immediately with the structured warning below |
+| Test file not found / runner error | Halt the workflow with a structured error; do not proceed to fix |
+
+**Halt message for unexpected green (test passes before fix):**
+
+```
+/quick-fix halted: red-phase verification failed.
+
+  Test file: <absolute path to test file>
+  Result:    PASSED (all assertions green before fix was applied)
+
+  Warning: The test passes before the fix was applied -- the diagnosis may be
+  incorrect or the bug is already fixed.
+
+  Possible causes:
+    1. The diagnosed bug has already been fixed in a prior commit.
+    2. The test assertion does not correctly reproduce the diagnosed symptom.
+    3. The target file path or location hint was mis-parsed (see BP-600d-1 output).
+
+  Suggested next steps:
+    - Review the test file at <test_file> and confirm it asserts the diagnosed
+      failure condition.
+    - Run git log <target_file> to check for recent fixes.
+    - Re-invoke /quick-fix with a more precise diagnosis, or mark the bug as
+      already-fixed.
+```
+
+**Ordering invariant:**
+
+The red-phase test-runner invocation MUST run after the test-writer completes
+(BP-600c-1) and BEFORE the fix-implementation phase starts (AC for fix phase). This
+sequencing is enforced by the phase chain in `quick-fix.js`:
+
+```
+build-ac (depth 1) → test-writer (depth 1) → test-runner/red-phase (depth 1) → fix-coder (depth 1) → commit (depth 1)
+```
+
+The depth-0 executing context controls the ordering: `test-runner` is dispatched only
+after the `test-writer` Agent-tool call returns with a successful sign-off. The fix-coder
+is dispatched only after the `test-runner` reports at least one FAILED result. Any other
+outcome halts the workflow before the fix-coder is ever invoked.
+
+**Why this guard is necessary:**
+
+Without the red-phase verification step, the quick-fix workflow could silently skip the
+TDD contract — writing a test that happens to pass against the current code, applying
+a "fix" that changes nothing meaningful, and committing a green test suite that never
+actually reproduced the bug. The red-phase check enforces that:
+
+1. The test genuinely targets the diagnosed defect (it fails against unfixed code).
+2. The subsequent green-phase (after the fix) is meaningful — a real state transition
+   from red to green.
+3. The audit trail is valid: the commit history shows test-red before fix, test-green
+   after fix.
+
 ---
 
 ## Key Design Principles
@@ -640,6 +726,7 @@ The workflow accepts two input forms:
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-08 [llm-expert]: Added AC BP-600c-2 red-phase verification section to Section 5: Gherkin contract, dispatch contract table, outcome routing table, halt message for unexpected green, ordering invariant, and rationale. (#EPIC-QuickFixWorkflow/08)
 - 2026-06-08 [llm-expert]: Added AC BP-600c-1 test-writer dispatch section to Section 5: Gherkin contract, dispatch contract table, test file requirements, red-phase assertion, ordering invariant, and covered_by update protocol. (#EPIC-QuickFixWorkflow/07)
 - 2026-06-08 [llm-expert]: Added AC BP-600d-1 structured diagnosis input parsing section to Section 5: Gherkin contract, four parsed fields table, two input forms, validation rules, and downstream consumer mapping. (#EPIC-QuickFixWorkflow/09)
 - 2026-06-08 [llm-expert]: Added AC BP-600a-3 uncommitted changes guard section to Section 5: guard contract, implementation steps, halt message format, and rationale. (#EPIC-QuickFixWorkflow/03)
