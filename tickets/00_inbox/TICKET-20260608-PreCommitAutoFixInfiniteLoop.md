@@ -87,6 +87,17 @@ Note: `check_ac_limits.py` exists in two locations — both the template source 
 
 ## Comments
 
+### 2026-06-08 — build-feature (status: invalid)
+Ticket closed as invalid after code audit. All 4 hooks (check_ac_governance.py,
+check_ac_parent_covered_by.py, check_placeholder_defaults.py, check_ac_limits.py)
+already implement Pattern B (report-only): they never modify files on disk and only
+exit 1 with actionable error messages. Grep for write_text/write_bytes/open('w')/
+yaml.dump across all 5 files returned zero matches. The modify+exit-1 infinite loop
+described in the ticket does not exist in the current codebase. The 251-file commit
+failure that prompted this ticket may have been caused by pre-commit's stash mechanism
+itself (not the hooks), or the hooks may have been fixed in a prior commit before this
+ticket was created.
+
 ## Implementation Tasks
 
 - [ ] Audit each hook's current behavior: document whether it currently modifies files (and where) and under what conditions it exits non-zero.
