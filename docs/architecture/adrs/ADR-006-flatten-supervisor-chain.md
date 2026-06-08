@@ -558,6 +558,41 @@ See `docs/architecture/agent_delivery_workflows.md` §5 "AC BP-600c-3 — Test-r
 green phase after fix is applied" for the full dispatch contract table, outcome routing table,
 halt message for persistent failure, ordering invariant, and red/green contrast table.
 
+### AC BP-600e-1 — Multi-file warning before green-phase test (2026-06-08)
+
+```gherkin
+Given the python-coder has been dispatched to apply the fix,
+When the coder's changes touch 2 or more source files (excluding
+  the test file and AC YAML),
+Then the workflow pauses before proceeding to the green-phase test,
+And it displays a warning: "This fix modified N files (expected 1).
+  Files changed: [list]. Continue with quick-fix or escalate to
+  /build-feature?",
+And it waits for user confirmation before proceeding.
+```
+
+**Relationship to the depth model (this ADR):**
+
+After the `python-coder` Agent-tool call (depth 1) returns, the depth-0
+executing context inspects the working tree diff (`git diff --name-only HEAD`)
+and counts source files modified, excluding the test file and AC YAML. If the
+count is 2 or more, the depth-0 context pauses and requests user confirmation
+before dispatching the green-phase `test-runner` at depth 1.
+
+This is a **depth-0 enforcement layer** — the control logic runs entirely
+within the executing context without any additional Agent-tool dispatch. The
+pattern is consistent with the ADR-006 depth model: orchestration decisions
+live at depth 0; phase agents receive structured inputs at depth 1.
+
+The user may choose to continue (proceed to green-phase test-runner) or
+escalate (abort quick-fix, leaving the changes uncommitted for re-planning
+via `/build-feature`). This two-option routing ensures the user is never
+silently committed to a multi-file change they did not intend.
+
+See `docs/architecture/agent_delivery_workflows.md` §5 "AC BP-600e-1 — Multi-file
+warning before green-phase test" for the full warning message format, user
+confirmation routing table, escalation halt message, and ordering invariant.
+
 ---
 
 ## References

@@ -871,6 +871,129 @@ modification constraint ensures:
 
 ---
 
+### AC BP-600e-1 — Multi-file warning before green-phase test
+
+After the python-coder has returned from the fix-application phase (AC BP-600d-2), the
+quick-fix workflow MUST inspect the diff before proceeding to the green-phase test-runner
+invocation. If the coder touched 2 or more source files (excluding the test file and the
+AC YAML), the workflow MUST pause and display a structured warning to the user before
+continuing. The Gherkin contract:
+
+```gherkin
+Given the python-coder has been dispatched to apply the fix,
+When the coder's changes touch 2 or more source files (excluding
+  the test file and AC YAML),
+Then the workflow pauses before proceeding to the green-phase test,
+And it displays a warning: "This fix modified N files (expected 1).
+  Files changed: [list]. Continue with quick-fix or escalate to
+  /build-feature?",
+And it waits for user confirmation before proceeding.
+```
+
+**When the check runs:**
+
+This check fires at the depth-0 executing context, immediately after the
+`python-coder` Agent-tool call returns with a successful sign-off. The depth-0
+context runs `git diff --name-only HEAD` and filters the result to exclude:
+
+1. The test file written by test-writer (BP-600c-1) — identified by the path
+   stored from that phase's output.
+2. Any AC YAML file (files matching `docs/acceptance-criteria/*.yaml` or the
+   path returned by `build-ac`).
+
+Files remaining after this exclusion are counted as **source files modified**.
+
+**Trigger condition:**
+
+The warning is triggered when the filtered source-file count is **≥ 2**. A
+single-file modification (count = 1) proceeds to the green-phase test-runner
+without any pause or user confirmation.
+
+**Warning message format:**
+
+```
+/quick-fix warning: multi-file modification detected.
+
+  This fix modified N files (expected 1).
+  Files changed:
+    - <source_file_1>
+    - <source_file_2>
+    [... additional files ...]
+
+  The quick-fix workflow is designed for single-file fixes.
+  A multi-file change may indicate the root cause spans more than
+  one module.
+
+  Options:
+    C — Continue with quick-fix (proceed to green-phase test)
+    E — Escalate to /build-feature (abort quick-fix; plan as a ticket)
+
+  Enter C or E:
+```
+
+**User confirmation routing:**
+
+| User input | Workflow action |
+|---|---|
+| `C` (continue) | Proceed to green-phase test-runner (BP-600c-3) with the multi-file diff in place |
+| `E` (escalate) | Halt the workflow. Print escalation message (see below). Do NOT proceed to green-phase test, commit, or any subsequent phase |
+| Any other input | Re-display the prompt — wait for `C` or `E` |
+
+**Escalation halt message (user chose E):**
+
+```
+/quick-fix escalated: fix scope exceeds single-file boundary.
+
+  Modified files:
+    - <source_file_1>
+    - <source_file_2>
+    [...]
+
+  The changes above have been left uncommitted in your working tree.
+  To proceed, re-plan this fix as a full ticket via:
+
+    /build-feature
+
+  The test file written by test-writer is at:
+    <test_file_path>
+  You may keep or delete it before starting /build-feature.
+```
+
+**Relationship to the depth model (this ADR):**
+
+This check runs entirely at depth 0 (the executing context). No additional
+Agent-tool dispatch is needed — the `git diff --name-only` call is a
+direct Bash invocation at depth 0. The result gates whether the green-phase
+`test-runner` dispatch (depth 1) occurs. This is consistent with the ADR-006
+pattern: all phase-chain control logic lives at depth 0; phase agents are
+dispatched at depth 1 and receive structured inputs.
+
+**Relationship to BP-600d-2 single-file scope constraint:**
+
+AC BP-600d-2 instructs the python-coder to modify only the target file.
+AC BP-600e-1 is the **depth-0 enforcement layer** for that constraint: even
+if the python-coder violated the scope (by editing additional files), the
+executing context detects this and pauses before committing the multi-file
+change. The two ACs are complementary:
+
+| Layer | AC | What it enforces |
+|---|---|---|
+| Agent-level | BP-600d-2 | python-coder receives a hard scope boundary in its Agent-tool input |
+| Workflow-level | BP-600e-1 | executing context (depth 0) detects scope violations and pauses before green-phase |
+
+**Ordering invariant:**
+
+```
+python-coder/fix (depth 1) → [BP-600e-1 multi-file check at depth 0]
+  → test-runner/green-phase (depth 1) → commit (depth 1)
+```
+
+The multi-file check occurs synchronously between the python-coder phase return
+and the green-phase test-runner dispatch. It is never skipped, even if only one
+file is modified (in that case it is a no-op — count = 1, no pause needed).
+
+---
+
 ## Key Design Principles
 
 1. **Self-Documenting State:** The `epic-supervisor` determines what phase a ticket is in by parsing the structured `agents:` YAML map in the ticket's frontmatter. It never reads the conversational history.
@@ -891,6 +1014,7 @@ modification constraint ensures:
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-08 [llm-expert]: Added AC BP-600e-1 multi-file warning section: Gherkin contract, trigger condition, warning message format, user confirmation routing table, escalation halt message, depth-0 enforcement rationale, relationship to BP-600d-2, and ordering invariant. (#EPIC-QuickFixWorkflow/14)
 - 2026-06-08 [llm-expert]: Added AC BP-600c-3 green-phase verification section to Section 5: Gherkin contract, dispatch contract table, outcome routing table, halt message for persistent failure, ordering invariant, contrast table with red-phase, and rationale. (#EPIC-QuickFixWorkflow/11)
 - 2026-06-08 [llm-expert]: Added AC BP-600d-2 python-coder fix-application dispatch section to Section 5: Gherkin contract, dispatch contract table, single-file scope constraint table, ordering invariant, and rationale. (#EPIC-QuickFixWorkflow/10)
 - 2026-06-08 [llm-expert]: Added AC BP-600c-2 red-phase verification section to Section 5: Gherkin contract, dispatch contract table, outcome routing table, halt message for unexpected green, ordering invariant, and rationale. (#EPIC-QuickFixWorkflow/08)
