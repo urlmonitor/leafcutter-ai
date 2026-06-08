@@ -1,5 +1,5 @@
 id: BP-100i-3-i
-readiness: reviewed
+readiness: approved
 priority: high
 title: "Parity check degrades gracefully when the deployed output directory does not exist"
 component: build-pipeline
