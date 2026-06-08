@@ -362,6 +362,12 @@ technical boundaries the BA could not see**.
    Set `status: superseded_by`.
 5. **Preserve the original criteria verbatim** in the first child AC, or
    distribute portions across children such that the union equals the original.
+6. **Apply parent covered_by update (mandatory)**: For each newly created child
+   AC, update its direct parent's `covered_by` list to append the child ID.
+   Use an `Edit` call that modifies ONLY `covered_by` — do NOT overwrite any
+   other fields. If the child ID is already present in `covered_by`, skip the
+   update (idempotent). Refer to `docs/reference/ac-schema.md` — "Authoring
+   agents — parent covered_by update" for the full protocol.
 
 ### When NOT to split
 

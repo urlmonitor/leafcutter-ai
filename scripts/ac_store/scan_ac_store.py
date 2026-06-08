@@ -24,12 +24,14 @@ Exit codes:
 
 AC-1: Leaf scanner identifies todo, unblocked L2/L3 ACs.
 AC-5: Scanner JSON output is machine-consumable.
+ACS-100i-1: derive_parent_id() derives the parent AC ID by stripping the last segment.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -514,6 +516,66 @@ def _dfs_collect_leaves(
 
 
 # ---------------------------------------------------------------------------
+# Parent ID derivation (ACS-100i-1)
+# ---------------------------------------------------------------------------
+
+# Root AC ID pattern: PREFIX-NNN (2-6 uppercase letters, hyphen, 3+ digits).
+# Examples: ACS-100, ACD-050, FIN-001.
+_ROOT_AC_RE = re.compile(r"^[A-Z]{2,6}-\d+$")
+
+# Level-1 AC ID pattern: PREFIX-NNNx where x is one or more lowercase letters
+# appended directly to the digit block (no hyphen separator).
+# Examples: ACS-100a, ACD-050b, ACS-300h.
+_LEVEL1_AC_RE = re.compile(r"^([A-Z]{2,6}-\d+)([a-z]+)$")
+
+
+def derive_parent_id(ac_id: str) -> str | None:
+    """Return the parent AC ID for *ac_id*, or ``None`` when *ac_id* is a root.
+
+    The parent ID is derived by stripping the last segment from the child ID:
+
+    * Root IDs (``PREFIX-NNN``, e.g. ``ACS-100``) have no parent — returns
+      ``None``.
+    * Level-1 IDs (``PREFIX-NNNx``, e.g. ``ACS-100a``) have the root as
+      their parent — returns ``PREFIX-NNN`` (e.g. ``ACS-100``).
+    * All deeper IDs (e.g. ``ACS-300h-1``, ``ACS-300h-2-i``) have the ID
+      with the last hyphen-separated segment removed as their parent.
+
+    Args:
+        ac_id: The child AC ID string (e.g. ``"ACS-300h-1"``).
+
+    Returns:
+        The parent AC ID string, or ``None`` when *ac_id* is a root-level ID.
+
+    Examples::
+
+        >>> derive_parent_id("ACS-300h-1")
+        'ACS-300h'
+        >>> derive_parent_id("ACS-300h-2-i")
+        'ACS-300h-2'
+        >>> derive_parent_id("ACS-100")
+        None
+        >>> derive_parent_id("ACS-100a")
+        'ACS-100'
+    """
+    # Root pattern: PREFIX-NNN — no parent
+    if _ROOT_AC_RE.match(ac_id):
+        return None
+
+    # Level-1 pattern: PREFIX-NNNx — parent is PREFIX-NNN
+    m = _LEVEL1_AC_RE.match(ac_id)
+    if m:
+        return m.group(1)
+
+    # All deeper levels: strip the last hyphen-delimited segment
+    if "-" in ac_id:
+        return ac_id.rsplit("-", 1)[0]
+
+    # Fallback: unrecognised format — treat as root (no parent)
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -669,5 +731,10 @@ DECISION HISTORY
   as ready or blocked. Sorts ready ACs by estimated_complexity (S<M<L<XL)
   then id. Outputs human-readable or JSON. Exits 0 on success, 1 on YAML
   errors, 2 on dependency cycle.
+- 2026-06-08 [TICKET-20260607-ACS-100i-1]: Added derive_parent_id().
+  Implements ACS-100i-1: given a child AC ID, strip the last segment to
+  derive the parent ID. Root IDs (PREFIX-NNN) return None. Level-1 IDs
+  (PREFIX-NNNx) return PREFIX-NNN. Deeper IDs strip the last hyphen-
+  delimited segment. Uses two compiled regexes plus rsplit for O(1).
 ====================================================================
 """
