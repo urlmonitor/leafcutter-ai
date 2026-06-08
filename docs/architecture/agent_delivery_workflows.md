@@ -467,6 +467,73 @@ clean-slate assumption: `/quick-fix` is a rapid-fix tool, not a merge tool.
   Then re-invoke: /quick-fix <your-diagnosis>
 ```
 
+### AC BP-600c-1 — Test-writer dispatch with AC input (test before fix)
+
+After creating the AC YAML file (AC BP-600b-1), the quick-fix workflow MUST dispatch the
+`test-writer` agent before applying any fix code. The Gherkin contract:
+
+```gherkin
+Given the quick-fix workflow has created an AC YAML file for the
+  diagnosed bug,
+When the workflow reaches the test-writing phase,
+Then it dispatches the test-writer agent with the AC as input,
+And the test-writer produces a test that reproduces the diagnosed bug,
+And the test includes a "# covers: <AC-ID>" tag referencing the
+  newly created AC,
+And the test is written to the appropriate test directory before any
+  fix code is applied.
+```
+
+**Dispatch contract (Agent-tool input to `test-writer` at depth 1):**
+
+The test-writer agent is dispatched with the following structured inputs:
+
+| Input field | Value | Source |
+|---|---|---|
+| `ticket_path` | Absolute path to the quick-fix workflow's internal ticket file | Workflow context at depth 0 |
+| `ac_path` | Absolute path to the newly created AC YAML file (from BP-600b-1) | AC creation phase output |
+| `target_file` | Absolute path to the buggy source file (from diagnosis parsing) | BP-600d-1 parsed struct |
+| `location_hint` | Line number or function name (optional) | BP-600d-1 parsed struct |
+| `symptom` | Observable incorrect behaviour | BP-600d-1 parsed struct |
+
+**Test file requirements:**
+
+1. **`# covers: <AC-ID>` tag** — every test function written by the test-writer for this
+   quick-fix MUST include the tag `# covers: <AC-ID>` (where `<AC-ID>` is the ID from the
+   newly created AC YAML file, e.g. `# covers: BP-600c`). The tag must appear on the line
+   above `def test_*`, on the first body line, or in the docstring — matching the format
+   required by `check_test_ac_tags.py`.
+
+2. **Test directory** — the test file is written to the project's canonical test directory
+   (e.g. `unit_tests/`) before any fix code is applied. The test-writer MUST NOT write to
+   `src/` or any source directory.
+
+3. **Red-phase assertion** — the test is expected to FAIL against the unfixed code. It
+   asserts the correct behaviour (`Then` clause of the AC), which the buggy code does not
+   yet satisfy. The test-runner phase (BP-600c-2) verifies this red state.
+
+4. **Ordering invariant** — the test file write and the `covered_by` update to the AC YAML
+   file (see AC Schema §test-writer integration) MUST both complete before the fix-implementation
+   phase (`python-coder` / `sql-coder`) is dispatched. This ordering is enforced by the
+   sequential phase chain in `quick-fix.js`.
+
+**`covered_by` update (AC store integration):**
+
+After writing the test file, the test-writer MUST append the new test path to the `covered_by`
+list in the AC YAML file created during the AC creation phase:
+
+```yaml
+# After test-writer runs — BP-600c-1 AC YAML excerpt:
+covered_by:
+  - "unit_tests/test_<component>_<bug-id>.py::test_<function_name>"
+```
+
+This update is part of the same agent turn as the test file write — both the test file and
+the `covered_by` update are committed together (see `docs/reference/ac-schema.md` §test-writer
+for the full integration protocol).
+
+---
+
 ### AC BP-600d-1 — Structured diagnosis input parsing
 
 Before any phase runs, `/quick-fix` MUST parse the user-provided diagnosis text and extract
@@ -573,6 +640,7 @@ The workflow accepts two input forms:
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-08 [llm-expert]: Added AC BP-600c-1 test-writer dispatch section to Section 5: Gherkin contract, dispatch contract table, test file requirements, red-phase assertion, ordering invariant, and covered_by update protocol. (#EPIC-QuickFixWorkflow/07)
 - 2026-06-08 [llm-expert]: Added AC BP-600d-1 structured diagnosis input parsing section to Section 5: Gherkin contract, four parsed fields table, two input forms, validation rules, and downstream consumer mapping. (#EPIC-QuickFixWorkflow/09)
 - 2026-06-08 [llm-expert]: Added AC BP-600a-3 uncommitted changes guard section to Section 5: guard contract, implementation steps, halt message format, and rationale. (#EPIC-QuickFixWorkflow/03)
 - 2026-06-08 [llm-expert]: Added AC BP-600a-2 documentation to Section 5: prohibited isolation infrastructure table, no-worktree-agent/no-feature-skill constraint, and rationale for the exclusion. (#EPIC-QuickFixWorkflow/02)

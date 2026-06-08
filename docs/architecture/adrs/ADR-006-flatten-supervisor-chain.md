@@ -309,6 +309,42 @@ remediation path.
 See `docs/architecture/agent_delivery_workflows.md` §5 "AC BP-600a-3 — Uncommitted
 changes guard" for the full output format specification.
 
+### AC BP-600c-1 — Test-writer dispatched with AC input before fix code is applied (2026-06-08)
+
+```gherkin
+Given the quick-fix workflow has created an AC YAML file for the
+  diagnosed bug,
+When the workflow reaches the test-writing phase,
+Then it dispatches the test-writer agent with the AC as input,
+And the test-writer produces a test that reproduces the diagnosed bug,
+And the test includes a "# covers: <AC-ID>" tag referencing the
+  newly created AC,
+And the test is written to the appropriate test directory before any
+  fix code is applied.
+```
+
+**Relationship to the depth model (this ADR):**
+
+The test-writer dispatch is the second Agent-tool invocation in the `/quick-fix` phase chain
+(after `build-ac` at depth 1). The executing context (`/quick-fix` at depth 0) enforces the
+ordering invariant: `build-ac` returns its AC file path, then — and only then — the executing
+context dispatches `test-writer` at depth 1 with the AC path as part of its input.
+
+Key constraints under the ADR-006 depth model:
+
+- **Ordering guarantee**: the depth-0 executing context controls phase sequencing. Because
+  `build-ac` and `test-writer` are sequential Agent-tool dispatches at depth 1 (not parallel),
+  the test file is guaranteed to exist before `python-coder` / `sql-coder` is spawned.
+- **`# covers: <AC-ID>` tag**: the test-writer writes the tag at depth 1 using the AC ID
+  passed in the Agent-tool input from depth 0. The tag is the link from test to AC in the
+  `check_test_ac_tags.py` pre-commit hook.
+- **`covered_by` update**: after writing the test file, the test-writer also appends the test
+  path to the AC YAML file's `covered_by` list at depth 1 — in the same agent turn, so both
+  writes are committed together.
+
+See `docs/architecture/agent_delivery_workflows.md` §5 "AC BP-600c-1" for the full dispatch
+contract table, test file requirements, and red-phase assertion specification.
+
 ### AC BP-600b-2 — Correct component prefix and sequential ID (2026-06-08)
 
 ```gherkin

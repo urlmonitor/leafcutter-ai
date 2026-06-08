@@ -276,6 +276,57 @@ discover which tests already exist for an AC. It adds `# covers: XX-NNN`
 tags to every new test function it writes, and appends the new test path to
 the `covered_by` list in the corresponding AC YAML file.
 
+#### `/quick-fix` workflow — test-writer dispatch (AC BP-600c-1)
+
+When the `test-writer` is invoked by the `/quick-fix` workflow (as opposed to a
+standard `build-feature` epic), it receives the AC YAML file created during the
+AC creation phase as an additional structured input. The dispatch contract is:
+
+| Input field | Type | Description |
+|---|---|---|
+| `ac_path` | file_path | Absolute path to the newly created quick-fix AC YAML file |
+| `target_file` | file_path | Absolute path to the buggy source file |
+| `location_hint` | string or null | Line number or function name from the diagnosis |
+| `symptom` | string | Observable incorrect behaviour from the diagnosis |
+
+**`# covers: <AC-ID>` tag requirement (quick-fix context):**
+
+Every test function written for a quick-fix MUST include a `# covers: <AC-ID>` tag
+referencing the newly created AC. The tag may appear:
+
+- On the line immediately above `def test_*`
+- As the first statement inside the function body
+- In the function's docstring
+
+The tag format must match the `check_test_ac_tags.py` hook pattern exactly:
+`# covers: XX-NNN` (e.g. `# covers: BP-601`). The `XX-NNN` value is the `id`
+field from the AC YAML file passed in `ac_path`.
+
+**Ordering invariant (BP-600c-1):**
+
+The test file write and the `covered_by` update to the AC YAML file MUST both
+complete before the fix-implementation phase (`python-coder` or `sql-coder`) is
+dispatched. This red-phase-first ordering is enforced by the sequential phase chain
+in `quick-fix.js` and mirrors the TDD discipline of the standard `build-feature` workflow.
+
+**`covered_by` update (same write batch):**
+
+After writing the test file, the test-writer MUST append the new test path to the
+`covered_by` list in the AC YAML file at `ac_path`. Both writes — the test file
+creation and the `covered_by` update — occur in the same agent turn so they are
+committed atomically.
+
+```yaml
+# Example: after test-writer runs for a quick-fix on build-pipeline
+covered_by:
+  - "unit_tests/test_build_pipeline_BP-601.py::test_executability_probe_not_skipped"
+```
+
+The parent AC's `covered_by` update protocol (see §Authoring agents above) also
+applies here: if the quick-fix AC is a child AC, the parent's `covered_by` list
+is updated to include the child AC ID (this was already done by `build-ac` during
+AC creation). The test-writer only updates the child AC's `covered_by` field.
+
 ### triage agent (glossary-triage, debug)
 
 The `debug` skill and `glossary-triage` agent can look up AC IDs to
