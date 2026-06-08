@@ -67,6 +67,7 @@ def validate_agent_registry(package_root: Path) -> list[str]:
     errors.extend(_check_self_loops(spawn_map))
     errors.extend(_check_skills_used(portable_agents, package_root))
     errors.extend(validate_verification_flags(template_dir))
+    errors.extend(validate_produces_field(agents, template_dir))
 
     # Validate category field values against agent_categories (if present in registry)
     registry_path = package_root / "config" / "agent_registry.json"
@@ -402,6 +403,99 @@ def _check_self_loops(spawn_map: dict[str, list[str]]) -> list[str]:
     ]
 
 
+def validate_produces_field(
+    agents: list[dict[str, Any]],
+    template_dir: Path,
+) -> list[str]:
+    """Validate that every agent has a 'produces' field in both the registry
+    and its template frontmatter.
+
+    For registry entries: every agent must have a non-empty 'produces' field
+    whose value is one of the allowed enum values.
+
+    For template files: every agent whose template_path is set must have a
+    'produces' field in its YAML frontmatter.
+
+    This check enforces AC BO-510-3-i: a developer cannot add a new agent
+    template without the 'produces' field without failing validation at
+    pre-commit / CI time.
+
+    Args:
+        agents: List of agent dicts from agent_registry.json.
+        template_dir: Path to the templates/agents/ directory.
+
+    Returns:
+        List of human-readable error strings. An empty list means all agents
+        have valid 'produces' declarations in both locations.
+    """
+    _VALID_PRODUCES = {
+        "production_code",
+        "documentation",
+        "configuration",
+        "prompt",
+        "review_verdict",
+        "orchestration",
+        "test_artifact",
+        "analysis",
+    }
+
+    errors: list[str] = []
+
+    # --- Registry check ---
+    for agent in agents:
+        agent_id = agent.get("id", "<unknown>")
+        produces = agent.get("produces")
+        if produces is None:
+            errors.append(
+                f"Agent '{agent_id}' in agent_registry.json is missing the 'produces' field"
+            )
+        elif produces not in _VALID_PRODUCES:
+            errors.append(
+                f"Agent '{agent_id}' in agent_registry.json has invalid 'produces' value "
+                f"'{produces}'. Expected one of: {sorted(_VALID_PRODUCES)}"
+            )
+
+    # --- Template frontmatter check ---
+    if not template_dir.exists():
+        return errors
+
+    try:
+        from template_compiler import parse_frontmatter
+    except ImportError:
+        # If template_compiler is unavailable, skip frontmatter check.
+        errors.append(
+            "[WARNING] Could not import template_compiler.parse_frontmatter — "
+            "template 'produces' frontmatter check skipped."
+        )
+        return errors
+
+    for agent in agents:
+        agent_id = agent.get("id", "<unknown>")
+        template_path_str = agent.get("template_path") or ""
+        if not template_path_str:
+            continue  # No template — skip
+
+        # Derive the template file name from the path
+        tmpl_path = template_dir.parent.parent / template_path_str
+        if not tmpl_path.exists():
+            continue  # Missing template already caught by _check_template_paths
+
+        try:
+            text = tmpl_path.read_text(encoding="utf-8")
+        except OSError as exc:
+            # Read failure is non-fatal here; _check_template_paths surfaces missing files.
+            print(f"  [WARNING] Could not read template '{template_path_str}': {exc}")
+            continue
+
+        fm, _ = parse_frontmatter(text)
+        if "produces" not in fm:
+            errors.append(
+                f"Template '{template_path_str}' is missing the 'produces' frontmatter field"
+            )
+
+    return errors
+
+
 def load_registry(package_root: Path) -> list[dict[str, Any]]:
     """Load and return the agents list from agent_registry.json.
 
@@ -611,4 +705,9 @@ if __name__ == "__main__":
 #   entry point exits 0 on clean, 1 with diff when mismatches found.
 #   __main__ block routes --skills flag to main_skill_registry() and defaults to
 #   agent registry validation for backward compatibility.
+# - 2026-06-08 10:45 [test-writer/EPIC-AgentProducesTrait/03]: Added validate_produces_field(). (#EPIC-AgentProducesTrait/03)
+#   Checks that every agent in agent_registry.json has a non-null 'produces' field
+#   whose value is in the allowed enum, and that every agent's template frontmatter
+#   also declares 'produces'. Wired into validate_agent_registry() as the final
+#   check. AC BO-510-3-i: 17 new tests all green.
 # ====================================================================
