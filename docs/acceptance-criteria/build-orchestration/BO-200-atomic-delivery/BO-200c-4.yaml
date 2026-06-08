@@ -12,15 +12,27 @@ criteria: |
   And only the commit body may be amended to reflect the additional staged files,
   And no hook or agent overwrites the subject line the user already confirmed.
 depends_on: [BO-200c]
-doc_links: []
-assigned_agent: null
+doc_links:
+  - path: templates/agents/commit.md
+    relationship: implements
+    status: exists
+  - path: templates/skills/precommit-autofix/SKILL.md
+    relationship: consumes
+    status: exists
+assigned_agent: llm-expert
 estimated_complexity: S
-it_requirements: []
-delivers_to: null
+readiness: reviewed
+it_requirements:
+  - "The commit agent template must check for a user-approved subject line before composing a new one"
+  - "Pre-commit autofix retry (Step 5 of commit.md) must preserve the original subject from Step 3"
+  - "Only the commit body may be amended to reflect additional staged files after hook auto-fix"
+delivers_to:
+  agent: llm-expert
+  contract: "Boolean signal: user_approved_subject_exists — consumed by BO-1100a-4 to gate pattern application"
 expects_from: null
 origin_agent: product-owner-v3
 created: 2026-06-05
-amended_by: []
+amended_by: [it-po-v3]
 superseded_by: null
 covered_by: []
 implemented_by: []

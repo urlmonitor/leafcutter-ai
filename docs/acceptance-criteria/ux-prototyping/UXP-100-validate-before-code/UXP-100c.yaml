@@ -1,7 +1,7 @@
 id: UXP-100c
 readiness: approved
 priority: medium
-title: "Approve or reject before any code is written"
+title: "Decide on a prototype through a clear approval gate"
 component: ux-prototyping
 level: L1
 status: active
@@ -11,24 +11,22 @@ roadmap_phase: phase_2
 criteria: |
   The prototype is a user-facing gate — see it, then decide.
 
-  You see the proposed experience and say yes, no, or change-it. Only after
-  sign-off does the pipeline proceed to implementation. This prevents wasted
-  engineering effort on features the user does not actually want.
+  You see the proposed experience and choose to approve, reject, or request
+  changes. The pipeline will not proceed until you make an active choice.
+  If you request changes, a revised prototype is produced and the cycle
+  repeats until you approve or reject.
 depends_on: [UXP-100]
 doc_links: []
 delivers_to: null
 expects_from: null
 origin_agent: product-owner-v3
 created: 2026-06-06
-amended_by: []
+amended_by:
+  - reason: "split: UXP-100c -> UXP-100c + UXP-100f, 2026-06-08"
 superseded_by: null
 covered_by:
   - UXP-100c-1
   - UXP-100c-2
   - UXP-100c-3
-  - UXP-100c-4
-  - UXP-100c-2-i
-  - UXP-100c-5
-  - UXP-100c-6
 implemented_by: []
 documentation_triggers: [how-to, sequence-diagram]

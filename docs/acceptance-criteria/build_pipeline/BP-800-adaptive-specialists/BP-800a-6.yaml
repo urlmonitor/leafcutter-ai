@@ -18,7 +18,7 @@ criteria: |
   And the diagram follows C4 component-level notation
   And the diagram is placed under docs/architecture/
 depends_on:
-  - BP-800a
+  - BP-800a2
   - BP-800a-4
 doc_links:
   - path: docs/architecture/components/build-epic-workflow-dispatch.md
@@ -32,7 +32,8 @@ expects_from:
   contract: "Completed detection subsystem to diagram"
 origin_agent: business-analyst-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+  - reason: "split: BP-800a -> BP-800a + BP-800a2, 2026-06-08 — parent changed from BP-800a to BP-800a2"
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -1,0 +1,35 @@
+id: BP-800f-1-i
+title: "Unknown database driver is detected but categorized as unclassified paradigm"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a project with "clickhouse-driver" listed in pyproject.toml dependencies
+  And "clickhouse" is not in the known database mapping (it is neither relational, document, nor graph in the detector's built-in list)
+  When the technology detector scans the project
+  Then it detects "clickhouse" as a database with paradigm "unclassified"
+  And if a best-practice knowledge file for "clickhouse" exists, a specialist is generated normally
+  And if no knowledge file exists, a minimal specialist is generated with a warning (per BP-800b-3 behavior)
+  And the unclassified paradigm does not prevent detection or generation
+depends_on:
+  - BP-800f-1
+doc_links:
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-800a-3
+  contract: "Database detection logic that this unknown-paradigm edge case exercises"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

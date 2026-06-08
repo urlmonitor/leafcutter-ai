@@ -17,12 +17,12 @@ criteria: |
   And the guide explains how to write actionable change-request feedback
     that the UX designer agent can execute
 depends_on:
-  - UXP-100c
+  - UXP-100f
   - UXP-100c-1
   - UXP-100c-3
   - UXP-100c-4
 doc_links:
-  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100c.yaml
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100f.yaml
     relationship: parent
     status: exists
 assigned_agent: documentation-expert
@@ -33,7 +33,8 @@ expects_from:
   contract: "Behavioral ACs describing the review and decision workflow"
 origin_agent: business-analyst-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+  - reason: "split: UXP-100c -> UXP-100c + UXP-100f, 2026-06-08"
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -21,13 +21,17 @@ depends_on: []
 doc_links: []
 origin_agent: product-owner-v3
 created: 2026-06-06
-amended_by: []
+amended_by:
+  - reason: "split: BP-800b -> BP-800b + BP-800g, 2026-06-08 — added BP-800g to covered_by"
+  - reason: "split: BP-800a -> BP-800a + BP-800a2, 2026-06-08 — added BP-800a2 to covered_by"
 superseded_by: null
 covered_by:
   - BP-800a
+  - BP-800a2
   - BP-800b
   - BP-800c
   - BP-800d
   - BP-800e
   - BP-800f
+  - BP-800g
 implemented_by: []
