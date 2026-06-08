@@ -41,6 +41,14 @@ DECISION HISTORY:
     scripts/ac_store/ac_parent_id.py (ACS-100i-1 deliverable).
     Fail-open on unexpected exceptions. Uses HOOK_TEST_FILES for unit testing.
     (#EPIC-AcParentChildLinkEnforcement/02)
+  - 2026-06-08 [python-coder/ACS-100i-3]: Verified full ancestry chain traversal.
+    The hook enforces only the immediate parent link (using derive_parent_id on
+    the child's own ID), not the grandparent. Only the immediate parent must list
+    the child in covered_by; grandparent ACs are not required to list grandchildren
+    directly. Six new TestThreeLevelAncestryChain tests added to confirm L1→L2→L3
+    chain behaviour: blocked when L2 omits L3, allowed when L2 includes L3, and
+    grandparent (L1) does NOT need to list L3.
+    (#EPIC-AcParentChildLinkEnforcement/03)
 """
 
 from __future__ import annotations

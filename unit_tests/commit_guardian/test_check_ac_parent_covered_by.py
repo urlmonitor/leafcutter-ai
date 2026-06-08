@@ -473,5 +473,192 @@ class TestMainExitCodes(unittest.TestCase):
             self.assertEqual(result, 0)
 
 
+class TestThreeLevelAncestryChain(unittest.TestCase):
+    """Tests for ACS-100i-3: three-level ancestry chain (L1 → L2 → L3).
+
+    When a new L3 AC is staged, only the immediate parent (L2) must list it in
+    covered_by. The grandparent (L1) is NOT required to list the L3 AC directly.
+    """
+
+    def setUp(self):
+        self.mod = _load_hook_module()
+        self._old_env = {}
+
+    def tearDown(self):
+        for k, v in self._old_env.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+
+    def _set_env(self, key, value):
+        self._old_env.setdefault(key, os.environ.get(key))
+        os.environ[key] = value
+
+    def _build_three_level_store(self, tmpdir, l2_covered_by="[]"):
+        """Create a three-level AC store under tmpdir.
+
+        L1 (ACS-300g): covered_by: ["ACS-300g-1"]
+        L2 (ACS-300g-1): covered_by: <l2_covered_by>
+        L3 (ACS-300g-1-ii): staged child, depends_on: [ACS-300g-1]
+
+        Returns:
+            Tuple (l3_file, l2_file, l1_file) as Path objects.
+        """
+        ac_store = Path(tmpdir) / "docs" / "acceptance-criteria" / "ACS-300g"
+        ac_store.mkdir(parents=True)
+
+        l1_file = ac_store / "ACS-300g.yaml"
+        l1_file.write_text(
+            textwrap.dedent(
+                f"""\
+                id: ACS-300g
+                title: L1 grandparent AC
+                req_status: approved
+                criteria: Root criteria.
+                covered_by: ["ACS-300g-1"]
+                origin_agent: BrainCandy
+                """
+            )
+        )
+
+        l2_file = ac_store / "ACS-300g-1.yaml"
+        l2_file.write_text(
+            textwrap.dedent(
+                f"""\
+                id: ACS-300g-1
+                title: L2 parent AC
+                req_status: approved
+                criteria: L2 criteria.
+                depends_on: [ACS-300g]
+                covered_by: {l2_covered_by}
+                origin_agent: BrainCandy
+                """
+            )
+        )
+
+        l3_file = ac_store / "ACS-300g-1-ii.yaml"
+        l3_file.write_text(
+            textwrap.dedent(
+                """\
+                id: ACS-300g-1-ii
+                title: L3 child AC
+                req_status: draft
+                criteria: L3 criteria.
+                depends_on: [ACS-300g-1]
+                origin_agent: BrainCandy
+                """
+            )
+        )
+
+        return l3_file, l2_file, l1_file
+
+    def test_l3_staged_l2_empty_covered_by_blocks(self):
+        """L3 staged; L2 covered_by is []; commit is blocked with a violation."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            l3_file, l2_file, _l1_file = self._build_three_level_store(
+                tmpdir, l2_covered_by="[]"
+            )
+            self._set_env("HOOK_ROOT", tmpdir)
+            self._set_env("HOOK_TEST_FILES", str(l3_file))
+
+            result = self.mod.main()
+
+            self.assertEqual(
+                result,
+                1,
+                "Expected exit code 1 (blocked) when L3 staged but L2 covered_by is []",
+            )
+
+    def test_l3_staged_error_names_immediate_parent_l2(self):
+        """Error message names the immediate parent (L2 = ACS-300g-1), not grandparent."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            l3_file, l2_file, _l1_file = self._build_three_level_store(
+                tmpdir, l2_covered_by="[]"
+            )
+            self._set_env("HOOK_ROOT", tmpdir)
+            derive_fn = self.mod._get_derive_parent_id()
+            violations = self.mod._check_file(str(l3_file), derive_fn)
+
+            self.assertTrue(
+                len(violations) == 1,
+                f"Expected exactly 1 violation; got {len(violations)}: {violations}",
+            )
+            self.assertIn(
+                "ACS-300g-1",
+                violations[0],
+                "Violation message must name the immediate parent 'ACS-300g-1'",
+            )
+
+    def test_l3_staged_error_does_not_require_grandparent(self):
+        """Grandparent (ACS-300g) is NOT required to list L3 in its covered_by."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # L1 covered_by only lists ACS-300g-1 (does NOT list ACS-300g-1-ii).
+            # This is correct — the grandparent only lists direct children.
+            # Hook must not require L1 to list L3.
+            l3_file, l2_file, _l1_file = self._build_three_level_store(
+                tmpdir, l2_covered_by="[ACS-300g-1-ii]"
+            )
+            self._set_env("HOOK_ROOT", tmpdir)
+            self._set_env("HOOK_TEST_FILES", str(l3_file))
+
+            result = self.mod.main()
+
+            # When L2 correctly lists L3, commit is allowed — even though L1
+            # does not list L3. Grandparent coverage is not required.
+            self.assertEqual(
+                result,
+                0,
+                "Expected exit code 0 (allowed): grandparent need not list L3 directly",
+            )
+
+    def test_l3_staged_l2_correct_covered_by_allows(self):
+        """L3 staged; L2 covered_by correctly includes L3; commit is allowed."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            l3_file, l2_file, _l1_file = self._build_three_level_store(
+                tmpdir, l2_covered_by="[ACS-300g-1-ii]"
+            )
+            self._set_env("HOOK_ROOT", tmpdir)
+            derive_fn = self.mod._get_derive_parent_id()
+            violations = self.mod._check_file(str(l3_file), derive_fn)
+
+            self.assertEqual(
+                violations,
+                [],
+                f"Expected no violations when L2 correctly lists L3; got: {violations}",
+            )
+
+    def test_violation_message_names_l3_child_id(self):
+        """Violation message names the staged child (L3 = ACS-300g-1-ii)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            l3_file, _l2_file, _l1_file = self._build_three_level_store(
+                tmpdir, l2_covered_by="[]"
+            )
+            self._set_env("HOOK_ROOT", tmpdir)
+            derive_fn = self.mod._get_derive_parent_id()
+            violations = self.mod._check_file(str(l3_file), derive_fn)
+
+            self.assertTrue(
+                any("ACS-300g-1-ii" in v for v in violations),
+                f"Violation must name child ID 'ACS-300g-1-ii'; got: {violations}",
+            )
+
+    def test_violation_message_names_l2_parent_file_path(self):
+        """Violation message includes the L2 parent file path for actionable guidance."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            l3_file, l2_file, _l1_file = self._build_three_level_store(
+                tmpdir, l2_covered_by="[]"
+            )
+            self._set_env("HOOK_ROOT", tmpdir)
+            derive_fn = self.mod._get_derive_parent_id()
+            violations = self.mod._check_file(str(l3_file), derive_fn)
+
+            l2_abs = str(l2_file.resolve())
+            self.assertTrue(
+                any(l2_abs in v for v in violations),
+                f"Violation must include L2 parent file path '{l2_abs}'; got: {violations}",
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
