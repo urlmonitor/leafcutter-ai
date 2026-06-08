@@ -17,6 +17,7 @@ tools: Read, Bash, Agent
 portable: true
 signoff: false
 domain: null
+produces: analysis
 config_keys: {}
 adopter_notes: |
   Internal only. Called by ticket-supervisor failure adjudication ladder.

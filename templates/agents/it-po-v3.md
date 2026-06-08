@@ -23,6 +23,7 @@ requires_verification: true
 signoff: false
 visibility: internal
 domain: null
+produces: analysis
 config_keys: {}
 skills_used:
   - knowledge-query  # Loaded during S1 to query agents, skills, and component docs.

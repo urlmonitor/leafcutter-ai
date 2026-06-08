@@ -15,6 +15,7 @@ tools: Bash, Read, Edit, Write, Agent
 portable: true
 signoff: false
 domain: null
+produces: orchestration
 config_keys: {}
 adopter_notes: |
   User-facing parallel test path. Called via /create-ticket-v2.

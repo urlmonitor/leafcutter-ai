@@ -30,6 +30,7 @@ tools: Bash, Read, Edit, Write, Agent
 portable: true
 signoff: false
 domain: null
+produces: orchestration
 config_keys: {}
 adopter_notes: |
   Invoked via /build-feature <epic>. Requires worktrees per epic.

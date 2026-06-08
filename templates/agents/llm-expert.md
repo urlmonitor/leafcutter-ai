@@ -15,6 +15,7 @@ tools: Bash, Read, Edit, Write, Agent
 portable: true
 signoff: true
 domain: null
+produces: prompt
 config_keys: {}
 adopter_notes: |
   Phase agent. Invoked by ticket-supervisor when a ticket requires

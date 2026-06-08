@@ -12,6 +12,7 @@ tools: Bash, Read
 portable: true
 signoff: false
 domain: null
+produces: analysis
 config_keys: {}
 adopter_notes: |
   Utility agent. Spawned by finalize-feature.js at step 4 when the

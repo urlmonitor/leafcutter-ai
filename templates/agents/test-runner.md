@@ -19,6 +19,7 @@ tools: Bash, Read
 portable: true
 signoff: true
 domain: null
+produces: test_artifact
 config_keys:
   test_command_live_trader:
     required: false

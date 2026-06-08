@@ -12,6 +12,7 @@ tools: Bash, Read
 portable: true
 signoff: false
 domain: null
+produces: analysis
 config_keys: {}
 adopter_notes: |
   Utility sub-agent. Invoked by glossary-bootstrap, check_glossary_coverage, and

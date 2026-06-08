@@ -17,6 +17,7 @@ tools: Bash, Read, Edit, Write, Agent
 portable: true
 signoff: true
 domain: null
+produces: orchestration
 config_keys: {}
 adopter_notes: |
   Depth-0 orchestrator. Dispatched directly by /build-feature (not via Agent tool).

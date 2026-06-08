@@ -19,6 +19,7 @@ tools: Bash, Read, Edit, Write, Agent
 portable: true
 signoff: true
 domain: null
+produces: production_code
 config_keys:
   test_command_live_trader:
     required: false

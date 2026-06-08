@@ -5,6 +5,7 @@ tools: Bash, Read
 portable: true
 signoff: false
 domain: null
+produces: analysis
 description: >
   Read-only analyst agent that loads the feedback-analysis skill, invokes
   trend_report.py against the full feedback corpus (or a filtered date window),

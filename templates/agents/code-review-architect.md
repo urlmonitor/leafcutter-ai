@@ -14,6 +14,7 @@ portable: true
 signoff: false
 requires_verification: true
 domain: null
+produces: review_verdict
 config_keys: {}
 default_artifact_checklist:
   - report_file_written

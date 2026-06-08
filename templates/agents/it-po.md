@@ -13,6 +13,7 @@ tools: Bash, Read
 portable: true
 signoff: true
 domain: null
+produces: analysis
 config_keys: {}
 adopter_notes: |
   This agent operates at the technical architecture level. It requires

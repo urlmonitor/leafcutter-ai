@@ -9,6 +9,7 @@ tools: Read
 portable: true
 signoff: false
 domain: null
+produces: analysis
 config_keys: {}
 adopter_notes: |
   Haiku sub-agent spawned by the onboard wizard. Not invoked directly.

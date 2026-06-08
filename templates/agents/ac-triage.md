@@ -16,6 +16,7 @@ tools: Read, Bash
 portable: true
 signoff: false
 domain: null
+produces: analysis
 spawn_allowlist: []
 tool_allowlist:
   - Read

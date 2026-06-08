@@ -19,6 +19,7 @@ tools: Bash, Read, Agent
 portable: true
 signoff: false
 domain: null
+produces: analysis
 config_keys: {}
 adopter_notes: |
   Internal. Always spawned by create-ticket for standard_ticket path.

@@ -10,6 +10,7 @@ tools: Bash, Read, Write, Edit, Agent
 portable: true
 signoff: false
 domain: null
+produces: analysis
 config_keys: {}
 adopter_notes: |
   Portable install wizard. Invoke via /onboard on a fresh repo after running

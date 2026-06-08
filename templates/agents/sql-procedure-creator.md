@@ -45,7 +45,7 @@ behavioral_patterns:
   name: Conditional Behavior
   related_agent: null
   trigger: the how-to conflicts with this system prompt
-
+produces: production_code
 ---
 
 You are a specialist sub-agent invoked exclusively by `sql-coder`. You author

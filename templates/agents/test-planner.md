@@ -22,6 +22,7 @@ tools: Bash, Read, Agent
 portable: true
 signoff: false
 domain: null
+produces: test_artifact
 config_keys:
   testing_context:
     required: false

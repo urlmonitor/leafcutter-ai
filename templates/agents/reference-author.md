@@ -11,6 +11,7 @@ tools: Bash, Read, Edit, Write, Agent
 portable: true
 signoff: true
 domain: null
+produces: documentation
 config_keys: {}
 adopter_notes: |
   Internal. Always spawned by documentation-expert.

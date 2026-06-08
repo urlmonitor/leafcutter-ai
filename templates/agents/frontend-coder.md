@@ -19,6 +19,7 @@ portable: true
 signoff: true
 requires_verification: true
 domain: null
+produces: production_code
 config_keys:
   frontend.project_context_path:
     required: false

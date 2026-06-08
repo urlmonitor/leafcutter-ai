@@ -13,6 +13,7 @@ portable: true
 signoff: true
 requires_verification: true
 domain: null
+produces: documentation
 config_keys: {}
 default_artifact_checklist:
   - adr_file_created

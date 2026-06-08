@@ -28,6 +28,7 @@ tools: Bash, Read, Edit, Write, Agent
 portable: true
 signoff: true
 domain: null
+produces: test_artifact
 config_keys:
   testing_context:
     required: false

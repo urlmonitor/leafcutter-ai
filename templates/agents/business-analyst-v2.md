@@ -15,6 +15,7 @@ tools: Bash, Read, Agent
 portable: true
 signoff: false
 domain: null
+produces: analysis
 config_keys: {}
 adopter_notes: |
   Internal. Spawned only by create-ticket-v2. Never call directly.

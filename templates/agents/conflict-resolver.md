@@ -12,6 +12,7 @@ tools: Bash, Read, Edit, Write, Agent
 portable: true
 signoff: false
 domain: null
+produces: orchestration
 config_keys: {}
 adopter_notes: |
   Called by worktree-agent or directly when merge conflicts exist.

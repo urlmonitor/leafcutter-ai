@@ -21,6 +21,7 @@ tools: Bash, Read, Write, Agent
 portable: true
 signoff: false
 domain: null
+produces: analysis
 config_keys: {}
 adopter_notes: |
   Internal. Spawned by epic-supervisor at post-completion (heuristic-based)
