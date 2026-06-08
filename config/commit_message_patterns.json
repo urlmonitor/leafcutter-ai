@@ -1,0 +1,14 @@
+{
+  "_comment": "Commit message pattern registry — AC BO-1100c. Each key is a FileGroup enum value. The template uses {detail} as the only placeholder. Edit this file to add or change a pattern; the commit agent picks it up on the next invocation without any code change.",
+  "patterns": {
+    "tickets":           "chore(tickets): {detail}",
+    "new_acs":           "feat(ac-store): {detail}",
+    "shipped_acs":       "chore(ac-store): {detail}",
+    "implementation_code": "feat: {detail}",
+    "status_changes":    "chore(status): {detail}",
+    "tests":             "test: {detail}",
+    "docs":              "docs: {detail}",
+    "config":            "chore(config): {detail}",
+    "unknown":           "chore: {detail}"
+  }
+}

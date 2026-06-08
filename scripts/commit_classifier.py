@@ -14,22 +14,45 @@ BUSINESS CONTEXT: AC BO-1100a — the right message style is chosen automaticall
       AC BO-1100b — when staged files span multiple unrelated groups, the user
       is warned before a misleading commit message is produced, giving them the
       opportunity to split the commit or confirm the mixed set intentionally.
-ARCHITECTURE: Pure utility module — no I/O side-effects, no filesystem writes.
-      Callers obtain the staged file list via `git diff --cached --name-only`
-      and pass it in; this module performs all classification logic in memory.
+      AC BO-1100c — message patterns are defined in one place you can read and
+      edit: config/commit_message_patterns.json. Adding a new pattern is a
+      one-line edit to that file; no code change is required.
+ARCHITECTURE: Patterns are loaded at module-import time from
+      config/commit_message_patterns.json (resolved relative to this file's
+      location). If the config file is absent or malformed, the module falls
+      back to compiled-in defaults so callers are never broken by a missing
+      config. The classification logic itself remains pure (no filesystem
+      writes, no network I/O).
 
 Used by:
   - templates/agents/commit.md (Step 2 message-drafting branch)
   - unit_tests/test_commit_classifier.py
   - unit_tests/test_mixed_set_detection.py
+  - unit_tests/test_commit_patterns_config.py
 """
 
 from __future__ import annotations
 
+import json
+import logging
 import re
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 from typing import Sequence
+
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Config file location
+# ---------------------------------------------------------------------------
+
+#: Default path to the external commit-message patterns config file.
+#: Resolved relative to the directory that contains this script so the module
+#: works regardless of the caller's working directory.
+_PATTERNS_CONFIG_PATH: Path = (
+    Path(__file__).resolve().parent.parent / "config" / "commit_message_patterns.json"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -52,12 +75,15 @@ class FileGroup(Enum):
 
 
 # ---------------------------------------------------------------------------
-# Per-group message patterns (the "proven patterns" referenced in BO-1100a)
+# Compiled-in fallback patterns (used only when the config file is absent)
 # ---------------------------------------------------------------------------
 
-#: Maps each FileGroup to the commit subject prefix template.
-#: Callers may override these by passing ``patterns`` to classify_staged_files().
-DEFAULT_PATTERNS: dict[FileGroup, str] = {
+#: Fallback pattern map.  These values are intentionally identical to the
+#: shipped config/commit_message_patterns.json so that a missing config file
+#: produces the same behaviour as a present one.  Do NOT change these values
+#: without updating the JSON config as well — the JSON file is the single
+#: source of truth per AC BO-1100c.
+_FALLBACK_PATTERNS: dict[FileGroup, str] = {
     FileGroup.TICKETS: "chore(tickets): {detail}",
     FileGroup.NEW_ACS: "feat(ac-store): {detail}",
     FileGroup.SHIPPED_ACS: "chore(ac-store): {detail}",
@@ -68,6 +94,88 @@ DEFAULT_PATTERNS: dict[FileGroup, str] = {
     FileGroup.CONFIG: "chore(config): {detail}",
     FileGroup.UNKNOWN: "chore: {detail}",
 }
+
+
+# ---------------------------------------------------------------------------
+# Config-file loader (AC BO-1100c)
+# ---------------------------------------------------------------------------
+
+
+def load_patterns(config_path: Path | None = None) -> dict[FileGroup, str]:
+    """Load commit-message patterns from the external config file.
+
+    Reads ``config/commit_message_patterns.json`` (or the caller-supplied
+    ``config_path``) and converts the JSON ``patterns`` object into a
+    ``FileGroup``-keyed dict.
+
+    The config file is the **single source of truth** for all routing patterns
+    (AC BO-1100c). Callers that want to add or modify a pattern should edit
+    the JSON file; this function picks up the change on the next invocation.
+
+    Args:
+        config_path: Optional explicit path to the patterns JSON file.
+            Defaults to ``config/commit_message_patterns.json`` in the repo
+            root resolved relative to this module's location.
+
+    Returns:
+        Dict mapping each FileGroup to its commit-subject template string.
+        Falls back to the compiled-in ``_FALLBACK_PATTERNS`` when the config
+        file is absent, unreadable, or structurally invalid.
+    """
+    path = config_path if config_path is not None else _PATTERNS_CONFIG_PATH
+    try:
+        with path.open("r", encoding="utf-8") as fh:
+            raw = json.load(fh)
+    except FileNotFoundError:
+        logger.warning(
+            "commit_message_patterns.json not found at %s — using compiled-in defaults",
+            path,
+        )
+        return dict(_FALLBACK_PATTERNS)
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning(
+            "Failed to load commit_message_patterns.json (%s: %s) — using compiled-in defaults",
+            type(exc).__name__,
+            exc,
+        )
+        return dict(_FALLBACK_PATTERNS)
+
+    patterns_raw = raw.get("patterns")
+    if not isinstance(patterns_raw, dict):
+        logger.warning(
+            "commit_message_patterns.json has no 'patterns' object — using compiled-in defaults"
+        )
+        return dict(_FALLBACK_PATTERNS)
+
+    result: dict[FileGroup, str] = dict(_FALLBACK_PATTERNS)
+    for key, template in patterns_raw.items():
+        try:
+            group = FileGroup(key)
+        except ValueError:
+            logger.warning(
+                "Unknown FileGroup key %r in commit_message_patterns.json — skipped",
+                key,
+            )
+            continue
+        if not isinstance(template, str):
+            logger.warning(
+                "Pattern for %r is not a string in commit_message_patterns.json — skipped",
+                key,
+            )
+            continue
+        result[group] = template
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Per-group message patterns (loaded from config; AC BO-1100c)
+# ---------------------------------------------------------------------------
+
+#: Maps each FileGroup to the commit subject prefix template.
+#: Loaded from ``config/commit_message_patterns.json`` at import time.
+#: Callers may override individual entries by passing ``patterns`` to
+#: ``classify_staged_files()``.
+DEFAULT_PATTERNS: dict[FileGroup, str] = load_patterns()
 
 # ---------------------------------------------------------------------------
 # Path-matching rules (declaration order = priority)
