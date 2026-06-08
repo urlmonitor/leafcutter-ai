@@ -377,12 +377,35 @@ flowchart TD
     AC --> TW --> Fix --> TR --> CM
 ```
 
-### Key constraint: no `git worktree add`, no `setup_ticket_worktree.py`
+### AC BP-600a-1 constraint: no `git worktree add`, no `setup_ticket_worktree.py`
 
 The `quick-fix.js` workflow script MUST NOT call `setup_ticket_worktree.py` or any equivalent
 command that creates a new worktree directory. All phases run in the directory where `/quick-fix`
 was invoked. This is enforced by the AC store entry `BP-600a-1` and checked by
 `git branch --show-current` before and after the workflow completes.
+
+### AC BP-600a-2 — No isolation infrastructure
+
+Beyond the worktree invariant, `/quick-fix` must use **no isolation infrastructure** from
+the full build pipeline. Specifically, the following are unconditionally prohibited in
+`quick-fix.js` and in any agent dispatched by it:
+
+| Prohibited item | Why |
+|---|---|
+| `worktree-agent` dispatch | Creates/manages isolated git worktrees — the opposite of stay-in-place |
+| `feature` skill invocation | Calls `git worktree add`; creates branch isolation — violates BP-600a-1 |
+| `git worktree add` | Direct worktree creation command — prohibited by BP-600a-1 |
+| `setup_ticket_worktree.py` | Bootstrap script for new isolated worktrees — not needed in existing worktree |
+| Any branch-switching command | `git checkout -b`, `git switch -c`, etc. |
+
+The phase agents dispatched by `/quick-fix` (`build-ac`, `test-writer`, `python-coder`,
+`test-runner`, `commit`) are worktree-agnostic — they operate on files in the current
+directory and do not require an isolated branch context.
+
+**Rationale:** `/quick-fix` is designed for rapid, in-place fixes to known bugs. Isolation
+infrastructure adds 30–60 seconds of overhead and introduces branch-switch race conditions
+when the user is mid-work on an active epic branch. The invariant is verifiable:
+`git branch --show-current` must return the same branch name before and after the workflow.
 
 ---
 
@@ -406,6 +429,7 @@ was invoked. This is enforced by the AC store entry `BP-600a-1` and checked by
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-08 [llm-expert]: Added AC BP-600a-2 documentation to Section 5: prohibited isolation infrastructure table, no-worktree-agent/no-feature-skill constraint, and rationale for the exclusion. (#EPIC-QuickFixWorkflow/02)
 - 2026-06-08 [llm-expert]: Added /quick-fix to high-level overview (§1) and Section 5 documenting the current-worktree-only flow, worktree invariant (BP-600a-1), contrast table with /build-feature, and Mermaid flow diagram. (#EPIC-QuickFixWorkflow/01)
 - 2026-05-13 [Antigravity]: Added test-planner spawn to ticket-creation diagram (§2) and test-writer to phase-agent dispatch order (§4) per ADR-018 and ticket 36 (test-expert injection).
 - 2026-05-11 [Antigravity]: Refactored to feature layered abstraction, splitting a single large flow into a high-level overview and specific orchestration detail views. Removed non-coding elements like `trade-report`.

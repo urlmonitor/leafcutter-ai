@@ -215,7 +215,7 @@ context, satisfying the Claude Code depth-1 constraint.
   failure-adjudication ladder, retry caps, and commit-phase lock recipe are
   identical.
 
-## Addendum: `/quick-fix` workflow (BP-600a-1, 2026-06-08)
+## Addendum: `/quick-fix` workflow (BP-600a-1 and BP-600a-2, 2026-06-08)
 
 The `/quick-fix` slash command was added as part of `EPIC-QuickFixWorkflow` to satisfy AC
 `BP-600a-1` — the quick-fix workflow must operate in the current worktree without creating a new
@@ -232,6 +232,50 @@ directory where the command was invoked, on the branch that is already checked o
 `git branch --show-current` value is invariant before and after the workflow.
 
 Relevant contract: `templates/workflows-js/quick-fix.js` implements the entry point.
+
+### AC BP-600a-2 — No isolation infrastructure
+
+A second invariant accompanies BP-600a-1:
+
+```
+Given the quick-fix workflow script exists,
+When it processes a user-provided diagnosis,
+Then it never dispatches the worktree-agent,
+And it never invokes the feature skill,
+And it never calls git worktree add,
+And no isolation infrastructure from the full build pipeline is used.
+```
+
+This means the `/quick-fix` implementation:
+
+- **Must NOT dispatch `worktree-agent`** — the worktree-agent's role is to create or
+  manage isolated git worktrees. The quick-fix workflow already operates in an existing
+  worktree; dispatching the worktree-agent would be a no-op at best and a branch-switch
+  hazard at worst.
+
+- **Must NOT invoke the `feature` skill** — the `feature` SKILL.md describes how to
+  create a new git worktree (`git worktree add`) and bootstrap it. Invoking it from
+  `/quick-fix` would violate the current-worktree invariant (BP-600a-1).
+
+- **Must NOT call `git worktree add`** — this command creates a new directory-level
+  isolation unit. Any call to it from `/quick-fix` is unconditionally prohibited.
+
+- **Must use no isolation infrastructure** — specifically, none of the following may
+  appear in `quick-fix.js` or in any agent dispatched by it:
+  - `setup_ticket_worktree.py`
+  - `worktree-agent` dispatch
+  - `feature` skill invocation
+  - `git worktree add`
+  - Any command that creates or switches the current branch
+
+This constraint exists because `/quick-fix` is designed for rapid, in-place fixes to
+known bugs. Spinning up isolation infrastructure would add 30–60 seconds of setup overhead
+and introduce branch-switch race conditions in environments where the user is mid-work on
+an active epic branch.
+
+The phase agents dispatched by `/quick-fix` (`build-ac`, `test-writer`, `python-coder`,
+`test-runner`, `commit`) are all worktree-agnostic — they operate on files in the current
+directory and do not require an isolated branch context to function correctly.
 
 ---
 
