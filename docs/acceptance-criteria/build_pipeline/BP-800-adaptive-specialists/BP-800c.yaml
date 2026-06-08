@@ -5,7 +5,7 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_2
 criteria: |
@@ -15,13 +15,18 @@ criteria: |
   independent knowledge layer. When the package updates, your generated agents
   get smarter automatically — without you editing config or re-running setup.
 depends_on:
-  - BP-800
+  - BP-810
 doc_links: []
 origin_agent: product-owner-v3
 created: 2026-06-06
-amended_by: []
+amended_by:
+  - reason: "split: BP-800 -> BP-800 + BP-810, 2026-06-08 — moved from BP-800 to BP-810"
 superseded_by: null
-covered_by: []
+covered_by:
+  - BP-800c-1
+  - BP-800c-2
+  - BP-800c-3
+  - BP-800c-4
 implemented_by: []
 documentation_triggers:
   - reference-doc

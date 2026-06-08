@@ -1,0 +1,27 @@
+id: TKT-500c-3
+readiness: approved
+priority: medium
+title: "work_status transitions to done when all assigned agents have signed off"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given an AC has work_status: in_progress
+  And all agents assigned to this AC have sign-off entries
+  When the ac-supervisor checks the AC's completion state
+  Then the AC's work_status is updated to done
+assigned_agent: python-coder
+estimated_complexity: M
+depends_on: [TKT-500c-1, TKT-500c-2]
+doc_links: []
+delivers_to: [TKT-500d-2]
+expects_from: [TKT-500c-1, TKT-500c-2]
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: [TKT-500c-3-i]
+implemented_by: []
+it_requirements: []

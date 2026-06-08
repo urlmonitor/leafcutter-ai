@@ -1,0 +1,36 @@
+id: PER-100a-1-i
+title: "Duplicate persona directory name is rejected"
+component: persona-management
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a project that already contains a persona directory at docs/personas/field-service-engineer/
+  When a user or agent attempts to create a second persona with the same slug "field-service-engineer"
+  Then the creation is rejected with an error message:
+    "Persona 'field-service-engineer' already exists at docs/personas/field-service-engineer/"
+  And the existing persona directory is not modified
+depends_on:
+  - PER-100a-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must not modify or overwrite any existing files when rejecting a duplicate"
+delivers_to: null
+expects_from:
+  ac_id: PER-100a-1
+  contract: "Persona creation script at scripts/persona_validate.py that this edge case exercises"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

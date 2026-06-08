@@ -1,0 +1,44 @@
+id: PER-100b-2
+title: "persona_for value must reference an existing persona directory"
+component: persona-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given an AC YAML file with persona_for: "field-service-engineer"
+  And a persona directory exists at docs/personas/field-service-engineer/
+  When the persona reference validator runs against the AC file
+  Then validation passes without errors
+
+  Given an AC YAML file with persona_for: "non-existent-persona"
+  And no persona directory exists at docs/personas/non-existent-persona/
+  When the persona reference validator runs against the AC file
+  Then the validator emits a warning naming the unresolvable persona: "non-existent-persona"
+  And the warning includes the AC file path and the AC ID
+depends_on:
+  - PER-100b
+  - PER-100b-1
+  - PER-100a-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must emit a warning (not an error) for unresolvable personas so builds are not blocked by missing persona directories"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must scan the docs/personas/ directory to determine the set of valid persona slugs"
+delivers_to: null
+expects_from:
+  ac_id: PER-100a-1
+  contract: "Persona directories at docs/personas/<slug>/ that serve as the reference target for validation"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,47 @@
+id: PER-100d-1
+title: "Persona summary is injected into PO and BA agent context at spawn"
+component: persona-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a project with two defined personas:
+    - docs/personas/field-service-engineer/persona.yaml (with identity.name: "Field Service Engineer")
+    - docs/personas/product-manager/persona.yaml (with identity.name: "Product Manager")
+  When the product-owner-v3 or business-analyst-v3 agent is spawned
+  Then the agent's context includes a persona summary block containing:
+    - Each persona's name and one-line archetype
+    - The total count of personas available ("2 personas defined")
+  And the summary is derived from the identity section of each persona.yaml
+  And the summary does not include the full persona detail (no goals, frustrations, or phase sections)
+depends_on:
+  - PER-100d
+  - PER-100a-1
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must use an injection channel compatible with the Agent Knowledge Plane (channel 2, 4, or 9)"
+  - "Must complete persona directory scanning and summary generation in <500ms for up to 50 personas"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must not block agent spawn if the docs/personas/ directory does not exist"
+  - "Summary must be concise enough to fit within 500 tokens of context"
+delivers_to:
+  agent: llm-expert
+  contract: "Persona summary text block available for injection into agent context at spawn time; format: one line per persona with name and archetype"
+expects_from:
+  ac_id: PER-100a-1
+  contract: "Persona directories at docs/personas/<slug>/ containing persona.yaml with an identity section"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - PER-100d-1-i
+implemented_by: []

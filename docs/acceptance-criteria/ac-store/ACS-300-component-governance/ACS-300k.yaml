@@ -34,5 +34,9 @@ origin_agent: BrainCandy
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - ACS-300k-1
+  - ACS-300k-2
+  - ACS-300k-3
+  - ACS-300k-4
 implemented_by: []

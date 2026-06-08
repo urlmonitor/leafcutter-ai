@@ -1,0 +1,45 @@
+id: BP-700b-2
+title: "Trigger conditions match only frontend file extensions"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the unified frontend agent's trigger_conditions in agent_registry.json
+  When a ticket has files_touched containing ".tsx" or ".jsx" or ".vue" or
+    ".svelte" or ".html" or ".css" or ".scss"
+  Then the dispatch system sets the agent status to "needed" for that ticket
+  And when a ticket has files_touched containing only ".py", ".sql", ".md",
+    ".json", ".yaml", or ".toml" extensions
+  Then the dispatch system does NOT set the agent status to "needed"
+depends_on:
+  - BP-700b
+  - BP-700b-1
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-005-frontend-coder-agent.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Trigger conditions must include both DSL-type (file extension matching) and LLM-type (semantic intent detection) rules per ADR-018 two-tier format"
+  - "Must use the owns_file_extensions list as the canonical set for DSL triggers"
+  - "Must not break existing trigger conditions for any other agent"
+delivers_to: null
+expects_from:
+  ac_id: BP-700b-1
+  contract: "Registry entry with default_status not_needed and DSL trigger conditions for frontend extensions"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-700b-2-i
+implemented_by: []

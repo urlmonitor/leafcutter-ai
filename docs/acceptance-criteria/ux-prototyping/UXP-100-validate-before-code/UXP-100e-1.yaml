@@ -1,0 +1,48 @@
+id: UXP-100e-1
+title: "UX designer and BA are dispatched concurrently after PO completes L0/L1 framing"
+component: ux-prototyping
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the PO agent has completed L0 and L1 AC authoring for a feature
+    and the L1 ACs have readiness: approved,
+  When the pipeline determines that UX involvement is warranted for this feature,
+  Then the UX designer agent and the BA agent are both dispatched in the same
+    orchestration step (not sequentially)
+  And neither agent's dispatch is gated on the other agent having started or finished
+  And both agents receive the same L0/L1 ACs as their input context
+depends_on:
+  - UXP-100e
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100e.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: planned
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must dispatch both agents in parallel (not sequentially) in the same orchestration step"
+  - "Must respect the depth-1 agent nesting limit per ADR-006 — both dispatches at the same depth"
+  - "Must pass the same L0/L1 AC set as input context to both agents"
+  - "Must include a mechanism to determine whether UX involvement is warranted (heuristic or configuration)"
+delivers_to:
+  ac_id: UXP-100e-2
+  contract: "Both agents running concurrently with shared L0/L1 ACs as input context and a shared prototype artifact store path"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by:
+  - reason: "it-po-v3 enrichment: reassigned frontend-coder -> python-coder (pipeline orchestration), 2026-06-08"
+superseded_by: null
+covered_by:
+  - UXP-100e-1-i
+implemented_by: []

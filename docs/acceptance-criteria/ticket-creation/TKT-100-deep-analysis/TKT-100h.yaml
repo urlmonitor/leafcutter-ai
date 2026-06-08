@@ -1,0 +1,37 @@
+id: TKT-100h
+readiness: reviewed
+priority: medium
+title: "The analyst reads everything relevant before asking you a question"
+component: ticket-creation
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Full project context is gathered before any specification work begins.
+  The analyst reads your existing requirements, agent capabilities, and project
+  documentation automatically — so when it starts working, it already knows
+  what you have and what matters.
+depends_on: [TKT-100, ACS-100a, ACS-100b]
+doc_links:
+  - path: docs/architecture/components/create-ticket-v2-pipeline.md
+    relationship: constrains
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to:
+  agent: diagram-classifier
+  contract: "AC YAML files in feature subfolder + structured BA payload JSON"
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-08
+amended_by:
+  - reason: "split: TKT-100a -> TKT-100h + TKT-100i, 2026-06-08"
+superseded_by: null
+covered_by:
+  - TKT-100a-1
+  - TKT-100a-2
+  - TKT-100a-3
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Split of existing L1 — no new user-facing behavior introduced."

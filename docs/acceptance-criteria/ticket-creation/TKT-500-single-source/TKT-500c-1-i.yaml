@@ -1,0 +1,30 @@
+id: TKT-500c-1-i
+readiness: approved
+priority: medium
+title: "Sequential sign-off writes to the same AC YAML do not corrupt the file"
+component: ticket-creation
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given two agents sign off on the same AC in rapid sequence
+  When both sign-off writes execute
+  Then both entries appear in the signoffs list
+  And the YAML file is not corrupted by the sequential writes
+  And no sign-off entry is lost or duplicated
+assigned_agent: python-coder
+estimated_complexity: M
+depends_on: [TKT-500c-2]
+doc_links: []
+delivers_to: []
+expects_from: [TKT-500c-2]
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+it_requirements:
+  - "Writes are sequential within a session — true concurrency is not expected"
+  - "File-level serialization is sufficient; no cross-process locking needed"

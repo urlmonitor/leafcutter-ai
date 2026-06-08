@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given an agent (e.g. "python-coder") that performs test execution
@@ -21,8 +21,7 @@ criteria: |
     (e.g. a "run-tests" skill entry) rather than in spawn_allowlist
   And the spawn diagram generated from this registry entry does NOT
     show a spawn edge to the agent whose capability is self-performed
-depends_on:
-  - INF-600d
+depends_on: []
 doc_links:
   - path: config/agent_registry.json
     relationship: describes
@@ -43,5 +42,5 @@ origin_agent: BrainCandy
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by: [INF-600d-1-i]
 implemented_by: []

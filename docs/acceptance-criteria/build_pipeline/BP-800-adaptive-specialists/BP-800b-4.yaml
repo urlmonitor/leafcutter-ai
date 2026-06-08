@@ -1,0 +1,43 @@
+id: BP-800b-4
+title: "Framework specialist inherits and extends parent language best practices"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the technology manifest contains entries for "python" (language) and "fastapi" (framework, parent: python)
+  And best-practice knowledge files exist for both "python" and "fastapi"
+  When the agent generator processes the manifest
+  Then it produces a "fastapi-coder" specialist
+  And the fastapi-coder template includes the Python base best practices (style, testing, idioms)
+  And it additionally includes the FastAPI-specific best practices (async patterns, dependency injection, route conventions)
+  And the Python base agent ("python-coder") is also generated separately
+  And the two agents do not duplicate the base Python content in conflicting ways
+depends_on:
+  - BP-800b
+  - BP-800b-1
+doc_links:
+  - path: docs/architecture/components/adaptive-specialists-generation.md
+    relationship: describes
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Framework knowledge must explicitly declare its parent_language in the knowledge file metadata"
+  - "Inheritance must be additive — framework content extends but never overrides base language content"
+  - "Must resolve the parent language knowledge file before composing the framework specialist"
+  - "Must handle errors gracefully if the parent language knowledge file is missing (fall back to framework-only content with a warning)"
+  - "Must produce deterministic output for the same knowledge file versions"
+delivers_to: null
+expects_from:
+  ac_id: BP-800b-1
+  contract: "Agent generation function with knowledge layer lookup — this exercises the framework-language inheritance composition path"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

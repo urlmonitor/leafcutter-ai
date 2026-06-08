@@ -1,0 +1,47 @@
+id: BP-800e-1
+title: "Build detects the legacy agent layout and triggers migration"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a project directory with the legacy agent structure:
+    - .claude/agents/python-coder.md (hardcoded, no generated-by metadata)
+    - .claude/agents/sql-coder.md (hardcoded, no generated-by metadata)
+    - No technology manifest file present
+  When the build runs for the first time after the package upgrade to the adaptive-specialists version
+  And the build detects the legacy layout (presence of agent files without generated-by metadata and absence of technology manifest)
+  And the build triggers the migration process before proceeding with normal specialist generation
+  And the build output reports: "Legacy agent layout detected — running migration"
+depends_on:
+  - BP-800e
+  - BP-800d-1
+doc_links:
+  - path: docs/architecture/components/adaptive-specialists-generation.md
+    relationship: describes
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Detection must check TWO signals: (1) agent files without 'generated-by' metadata AND (2) absence of technology manifest"
+  - "Must not trigger migration if a technology manifest already exists (even if legacy files are also present)"
+  - "Must run detection before any specialist generation (fail-fast on legacy layout)"
+  - "Must handle errors gracefully per the project error handling policy if agent files are unreadable"
+  - "Must log at INFO level when migration is triggered (not WARNING — this is an expected first-run path)"
+delivers_to:
+  agent: python-coder
+  contract: "Migration trigger signal — boolean indication that the migration pipeline (BP-800d-1 through BP-800d-3) should run before normal generation"
+expects_from:
+  ac_id: BP-800d-1
+  contract: "Legacy supersession logic that is invoked as part of the migration pipeline after detection"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by:
+  - reason: "split: BP-800 -> BP-800 + BP-810, 2026-06-08 (product-owner-v3)"
+superseded_by: null
+covered_by:
+  - BP-800e-1-i
+implemented_by: []

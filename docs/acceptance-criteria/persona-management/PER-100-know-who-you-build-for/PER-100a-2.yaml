@@ -1,0 +1,42 @@
+id: PER-100a-2
+title: "Persona definition includes phase-specific detail sections"
+component: persona-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a persona.yaml file for persona "field-service-engineer"
+  When the file is loaded by a phase agent during discovery, design, development, or marketing
+  Then the file contains the following phase-specific sections:
+    - discovery (key questions to answer, research pointers)
+    - design (UX preferences, accessibility needs, device constraints)
+    - development (technical assumptions, integration points, performance expectations)
+    - marketing (messaging hooks, value propositions, competitive alternatives)
+  And each section can be read independently without requiring the full document
+  And any section may be empty (no entries) but the key must be present
+depends_on:
+  - PER-100a
+  - PER-100a-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Phase-specific sections must be added to the persona JSON Schema at config/persona_schema.json"
+  - "Each phase section key must be present in the schema as an optional mapping with no required sub-fields"
+  - "Must be backward-compatible with persona.yaml files that lack phase sections (validation passes with a warning, not an error)"
+delivers_to: null
+expects_from:
+  ac_id: PER-100a-1
+  contract: "Base persona.yaml JSON Schema at config/persona_schema.json with identity, goals, frustrations, context sections"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

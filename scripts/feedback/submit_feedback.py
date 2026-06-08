@@ -63,7 +63,12 @@ except ImportError:
 
 
 def _find_project_root() -> Path:
-    """Walk up from this file to find the project root (directory containing .claude/)."""
+    """Walk up from this file to find the project root (directory containing .claude/).
+
+    Used for resolving paths that live at the project root (e.g. debugging/logs/).
+    For config files that live alongside the script in a portable install
+    (e.g. .leafcutter/config/), use _find_config_root() instead.
+    """
     current = Path(__file__).resolve().parent
     for _ in range(6):
         if (current / ".claude").is_dir():
@@ -72,12 +77,29 @@ def _find_project_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
+def _find_config_root() -> Path:
+    """Resolve the config directory using the script's own location as anchor.
+
+    This function anchors config resolution to the script file itself rather
+    than searching for a project-level marker (.claude/).  When the script is
+    deployed at <project>/.leafcutter/scripts/feedback/submit_feedback.py the
+    config lives at <project>/.leafcutter/config/ — two directory levels up
+    from the script file.  The same relative layout holds for the source
+    location (leafcutter-ai/scripts/feedback/ → leafcutter-ai/config/).
+
+    Returns:
+        Path: Absolute path to the config directory that contains
+            feedback_categories.yaml.
+    """
+    return Path(__file__).resolve().parents[2] / "config"
+
+
 # ---------------------------------------------------------------------------
 # Config loading
 # ---------------------------------------------------------------------------
 
 _PROJECT_ROOT = _find_project_root()
-_CONFIG_DIR = _PROJECT_ROOT / "config"
+_CONFIG_DIR = _find_config_root()
 _CATEGORIES_FILE = _CONFIG_DIR / "feedback_categories.yaml"
 _JSONL_DEFAULT = _PROJECT_ROOT / "debugging" / "logs" / "feedback.jsonl"
 
@@ -114,7 +136,14 @@ def _load_categories(config_path: Path | None = None) -> dict:
         with open(path, encoding="utf-8") as fh:
             data = yaml.safe_load(fh)
     except OSError as exc:
-        print(f"ERROR: Cannot read categories file {path}: {exc}", file=sys.stderr)
+        checked_path = Path(path).resolve()
+        print(
+            f"ERROR: Cannot read feedback_categories.yaml.\n"
+            f"  Checked path: {checked_path}\n"
+            f"  OS error: {exc}\n"
+            f"  To fix: Place feedback_categories.yaml at {checked_path}",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     cats: dict = {}
@@ -530,6 +559,22 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-06-08 12:30 [python-coder/EPIC-FeedbackPortability/04_TICKET-20260608-INF-100c-4]:
+#   Improved _load_categories() error message to satisfy AC INF-100c-4: when
+#   feedback_categories.yaml is not found, the error now prints three lines:
+#   (1) a header line, (2) "Checked path: <absolute-path>", and (3)
+#   "To fix: Place feedback_categories.yaml at <path>".  This makes the error
+#   actionable by labelling the checked path explicitly and providing a
+#   copy-pasteable remediation command, rather than embedding the path only
+#   inside an OSError string. (#EPIC-FeedbackPortability)
+# - 2026-06-08 00:00 [python-coder/EPIC-FeedbackPortability/TICKET-20260608-INF-100c-1]:
+#   Added _find_config_root() helper that anchors config path resolution to the
+#   script's own location (Path(__file__).resolve().parents[2] / "config") rather
+#   than using _find_project_root(). This ensures feedback_categories.yaml is found
+#   at <leafcutter_root>/config/ regardless of where the script is deployed:
+#   source (leafcutter-ai/scripts/feedback/) and deployed (.leafcutter/scripts/feedback/)
+#   both resolve to two parents up + /config/. _find_project_root() is retained for
+#   _JSONL_DEFAULT which must remain at the project root. (AC INF-100c-1) (#EPIC-FeedbackPortability)
 # - 2026-06-03 09:00 [python-coder/EPIC-TemplateDocViolations/06]: Confirmed 2026-05-21 entry already has HH:MM (12:00); no change needed. Added this audit entry for traceability. (#EPIC-TemplateDocViolations/06)
 # - 2026-05-30 12:00 [python-coder/TICKET-20260528-FeedbackCorrelationIDLoss]:
 #   Wrapped JSONL append and stdout print in fcntl.flock(LOCK_EX) advisory

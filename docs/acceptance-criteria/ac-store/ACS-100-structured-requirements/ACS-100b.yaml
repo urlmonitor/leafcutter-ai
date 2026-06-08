@@ -25,5 +25,10 @@ origin_agent: BrainCandy
 created: 2026-06-04
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - ACS-100b-1
+  - ACS-100b-2
+  - ACS-100b-3
+  - ACS-100b-4
+  - ACS-100b-5
 implemented_by: []

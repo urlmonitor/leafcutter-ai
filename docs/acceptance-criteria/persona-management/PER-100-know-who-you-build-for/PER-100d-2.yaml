@@ -1,0 +1,45 @@
+id: PER-100d-2
+title: "Full persona detail is available on demand via a skill invocation"
+component: persona-management
+level: L2
+status: superseded_by
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given an agent is executing and needs deeper understanding of persona "field-service-engineer"
+  When the agent invokes the persona-detail skill with argument "field-service-engineer"
+  Then the agent's context receives the full persona.yaml content for that persona including:
+    - identity (name, role, archetype)
+    - goals (full list)
+    - frustrations (full list)
+    - context (environment, tools, constraints)
+    - All phase-specific sections (discovery, design, development, marketing)
+  And the content is formatted as readable Markdown sections
+depends_on:
+  - PER-100g
+  - PER-100a-1
+  - PER-100a-2
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A persona-detail skill that loads full persona content into agent context"
+expects_from:
+  ac_id: PER-100a-2
+  contract: "Persona YAML files with phase-specific sections populated"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by:
+  - reason: "split: PER-100d -> PER-100d + PER-100g, 2026-06-08"
+superseded_by:
+  - PER-100d-2a
+  - PER-100d-2b
+covered_by:
+  - PER-100d-2-i
+implemented_by: []

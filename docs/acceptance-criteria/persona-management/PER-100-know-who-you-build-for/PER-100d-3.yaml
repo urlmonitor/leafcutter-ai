@@ -1,0 +1,40 @@
+id: PER-100d-3
+title: "Persona injection is scoped to agents that need audience awareness"
+component: persona-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the agent_registry.json lists agents with role "coding" (python-coder, sql-coder, frontend-coder)
+  And agents with role "analysis" or "review" (business-analyst-v3, product-owner-v3, architect-review)
+  When the persona summary injection runs at spawn time
+  Then agents with role "analysis" or agent IDs product-owner-v3, business-analyst-v3, or documentation-expert receive the persona summary
+  And agents with role "coding" (python-coder, sql-coder) do NOT receive the persona summary by default
+  And the injection scope is configurable via a persona_injection_agents list in skills_config.json
+depends_on:
+  - PER-100d
+  - PER-100d-1
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must read the injection scope from skills_config.json (key: persona_injection_agents)"
+  - "Must default to a sensible agent list if the config key is absent (product-owner-v3, business-analyst-v3, documentation-expert)"
+  - "Must not inject persona summary into agents not on the list"
+  - "Must handle errors gracefully per the project error handling policy"
+delivers_to: null
+expects_from:
+  ac_id: PER-100d-1
+  contract: "Persona summary injection mechanism that this AC constrains to a configurable agent scope"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

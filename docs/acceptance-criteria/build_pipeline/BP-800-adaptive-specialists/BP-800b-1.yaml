@@ -1,0 +1,52 @@
+id: BP-800b-1
+title: "Agent template generated from technology manifest entry"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the technology manifest contains an entry for "go" with category "language"
+  And a best-practice knowledge file exists for "go" in the package knowledge layer
+  When the agent generator processes the manifest
+  Then it produces an agent template file for the "go-coder" specialist
+  And the template includes the best-practice content for Go (testing conventions, idioms, tooling)
+  And the template is written to the project's agent templates directory
+  And the generated agent is registered in the agent deployment so it can be dispatched by name
+depends_on:
+  - BP-800b
+  - BP-800a-4
+doc_links:
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: context
+    status: exists
+  - path: docs/architecture/components/adaptive-specialists-generation.md
+    relationship: describes
+    status: planned
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "Generated template must include a 'generated-by: adaptive-specialists' metadata marker to distinguish from legacy templates"
+  - "Must include a version field in the generated template metadata referencing the knowledge file version used"
+  - "Must handle errors gracefully per the project error handling policy if the output directory is not writable"
+  - "Must produce valid Markdown agent template format consistent with existing templates in templates/agents/"
+  - "Must be idempotent — regenerating from the same manifest and knowledge version produces identical output"
+  - "Must not modify agent_registry.json directly — registration is handled by the build system's existing add-agent-to-package mechanism"
+delivers_to:
+  agent: python-coder
+  contract: "Agent template Markdown file at <templates_dir>/<tech>-coder.md with frontmatter metadata: {generated_by: 'adaptive-specialists', technology: str, knowledge_version: int, generated_at: ISO-8601}"
+expects_from:
+  ac_id: BP-800a-4
+  contract: "Technology manifest JSON file at .leafcutter/technology_manifest.json with schema: {schema_version, generated_at, technologies: list[{name, category, paradigm, confidence, detection_source}]}"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-800b-1-i
+implemented_by: []

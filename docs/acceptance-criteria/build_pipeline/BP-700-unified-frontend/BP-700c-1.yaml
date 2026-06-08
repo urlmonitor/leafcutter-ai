@@ -1,0 +1,52 @@
+id: BP-700c-1
+title: "All frontend-design skill principles are present in unified template"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the current frontend-design skill at templates/skills/frontend-design/SKILL.md
+    contains these sections:
+    - Section 2: Project Context Hook (design_system key check)
+    - Section 3: Design Principles (5 principles)
+    - Section 4: Pre-Write Checklist (6 questions)
+    - Section 5: Constraints (advisory, platform-agnostic, project-defers)
+  When the unified frontend agent template is compared to the skill
+  Then every behavioral rule from sections 2 through 5 has a corresponding
+    instruction in the unified template
+  And no principle, constraint, or checklist item has been dropped or weakened
+  And the project-context hook (design_system key in PROJECT_CONTEXT.md)
+    is preserved with the same precedence rules
+depends_on:
+  - BP-700c
+doc_links:
+  - path: templates/skills/frontend-design/SKILL.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/frontend-coder.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-005-frontend-coder-agent.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Must perform a complete section-by-section comparison between the skill and the unified template"
+  - "Every behavioral rule must have a traceable corresponding instruction -- no silent drops"
+  - "The project-context hook must use the same design_system key name and same precedence semantics"
+delivers_to:
+  agent: documentation-expert
+  contract: "Verified list of all design principles and behavioral rules preserved in the unified template, for use in reference documentation (BP-700c-5)"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260608-BP-700c-1.md

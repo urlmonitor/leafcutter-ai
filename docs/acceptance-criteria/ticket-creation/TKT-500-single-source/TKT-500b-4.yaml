@@ -1,0 +1,27 @@
+id: TKT-500b-4
+readiness: approved
+priority: medium
+title: "tests-after override is visible in the AC state"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given an AC has tests_after: true
+  When a user queries the AC's state
+  Then the tests_after field and its value are visible in the YAML
+  And any status query or dashboard shows the override is active
+assigned_agent: python-coder
+estimated_complexity: S
+depends_on: [TKT-500b-3]
+doc_links: []
+delivers_to: []
+expects_from: []
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+it_requirements: []

@@ -1,0 +1,48 @@
+id: PER-100c-1
+title: "Query AC store by persona returns all ACs targeting that persona"
+component: persona-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given an AC store containing 6 active AC files:
+    - AC-1, AC-2, AC-3 with persona_for: "field-service-engineer"
+    - AC-4, AC-5 with persona_for: "product-manager"
+    - AC-6 with no persona_for field
+  When a user queries the AC store with persona filter "field-service-engineer"
+  Then the result contains exactly 3 ACs: AC-1, AC-2, AC-3
+  And each result entry includes the AC ID, title, component, and level
+  And the result does not include AC-4, AC-5, or AC-6
+depends_on:
+  - PER-100c
+  - PER-100b-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must complete scanning of the full AC store in <2 seconds for up to 500 AC files"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must filter only active ACs (status: active), not deprecated or superseded"
+  - "Must output results in a structured format suitable for both human reading and scripted consumption (JSON with --json flag)"
+delivers_to:
+  agent: python-coder
+  contract: "A persona query script at scripts/persona_query.py that accepts --persona <slug> and returns matching ACs as structured output (JSON list of {id, title, component, level})"
+expects_from:
+  ac_id: PER-100b-1
+  contract: "AC YAML files with persona_for field conforming to config/ac_store_schema.json"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - PER-100c-1-i
+implemented_by: []

@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given an agent registry where agent "python-coder" lists "sql-coder"
@@ -27,8 +27,7 @@ criteria: |
     "asymmetric spawn: B.spawn_allowlist includes A, but A.spawned_by
      does not include B"
   And the error names both agents involved in the asymmetry
-depends_on:
-  - INF-600g
+depends_on: []
 doc_links:
   - path: config/agent_registry.json
     relationship: describes
@@ -47,4 +46,5 @@ created: 2026-06-05
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260608-INF-600g-1.md

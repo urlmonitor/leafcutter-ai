@@ -44,5 +44,6 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: [it-po-v3]
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by: [ACS-300g-1-i, ACS-300g-1-ii]
+implemented_by:
+- tickets/00_inbox/TICKET-20260608-ACS-300g-1.md

@@ -1,0 +1,36 @@
+id: ACS-100i-2-i
+title: "Hook fails open when a staged YAML file contains non-UTF-8 binary content"
+component: ac-store
+level: L3
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given a staged file under docs/acceptance-criteria/ has a .yaml extension
+    but contains non-UTF-8 binary content (e.g. embedded NUL bytes or Latin-1
+    encoded bytes that are not valid UTF-8),
+  When the check_ac_parent_covered_by pre-commit hook attempts to load and
+    parse the file,
+  Then the hook logs a WARNING that names the file path and describes the
+    decode error (e.g. "Skipping <path>: UnicodeDecodeError ..."),
+  And the hook returns exit code 0 (success),
+  And the commit is NOT blocked by this hook.
+depends_on: [ACS-100i-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACS-100i-2
+  contract: "The file-loading function whose error handling this edge case exercises"
+origin_agent: BrainCandy
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

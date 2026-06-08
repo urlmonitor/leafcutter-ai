@@ -1,0 +1,46 @@
+id: UXP-100b-1
+title: "Gap detection produces a named list of missing components with usage context"
+component: ux-prototyping
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the component library catalog contains "navigation-bar", "data-table",
+    and "form-panel",
+  When the UX designer agent composes a prototype for a feature that requires
+    a "timeline-view" and a "progress-indicator" (neither in the catalog),
+  Then the agent produces a gap report listing each missing component by name:
+    "timeline-view", "progress-indicator"
+  And each gap entry includes the context of where the component would be used
+    in the prototype (e.g. "main content area, showing event sequence")
+  And the agent does not substitute an improvised replacement for any missing component
+depends_on:
+  - UXP-100b
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100b.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: planned
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Gap report must be a structured artifact (not free-text) with fields: component_name, usage_context, classification"
+  - "Must never substitute an improvised replacement — missing components are flagged, not faked"
+  - "Must follow the leafcutter agent template conventions for structured output"
+delivers_to:
+  ac_id: UXP-100b-2
+  contract: "Structured gap report: list of { component_name: string, usage_context: string, classification: 'near-match' | 'new-component', near_match_base: string | null }"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by:
+  - reason: "it-po-v3 enrichment: reassigned frontend-coder -> llm-expert (agent template gap detection), 2026-06-08"
+superseded_by: null
+covered_by:
+  - UXP-100b-1-i
+implemented_by: []

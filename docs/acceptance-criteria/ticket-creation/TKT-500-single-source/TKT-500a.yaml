@@ -1,0 +1,29 @@
+id: TKT-500a
+readiness: approved
+priority: medium
+title: "Agents read requirements at their source, not from copies"
+component: ticket-creation
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Requirements are read live from the approved AC — never from a duplicated body.
+
+  When an agent begins work, it reads the criteria directly from the AC YAML
+  file. No intermediate document duplicates or paraphrases the requirement.
+  If the requirement is amended, every agent that reads it next sees the
+  amendment immediately — no propagation delay, no sync step.
+depends_on: [TKT-500]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: [TKT-500a-1, TKT-500a-2, TKT-500a-3, TKT-500a-4, TKT-500a-5, TKT-500a-6]
+implemented_by: []
+documentation_triggers: [sequence-diagram, component-diagram]

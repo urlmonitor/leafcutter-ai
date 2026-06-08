@@ -1,0 +1,37 @@
+id: BP-800b-1-i
+title: "Duplicate technology entries in manifest do not produce duplicate agents"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the technology manifest contains two entries for "python" (one from file-extension detection, one from pyproject.toml manifest detection)
+  When the agent generator processes the manifest
+  Then it produces exactly one "python-coder" specialist (not two)
+  And the agent uses the highest-confidence detection source to inform its metadata
+  And no error or warning about duplicates is emitted (deduplication is silent)
+depends_on:
+  - BP-800b-1
+doc_links:
+  - path: docs/architecture/components/adaptive-specialists-generation.md
+    relationship: describes
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Deduplication must use technology name as the unique key (case-insensitive)"
+  - "Must select the entry with the highest confidence when duplicates exist (manifest > file-extension)"
+  - "Must be idempotent — repeated runs with the same duplicate input produce identical output"
+delivers_to: null
+expects_from:
+  ac_id: BP-800b-1
+  contract: "Agent generation function that accepts a manifest and produces template files — this edge case verifies deduplication within that function"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,48 @@
+id: BP-800a-3
+title: "Database technology detection from connection strings and driver dependencies"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a project with:
+    - pyproject.toml listing "neo4j" in dependencies
+    - package.json listing "mongodb" in dependencies
+    - pyproject.toml listing "psycopg2" in dependencies
+  When the technology detector scans the project at build time
+  Then it reports detected databases: ["neo4j", "mongodb", "postgresql"]
+  And each database is categorized by paradigm: neo4j -> "graph", mongodb -> "document", postgresql -> "relational"
+  And the detection source is recorded for each (dependency manifest path and package name)
+depends_on:
+  - BP-800a
+  - BP-800a-1
+doc_links:
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: context
+    status: exists
+  - path: docs/architecture/components/adaptive-specialists-detection.md
+    relationship: describes
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must maintain a configurable mapping of driver package names to database identifiers and paradigms"
+  - "Must support 'unclassified' paradigm for unknown database drivers (never fail on unknown)"
+  - "Must handle errors gracefully when manifest files are unreadable or malformed"
+  - "Must produce deterministic output for the same manifest content"
+  - "Mapping data must be stored in a data file (not inline in code) to enable easy extension"
+delivers_to:
+  agent: python-coder
+  contract: "list[dict] where each entry has: {name: str, category: 'database', paradigm: 'relational'|'document'|'graph'|'unclassified', confidence: 'manifest', detection_source: str}"
+expects_from:
+  ac_id: BP-800a-1
+  contract: "Shared manifest file discovery and parsing infrastructure — parsed dependency lists from pyproject.toml, package.json, etc."
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

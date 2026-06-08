@@ -1,0 +1,43 @@
+id: BP-700b-2-i
+title: "LLM trigger fires for tickets describing UI work without frontend file extensions in files_touched"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket has files_touched containing only ".ts" files (not .tsx)
+  But the ticket body says "create a React component for the settings page"
+  When the dispatch system evaluates the unified frontend agent's trigger conditions
+  Then the LLM-type trigger condition fires ("ticket involves creating or
+    modifying frontend/UI components, markup, or styles")
+  And the agent is dispatched with status "needed"
+  And the dispatch system does not rely solely on the DSL file-extension check
+depends_on:
+  - BP-700b-2
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-005-frontend-coder-agent.md
+    relationship: describes
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+it_requirements:
+  - "Test must verify LLM-type trigger fires independently of DSL file-extension matching"
+  - "Test must be deterministic and not depend on specific LLM model behavior -- verify the trigger configuration exists, not that inference produces a specific answer"
+delivers_to: null
+expects_from:
+  ac_id: BP-700b-2
+  contract: "Trigger conditions include both DSL and LLM-type rules in the registry entry"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260608-BP-700b-2-i.md

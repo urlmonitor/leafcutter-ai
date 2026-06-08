@@ -3,7 +3,7 @@ title: "Proposed rule conflicting with an existing config entry is rejected with
 component: build-orchestration
 level: L3
 status: active
-readiness: draft
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo
@@ -22,16 +22,23 @@ criteria: |
   And the specialist suggests placement options (before vs. after the conflicting entry),
   And the specialist does NOT silently insert the rule at the end where it would be unreachable.
 depends_on: [BO-1100d-3]
-doc_links: []
+doc_links:
+  - path: templates/agents/commit.md
+    relationship: describes
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: M
+it_requirements:
+  - "Must validate proposed patterns against all existing config entries for subset/superset overlap"
+  - "Must suggest placement options that would make the proposed rule reachable"
+  - "Must not silently insert an unreachable rule"
 delivers_to: null
 expects_from:
   ac_id: BO-1100d-2
-  contract: "Candidate routing entry that needs validation against existing config"
+  contract: "Candidate routing entry: {group: string, path_pattern: string, template: string} that needs validation against the current routing config array"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by: [it-po-v3]
 superseded_by: null
 covered_by: []
 implemented_by: []

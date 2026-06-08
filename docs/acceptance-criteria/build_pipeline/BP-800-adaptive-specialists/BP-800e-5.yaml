@@ -1,0 +1,48 @@
+id: BP-800e-5
+title: "Sequence diagram for the legacy-to-adaptive migration flow"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the migration feature is implemented
+  When an architecture-diagram-author produces the sequence diagram
+  Then the diagram shows the temporal flow:
+    1. Build system starts and checks for technology manifest
+    2. No manifest found — build checks for legacy agent files
+    3. Legacy layout detected — migration triggered
+    4. Migration extracts knowledge from legacy templates
+    5. Migration writes best-practice files to knowledge layer
+    6. Migration renames legacy templates with .legacy suffix
+    7. Technology detector runs and produces manifest
+    8. Agent generator runs and produces specialists
+    9. Build completes with generated specialists deployed
+  And the diagram shows the alternative path (manifest exists — skip to step 7)
+  And the diagram is placed under docs/architecture/
+depends_on:
+  - BP-800e
+  - BP-800e-2
+doc_links:
+  - path: docs/architecture/components/adaptive-specialists-generation.md
+    relationship: describes
+    status: planned
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "Must use Mermaid sequenceDiagram syntax (consistent with existing architecture docs)"
+  - "Must show the alternative path (manifest exists) as an alt/opt block in the sequence diagram"
+  - "Must include the rollback path from BP-800e-1-i as a break block or note"
+  - "Must clearly distinguish the migration-only steps from the normal build steps"
+delivers_to: null
+expects_from:
+  ac_id: BP-800e-2
+  contract: "Completed migration flow with defined temporal ordering to represent in the diagram"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

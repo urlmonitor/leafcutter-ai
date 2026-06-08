@@ -1,0 +1,51 @@
+id: UXP-100b-4
+title: "Sequence diagram showing gap detection and research initiation flow"
+component: ux-prototyping
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given UXP-100b describes a gap detection and research initiation workflow,
+  When a sequence diagram is produced for this workflow,
+  Then the diagram shows the following actors: UX designer agent, component
+    library catalog, gap detection logic, and research pipeline
+  And the diagram shows the sequence: (1) agent queries catalog, (2) agent
+    compares required components against catalog, (3) gap detection classifies
+    missing entries, (4) research requests are dispatched for each gap
+  And the diagram distinguishes the near-match path from the entirely-new path
+    as alternative branches in the sequence
+depends_on:
+  - UXP-100b
+  - UXP-100b-1
+  - UXP-100b-2
+  - UXP-100b-3
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100b.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: planned
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: M
+it_requirements:
+  - "Must follow the project's sequence diagram conventions"
+  - "Must show the near-match and new-component paths as alternative branches"
+  - "Must include all four actors: UX designer agent, component library catalog, gap detection logic, research pipeline"
+delivers_to: null
+expects_from:
+  ac_id: UXP-100b-1
+  contract: "Behavioral ACs describing gap detection and research dispatch, available as diagram source material"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by:
+  - reason: "it-po-v3 enrichment: added it_requirements and doc_links, 2026-06-08"
+superseded_by: null
+covered_by: []
+implemented_by: []

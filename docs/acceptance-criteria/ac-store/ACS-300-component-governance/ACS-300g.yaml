@@ -52,5 +52,11 @@ origin_agent: BrainCandy
 created: 2026-06-05
 amended_by: [it-po-v3]
 superseded_by: null
-covered_by: [ACS-300g-1, ACS-300g-2, ACS-300g-3, ACS-300g-4a, ACS-300g-4b]
+covered_by:
+  - ACS-300g-1
+  - ACS-300g-2
+  - ACS-300g-3
+  - ACS-300g-4a
+  - ACS-300g-4b
+  - ACS-300g-4
 implemented_by: []

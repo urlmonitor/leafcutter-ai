@@ -1,0 +1,43 @@
+id: UXP-100e-1-i
+title: "Feature without UX involvement skips UX designer dispatch entirely"
+component: ux-prototyping
+level: L3
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the PO agent has completed L0 and L1 AC authoring for a feature
+    that is purely backend (e.g. a data migration or an API-only change with
+    no user-facing screens),
+  When the pipeline evaluates whether UX involvement is warranted,
+  Then the UX designer agent is not dispatched
+  And the BA agent is dispatched alone (not held back waiting for a UX decision)
+  And no prototype artifact is expected or required for this feature
+  And the pipeline proceeds to implementation after BA decomposition and
+    IT PO enrichment without a UX approval gate
+depends_on:
+  - UXP-100e-1
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100e-1.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "UX-warranted heuristic must correctly identify backend-only features and skip UX dispatch"
+  - "BA must not be blocked or delayed when UX is not warranted"
+  - "Pipeline must proceed directly to implementation phase without a UX approval gate for backend features"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by:
+  - reason: "it-po-v3 enrichment: reassigned frontend-coder -> python-coder (pipeline orchestration edge case), 2026-06-08"
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,42 @@
+id: PER-100e-4
+title: "How-to guide for creating and refining personas with the persona expert"
+component: persona-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a user who wants to use the persona expert agent to manage personas
+  When they consult the how-to guide at docs/how-to/persona-management.md
+  Then the guide includes a section on the persona expert with:
+    - How to invoke the persona expert to create a new persona (with example prompt)
+    - How to invoke it to refine an existing persona (with example prompt)
+    - How to invoke it to suggest refinements based on AC store patterns
+    - How the persona history file tracks changes over time
+    - An explanation that the agent asks for user approval before writing changes
+depends_on:
+  - PER-100f
+  - PER-100e-1a
+  - PER-100e-2
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Must follow the leafcutter how-to guide format (problem statement, prerequisites, numbered steps, verification)"
+  - "Must include example prompts that match the persona expert agent's expected invocation patterns"
+delivers_to: null
+expects_from:
+  ac_id: PER-100e-1a
+  contract: "Completed persona expert agent template to document"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by:
+  - reason: "split: PER-100e -> PER-100e + PER-100f, 2026-06-08"
+superseded_by: null
+covered_by: []
+implemented_by: []

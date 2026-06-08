@@ -44,6 +44,8 @@ categories:
       - how-to-author
       - reference-author
       - user-surface-smoker
+      - frontend-coder
+      - llm-expert
     default_severity: low
 
   - id: knowledge-gap
@@ -67,6 +69,8 @@ categories:
       - how-to-author
       - reference-author
       - user-surface-smoker
+      - frontend-coder
+      - llm-expert
     default_severity: medium
 
   - id: quality-concern
@@ -101,6 +105,8 @@ categories:
       - user-surface-smoker
       - epic-supervisor
       - ticket-supervisor
+      - frontend-coder
+      - llm-expert
     default_severity: medium
 
   - id: convention-ambiguity
@@ -126,6 +132,8 @@ categories:
       - user-surface-smoker
       - epic-supervisor
       - ticket-supervisor
+      - frontend-coder
+      - llm-expert
     default_severity: medium
 
   - id: blocker
@@ -151,6 +159,8 @@ categories:
       - user-surface-smoker
       - epic-supervisor
       - ticket-supervisor
+      - frontend-coder
+      - llm-expert
     default_severity: high
 
   - id: subagent-quality
@@ -184,6 +194,8 @@ categories:
       - how-to-author
       - reference-author
       - user-surface-smoker
+      - frontend-coder
+      - llm-expert
     default_severity: low
 
   - id: process-finding
@@ -220,4 +232,11 @@ categories:
 #   convention-ambiguity, blocker, and success-pattern categories. quality-concern and
 #   subagent-quality remain restricted to reviewer-class and supervisor agents respectively.
 #   (#TICKET-20260603-SmokerFeedbackSinkWorktree)
+# - 2026-06-08 10:15 [python-coder/TICKET-20260608-INF-100c-3]: Added frontend-coder and llm-expert to allowed_writers.
+#   Root cause: AC INF-100c-3 requires all standard phase agents to be recognized as valid
+#   writers for categories they interact with. frontend-coder and llm-expert were absent from
+#   all general-purpose categories (complete, knowledge-gap, tooling-issue, convention-ambiguity,
+#   blocker, success-pattern). quality-concern (reviewer-class only), subagent-quality
+#   (supervisor-only), and process-finding (hook-only) remain unchanged.
+#   (#TICKET-20260608-INF-100c-3)
 # ====================================================================

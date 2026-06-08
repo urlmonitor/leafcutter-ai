@@ -1,0 +1,25 @@
+id: BP-101
+readiness: approved
+priority: medium
+title: "Build process handles edge cases gracefully — hooks, validation, and degradation work reliably"
+component: build-pipeline
+level: L0
+status: active
+criteria: |
+  The build pipeline is robust under real-world conditions. Hooks never block
+  their own source code changes, timestamps are always machine-parseable,
+  git-dependent workflows degrade gracefully outside a repository, malformed
+  skill files fail with clear diagnostics, valid files deploy cleanly, and
+  build documentation stays current as the pipeline grows.
+depends_on: []
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-06-08
+amended_by:
+  - "split: BP-100 -> BP-100 + BP-101, 2026-06-08"
+superseded_by: null
+covered_by:
+  - BP-100g
+  - BP-100h
+  - BP-100l
+implemented_by: []

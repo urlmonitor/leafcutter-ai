@@ -1,0 +1,28 @@
+id: TKT-500a-3
+readiness: approved
+priority: medium
+title: "Amended AC is seen by the next agent without manual sync"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given an AC has been amended between two agent dispatches
+  When the next agent is dispatched for that AC
+  Then the agent reads the amended criteria text
+  And no manual sync step or propagation command is required
+  And the agent's work reflects the amendment, not the original text
+assigned_agent: llm-expert
+estimated_complexity: S
+depends_on: [TKT-500a-2]
+doc_links: []
+delivers_to: []
+expects_from: [TKT-500a-2]
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+it_requirements: []

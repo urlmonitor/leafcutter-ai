@@ -24,5 +24,9 @@ origin_agent: BrainCandy
 created: 2026-06-04
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - TKT-300a-1
+  - TKT-300a-2
+  - TKT-300a-3
+  - TKT-300a-4
 implemented_by: []

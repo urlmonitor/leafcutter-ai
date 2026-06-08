@@ -1,0 +1,49 @@
+id: BP-800a-4
+title: "Detection produces a stable technology manifest"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the technology detector has completed scanning a project with Python, Go, FastAPI, and PostgreSQL
+  When the detection results are persisted
+  Then a technology manifest is written as a structured data file
+  And the manifest contains entries for each detected technology with fields: name, category (language/framework/database), paradigm (if database), confidence, detection_source
+  And running the detector a second time on an unchanged project produces a byte-identical manifest
+  And downstream consumers (agent generator) can read the manifest without re-running detection
+depends_on:
+  - BP-800a2
+  - BP-800a-1
+  - BP-800a-2
+  - BP-800a-3
+doc_links:
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: context
+    status: exists
+  - path: docs/architecture/components/adaptive-specialists-detection.md
+    relationship: describes
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Manifest must be JSON format for machine-readability by downstream consumers"
+  - "Must sort entries deterministically (e.g. alphabetically by name) to ensure byte-identical output on repeated runs"
+  - "Must include a schema_version field in the manifest for future compatibility"
+  - "Must write the manifest atomically (write to temp file, then rename) to prevent partial reads"
+  - "Must handle errors gracefully per the project error handling policy if the output directory is not writable"
+delivers_to:
+  agent: python-coder
+  contract: "JSON file at a well-known path (e.g. .leafcutter/technology_manifest.json) with schema: {schema_version: str, generated_at: ISO-8601 str, technologies: list[{name: str, category: str, paradigm: str|null, confidence: str, detection_source: str}]}"
+expects_from:
+  ac_id: BP-800a-1
+  contract: "Combined detection results from language (BP-800a-1), framework (BP-800a-2), and database (BP-800a-3) detectors as list[dict]"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by:
+  - reason: "split: BP-800a -> BP-800a + BP-800a2, 2026-06-08 — parent changed from BP-800a to BP-800a2"
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,43 @@
+id: UXP-100c-1
+title: "Prototype is presented to the user with three explicit decision options"
+component: ux-prototyping
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the UX designer agent has produced a complete prototype for a feature,
+  When the prototype is presented to the user for review,
+  Then the user sees the rendered prototype alongside three labeled options:
+    "Approve", "Reject", and "Request changes"
+  And the presentation includes a summary of which components were used,
+    which page type was selected, and any gap-report items still pending research
+  And no option is pre-selected — the user must make an active choice
+depends_on:
+  - UXP-100c
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100c.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: planned
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Presentation must include component summary, page type, and pending research items"
+  - "No option may be pre-selected — the user must make an explicit choice"
+  - "Must follow the leafcutter confirmation gate pattern used by other agents"
+delivers_to:
+  ac_id: UXP-100c-2
+  contract: "User decision: { decision: 'approve' | 'reject' | 'request-changes', feedback_text: string | null }"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by:
+  - reason: "it-po-v3 enrichment: reassigned frontend-coder -> llm-expert (agent template presentation), 2026-06-08"
+superseded_by: null
+covered_by: []
+implemented_by: []

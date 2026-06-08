@@ -21,5 +21,10 @@ created: 2026-06-05
 amended_by:
   - "split: BP-100 -> BP-100 + BP-500, 2026-06-05 — reparented from BP-100 to BP-500"
 superseded_by: null
-covered_by: []
+covered_by:
+  - BP-100e-1
+  - BP-100e-2
+  - BP-100e-3
+  - BP-100e-4
+  - BP-100e-5
 implemented_by: []

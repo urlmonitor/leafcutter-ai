@@ -21,5 +21,9 @@ origin_agent: product-owner-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - INF-500a-1
+  - INF-500a-2
+  - INF-500a-3
+  - INF-500a-4
 implemented_by: []

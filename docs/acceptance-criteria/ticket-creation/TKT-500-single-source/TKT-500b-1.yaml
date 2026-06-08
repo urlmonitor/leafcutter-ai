@@ -1,0 +1,32 @@
+id: TKT-500b-1
+readiness: approved
+priority: medium
+title: "Test-writer is dispatched as the first phase agent for a leaf AC"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a leaf AC enters work_status: in_progress
+  And the AC does not have tests_after: true
+  When the ac-supervisor selects the first phase agent
+  Then test-writer is dispatched before any coder agent
+  And the test-writer receives the AC file path as input
+assigned_agent: python-coder
+estimated_complexity: M
+depends_on: [TKT-500a-1, TKT-500b]
+doc_links:
+  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+    relationship: constrains
+delivers_to: [TKT-500b-2]
+expects_from: [TKT-500a-1]
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: [TKT-500b-1-i]
+implemented_by: []
+it_requirements:
+  - "Must enforce TDD ordering in the ac-supervisor dispatch logic"
+  - "tests_after field must be checked before dispatch"

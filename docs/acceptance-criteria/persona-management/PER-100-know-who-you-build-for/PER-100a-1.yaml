@@ -1,0 +1,46 @@
+id: PER-100a-1
+title: "Persona directory contains a structured YAML definition file"
+component: persona-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a project with the persona-management component installed
+  When a persona named "field-service-engineer" is created
+  Then a directory exists at docs/personas/field-service-engineer/
+  And the directory contains a persona.yaml file with required sections:
+    - identity (name, role, archetype)
+    - goals (primary goals as a list of strings)
+    - frustrations (pain points as a list of strings)
+    - context (environment, tools, constraints)
+  And each section is a top-level YAML key with a non-empty value
+depends_on:
+  - PER-100a
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must define the persona.yaml schema as a JSON Schema file at config/persona_schema.json"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must use stdlib-only dependencies (no external packages beyond PyYAML)"
+  - "Must be portable across projects that adopt the persona-management component"
+delivers_to:
+  agent: python-coder
+  contract: "A persona.yaml JSON Schema at config/persona_schema.json and a creation/validation script at scripts/persona_validate.py"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - PER-100a-1-i
+implemented_by: []

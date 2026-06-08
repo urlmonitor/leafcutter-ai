@@ -7,12 +7,15 @@ level: L2
 status: active
 req_status: active
 work_status: done
+created_by: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
 criteria: |
   Given .pre-commit-config.yaml defines the check_output_drift hook,
   When a compiled workflow file at .claude/workflows/ is modified,
   Then the hook's file pattern matches .claude/workflows/ and the hook runs
   And drift is detected and reported by check_output_drift.py
-depends_on: [BP-100b, BP-100b-5]
+depends_on:
+  - BP-100k
+  - BP-100b-5
 doc_links:
   - path: tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md
     relationship: implements
@@ -25,8 +28,8 @@ expects_from:
   contract: "Drift detection script that knows about .claude/workflows/"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-created_by: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
-amended_by: []
+amended_by:
+  - "split: BP-100b -> BP-100j + BP-100k + BP-100l, 2026-06-08"
 superseded_by: null
 covered_by:
   - tests/test_build_artifact_parity.py::TestPreCommitFilesPatternCoversAllShimmedDirs

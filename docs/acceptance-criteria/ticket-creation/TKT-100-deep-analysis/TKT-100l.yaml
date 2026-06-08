@@ -13,7 +13,7 @@ criteria: |
   scripts, or functions make it happen. Technical implementation details are
   added later by a separate technical review step, keeping business requirements
   clean and readable by non-engineers.
-depends_on: [TKT-100f]
+depends_on: [TKT-100j]
 doc_links: []
 assigned_agent: llm-expert
 estimated_complexity: M
@@ -21,7 +21,8 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-04
-amended_by: []
+amended_by:
+  - reason: "split: TKT-100f -> TKT-100j + TKT-100k, 2026-06-08 — depends_on updated"
 superseded_by: null
 covered_by: []
 implemented_by: []

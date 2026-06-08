@@ -1,5 +1,5 @@
 id: BO-1100
-readiness: draft
+readiness: approved
 priority: medium
 title: "Commit messages match the kind of change automatically -- no manual formatting decisions"
 component: build-orchestration

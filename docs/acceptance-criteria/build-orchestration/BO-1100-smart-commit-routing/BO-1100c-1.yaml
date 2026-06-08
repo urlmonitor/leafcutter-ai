@@ -3,7 +3,7 @@ title: "Routing configuration is a single JSON file with an array of pattern ent
 component: build-orchestration
 level: L2
 status: active
-readiness: draft
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo
@@ -23,15 +23,26 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: templates/commit-guardian/commit_guardian.json
+    relationship: describes
+    status: exists
+  - path: .claude/precommit-autofix.json
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "The config file must follow the same JSON routing pattern used by precommit-autofix.json and commit_guardian.json"
+  - "Must validate all required fields on load and report specific entry-level errors"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "The config file path must be documented and discoverable by the commit agent template"
 delivers_to:
   agent: python-coder
-  contract: "A JSON schema and default config file that the commit agent and pattern-learning specialist both consume"
+  contract: "A JSON config file at a documented path containing an ordered array: [{group: string, path_pattern: string, template: string}, ...] with at least 5 default entries. Also a Python loader function returning the parsed list."
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by: [it-po-v3]
 superseded_by: null
-covered_by: []
+covered_by: [BO-1100c-1-i]
 implemented_by: []

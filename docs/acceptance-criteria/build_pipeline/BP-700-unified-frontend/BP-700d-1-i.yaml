@@ -1,0 +1,46 @@
+id: BP-700d-1-i
+title: "Fresh install without prior frontend-design skill succeeds cleanly"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a project has never had leafcutter installed before
+  And no .claude/skills/frontend-design/ directory exists
+  And no .claude/agents/frontend-coder.md file exists
+  When the adopter runs "python leafcutter-ai/scripts/build.py --target-dir ."
+    for the first time with the new package version
+  Then the unified agent template is deployed to .claude/agents/frontend-coder.md
+  And no error is raised about a missing frontend-design directory to remove
+  And the build completes with exit code 0
+  And the frontend-design skill directory is NOT created
+depends_on:
+  - BP-700d-1
+doc_links:
+  - path: templates/agents/frontend-coder.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must handle the absence of legacy files gracefully -- no FileNotFoundError or similar"
+  - "Build must exit with code 0 on the fresh-install path"
+  - "Must not create the frontend-design skill directory as a side effect"
+delivers_to: null
+expects_from:
+  ac_id: BP-700d-1
+  contract: "build.py migration logic handles both fresh-install and upgrade paths without error"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260608-BP-700d-1-i.md

@@ -22,5 +22,9 @@ origin_agent: BrainCandy
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - INF-400a-1
+  - INF-400a-2
+  - INF-400a-3
+  - INF-400a-4
 implemented_by: []

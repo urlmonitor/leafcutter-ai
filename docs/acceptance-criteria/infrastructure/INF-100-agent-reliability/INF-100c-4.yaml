@@ -1,0 +1,38 @@
+id: INF-100c-4
+readiness: approved
+priority: medium
+title: "Feedback submission error message identifies the missing config path"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given submit_feedback.py cannot find feedback_categories.yaml at any expected location,
+  When the script raises an error,
+  Then the error message includes the full absolute path(s) that were checked,
+  And the message is actionable for debugging.
+depends_on:
+  - INF-100c-1
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Error messages must include absolute paths, not relative paths"
+  - "Must follow the project error handling policy (log at WARNING or higher, raise typed exception)"
+  - "Must not expose sensitive filesystem information beyond the checked paths"
+delivers_to: null
+expects_from:
+  ac_id: INF-100c-1
+  contract: "Resolution function raises a descriptive error when no config is found at any candidate path"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260608-INF-100c-4.md

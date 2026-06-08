@@ -1,5 +1,5 @@
 id: BP-100i
-readiness: draft
+readiness: approved
 priority: high
 title: "Commit guardian hooks ship identically across all template directories — no silent gaps between runtime and consumer deployments"
 component: build-pipeline
@@ -26,5 +26,10 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - BP-100i-1
+  - BP-100i-2
+  - BP-100i-3
+  - BP-100i-4
+  - BP-100i-5
 implemented_by: []

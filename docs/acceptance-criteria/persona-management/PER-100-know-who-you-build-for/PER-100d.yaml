@@ -1,7 +1,7 @@
 id: PER-100d
-readiness: draft
+readiness: approved
 priority: medium
-title: "Persona context is available to every agent that needs it"
+title: "Agents automatically know who they are building for"
 component: persona-management
 level: L1
 status: active
@@ -9,20 +9,28 @@ req_status: draft
 work_status: todo
 roadmap_phase: phase_2
 criteria: |
-  Agents always know who they are building for — persona detail on demand.
+  Automatic persona awareness at agent startup — no manual steps.
 
-  The PO, BA, and UX designer can pull persona information into their working
-  context. A summary is injected by default so agents always have audience
-  awareness, with full detail available on demand when deeper understanding
-  is needed.
+  The PO, BA, and relevant agents receive a persona summary the moment they
+  are spawned. The injection is scoped so only agents that need audience
+  awareness get it, and it is configurable. Agents start every task already
+  knowing who they are building for.
 depends_on: [PER-100]
 doc_links: []
 delivers_to: null
 expects_from: null
 origin_agent: product-owner-v3
 created: 2026-06-06
-amended_by: []
+amended_by:
+  - reason: "split: PER-100d -> PER-100d + PER-100g, 2026-06-08"
 superseded_by: null
-covered_by: []
+covered_by:
+  - PER-100d-1
+  - PER-100d-3
+  - PER-100d-4
+  - PER-100d-2
+  - PER-100d-2a
+  - PER-100d-2b
+  - PER-100d-5
 implemented_by: []
 documentation_triggers: [sequence-diagram, component-diagram]

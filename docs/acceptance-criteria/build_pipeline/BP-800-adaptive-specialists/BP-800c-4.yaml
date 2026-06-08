@@ -1,0 +1,44 @@
+id: BP-800c-4
+title: "Reference documentation for the best-practice knowledge layer"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the knowledge layer structure is implemented (BP-800c-1 through BP-800c-3)
+  When a documentation-expert produces the reference document
+  Then the document covers:
+    - The directory structure of the knowledge layer within the package
+    - The required file format and section structure for best-practice files
+    - The metadata header fields and their allowed values
+    - The versioning scheme (how versions are incremented and tracked)
+    - The relationship between knowledge files and generated agents
+    - How to contribute a new best-practice file for an unsupported technology
+  And the document is placed under docs/reference/
+depends_on:
+  - BP-800c
+  - BP-800c-2
+doc_links:
+  - path: docs/architecture/components/adaptive-specialists-generation.md
+    relationship: describes
+    status: planned
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Must follow the existing reference document format and structure in docs/reference/"
+  - "Must include the complete metadata header schema with field types and allowed values"
+  - "Must include a minimal example of a valid knowledge file (copy-paste-ready template)"
+  - "Must cross-reference the how-to guide (BP-800b-5) for the user-facing workflow"
+delivers_to: null
+expects_from:
+  ac_id: BP-800c-2
+  contract: "Completed knowledge layer structure with validation schema to document as a reference"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

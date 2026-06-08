@@ -1,0 +1,44 @@
+id: BP-800e-4
+title: "How-to guide for upgrading from legacy agent layout"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the migration feature is implemented (BP-800e-1 through BP-800e-3)
+  When a documentation-expert produces the how-to guide
+  Then the guide covers:
+    - What the legacy agent layout looks like and how to identify it
+    - What happens automatically when you upgrade the package and run the build
+    - How to verify that migration completed (where to find the migration summary)
+    - What to do if migration fails (how to read the error, how to retry)
+    - How to manually roll back if the generated specialists are not satisfactory
+  And the guide is written for users upgrading from a pre-adaptive-specialists version
+  And the guide is placed under docs/how-to/
+depends_on:
+  - BP-800e
+  - BP-800e-2
+doc_links:
+  - path: docs/architecture/components/adaptive-specialists-generation.md
+    relationship: describes
+    status: planned
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Must follow the existing how-to document format and structure in docs/how-to/"
+  - "Must include a pre-upgrade checklist (backup recommendations, version verification)"
+  - "Must include the exact location of the migration summary file and how to interpret it"
+  - "Must cross-reference the legacy retirement guide (BP-800d-4) for agent-specific details"
+delivers_to: null
+expects_from:
+  ac_id: BP-800e-2
+  contract: "Completed migration feature with summary output format to document"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -3,7 +3,7 @@ title: "Shapes differing only in file count are treated as the same shape"
 component: build-orchestration
 level: L3
 status: active
-readiness: draft
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo
@@ -21,13 +21,16 @@ depends_on: [BO-1100d-1]
 doc_links: []
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Shape identity key must be derived from (dir_pattern, sorted extension set) only"
+  - "File count must be stored as metadata but excluded from the identity comparison"
 delivers_to: null
 expects_from:
   ac_id: BO-1100d-1
-  contract: "Shape-tracking store with shape identity logic"
+  contract: "Shape-tracking store where identity is keyed on {dir_pattern: string, extensions: string[]} (extensions sorted, file count excluded)"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by: [it-po-v3]
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -1,0 +1,47 @@
+id: BP-800a-2
+title: "Framework detection from dependency declarations"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a project with:
+    - pyproject.toml listing "fastapi" and "sqlalchemy" in [project.dependencies]
+    - package.json listing "react" in dependencies and "next" in dependencies
+  When the technology detector scans the project at build time
+  Then it reports detected frameworks: ["fastapi", "sqlalchemy", "react", "nextjs"]
+  And each framework is associated with its parent language ("fastapi" -> "python", "react" -> "typescript")
+  And frameworks are detected from manifest files only (not from import statements in source code)
+depends_on:
+  - BP-800a
+  - BP-800a-1
+doc_links:
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: context
+    status: exists
+  - path: docs/architecture/components/adaptive-specialists-detection.md
+    relationship: describes
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must support pyproject.toml, requirements.txt, package.json, and go.mod as manifest sources"
+  - "Must maintain a configurable mapping of package names to framework identifiers (not hardcoded inline)"
+  - "Must handle errors gracefully when manifest files contain invalid syntax"
+  - "Must not perform source code analysis (import parsing) — manifest-only detection"
+  - "Must produce deterministic output for the same set of manifest files"
+delivers_to:
+  agent: python-coder
+  contract: "list[dict] where each entry has: {name: str, category: 'framework', parent_language: str, confidence: 'manifest', detection_source: str (manifest file path)}"
+expects_from:
+  ac_id: BP-800a-1
+  contract: "Shared manifest file discovery logic — list of manifest file paths found during language detection scan"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

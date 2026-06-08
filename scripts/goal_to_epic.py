@@ -1304,7 +1304,7 @@ def _collect_master_plan_data(
         agents_map = fm.get("agents") or {}
         needed_agents = [
             a for a, status in agents_map.items()
-            if status in ("needed", "signed_off")
+            if a is not None and status in ("needed", "signed_off")
         ]
         for agent_name in needed_agents:
             all_agents.setdefault(agent_name, []).append(ticket_num)
