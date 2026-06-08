@@ -1,6 +1,6 @@
 ---
 title: "Fix pre-commit auto-fix hooks that modify files and exit non-zero (infinite loop on large commits)"
-status: todo
+status: invalid
 components:
   - build_pipeline
 created: 2026-06-08
