@@ -28,5 +28,9 @@ covered_by:
   - PER-100d-1
   - PER-100d-3
   - PER-100d-4
+  - PER-100d-2
+  - PER-100d-2a
+  - PER-100d-2b
+  - PER-100d-5
 implemented_by: []
 documentation_triggers: [sequence-diagram, component-diagram]

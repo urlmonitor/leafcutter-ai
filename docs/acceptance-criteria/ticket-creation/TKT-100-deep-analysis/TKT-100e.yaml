@@ -31,5 +31,10 @@ origin_agent: BrainCandy
 created: 2026-06-04
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - TKT-100e-1
+  - TKT-100e-2
+  - TKT-100e-3
+  - TKT-100e-4
+  - TKT-100e-5
 implemented_by: []

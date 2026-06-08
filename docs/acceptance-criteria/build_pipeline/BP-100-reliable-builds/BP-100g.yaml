@@ -21,5 +21,11 @@ created: 2026-06-05
 amended_by:
   - "split: BP-100g -> BP-100g + BP-100h, 2026-06-05"
 superseded_by: null
-covered_by: []
+covered_by:
+  - BP-100g-1
+  - BP-100g-2
+  - BP-100g-3
+  - BP-100g-4
+  - BP-100g-5
+  - BP-100g-6
 implemented_by: []

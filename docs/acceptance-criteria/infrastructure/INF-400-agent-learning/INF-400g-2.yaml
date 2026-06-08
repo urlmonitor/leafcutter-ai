@@ -26,5 +26,5 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by: [INF-400g-2-i, INF-400g-2-ii]
 implemented_by: []

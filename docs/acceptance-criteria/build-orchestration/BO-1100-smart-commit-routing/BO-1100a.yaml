@@ -1,5 +1,5 @@
 id: BO-1100a
-readiness: draft
+readiness: approved
 priority: medium
 title: "The right message style is chosen for you based on what changed"
 component: build-orchestration
@@ -24,5 +24,11 @@ origin_agent: product-owner-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - BO-1100a-1
+  - BO-1100a-2
+  - BO-1100a-3
+  - BO-1100a-4
+  - BO-1100a-5
+implemented_by:
+- tickets/00_inbox/TICKET-20260608-BO-1100a.md

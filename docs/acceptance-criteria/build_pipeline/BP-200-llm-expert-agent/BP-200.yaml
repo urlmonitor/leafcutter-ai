@@ -21,7 +21,12 @@ origin_agent: product-owner-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - BP-200a
+  - BP-200b
+  - BP-200c
+  - BP-200d
+  - BP-200e
 implemented_by:
   - "templates/agents/llm-expert.md"
   - "docs/agents/llm-expert/PROJECT_CONTEXT.md"

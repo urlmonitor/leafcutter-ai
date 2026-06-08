@@ -21,6 +21,16 @@ amended_by: []
 superseded_by: null
 covered_by:
   - tests/test_build_artifact_parity.py
+  - BP-100b-1
+  - BP-100b-10
+  - BP-100b-2
+  - BP-100b-3
+  - BP-100b-4
+  - BP-100b-5
+  - BP-100b-6
+  - BP-100b-7
+  - BP-100b-8
+  - BP-100b-9
 implemented_by:
   - scripts/build_helpers.py
   - scripts/build_phases.py

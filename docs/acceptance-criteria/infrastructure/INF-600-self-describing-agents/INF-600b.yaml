@@ -19,5 +19,5 @@ origin_agent: product-owner-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by: [INF-600b-1, INF-600b-2]
 implemented_by: []

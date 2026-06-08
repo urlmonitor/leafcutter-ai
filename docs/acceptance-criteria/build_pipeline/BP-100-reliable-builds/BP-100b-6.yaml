@@ -37,5 +37,6 @@ amended_by: []
 superseded_by: null
 covered_by:
   - tests/test_build_artifact_parity.py
+  - BP-100b-6-i
 implemented_by:
   - tests/test_build_artifact_parity.py

@@ -27,5 +27,8 @@ covered_by:
   - PER-100e-1
   - PER-100e-1a
   - PER-100e-1b
+  - PER-100e-2
+  - PER-100e-3
+  - PER-100e-4
 implemented_by: []
 documentation_triggers: [how-to]

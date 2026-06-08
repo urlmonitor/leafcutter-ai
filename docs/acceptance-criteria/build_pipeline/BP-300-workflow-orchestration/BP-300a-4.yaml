@@ -26,5 +26,5 @@ created: 2026-06-05
 amended_by:
   - "split: BP-300a -> BP-300a + BP-300c, 2026-06-05"
 superseded_by: null
-covered_by: []
+covered_by: [BP-300a-4-i]
 implemented_by: []

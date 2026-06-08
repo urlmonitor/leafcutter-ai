@@ -22,5 +22,5 @@ origin_agent: product-owner-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by: [BO-550-1, BO-550-2]
 implemented_by: []

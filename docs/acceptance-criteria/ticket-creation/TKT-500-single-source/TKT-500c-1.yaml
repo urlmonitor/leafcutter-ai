@@ -24,7 +24,7 @@ origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by: [TKT-500c-1-i]
 implemented_by: []
 it_requirements:
   - "YAML write must use targeted field replacement, not full dump"
