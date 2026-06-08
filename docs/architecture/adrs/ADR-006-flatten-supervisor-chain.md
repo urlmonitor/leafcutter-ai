@@ -215,6 +215,26 @@ context, satisfying the Claude Code depth-1 constraint.
   failure-adjudication ladder, retry caps, and commit-phase lock recipe are
   identical.
 
+## Addendum: `/quick-fix` workflow (BP-600a-1, 2026-06-08)
+
+The `/quick-fix` slash command was added as part of `EPIC-QuickFixWorkflow` to satisfy AC
+`BP-600a-1` — the quick-fix workflow must operate in the current worktree without creating a new
+worktree or switching branches. This is a direct application of this ADR's depth model:
+
+- `/quick-fix` is the executing context (depth 0), equivalent to `/build-feature`.
+- `ticket-supervisor` logic runs inline inside `/quick-fix` (no Agent-tool hop).
+- Phase agents (`build-ac`, `test-writer`, `python-coder`, `test-runner`, `commit`) are
+  spawned via the Agent tool at depth 1 — exactly as this ADR specifies.
+
+The key difference from `/build-feature` is that `/quick-fix` never calls
+`setup_ticket_worktree.py` and never runs `git worktree add`. All phases execute in the
+directory where the command was invoked, on the branch that is already checked out. The
+`git branch --show-current` value is invariant before and after the workflow.
+
+Relevant contract: `templates/workflows-js/quick-fix.js` implements the entry point.
+
+---
+
 ## References
 
 - `tickets/00_inbox/epics/EPIC-FlattenSupervisorChain/Master_Plan.md` — the
@@ -223,5 +243,8 @@ context, satisfying the Claude Code depth-1 constraint.
   algorithm now inlined into `/build-feature`.
 - `.claude/skills/building-epics/SKILL.md` §2 — the ticket-level dispatch loop
   implemented by `ticket-supervisor` (unchanged by this decision).
+- `docs/architecture/agent_delivery_workflows.md` §5 — the `/quick-fix` workflow
+  diagram and worktree-invariant contrast table documenting the current-worktree-only
+  pattern (AC BP-600a-1).
 - PR #22 (reverted) — the failed pass-through shim attempt that confirmed the
   depth-1 constraint is not bypassable within the Agent tool model.

@@ -363,6 +363,29 @@ Do not add any other preamble or summary text.
   a `(status: question)` or a `failed` payload, this skill is a
   passthrough — it does not try to answer on the user's behalf.
 
+## Contrast: this skill vs. `/quick-fix`
+
+This skill (`build-single-ticket`) always creates a **new isolated worktree** (Step 2 via
+`setup_ticket_worktree.py`) and drives the ticket on a **new branch**. The ticket persists
+in the inbox until `finalize-feature.js` reconciles it on `main` after the PR is merged.
+
+The `/quick-fix` workflow (AC BP-600a-1; `templates/workflows-js/quick-fix.js`) is the
+**current-worktree** counterpart. It differs from this skill in four key ways:
+
+| Aspect | `build-single-ticket` (this skill) | `/quick-fix` |
+|--------|-----------------------------------|----|
+| Worktree | New isolated worktree created | **Current worktree — no new directory** |
+| Branch | New branch per ticket | **Current branch — no switch** |
+| Entry | Invoked by `/build-feature` for single-ticket paths | Invoked directly by `/quick-fix` |
+| Ticket lifecycle | Full inbox → PR → finalize | Single-shot — ticket created and driven to commit inline |
+
+**When to use this skill vs. `/quick-fix`:** use this skill when the fix requires a clean
+branch and a full PR lifecycle. Use `/quick-fix` when you have already diagnosed a bug,
+want the fix committed on your current branch immediately, and do not want a new worktree
+directory created (AC BP-600a-1).
+
+See `docs/architecture/agent_delivery_workflows.md` §5 for the full quick-fix workflow diagram.
+
 ## References
 
 - `.claude/commands/build-feature.md` — the slash command that

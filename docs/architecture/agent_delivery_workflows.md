@@ -93,6 +93,7 @@ flowchart TD
     subgraph Commands ["User Slash Commands"]
         cmdBuild["/build-feature"]:::ui
         cmdTicket["/create-ticket"]:::ui
+        cmdQuickFix["/quick-fix"]:::ui
         cmdPy["/python-coder"]:::ui
         cmdSql["/sql-coder"]:::ui
         cmdDoc["/documentation"]:::ui
@@ -107,6 +108,7 @@ flowchart TD
     subgraph Primary_Agents ["Top-Level Agents"]
         epicSup["epic-supervisor"]:::orchestrator
         createTick["create-ticket"]:::orchestrator
+        quickFixAgt["ticket-supervisor (inline,<br/>current worktree — no branch switch)"]:::orchestrator
         pyCoder["python-coder"]:::worker
         sqlCoder["sql-coder"]:::orchestrator
         docExp["documentation-expert"]:::orchestrator
@@ -120,6 +122,7 @@ flowchart TD
     %% Mappings
     cmdBuild --> epicSup
     cmdTicket --> createTick
+    cmdQuickFix --> quickFixAgt
     cmdPy --> pyCoder
     cmdSql --> sqlCoder
     cmdDoc --> docExp
@@ -312,12 +315,84 @@ flowchart TD
 
 ---
 
+---
+
+## 5. Detail View: Quick-Fix Workflow (`/quick-fix`)
+
+The `/quick-fix` command is a **current-worktree-only** workflow. Unlike `/build-feature`, it
+never creates a new worktree or switches branches. The user invokes it from an existing
+worktree (e.g. `EPIC-SomeFeature`) and all operations — AC creation, test writing, fix, and
+commit — complete on the **same branch** the user was already on.
+
+### AC BP-600a-1 — Worktree invariant
+
+```
+Given a user is on branch "EPIC-SomeFeature" in an existing worktree,
+When they invoke /quick-fix with a diagnosis specifying a file and root cause,
+Then the workflow performs all operations (AC creation, test writing, fix, commit)
+  in the current worktree,
+And git branch --show-current returns the same branch name both before and after
+  the workflow completes,
+And no new worktree directory is created during execution.
+```
+
+### Contrast with `/build-feature`
+
+| Aspect | `/build-feature` | `/quick-fix` |
+|--------|-----------------|-------------|
+| Worktree | Creates a new isolated worktree per epic/ticket | Stays in the **current** worktree |
+| Branch | Creates and switches to a new feature branch | Stays on the **current** branch |
+| Entry point | `build-ticket.js` (JS workflow) or `build-single-ticket` skill | `quick-fix.js` (JS workflow, inline) |
+| Depth model | `ticket-supervisor` at depth 0; phase agents at depth 1 (ADR-006) | Same depth model — `ticket-supervisor` inline at depth 0 |
+| Ticket lifecycle | Full inbox → todo → done lifecycle | Lightweight — single-shot fix; ticket created inline and driven to commit in one pass |
+
+### Flow
+
+```mermaid
+flowchart TD
+    classDef ui fill:#fef3c7,stroke:#d97706,stroke-width:2px;
+    classDef orchestrator fill:#dbeafe,stroke:#2563eb,stroke-width:2px;
+    classDef worker fill:#d1fae5,stroke:#059669,stroke-width:2px;
+    classDef invariant fill:#fee2e2,stroke:#ef4444,stroke-width:2px;
+
+    QF["/quick-fix (slash command)<br/>Current worktree — no branch switch"]:::ui
+
+    subgraph Invariant ["Worktree Invariant (BP-600a-1)"]
+        direction TB
+        Check["git branch --show-current == SAME before/after"]:::invariant
+        NoNewWT["No new worktree directory created"]:::invariant
+    end
+
+    subgraph Phases ["Inline Phases (current branch)"]
+        direction TB
+        AC["1. AC creation<br/>(build-ac agent)"]:::worker
+        TW["2. Test writing<br/>(test-writer agent)"]:::worker
+        Fix["3. Fix implementation<br/>(python-coder / sql-coder)"]:::worker
+        TR["4. Test runner<br/>(test-runner agent)"]:::worker
+        CM["5. Commit<br/>(commit agent)"]:::worker
+    end
+
+    QF --> Invariant
+    QF --> Phases
+    AC --> TW --> Fix --> TR --> CM
+```
+
+### Key constraint: no `git worktree add`, no `setup_ticket_worktree.py`
+
+The `quick-fix.js` workflow script MUST NOT call `setup_ticket_worktree.py` or any equivalent
+command that creates a new worktree directory. All phases run in the directory where `/quick-fix`
+was invoked. This is enforced by the AC store entry `BP-600a-1` and checked by
+`git branch --show-current` before and after the workflow completes.
+
+---
+
 ## Key Design Principles
 
 1. **Self-Documenting State:** The `epic-supervisor` determines what phase a ticket is in by parsing the structured `agents:` YAML map in the ticket's frontmatter. It never reads the conversational history.
 2. **Safe Parallelism:** Tickets are batched for parallel execution only if their `files_touched` sets are disjoint and logical `depends_on` constraints are met.
 3. **Escalating Adjudication:** When a worker encounters a blocker, `ticket-supervisor` attempts mechanical retries before calling an Opus-level brainstormer or bothering the user.
 4. **Single Source of Truth:** User-facing slash commands (`/sql-coder`, `/pr-review`) map directly to their underlying orchestration agents, decoupling UX from complex internal routing.
+5. **Current-Worktree-First for Known Bugs:** The `/quick-fix` workflow stays in the current worktree and branch. Speed and quality discipline are not in tension — the same phase agents run inline without a branch switch (ADR-006; AC BP-600a-1).
 
 ---
 
@@ -331,6 +406,7 @@ flowchart TD
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-08 [llm-expert]: Added /quick-fix to high-level overview (§1) and Section 5 documenting the current-worktree-only flow, worktree invariant (BP-600a-1), contrast table with /build-feature, and Mermaid flow diagram. (#EPIC-QuickFixWorkflow/01)
 - 2026-05-13 [Antigravity]: Added test-planner spawn to ticket-creation diagram (§2) and test-writer to phase-agent dispatch order (§4) per ADR-018 and ticket 36 (test-expert injection).
 - 2026-05-11 [Antigravity]: Refactored to feature layered abstraction, splitting a single large flow into a high-level overview and specific orchestration detail views. Removed non-coding elements like `trade-report`.
 - 2026-05-11 [Antigravity]: Initial creation. Visualises slash command distribution and Epic Supervisor execution flow based on EPIC-CodingAgents and EPIC-AgentSupervisor patterns.
