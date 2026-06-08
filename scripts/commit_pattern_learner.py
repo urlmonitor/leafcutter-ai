@@ -1,6 +1,6 @@
 """
-commit_pattern_learner — AC BO-1100d: Unfamiliar commit shapes are analysed
-and learned over time.
+commit_pattern_learner — AC BO-1100d / BO-1100e: Unfamiliar commit shapes are
+analysed and learned over time with targeted history filtering.
 
 MODULE: scripts/commit_pattern_learner.py
 GOAL: Record staged-file "shapes" that hit the UNKNOWN fallback (no pattern
@@ -15,6 +15,14 @@ BUSINESS CONTEXT:
     same shape, a new routing rule is proposed for addition to the
     configuration. The system gets smarter with use without requiring manual
     rule authoring.
+
+    AC BO-1100e — when analysing whether a shape recurs, the system uses a
+    targeted history filter (``filter_history_by_shape``) rather than reading
+    the full git log. The filter narrows git log output to commits that touched
+    structurally similar paths (same directory prefixes and file extensions),
+    and caps the result at MAX_HISTORY_COMMITS (100) entries. This keeps
+    analysis latency and token cost bounded even in repositories with thousands
+    of commits.
 
 ARCHITECTURE:
     * A "shape" is a frozenset of normalised tokens extracted from the staged
@@ -31,10 +39,15 @@ ARCHITECTURE:
     * The classification logic from commit_classifier.py is NOT re-used for
       the shape extraction to avoid a circular dependency; shapes are derived
       directly from file paths.
+    * ``filter_history_by_shape`` uses ``git log --format=%H%n%s --
+      <pathspecs>`` to retrieve only commits touching matching paths. It
+      never reads the full history; the ``--max-count`` flag enforces the
+      upper bound.
 
 Used by:
   - templates/agents/commit.md (Step 2: after UNKNOWN fallback fires)
   - unit_tests/test_commit_pattern_learner.py
+  - unit_tests/test_history_filter.py
 """
 
 from __future__ import annotations
@@ -42,6 +55,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Sequence
@@ -54,6 +68,10 @@ logger = logging.getLogger(__name__)
 
 #: Number of times a shape must recur before a proposal is generated.
 PROPOSAL_THRESHOLD: int = 10
+
+#: Maximum number of commits examined when filtering git history by shape.
+#: Keeps analysis latency and token cost bounded even in large repositories.
+MAX_HISTORY_COMMITS: int = 100
 
 #: Default path to the observation log (JSONL).
 #: Resolved relative to this module so the code works from any CWD.
@@ -128,6 +146,159 @@ def extract_shape(staged_paths: Sequence[str]) -> tuple[str, ...]:
                 tokens.add(f"ext:{ext}")
 
     return tuple(sorted(tokens))
+
+
+# ---------------------------------------------------------------------------
+# History filter (AC BO-1100e)
+# ---------------------------------------------------------------------------
+
+
+def _build_git_pathspecs(shape: tuple[str, ...]) -> list[str]:
+    """Derive git log pathspec arguments from a shape tuple.
+
+    Each token in ``shape`` contributes one or two pathspec arguments:
+
+    * ``dir:<name>`` tokens become ``<name>/`` (a directory prefix glob).
+    * ``ext:<suffix>`` tokens become ``*.<suffix>`` (a file extension glob).
+
+    These arguments are used with ``git log -- <pathspecs>`` so that git
+    filters its commit walk to only commits that touched matching paths.
+
+    Parameters
+    ----------
+    shape:
+        Shape tuple as returned by ``extract_shape``.
+
+    Returns
+    -------
+    List of pathspec strings suitable for passing after ``--`` in a git
+    command.  Returns an empty list when the shape is empty (caller falls
+    back to unfiltered history or skips the git call).
+    """
+    pathspecs: list[str] = []
+    for token in shape:
+        if token.startswith("dir:"):
+            dir_name = token[len("dir:"):]
+            if dir_name:
+                pathspecs.append(f"{dir_name}/")
+        elif token.startswith("ext:"):
+            ext_name = token[len("ext:"):]
+            if ext_name:
+                pathspecs.append(f"*.{ext_name}")
+    return pathspecs
+
+
+def filter_history_by_shape(
+    shape: tuple[str, ...],
+    repo_root: Path | None = None,
+    max_commits: int = MAX_HISTORY_COMMITS,
+) -> list[dict[str, str]]:
+    """Return git commits whose file changes are structurally similar to ``shape``.
+
+    AC BO-1100e — the specialist only reads relevant history, not thousands
+    of commits.  This function narrows ``git log`` output to commits that
+    touched paths matching the shape's directory and extension tokens,
+    then caps the result at ``max_commits`` entries so token cost stays
+    bounded regardless of repository history depth.
+
+    Algorithm
+    ---------
+    1. Derive pathspec arguments from the shape tokens via
+       ``_build_git_pathspecs``.
+    2. Run ``git log --max-count=<max_commits> --format=%H%n%s --
+       <pathspecs>`` in the repository root (resolved from this module's
+       location when ``repo_root`` is not provided).
+    3. Parse the output into a list of ``{"hash": ..., "subject": ...}``
+       dicts and return it.
+
+    If the shape is empty (no tokens), or if git is unavailable, or if
+    the command returns a non-zero exit code, an empty list is returned and
+    the error is logged at WARNING level.  Callers must handle the empty-list
+    case gracefully.
+
+    Parameters
+    ----------
+    shape:
+        Shape tuple as returned by ``extract_shape``.  An empty tuple
+        causes an immediate return of ``[]`` (no pathspecs to filter by).
+    repo_root:
+        Explicit path to the repository root.  Defaults to the parent of
+        the ``scripts/`` directory (i.e. the repo root when this module
+        lives at ``scripts/commit_pattern_learner.py``).
+    max_commits:
+        Maximum number of matching commits to return.  Defaults to
+        ``MAX_HISTORY_COMMITS`` (100).  Lower values reduce latency and
+        token cost; higher values improve pattern accuracy for low-frequency
+        shapes.
+
+    Returns
+    -------
+    List of dicts, each with keys ``"hash"`` (full SHA-1) and
+    ``"subject"`` (first commit-message line).  Empty list on error or
+    when no commits match.
+    """
+    if not shape:
+        return []
+
+    pathspecs = _build_git_pathspecs(shape)
+    if not pathspecs:
+        return []
+
+    root = repo_root if repo_root is not None else Path(__file__).resolve().parent.parent
+
+    cmd = [
+        "git",
+        "-C",
+        str(root),
+        "log",
+        f"--max-count={max_commits}",
+        "--format=%H%n%s",
+        "--",
+        *pathspecs,
+    ]
+
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except FileNotFoundError as exc:
+        logger.warning("git executable not found — history filter unavailable: %s", exc)
+        return []
+    except subprocess.TimeoutExpired as exc:
+        logger.warning("git log timed out after 30 s — returning empty history: %s", exc)
+        return []
+    except OSError as exc:
+        logger.warning("git log subprocess failed: %s", exc)
+        return []
+
+    if result.returncode != 0:
+        logger.warning(
+            "git log exited %d for shape %s: %s",
+            result.returncode,
+            shape,
+            result.stderr.strip(),
+        )
+        return []
+
+    commits: list[dict[str, str]] = []
+    lines = result.stdout.splitlines()
+    # git log --format=%H%n%s outputs two lines per commit: hash then subject.
+    it = iter(lines)
+    for commit_hash in it:
+        commit_hash = commit_hash.strip()
+        if not commit_hash:
+            continue
+        try:
+            subject = next(it).strip()
+        except StopIteration:
+            subject = ""
+        if commit_hash:
+            commits.append({"hash": commit_hash, "subject": subject})
+
+    return commits
 
 
 # ---------------------------------------------------------------------------
