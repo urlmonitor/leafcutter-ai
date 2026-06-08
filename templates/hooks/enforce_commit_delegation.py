@@ -56,18 +56,41 @@ def _is_git_commit_call(payload: dict) -> bool:
     return "git commit" in command
 
 
-def _is_commit_agent_mode() -> bool:
-    """Return True when ``COMMIT_AGENT_MODE=1`` is set in the environment.
+def _is_commit_agent_mode(payload: dict | None = None) -> bool:
+    """Return True when the call originates from the commit agent.
 
-    The ``commit`` agent template sets this env var immediately before its
-    own ``git commit`` call in Step 4. No other agent or interactive context
-    sets it. This function is a pure environment query — no I/O.
+    Two detection paths are supported:
+
+    1. **Process environment**: ``os.environ["COMMIT_AGENT_MODE"] == "1"``.
+       This is set when the harness injects the variable into the Claude Code
+       process before spawning the commit agent.
+
+    2. **Inline command prefix**: the Bash command string starts with the
+       token ``COMMIT_AGENT_MODE=1`` (shell inline-assignment syntax).  The
+       commit agent template uses this form (``COMMIT_AGENT_MODE=1 git …``)
+       which sets the variable for the shell child but not for the hook's own
+       process (spawned before the shell runs).  Checking the raw command
+       covers that case.
+
+    Either path is sufficient — the check is OR-logic.
+
+    Args:
+        payload: Optional PreToolUse JSON payload.  When provided, the
+            ``command`` field is inspected for the inline prefix.
 
     Returns:
-        True when ``os.environ["COMMIT_AGENT_MODE"]`` equals the string
-        ``"1"``; False in all other cases (unset, empty, or any other value).
+        True when either detection path matches; False otherwise.
     """
-    return os.environ.get("COMMIT_AGENT_MODE", "") == "1"
+    if os.environ.get("COMMIT_AGENT_MODE", "") == "1":
+        return True
+    if payload is not None:
+        tool_input = payload.get("tool_input") or {}
+        command = str(tool_input.get("command") or tool_input.get("cmd") or "")
+        # Accept "COMMIT_AGENT_MODE=1 git commit …" (inline env prefix)
+        tokens = command.lstrip().split()
+        if "COMMIT_AGENT_MODE=1" in tokens:
+            return True
+    return False
 
 
 def _build_block_message() -> str:
@@ -107,8 +130,10 @@ def main() -> None:
     if not _is_git_commit_call(payload):
         sys.exit(0)
 
-    # Allow when the commit agent has set its sentinel env var
-    if _is_commit_agent_mode():
+    # Allow when the commit agent has set its sentinel env var (either via
+    # process environment or via the inline COMMIT_AGENT_MODE=1 prefix in
+    # the command string — the commit agent template uses the latter form).
+    if _is_commit_agent_mode(payload):
         sys.exit(0)
 
     # Block: direct git commit from a non-commit-agent context
@@ -133,5 +158,14 @@ DECISION HISTORY
   check_commit_ticket_staged.py: same module docstring sections, same
   JSON block-decision contract, same fail-open exit(0) pattern.
   (#TICKET-20260605-EnforceCommitAgentDelegation)
+- 2026-06-08 12:00 [commit]: Add inline command-prefix detection path.
+  The hook previously only checked os.environ["COMMIT_AGENT_MODE"], but
+  the commit agent template uses the shell inline-assignment form
+  "COMMIT_AGENT_MODE=1 git commit …", which sets the var for the shell
+  child process but NOT for the hook's own Python process (spawned before
+  the shell runs). Added a second detection path that inspects the raw
+  command string tokens for the inline prefix, so the hook correctly
+  passes commits from the commit agent template.
+  (#TICKETLESS reason=hook-correctness-fix-no-ticket-needed)
 ====================================================================
 """
