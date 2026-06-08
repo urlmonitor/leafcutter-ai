@@ -660,5 +660,579 @@ class TestThreeLevelAncestryChain(unittest.TestCase):
             )
 
 
+class TestPreCommitHookEdgeCases(unittest.TestCase):
+    """Edge-case tests for the pre-commit hook covering unusual or adversarial inputs.
+
+    Each test documents the expected (fail-open) behaviour for inputs that are
+    malformed, structurally unusual, or outside the normal AC store path tree.
+    Where a test uncovers a real implementation bug, the assertion is written to
+    reflect what the hook *should* do (fail-open), and the test is expected to
+    fail against the current implementation — that failure is the bug report.
+    """
+
+    def setUp(self):
+        self.mod = _load_hook_module()
+        self._old_env = {}
+
+    def tearDown(self):
+        for k, v in self._old_env.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+
+    def _set_env(self, key, value):
+        self._old_env.setdefault(key, os.environ.get(key))
+        os.environ[key] = value
+
+    # ------------------------------------------------------------------
+    # Scenario 1: staged YAML file with completely empty content (0 bytes)
+    # ------------------------------------------------------------------
+
+    def test_empty_file_fails_open(self):
+        """A zero-byte staged YAML file must not block the commit (fail-open).
+
+        yaml.safe_load("") returns None, which _load_yaml_safe converts to None,
+        causing _check_file to return [] (no violations).
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ac_store = Path(tmpdir) / "docs" / "acceptance-criteria"
+            ac_store.mkdir(parents=True)
+            empty_file = ac_store / "ACS-500a.yaml"
+            empty_file.write_bytes(b"")  # exactly 0 bytes
+
+            self._set_env("HOOK_ROOT", tmpdir)
+            derive_fn = self.mod._get_derive_parent_id()
+            violations = self.mod._check_file(str(empty_file), derive_fn)
+
+            self.assertEqual(
+                violations,
+                [],
+                "Empty file must produce no violations (fail-open); "
+                f"got: {violations}",
+            )
+
+    # ------------------------------------------------------------------
+    # Scenario 2: valid YAML but no `id` field
+    # ------------------------------------------------------------------
+
+    def test_valid_yaml_no_id_field_skips(self):
+        """A parseable YAML file with no 'id' field is not an AC and must be skipped.
+
+        The hook extracts child_id = "" (empty) and returns [] immediately.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ac_store = Path(tmpdir) / "docs" / "acceptance-criteria"
+            ac_store.mkdir(parents=True)
+            yaml_file = ac_store / "ACS-500b.yaml"
+            yaml_file.write_text(
+                textwrap.dedent(
+                    """\
+                    title: Missing ID file
+                    req_status: draft
+                    depends_on: [ACS-500]
+                    covered_by: []
+                    """
+                )
+            )
+
+            self._set_env("HOOK_ROOT", tmpdir)
+            derive_fn = self.mod._get_derive_parent_id()
+            violations = self.mod._check_file(str(yaml_file), derive_fn)
+
+            self.assertEqual(
+                violations,
+                [],
+                "File with no 'id' field must be skipped; "
+                f"got: {violations}",
+            )
+
+    # ------------------------------------------------------------------
+    # Scenario 3: `covered_by` is a string instead of a list
+    # ------------------------------------------------------------------
+
+    def test_covered_by_plain_string_is_handled(self):
+        """Parent's covered_by is a plain string (not YAML list) — hook should not crash.
+
+        When covered_by is a bare string like 'ACS-500a-1', _extract_covered_by
+        falls into the str branch, strips brackets (none present), and splits on
+        commas. A bare ID 'ACS-500a-1' with no brackets should be treated as a
+        single-element list containing that ID.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ac_store = Path(tmpdir) / "docs" / "acceptance-criteria" / "ACS-500a"
+            ac_store.mkdir(parents=True)
+
+            # Parent uses a plain string for covered_by (no square brackets)
+            parent_file = ac_store / "ACS-500a.yaml"
+            parent_file.write_text(
+                textwrap.dedent(
+                    """\
+                    id: ACS-500a
+                    title: Parent AC
+                    req_status: approved
+                    criteria: Some criteria.
+                    covered_by: ACS-500a-1
+                    origin_agent: BrainCandy
+                    """
+                )
+            )
+
+            child_file = ac_store / "ACS-500a-1.yaml"
+            child_file.write_text(
+                _CHILD_YAML_TEMPLATE.format(
+                    child_id="ACS-500a-1",
+                    parent_id="ACS-500a",
+                )
+            )
+
+            self._set_env("HOOK_ROOT", tmpdir)
+            derive_fn = self.mod._get_derive_parent_id()
+            violations = self.mod._check_file(str(child_file), derive_fn)
+
+            # covered_by: ACS-500a-1 (plain string) must be parsed to include the child
+            self.assertEqual(
+                violations,
+                [],
+                "Plain-string covered_by containing the child ID must be recognised; "
+                f"got: {violations}",
+            )
+
+    # ------------------------------------------------------------------
+    # Scenario 4: `covered_by` is null/None
+    # ------------------------------------------------------------------
+
+    def test_covered_by_null_produces_violation(self):
+        """Parent's covered_by is null — child is staged but parent lists nothing.
+
+        PyYAML parses 'covered_by: null' / 'covered_by: ~' / 'covered_by:' as None.
+        _extract_covered_by returns [] for None. The child ID is therefore absent
+        from covered_by, and the hook must raise a violation.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ac_store = Path(tmpdir) / "docs" / "acceptance-criteria" / "ACS-500b"
+            ac_store.mkdir(parents=True)
+
+            parent_file = ac_store / "ACS-500b.yaml"
+            parent_file.write_text(
+                textwrap.dedent(
+                    """\
+                    id: ACS-500b
+                    title: Parent AC
+                    req_status: approved
+                    criteria: Some criteria.
+                    covered_by: null
+                    origin_agent: BrainCandy
+                    """
+                )
+            )
+
+            child_file = ac_store / "ACS-500b-1.yaml"
+            child_file.write_text(
+                _CHILD_YAML_TEMPLATE.format(
+                    child_id="ACS-500b-1",
+                    parent_id="ACS-500b",
+                )
+            )
+
+            self._set_env("HOOK_ROOT", tmpdir)
+            derive_fn = self.mod._get_derive_parent_id()
+            violations = self.mod._check_file(str(child_file), derive_fn)
+
+            self.assertEqual(
+                len(violations),
+                1,
+                "null covered_by must produce exactly 1 violation; "
+                f"got {len(violations)}: {violations}",
+            )
+            self.assertIn("ACS-500b-1", violations[0])
+
+    # ------------------------------------------------------------------
+    # Scenario 5: child ID whose derived parent doesn't exist as a file
+    # ------------------------------------------------------------------
+
+    def test_parent_file_absent_fails_open(self):
+        """Child references a parent ID that has no matching YAML on disk.
+
+        _resolve_parent_file scans the AC store and finds no file whose id
+        matches the parent. Hook warns and returns [] (fail-open, no violation).
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ac_store = Path(tmpdir) / "docs" / "acceptance-criteria"
+            ac_store.mkdir(parents=True)
+
+            # Child exists; parent file does NOT exist anywhere in the AC store
+            child_file = ac_store / "ACS-501a-1.yaml"
+            child_file.write_text(
+                _CHILD_YAML_TEMPLATE.format(
+                    child_id="ACS-501a-1",
+                    parent_id="ACS-501a",
+                )
+            )
+
+            self._set_env("HOOK_ROOT", tmpdir)
+            derive_fn = self.mod._get_derive_parent_id()
+            violations = self.mod._check_file(str(child_file), derive_fn)
+
+            self.assertEqual(
+                violations,
+                [],
+                "Missing parent file on disk must fail-open (no violation); "
+                f"got: {violations}",
+            )
+
+    # ------------------------------------------------------------------
+    # Scenario 6: parent YAML file exists but is malformed (not valid YAML)
+    # ------------------------------------------------------------------
+
+    def test_malformed_parent_yaml_fails_open(self):
+        """Parent file exists but contains invalid YAML — hook must not crash.
+
+        _load_yaml_safe returns None on parse error. _check_file detects None
+        parent_data and returns [] (fail-open), printing a WARNING to stderr.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ac_store = Path(tmpdir) / "docs" / "acceptance-criteria" / "ACS-502a"
+            ac_store.mkdir(parents=True)
+
+            # Parent file: syntactically invalid YAML (mapping key collision / bad indent)
+            parent_file = ac_store / "ACS-502a.yaml"
+            parent_file.write_text(
+                textwrap.dedent(
+                    """\
+                    id: ACS-502a
+                    covered_by: [ACS-502a-1
+                      bad_indent: this is not valid yaml: [
+                    """
+                )
+            )
+
+            child_file = ac_store / "ACS-502a-1.yaml"
+            child_file.write_text(
+                _CHILD_YAML_TEMPLATE.format(
+                    child_id="ACS-502a-1",
+                    parent_id="ACS-502a",
+                )
+            )
+
+            self._set_env("HOOK_ROOT", tmpdir)
+            derive_fn = self.mod._get_derive_parent_id()
+            violations = self.mod._check_file(str(child_file), derive_fn)
+
+            # Malformed parent must cause fail-open, not a violation or exception
+            self.assertEqual(
+                violations,
+                [],
+                "Malformed parent YAML must fail-open; "
+                f"got: {violations}",
+            )
+
+    # ------------------------------------------------------------------
+    # Scenario 7: multiple staged children pointing to same parent; parent
+    #             lists only one of them (missing the second)
+    # ------------------------------------------------------------------
+
+    def test_multiple_children_parent_missing_one_produces_one_violation(self):
+        """Two children staged; parent covered_by lists only first child.
+
+        The hook processes each staged path independently via main(). When it
+        processes the second child, it detects the omission and emits 1 violation.
+        Overall, main() exits 1.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ac_store = Path(tmpdir) / "docs" / "acceptance-criteria" / "ACS-503a"
+            ac_store.mkdir(parents=True)
+
+            # Parent lists only child-1, not child-2
+            parent_file = ac_store / "ACS-503a.yaml"
+            parent_file.write_text(
+                _PARENT_YAML_TEMPLATE.format(
+                    parent_id="ACS-503a",
+                    covered_by="[ACS-503a-1]",
+                )
+            )
+
+            child1_file = ac_store / "ACS-503a-1.yaml"
+            child1_file.write_text(
+                _CHILD_YAML_TEMPLATE.format(
+                    child_id="ACS-503a-1",
+                    parent_id="ACS-503a",
+                )
+            )
+
+            child2_file = ac_store / "ACS-503a-2.yaml"
+            child2_file.write_text(
+                _CHILD_YAML_TEMPLATE.format(
+                    child_id="ACS-503a-2",
+                    parent_id="ACS-503a",
+                )
+            )
+
+            self._set_env("HOOK_ROOT", tmpdir)
+            # Stage both children
+            staged = os.pathsep.join([str(child1_file), str(child2_file)])
+            self._set_env("HOOK_TEST_FILES", staged)
+
+            result = self.mod.main()
+
+            # child-1 is in covered_by → no violation; child-2 is not → 1 violation
+            self.assertEqual(
+                result,
+                1,
+                "Expected exit code 1: parent lists child-1 but omits child-2; "
+                f"got exit code {result}",
+            )
+
+    def test_multiple_children_parent_missing_one_violation_names_missing_child(self):
+        """Violation message for the missing child must name the missing child ID."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ac_store = Path(tmpdir) / "docs" / "acceptance-criteria" / "ACS-503b"
+            ac_store.mkdir(parents=True)
+
+            parent_file = ac_store / "ACS-503b.yaml"
+            parent_file.write_text(
+                _PARENT_YAML_TEMPLATE.format(
+                    parent_id="ACS-503b",
+                    covered_by="[ACS-503b-1]",
+                )
+            )
+
+            child1_file = ac_store / "ACS-503b-1.yaml"
+            child1_file.write_text(
+                _CHILD_YAML_TEMPLATE.format(
+                    child_id="ACS-503b-1",
+                    parent_id="ACS-503b",
+                )
+            )
+
+            child2_file = ac_store / "ACS-503b-2.yaml"
+            child2_file.write_text(
+                _CHILD_YAML_TEMPLATE.format(
+                    child_id="ACS-503b-2",
+                    parent_id="ACS-503b",
+                )
+            )
+
+            self._set_env("HOOK_ROOT", tmpdir)
+            derive_fn = self.mod._get_derive_parent_id()
+
+            violations_child1 = self.mod._check_file(str(child1_file), derive_fn)
+            violations_child2 = self.mod._check_file(str(child2_file), derive_fn)
+
+            self.assertEqual(violations_child1, [], "child-1 is in covered_by; must not violate")
+            self.assertEqual(len(violations_child2), 1, "child-2 is missing; must produce 1 violation")
+            self.assertIn("ACS-503b-2", violations_child2[0])
+
+    # ------------------------------------------------------------------
+    # Scenario 8: child AC staged alongside its parent AC (both in same commit)
+    # ------------------------------------------------------------------
+
+    def test_child_and_parent_both_staged_parent_correct(self):
+        """Both child and parent are staged; parent on disk already has correct covered_by.
+
+        The hook reads the parent from disk (not from the git index). If the
+        parent file on disk is correctly updated before the pre-commit hook runs,
+        both staged files should pass with exit 0.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ac_store = Path(tmpdir) / "docs" / "acceptance-criteria" / "ACS-504a"
+            ac_store.mkdir(parents=True)
+
+            parent_file = ac_store / "ACS-504a.yaml"
+            parent_file.write_text(
+                _PARENT_YAML_TEMPLATE.format(
+                    parent_id="ACS-504a",
+                    covered_by="[ACS-504a-1]",
+                )
+            )
+
+            child_file = ac_store / "ACS-504a-1.yaml"
+            child_file.write_text(
+                _CHILD_YAML_TEMPLATE.format(
+                    child_id="ACS-504a-1",
+                    parent_id="ACS-504a",
+                )
+            )
+
+            self._set_env("HOOK_ROOT", tmpdir)
+            # Stage both parent and child
+            staged = os.pathsep.join([str(parent_file), str(child_file)])
+            self._set_env("HOOK_TEST_FILES", staged)
+
+            result = self.mod.main()
+
+            self.assertEqual(
+                result,
+                0,
+                "Child + parent staged together with correct covered_by must exit 0; "
+                f"got exit code {result}",
+            )
+
+    def test_child_and_parent_both_staged_parent_missing_child(self):
+        """Both staged but parent on disk does NOT list the child — must block.
+
+        Even though both files are staged, the hook reads parent from disk and
+        finds the child absent from covered_by. Must exit 1.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ac_store = Path(tmpdir) / "docs" / "acceptance-criteria" / "ACS-504b"
+            ac_store.mkdir(parents=True)
+
+            parent_file = ac_store / "ACS-504b.yaml"
+            parent_file.write_text(
+                _PARENT_YAML_TEMPLATE.format(
+                    parent_id="ACS-504b",
+                    covered_by="[]",  # parent NOT updated
+                )
+            )
+
+            child_file = ac_store / "ACS-504b-1.yaml"
+            child_file.write_text(
+                _CHILD_YAML_TEMPLATE.format(
+                    child_id="ACS-504b-1",
+                    parent_id="ACS-504b",
+                )
+            )
+
+            self._set_env("HOOK_ROOT", tmpdir)
+            staged = os.pathsep.join([str(parent_file), str(child_file)])
+            self._set_env("HOOK_TEST_FILES", staged)
+
+            result = self.mod.main()
+
+            self.assertEqual(
+                result,
+                1,
+                "Parent staged but covered_by empty must still block; "
+                f"got exit code {result}",
+            )
+
+    # ------------------------------------------------------------------
+    # Scenario 9: YAML file outside docs/acceptance-criteria/ path
+    # ------------------------------------------------------------------
+
+    def test_yaml_outside_ac_store_via_hook_test_files_is_processed(self):
+        """A YAML outside docs/acceptance-criteria/ injected via HOOK_TEST_FILES.
+
+        _get_staged_ac_paths() does NOT filter HOOK_TEST_FILES by path prefix —
+        it only filters by .yaml extension. So the hook WILL attempt to process
+        a YAML from any path when injected via HOOK_TEST_FILES.
+
+        If the file has no 'id' field, the hook skips it cleanly (no violation,
+        no crash). This scenario verifies the hook doesn't crash on out-of-tree
+        files.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # No AC store — file is outside any AC path
+            outside_dir = Path(tmpdir) / "config"
+            outside_dir.mkdir(parents=True)
+
+            outside_file = outside_dir / "settings.yaml"
+            outside_file.write_text(
+                textwrap.dedent(
+                    """\
+                    version: 1
+                    debug: false
+                    database_url: sqlite:///app.db
+                    """
+                )
+            )
+
+            # AC store does not exist in this tmpdir → main() exits 0 early
+            self._set_env("HOOK_ROOT", tmpdir)
+            self._set_env("HOOK_TEST_FILES", str(outside_file))
+
+            result = self.mod.main()
+
+            # main() exits 0 because there is no AC store directory
+            self.assertEqual(
+                result,
+                0,
+                "YAML outside AC store path must not block (no AC store → exit 0); "
+                f"got exit code {result}",
+            )
+
+    def test_yaml_outside_ac_store_with_ac_store_present(self):
+        """Out-of-tree YAML injected via HOOK_TEST_FILES when AC store exists.
+
+        When the AC store directory IS present, main() proceeds to call _check_file
+        on the injected path regardless of its location. If the out-of-tree file
+        has no 'id' field, _check_file skips it (no violation, no crash).
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create AC store directory so main() doesn't exit early
+            ac_store = Path(tmpdir) / "docs" / "acceptance-criteria"
+            ac_store.mkdir(parents=True)
+
+            # File outside AC store path
+            outside_dir = Path(tmpdir) / "config"
+            outside_dir.mkdir(parents=True)
+            outside_file = outside_dir / "myconfig.yaml"
+            outside_file.write_text("key: value\nother: 123\n")
+
+            self._set_env("HOOK_ROOT", tmpdir)
+            self._set_env("HOOK_TEST_FILES", str(outside_file))
+
+            result = self.mod.main()
+
+            # No 'id' field → skipped → no violation
+            self.assertEqual(
+                result,
+                0,
+                "Out-of-tree YAML with no 'id' field must be skipped (exit 0); "
+                f"got exit code {result}",
+            )
+
+    # ------------------------------------------------------------------
+    # Scenario 10: .yaml extension with binary (non-UTF-8) content
+    # ------------------------------------------------------------------
+
+    def test_binary_content_yaml_file_fails_open(self):
+        """A .yaml file with binary (non-UTF-8) content must not crash the hook.
+
+        _load_file_yaml uses path.read_text(encoding='utf-8'). Binary content
+        raises UnicodeDecodeError, which is NOT a subclass of OSError and is
+        therefore NOT caught by the 'except OSError' guard in _load_file_yaml.
+
+        Expected (correct) behaviour: hook fails open — exit 0, no crash.
+        Current behaviour: UnicodeDecodeError propagates uncaught through
+        _check_file and main(), causing main() to raise instead of return 1 or 0.
+
+        NOTE: This test documents a real bug. It is written to assert the
+        *desired* fail-open behaviour. If the test fails with UnicodeDecodeError,
+        that is a confirmed bug in _load_file_yaml (except clause should also
+        catch ValueError / UnicodeDecodeError).
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ac_store = Path(tmpdir) / "docs" / "acceptance-criteria"
+            ac_store.mkdir(parents=True)
+
+            binary_file = ac_store / "ACS-505a.yaml"
+            # Write non-UTF-8 binary bytes (Latin-1 encoded text with high bytes)
+            binary_file.write_bytes(b"\xff\xfe\x00id:\x00 \x00A\x00C\x00S\x00")
+
+            self._set_env("HOOK_ROOT", tmpdir)
+            self._set_env("HOOK_TEST_FILES", str(binary_file))
+
+            # The hook MUST fail open: either return 0 or silently skip the file.
+            # If this raises UnicodeDecodeError, it is a confirmed implementation bug.
+            try:
+                result = self.mod.main()
+            except UnicodeDecodeError as exc:
+                self.fail(
+                    f"BUG: _load_file_yaml does not catch UnicodeDecodeError. "
+                    f"Binary .yaml files crash the hook instead of failing open. "
+                    f"Fix: add 'except (OSError, ValueError)' in _load_file_yaml. "
+                    f"Exception: {exc}"
+                )
+
+            self.assertEqual(
+                result,
+                0,
+                "Binary .yaml file must fail open (exit 0); "
+                f"got exit code {result}",
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

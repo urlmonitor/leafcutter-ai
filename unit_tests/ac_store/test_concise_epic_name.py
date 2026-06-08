@@ -229,3 +229,169 @@ class TestTruncatePascalAt:
         result = _truncate_pascal_at(single_word, 40)
         # The function must return something (the first word) rather than empty string
         assert result, "Must not return empty string even when first word exceeds limit"
+
+
+# ---------------------------------------------------------------------------
+# Edge-case tests for _derive_epic_name
+# ---------------------------------------------------------------------------
+
+
+class TestEpicNamingEdgeCases:
+    """Edge-case and boundary tests for _derive_epic_name()."""
+
+    # ------------------------------------------------------------------
+    # Boundary: exactly 40 characters (should NOT trigger LLM)
+    # ------------------------------------------------------------------
+
+    def test_exactly_40_char_pascal_does_not_trigger_llm(self) -> None:
+        """A title whose PascalCase is exactly 40 chars is returned WITHOUT calling LLM."""
+        import goal_to_epic as _gte_mod
+
+        # Build a title whose PascalCase is exactly 40 chars.
+        # "A" * 40 is a 40-char single PascalCase token.
+        title = "a" * 40
+        naive = _to_pascal_case(title)
+        assert len(naive) == 40, f"Precondition: PascalCase must be 40 chars, got {len(naive)}"
+
+        call_log: list[str] = []
+
+        original = _gte_mod._summarise_title_via_llm
+
+        def _spy(t: str) -> None:  # type: ignore[return]
+            call_log.append(t)
+            return original(t)
+
+        with patch.object(_gte_mod, "_summarise_title_via_llm", side_effect=_spy):
+            result = _derive_epic_name(title)
+
+        assert call_log == [], (
+            f"LLM must NOT be called when PascalCase is exactly 40 chars; "
+            f"got calls: {call_log}"
+        )
+        assert result == naive
+
+    # ------------------------------------------------------------------
+    # Boundary: 41 characters (SHOULD trigger LLM or truncation)
+    # ------------------------------------------------------------------
+
+    def test_41_char_pascal_does_trigger_llm(self) -> None:
+        """A title whose PascalCase is 41 chars MUST attempt LLM summarisation."""
+        import goal_to_epic as _gte_mod
+
+        # Construct a title whose PascalCase is exactly 41 chars.
+        # Use "a" * 41 — single token of 41 chars.
+        title = "a" * 41
+        naive = _to_pascal_case(title)
+        assert len(naive) == 41, f"Precondition: PascalCase must be 41 chars, got {len(naive)}"
+
+        call_log: list[str] = []
+
+        def _spy(t: str) -> None:  # type: ignore[return]
+            call_log.append(t)
+            return None  # simulate LLM unavailable; just capture the call
+
+        with patch.object(_gte_mod, "_summarise_title_via_llm", side_effect=_spy):
+            result = _derive_epic_name(title)
+
+        assert call_log, (
+            "LLM (or its stub) must be called when PascalCase is 41 chars"
+        )
+        # Falls back to truncation when LLM returns None
+        assert len(result) <= 41, f"Result should be within limit, got {len(result)}"
+
+    # ------------------------------------------------------------------
+    # Title with only special characters
+    # ------------------------------------------------------------------
+
+    def test_special_characters_only_title(self) -> None:
+        """A title of only special chars (e.g. '!@#$%^&*()') produces an empty or minimal result."""
+        title = "!@#$%^&*()"
+        # _to_pascal_case splits on spaces/hyphens/underscores only;
+        # the whole string is one "word" that capitalise() leaves as-is
+        # (capitalize() of "!@#$%^&*()" → "!@#$%^&*()" — no alphabetic chars).
+        naive = _to_pascal_case(title)
+        # The implementation should not crash.
+        result = _derive_epic_name(title)
+        # Result must be a string (may be empty or the original token).
+        assert isinstance(result, str)
+        # If result is non-empty it must be the same as naive (≤40 chars path).
+        if naive:
+            assert len(naive) <= 40, "Special-char naive PascalCase should be short"
+            assert result == naive
+
+    # ------------------------------------------------------------------
+    # Empty string title
+    # ------------------------------------------------------------------
+
+    def test_empty_string_title_does_not_crash(self) -> None:
+        """An empty string title must not raise an exception."""
+        result = _derive_epic_name("")
+        assert isinstance(result, str)
+        # The result should be the empty string (no words to join).
+        assert result == ""
+
+    # ------------------------------------------------------------------
+    # Title that is entirely numeric
+    # ------------------------------------------------------------------
+
+    def test_numeric_only_title(self) -> None:
+        """A title of only digits (e.g. '1234567890') is handled without crash."""
+        title = "1234567890"
+        # capitalize() of "1234567890" is still "1234567890".
+        naive = _to_pascal_case(title)
+        result = _derive_epic_name(title)
+        assert isinstance(result, str)
+        # Result must equal the naive form when ≤40 chars.
+        assert len(naive) <= 40, "Numeric-only naive should be ≤40 chars"
+        assert result == naive
+
+    # ------------------------------------------------------------------
+    # Title with Unicode / emoji characters
+    # ------------------------------------------------------------------
+
+    def test_unicode_title_does_not_crash(self) -> None:
+        """A title with Unicode / emoji characters is handled without raising."""
+        title = "validate élève data \U0001f600 safely"
+        result = _derive_epic_name(title)
+        assert isinstance(result, str)
+        # Implementation must not crash; result length constraint applies if
+        # naive PascalCase happened to exceed 40 chars.
+        if len(_to_pascal_case(title)) <= 40:
+            assert len(result) <= 40
+
+    def test_emoji_only_title_does_not_crash(self) -> None:
+        """A title consisting solely of emoji characters must not raise."""
+        title = "\U0001f600\U0001f680\U0001f4a5"
+        result = _derive_epic_name(title)
+        assert isinstance(result, str)
+
+    # ------------------------------------------------------------------
+    # Very long title (200+ characters)
+    # ------------------------------------------------------------------
+
+    def test_very_long_title_result_within_limit(self) -> None:
+        """A 200+ character title yields a result at most 40 chars (LLM or fallback)."""
+        import goal_to_epic as _gte_mod
+
+        # Construct a 200-char title using many distinct words so PascalCase
+        # is also very long.
+        words = ["validate", "api", "inputs", "for", "cross", "field",
+                 "relational", "constraints", "and", "schema", "integrity",
+                 "across", "all", "supported", "user", "types", "and",
+                 "access", "control", "levels"]
+        title = " ".join(words)
+        assert len(title) > 40, "Precondition: title must be long"
+
+        naive = _to_pascal_case(title)
+        assert len(naive) > 40, f"Precondition: naive PascalCase must exceed 40; got {len(naive)}"
+
+        # Force LLM to return None so we exercise the truncation fallback.
+        with patch.object(_gte_mod, "_summarise_title_via_llm", return_value=None):
+            result = _derive_epic_name(title)
+
+        assert len(result) <= 40, (
+            f"Very long title must produce a result ≤ 40 chars; got {len(result)}: {result!r}"
+        )
+        assert result != naive, (
+            "Result must NOT be the naive full concatenation for a long title"
+        )

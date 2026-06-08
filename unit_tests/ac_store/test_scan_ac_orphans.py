@@ -411,3 +411,349 @@ class TestLoadAc:
         assert record is not None
         assert "_path" in record
         assert record["_path"] == str(p)
+
+
+# ---------------------------------------------------------------------------
+# TestOrphanScannerEdgeCases — boundary and malformed-input scenarios
+# ---------------------------------------------------------------------------
+
+
+class TestOrphanScannerEdgeCases:
+    """Edge-case tests for the orphan scanner covering boundary and malformed inputs."""
+
+    # ------------------------------------------------------------------
+    # 1. Empty AC store directory (no YAML files at all)
+    # ------------------------------------------------------------------
+
+    def test_empty_store_directory_exits_zero(self, tmp_path: Path) -> None:
+        """An AC store with zero YAML files should exit 0 with no orphans."""
+        result = main(["--ac-root", str(tmp_path)])
+        assert result == 0
+
+    def test_empty_store_directory_find_orphans_returns_empty(self) -> None:
+        """find_orphaned_children on an empty index returns an empty dict."""
+        orphans = find_orphaned_children({}, derive_parent_id)
+        assert orphans == {}
+
+    # ------------------------------------------------------------------
+    # 2. Store with only root-level ACs (no children) — should report 0 orphans
+    # ------------------------------------------------------------------
+
+    def test_only_root_acs_exits_zero(self, tmp_path: Path) -> None:
+        """A store containing only root-level ACs (PREFIX-NNN) has no orphans."""
+        _write_yaml(tmp_path, "ACS-100.yaml", "id: ACS-100\ncovered_by: []\n")
+        _write_yaml(tmp_path, "ACS-200.yaml", "id: ACS-200\ncovered_by: []\n")
+        _write_yaml(tmp_path, "ACS-300.yaml", "id: ACS-300\ncovered_by: []\n")
+        result = main(["--ac-root", str(tmp_path)])
+        assert result == 0
+
+    def test_only_root_acs_find_orphans_returns_empty(self) -> None:
+        """find_orphaned_children with only root-level IDs returns an empty dict."""
+        index = {
+            "ACS-100": {"id": "ACS-100", "covered_by": [], "_path": "/fake/ACS-100.yaml"},
+            "ACS-200": {"id": "ACS-200", "covered_by": [], "_path": "/fake/ACS-200.yaml"},
+        }
+        orphans = find_orphaned_children(index, derive_parent_id)
+        assert orphans == {}
+
+    # ------------------------------------------------------------------
+    # 3. Child whose parent file exists but covered_by is None
+    # ------------------------------------------------------------------
+
+    def test_parent_covered_by_none_treats_child_as_orphan(self) -> None:
+        """A parent with covered_by: null/None means no children are acknowledged.
+
+        The child must appear in the orphan report.
+        """
+        index = {
+            "ACS-300h": {
+                "id": "ACS-300h",
+                "covered_by": None,
+                "_path": "/fake/ACS-300h.yaml",
+            },
+            "ACS-300h-1": {
+                "id": "ACS-300h-1",
+                "covered_by": [],
+                "_path": "/fake/ACS-300h-1.yaml",
+            },
+        }
+        orphans = find_orphaned_children(index, derive_parent_id)
+        assert "ACS-300h" in orphans
+        child_ids = {e["child_id"] for e in orphans["ACS-300h"]}
+        assert "ACS-300h-1" in child_ids
+
+    def test_parent_covered_by_none_via_yaml_exits_one(self, tmp_path: Path) -> None:
+        """main() exits 1 when a parent YAML has covered_by: null and a child exists."""
+        _write_yaml(
+            tmp_path,
+            "ACS-300h.yaml",
+            "id: ACS-300h\ncovered_by:\n",
+        )
+        _write_yaml(tmp_path, "ACS-300h-1.yaml", "id: ACS-300h-1\ncovered_by: []\n")
+        result = main(["--ac-root", str(tmp_path)])
+        assert result == 1
+
+    # ------------------------------------------------------------------
+    # 4. Child whose parent's covered_by is not a list (e.g. a plain string)
+    # ------------------------------------------------------------------
+
+    def test_extract_covered_by_non_list_string_single_item(self) -> None:
+        """A bare string in covered_by (not bracket-wrapped) is treated as one entry."""
+        data = {"covered_by": "ACS-300h-1"}
+        result = _extract_covered_by(data)
+        # A bare string with no commas should resolve to a single-element list.
+        assert "ACS-300h-1" in result
+
+    def test_parent_covered_by_plain_string_not_matching_child_is_orphan(self) -> None:
+        """When covered_by is a bare string that doesn't match the child, it's an orphan."""
+        index = {
+            "ACS-300h": {
+                "id": "ACS-300h",
+                "covered_by": "some-other-id",
+                "_path": "/fake/ACS-300h.yaml",
+            },
+            "ACS-300h-1": {
+                "id": "ACS-300h-1",
+                "covered_by": [],
+                "_path": "/fake/ACS-300h-1.yaml",
+            },
+        }
+        orphans = find_orphaned_children(index, derive_parent_id)
+        assert "ACS-300h" in orphans
+        child_ids = {e["child_id"] for e in orphans["ACS-300h"]}
+        assert "ACS-300h-1" in child_ids
+
+    def test_parent_covered_by_plain_string_matching_child_not_orphan(self) -> None:
+        """When covered_by is a bare string that equals the child ID, no orphan."""
+        index = {
+            "ACS-300h": {
+                "id": "ACS-300h",
+                "covered_by": "ACS-300h-1",
+                "_path": "/fake/ACS-300h.yaml",
+            },
+            "ACS-300h-1": {
+                "id": "ACS-300h-1",
+                "covered_by": [],
+                "_path": "/fake/ACS-300h-1.yaml",
+            },
+        }
+        orphans = find_orphaned_children(index, derive_parent_id)
+        # "ACS-300h-1" should be parsed from the bare string — no orphan.
+        assert "ACS-300h" not in orphans or all(
+            e["child_id"] != "ACS-300h-1" for e in orphans.get("ACS-300h", [])
+        )
+
+    # ------------------------------------------------------------------
+    # 5. A YAML file with a malformed/unparseable ID (no naming convention)
+    # ------------------------------------------------------------------
+
+    def test_build_id_index_skips_non_string_id(self) -> None:
+        """Records with a non-str id field (e.g. integer) are excluded from index."""
+        records = [
+            {"id": 12345, "covered_by": []},
+            {"id": "ACS-200", "covered_by": []},
+        ]
+        index = _build_id_index(records)
+        assert "ACS-200" in index
+        assert 12345 not in index
+
+    def test_malformed_id_yaml_file_not_indexed(self, tmp_path: Path) -> None:
+        """A YAML file with an integer id is loaded but not included in orphan checks."""
+        _write_yaml(tmp_path, "weird.yaml", "id: 99999\ncovered_by: []\n")
+        _write_yaml(tmp_path, "ACS-400.yaml", "id: ACS-400\ncovered_by: []\n")
+        result = main(["--ac-root", str(tmp_path)])
+        # No children exist, so no orphans — should exit clean.
+        assert result == 0
+
+    # ------------------------------------------------------------------
+    # 6. Deeply nested AC (4+ levels) where an intermediate ancestor is missing
+    # ------------------------------------------------------------------
+
+    def test_deep_child_missing_intermediate_ancestor_is_skipped(self) -> None:
+        """A 4-level-deep child whose direct parent is absent from the index is skipped.
+
+        The scan only checks the immediate parent; a missing intermediate ancestor
+        means parent_rec is None and the child is silently skipped (not an orphan).
+        """
+        # ACS-300h-1-a exists; its parent ACS-300h-1 does NOT exist in the index.
+        # ACS-300h-1-a should be skipped (not reported as orphan).
+        index = {
+            "ACS-300h": {
+                "id": "ACS-300h",
+                "covered_by": [],
+                "_path": "/fake/ACS-300h.yaml",
+            },
+            "ACS-300h-1-a": {
+                "id": "ACS-300h-1-a",
+                "covered_by": [],
+                "_path": "/fake/ACS-300h-1-a.yaml",
+            },
+        }
+        orphans = find_orphaned_children(index, derive_parent_id)
+        # ACS-300h-1-a's immediate parent (ACS-300h-1) is absent — skipped.
+        # ACS-300h-1 is not in the index so it can't be orphaned from ACS-300h either.
+        deep_orphan_present = any(
+            e["child_id"] == "ACS-300h-1-a"
+            for entries in orphans.values()
+            for e in entries
+        )
+        assert not deep_orphan_present
+
+    def test_deep_child_with_full_ancestor_chain_is_orphan_when_unlinked(self) -> None:
+        """With a complete ancestor chain, a 4-level child is an orphan when unlinked."""
+        index = {
+            "ACS-300h": {
+                "id": "ACS-300h",
+                "covered_by": ["ACS-300h-1"],
+                "_path": "/fake/ACS-300h.yaml",
+            },
+            "ACS-300h-1": {
+                "id": "ACS-300h-1",
+                # Does not list ACS-300h-1-a
+                "covered_by": [],
+                "_path": "/fake/ACS-300h-1.yaml",
+            },
+            "ACS-300h-1-a": {
+                "id": "ACS-300h-1-a",
+                "covered_by": [],
+                "_path": "/fake/ACS-300h-1-a.yaml",
+            },
+        }
+        orphans = find_orphaned_children(index, derive_parent_id)
+        # ACS-300h-1-a's direct parent ACS-300h-1 doesn't list it.
+        assert "ACS-300h-1" in orphans
+        child_ids = {e["child_id"] for e in orphans["ACS-300h-1"]}
+        assert "ACS-300h-1-a" in child_ids
+
+    # ------------------------------------------------------------------
+    # 7. Two children pointing to the same nonexistent parent
+    # ------------------------------------------------------------------
+
+    def test_two_children_same_missing_parent_both_skipped(self) -> None:
+        """Two children sharing a missing parent are both silently skipped.
+
+        Per the existing scan design, a missing parent record means the child
+        is skipped — not an orphan (a separate 'missing-parent' scan handles that).
+        """
+        index = {
+            "ACS-300h-1": {
+                "id": "ACS-300h-1",
+                "covered_by": [],
+                "_path": "/fake/ACS-300h-1.yaml",
+            },
+            "ACS-300h-2": {
+                "id": "ACS-300h-2",
+                "covered_by": [],
+                "_path": "/fake/ACS-300h-2.yaml",
+            },
+            # ACS-300h (common parent) is intentionally absent.
+        }
+        orphans = find_orphaned_children(index, derive_parent_id)
+        assert orphans == {}
+
+    # ------------------------------------------------------------------
+    # 8. A YAML file with a valid structure but the id field is an integer
+    # ------------------------------------------------------------------
+
+    def test_integer_id_excluded_from_index(self) -> None:
+        """_build_id_index skips records whose id is an integer (not a str)."""
+        records = [{"id": 42, "covered_by": ["ACS-200-1"]}]
+        index = _build_id_index(records)
+        assert len(index) == 0
+
+    def test_integer_id_file_does_not_cause_orphan_report(self, tmp_path: Path) -> None:
+        """A file with an integer id is excluded from parent-child checks.
+
+        Even if another file has the same numeric value as a string id, the
+        integer-id file is never added to the index, so no orphan is reported.
+        """
+        _write_yaml(tmp_path, "int_id.yaml", "id: 42\ncovered_by: []\n")
+        # A legitimate child that would be an orphan if the parent were real.
+        _write_yaml(tmp_path, "ACS-300h.yaml", "id: ACS-300h\ncovered_by: []\n")
+        _write_yaml(tmp_path, "ACS-300h-1.yaml", "id: ACS-300h-1\ncovered_by: []\n")
+        result = main(["--ac-root", str(tmp_path)])
+        # ACS-300h-1 is orphaned from ACS-300h — exit 1.
+        assert result == 1
+
+    # ------------------------------------------------------------------
+    # 9. Store directory containing non-YAML files (should be ignored)
+    # ------------------------------------------------------------------
+
+    def test_non_yaml_files_are_ignored(self, tmp_path: Path) -> None:
+        """Non-.yaml files in the AC store are silently ignored by the scanner."""
+        # Write a clean parent/child pair.
+        _write_yaml(tmp_path, "ACS-300h.yaml", "id: ACS-300h\ncovered_by:\n  - ACS-300h-1\n")
+        _write_yaml(tmp_path, "ACS-300h-1.yaml", "id: ACS-300h-1\ncovered_by: []\n")
+        # Write various non-YAML files that must not be picked up.
+        (tmp_path / "README.md").write_text("# docs\n", encoding="utf-8")
+        (tmp_path / "notes.txt").write_text("some notes\n", encoding="utf-8")
+        (tmp_path / "schema.json").write_text('{"type": "object"}\n', encoding="utf-8")
+        (tmp_path / ".hidden_file").write_text("hidden\n", encoding="utf-8")
+        result = main(["--ac-root", str(tmp_path)])
+        # The store is clean — non-YAML noise must not affect the exit code.
+        assert result == 0
+
+    def test_non_yaml_files_never_enter_id_index(self, tmp_path: Path) -> None:
+        """_build_id_index is only fed records from .yaml files; non-YAML files
+        are filtered at the rglob('*.yaml') stage before index construction."""
+        # We test this indirectly: write only non-YAML files and confirm exit 0.
+        (tmp_path / "data.json").write_text('{"id": "ACS-300h-1"}\n', encoding="utf-8")
+        (tmp_path / "notes.txt").write_text("id: ACS-300h-1\n", encoding="utf-8")
+        result = main(["--ac-root", str(tmp_path)])
+        assert result == 0
+
+    # ------------------------------------------------------------------
+    # 10. A child that references itself in covered_by (single-level circular)
+    # ------------------------------------------------------------------
+
+    def test_self_referential_covered_by_not_counted_as_own_child(self) -> None:
+        """An AC that lists itself in covered_by is never its own orphan.
+
+        ACS-300h lists itself in covered_by, and ACS-300h's parent-derivation
+        returns None (it's a root), so it should never appear as an orphan.
+        """
+        index = {
+            "ACS-300h": {
+                "id": "ACS-300h",
+                "covered_by": ["ACS-300h"],  # self-reference
+                "_path": "/fake/ACS-300h.yaml",
+            },
+        }
+        orphans = find_orphaned_children(index, derive_parent_id)
+        assert orphans == {}
+
+    def test_child_references_itself_in_covered_by_is_still_orphan_from_parent(
+        self,
+    ) -> None:
+        """A child that self-references in covered_by is still an orphan if its
+        true parent doesn't acknowledge it."""
+        index = {
+            "ACS-300h": {
+                "id": "ACS-300h",
+                # Does NOT list ACS-300h-1
+                "covered_by": [],
+                "_path": "/fake/ACS-300h.yaml",
+            },
+            "ACS-300h-1": {
+                "id": "ACS-300h-1",
+                # Lists itself — circular at L2; doesn't affect parent check
+                "covered_by": ["ACS-300h-1"],
+                "_path": "/fake/ACS-300h-1.yaml",
+            },
+        }
+        orphans = find_orphaned_children(index, derive_parent_id)
+        # ACS-300h-1 is still an orphan because ACS-300h.covered_by doesn't list it.
+        assert "ACS-300h" in orphans
+        child_ids = {e["child_id"] for e in orphans["ACS-300h"]}
+        assert "ACS-300h-1" in child_ids
+
+    def test_self_referential_covered_by_via_yaml(self, tmp_path: Path) -> None:
+        """main() handles a YAML file that lists its own ID in covered_by without crashing."""
+        _write_yaml(
+            tmp_path,
+            "ACS-300h.yaml",
+            "id: ACS-300h\ncovered_by:\n  - ACS-300h\n",
+        )
+        # ACS-300h is root-level — no orphan report expected.
+        result = main(["--ac-root", str(tmp_path)])
+        assert result == 0

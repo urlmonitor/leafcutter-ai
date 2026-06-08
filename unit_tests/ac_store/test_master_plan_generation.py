@@ -521,3 +521,254 @@ class TestGenerateMasterPlan:
 
         content = (epic_folder / "Master_Plan.md").read_text(encoding="utf-8")
         assert "No inter-ticket dependencies" in content
+
+
+# ---------------------------------------------------------------------------
+# Edge-case tests for generate_master_plan
+# ---------------------------------------------------------------------------
+
+
+class TestMasterPlanEdgeCases:
+    """Edge-case tests for generate_master_plan() and its helpers."""
+
+    # ------------------------------------------------------------------
+    # Epic with zero tickets (empty ticket list)
+    # ------------------------------------------------------------------
+
+    def test_zero_tickets_produces_valid_master_plan(self, tmp_path: Path) -> None:
+        """An epic folder with no ticket files produces a Master_Plan.md without crashing."""
+        epic_folder = tmp_path / "EPIC-Empty"
+        epic_folder.mkdir()
+        # No ticket files in the folder.
+
+        result = generate_master_plan(
+            epic_folder=epic_folder,
+            topo_order=[],
+            dep_graph={},
+            goal_ac_id="ACD-000",
+            goal_summary="No tickets yet.",
+            epic_name="Empty",
+        )
+
+        assert result.exists(), "Master_Plan.md must be written even with zero tickets"
+        content = result.read_text(encoding="utf-8")
+        assert "## Tickets" in content
+        assert "No inter-ticket dependencies" in content
+
+    def test_zero_tickets_table_has_header_only(self, tmp_path: Path) -> None:
+        """With zero tickets the Tickets table header is present but has no data rows."""
+        epic_folder = tmp_path / "EPIC-ZeroRows"
+        epic_folder.mkdir()
+
+        generate_master_plan(
+            epic_folder=epic_folder,
+            topo_order=[],
+            dep_graph={},
+            goal_ac_id="ACD-000",
+            goal_summary=".",
+            epic_name="ZeroRows",
+        )
+
+        content = (epic_folder / "Master_Plan.md").read_text(encoding="utf-8")
+        lines = content.splitlines()
+        # Find the table header line
+        header_lines = [l for l in lines if "| # |" in l]
+        assert header_lines, "Tickets table header must appear even with zero tickets"
+        # Data rows in the table would start with "| " followed by a digit.
+        data_rows = [l for l in lines if l.startswith("| ") and l[2].isdigit()]
+        assert data_rows == [], (
+            f"Expected zero ticket data rows, found: {data_rows}"
+        )
+
+    # ------------------------------------------------------------------
+    # Epic with a single ticket that has no depends_on
+    # ------------------------------------------------------------------
+
+    def test_single_ticket_no_depends_on(self, tmp_path: Path) -> None:
+        """A single ticket with no depends_on produces correct output."""
+        epic_folder = tmp_path / "EPIC-Solo"
+        epic_folder.mkdir()
+        _make_ticket(epic_folder, "01", "solo-ticket", "Solo Ticket", "ACD-001",
+                     depends_on=[])
+
+        generate_master_plan(
+            epic_folder=epic_folder,
+            topo_order=["ACD-001"],
+            dep_graph={"ACD-001": []},
+            goal_ac_id="ACD-000",
+            goal_summary="One ticket, no deps.",
+            epic_name="Solo",
+        )
+
+        content = (epic_folder / "Master_Plan.md").read_text(encoding="utf-8")
+        assert "Solo Ticket" in content
+        # The dep entry should show "no dependencies"
+        assert "ACD-001 (no dependencies)" in content
+
+    def test_single_ticket_depends_on_column_shows_dash(self, tmp_path: Path) -> None:
+        """The Depends On column for a ticket with no deps shows '—'."""
+        epic_folder = tmp_path / "EPIC-SoloDash"
+        epic_folder.mkdir()
+        _make_ticket(epic_folder, "01", "solo", "Solo", "ACD-001", depends_on=[])
+
+        generate_master_plan(
+            epic_folder=epic_folder,
+            topo_order=["ACD-001"],
+            dep_graph={"ACD-001": []},
+            goal_ac_id="ACD-000",
+            goal_summary=".",
+            epic_name="SoloDash",
+        )
+
+        content = (epic_folder / "Master_Plan.md").read_text(encoding="utf-8")
+        # The table row for ticket 01 should end with "| — |" (em-dash) when no deps.
+        assert "| — |" in content or "| —\n" in content or " | — |" in content
+
+    # ------------------------------------------------------------------
+    # Ticket with depends_on referencing a nonexistent ticket
+    # ------------------------------------------------------------------
+
+    def test_depends_on_nonexistent_ticket_does_not_crash(self, tmp_path: Path) -> None:
+        """A ticket that references a nonexistent AC in depends_on is handled gracefully."""
+        epic_folder = tmp_path / "EPIC-BadDep"
+        epic_folder.mkdir()
+        # Ticket references "ACD-GHOST" which is not in the epic folder.
+        _make_ticket(epic_folder, "01", "ticket-a", "Ticket A", "ACD-001",
+                     depends_on=["ACD-GHOST"])
+
+        # dep_graph also reflects a reference to a node outside the set.
+        result = generate_master_plan(
+            epic_folder=epic_folder,
+            topo_order=["ACD-001"],
+            dep_graph={"ACD-001": []},
+            goal_ac_id="ACD-000",
+            goal_summary=".",
+            epic_name="BadDep",
+        )
+
+        assert result.exists(), "Master_Plan.md must still be written"
+        content = result.read_text(encoding="utf-8")
+        # The depends_on reference from ticket frontmatter is passed through as-is.
+        assert "ACD-GHOST" in content
+
+    # ------------------------------------------------------------------
+    # Ticket YAML files that are malformed / unparseable
+    # ------------------------------------------------------------------
+
+    def test_malformed_ticket_frontmatter_skips_gracefully(self, tmp_path: Path) -> None:
+        """A ticket with malformed YAML frontmatter falls back to empty dict without crashing."""
+        epic_folder = tmp_path / "EPIC-Malformed"
+        epic_folder.mkdir()
+        # Write a ticket whose frontmatter is broken YAML.
+        malformed = epic_folder / "01_broken.md"
+        malformed.write_text(
+            "---\ntitle: [broken: yaml: content: here\n---\n\n# Body\n",
+            encoding="utf-8",
+        )
+
+        # Should not raise; malformed frontmatter falls back to empty dict.
+        result = generate_master_plan(
+            epic_folder=epic_folder,
+            topo_order=["ACD-BROKEN"],
+            dep_graph={"ACD-BROKEN": []},
+            goal_ac_id="ACD-000",
+            goal_summary=".",
+            epic_name="Malformed",
+        )
+
+        assert result.exists()
+        content = result.read_text(encoding="utf-8")
+        assert "## Tickets" in content
+        # The filename stem should appear as the title fallback.
+        assert "01_broken" in content
+
+    def test_ticket_with_no_frontmatter_uses_filename_as_title(self, tmp_path: Path) -> None:
+        """A ticket file with no YAML frontmatter uses its filename stem as the title."""
+        epic_folder = tmp_path / "EPIC-NoFM"
+        epic_folder.mkdir()
+        no_fm = epic_folder / "01_plain-ticket.md"
+        no_fm.write_text("# Just a heading\nNo frontmatter.\n", encoding="utf-8")
+
+        generate_master_plan(
+            epic_folder=epic_folder,
+            topo_order=["ACD-001"],
+            dep_graph={},
+            goal_ac_id="ACD-000",
+            goal_summary=".",
+            epic_name="NoFM",
+        )
+
+        content = (epic_folder / "Master_Plan.md").read_text(encoding="utf-8")
+        # Title fallback: ticket_file.stem → "01_plain-ticket"
+        assert "01_plain-ticket" in content
+
+    # ------------------------------------------------------------------
+    # Epic folder path that doesn't exist
+    # ------------------------------------------------------------------
+
+    def test_nonexistent_epic_folder_raises_oserror(self, tmp_path: Path) -> None:
+        """Passing a non-existent epic_folder path raises OSError (cannot write file)."""
+        nonexistent = tmp_path / "EPIC-DoesNotExist"
+        # Do NOT create the folder.
+
+        import pytest as _pytest
+        with _pytest.raises(OSError):
+            generate_master_plan(
+                epic_folder=nonexistent,
+                topo_order=[],
+                dep_graph={},
+                goal_ac_id="ACD-000",
+                goal_summary=".",
+                epic_name="DoesNotExist",
+            )
+
+    # ------------------------------------------------------------------
+    # All tickets having the same component
+    # ------------------------------------------------------------------
+
+    def test_duplicate_components_deduplicated_in_frontmatter(self, tmp_path: Path) -> None:
+        """When all tickets share the same component it appears only once in the plan."""
+        epic_folder = tmp_path / "EPIC-SameComp"
+        epic_folder.mkdir()
+        _make_ticket(epic_folder, "01", "t1", "T1", "ACD-001", components=["shared-comp"])
+        _make_ticket(epic_folder, "02", "t2", "T2", "ACD-002", components=["shared-comp"])
+        _make_ticket(epic_folder, "03", "t3", "T3", "ACD-003", components=["shared-comp"])
+
+        generate_master_plan(
+            epic_folder=epic_folder,
+            topo_order=["ACD-001", "ACD-002", "ACD-003"],
+            dep_graph={"ACD-001": [], "ACD-002": [], "ACD-003": []},
+            goal_ac_id="ACD-000",
+            goal_summary=".",
+            epic_name="SameComp",
+        )
+
+        content = (epic_folder / "Master_Plan.md").read_text(encoding="utf-8")
+        # "shared-comp" should appear as a component exactly once in the frontmatter list.
+        fm_lines = content.split("---")[1].splitlines()
+        comp_lines = [l for l in fm_lines if "shared-comp" in l]
+        assert len(comp_lines) == 1, (
+            f"Expected 'shared-comp' to appear once in frontmatter; "
+            f"found {len(comp_lines)} times: {comp_lines}"
+        )
+
+    def test_all_same_component_collected_once_in_data(self, tmp_path: Path) -> None:
+        """_collect_master_plan_data deduplicates components from repeated tickets."""
+        epic_folder = tmp_path / "EPIC-SameCompData"
+        epic_folder.mkdir()
+        for prefix, name, ac in [("01", "ta", "ACD-001"), ("02", "tb", "ACD-002")]:
+            _make_ticket(epic_folder, prefix, name, f"Ticket {ac}", ac,
+                         components=["only-component"])
+
+        data = _collect_master_plan_data(
+            epic_folder=epic_folder,
+            topo_order=["ACD-001", "ACD-002"],
+            dep_graph={"ACD-001": [], "ACD-002": []},
+            goal_ac_id="ACD-000",
+            goal_summary=".",
+            epic_name="SameCompData",
+        )
+
+        assert data["components"] == ["only-component"], (
+            f"Expected ['only-component'], got {data['components']}"
+        )
