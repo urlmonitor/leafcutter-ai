@@ -17,7 +17,7 @@ criteria: |
     when there is a logical ordering dependency,
   And the L2 ID follows the pattern "{L1-ID}-{number}"
     (e.g., TKT-100a-1, TKT-100a-2).
-depends_on: [TKT-100f]
+depends_on: [TKT-100j]
 doc_links: []
 assigned_agent: llm-expert
 estimated_complexity: S
@@ -25,7 +25,8 @@ delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-04
-amended_by: []
+amended_by:
+  - reason: "split: TKT-100f -> TKT-100j + TKT-100k, 2026-06-08"
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -4,7 +4,7 @@ priority: medium
 title: "The system truly understands what you want before writing specs"
 component: ticket-creation
 level: L1
-status: active
+status: superseded_by
 req_status: active
 work_status: todo
 criteria: |
@@ -26,8 +26,9 @@ delivers_to:
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-04
-amended_by: []
-superseded_by: null
+amended_by:
+  - reason: "split: TKT-100a -> TKT-100h + TKT-100i, 2026-06-08"
+superseded_by: [TKT-100h, TKT-100i]
 covered_by:
   - TKT-100a-1
   - TKT-100a-2

@@ -1,0 +1,43 @@
+id: ACD-300g-1-i
+readiness: draft
+priority: medium
+title: "Commit failure aborts the pipeline with an actionable error"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the /create-ac workflow attempts to commit after a stage approval,
+  And the commit fails because a pre-commit hook rejects the staged files
+    (e.g. AC schema validation fails on a malformed YAML file),
+  When the workflow detects the non-zero exit code from the commit operation,
+  Then the workflow does NOT dispatch the next authoring agent,
+  And it reports the specific hook name and error message to the user,
+  And it lists the file paths that failed validation,
+  And it advises the user to fix the validation errors and re-run the workflow,
+  And all AC files from the failed stage remain on disk as uncommitted changes
+    so the user can inspect and correct them.
+
+  Given the /create-ac workflow attempts to commit after a stage approval,
+  And the commit fails because the git index has a conflict
+    (e.g. another process modified the same files concurrently),
+  When the workflow detects the non-zero exit code,
+  Then the workflow does NOT dispatch the next authoring agent,
+  And it reports "index conflict" with the conflicting file paths,
+  And it does NOT silently retry or force-overwrite the conflicting changes.
+depends_on: [ACD-300g-1]
+doc_links:
+  - path: templates/skills/create-ac/SKILL.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

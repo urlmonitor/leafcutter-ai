@@ -17,7 +17,7 @@ criteria: |
   And if all compiled workflow files match their source fingerprints, the hook
     passes with no drift warnings for the workflows category
 depends_on:
-  - BP-100b
+  - BP-100k
   - BP-100b-1
 doc_links:
   - path: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
@@ -29,7 +29,8 @@ delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "split: BP-100b -> BP-100j + BP-100k + BP-100l, 2026-06-08"
 superseded_by: null
 covered_by:
   - tests/test_build_artifact_parity.py::TestOutputDriftCoversAllShimmedDirs

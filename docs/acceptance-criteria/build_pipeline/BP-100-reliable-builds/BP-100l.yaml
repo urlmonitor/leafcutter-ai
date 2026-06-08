@@ -1,0 +1,30 @@
+id: BP-100l
+readiness: reviewed
+priority: medium
+title: "Build documentation stays current as the pipeline grows"
+component: build-pipeline
+level: L1
+status: active
+criteria: |
+  Diagrams, output tables, and developer checklists reflect every pipeline change.
+
+  When a new template category is added to the build system, the pipeline
+  diagram, consolidated output table, and developer checklist are updated
+  to include it — so contributors always have an accurate picture of the
+  build's moving parts.
+depends_on:
+  - BP-100
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-06-08
+amended_by:
+  - "split: BP-100b -> BP-100j + BP-100k + BP-100l, 2026-06-08"
+superseded_by: null
+covered_by:
+  - BP-100b-8
+  - BP-100b-9
+  - BP-100b-10
+implemented_by:
+  - docs/build-pipeline.md
+  - docs/explanation/consolidated-output-root.md
+  - docs/build-drift-hook.md

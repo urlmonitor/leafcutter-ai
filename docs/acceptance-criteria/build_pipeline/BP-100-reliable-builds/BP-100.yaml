@@ -21,15 +21,18 @@ created: 2026-06-05
 amended_by:
   - "split: BP-100g -> BP-100g + BP-100h, 2026-06-05"
   - "split: BP-100 -> BP-100 + BP-500, 2026-06-05"
+  - "split: BP-100b -> BP-100j + BP-100k + BP-100l, 2026-06-08"
 superseded_by: null
 covered_by:
   - BP-100a
-  - BP-100b
   - BP-100c
-  - BP-100g
-  - BP-100h
   - BP-100d
   - BP-100e
   - BP-100f
+  - BP-100g
+  - BP-100h
   - BP-100i
+  - BP-100j
+  - BP-100k
+  - BP-100l
 implemented_by: []

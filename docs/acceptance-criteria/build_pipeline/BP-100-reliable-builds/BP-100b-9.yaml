@@ -7,12 +7,14 @@ level: L2
 status: active
 req_status: active
 work_status: done
+created_by: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
 criteria: |
   Given docs/explanation/consolidated-output-root.md contains a shimmed outputs table,
   When the table is viewed,
   Then a row exists with source "templates/scripts/workflows/",
     output ".claude/workflows/", and content description mentioning compiled workflow JS scripts
-depends_on: [BP-100b]
+depends_on:
+  - BP-100l
 doc_links:
   - path: docs/explanation/consolidated-output-root.md
     relationship: modifies
@@ -23,8 +25,8 @@ delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05
-created_by: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
-amended_by: []
+amended_by:
+  - "split: BP-100b -> BP-100j + BP-100k + BP-100l, 2026-06-08"
 superseded_by: null
 covered_by: []
 implemented_by:

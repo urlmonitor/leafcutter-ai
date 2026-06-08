@@ -13,7 +13,7 @@ criteria: |
   goal (routed through vision alignment first) or a tactical change (routed
   directly to detailed specification). You can override the classification
   explicitly, and ambiguous requests default to the more thorough path.
-depends_on: [TKT-100e, TKT-100f]
+depends_on: [TKT-100e, TKT-100j]
 doc_links: []
 assigned_agent: llm-expert
 estimated_complexity: S
@@ -23,7 +23,8 @@ delivers_to:
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-04
-amended_by: []
+amended_by:
+  - reason: "split: TKT-100f -> TKT-100j + TKT-100k, 2026-06-08 — depends_on updated"
 superseded_by: null
 covered_by:
   - TKT-100g-1

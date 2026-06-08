@@ -16,7 +16,7 @@ criteria: |
     (the assigned_agent template plus up to 2 templates referenced in depends_on ACs),
   And the extracted responsibilities are stored as agent_capabilities
     in the working context for use during L2 Gherkin drafting.
-depends_on: [TKT-100a]
+depends_on: [TKT-100h]
 doc_links: []
 assigned_agent: llm-expert
 estimated_complexity: S
@@ -24,7 +24,8 @@ delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-04
-amended_by: []
+amended_by:
+  - reason: "split: TKT-100a -> TKT-100h + TKT-100i, 2026-06-08"
 superseded_by: null
 covered_by: []
 implemented_by: []

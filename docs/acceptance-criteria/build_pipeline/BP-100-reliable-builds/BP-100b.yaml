@@ -4,7 +4,7 @@ priority: medium
 title: "Compiled workflows are reachable where agents look for them"
 component: build-pipeline
 level: L1
-status: active
+status: superseded_by
 criteria: |
   Workflow scripts land in the right place after every build — no manual wiring needed.
 
@@ -17,20 +17,14 @@ depends_on:
 doc_links: []
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
-superseded_by: null
+amended_by:
+  - "split: BP-100b -> BP-100j + BP-100k + BP-100l, 2026-06-08"
+superseded_by:
+  - BP-100j
+  - BP-100k
+  - BP-100l
 covered_by:
   - tests/test_build_artifact_parity.py
-  - BP-100b-1
-  - BP-100b-10
-  - BP-100b-2
-  - BP-100b-3
-  - BP-100b-4
-  - BP-100b-5
-  - BP-100b-6
-  - BP-100b-7
-  - BP-100b-8
-  - BP-100b-9
 implemented_by:
   - scripts/build_helpers.py
   - scripts/build_phases.py

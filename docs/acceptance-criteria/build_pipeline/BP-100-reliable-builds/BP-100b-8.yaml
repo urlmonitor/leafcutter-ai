@@ -7,13 +7,15 @@ level: L2
 status: active
 req_status: active
 work_status: done
+created_by: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
 criteria: |
   Given docs/build-pipeline.md contains a mermaid graph TD diagram,
   When the diagram is rendered,
   Then build_workflow_scripts appears as a phase node
   And an edge connects build.py (or the orchestrator node) to build_workflow_scripts
   And the node label indicates .claude/workflows/ as the output destination
-depends_on: [BP-100b]
+depends_on:
+  - BP-100l
 doc_links:
   - path: docs/build-pipeline.md
     relationship: modifies
@@ -24,8 +26,8 @@ delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05
-created_by: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
-amended_by: []
+amended_by:
+  - "split: BP-100b -> BP-100j + BP-100k + BP-100l, 2026-06-08"
 superseded_by: null
 covered_by: []
 implemented_by:

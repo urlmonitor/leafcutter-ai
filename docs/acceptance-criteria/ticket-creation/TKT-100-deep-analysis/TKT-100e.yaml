@@ -13,7 +13,7 @@ criteria: |
   idea into benefit-oriented goals and feature statements. You confirm the framing before
   detailed specification work starts — ensuring nothing gets built that doesn't serve
   your product direction.
-depends_on: [TKT-100a, ACS-100c]
+depends_on: [TKT-100h, ACS-100c]
 doc_links:
   - path: docs/roadmap.json
     relationship: constrains
@@ -29,7 +29,8 @@ delivers_to:
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-04
-amended_by: []
+amended_by:
+  - reason: "split: TKT-100a -> TKT-100h + TKT-100i, 2026-06-08 — depends_on updated"
 superseded_by: null
 covered_by:
   - TKT-100e-1
