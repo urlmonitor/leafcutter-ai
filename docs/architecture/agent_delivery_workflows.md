@@ -992,6 +992,158 @@ The multi-file check occurs synchronously between the python-coder phase return
 and the green-phase test-runner dispatch. It is never skipped, even if only one
 file is modified (in that case it is a no-op — count = 1, no pause needed).
 
+### AC BP-600e-2 — Warning when red-phase test reveals a deeper root cause
+
+After the test-runner has returned a FAILED result from the red-phase check (AC BP-600c-2),
+the quick-fix workflow MUST inspect the failure message before proceeding to the fix-application
+phase. If the failure message indicates a **different root cause** than the one the user diagnosed
+— specifically, the test fails at a different assertion point or with an unexpected exception
+type — the workflow MUST pause and present a structured warning before dispatching `python-coder`.
+The Gherkin contract:
+
+```gherkin
+Given the test-writer has produced a test based on the diagnosis,
+When the red-phase test fails but the failure message indicates a
+  different root cause than what was diagnosed (the test fails at
+  a different assertion point or with an unexpected exception type),
+Then the workflow pauses and reports: "The test failure suggests the
+  root cause may differ from your diagnosis. Diagnosed: [root cause].
+  Observed: [actual failure]. Continue or re-diagnose?",
+And it waits for user confirmation before proceeding to the fix phase.
+```
+
+**When the check runs:**
+
+This check fires at the depth-0 executing context, immediately after the red-phase
+`test-runner` Agent-tool call returns with at least one FAILED result. The depth-0
+context inspects the test-runner's failure output to classify the failure:
+
+1. **Expected failure** — the failure message aligns with the diagnosed root cause:
+   the same function, the same assertion, or the same exception type the diagnosis
+   predicted. The workflow proceeds normally to the fix-implementation phase.
+
+2. **Unexpected failure** — the failure message indicates a **different root cause**:
+   - The test fails at an assertion that is unrelated to the diagnosed symptom.
+   - The exception type raised is unexpected (e.g. `AttributeError` instead of
+     `ValueError`, or `FileNotFoundError` where the diagnosis predicted a logic error).
+   - The stack trace points to a different file or function than the diagnosed
+     location hint.
+
+**Root-cause divergence classification:**
+
+The depth-0 context uses a simple heuristic to classify the failure:
+
+| Signal | Divergence indicator |
+|--------|---------------------|
+| `expected_exception_type` present in input AND exception type in failure does not match | Exception-type mismatch → divergence |
+| `location_hint` present in input AND stack trace top-frame does not include the hinted file/line | Stack-trace mismatch → divergence |
+| Test fails at an assertion labelled `# covers: <AC-ID>` with an error message that does not reference the diagnosed root cause keywords | Assertion-message mismatch → divergence |
+| All assertions passed but a `Setup` or `teardown` step raised an unhandled exception | Infrastructure failure → divergence |
+
+If any signal indicates divergence, the workflow pauses and displays the structured
+warning below. If no divergence signal is detected, the workflow proceeds without
+pausing.
+
+**Warning message format:**
+
+```
+/quick-fix warning: red-phase test suggests a different root cause.
+
+  Diagnosed root cause:  [root_cause from BP-600d-1 parsed struct]
+  Observed failure:      [failure message from test-runner output, ≤ 3 lines]
+
+  The test failure suggests the root cause may differ from your diagnosis.
+
+  Options:
+    C — Continue with quick-fix (proceed to fix phase with current diagnosis)
+    R — Re-diagnose (abort quick-fix; re-invoke with a revised diagnosis)
+
+  Enter C or R:
+```
+
+**User confirmation routing:**
+
+| User input | Workflow action |
+|------------|----------------|
+| `C` (continue) | Proceed to fix-implementation phase (`python-coder` / `sql-coder`) with the original diagnosis |
+| `R` (re-diagnose) | Halt the workflow. Print re-diagnosis guidance (see below). Do NOT proceed to the fix phase, commit, or any subsequent phase |
+| Any other input | Re-display the prompt — wait for `C` or `R` |
+
+**Re-diagnosis halt message (user chose R):**
+
+```
+/quick-fix paused: re-diagnose before retrying.
+
+  Original diagnosis:
+    Target file:   <target_file>
+    Location hint: <location_hint or (none)>
+    Symptom:       <symptom>
+    Root cause:    <root_cause>
+
+  Observed test failure:
+    <failure message, up to 5 lines>
+
+  The test failure above suggests the actual defect may be at a
+  different location or have a different cause than originally diagnosed.
+
+  To retry, re-invoke /quick-fix with a revised diagnosis that reflects
+  the observed failure. Example:
+
+    /quick-fix In <actual_file> <actual_location>, <revised_symptom>
+               because <revised_root_cause>.
+
+  The test file written by test-writer is at:
+    <test_file_path>
+  You may keep or delete it before retrying /quick-fix.
+```
+
+**Relationship to BP-600c-2 (red-phase verification):**
+
+AC BP-600c-2 gates on whether the test fails at all. AC BP-600e-2 gates on **why**
+it fails. Both checks occur at depth-0 before the fix-implementation phase is
+dispatched:
+
+| Check | AC | Gate condition | Halt trigger |
+|-------|----|----------------|--------------|
+| Fails at all? | BP-600c-2 | Test must report at least one FAILED result | Halt if all tests pass (unexpected green) |
+| Fails for the right reason? | BP-600e-2 | Failure message must align with the diagnosis | Pause if failure indicates a different root cause |
+
+The BP-600e-2 check only runs when BP-600c-2 has already confirmed the test fails
+(expected red). If BP-600c-2 halts the workflow (unexpected green), BP-600e-2
+never fires.
+
+**Ordering invariant:**
+
+```
+test-writer (depth 1) → test-runner/red-phase (depth 1)
+  → [BP-600c-2 gate: test must fail]
+  → [BP-600e-2 gate: failure must match diagnosis]
+  → python-coder/fix (depth 1) → test-runner/green-phase (depth 1) → commit (depth 1)
+```
+
+The BP-600e-2 check occurs synchronously between the red-phase test-runner return
+and the python-coder dispatch. If the user chooses `R` (re-diagnose), the workflow
+halts before `python-coder` is ever invoked.
+
+**Why this check is necessary:**
+
+Without the root-cause divergence check, the quick-fix workflow could proceed to
+apply a fix that targets the wrong defect. Specifically:
+
+1. The test-writer writes a test based on the user's diagnosis.
+2. The red-phase confirms the test fails (BP-600c-2 passes).
+3. BUT the test fails because of a different, deeper defect than the one diagnosed.
+4. The python-coder applies a fix targeting the diagnosed root cause.
+5. The green-phase test-runner confirms the fix resolves the failure.
+6. The commit records a "fix" that addressed a surface symptom, leaving the
+   underlying defect in place.
+
+The BP-600e-2 check surfaces this mismatch before the fix is applied, giving
+the user the choice to either:
+- Accept the risk and proceed (the fix may still help, even if the failure
+  message is unexpected), or
+- Stop and re-diagnose with better information from the actual test output.
+
 ---
 
 ## Key Design Principles
@@ -1014,6 +1166,7 @@ file is modified (in that case it is a no-op — count = 1, no pause needed).
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-08 [llm-expert]: Added AC BP-600e-2 red-phase root-cause divergence warning section: Gherkin contract, divergence classification heuristics table, warning message format, user confirmation routing table, re-diagnosis halt message, relationship to BP-600c-2 contrast table, ordering invariant, and rationale. (#EPIC-QuickFixWorkflow/15)
 - 2026-06-08 [llm-expert]: Added AC BP-600e-1 multi-file warning section: Gherkin contract, trigger condition, warning message format, user confirmation routing table, escalation halt message, depth-0 enforcement rationale, relationship to BP-600d-2, and ordering invariant. (#EPIC-QuickFixWorkflow/14)
 - 2026-06-08 [llm-expert]: Added AC BP-600c-3 green-phase verification section to Section 5: Gherkin contract, dispatch contract table, outcome routing table, halt message for persistent failure, ordering invariant, contrast table with red-phase, and rationale. (#EPIC-QuickFixWorkflow/11)
 - 2026-06-08 [llm-expert]: Added AC BP-600d-2 python-coder fix-application dispatch section to Section 5: Gherkin contract, dispatch contract table, single-file scope constraint table, ordering invariant, and rationale. (#EPIC-QuickFixWorkflow/10)

@@ -593,6 +593,61 @@ See `docs/architecture/agent_delivery_workflows.md` §5 "AC BP-600e-1 — Multi-
 warning before green-phase test" for the full warning message format, user
 confirmation routing table, escalation halt message, and ordering invariant.
 
+### AC BP-600e-2 — Warning when red-phase test reveals a deeper root cause (2026-06-08)
+
+```gherkin
+Given the test-writer has produced a test based on the diagnosis,
+When the red-phase test fails but the failure message indicates a
+  different root cause than what was diagnosed (the test fails at
+  a different assertion point or with an unexpected exception type),
+Then the workflow pauses and reports: "The test failure suggests the
+  root cause may differ from your diagnosis. Diagnosed: [root cause].
+  Observed: [actual failure]. Continue or re-diagnose?",
+And it waits for user confirmation before proceeding to the fix phase.
+```
+
+**Relationship to the depth model (this ADR):**
+
+After the red-phase `test-runner` Agent-tool call (depth 1) returns with at least
+one FAILED result (BP-600c-2), the depth-0 executing context inspects the failure
+message before dispatching the fix-implementation phase. If the failure indicates a
+**different root cause** than the one supplied in the diagnosis — the test fails at
+a different assertion point, or an unexpected exception type is raised — the depth-0
+context pauses and presents a user confirmation prompt.
+
+This is a **depth-0 guard** that runs inline within the executing context, requiring
+no additional Agent-tool dispatch. The control logic (divergence classification,
+user prompt, routing on the `C` or `R` response) executes entirely at depth 0. Only
+after the user chooses `C` (continue) does the depth-0 context dispatch
+`python-coder` at depth 1.
+
+Key constraints under the ADR-006 depth model:
+
+- **Ordering guarantee**: BP-600e-2 fires synchronously between the red-phase
+  `test-runner` return and the `python-coder` dispatch. The fix agent is never
+  started while the root-cause divergence check is pending.
+- **Complementary to BP-600c-2**: BP-600c-2 gates on whether the test fails at all
+  (red-phase confirmation). BP-600e-2 gates on whether it fails for the right
+  reason. Both checks are depth-0 guards that run before `python-coder` is spawned.
+- **User choice is final at depth 0**: if the user chooses `R` (re-diagnose), the
+  depth-0 context halts without dispatching `python-coder`. No phase agent at
+  depth 1 is ever invoked after a halt.
+
+Updated phase chain after this addendum:
+
+```
+build-ac (depth 1) → test-writer (depth 1)
+  → test-runner/red-phase (depth 1)
+  → [BP-600c-2 gate at depth 0: test must fail]
+  → [BP-600e-2 gate at depth 0: failure must match diagnosis]
+  → python-coder/fix (depth 1) → test-runner/green-phase (depth 1) → commit (depth 1)
+```
+
+See `docs/architecture/agent_delivery_workflows.md` §5 "AC BP-600e-2 — Warning when
+red-phase test reveals a deeper root cause" for the full divergence classification
+heuristics table, warning message format, user confirmation routing table, re-diagnosis
+halt message, and ordering invariant.
+
 ---
 
 ## References
