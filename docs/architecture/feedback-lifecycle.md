@@ -7,7 +7,7 @@ status: active
 components:
   - build_pipeline
 created: 2026-06-03
-last_updated: 2026-06-08
+last_updated: 2026-06-08 12:30
 related_code:
   - scripts/feedback/submit_feedback.py
   - scripts/feedback/aggregate.py
@@ -224,6 +224,45 @@ which searches for `.claude/` and is used only for the JSONL log path).
 
 **Cross-reference:** AC INF-100c-1 (base), AC INF-100c-1-i (worktree scenario),
 `unit_tests/feedback/test_submit_feedback_worktree_resolution.py`.
+
+---
+
+## Missing Config — Actionable Error Messages (AC INF-100c-4)
+
+When `submit_feedback.py` cannot find `feedback_categories.yaml` at the resolved
+config path, the error output is designed to be immediately actionable:
+
+```
+ERROR: Cannot read feedback_categories.yaml.
+  Checked path: /absolute/path/to/config/feedback_categories.yaml
+  OS error: [Errno 2] No such file or directory: '/absolute/path/to/...'
+  To fix: Place feedback_categories.yaml at /absolute/path/to/config/feedback_categories.yaml
+```
+
+### Why this format
+
+The error message labels each piece of information separately:
+
+| Line | Purpose |
+|------|---------|
+| `ERROR: Cannot read feedback_categories.yaml.` | Human-readable headline identifying the file |
+| `Checked path: <absolute-path>` | Labelled absolute path — copy-pasteable for verification |
+| `OS error: <exc>` | Raw OS error for low-level debugging (file permissions, filesystem issues) |
+| `To fix: Place feedback_categories.yaml at <path>` | Explicit remediation command |
+
+This structure satisfies AC INF-100c-4: "the error message includes the full absolute
+path(s) that were checked, and the message is actionable for debugging."
+
+### Contrast with prior format
+
+Before AC INF-100c-4 was implemented, the error was:
+```
+ERROR: Cannot read categories file <path>: [Errno 2] No such file or directory: '<path>'
+```
+The path was present but embedded inside the OSError string, making it hard to distinguish
+from the exception detail. The new format labels the path explicitly.
+
+**Cross-reference:** `unit_tests/feedback/test_submit_feedback_missing_config.py` (AC INF-100c-4).
 
 ---
 

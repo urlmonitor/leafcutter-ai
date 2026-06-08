@@ -132,5 +132,122 @@ class TestConfigRootResolution(unittest.TestCase):
         )
 
 
+class TestConfigRootFromSourceRepoLocation(unittest.TestCase):
+    """AC INF-100c-2: config resolution works from the source repo location."""
+
+    def test_find_config_root_from_source_script_location(self):
+        # covers: INF-100c-2
+        """When running from leafcutter-ai/scripts/feedback/, config is at leafcutter-ai/config/.
+
+        This test verifies the source-repo-location layout:
+          leafcutter-ai/scripts/feedback/submit_feedback.py
+          leafcutter-ai/config/feedback_categories.yaml  ← must be found here
+
+        _find_config_root() must return parents[2]/config relative to the script file,
+        which resolves to the source repo config/ directory.
+        """
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location(
+            "submit_feedback_src", str(_SUBMIT_SCRIPT)
+        )
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+
+        result = mod._find_config_root()
+
+        # The script is at scripts/feedback/submit_feedback.py within the repo.
+        # parents[2] of that path should be the repo root.
+        repo_root = _SUBMIT_SCRIPT.resolve().parents[2]
+        expected = repo_root / "config"
+
+        self.assertEqual(
+            result,
+            expected,
+            f"_find_config_root() returned {result!r}, expected {expected!r}. "
+            f"Config resolution is not anchored to the source repo location.",
+        )
+
+    def test_source_repo_categories_file_is_readable(self):
+        # covers: INF-100c-2
+        """feedback_categories.yaml must be readable from the source repo location.
+
+        Verifies backward compatibility: the file exists and is parseable with
+        yaml.safe_load from the source-repo-relative path.
+        """
+        import importlib.util
+
+        try:
+            import yaml
+        except ImportError:
+            self.skipTest("PyYAML not installed — skipping readability check")
+
+        spec = importlib.util.spec_from_file_location(
+            "submit_feedback_src2", str(_SUBMIT_SCRIPT)
+        )
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+
+        config_dir = mod._find_config_root()
+        categories_file = config_dir / "feedback_categories.yaml"
+
+        self.assertTrue(
+            categories_file.exists(),
+            f"feedback_categories.yaml not found at source-repo location: {categories_file}",
+        )
+
+        with open(categories_file, encoding="utf-8") as fh:
+            data = yaml.safe_load(fh)
+
+        self.assertIn(
+            "categories",
+            data,
+            "feedback_categories.yaml must have a 'categories' key at the source-repo location",
+        )
+
+    def test_source_repo_config_resolution_end_to_end(self):
+        # covers: INF-100c-2
+        """End-to-end: submit_feedback.py called from the source repo finds its config.
+
+        Runs submit_feedback.py with the script's own directory as cwd to simulate
+        being invoked from within the source repo tree. The script must succeed and
+        emit a valid feedback_id, proving backward compatibility is preserved.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            jsonl_path = Path(tmpdir) / "feedback.jsonl"
+            # Run with cwd set to the script's own directory (source repo location)
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(_SUBMIT_SCRIPT),
+                    "--ticket",
+                    "tickets/00_inbox/epics/EPIC-FeedbackPortability/02_TICKET-20260608-INF-100c-2.md",
+                    "--phase",
+                    "test-runner",
+                    "--category",
+                    "complete",
+                    "--note",
+                    "INF-100c-2 source-repo-location acceptance-test probe",
+                    "--jsonl",
+                    str(jsonl_path),
+                ],
+                capture_output=True,
+                text=True,
+                cwd=str(_SUBMIT_SCRIPT.parent),  # source repo: scripts/feedback/
+                timeout=10,
+            )
+        self.assertEqual(
+            result.returncode,
+            0,
+            f"submit_feedback.py failed when invoked from its source-repo location.\n"
+            f"stdout: {result.stdout}\nstderr: {result.stderr}",
+        )
+        self.assertRegex(
+            result.stdout.strip(),
+            r"^fb_\d{4}-\d{2}-\d{2}_[0-9a-f]{8}$",
+            "Expected feedback_id on stdout from source-repo-location invocation",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
