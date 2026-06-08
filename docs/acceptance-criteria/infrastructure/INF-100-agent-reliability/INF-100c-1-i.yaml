@@ -4,9 +4,9 @@ priority: medium
 title: "Config resolution in a worktree of a deployed project"
 component: infrastructure
 level: L3
-status: draft
+status: active
 req_status: active
-work_status: not_started
+work_status: todo
 criteria: |
   Given a git worktree is created from a deployed project that has .leafcutter/,
   When submit_feedback.py runs from the worktree's .leafcutter/scripts/feedback/,
@@ -34,4 +34,5 @@ amended_by:
   - it-po-v3
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260608-INF-100c-1-i.md

@@ -4,16 +4,15 @@ priority: medium
 title: "All phase agents are recognized as valid writers for their categories"
 component: infrastructure
 level: L2
-status: draft
+status: active
 req_status: active
-work_status: not_started
+work_status: todo
 criteria: |
   Given feedback_categories.yaml defines allowed_writers per category,
   When the frontend-coder agent submits feedback to the success-pattern category,
   Then the submission is accepted,
   And all standard phase agents (python-coder, sql-coder, frontend-coder, llm-expert, test-writer, test-runner, pr-reviewer, commit) are listed in the allowed_writers for categories they interact with.
-depends_on:
-  - INF-100c
+depends_on: []
 doc_links:
   - path: docs/architecture/feedback-lifecycle.md
     relationship: describes
@@ -33,4 +32,5 @@ amended_by:
 superseded_by: null
 covered_by:
   - INF-100c-3-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-Feedbacksubmissionresolvesitsconfigand/TICKET-20260608-INF-100c-3.md

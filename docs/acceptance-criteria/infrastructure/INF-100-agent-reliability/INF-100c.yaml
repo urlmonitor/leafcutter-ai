@@ -4,7 +4,7 @@ priority: medium
 title: "Feedback submission resolves its config and validates writers correctly in deployed projects"
 component: infrastructure
 level: L1
-status: draft
+status: active
 criteria: |
   When an agent submits feedback from a deployed project (via .leafcutter/),
   the submission succeeds — config files are found at the correct deployed path,

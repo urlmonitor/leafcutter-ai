@@ -4,16 +4,15 @@ priority: medium
 title: "Config resolution uses the script's own location as anchor"
 component: infrastructure
 level: L2
-status: draft
+status: active
 req_status: active
-work_status: not_started
+work_status: todo
 criteria: |
   Given submit_feedback.py is running from a deployed location at <project>/.leafcutter/scripts/feedback/,
   When the script resolves the path to feedback_categories.yaml,
   Then it finds the file at <project>/.leafcutter/config/feedback_categories.yaml,
   And feedback submission succeeds.
-depends_on:
-  - INF-100c
+depends_on: []
 doc_links:
   - path: docs/architecture/feedback-lifecycle.md
     relationship: describes
@@ -34,4 +33,5 @@ amended_by:
 superseded_by: null
 covered_by:
   - INF-100c-1-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-Feedbacksubmissionresolvesitsconfigand/TICKET-20260608-INF-100c-1.md
