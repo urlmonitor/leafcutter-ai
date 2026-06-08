@@ -486,9 +486,13 @@ def validate_produces_field(
         from template_compiler import parse_frontmatter
     except ImportError:
         # If template_compiler is unavailable, skip frontmatter check.
-        errors.append(
-            "[WARNING] Could not import template_compiler.parse_frontmatter — "
-            "template 'produces' frontmatter check skipped."
+        # This is an optional dependency — emit a warning to stderr rather than
+        # treating the absence as a hard validation error.
+        import sys
+        print(
+            "WARNING: Could not import template_compiler.parse_frontmatter — "
+            "template 'produces' frontmatter check skipped.",
+            file=sys.stderr,
         )
         return errors
 
