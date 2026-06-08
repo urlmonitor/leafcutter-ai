@@ -1,5 +1,5 @@
 id: ACD-300g-1
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Approved stage output is committed before the next agent is dispatched"
 component: ac-driven-dev
@@ -38,8 +38,22 @@ doc_links:
   - path: templates/skills/create-ac/SKILL.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Must not dispatch the next authoring agent until the commit operation returns exit code 0"
+  - "Must handle errors from the git commit operation gracefully per the project error handling policy"
+  - "Must be idempotent -- re-running the workflow after a successful commit must not re-commit already-committed files"
+  - "Must log each commit operation to the telemetry sink per the existing workflow telemetry convention"
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3

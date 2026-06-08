@@ -1,5 +1,5 @@
 id: ACD-300g-1-i
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Commit failure aborts the pipeline with an actionable error"
 component: ac-driven-dev
@@ -31,8 +31,21 @@ doc_links:
   - path: templates/skills/create-ac/SKILL.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Must report the specific pre-commit hook name and error output to the user, not a generic failure message"
+  - "Must not silently retry or force-overwrite on commit failure"
+  - "Must preserve all AC files on disk as uncommitted changes after a commit failure"
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3

@@ -1,5 +1,5 @@
 id: ACD-300g-2-i
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Partial-run recovery: uncommitted AC files from a prior crashed session are detected"
 component: ac-driven-dev
@@ -31,8 +31,22 @@ doc_links:
   - path: templates/skills/create-ac/SKILL.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Must detect orphaned AC files by scanning the AC store directory for uncommitted changes, not by relying on workflow state files"
+  - "Must present the three-way choice (yes/no/discard) before any destructive or constructive action"
+  - "Must complete the orphan scan within 2 seconds for AC stores with up to 500 files"
+  - "Must handle errors from the git status operation gracefully per the project error handling policy"
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3

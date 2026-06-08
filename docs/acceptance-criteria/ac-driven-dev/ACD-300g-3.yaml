@@ -1,5 +1,5 @@
 id: ACD-300g-3
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "The commit message identifies the workflow run, stage, and AC IDs produced"
 component: ac-driven-dev
@@ -23,8 +23,20 @@ doc_links:
   - path: templates/skills/create-ac/SKILL.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Commit message must be deterministic given the same inputs (stage name, component, AC IDs)"
+  - "Commit message must be parseable by standard git log tooling without custom parsers"
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
