@@ -1,5 +1,6 @@
 ---
 title: "ADR-006: Flatten the Supervisor Chain — ticket-supervisor at Depth 0"
+description: "Architectural decision to flatten the supervisor chain so ticket-supervisor runs at depth 0 and phase agents at depth 1, satisfying Claude Code's hard depth-1 Agent-tool nesting limit."
 type: "adr"
 status: "accepted"
 created: "2026-05-29"
@@ -426,6 +427,49 @@ workflow may modify, move, or delete it.
 
 See `docs/reference/ac-schema.md` §AC persistence guarantee after ticket lifecycle close
 for the full implementation constraint and rationale.
+
+### AC BP-600d-2 — python-coder dispatched with diagnosis after red-phase confirmation (2026-06-08)
+
+```gherkin
+Given the red-phase test has confirmed the bug is reproducible
+  (test fails as expected),
+When the workflow reaches the fix-application phase,
+Then it dispatches the python-coder agent with the diagnosis,
+  the failing test file, and the target file path,
+And the python-coder modifies only the target file specified in
+  the diagnosis,
+And no other source files are modified by the python-coder in
+  this phase.
+```
+
+**Relationship to the depth model (this ADR):**
+
+The python-coder dispatch is the fourth sequential Agent-tool invocation in the
+`/quick-fix` phase chain (after `build-ac`, `test-writer`, and `test-runner/red-phase`).
+The depth-0 executing context controls the ordering: `python-coder` is dispatched at
+depth 1 only after the `test-runner` Agent-tool call has returned confirming at least
+one FAILED result (red state). The fix is never started unless the red-phase check
+succeeds — this is the Halt-before-fix contract from AC BP-600c-2.
+
+Key constraints under the ADR-006 depth model:
+
+- **Ordering guarantee**: the depth-0 executing context owns the phase chain.
+  `python-coder` is dispatched sequentially at depth 1 after red-phase
+  `test-runner` confirms failure. The fix agent never runs concurrently with the
+  test-runner.
+- **Single-file scope**: the python-coder receives `target_file` as a hard
+  scope boundary in its Agent-tool input. Only the file named in the diagnosis
+  may be modified. The depth-0 context enforces this by reading `git diff
+  --name-only` after the python-coder returns and halting if unexpected files
+  appear in the diff.
+- **No test file edits**: the test file written at depth 1 by test-writer
+  (BP-600c-1) is immutable during the fix phase. The depth-0 context verifies
+  this by checking that the test file path does not appear in the python-coder's
+  diff output.
+
+See `docs/architecture/agent_delivery_workflows.md` §5 "AC BP-600d-2 — python-coder
+dispatched with diagnosis after red-phase confirmation" for the full dispatch
+contract table, scope constraint table, ordering invariant, and rationale.
 
 ### AC BP-600d-1 — Structured diagnosis input parsing (2026-06-08)
 

@@ -1,5 +1,6 @@
 ---
 title: "Agent Code Delivery Workflows"
+description: "Visualises how the leafcutter-ai agent ecosystem orchestrates code delivery — slash-command entry points, supervisor dispatch topology, quick-fix workflow, and blocker adjudication flows."
 type: "reference"
 status: "active"
 created: "2026-05-11"
@@ -704,6 +705,75 @@ actually reproduced the bug. The red-phase check enforces that:
 3. The audit trail is valid: the commit history shows test-red before fix, test-green
    after fix.
 
+### AC BP-600d-2 — python-coder dispatched with diagnosis after red-phase confirmation
+
+After the red-phase test-runner has confirmed the bug is reproducible (AC BP-600c-2), the
+quick-fix workflow MUST dispatch the `python-coder` agent to apply the fix. The Gherkin
+contract:
+
+```gherkin
+Given the red-phase test has confirmed the bug is reproducible
+  (test fails as expected),
+When the workflow reaches the fix-application phase,
+Then it dispatches the python-coder agent with the diagnosis,
+  the failing test file, and the target file path,
+And the python-coder modifies only the target file specified in
+  the diagnosis,
+And no other source files are modified by the python-coder in
+  this phase.
+```
+
+**Dispatch contract (Agent-tool input to `python-coder` at depth 1):**
+
+The python-coder agent is dispatched with the following structured inputs:
+
+| Input field | Value | Source |
+|---|---|---|
+| `ticket_path` | Absolute path to the quick-fix workflow's internal ticket file | Workflow context at depth 0 |
+| `target_file` | Absolute path to the buggy source file (from diagnosis parsing) | BP-600d-1 parsed struct |
+| `test_file` | Absolute path to the failing test file produced by test-writer | BP-600c-1 output |
+| `location_hint` | Line number or function name (optional) | BP-600d-1 parsed struct |
+| `symptom` | Observable incorrect behaviour | BP-600d-1 parsed struct |
+| `root_cause` | Root cause of the bug | BP-600d-1 parsed struct |
+
+**Scope constraint (single-file modification):**
+
+The python-coder MUST modify only the `target_file` supplied in the Agent-tool input.
+No other source files may be created or modified during this phase:
+
+| Constraint | Rule |
+|---|---|
+| Only `target_file` modified | The python-coder edit must be scoped to the single file named in the diagnosis. Changes to any other source file are unconditionally prohibited in this phase. |
+| No test file edits | The test file written by test-writer (BP-600c-1) MUST NOT be modified by the python-coder. The test is the acceptance gate — editing it during the fix phase would invalidate the TDD contract. |
+| No new source files | The python-coder MUST NOT create new source files as part of the fix. If the fix genuinely requires a new module, the workflow halts and surfaces to the user for a scoped re-diagnosis. |
+
+**Ordering invariant:**
+
+The python-coder dispatch occurs ONLY after both:
+1. The test-writer has produced the failing test (BP-600c-1), AND
+2. The red-phase test-runner has confirmed the test fails (BP-600c-2).
+
+If either prior phase did not complete successfully, the fix-application phase MUST NOT
+start. The ordering is enforced by the sequential phase chain in `quick-fix.js`:
+
+```
+build-ac (depth 1) → test-writer (depth 1) → test-runner/red-phase (depth 1)
+  → python-coder/fix (depth 1) → test-runner/green-phase (depth 1) → commit (depth 1)
+```
+
+**Why single-file scope is enforced:**
+
+The quick-fix workflow is a rapid-fix tool for known, localised bugs. A single-file
+modification constraint ensures:
+
+1. **Audit clarity** — the commit shows exactly which file was changed and why. A
+   multi-file python-coder edit would obscure causality.
+2. **Minimal blast radius** — the fix applies the smallest possible change to restore
+   correct behaviour. Collateral edits to unrelated files introduce regression risk.
+3. **AC traceability** — the single-file constraint makes it straightforward to verify
+   that the committed change satisfies exactly the diagnosed AC (BP-600d-2). A
+   multi-file change would require cross-file AC coverage analysis.
+
 ---
 
 ## Key Design Principles
@@ -726,6 +796,7 @@ actually reproduced the bug. The red-phase check enforces that:
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-08 [llm-expert]: Added AC BP-600d-2 python-coder fix-application dispatch section to Section 5: Gherkin contract, dispatch contract table, single-file scope constraint table, ordering invariant, and rationale. (#EPIC-QuickFixWorkflow/10)
 - 2026-06-08 [llm-expert]: Added AC BP-600c-2 red-phase verification section to Section 5: Gherkin contract, dispatch contract table, outcome routing table, halt message for unexpected green, ordering invariant, and rationale. (#EPIC-QuickFixWorkflow/08)
 - 2026-06-08 [llm-expert]: Added AC BP-600c-1 test-writer dispatch section to Section 5: Gherkin contract, dispatch contract table, test file requirements, red-phase assertion, ordering invariant, and covered_by update protocol. (#EPIC-QuickFixWorkflow/07)
 - 2026-06-08 [llm-expert]: Added AC BP-600d-1 structured diagnosis input parsing section to Section 5: Gherkin contract, four parsed fields table, two input forms, validation rules, and downstream consumer mapping. (#EPIC-QuickFixWorkflow/09)
