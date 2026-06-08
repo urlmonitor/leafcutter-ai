@@ -1,7 +1,7 @@
 ---
 title: "EPIC: Agent Produces Trait"
 type: epic
-status: todo
+status: done
 components:
   - build-orchestration
 created: 2026-06-07
