@@ -358,6 +358,7 @@ Your final response MUST include a structured section:
 - frontend-design legacy file: ignored (even if present on disk)
 
 ### Optional skills
+- design_principles_applied: true
 - webapp-testing: installed / not installed / screenshot: <path> / console: <summary>
 
 ### Tests

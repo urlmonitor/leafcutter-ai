@@ -44,6 +44,8 @@ The optional-skill integration contract (webapp-testing, frontend-design) also n
 
 This change was introduced to satisfy AC `BP-700a-1-i`: when the unified frontend agent template is deployed, it uses only its embedded design principles, preventing the agent from applying design constraints twice (once from the embedded principles and once from the external skill file).
 
+To satisfy AC `BP-700a-2`, the `frontend-coder` agent always reports `design_principles_applied: true` in the `### Optional skills` block of its completion report. This entry is unconditional — design principles are always embedded and always applied, so no conditional flag or "not installed" message is needed or produced.
+
 File-existence detection is chosen over a registry lookup because:
 - It requires zero infrastructure beyond the filesystem.
 - It is consistent with how `build.py` deploys skills: if the skill directory exists, the skill is installed.
