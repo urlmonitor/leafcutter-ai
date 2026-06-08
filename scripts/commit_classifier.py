@@ -5,11 +5,15 @@ MODULE: scripts/commit_classifier.py
 GOAL: Examine the staged file set, group files by recognised type, and select
       the appropriate commit message pattern for the group. The commit agent
       calls classify_staged_files() to obtain a suggested subject line that
-      is more specific than "update files".
+      is more specific than "update files". Also detects mixed staged sets
+      (AC BO-1100b) and warns the user when unrelated groups are staged together.
 BUSINESS CONTEXT: AC BO-1100a — the right message style is chosen automatically
       based on what changed. Each recognised group (tickets, new ACs, shipped
       ACs, implementation code, status changes) gets its own proven message
       pattern applied automatically.
+      AC BO-1100b — when staged files span multiple unrelated groups, the user
+      is warned before a misleading commit message is produced, giving them the
+      opportunity to split the commit or confirm the mixed set intentionally.
 ARCHITECTURE: Pure utility module — no I/O side-effects, no filesystem writes.
       Callers obtain the staged file list via `git diff --cached --name-only`
       and pass it in; this module performs all classification logic in memory.
@@ -17,6 +21,7 @@ ARCHITECTURE: Pure utility module — no I/O side-effects, no filesystem writes.
 Used by:
   - templates/agents/commit.md (Step 2 message-drafting branch)
   - unit_tests/test_commit_classifier.py
+  - unit_tests/test_mixed_set_detection.py
 """
 
 from __future__ import annotations
@@ -120,6 +125,61 @@ class ClassificationResult:
     suggested_subject: str
     #: True when a specific pattern was matched; False when the fallback was used.
     specific_pattern_matched: bool
+
+
+# Groups that are considered "naturally co-occurring" and therefore NOT flagged
+# as a mixed set when staged together.  Any pair NOT listed here will trigger
+# a mixed-set warning when both groups are present in the staged file set.
+#
+# Rationale for each exemption:
+#   TICKETS + DOCS       — ticket files are markdown; docs are markdown; they
+#                          often move together when a feature lands.
+#   IMPLEMENTATION_CODE + TESTS
+#                        — TDD workflow: production code and its tests are
+#                          almost always committed together.
+#   IMPLEMENTATION_CODE + DOCS
+#                        — module-level docstring updates land with the code.
+#   IMPLEMENTATION_CODE + CONFIG
+#                        — a new script commonly ships with a companion config
+#                          entry (e.g. a new paths.json key).
+#   TESTS + DOCS         — test files that double as runnable examples, or
+#                          README updates that accompany test additions.
+#   SHIPPED_ACS + TICKETS
+#                        — AC-store YAML and the ticket that ships it often
+#                          land in the same commit.
+#   CONFIG + DOCS        — config files (YAML/JSON) and their companion docs
+#                          update together (e.g. README or reference docs).
+RELATED_GROUP_PAIRS: frozenset[frozenset[FileGroup]] = frozenset(
+    {
+        frozenset({FileGroup.TICKETS, FileGroup.DOCS}),
+        frozenset({FileGroup.IMPLEMENTATION_CODE, FileGroup.TESTS}),
+        frozenset({FileGroup.IMPLEMENTATION_CODE, FileGroup.DOCS}),
+        frozenset({FileGroup.IMPLEMENTATION_CODE, FileGroup.CONFIG}),
+        frozenset({FileGroup.TESTS, FileGroup.DOCS}),
+        frozenset({FileGroup.SHIPPED_ACS, FileGroup.TICKETS}),
+        frozenset({FileGroup.CONFIG, FileGroup.DOCS}),
+    }
+)
+
+
+@dataclass
+class MixedSetWarning:
+    """Returned by detect_mixed_set() when unrelated groups are staged together.
+
+    ``is_mixed`` is the primary signal: when True the caller should warn the
+    user before letting the commit proceed.  When False, the staged set is
+    either homogeneous or composed of groups that are known to co-occur.
+    """
+
+    #: True when staged files span two or more unrelated groups.
+    is_mixed: bool
+    #: The FileGroup buckets that are present and considered unrelated to each other.
+    #: Empty when is_mixed is False.
+    unrelated_groups: list[FileGroup]
+    #: Human-readable warning message, or empty string when is_mixed is False.
+    warning: str
+    #: Recommendation for the user (split vs confirm), or empty string when is_mixed is False.
+    recommendation: str
 
 
 # ---------------------------------------------------------------------------
@@ -277,4 +337,119 @@ def classify_staged_files(
         groups=groups,
         suggested_subject=subject,
         specific_pattern_matched=specific,
+    )
+
+
+def detect_mixed_set(
+    groups: dict[FileGroup, list[str]],
+) -> MixedSetWarning:
+    """Detect whether staged files span multiple unrelated groups.
+
+    Uses the grouping output from group_files_by_type() and the
+    RELATED_GROUP_PAIRS exemption table to decide whether the staged set is
+    "mixed" (i.e. likely to produce a misleading commit message).
+
+    A staged set is considered mixed when:
+      - It contains files from two or more distinct FileGroups, AND
+      - At least one pair of those groups is NOT listed in RELATED_GROUP_PAIRS.
+
+    The function is intentionally conservative: if every pair of present groups
+    appears in RELATED_GROUP_PAIRS, no warning is issued even if three or more
+    groups are present (e.g. implementation code + tests + docs is a common
+    TDD pattern).
+
+    Parameters
+    ----------
+    groups:
+        Mapping of FileGroup → list of paths as returned by group_files_by_type().
+        Groups with empty path lists are ignored.
+
+    Returns
+    -------
+    MixedSetWarning with is_mixed=False when the staged set is homogeneous or
+    composed of known-related groups; is_mixed=True with a populated warning and
+    recommendation otherwise.
+
+    Examples
+    --------
+    Clean TDD commit — not mixed:
+        groups = {
+            FileGroup.IMPLEMENTATION_CODE: ["scripts/build.py"],
+            FileGroup.TESTS: ["unit_tests/test_build.py"],
+        }
+        result = detect_mixed_set(groups)
+        assert not result.is_mixed  # IMPLEMENTATION_CODE + TESTS is exempted
+
+    Mixed commit — ticket move plus unrelated code change:
+        groups = {
+            FileGroup.TICKETS: ["tickets/00_inbox/my_ticket.md"],
+            FileGroup.IMPLEMENTATION_CODE: ["scripts/build.py"],
+        }
+        result = detect_mixed_set(groups)
+        assert result.is_mixed  # TICKETS + IMPLEMENTATION_CODE is not exempted
+    """
+    # Only consider groups that actually contain at least one file.
+    present_groups = [g for g, paths in groups.items() if paths]
+
+    if len(present_groups) <= 1:
+        # Homogeneous or empty — never mixed.
+        return MixedSetWarning(
+            is_mixed=False,
+            unrelated_groups=[],
+            warning="",
+            recommendation="",
+        )
+
+    # Check every pair of present groups.  If any pair is NOT in
+    # RELATED_GROUP_PAIRS, the staged set is considered mixed.
+    unrelated: list[FileGroup] = []
+    seen_unrelated: set[FileGroup] = set()
+
+    for i, group_a in enumerate(present_groups):
+        for group_b in present_groups[i + 1 :]:
+            pair = frozenset({group_a, group_b})
+            if pair not in RELATED_GROUP_PAIRS:
+                if group_a not in seen_unrelated:
+                    unrelated.append(group_a)
+                    seen_unrelated.add(group_a)
+                if group_b not in seen_unrelated:
+                    unrelated.append(group_b)
+                    seen_unrelated.add(group_b)
+
+    if not unrelated:
+        return MixedSetWarning(
+            is_mixed=False,
+            unrelated_groups=[],
+            warning="",
+            recommendation="",
+        )
+
+    # Build a human-readable summary of the unrelated groups and the files in each.
+    group_summaries = []
+    for group in unrelated:
+        file_list = groups.get(group, [])
+        file_count = len(file_list)
+        label = group.value.replace("_", " ")
+        if file_count == 1:
+            sample = file_list[0].split("/")[-1]
+            group_summaries.append(f"{label} ({sample})")
+        else:
+            group_summaries.append(f"{label} ({file_count} files)")
+
+    groups_str = ", ".join(group_summaries)
+    warning = (
+        f"Mixed staged set detected: unrelated groups present — {groups_str}. "
+        "A single commit message cannot accurately describe all of these changes."
+    )
+    recommendation = (
+        "Split the commit into separate commits by group "
+        "(e.g. `git reset HEAD <file>` to unstage unrelated files), "
+        "or confirm the mixed set intentionally if you are certain they belong together."
+    )
+
+    return MixedSetWarning(
+        is_mixed=True,
+        unrelated_groups=unrelated,
+        warning=warning,
+        recommendation=recommendation,
     )
