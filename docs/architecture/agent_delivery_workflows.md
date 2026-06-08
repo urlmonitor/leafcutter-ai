@@ -1242,6 +1242,119 @@ previously in the test suite) while leaving the diagnosed bug actually unresolve
 green-phase verification is the contract that the commit is a genuine resolution — not
 merely a change that compiles.
 
+### AC BP-600e-3 — Quick-fix workflow preserves progress when escalating to full build pipeline
+
+When the workflow pauses with a scope-exceeded warning (from BP-600e-1 or BP-600e-2) and
+the user chooses to escalate to the full build pipeline, the quick-fix workflow MUST preserve
+the artefacts already produced — the AC YAML file and the test file — so the user can
+reference them when resuming via `/create-ac` or `/build-feature`. The Gherkin contract:
+
+```gherkin
+Given the workflow has paused with a scope-exceeded warning
+  (from BP-600e-1 or BP-600e-2),
+When the user chooses to escalate to the full build pipeline,
+Then the AC YAML file already created is preserved in the AC store,
+And the test file already written is preserved in the test directory,
+And the workflow outputs a summary of what was completed and what
+  remains (AC ID, test file path, diagnosed file, root cause),
+And it provides the AC ID so the user can reference it in
+  /create-ac or /build-feature.
+```
+
+**When this section applies:**
+
+This preservation contract fires on **both** escalation paths:
+
+1. **BP-600e-1 escalation** — user chooses `E` when the python-coder modified 2 or more
+   source files (multi-file scope warning).
+2. **BP-600e-2 escalation** — user chooses `R` when the red-phase test reveals a different
+   root cause than diagnosed (re-diagnose path).
+
+In both cases, the workflow exits before the `python-coder` has been committed (BP-600e-1:
+the changes are left uncommitted; BP-600e-2: the python-coder was never dispatched). The
+AC YAML file and test file already exist on disk — they MUST NOT be deleted as part of the
+escalation exit.
+
+**Preserved artefacts:**
+
+| Artefact | Path | Preservation rule |
+|----------|------|-------------------|
+| AC YAML file | Path returned by `build-ac` (e.g. `docs/acceptance-criteria/<component>/<id>.yaml`) | MUST remain in place; status field stays `active` |
+| Test file | Path returned by `test-writer` (e.g. `unit_tests/test_<component>_<id>.py`) | MUST remain in place; staged for the user's next commit |
+
+The escalation exit MUST NOT call `git clean`, `git checkout`, or any other command that
+removes untracked or unstaged files. The artefacts are intentionally left in the working
+tree so the user's next `/build-feature` invocation can stage them as part of the first
+commit on the feature branch.
+
+**Escalation summary output (mandatory):**
+
+When the workflow exits due to escalation, it MUST print the following structured summary.
+All placeholders are resolved from the workflow's in-memory state at the time of exit:
+
+```
+/quick-fix escalated: escalating to full build pipeline.
+
+  Progress preserved:
+
+    AC ID:           <ac_id>                          (from build-ac phase)
+    AC YAML file:    <ac_path>                        (AC store traceability artefact)
+    Test file:       <test_file_path>                 (failing test — may still be red)
+    Diagnosed file:  <target_file>                    (from diagnosis parsing, BP-600d-1)
+    Root cause:      <root_cause>                     (from diagnosis parsing, BP-600d-1)
+
+  What was completed:
+    [x] AC created       — <ac_path>
+    [x] Test written     — <test_file_path>
+    [ ] Fix applied      — not committed (changes are in your working tree)
+
+  What remains:
+    - Stage and commit the AC YAML and test file as a starting commit.
+    - Plan the full fix as a ticket via /build-feature or /create-ticket.
+    - Reference AC ID <ac_id> in your ticket's acceptance-criteria list.
+
+  To continue:
+    /create-ticket   — create a full ticket referencing AC ID <ac_id>
+    /build-feature   — drive an existing or new epic that covers the fix
+```
+
+**AC ID reference in downstream commands:**
+
+The AC ID printed in the escalation summary (`<ac_id>`, e.g. `BP-600e-3`) is the identifier
+that the user can pass to `/create-ac` (to amend the AC) or reference in a new ticket's
+`## Acceptance Criteria` section. This ID is the primary link between the quick-fix
+escalation and the full-build pipeline that will complete the fix.
+
+**Relationship to BP-600b-3 (AC YAML persistence guarantee):**
+
+AC BP-600b-3 already guarantees the AC YAML file persists after the normal quick-fix lifecycle
+closes. BP-600e-3 extends this guarantee to the **escalation exit path**: even when the workflow
+exits early (before the commit phase), the AC YAML file is treated as a permanent artefact that
+is not cleaned up. The escalation exit is a subset of the ticket-lifecycle-close operation from
+the perspective of artefact preservation — both paths leave the AC YAML file intact.
+
+**Relationship to BP-600e-1 (multi-file warning) and BP-600e-2 (root-cause divergence):**
+
+| Escalation source | Artefacts available at escalation point | python-coder changes |
+|---|---|---|
+| BP-600e-1 (user chose `E`) | AC YAML, test file, python-coder diff (uncommitted) | In working tree — left uncommitted |
+| BP-600e-2 (user chose `R`) | AC YAML, test file only | Never dispatched — working tree clean |
+
+For BP-600e-1 escalation, the python-coder's changes are left in the working tree (not
+reverted, not staged). The escalation summary informs the user that the changes exist
+and directs them to the full build pipeline to plan the commit as a feature ticket.
+
+**Ordering invariant:**
+
+```
+[BP-600e-1 gate at depth 0: user chose E] → [BP-600e-3 summary output] → workflow exits
+[BP-600e-2 gate at depth 0: user chose R] → [BP-600e-3 summary output] → workflow exits
+```
+
+The BP-600e-3 summary output occurs synchronously at the depth-0 escalation exit point.
+No further Agent-tool dispatches occur after the escalation decision — the workflow
+terminates cleanly after printing the summary.
+
 ---
 
 ## Key Design Principles
@@ -1265,6 +1378,7 @@ merely a change that compiles.
 DECISION HISTORY
 ====================================================================
 - 2026-06-08 [llm-expert]: Added AC BP-600d-3 commit-agent dispatch section: Gherkin contract, dispatch contract table, staged-files constraint table, commit message format, rationale for agent-dispatch over direct git commit, and ordering invariant. (#EPIC-QuickFixWorkflow/12)
+- 2026-06-08 [llm-expert]: Added AC BP-600e-3 escalation progress-preservation section: Gherkin contract, preserved artefacts table, escalation summary output format, AC ID reference in downstream commands, relationship to BP-600b-3 and BP-600e-1/e-2, BP-600e-1 vs BP-600e-2 escalation comparison table, and ordering invariant. (#EPIC-QuickFixWorkflow/16)
 - 2026-06-08 [llm-expert]: Added AC BP-600e-2 red-phase root-cause divergence warning section: Gherkin contract, divergence classification heuristics table, warning message format, user confirmation routing table, re-diagnosis halt message, relationship to BP-600c-2 contrast table, ordering invariant, and rationale. (#EPIC-QuickFixWorkflow/15)
 - 2026-06-08 [llm-expert]: Added AC BP-600e-1 multi-file warning section: Gherkin contract, trigger condition, warning message format, user confirmation routing table, escalation halt message, depth-0 enforcement rationale, relationship to BP-600d-2, and ordering invariant. (#EPIC-QuickFixWorkflow/14)
 - 2026-06-08 [llm-expert]: Added AC BP-600c-3 green-phase verification section to Section 5: Gherkin contract, dispatch contract table, outcome routing table, halt message for persistent failure, ordering invariant, contrast table with red-phase, and rationale. (#EPIC-QuickFixWorkflow/11)

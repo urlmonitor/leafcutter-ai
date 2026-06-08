@@ -704,6 +704,66 @@ dispatched after green-phase verification" for the full dispatch contract table,
 constraint table, commit message format, rationale for agent dispatch over direct git commit,
 and ordering invariant.
 
+### AC BP-600e-3 — Quick-fix workflow preserves progress when escalating to full build pipeline (2026-06-08)
+
+```gherkin
+Given the workflow has paused with a scope-exceeded warning
+  (from BP-600e-1 or BP-600e-2),
+When the user chooses to escalate to the full build pipeline,
+Then the AC YAML file already created is preserved in the AC store,
+And the test file already written is preserved in the test directory,
+And the workflow outputs a summary of what was completed and what
+  remains (AC ID, test file path, diagnosed file, root cause),
+And it provides the AC ID so the user can reference it in
+  /create-ac or /build-feature.
+```
+
+**Relationship to the depth model (this ADR):**
+
+The preservation contract and escalation summary output operate entirely at depth 0 (the
+`/quick-fix` executing context). No additional Agent-tool dispatch is needed — the exit path
+is an inline operation within the depth-0 context. This is consistent with the ADR-006 pattern:
+orchestration control logic, including exit conditions and summary generation, lives at depth 0.
+
+Key constraints under the ADR-006 depth model:
+
+- **No Agent-tool dispatch on exit**: when the user chooses to escalate (BP-600e-1 `E` or
+  BP-600e-2 `R`), the depth-0 context prints the structured summary and exits. No phase agent
+  at depth 1 is ever spawned after the escalation decision.
+- **Artefact preservation is depth-0 invariant**: the AC YAML file and test file were written
+  during earlier depth-1 dispatches (`build-ac` and `test-writer`). The depth-0 context's
+  exit path MUST NOT invoke any command that removes these files (`git clean`, `git checkout`,
+  etc.). The invariant is enforced at depth 0 — the depth-1 agents that wrote the files are
+  already done and do not participate in the exit.
+- **AC ID is the hand-off token**: the AC ID printed in the escalation summary is the
+  machine-readable link between the quick-fix escalation and the downstream full-build
+  pipeline. The user references it when invoking `/create-ticket` or `/build-feature` to
+  continue the fix. This hand-off token is computed at depth 0 (from the `build-ac` output
+  captured earlier in the phase chain) and printed inline — no agent dispatch needed.
+
+Updated complete phase chain after all `/quick-fix` addenda:
+
+```
+build-ac (depth 1) → test-writer (depth 1)
+  → test-runner/red-phase (depth 1)
+  → [BP-600c-2 gate at depth 0: test must fail]
+  → [BP-600e-2 gate at depth 0: failure must match diagnosis]  ← user may choose R → [BP-600e-3 exit]
+  → python-coder/fix (depth 1)
+  → [BP-600e-1 gate at depth 0: multi-file scope check]  ← user may choose E → [BP-600e-3 exit]
+  → test-runner/green-phase (depth 1)
+  → [BP-600c-3 gate at depth 0: all tests must pass]
+  → commit (depth 1)  ← BP-600d-3
+```
+
+Both BP-600e-3 exit points are in the depth-0 executing context. The exit is clean — artefacts
+are preserved, a summary is printed, and the workflow terminates without committing or modifying
+the AC YAML or test file.
+
+See `docs/architecture/agent_delivery_workflows.md` §5 "AC BP-600e-3 — Quick-fix workflow
+preserves progress when escalating to full build pipeline" for the full preserved artefacts
+table, escalation summary output format, AC ID downstream reference, and BP-600e-1 vs
+BP-600e-2 comparison table.
+
 ---
 
 ## References

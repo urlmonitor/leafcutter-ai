@@ -386,6 +386,58 @@ directory created (AC BP-600a-1).
 
 See `docs/architecture/agent_delivery_workflows.md` §5 for the full quick-fix workflow diagram.
 
+### Handling `/quick-fix` escalation (AC BP-600e-3)
+
+When the `/quick-fix` workflow escalates to the full build pipeline — either because the
+python-coder modified more than one source file (BP-600e-1) or because the red-phase test
+revealed a different root cause than diagnosed (BP-600e-2) — the user receives a structured
+escalation summary with:
+
+- An **AC ID** (e.g. `BP-600e-3`) identifying the traceability artefact in the AC store.
+- A **test file path** pointing to the failing test that was written during the quick-fix run.
+- A **diagnosed file** and **root cause** from the original diagnosis.
+
+When the user then invokes `/build-feature` (or `/create-ticket`) to continue the fix, this
+skill (`build-single-ticket`) is the vehicle. The workflow for continuing from a `/quick-fix`
+escalation:
+
+1. **Stage and commit the preserved artefacts** before invoking this skill. The AC YAML file
+   and test file are already in the working tree (left by `/quick-fix`). Commit them as a
+   starting point on the current branch:
+   ```
+   git add <ac_path> <test_file_path>
+   git commit -m "chore: stage quick-fix artefacts for escalated fix (AC <ac_id>)"
+   ```
+   This pre-commit is the user's responsibility — this skill does not stage or commit
+   pre-existing artefacts from a prior `/quick-fix` run.
+
+2. **Create a ticket** referencing the AC ID. The ticket's `## Acceptance Criteria` section
+   should include the AC ID from the escalation summary so the `ac-validator` phase can
+   locate the coverage evidence:
+   ```
+   /create-ticket
+   > Fix the multi-file bug diagnosed by /quick-fix. AC ID: <ac_id>.
+   >   Test file already written: <test_file_path>
+   >   Target file: <target_file>
+   >   Root cause: <root_cause>
+   ```
+
+3. **Invoke this skill** (via `/build-feature`) on the resulting ticket. This skill creates
+   a new isolated worktree, bootstraps the branch, and drives the full phase-agent pipeline
+   (including `python-coder` for the fix and `pr-reviewer` for review).
+
+**AC ID continuity contract (BP-600e-3):**
+
+The AC YAML file created during the `/quick-fix` run remains `status: active` throughout this
+escalated flow. The escalated ticket's `python-coder` phase writes the fix to the target file;
+the `test-runner` phase verifies the test written during the quick-fix turns green; the
+`commit` phase references the same AC ID in the commit message. The AC YAML file is not
+re-created — the same file that `/quick-fix` created is the traceability artefact for the
+full-pipeline fix.
+
+See `docs/architecture/agent_delivery_workflows.md` §5 "AC BP-600e-3" for the full
+escalation summary output format and artefact preservation rules.
+
 ## References
 
 - `.claude/commands/build-feature.md` — the slash command that
