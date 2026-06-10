@@ -40,18 +40,19 @@ Both formats are accepted. The skill parses them into four fields:
 
 ## What this command does
 
-Loads `.claude/skills/quick-fix/SKILL.md` and executes the six-phase pipeline:
+Invokes the `quick-fix.js` workflow script (deterministic JS control flow) which
+enforces the exact phase sequence:
 
-1. **Phase 0 — Guards**: worktree invariant check, no-isolation check, uncommitted-changes guard.
-2. **Phase 1 — AC Creation**: writes a permanent `docs/acceptance-criteria/` YAML entry.
-3. **Phase 2 — Test-first**: dispatches `test-writer`, verifies the test fails (red phase).
-4. **Phase 3 — Fix**: dispatches `python-coder` with a single-file constraint.
-5. **Phase 4 — Green phase**: verifies the test now passes.
-6. **Phase 5 — Commit**: dispatches `commit` agent with exact staging instructions.
-7. **Phase 6 — Close**: pushes to origin, checks for open PR, prints completion summary.
+1. **Guards**: worktree invariant check, no-isolation check, uncommitted-changes guard.
+2. **AC Creation**: writes a permanent `docs/acceptance-criteria/` YAML entry.
+3. **Red Phase**: dispatches `test-writer`, verifies the test fails.
+4. **Fix**: dispatches `python-coder` with a single-file constraint.
+5. **Green Phase**: verifies the test now passes.
+6. **Commit & Close**: dispatches `commit` agent, pushes to origin.
 
-Escalation to `/build-feature` is offered automatically if `python-coder` modifies more
-than the target file, or if the red-phase failure pattern diverges from the diagnosis.
+The workflow halts with `status: "blocked"` when user input is required (divergence
+warnings, scope expansion, test failures). Escalation to `/build-feature` is offered
+automatically if scope expands beyond the target file.
 
 ## What this command does NOT do
 
@@ -62,4 +63,14 @@ than the target file, or if the red-phase failure pattern diverges from the diag
 
 ---
 
-Load `.claude/skills/quick-fix/SKILL.md` and execute the workflow with `$ARGUMENTS` as the diagnosis input.
+Parse `$ARGUMENTS` into a diagnosis object. If the input is natural language, extract the four fields (target_file, location_hint, symptom, root_cause) from the sentence. If structured JSON, use directly.
+
+Then invoke the workflow:
+
+```
+Workflow(name: "quick-fix", args: { target_file, location_hint, symptom, root_cause })
+```
+
+If `quick-fix.js` is not available (pre-v2.1.154 install), fall back to loading
+`.claude/skills/quick-fix/SKILL.md` and executing the workflow manually with
+`$ARGUMENTS` as the diagnosis input.
