@@ -1,7 +1,7 @@
 /**
- * create-ac.js — Claude Code Workflow script
+ * plan-feature.js — Claude Code Workflow script
  *
- * Implements the /create-ac command: triages the user's request via the
+ * Implements the /plan-feature command: triages the user's request via the
  * ac-triage agent (Haiku-tier, fast), routes to the correct AC authoring
  * agents (product-owner-v3, business-analyst-v3, it-po-v3) in sequence with
  * user confirmation gates between stages, and writes all output exclusively
@@ -21,12 +21,13 @@
  *
  * Source ticket: EPIC-ACDrivenDevelopment/08_create_ac_workflow.md
  * ACs: ACD-300, ACD-300a, ACD-300a-1..3, ACD-300b..d, TKT-100g
+ * Renamed from create-ac.js per AC ACD-1100c-1 (v2.0 migration).
  *
  * Minimum Claude Code version: 2.1.154 (workflow script support)
  */
 
 export const meta = {
-  name: "create-ac",
+  name: "plan-feature",
   description:
     "Triage, orchestrate, and gate AC authoring for a new feature request. " +
     "Dispatches ac-triage (Haiku) to classify the request as strategic / " +
@@ -101,8 +102,8 @@ async function run({ userInput, agent }) {
       status: "error",
       message:
         "No request text provided.\n" +
-        "Usage: /create-ac <description> [--component <name>] [--force]\n" +
-        "Example: /create-ac \"Allow users to export reports as PDF\" --component reports",
+        "Usage: /plan-feature <description> [--component <name>] [--force]\n" +
+        "Example: /plan-feature \"Allow users to export reports as PDF\" --component reports",
     };
   }
 
@@ -227,7 +228,7 @@ async function run({ userInput, agent }) {
           parent_l1_id: parent_l1_id,
           route: effectiveRoute,
           instructions:
-            `You are running as part of the /create-ac pipeline (route: ${effectiveRoute}). ` +
+            `You are running as part of the /plan-feature pipeline (route: ${effectiveRoute}). ` +
             "Write AC YAML files ONLY to docs/acceptance-criteria/. " +
             "Do NOT create or modify any files in tickets/. " +
             "After writing, return a JSON object: { \"status\": \"ok\", \"acs_written\": [\"ACD-...\", ...] }",
@@ -320,7 +321,7 @@ async function run({ userInput, agent }) {
         } else if (finalAction === "defer") {
           return {
             status: "ok",
-            message: "ACs left as reviewed (deferred). Re-run /create-ac to approve.",
+            message: "ACs left as reviewed (deferred). Re-run /plan-feature to approve.",
             acs_as_reviewed: allAcsWritten,
           };
         } else if (finalAction === "approve" || finalAction === "edit") {
@@ -341,7 +342,7 @@ async function run({ userInput, agent }) {
           return {
             status: "ok",
             message:
-              `/create-ac complete. ${allAcsWritten.length} AC(s) approved with priority: ${priority}.`,
+              `/plan-feature complete. ${allAcsWritten.length} AC(s) approved with priority: ${priority}.`,
             acs_approved: allAcsWritten,
             priority,
             route: effectiveRoute,

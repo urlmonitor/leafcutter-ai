@@ -1,26 +1,26 @@
 ---
-name: create-ac
+name: plan-feature
 description: |
   Triage, orchestrate, and gate AC authoring for a user's feature request.
-  Invokes the /create-ac workflow (scripts/workflows/create-ac.js): dispatches
+  Invokes the /plan-feature workflow (scripts/workflows/plan-feature.js): dispatches
   ac-triage to classify the request as strategic / behavioral / technical /
   covered, then routes through the correct authoring agents (PO v3, BA v3,
   IT PO v3) with user confirmation gates between stages. All output goes
   exclusively to the AC store (docs/acceptance-criteria/) — no ticket files
   are produced. The user sets priority at the final gate; the workflow writes
   readiness: approved on approval.
-  Trigger phrases: "create acceptance criteria", "new AC", "author ACs",
-  "write requirements", "/create-ac".
+  Trigger phrases: "plan feature", "new AC", "author ACs",
+  "write requirements", "/plan-feature".
 allowed-tools: Bash, Read, Agent
-workflow_script: scripts/workflows/create-ac.js
+workflow_script: scripts/workflows/plan-feature.js
 ---
 
-# create-ac skill
+# plan-feature skill
 
 ## Purpose
 
-`/create-ac` is the user-facing entry point to the AC authoring pipeline. It
-wraps the `create-ac.js` workflow script, which:
+`/plan-feature` is the user-facing entry point to the AC authoring pipeline. It
+wraps the `plan-feature.js` workflow script, which:
 
 1. **Pre-triages** the user's request via the `ac-triage` agent (Haiku-tier)
    to check for duplicates and classify the routing path.
@@ -33,7 +33,7 @@ wraps the `create-ac.js` workflow script, which:
 ## Invocation
 
 ```
-/create-ac <description> [--component <name>] [--force]
+/plan-feature <description> [--component <name>] [--force]
 ```
 
 | Argument | Required | Description |
@@ -46,16 +46,16 @@ wraps the `create-ac.js` workflow script, which:
 
 ```bash
 # Author ACs for a new analytics dashboard (no existing L1 — strategic route)
-/create-ac "Allow users to export their dashboard as PDF" --component reports
+/plan-feature "Allow users to export their dashboard as PDF" --component reports
 
 # Author ACs for a behavioral addition to existing inventory feature
-/create-ac "Add sub-category filter to inventory list" --component inventory
+/plan-feature "Add sub-category filter to inventory list" --component inventory
 
 # Force-create ACs even though the store has similar entries
-/create-ac "Inventory export as CSV" --component inventory --force
+/plan-feature "Inventory export as CSV" --component inventory --force
 
 # Add a technical constraint to an existing feature
-/create-ac "Inventory API must respond in < 200ms for ≤10,000 items" --component inventory
+/plan-feature "Inventory API must respond in < 200ms for ≤10,000 items" --component inventory
 ```
 
 ## Routing Paths
@@ -114,7 +114,7 @@ via the `emit_event.py` script (non-blocking; failures are ignored).
 ## Related
 
 - `templates/agents/ac-triage.md` — Haiku-pinned triage agent.
-- `scripts/workflows/create-ac.js` — the underlying workflow script.
+- `scripts/workflows/plan-feature.js` — the underlying workflow script.
 - `scripts/ac_store/validate_ac_schema.py` — AC YAML schema validator.
 - `config/ac_schema.json` — JSON Schema for the triage output object.
 - `/build-ac` — downstream command: scanner + ticket generator from existing ACs.
