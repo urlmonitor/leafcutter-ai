@@ -1,7 +1,7 @@
 ---
 epic_name: EPIC-CommitMessagesMatchTheKindOfChange
 created: 2026-06-08
-status: in_progress
+status: done
 components:
   - build-orchestration
 source_ac: BO-1100
