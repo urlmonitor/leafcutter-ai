@@ -208,8 +208,7 @@
                 "brainstorm-worker"
             ],
             "spawned_by": [
-                "ticket-supervisor",
-                "create-ticket"
+                "ticket-supervisor"
             ],
             "is_ticket_phase": false,
             "selection_criteria": null,
@@ -296,7 +295,6 @@
             "spawn_allowlist": [],
             "spawned_by": [
                 "architect-review",
-                "business-analyst",
                 "business-analyst-v3",
                 "python-coder",
                 "documentation-expert",
@@ -360,8 +358,7 @@
                 "architect-review-deep"
             ],
             "spawned_by": [
-                "ticket-supervisor",
-                "create-ticket"
+                "ticket-supervisor"
             ],
             "is_ticket_phase": true,
             "selection_criteria": {
@@ -553,9 +550,7 @@
             "spawn_allowlist": [
                 "research-agent"
             ],
-            "spawned_by": [
-                "business-analyst"
-            ],
+            "spawned_by": [],
             "is_ticket_phase": false,
             "selection_criteria": null,
             "template_path": "templates/agents/test-planner.md",
@@ -2607,7 +2602,6 @@
             "portable": true,
             "domain": null,
             "spawn_allowlist": [
-                "create-ticket",
                 "research-agent"
             ],
             "spawned_by": [

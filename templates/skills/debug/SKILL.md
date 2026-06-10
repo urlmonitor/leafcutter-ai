@@ -3,8 +3,8 @@ name: debug
 description: >-
   Multi-angle debugging workflow. Spawns three parallel investigative agents
   (database, backend, frontend/docs) to diagnose an issue from different
-  perspectives, synthesizes findings, creates a fix ticket via create-ticket
-  agent, and builds it via build-feature. Asks the user for clarification
+  perspectives, synthesizes findings, creates a fix ticket via /create-ticket
+  command, and builds it via build-feature. Asks the user for clarification
   when investigators are uncertain.
 allowed-tools: Bash(git *), Bash(find *), Bash(grep *), Bash(ls *), Read, Agent
 ---
@@ -255,33 +255,28 @@ Wait for the user's response before proceeding.
 ## Step 4 — Create Fix Ticket
 
 Once the diagnosis is confirmed (either by high-confidence agreement or
-user clarification), spawn the `create-ticket` agent:
+user clarification), invoke the `/create-ticket` command to create the fix
+ticket. Pass the following context to `/create-ticket`:
 
-```
-Agent(
-  subagent_type: "create-ticket",
-  description: "Debug: create fix ticket",
-  prompt: "<issue summary and confirmed root cause, consolidated fix plan,
-           files to touch, docs discrepancies to fix>"
-)
-```
-
-Include in the prompt to `create-ticket`:
 - The original issue description
 - The confirmed root cause
 - The specific files that need changes (from the investigation)
 - Any documentation discrepancies that should be fixed in the same ticket
 - The suggested fix approach
-- **AC origin tracking instruction:** "Instruct the BA/wiring step to set
-  `origin_agent: debug` on any AC YAML files created as part of this fix
-  ticket." This ensures compliance auditing can identify debug-workflow-
-  generated ACs (which differ from BA-generated or human-authored ACs).
+- **AC origin tracking instruction:** "Set `origin_agent: debug` on any AC
+  YAML files created as part of this fix ticket." This ensures compliance
+  auditing can identify debug-workflow-generated ACs (which differ from
+  BA-generated or human-authored ACs).
+
+Note: The `create-ticket` agent has been removed. Use the `/create-ticket`
+workflow command (Claude Code >= 2.1.154) or invoke `business-analyst-v3`
+directly on older installs.
 
 ---
 
 ## Step 5 — Build the Ticket
 
-After `create-ticket` returns with the ticket path, invoke `/build-feature`
+After `/create-ticket` returns with the ticket path, invoke `/build-feature`
 to drive it:
 
 ```
