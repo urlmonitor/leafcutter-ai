@@ -17,7 +17,7 @@ criteria: |
     (a list of {source_agent, target_agent, data_fields} triples),
   And the agent_contracts inform L2 Gherkin scenarios that test
     the handoff points between agents (e.g., BA output consumed by IT PO).
-depends_on: [TKT-100a, TKT-100a-1]
+depends_on: [TKT-100i, TKT-100a-1]
 doc_links: []
 assigned_agent: llm-expert
 estimated_complexity: S
@@ -25,7 +25,8 @@ delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-04
-amended_by: []
+amended_by:
+  - reason: "split: TKT-100a -> TKT-100h + TKT-100i, 2026-06-08"
 superseded_by: null
 covered_by: []
 implemented_by: []

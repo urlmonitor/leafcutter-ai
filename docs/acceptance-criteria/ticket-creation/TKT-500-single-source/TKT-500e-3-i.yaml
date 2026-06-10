@@ -1,0 +1,28 @@
+id: TKT-500e-3-i
+readiness: approved
+priority: medium
+title: "Agent spawned for goal-B has no memory leakage from goal-A"
+component: ticket-creation
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given an agent worked on goal-A and was terminated
+  When a new agent is spawned for goal-B
+  Then the new agent has no access to goal-A's conversation context
+  And the new agent cannot reference files modified by goal-A's agent
+  And the worktree isolation ensures a clean starting state
+assigned_agent: llm-expert
+estimated_complexity: S
+depends_on: [TKT-500e-3]
+doc_links: []
+delivers_to: []
+expects_from: []
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+it_requirements: []

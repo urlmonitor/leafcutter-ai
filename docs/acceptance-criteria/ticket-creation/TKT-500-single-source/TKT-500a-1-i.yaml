@@ -1,0 +1,30 @@
+id: TKT-500a-1-i
+readiness: approved
+priority: medium
+title: "Agent fails gracefully when the AC file is missing or unreadable"
+component: ticket-creation
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the ac-supervisor has resolved an AC file path
+  When the dispatched agent attempts to read the file
+  And the file does not exist or is not readable
+  Then the agent returns a structured error (not a stack trace)
+  And the supervisor logs the error and marks the AC as blocked
+  And no partial work is committed
+assigned_agent: python-coder
+estimated_complexity: S
+depends_on: [TKT-500a-1]
+doc_links: []
+delivers_to: []
+expects_from: [TKT-500a-1]
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+it_requirements:
+  - "Error must include the expected path and the specific OS error"

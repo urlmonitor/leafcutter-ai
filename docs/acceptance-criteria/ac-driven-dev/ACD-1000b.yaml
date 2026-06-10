@@ -28,5 +28,5 @@ origin_agent: product-owner-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by: [ACD-1000b-1, ACD-1000b-2, ACD-1000b-3]
 implemented_by: []

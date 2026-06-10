@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given an agent registry entry for "research-agent" with skills_invoked
@@ -25,9 +25,7 @@ criteria: |
      no reference found in template body"
   And both warning directions are checked (template -> registry AND
     registry -> template)
-depends_on:
-  - INF-600g
-  - INF-600a-1
+depends_on: []
 doc_links:
   - path: config/agent_registry.json
     relationship: describes
@@ -50,5 +48,6 @@ origin_agent: BrainCandy
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by: [INF-600g-3-i]
+implemented_by:
+- tickets/00_inbox/TICKET-20260608-INF-600g-3.md

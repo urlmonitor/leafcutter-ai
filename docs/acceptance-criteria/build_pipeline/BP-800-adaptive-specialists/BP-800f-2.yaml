@@ -1,0 +1,42 @@
+id: BP-800f-2
+title: "Document database detected and specialist generated with document-specific best practices"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a project with "mongodb" listed in package.json dependencies
+  And a best-practice knowledge file exists for "mongodb" with paradigm "document"
+  When the technology detector scans the project and the agent generator runs
+  Then a "mongodb-coder" specialist is generated
+  And the specialist includes document-specific best practices: schema design for documents, aggregation pipeline patterns, indexing strategies for document queries, embedding vs referencing decisions
+  And the specialist does NOT include relational patterns or graph traversal patterns
+  And the specialist is dispatched independently from relational or graph specialists
+depends_on:
+  - BP-800f
+  - BP-800a-3
+  - BP-800b-1
+doc_links:
+  - path: docs/architecture/components/adaptive-specialists-generation.md
+    relationship: describes
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must use the paradigm field from the technology manifest to select document-paradigm knowledge content"
+  - "Must verify paradigm isolation — no relational or graph content in the generated specialist"
+  - "Must support detection from both Python (pymongo) and Node.js (mongodb) driver packages"
+  - "Must handle errors gracefully if the document-specific knowledge file is incomplete"
+delivers_to: null
+expects_from:
+  ac_id: BP-800a-3
+  contract: "Database detection result with paradigm classification: {name: 'mongodb', category: 'database', paradigm: 'document', confidence: 'manifest', detection_source: str}"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

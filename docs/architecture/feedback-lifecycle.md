@@ -7,7 +7,7 @@ status: active
 components:
   - build_pipeline
 created: 2026-06-03
-last_updated: 2026-06-03
+last_updated: 2026-06-08 12:30
 related_code:
   - scripts/feedback/submit_feedback.py
   - scripts/feedback/aggregate.py
@@ -165,6 +165,104 @@ Each `feedback.jsonl` entry carries these key fields:
 4. For each unresolved entry, the user chooses: Create Ticket, Dismiss, or Skip.
 5. Resolved entries have `resolved_at` set; skipped entries remain unresolved for the next cycle.
 6. The cycle repeats on the next epic close or on-demand invocation.
+
+---
+
+## Config Resolution — Source Repo and Deployed Layouts (AC INF-100c-2)
+
+When `submit_feedback.py` runs from the leafcutter source tree at
+`leafcutter-ai/scripts/feedback/`, it must find `feedback_categories.yaml` at
+`leafcutter-ai/config/feedback_categories.yaml`. This is the source-repo layout,
+distinct from the deployed-project layout (`.leafcutter/`).
+
+The `_find_config_root()` function achieves this by anchoring to `__file__` and
+returning `Path(__file__).resolve().parents[2] / "config"`. For the source repo:
+
+- Script at `leafcutter-ai/scripts/feedback/submit_feedback.py`
+- `parents[2]` = `leafcutter-ai/`
+- Config found at `leafcutter-ai/config/` ✓
+
+This preserves backward compatibility: the source-repo config layout (`config/`
+adjacent to `scripts/`) is identical to the deployed layout (`.leafcutter/config/`
+adjacent to `.leafcutter/scripts/`), so the same `parents[2]` resolution works
+in both cases.
+
+**Verification:** `unit_tests/feedback/test_submit_feedback_config_resolution.py`
+class `TestConfigRootFromSourceRepoLocation` (AC INF-100c-2).
+
+---
+
+## Config Resolution in Git Worktrees (AC INF-100c-1-i)
+
+When leafcutter is deployed into a project at `<project>/.leafcutter/` and a git
+worktree is created from that project, `submit_feedback.py` must resolve its config
+without walking past `.leafcutter/` into the parent directory.
+
+### How it works
+
+`submit_feedback.py` uses `_find_config_root()` which anchors config resolution to
+the script file's own location via `Path(__file__).resolve().parents[2] / "config"`.
+
+This means:
+
+| Deployment layout | Script location | Config resolved at |
+|---|---|---|
+| Source repo | `leafcutter-ai/scripts/feedback/submit_feedback.py` | `leafcutter-ai/config/` |
+| Deployed project | `<project>/.leafcutter/scripts/feedback/submit_feedback.py` | `<project>/.leafcutter/config/` |
+| Git worktree of deployed project | `<worktree>/.leafcutter/scripts/feedback/submit_feedback.py` | `<worktree>/.leafcutter/config/` |
+
+### Invariant
+
+The config directory is always exactly **two parents above the script file**, regardless of:
+
+- The process working directory (CWD)
+- The presence of `.claude/` markers in the directory tree
+- The existence of a `config/` directory in the worktree's parent
+
+This is enforced by the `_find_config_root()` function (not `_find_project_root()`,
+which searches for `.claude/` and is used only for the JSONL log path).
+
+**Cross-reference:** AC INF-100c-1 (base), AC INF-100c-1-i (worktree scenario),
+`unit_tests/feedback/test_submit_feedback_worktree_resolution.py`.
+
+---
+
+## Missing Config — Actionable Error Messages (AC INF-100c-4)
+
+When `submit_feedback.py` cannot find `feedback_categories.yaml` at the resolved
+config path, the error output is designed to be immediately actionable:
+
+```
+ERROR: Cannot read feedback_categories.yaml.
+  Checked path: /absolute/path/to/config/feedback_categories.yaml
+  OS error: [Errno 2] No such file or directory: '/absolute/path/to/...'
+  To fix: Place feedback_categories.yaml at /absolute/path/to/config/feedback_categories.yaml
+```
+
+### Why this format
+
+The error message labels each piece of information separately:
+
+| Line | Purpose |
+|------|---------|
+| `ERROR: Cannot read feedback_categories.yaml.` | Human-readable headline identifying the file |
+| `Checked path: <absolute-path>` | Labelled absolute path — copy-pasteable for verification |
+| `OS error: <exc>` | Raw OS error for low-level debugging (file permissions, filesystem issues) |
+| `To fix: Place feedback_categories.yaml at <path>` | Explicit remediation command |
+
+This structure satisfies AC INF-100c-4: "the error message includes the full absolute
+path(s) that were checked, and the message is actionable for debugging."
+
+### Contrast with prior format
+
+Before AC INF-100c-4 was implemented, the error was:
+```
+ERROR: Cannot read categories file <path>: [Errno 2] No such file or directory: '<path>'
+```
+The path was present but embedded inside the OSError string, making it hard to distinguish
+from the exception detail. The new format labels the path explicitly.
+
+**Cross-reference:** `unit_tests/feedback/test_submit_feedback_missing_config.py` (AC INF-100c-4).
 
 ---
 

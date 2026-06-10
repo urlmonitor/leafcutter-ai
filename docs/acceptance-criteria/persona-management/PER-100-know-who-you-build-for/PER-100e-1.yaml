@@ -1,0 +1,45 @@
+id: PER-100e-1
+title: "Persona expert agent creates new persona from a user request"
+component: persona-management
+level: L2
+status: superseded_by
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a user provides the request: "Create a persona for a field service engineer who maintains industrial equipment on-site"
+  When the persona expert agent processes the request
+  Then it creates a new directory at docs/personas/field-service-engineer/
+  And writes a persona.yaml file with:
+    - identity.name: "Field Service Engineer"
+    - identity.role: derived from the user's description
+    - identity.archetype: a one-line summary of the persona's core motivation
+    - goals: at least 2 goals inferred from the user's description
+    - frustrations: at least 2 frustrations inferred from the user's description
+    - context: environment and tool constraints inferred from the description
+  And the generated persona.yaml passes the persona validation script
+depends_on:
+  - PER-100e
+  - PER-100a-1
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+  agent: python-coder
+  contract: "A persona-expert agent template that creates persona files from natural-language user input"
+expects_from:
+  ac_id: PER-100a-1
+  contract: "Persona YAML schema and validation script"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by:
+  - PER-100e-1a
+  - PER-100e-1b
+covered_by:
+  - PER-100e-1-i
+implemented_by: []

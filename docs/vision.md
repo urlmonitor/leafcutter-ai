@@ -1,5 +1,6 @@
 ---
 title: "leafcutter-ai Vision"
+description: "Product vision — what leafcutter-ai is, who it serves, and the outcomes it delivers"
 type: cross-cutting
 status: accepted
 created: 2026-05-19
@@ -40,7 +41,7 @@ The following are explicitly out of scope until a future phase decision:
 |-------|-------------|----------------|
 | Config-driven templating | `{{config.*}}` injection compiles portable templates into project-specific agents | One template set serves all adopters; no fork-and-edit pattern |
 | Build-system architecture | `build.py` with phase-based dispatch, compare-before-write, manifest tracking | Deterministic, auditable builds; drift detection via pre-commit hooks |
-| Ticket lifecycle | Structured ticket frontmatter with agent maps, sign-offs, and dependency tracking | Enables fully automated epic-to-PR workflows via supervisor agents |
+| AC-driven delivery | Each acceptance criterion carries its own agent assignments, sign-offs, and work status — the requirement IS the work order | Eliminates drift between specs and execution; supervisors walk the AC hierarchy directly without an intermediate ticket layer |
 | Self-hosting dogfood | leafcutter develops itself using its own agents and skills (ADR-001) | Every UX issue is discovered during development, not after release |
 | Quality gate suite | Pre-commit hooks for build drift, secrets, doc coverage, structural changes | Adopters get guardrails without writing their own hook infrastructure |
 

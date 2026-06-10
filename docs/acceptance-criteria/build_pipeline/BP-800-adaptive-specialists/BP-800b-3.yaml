@@ -1,0 +1,41 @@
+id: BP-800b-3
+title: "Technology with no best-practice file produces a minimal specialist with a warning"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the technology manifest contains an entry for "elixir" with category "language"
+  And no best-practice knowledge file exists for "elixir" in the package knowledge layer
+  When the agent generator processes the manifest
+  Then it produces an agent template for "elixir-coder" with a generic structure (no language-specific best practices)
+  And the template includes a placeholder section noting that best practices are not yet available for this technology
+  And a warning is emitted: "No best-practice knowledge found for elixir — generating minimal specialist"
+  And the build does not fail or skip the technology
+depends_on:
+  - BP-800b
+  - BP-800b-1
+doc_links:
+  - path: docs/architecture/components/adaptive-specialists-generation.md
+    relationship: describes
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must log the warning at WARNING level (not ERROR — this is expected for new/unknown technologies)"
+  - "The minimal template must still be a valid agent template that can be dispatched"
+  - "Must not block or halt the build — graceful degradation to minimal specialist"
+  - "Must include a metadata flag in the generated template indicating it is a minimal/stub specialist"
+delivers_to: null
+expects_from:
+  ac_id: BP-800b-1
+  contract: "Agent generation logic — this edge case tests the fallback path when knowledge lookup returns no result"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

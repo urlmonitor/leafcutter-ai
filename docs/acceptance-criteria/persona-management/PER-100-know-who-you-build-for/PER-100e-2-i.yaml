@@ -1,0 +1,39 @@
+id: PER-100e-2-i
+title: "Persona refinement does not remove existing entries without explicit user confirmation"
+component: persona-management
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given an existing persona at docs/personas/field-service-engineer/persona.yaml with:
+    - goals: ["Minimize equipment downtime", "Complete repairs on first visit", "Maintain accurate service logs"]
+  When the persona expert agent is invoked with: "Replace the goals with just 'Fix things quickly'"
+  Then the agent does NOT immediately overwrite the goals list
+  And the agent presents the proposed change to the user:
+    - "This would remove 3 existing goals and replace them with 1. Confirm? (yes/no)"
+  And only writes the change if the user confirms with "yes"
+  And if the user declines, the original goals list is preserved unchanged
+depends_on:
+  - PER-100e-2
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Must be enforced in the agent template instructions (destructive change detection is an LLM judgment call)"
+  - "Must present a clear diff showing what would be removed before confirming"
+delivers_to: null
+expects_from:
+  ac_id: PER-100e-2
+  contract: "Persona refinement workflow that this edge case constrains"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

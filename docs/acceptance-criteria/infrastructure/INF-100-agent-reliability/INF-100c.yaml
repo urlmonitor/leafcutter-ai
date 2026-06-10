@@ -1,0 +1,30 @@
+id: INF-100c
+readiness: approved
+priority: medium
+title: "Feedback submission resolves its config and validates writers correctly in deployed projects"
+component: infrastructure
+level: L1
+status: active
+criteria: |
+  When an agent submits feedback from a deployed project (via .leafcutter/),
+  the submission succeeds — config files are found at the correct deployed path,
+  and all phase agents are recognized as valid writers.
+depends_on:
+  - INF-100
+doc_links:
+  - path: scripts/feedback/submit_feedback.py
+    relationship: implements
+    status: exists
+  - path: config/feedback_categories.yaml
+    relationship: describes
+    status: exists
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - INF-100c-1
+  - INF-100c-2
+  - INF-100c-3
+  - INF-100c-4
+implemented_by: []

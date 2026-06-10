@@ -1,5 +1,5 @@
 id: BP-100i-3-i
-readiness: draft
+readiness: approved
 priority: high
 title: "Parity check degrades gracefully when the deployed output directory does not exist"
 component: build-pipeline
@@ -24,15 +24,32 @@ doc_links:
   - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100i-3.yaml"
     relationship: parent
     status: exists
+  - path: "docs/build-drift-hook.md"
+    relationship: describes
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "docs/build-pipeline.md"
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Must check for directory existence before attempting to scan; a missing directory must not raise an unhandled exception"
+  - "The informational message about the skipped comparison must go to stderr, not stdout, to avoid polluting clean-pass output"
+  - "Must follow the same graceful-degradation pattern used by check_build_drift.py when .build_manifest.json is absent (warn and skip, do not block)"
 delivers_to: null
 expects_from:
   ac_id: BP-100i-3
-  contract: "The deployment-parity function that this edge case extends with a missing-directory guard"
+  contract: "The deployment-parity function that checks directory existence before scanning, and returns a skip-with-info-message result when the deployed output directory is absent"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - it-po-v3
 superseded_by: null
 covered_by: []
 implemented_by: []

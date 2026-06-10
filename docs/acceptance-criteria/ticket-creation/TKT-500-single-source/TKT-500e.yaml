@@ -1,0 +1,31 @@
+id: TKT-500e
+readiness: approved
+priority: medium
+title: "Within a goal, agents carry forward what they learned"
+component: ticket-creation
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Agents maintain continuity within a goal's scope.
+
+  When an agent completes work on one requirement within a goal, it receives
+  the next requirement without losing context. Files it modified, patterns it
+  learned, and decisions it made carry forward. The agent accumulates
+  understanding across the goal's requirements rather than starting cold each
+  time. Across goal boundaries, agents start fresh — no context leaks between
+  independent goals.
+depends_on: [TKT-500]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: [TKT-500e-1, TKT-500e-2, TKT-500e-3, TKT-500e-4, TKT-500e-5, TKT-500e-6]
+implemented_by: []
+documentation_triggers: [sequence-diagram, component-diagram]

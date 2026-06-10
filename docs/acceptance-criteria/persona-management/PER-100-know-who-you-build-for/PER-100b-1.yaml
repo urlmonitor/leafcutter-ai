@@ -1,0 +1,47 @@
+id: PER-100b-1
+title: "AC YAML schema accepts an optional persona_for field"
+component: persona-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given an AC YAML file with the field persona_for: "field-service-engineer"
+  When the AC schema validator (check_ac_schema.py) runs against the file
+  Then the file passes validation without errors
+  And the persona_for field value is preserved as a string in the parsed output
+
+  Given an AC YAML file with no persona_for field
+  When the AC schema validator runs against the file
+  Then the file passes validation without errors (the field is optional)
+depends_on:
+  - PER-100b
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must add persona_for to config/ac_store_schema.json as type: [string, null] with no additional constraints"
+  - "Must not break validation of existing AC YAML files that lack the field"
+  - "Must complete schema validation of a single AC file in <100ms"
+delivers_to:
+  agent: python-coder
+  contract: "Updated AC YAML JSON Schema at config/ac_store_schema.json that includes persona_for as an optional field of type string or null"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - PER-100b-1-i
+implemented_by: []

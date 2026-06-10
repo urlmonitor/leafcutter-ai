@@ -5,7 +5,7 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_2
 criteria: |
@@ -14,15 +14,26 @@ criteria: |
   For each technology discovered in the project, the build produces a
   specialist agent loaded with behavioral best practices for that ecosystem —
   covering style, testing conventions, idioms, and tooling preferences.
+  Multiple technologies are handled independently, frameworks inherit from
+  their parent language, and unknown technologies get a minimal specialist
+  rather than being skipped.
 depends_on:
   - BP-800
   - BP-800a
 doc_links: []
 origin_agent: product-owner-v3
 created: 2026-06-06
-amended_by: []
+amended_by:
+  - reason: "split: BP-800b -> BP-800b + BP-800g, 2026-06-08 — documentation L2s moved to BP-800g"
 superseded_by: null
-covered_by: []
+covered_by:
+  - BP-800b-1
+  - BP-800b-2
+  - BP-800b-3
+  - BP-800b-4
+  - BP-800b-5
+  - BP-800b-6
+  - BP-800b-7
 implemented_by: []
 documentation_triggers:
   - how-to

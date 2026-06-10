@@ -1,0 +1,29 @@
+id: TKT-500e-3
+readiness: approved
+priority: medium
+title: "Cross-goal boundary forces a fresh agent spawn"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given an agent has been working on ACs within goal-A
+  When work moves to a different L0 goal (goal-B)
+  Then the agent from goal-A is terminated
+  And a new agent is spawned on goal-B's branch/worktree
+  And the new agent has no context from goal-A
+assigned_agent: llm-expert
+estimated_complexity: M
+depends_on: [TKT-500e-1, TKT-500d-4]
+doc_links: []
+delivers_to: []
+expects_from: [TKT-500d-4]
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: [TKT-500e-3-i]
+implemented_by: []
+it_requirements:
+  - "Agent termination must be clean — no dangling processes"

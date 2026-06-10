@@ -49,6 +49,13 @@ DECISION HISTORY:
     chain behaviour: blocked when L2 omits L3, allowed when L2 includes L3, and
     grandparent (L1) does NOT need to list L3.
     (#EPIC-AcParentChildLinkEnforcement/03)
+  - 2026-06-08 [python-coder/ACS-100i-2-i]: Fixed binary-content fail-open bug.
+    UnicodeDecodeError (subclass of ValueError, not OSError) was propagating
+    uncaught from _load_file_yaml and _resolve_parent_file when reading binary
+    .yaml files, crashing the hook instead of failing open. Fixed by widening
+    except OSError to except (OSError, ValueError) in both functions. The
+    _load_file_yaml warning message now includes the exception class name for
+    observability. (AC: ACS-100i-2-i)
 """
 
 from __future__ import annotations
@@ -198,9 +205,9 @@ def _load_file_yaml(file_path: str) -> dict | None:
     path = Path(file_path)
     try:
         content = path.read_text(encoding="utf-8")
-    except OSError as exc:
+    except (OSError, ValueError) as exc:
         print(
-            f"{_HOOK_PREFIX} WARNING: cannot read file {file_path}: {exc}",
+            f"{_HOOK_PREFIX} WARNING: cannot read file {file_path}: {type(exc).__name__}: {exc}",
             file=sys.stderr,
         )
         return None
@@ -281,7 +288,7 @@ def _resolve_parent_file(child_path: str, parent_id: str, project_root: Path | N
     for yaml_file in ac_store_root.rglob("*.yaml"):
         try:
             content = yaml_file.read_text(encoding="utf-8")
-        except OSError:
+        except (OSError, ValueError):
             continue
         data = _load_yaml_safe(content, source_label=str(yaml_file))
         if data is None:

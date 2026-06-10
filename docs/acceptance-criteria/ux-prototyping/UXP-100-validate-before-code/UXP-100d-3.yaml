@@ -1,0 +1,47 @@
+id: UXP-100d-3
+title: "Handoff artifact includes component version references for drift detection"
+component: ux-prototyping
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the approved prototype uses "data-table" from the component library
+    catalog at version "v2" (with sortable columns and pagination),
+  When the handoff artifact is produced,
+  Then each component reference in the artifact includes the catalog version
+    that was used at approval time (e.g. "data-table@v2")
+  And if the component library catalog is updated after approval (e.g.
+    "data-table" moves to "v3" with breaking layout changes), the handoff
+    artifact retains the "v2" reference
+  And the frontend-coder agent can detect the version mismatch and flag it
+    for user review before proceeding
+depends_on:
+  - UXP-100d
+  - UXP-100d-1
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100d.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: planned
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Version references must use the format 'component_name@version' in the handoff artifact"
+  - "Handoff artifact must be immutable after approval — catalog updates do not retroactively change it"
+  - "Version mismatch detection must be possible by comparing artifact versions against current catalog versions"
+delivers_to: null
+expects_from:
+  ac_id: UXP-100d-1
+  contract: "Handoff artifact file with component_versions: dict[component_name, version_string]"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by:
+  - reason: "it-po-v3 enrichment: reassigned frontend-coder -> llm-expert (UX designer agent embeds versions), 2026-06-08"
+superseded_by: null
+covered_by: []
+implemented_by: []

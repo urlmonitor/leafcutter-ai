@@ -1,0 +1,28 @@
+id: TKT-500b-3
+readiness: approved
+priority: medium
+title: "IT-PO tests-after override reverses the sequence"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given an AC has tests_after: true set by the IT-PO
+  When the ac-supervisor selects the first phase agent
+  Then the coder agent is dispatched first
+  And the test-writer is dispatched after the coder signs off
+assigned_agent: python-coder
+estimated_complexity: S
+depends_on: [TKT-500b-1]
+doc_links: []
+delivers_to: []
+expects_from: []
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+it_requirements:
+  - "tests_after must be a boolean YAML field on the AC"

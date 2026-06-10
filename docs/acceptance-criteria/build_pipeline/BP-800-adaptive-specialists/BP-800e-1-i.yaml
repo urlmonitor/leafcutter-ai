@@ -1,0 +1,42 @@
+id: BP-800e-1-i
+title: "Migration failure does not leave the project in an inconsistent state"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a project with the legacy agent layout
+  And the migration process starts but fails partway through (e.g. a knowledge file write fails due to a permission error)
+  When the build detects the migration failure
+  Then it rolls back any partial changes (restores renamed legacy files to their original names)
+  And the project is left in the same state as before the migration attempt
+  And an error is emitted identifying the failure point and the rollback action taken
+  And the next build run re-detects the legacy layout and retries the migration from the beginning
+depends_on:
+  - BP-800e-1
+doc_links:
+  - path: docs/architecture/components/adaptive-specialists-generation.md
+    relationship: describes
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must implement transactional semantics — track all file operations and reverse them on failure"
+  - "Must handle errors gracefully per the project error handling policy during both the migration and the rollback"
+  - "Rollback must restore file contents and names exactly (not just names — content must be preserved)"
+  - "Must log at ERROR level on migration failure with the specific exception and rollback summary"
+  - "Must leave no partial state (no half-renamed files, no incomplete knowledge files)"
+  - "Must ensure the next build cleanly re-detects legacy layout (no stale markers from the failed attempt)"
+delivers_to: null
+expects_from:
+  ac_id: BP-800e-1
+  contract: "Migration trigger and pipeline that this failure-recovery edge case exercises — specifically the file operation sequence that must be reversible"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

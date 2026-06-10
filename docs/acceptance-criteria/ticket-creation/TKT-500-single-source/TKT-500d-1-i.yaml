@@ -1,0 +1,28 @@
+id: TKT-500d-1-i
+readiness: approved
+priority: medium
+title: "Cycle in depends_on among L0 children is detected and rejected"
+component: ticket-creation
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given an L0's children have circular depends_on relationships
+  When the ac-supervisor attempts topological sort
+  Then the cycle is detected before any dispatch
+  And the supervisor halts with a structured error naming the cycle members
+  And no partial work is started
+assigned_agent: python-coder
+estimated_complexity: S
+depends_on: [TKT-500d-1]
+doc_links: []
+delivers_to: []
+expects_from: []
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+it_requirements: []

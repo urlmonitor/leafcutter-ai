@@ -1,0 +1,33 @@
+id: TKT-500a-1
+readiness: approved
+priority: medium
+title: "Supervisor resolves AC file path and passes it to the dispatched agent"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given an AC YAML file exists in the AC store with work_status: todo
+  When the ac-supervisor selects this AC for dispatch
+  Then the supervisor reads the AC's absolute file path from the store
+  And passes that path as the primary input to the dispatched phase agent
+  And the agent receives the path before any work begins
+assigned_agent: python-coder
+estimated_complexity: M
+depends_on: [TKT-500a]
+doc_links:
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: constrains
+delivers_to: [TKT-500a-2, TKT-500b-1]
+expects_from: []
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: [TKT-500a-1-i]
+implemented_by: []
+it_requirements:
+  - "Must respect ADR-006 depth-1 sub-agent constraint"
+  - "AC file path must be absolute, not relative"
+  - "YAML read must use safe loader (no arbitrary code execution)"

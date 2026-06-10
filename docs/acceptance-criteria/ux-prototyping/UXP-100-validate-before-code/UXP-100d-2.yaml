@@ -1,0 +1,50 @@
+id: UXP-100d-2
+title: "Frontend-coder agent consumes the handoff artifact without human translation"
+component: ux-prototyping
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given a handoff artifact exists specifying layout: "navigation-bar: top,
+    sidebar: left with filters, data-table: center" and terminology:
+    "Equipment List" as the page title,
+  When the frontend-coder agent receives a ticket referencing this handoff artifact,
+  Then the agent reads the artifact and produces markup that places the navigation-bar
+    at the top, the sidebar on the left, and the data-table in the center
+  And the agent uses "Equipment List" as the page title in the generated markup
+  And the agent does not require any additional human clarification about layout
+    or terminology to begin implementation
+depends_on:
+  - UXP-100d
+  - UXP-100d-1
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100d.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: planned
+  - path: docs/architecture/adrs/ADR-005-frontend-coder-agent.md
+    relationship: describes
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements:
+  - "Frontend-coder agent template must include a pre-flight step to read the handoff artifact when one is referenced"
+  - "Must produce markup that faithfully reflects the layout, terminology, and hierarchy from the artifact"
+  - "Must not require additional human clarification for information already present in the artifact"
+  - "Must handle the case where a referenced handoff artifact is missing or invalidated (stop-and-ask)"
+delivers_to: null
+expects_from:
+  ac_id: UXP-100d-1
+  contract: "Handoff artifact file: { layout: dict[component_name, position], flow: list[{ step: string, action: string, target: string }], terminology: dict[label_key, label_value], hierarchy: dict[parent, list[child]], component_versions: dict[component_name, version_string] }"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by:
+  - reason: "it-po-v3 enrichment: added it_requirements, doc_links, and refined contract, 2026-06-08"
+superseded_by: null
+covered_by: []
+implemented_by: []

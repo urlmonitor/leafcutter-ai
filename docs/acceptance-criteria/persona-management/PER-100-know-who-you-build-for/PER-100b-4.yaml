@@ -1,0 +1,39 @@
+id: PER-100b-4
+title: "How-to guide for tagging ACs with persona references"
+component: persona-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a user who wants to associate an AC with a specific persona
+  When they consult the how-to guide at docs/how-to/persona-management.md
+  Then the guide includes a section on adding persona_for to AC YAML files with:
+    - The field name and expected value format (kebab-case persona slug)
+    - An example AC YAML snippet showing persona_for in context
+    - Instructions for running the persona orphan scanner to find untagged ACs
+    - Guidance on when to omit persona_for (infrastructure ACs, cross-cutting concerns)
+depends_on:
+  - PER-100b
+  - PER-100b-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Must follow the leafcutter how-to guide format (problem statement, prerequisites, numbered steps, verification)"
+  - "Must reference the orphan scanner script by its actual path"
+delivers_to: null
+expects_from:
+  ac_id: PER-100b-1
+  contract: "Completed persona_for field in config/ac_store_schema.json to document"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

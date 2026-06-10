@@ -4,7 +4,7 @@ priority: medium
 title: "Every feature is broken down into testable, unambiguous behaviors"
 component: ticket-creation
 level: L1
-status: active
+status: superseded_by
 req_status: active
 work_status: todo
 criteria: |
@@ -25,7 +25,15 @@ expects_from:
   contract: "L0 + L1 AC files with customer-facing titles, component assignments"
 origin_agent: BrainCandy
 created: 2026-06-04
-amended_by: []
-superseded_by: null
-covered_by: []
+amended_by:
+  - reason: "split: TKT-100f -> TKT-100j + TKT-100k, 2026-06-08"
+superseded_by: [TKT-100j, TKT-100k]
+covered_by:
+  - TKT-100f-1
+  - TKT-100f-2
+  - TKT-100f-3
+  - TKT-100f-4
+  - TKT-100f-5
+  - TKT-100f-6
+  - TKT-100f-7
 implemented_by: []

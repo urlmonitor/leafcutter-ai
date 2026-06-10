@@ -1,0 +1,27 @@
+id: TKT-500c-4
+readiness: approved
+priority: medium
+title: "Progress is queryable at individual AC granularity"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a user or script queries a single AC by ID
+  When the query executes
+  Then it returns: work_status, assigned agents, and which have signed off
+  And the query reads only the AC's own YAML file — no other file needed
+assigned_agent: python-coder
+estimated_complexity: S
+depends_on: [TKT-500c-2]
+doc_links: []
+delivers_to: []
+expects_from: [TKT-500c-2]
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+it_requirements: []

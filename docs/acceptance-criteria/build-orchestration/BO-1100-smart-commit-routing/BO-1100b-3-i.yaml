@@ -3,7 +3,7 @@ title: "Confirmed mixed commit message indicates the mixed nature"
 component: build-orchestration
 level: L3
 status: active
-readiness: draft
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo
@@ -18,16 +18,22 @@ criteria: |
     by reading the message alone,
   And the message still references the specific files or identifiers from each group.
 depends_on: [BO-1100b-3]
-doc_links: []
+doc_links:
+  - path: templates/agents/commit.md
+    relationship: describes
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: S
+it_requirements:
+  - "The mixed-commit indicator must be machine-parseable for future pattern-learning analysis"
+  - "Must still reference files/identifiers from all groups in the body"
 delivers_to: null
 expects_from:
   ac_id: BO-1100b-3
-  contract: "User confirmation that the mixed commit should proceed"
+  contract: "User confirmation that the mixed commit should proceed, plus the full group-to-files mapping"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by: [it-po-v3]
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -1,0 +1,29 @@
+id: TKT-500b-2
+readiness: approved
+priority: medium
+title: "Coder agent is blocked until test-writer signs off"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given test-writer has been dispatched for a leaf AC
+  And test-writer has not yet signed off
+  When the ac-supervisor evaluates the next agent to dispatch
+  Then no coder agent (python-coder, sql-coder, frontend-coder) is dispatched
+  And the supervisor waits for test-writer sign-off before proceeding
+assigned_agent: python-coder
+estimated_complexity: M
+depends_on: [TKT-500b-1, TKT-500c-2]
+doc_links: []
+delivers_to: []
+expects_from: [TKT-500b-1, TKT-500c-2]
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: [TKT-500b-2-i]
+implemented_by: []
+it_requirements:
+  - "Blocking gate reads signoffs field from AC YAML, not from ticket"

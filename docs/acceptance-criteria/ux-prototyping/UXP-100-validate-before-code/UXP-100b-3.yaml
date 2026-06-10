@@ -1,0 +1,47 @@
+id: UXP-100b-3
+title: "Gap report distinguishes near-matches from entirely new components"
+component: ux-prototyping
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the component library catalog contains "data-table" (tabular display
+    with sortable columns) and the prototype requires a "tree-table" (tabular
+    display with expandable row hierarchy),
+  When the UX designer agent detects the gap,
+  Then the gap report classifies "tree-table" as "near-match: data-table"
+    with an explanation of what extension is needed ("add row-expand capability")
+  And the gap report classifies a completely novel requirement (e.g. "3d-viewer")
+    as "new-component" with no near-match reference
+  And the research request for a near-match includes the base component ID as
+    a starting point for the researcher
+depends_on:
+  - UXP-100b
+  - UXP-100b-1
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100b.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: planned
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Classification must distinguish between 'near-match' (extension of existing component) and 'new-component' (no catalog match)"
+  - "Near-match entries must include the base component ID and a description of the required extension"
+  - "New-component entries must not reference a base component"
+delivers_to: null
+expects_from:
+  ac_id: UXP-100b-1
+  contract: "Structured gap report entries that can be classified as near-match or new-component"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by:
+  - reason: "it-po-v3 enrichment: reassigned frontend-coder -> llm-expert (agent template classification logic), 2026-06-08"
+superseded_by: null
+covered_by: []
+implemented_by: []

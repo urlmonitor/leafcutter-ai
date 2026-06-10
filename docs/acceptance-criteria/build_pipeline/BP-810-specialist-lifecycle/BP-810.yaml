@@ -1,0 +1,30 @@
+id: BP-810
+title: "Specialists stay current and old agents transition without pain"
+component: build-pipeline
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_2
+criteria: |
+  Seamless specialist lifecycle — knowledge grows, legacy agents retire gracefully.
+
+  Once specialists are generated, they do not become stale. Best-practice
+  knowledge improves with every package update, old hardcoded agents are
+  absorbed into the new system without losing any accumulated wisdom, and
+  projects using the previous layout migrate automatically when they upgrade.
+  You never have to manually maintain agent configurations or worry about
+  losing capabilities during the transition.
+depends_on: []
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-800c
+  - BP-800d
+  - BP-800e
+implemented_by: []

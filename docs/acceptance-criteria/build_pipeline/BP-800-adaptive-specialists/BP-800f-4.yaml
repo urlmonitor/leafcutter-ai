@@ -1,0 +1,44 @@
+id: BP-800f-4
+title: "Reference documentation for database paradigm support"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the multi-paradigm database support is implemented (BP-800f-1 through BP-800f-3)
+  When a documentation-expert produces the reference document
+  Then the document covers:
+    - The three supported paradigms (relational, document, graph) and their characteristics
+    - The list of known database drivers and their paradigm mappings
+    - How to add a new database to the known mapping
+    - How the "unclassified" paradigm fallback works
+    - The structure of database-specific best-practice knowledge files
+    - How paradigm influences the generated specialist's content (what sections differ by paradigm)
+  And the document is placed under docs/reference/
+depends_on:
+  - BP-800f
+  - BP-800f-3
+doc_links:
+  - path: docs/architecture/components/adaptive-specialists-generation.md
+    relationship: describes
+    status: planned
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Must follow the existing reference document format and structure in docs/reference/"
+  - "Must include the complete driver-to-paradigm mapping table (copy-paste-ready for contributors)"
+  - "Must include an example of a database-paradigm-specific knowledge file structure"
+  - "Must cross-reference the technology detection how-to (BP-800a-5) for detection behavior"
+delivers_to: null
+expects_from:
+  ac_id: BP-800f-3
+  contract: "Completed multi-paradigm feature with driver mapping and paradigm classification to document"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -3,7 +3,7 @@ title: "Staged files are classified into exactly one routing group per file"
 component: build-orchestration
 level: L2
 status: active
-readiness: draft
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo
@@ -24,17 +24,25 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: templates/commit-guardian/commit_guardian.json
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Must complete classification in <50ms for typical staged sets (up to 100 files)"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must be importable as a standalone Python module for unit testing"
+  - "Must produce deterministic output given the same config and file list"
 delivers_to:
   agent: llm-expert
-  contract: "A file-to-group mapping that the message composer and mixed-change detector consume"
+  contract: "JSON classification result: {matched: bool, groups: [{group: string, files: string[], template: string}], unmatched_files: string[], structural_shape: {dir_pattern: string, extensions: string[]} | null}"
 expects_from:
   ac_id: BO-1100c-1
-  contract: "The parsed routing config with ordered pattern entries"
+  contract: "Parsed routing config as ordered list of entries: [{group: string, path_pattern: string, template: string}, ...]"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by: [it-po-v3]
 superseded_by: null
-covered_by: []
+covered_by: [BO-1100a-1-i]
 implemented_by: []

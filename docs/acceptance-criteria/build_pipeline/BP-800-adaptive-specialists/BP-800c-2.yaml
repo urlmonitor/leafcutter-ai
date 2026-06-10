@@ -1,0 +1,44 @@
+id: BP-800c-2
+title: "Best-practice knowledge files follow a standard structure"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the package knowledge layer directory
+  When a contributor adds a new best-practice file for a technology (e.g. "rust")
+  Then the file must contain the following sections:
+    - metadata header with fields: technology_id, version, category (language/framework/database)
+    - "style" section covering code formatting and naming conventions
+    - "testing" section covering test structure and assertion patterns
+    - "idioms" section covering language-specific patterns and anti-patterns
+    - "tooling" section covering build tools, linters, and formatters
+  And any file missing a required section is rejected by the build with a validation error naming the missing section
+  And the file format is plain text with structured headings (not executable code)
+depends_on:
+  - BP-800c
+doc_links:
+  - path: docs/architecture/components/adaptive-specialists-generation.md
+    relationship: describes
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Validation must run at build time before agent generation (fail-fast on invalid knowledge files)"
+  - "Must validate metadata header fields: technology_id (non-empty str), version (positive int), category (enum: language|framework|database)"
+  - "Must validate section headings are present (case-insensitive heading match)"
+  - "Validation error messages must be actionable — name the file, the missing field/section, and the expected format"
+  - "Must not validate section content (only structure) — content quality is a human concern"
+delivers_to:
+  agent: python-coder
+  contract: "Validation function and schema definition for knowledge files — consumed by BP-800c-1 (version-aware reading) and BP-800d-2 (migration writes)"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

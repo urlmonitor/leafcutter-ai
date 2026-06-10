@@ -44,5 +44,6 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by: [BP-600d-4-i]
+implemented_by:
+- tickets/00_inbox/TICKET-20260608-BP-600d-4.md

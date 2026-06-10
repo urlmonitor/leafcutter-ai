@@ -1,0 +1,29 @@
+id: TKT-500c
+readiness: approved
+priority: medium
+title: "Each requirement tracks its own delivery progress"
+component: ticket-creation
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Sign-offs, agent assignments, and work status live on the requirement itself.
+
+  Every AC carries its own delivery state: which agents are assigned, which
+  have signed off, and what the current work status is. There is no separate
+  wrapper document that must be kept in sync. Progress is visible at the
+  granularity of individual requirements, not at a coarser ticket level.
+depends_on: [TKT-500]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: [TKT-500c-1, TKT-500c-2, TKT-500c-3, TKT-500c-4, TKT-500c-5, TKT-500c-6]
+implemented_by: []
+documentation_triggers: [how-to, state-diagram]

@@ -1,0 +1,51 @@
+id: BP-700a-3
+title: "Project design system overrides embedded principles"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a project has a PROJECT_CONTEXT.md file for the frontend agent
+    containing a design_system key with values:
+    - primary_colour: "#1E40AF"
+    - font_heading: "Roboto Slab"
+    - font_body: "Roboto"
+  When the unified frontend agent is dispatched for a ticket
+  Then the agent uses "#1E40AF" as the primary colour (not the embedded default)
+  And the agent uses "Roboto Slab" for headings (not the embedded suggestion)
+  And the agent applies the embedded principles only for aspects not specified
+    by the project design system (e.g. negative space, interactive states)
+depends_on:
+  - BP-700a
+  - BP-700a-1
+doc_links:
+  - path: templates/agents/frontend-coder.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/frontend-design/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-005-frontend-coder-agent.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "PROJECT_CONTEXT.md design_system values must take strict precedence over embedded defaults"
+  - "Embedded principles must remain active for any aspect not overridden by the project design system"
+  - "Must follow the same precedence rules as the existing frontend-design skill (project context > embedded defaults)"
+delivers_to: null
+expects_from:
+  ac_id: BP-700a-1
+  contract: "Unified template with project-context hook that defers to project design system"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260608-BP-700a-3.md

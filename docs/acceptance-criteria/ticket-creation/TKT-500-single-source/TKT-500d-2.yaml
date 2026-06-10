@@ -1,0 +1,29 @@
+id: TKT-500d-2
+readiness: approved
+priority: medium
+title: "L0 is marked done only when all leaf-level descendants have work_status: done"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given an L0 AC with leaf descendants at various levels
+  When all leaf-level ACs under this L0 have work_status: done
+  Then the L0's own work_status transitions to done
+  And intermediate L1 ACs also transition to done
+  And no L0 is marked done while any leaf is still in_progress or todo
+assigned_agent: python-coder
+estimated_complexity: M
+depends_on: [TKT-500d-1, TKT-500c-3]
+doc_links: []
+delivers_to: []
+expects_from: [TKT-500c-3]
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: [TKT-500d-2-i]
+implemented_by: []
+it_requirements:
+  - "Must handle mixed L1/L2 children — done requires ALL leaves, not just direct children"

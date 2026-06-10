@@ -1,0 +1,37 @@
+id: TKT-100i
+readiness: reviewed
+priority: medium
+title: "The analyst works with incomplete project setup without crashing or guessing"
+component: ticket-creation
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Resilience when project resources are missing or partially configured.
+  If documentation indexes, AC stores, or other context sources are absent,
+  the analyst acknowledges the gap, logs what it cannot verify, and proceeds
+  with available information — never failing silently or fabricating context.
+depends_on: [TKT-100, ACS-100a, ACS-100b]
+doc_links:
+  - path: docs/architecture/components/create-ticket-v2-pipeline.md
+    relationship: constrains
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to:
+  agent: diagram-classifier
+  contract: "AC YAML files in feature subfolder + structured BA payload JSON"
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-08
+amended_by:
+  - reason: "split: TKT-100a -> TKT-100h + TKT-100i, 2026-06-08"
+superseded_by: null
+covered_by:
+  - TKT-100a-4
+  - TKT-100a-5
+  - TKT-100a-6
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Split of existing L1 — no new user-facing behavior introduced."

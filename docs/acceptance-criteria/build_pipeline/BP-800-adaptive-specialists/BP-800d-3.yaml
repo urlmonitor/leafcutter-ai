@@ -1,0 +1,41 @@
+id: BP-800d-3
+title: "All existing legacy language agents are accounted for in the migration"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the legacy agent set includes: python-coder, sql-coder, frontend-coder
+  When the migration process completes
+  Then a best-practice knowledge file exists for each: "python", "sql", "frontend-javascript"
+  And each knowledge file passes the structure validation (metadata, style, testing, idioms, tooling sections)
+  And no legacy agent's behavioral content is lost (each section from the legacy template maps to the corresponding knowledge layer section)
+  And a migration report is produced listing: source template, destination knowledge file, sections transferred
+depends_on:
+  - BP-800d
+  - BP-800d-2
+doc_links:
+  - path: docs/architecture/components/adaptive-specialists-generation.md
+    relationship: describes
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must enumerate all known legacy agents from a manifest (not by scanning the filesystem)"
+  - "Must produce a structured migration report (JSON or YAML) for audit and debugging"
+  - "Must verify content coverage — every non-empty section from the legacy template must map to a knowledge file section"
+  - "Must handle errors gracefully if one legacy agent fails migration (continue with remaining agents)"
+  - "Must complete the full migration set within <30 seconds for the current 3-agent legacy set"
+delivers_to: null
+expects_from:
+  ac_id: BP-800d-2
+  contract: "Migration function that extracts content from a single legacy template and writes a knowledge file — this AC invokes it for each known legacy agent"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

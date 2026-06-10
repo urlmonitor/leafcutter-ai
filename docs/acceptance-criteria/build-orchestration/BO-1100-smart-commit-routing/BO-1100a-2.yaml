@@ -3,7 +3,7 @@ title: "Matched routing group produces its pattern-specific commit subject line"
 component: build-orchestration
 level: L2
 status: active
-readiness: draft
+readiness: approved
 priority: medium
 req_status: active
 work_status: todo
@@ -30,15 +30,23 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: templates/agents/commit.md
+    relationship: describes
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: M
+it_requirements:
+  - "Must enforce 72-character subject line limit per git convention"
+  - "Must never produce a generic subject line when a routing pattern matches"
+  - "Template interpolation must handle variable-length lists gracefully (truncate with ellipsis if list would exceed subject limit)"
+  - "Must preserve the Co-Authored-By trailer convention used by this project"
 delivers_to: null
 expects_from:
   ac_id: BO-1100a-1
-  contract: "File-to-group classification result with all staged files assigned to a single group"
+  contract: "JSON classification result: {matched: true, groups: [{group: string, files: string[], template: string}]} with exactly one group entry"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by: [it-po-v3]
 superseded_by: null
-covered_by: []
+covered_by: [BO-1100a-2-i]
 implemented_by: []

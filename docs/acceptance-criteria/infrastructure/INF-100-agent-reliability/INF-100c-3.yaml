@@ -1,0 +1,36 @@
+id: INF-100c-3
+readiness: approved
+priority: medium
+title: "All phase agents are recognized as valid writers for their categories"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given feedback_categories.yaml defines allowed_writers per category,
+  When the frontend-coder agent submits feedback to the success-pattern category,
+  Then the submission is accepted,
+  And all standard phase agents (python-coder, sql-coder, frontend-coder, llm-expert, test-writer, test-runner, pr-reviewer, commit) are listed in the allowed_writers for categories they interact with.
+depends_on: []
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must include all agents registered as phase agents in agent_registry.json"
+  - "Must not remove any existing allowed_writers entries"
+  - "Changes must be backward-compatible with existing feedback submission calls"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by:
+  - INF-100c-3-i
+implemented_by:
+- tickets/00_inbox/epics/EPIC-Feedbacksubmissionresolvesitsconfigand/TICKET-20260608-INF-100c-3.md

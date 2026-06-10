@@ -1,5 +1,5 @@
 id: BP-100i-2-i
-readiness: draft
+readiness: approved
 priority: high
 title: "Disabled hooks in the legacy manifest still require canonical presence"
 component: build-pipeline
@@ -27,15 +27,31 @@ doc_links:
   - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100i-2.yaml"
     relationship: parent
     status: exists
+  - path: "docs/build-drift-hook.md"
+    relationship: describes
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "docs/build-pipeline.md"
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Must extract hook IDs from the hooks_manifest.hooks[] array regardless of the enabled field value -- both enabled:true and enabled:false entries must be included in the comparison set"
+  - "Error messages for disabled-hook violations must include the enabled state so the developer understands why a disabled hook still requires parity"
 delivers_to: null
 expects_from:
   ac_id: BP-100i-2
-  contract: "The manifest-comparison function that this edge case validates treats disabled hooks the same as enabled ones"
+  contract: "The manifest-comparison function that extracts hook IDs from hooks_manifest.hooks[] in each commit_guardian.json, treating all entries identically regardless of their enabled field value"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - it-po-v3
 superseded_by: null
 covered_by: []
 implemented_by: []

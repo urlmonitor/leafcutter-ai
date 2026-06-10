@@ -1,0 +1,44 @@
+id: PER-100b-3
+title: "Orphan AC report lists ACs with no persona_for value"
+component: persona-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given an AC store containing 5 active AC files:
+    - AC-1 with persona_for: "field-service-engineer"
+    - AC-2 with persona_for: "product-manager"
+    - AC-3 with no persona_for field
+    - AC-4 with persona_for: null
+    - AC-5 with no persona_for field
+  When the persona orphan scanner runs against the AC store
+  Then it reports 3 orphan ACs: AC-3, AC-4, AC-5
+  And the report includes each orphan's ID, title, and component
+  And the report states the total count: "3 ACs have no persona assignment out of 5 total"
+depends_on:
+  - PER-100b
+  - PER-100b-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must complete scanning of the full AC store in <2 seconds for up to 500 AC files"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must treat both absent persona_for field and persona_for: null as orphaned"
+  - "Must output results in a structured format suitable for both human reading and scripted consumption"
+delivers_to: null
+expects_from:
+  ac_id: PER-100b-1
+  contract: "AC schema with persona_for field at config/ac_store_schema.json that the scanner reads"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

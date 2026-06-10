@@ -1,0 +1,49 @@
+id: BP-700c-5
+title: "Reference document catalogues all preserved capabilities"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given BP-700c is implemented (all capabilities preserved)
+  When an adopter looks for documentation on the unified agent
+  Then a reference document exists at docs/reference/ that lists:
+    - Every design principle carried forward from the old frontend-design skill
+    - Every behavioral rule carried forward from the old frontend-coder agent
+    - The webapp-testing integration status (still optional, same detection)
+    - A comparison table: old artifact (source) to new location in unified template
+depends_on:
+  - BP-700c
+  - BP-700c-1
+  - BP-700c-2
+doc_links:
+  - path: templates/agents/frontend-coder.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/frontend-design/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-005-frontend-coder-agent.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - "Must follow the Diataxis reference format (information-oriented, structured tables)"
+  - "The comparison table must be exhaustive -- every rule from both source artifacts must have a row"
+  - "Must be discoverable from docs/INDEX.md after the doc index is regenerated"
+delivers_to: null
+expects_from:
+  ac_id: BP-700c-1
+  contract: "Verified list of all preserved principles and behavioral rules for inclusion in the reference document"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260608-BP-700c-5.md

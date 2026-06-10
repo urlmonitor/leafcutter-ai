@@ -1,0 +1,48 @@
+id: BP-800c-1
+title: "Best-practice files are versioned independently from agent templates"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the package contains a best-practice knowledge file for "python" at version 2
+  And a project previously generated a "python-coder" specialist from version 1
+  When the package is updated to a new release containing version 2 of the python best practices
+  And the build runs again on the same project
+  Then the generated "python-coder" specialist incorporates the version 2 best practices
+  And the version of the best-practice content is recorded in the generated template metadata
+  And the previous version 1 content is fully replaced (not appended)
+depends_on:
+  - BP-800c
+  - BP-800b-1
+doc_links:
+  - path: docs/architecture/components/adaptive-specialists-generation.md
+    relationship: describes
+    status: planned
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Version must be an integer (monotonically increasing) stored in the knowledge file metadata header"
+  - "Must compare current knowledge version against the version recorded in the generated template metadata to detect staleness"
+  - "Must fully regenerate the template when version changes (not patch/merge — clean replacement)"
+  - "Must be idempotent — if versions match, regeneration produces identical output and may be skipped"
+  - "Must handle errors gracefully per the project error handling policy if the knowledge file is unreadable"
+delivers_to:
+  agent: python-coder
+  contract: "Versioned knowledge file at knowledge/<tech>.md with metadata header: {technology_id: str, version: int, category: str} — consumed by the agent generator at build time"
+expects_from:
+  ac_id: BP-800b-1
+  contract: "Agent generator that reads knowledge files and produces templates — this AC adds version-aware regeneration to that generator"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-800c-1-i
+implemented_by: []

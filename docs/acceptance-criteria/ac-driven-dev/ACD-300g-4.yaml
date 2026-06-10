@@ -1,0 +1,54 @@
+id: ACD-300g-4
+readiness: reviewed
+priority: medium
+title: "Cancel or abort does not commit -- draft files remain on disk uncommitted"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the /create-ac workflow has completed a stage and the authoring agent
+    has written AC YAML files to the AC store with readiness: draft,
+  When the user chooses "cancel" at the confirmation gate,
+  Then the workflow does NOT create a git commit for that stage's output,
+  And the draft AC YAML files remain on disk as uncommitted working-tree changes,
+  And the workflow exits with a message listing the uncommitted file paths,
+  And the user can inspect the files, manually commit them, or discard them
+    with a standard git checkout.
+
+  Given the /create-ac workflow has completed stage 1 (PO v3, committed)
+    and stage 2 (BA v3, not yet approved),
+  When the user chooses "cancel" at gate 2,
+  Then the stage 1 commit remains in git history (it was already committed),
+  And only the stage 2 draft files remain uncommitted on disk,
+  And the workflow exit message distinguishes between "committed ACs from
+    prior stages" and "uncommitted draft ACs from the canceled stage".
+depends_on: [ACD-300g]
+doc_links:
+  - path: templates/skills/create-ac/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must not invoke any git commit operation when the user chooses cancel"
+  - "Must preserve all files on disk in their current state after cancel"
+  - "Exit message must clearly distinguish between committed prior-stage ACs and uncommitted current-stage ACs"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

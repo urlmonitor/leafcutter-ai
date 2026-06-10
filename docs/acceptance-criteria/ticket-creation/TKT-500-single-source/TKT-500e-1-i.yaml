@@ -1,0 +1,30 @@
+id: TKT-500e-1-i
+readiness: approved
+priority: medium
+title: "Agent crash mid-goal results in respawn with prior AC summaries injected"
+component: ticket-creation
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a coder agent crashes or is terminated mid-goal
+  When the supervisor detects the failure
+  Then it spawns a new agent for the same goal
+  And the new agent receives summaries of what prior ACs accomplished
+  And the new agent can continue from where the crashed agent left off
+assigned_agent: llm-expert
+estimated_complexity: L
+depends_on: [TKT-500e-1]
+doc_links: []
+delivers_to: []
+expects_from: []
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+it_requirements:
+  - "Crash recovery must read completed AC signoffs to build context summary"
+  - "Summary format must be concise enough to fit agent context window"

@@ -1,0 +1,38 @@
+id: INF-100c-1-i
+readiness: approved
+priority: medium
+title: "Config resolution in a worktree of a deployed project"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a git worktree is created from a deployed project that has .leafcutter/,
+  When submit_feedback.py runs from the worktree's .leafcutter/scripts/feedback/,
+  Then config resolution does not walk past the .leafcutter/ directory into the worktree's parent,
+  And the config is found at the worktree's own .leafcutter/config/feedback_categories.yaml.
+depends_on:
+  - INF-100c-1
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must not walk past the .leafcutter/ boundary when traversing parent directories"
+  - "Must work correctly when the worktree is a symlink or on a different filesystem mount"
+  - "Must follow the project error handling policy for filesystem operations"
+delivers_to: null
+expects_from:
+  ac_id: INF-100c-1
+  contract: "Resolution function that anchors to .leafcutter/ directory without traversing past it"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260608-INF-100c-1-i.md

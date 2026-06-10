@@ -1,0 +1,44 @@
+id: BP-700a-1-i
+title: "Legacy frontend-design skill file is ignored when unified agent is deployed"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a project still has a .claude/skills/frontend-design/SKILL.md file
+    from a previous install
+  And the unified frontend agent template has been deployed by build.py
+  When the unified frontend agent is dispatched for a ticket
+  Then the agent does NOT read .claude/skills/frontend-design/SKILL.md
+  And the agent uses only its embedded design principles
+  And the agent does NOT apply the design principles twice (no duplication
+    from both embedded and external sources)
+depends_on:
+  - BP-700a-1
+doc_links:
+  - path: templates/agents/frontend-coder.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-005-frontend-coder-agent.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The template must contain no instruction to check for or load .claude/skills/frontend-design/SKILL.md"
+  - "Must not contain conditional logic that would load external design principles alongside embedded ones"
+delivers_to: null
+expects_from:
+  ac_id: BP-700a-1
+  contract: "Unified template at templates/agents/frontend-coder.md with no external skill loading instruction"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260608-BP-700a-1-i.md

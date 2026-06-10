@@ -1,0 +1,46 @@
+id: BP-800a-1
+title: "Language detection from file extensions and manifest files"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a project directory containing:
+    - 3 Python files (*.py) in src/
+    - 1 Go module (go.mod at root, 2 *.go files in cmd/)
+    - 1 package.json with "typescript" in devDependencies
+  When the technology detector scans the project at build time
+  Then it reports detected languages: ["python", "go", "typescript"]
+  And each detection includes a confidence indicator ("manifest" for go and typescript, "file-extension" for python)
+  And the scan completes without requiring any user-provided configuration file
+depends_on:
+  - BP-800a
+doc_links:
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: context
+    status: exists
+  - path: docs/architecture/components/adaptive-specialists-detection.md
+    relationship: describes
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must complete scan in <5 seconds for projects with up to 10,000 files"
+  - "Must ignore directories listed in .gitignore (vendor/, node_modules/, .venv/, etc.)"
+  - "Must handle errors gracefully per the project error handling policy when manifest files are unreadable"
+  - "Must produce deterministic output — same project state yields identical detection results"
+  - "Must not require any runtime dependencies beyond the Python standard library and packages already in the leafcutter dependency set"
+delivers_to:
+  agent: python-coder
+  contract: "list[dict] where each entry has: {name: str, category: 'language', confidence: 'manifest'|'file-extension', detection_source: str (file path that triggered detection)}"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-800a-1-i
+implemented_by: []

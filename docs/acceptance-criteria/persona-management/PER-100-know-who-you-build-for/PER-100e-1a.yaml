@@ -1,0 +1,47 @@
+id: PER-100e-1a
+title: "Persona expert agent template orchestrates persona creation from user input"
+component: persona-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a user provides the request: "Create a persona for a field service engineer who maintains industrial equipment on-site"
+  When the persona expert agent processes the request
+  Then it derives persona attributes from the user's description:
+    - identity.name: "Field Service Engineer"
+    - identity.role: derived from the user's description
+    - identity.archetype: a one-line summary of the persona's core motivation
+    - goals: at least 2 goals inferred from the user's description
+    - frustrations: at least 2 frustrations inferred from the user's description
+    - context: environment and tool constraints inferred from the description
+  And it invokes the persona creation script to write the persona.yaml file
+  And the generated persona.yaml passes the persona validation script
+depends_on:
+  - PER-100e
+  - PER-100a-1
+  - PER-100e-1b
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Agent template must follow the leafcutter agent template convention (frontmatter with model, tools, spawn_allowlist)"
+  - "Must be registered in config/agent_registry.json with appropriate spawn rules"
+  - "Must present derived persona attributes to the user for confirmation before writing"
+  - "Must be portable across projects that adopt the persona-management component"
+delivers_to: null
+expects_from:
+  ac_id: PER-100e-1b
+  contract: "Python script at scripts/persona_expert.py that accepts --create --slug <slug> --data <json> and writes persona.yaml to the correct directory"
+origin_agent: it-po-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - PER-100e-1-i
+implemented_by: []

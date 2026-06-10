@@ -5,7 +5,7 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -21,7 +21,12 @@ origin_agent: product-owner-v3
 created: 2026-06-06
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - BP-700a-1
+  - BP-700a-2
+  - BP-700a-3
+  - BP-700a-4
+  - BP-700a-5
 implemented_by: []
 documentation_triggers:
   - how-to

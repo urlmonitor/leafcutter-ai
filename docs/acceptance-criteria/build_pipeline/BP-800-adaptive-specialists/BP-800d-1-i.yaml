@@ -1,0 +1,40 @@
+id: BP-800d-1-i
+title: "Legacy agent with user customizations preserves those customizations"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the legacy "python-coder" agent template has been manually modified by the user (contains custom project-specific rules appended after a "# User Customizations" marker)
+  When the supersession process runs and replaces the legacy template with a generated specialist
+  Then the user customization section is extracted and appended to the generated specialist template
+  And the generated template clearly separates package content from user customizations with a visible marker
+  And the build output warns: "Preserved user customizations from legacy python-coder — review for compatibility"
+  And the user's custom rules continue to be loaded when the specialist is dispatched
+depends_on:
+  - BP-800d-1
+doc_links:
+  - path: docs/architecture/components/adaptive-specialists-generation.md
+    relationship: describes
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must use a well-known marker (e.g. '# User Customizations') to identify the boundary between package and user content"
+  - "Must preserve user content verbatim — no reformatting, no reordering"
+  - "Must log at WARNING level when customizations are preserved (user should review for compatibility)"
+  - "Must handle the case where no marker exists (treat entire legacy file as non-customized — no extraction)"
+  - "Must not corrupt the generated template if user content contains special characters or Markdown headings"
+delivers_to: null
+expects_from:
+  ac_id: BP-800d-1
+  contract: "Supersession logic that this customization-preservation edge case extends — accesses the legacy file before rename"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

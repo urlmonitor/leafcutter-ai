@@ -1,0 +1,33 @@
+id: BP-800g
+title: "Understand how specialist generation works through clear documentation"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_2
+criteria: |
+  Clear guides and diagrams explain the specialist generation pipeline.
+
+  After the generation feature is built, users can learn how to trigger it,
+  verify results, and extend it for new technologies — supported by visual
+  diagrams that show how the components interact over time.
+depends_on:
+  - BP-800
+  - BP-800b
+doc_links: []
+origin_agent: product-owner-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-800b-5
+  - BP-800b-6
+  - BP-800b-7
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - sequence-diagram
+  - component-diagram

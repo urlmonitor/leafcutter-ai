@@ -28,5 +28,9 @@ origin_agent: business-analyst-v3
 created: 2026-06-04
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - BO-100b-1
+  - BO-100b-2
+  - BO-100b-3
+  - BO-100b-4
 implemented_by: []

@@ -21,5 +21,14 @@ amended_by:
   - "split: INF-400g -> INF-400g + INF-400h, 2026-06-05"
   - "split: INF-400 -> INF-400 + INF-700, 2026-06-05 — reparented from INF-400 to INF-700"
 superseded_by: null
-covered_by: []
+covered_by:
+  - INF-400g-1
+  - INF-400g-2
+  - INF-400g-3
+  - INF-400g-4
+  - INF-400g-5
+  - INF-400g-6
+  - INF-400g-7
+  - INF-400g-8
+  - INF-400g-9
 implemented_by: []

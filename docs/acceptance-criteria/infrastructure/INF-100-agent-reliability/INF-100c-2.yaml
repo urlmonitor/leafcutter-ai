@@ -1,0 +1,38 @@
+id: INF-100c-2
+readiness: approved
+priority: medium
+title: "Config resolution works from the source repo location"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given submit_feedback.py is running from the leafcutter source at leafcutter-ai/scripts/feedback/,
+  When the script resolves the path to feedback_categories.yaml,
+  Then it finds the file at leafcutter-ai/config/feedback_categories.yaml,
+  And backward compatibility is preserved.
+depends_on:
+  - INF-100c-1
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must maintain backward compatibility with the source repo layout"
+  - "Must not introduce regressions for the deployed-project path (INF-100c-1)"
+  - "Must follow the project error handling policy for filesystem operations"
+delivers_to: null
+expects_from:
+  ac_id: INF-100c-1
+  contract: "Path resolution function that checks script-relative location first, then falls back to source-repo-relative location"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by:
+  - it-po-v3
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260608-INF-100c-2.md

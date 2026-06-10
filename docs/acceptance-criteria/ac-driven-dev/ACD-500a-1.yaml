@@ -30,5 +30,5 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by: [ACD-500a-1-i, ACD-500a-1-ii]
 implemented_by: []

@@ -1,0 +1,49 @@
+id: UXP-100c-3
+title: "Request-changes feedback produces a revised prototype incorporating the feedback"
+component: ux-prototyping
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the user reviews a prototype and selects "Request changes" with
+    feedback text: "Move the sidebar filters above the data table and
+    remove the card-grid section entirely",
+  When the UX designer agent processes the change request,
+  Then it produces a revised prototype that applies the requested changes:
+    sidebar filters appear above the data table, and the card-grid section
+    is removed
+  And the revised prototype is presented for a new review cycle with the
+    same three decision options (Approve, Reject, Request changes)
+  And the revision history records the original prototype and the change
+    request text for traceability
+depends_on:
+  - UXP-100c
+  - UXP-100c-1
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-100-validate-before-code/UXP-100c.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: planned
+assigned_agent: llm-expert
+estimated_complexity: L
+it_requirements:
+  - "Agent template must accept the previous prototype and the change-request feedback as input"
+  - "Revision history must be maintained for traceability — each revision records the prior prototype state and the feedback that triggered the change"
+  - "Revised prototype must be re-presented through the same approval gate (no shortcut to implementation)"
+  - "Must handle multiple revision cycles without losing history"
+delivers_to: null
+expects_from:
+  ac_id: UXP-100c-1
+  contract: "User decision: { decision: 'request-changes', feedback_text: string }"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by:
+  - reason: "it-po-v3 enrichment: reassigned frontend-coder -> llm-expert (agent template revision behavior), 2026-06-08"
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,27 @@
+id: TKT-500c-3-i
+readiness: approved
+priority: medium
+title: "AC with zero assigned agents cannot reach done status"
+component: ticket-creation
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given an AC has no agents in its assigned_agent field
+  When the ac-supervisor checks the AC's completion state
+  Then the AC is NOT auto-completed
+  And the supervisor raises an error or marks the AC as blocked
+assigned_agent: python-coder
+estimated_complexity: S
+depends_on: [TKT-500c-3]
+doc_links: []
+delivers_to: []
+expects_from: []
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+it_requirements: []

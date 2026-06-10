@@ -1,0 +1,32 @@
+id: TKT-500d-1
+readiness: approved
+priority: medium
+title: "Supervisor discovers L0 children and walks them in dependency order"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given an L0 AC with children that have depends_on relationships
+  When the ac-supervisor begins work on this goal
+  Then it discovers all leaf-level descendants from the AC hierarchy
+  And it dispatches them in topological order respecting depends_on
+  And no child is dispatched before its dependencies have work_status: done
+assigned_agent: python-coder
+estimated_complexity: L
+depends_on: [TKT-500d, TKT-500c-2, TKT-500c-3]
+doc_links:
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: constrains
+delivers_to: [TKT-500e-1]
+expects_from: [TKT-500c-2, TKT-500c-3]
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: [TKT-500d-1-i]
+implemented_by: []
+it_requirements:
+  - "Must implement topological sort with cycle detection"
+  - "Must traverse AC hierarchy recursively to find all leaves"

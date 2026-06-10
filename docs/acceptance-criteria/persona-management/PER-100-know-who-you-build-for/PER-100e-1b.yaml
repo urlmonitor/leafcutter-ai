@@ -1,0 +1,48 @@
+id: PER-100e-1b
+title: "Persona creation script writes validated persona.yaml from structured input"
+component: persona-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given structured persona data as a JSON payload containing identity, goals, frustrations, and context
+  When the persona creation script is invoked with --create --slug "field-service-engineer" --data <json>
+  Then it creates a new directory at docs/personas/field-service-engineer/
+  And writes a persona.yaml file with the provided sections:
+    - identity (name, role, archetype)
+    - goals (primary goals as a list of strings)
+    - frustrations (pain points as a list of strings)
+    - context (environment, tools, constraints)
+  And each section is a top-level YAML key with a non-empty value
+  And the generated persona.yaml passes the persona validation script
+depends_on:
+  - PER-100e
+  - PER-100a-1
+  - PER-100a-3
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must validate the generated file against the persona schema before writing"
+  - "Must return a non-zero exit code if writing fails (directory exists, permission error, schema violation)"
+  - "Must be idempotent — if the directory already exists, reject with an informative error"
+  - "Must accept persona data as a JSON string via --data argument"
+delivers_to:
+  agent: llm-expert
+  contract: "Python script at scripts/persona_expert.py that accepts --create --slug <slug> --data <json> and writes persona.yaml to the correct directory"
+expects_from:
+  ac_id: PER-100a-1
+  contract: "Persona YAML schema definition and validation script"
+origin_agent: it-po-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

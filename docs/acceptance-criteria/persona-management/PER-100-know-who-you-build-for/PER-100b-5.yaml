@@ -1,0 +1,41 @@
+id: PER-100b-5
+title: "Reference doc for persona_for AC field"
+component: persona-management
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a developer or agent that needs to understand the persona_for AC field
+  When they consult docs/reference/ac-schema.md (or the persona schema reference)
+  Then the document includes a row for persona_for with:
+    - field name: persona_for
+    - type: string or null
+    - required: no
+    - description: kebab-case slug of a persona defined under docs/personas/
+    - example: "field-service-engineer"
+  And the document cross-references the persona orphan scanner
+depends_on:
+  - PER-100b
+  - PER-100b-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Must add the persona_for row to the existing field table in docs/reference/ac-schema.md"
+  - "Must follow the existing column format in the reference doc (field, type, required, description, example)"
+delivers_to: null
+expects_from:
+  ac_id: PER-100b-1
+  contract: "Finalized persona_for field spec at config/ac_store_schema.json to document"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

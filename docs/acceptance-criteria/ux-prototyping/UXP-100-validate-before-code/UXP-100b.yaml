@@ -1,5 +1,5 @@
 id: UXP-100b
-readiness: draft
+readiness: approved
 priority: medium
 title: "Know immediately when a new component is needed"
 component: ux-prototyping
@@ -22,6 +22,11 @@ origin_agent: product-owner-v3
 created: 2026-06-06
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - UXP-100b-1
+  - UXP-100b-2
+  - UXP-100b-3
+  - UXP-100b-4
+  - UXP-100b-1-i
 implemented_by: []
 documentation_triggers: [sequence-diagram]

@@ -1,0 +1,47 @@
+id: ACS-100i-2
+title: "Pre-commit hook blocks a child AC whose parent covered_by omits it"
+component: ac-store
+level: L2
+status: active
+readiness: approved
+priority: medium
+req_status: active
+work_status: done
+criteria: |
+  Given the AC store contains a parent file ACS-300h.yaml with covered_by: [],
+  And a new child file ACS-300h-4.yaml is staged for commit
+    with id: ACS-300h-4 and depends_on: [ACS-300h],
+  When the pre-commit validation hook runs on the staged files,
+  Then the commit is blocked,
+  And the error message names the child AC ID ("ACS-300h-4"),
+  And the error message names the parent AC ID ("ACS-300h"),
+  And the error message states that the parent's covered_by field
+    must include "ACS-300h-4",
+  And the error message includes the file path of the parent AC.
+
+  And given the parent file ACS-300h.yaml is then updated so that
+    covered_by includes "ACS-300h-4" and both files are staged,
+  When the pre-commit validation hook runs again,
+  Then the commit is allowed to proceed (no error for this check).
+depends_on: [ACS-100i]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: ACS-100i-1
+  contract: "Parent ID derivation function used to determine expected parent"
+origin_agent: BrainCandy
+created: 2026-06-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-100i-2-i
+implemented_by:
+  - "scripts/commit_guardian/check_ac_parent_covered_by.py"
