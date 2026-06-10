@@ -4,7 +4,7 @@ description: "Field-by-field reference for AC YAML files, the hierarchical ID fo
 type: reference
 status: active
 created: 2026-06-04
-last_updated: 2026-06-08
+last_updated: 2026-06-10
 components:
   - build_pipeline
 related_docs:
@@ -38,7 +38,7 @@ Each AC file is a single YAML document with the following fields.
 | `amended_by` | list of strings | no | Ticket paths that subsequently amended this criterion. Default: `[]`. |
 | `covered_by` | list of strings | no | Test file paths (optionally with `::test_function`) that verify this criterion. Default: `[]`. |
 | `implemented_by` | list of strings | no | Source file paths (optionally with `#anchor`) that implement this criterion. Default: `[]`. |
-| `origin_agent` | string | no | Identity of the agent or workflow that created this AC file. Common values: `business-analyst`, `debug`, `human`, `ticket-wiring`. |
+| `origin_agent` | string | no | Identity of the agent or workflow that created this AC file. Free-form provenance string — any non-empty value is valid. Common values: `business-analyst`, `business-analyst-v2`, `business-analyst-v3`, `debug`, `human`, `ticket-wiring`. Historical agent names (e.g. `business-analyst-v2` from now-deleted agents) remain valid and are never rewritten. |
 
 ### Full example
 

@@ -280,5 +280,55 @@ class TestOriginAgentEmptyStringBlocked(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
 
 
+class TestOriginAgentHistoricalValuePasses(unittest.TestCase):
+    """AC YAML with a historical origin_agent value (e.g. business-analyst-v2)
+    should pass validation — origin_agent is a free-form provenance string and
+    must NOT be validated against the current agent registry (ACD-1100f-1).
+    """
+
+    def test_origin_agent_historical_value_passes(self) -> None:
+        # covers: ACD-1100f-1
+        """A YAML file with origin_agent: business-analyst-v2 exits 0.
+
+        business-analyst-v2 is a now-deleted agent whose name appears in
+        historical AC files. The schema accepts any non-empty string for
+        origin_agent; registry membership is irrelevant.
+        """
+        content = textwrap.dedent("""\
+            id: FIN-001
+            title: "Historical origin agent"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+            origin_agent: "business-analyst-v2"
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-001.yaml", content)
+            result = _run_hook(root)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                f"origin_agent: business-analyst-v2 should be accepted as a valid "
+                f"historical provenance string. Stderr: {result.stderr}"
+            ),
+        )
+        self.assertEqual(
+            result.stderr,
+            "",
+            msg=(
+                "No error or warning should be emitted for a historical "
+                f"origin_agent value. Stderr: {result.stderr}"
+            ),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
