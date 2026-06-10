@@ -64,7 +64,7 @@ ambiguous, ask the user to clarify before starting Phase 0.
 
 ## Phase 0 — Guards
 
-Run all three guards before any other action. Halt on any failure.
+Run all guards before any other action. Halt on any failure.
 
 ### Guard BP-600a-1 — Worktree invariant
 
@@ -81,6 +81,21 @@ verify the branch has not changed. If it has, halt immediately:
 Halt: branch changed from '<INITIAL_BRANCH>' to '<current>' during quick-fix.
 This is a bug — quick-fix must never switch branches.
 ```
+
+### Guard BP-600f — Main-branch confirmation
+
+If `INITIAL_BRANCH` is `main` or `master`, warn the user and ask for
+explicit confirmation before proceeding:
+
+```
+Warning: you are on '<INITIAL_BRANCH>'. /quick-fix will commit the AC,
+test, and fix directly to this branch — there is no PR review gate.
+
+Continue? (yes / no)
+```
+
+On "yes": proceed to Guard BP-600a-2.
+On "no": halt cleanly with no changes.
 
 ### Guard BP-600a-2 — No isolation
 

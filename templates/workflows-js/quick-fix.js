@@ -136,10 +136,10 @@ const guardResult = await agent(
    If yes: set target_file_dirty=true and list all dirty files in dirty_files[].
    If no: set target_file_dirty=false and dirty_files=[].
 
-3. Verify this is NOT the main/master branch (initial_branch must not be "main" or "master").
+3. Check if initial_branch is "main" or "master". If yes, set is_default_branch=true.
 
-Return status:"ok" if target_file is clean and branch is not main/master.
-Return status:"blocked" with a message if any check fails.
+Return status:"ok" if target_file is clean (regardless of branch name).
+Return status:"blocked" with a message only if target_file is dirty.
 
 IMPORTANT: Do NOT invoke worktree-agent, feature skill, or git worktree add.`,
   { label: 'guard-checks', phase: 'Guards', schema: GUARD_SCHEMA }
@@ -155,7 +155,30 @@ if (!guardResult || guardResult.status === 'blocked') {
 }
 
 const initialBranch = guardResult.initial_branch
-log(`Guards passed. Branch: ${initialBranch}, target file clean.`)
+const isDefaultBranch = initialBranch === 'main' || initialBranch === 'master'
+
+if (isDefaultBranch) {
+  const confirmResult = await agent(
+    `WARNING: You are on the "${initialBranch}" branch. /quick-fix will commit directly to ${initialBranch} — there is no PR review gate.
+
+Ask the user to confirm: "You are on ${initialBranch}. /quick-fix will commit the AC, test, and fix directly to this branch. Continue? (yes/no)"
+
+If the user says yes/confirm/continue, return status:"ok".
+If the user says no/cancel/abort, return status:"blocked" with message "User declined main-branch quick-fix."`,
+    { label: 'main-branch-confirm', phase: 'Guards', schema: GUARD_SCHEMA }
+  )
+
+  if (!confirmResult || confirmResult.status === 'blocked') {
+    return {
+      status: 'blocked',
+      phase: 'Guards',
+      message: confirmResult ? confirmResult.message : 'User declined main-branch quick-fix.',
+      halt_reason: 'user_declined_main',
+    }
+  }
+}
+
+log(`Guards passed. Branch: ${initialBranch}${isDefaultBranch ? ' (confirmed by user)' : ''}, target file clean.`)
 
 // ---------------------------------------------------------------------------
 // Phase 1 — AC Creation
