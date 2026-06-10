@@ -1,0 +1,31 @@
+id: BP-100j
+readiness: reviewed
+priority: medium
+title: "Workflows land in the right place after every build"
+component: build-pipeline
+level: L1
+status: active
+criteria: |
+  Build outputs are placed, mapped, cleaned, and fingerprinted automatically.
+
+  When the build system compiles workflow scripts, each file is symlinked to
+  its discovery path, tracked by source-to-destination mappings, cleaned of
+  stale predecessors, and fingerprinted for future drift detection — all
+  without manual intervention.
+depends_on:
+  - BP-100
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-06-08
+amended_by:
+  - "split: BP-100b -> BP-100j + BP-100k + BP-100l, 2026-06-08"
+superseded_by: null
+covered_by:
+  - BP-100b-1
+  - BP-100b-2
+  - BP-100b-3
+  - BP-100b-4
+implemented_by:
+  - scripts/build_helpers.py
+  - scripts/build_phases.py
+  - scripts/build.py

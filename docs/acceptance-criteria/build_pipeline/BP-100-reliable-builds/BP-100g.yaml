@@ -14,7 +14,7 @@ criteria: |
   target. Authoring errors surface at build time — not at invocation time
   during an epic drive when a confusing parse failure derails the workflow.
 depends_on:
-  - BP-100
+  - BP-101
 doc_links: []
 origin_agent: product-owner-v3
 created: 2026-06-05

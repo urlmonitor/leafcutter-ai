@@ -504,13 +504,15 @@ def _dfs_collect_leaves(
     if record is None:
         return
 
+    level: str = record.get("level", "")
     children: list[str] = record.get("covered_by") or []
-    if not children:
-        # Leaf — no covered_by children (empty list or absent field)
-        result.append(node_id)
-        return
 
-    # Visit children in alphabetical order for deterministic depth-first output
+    # L2 and L3 are always leaves — emit them regardless of covered_by.
+    # L0/L1 nodes are composites and must never be emitted as leaves.
+    if level in _LEAF_LEVELS:
+        result.append(node_id)
+
+    # Recurse into covered_by children for any level that has them.
     for child_id in sorted(children):
         _dfs_collect_leaves(child_id, id_index, result)
 
@@ -736,5 +738,14 @@ DECISION HISTORY
   derive the parent ID. Root IDs (PREFIX-NNN) return None. Level-1 IDs
   (PREFIX-NNNx) return PREFIX-NNN. Deeper IDs strip the last hyphen-
   delimited segment. Uses two compiled regexes plus rsplit for O(1).
+- 2026-06-08 [TICKET-20260608-ACD-1200a-9]: Fixed _dfs_collect_leaves().
+  Replaced `if not children: result.append(node_id)` (covered_by-based
+  leaf detection) with `if level in _LEAF_LEVELS: result.append(node_id)`
+  (level-based leaf detection). L2/L3 nodes are now always emitted as
+  leaves regardless of whether they have covered_by children. L0/L1 nodes
+  are now correctly treated as pure composites and never emitted. Recursion
+  into covered_by children is preserved for all levels. Fixes the bug where
+  an L2 with L3 edge-case children was silently skipped, and where L0/L1
+  nodes with empty covered_by were incorrectly emitted as leaves.
 ====================================================================
 """

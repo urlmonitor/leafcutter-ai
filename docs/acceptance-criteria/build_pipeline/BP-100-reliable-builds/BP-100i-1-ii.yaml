@@ -1,5 +1,5 @@
 id: BP-100i-1-ii
-readiness: reviewed
+readiness: approved
 priority: high
 title: "Non-hook utility files (e.g. __init__.py, README.md) are excluded from script parity checks"
 component: build-pipeline
