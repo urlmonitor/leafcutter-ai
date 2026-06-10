@@ -269,7 +269,7 @@ ticket. Pass the following context to `/create-ticket`:
   BA-generated or human-authored ACs).
 
 Note: The `create-ticket` agent has been removed. Use the `/create-ticket`
-workflow command (Claude Code >= 2.1.154) or invoke `business-analyst-v3`
+workflow command (Claude Code >= 2.1.154) or invoke `business-analyst`
 directly on older installs.
 
 ---

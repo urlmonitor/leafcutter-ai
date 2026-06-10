@@ -1,8 +1,8 @@
 """
 MODULE: check_ac_governance
 GOAL: Pre-commit hook that write-locks requirement-defining fields in AC YAML
-    files to authorized agents only (product-owner-v3, business-analyst-v3,
-    it-po-v3, and human users), blocking implementation agents from silently
+    files to authorized agents only (product-owner, business-analyst,
+    it-po, and human users), blocking implementation agents from silently
     rewriting acceptance criteria.
 BUSINESS CONTEXT: The AC store is the authoritative definition of "done". If an
     implementation agent can rewrite `criteria` without detection, the team loses
@@ -70,7 +70,7 @@ _OPEN_FIELDS: frozenset[str] = frozenset(
 """Fields that any agent may modify freely (ACS-400b-1, ACS-400b-2)."""
 
 _AUTHORIZED_AGENTS: frozenset[str] = frozenset(
-    {"product-owner-v3", "business-analyst-v3", "it-po-v3"}
+    {"product-owner", "business-analyst", "it-po"}
 )
 """Requirement-authoring agents authorized to write protected fields.
 Human users (any identity not found in agent_registry.json) are also authorized.
@@ -132,7 +132,7 @@ def _is_authorized(agent_id: str, registry_path: str | None = None) -> bool:
     """Return True if agent_id is permitted to modify protected fields.
 
     Authorization rules (ACS-400a-3-i):
-    - Explicitly authorized agents: product-owner-v3, business-analyst-v3, it-po-v3.
+    - Explicitly authorized agents: product-owner, business-analyst, it-po.
     - Human users: any identity NOT present in agent_registry.json.
     - All other known agents: NOT authorized.
 
@@ -618,7 +618,8 @@ def main() -> int:
     """
     # Diagnostic counter for test introspection (AC-13: staged-files-only scope)
     if os.environ.get("HOOK_SIMULATE_EXCEPTION"):
-        raise RuntimeError("HOOK_SIMULATE_EXCEPTION: forced exception for testing")
+        _msg = "HOOK_SIMULATE_EXCEPTION: forced exception for testing"
+        raise RuntimeError(_msg)
 
     # Discover AC store directory (early exit if absent — ACS-400d-2-i)
     project_root = _find_project_root()
