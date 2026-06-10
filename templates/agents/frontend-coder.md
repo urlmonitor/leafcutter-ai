@@ -209,12 +209,119 @@ Apply all embedded principles below without modification.
 
 ---
 
-### Layout and spacing
-- Prefer CSS custom properties (`--spacing-sm`, `--color-primary`, etc.) over
-  hard-coded pixel values. Define them in `:root` or the component's style block.
-- Use CSS Grid or Flexbox for layout. Avoid absolute positioning unless the
-  design explicitly requires an overlay or a tooltip.
-- Target WCAG 2.1 AA contrast ratios (4.5:1 for normal text, 3:1 for large text).
+### Principle 1 — Custom font pairing, not the browser default
+
+Do NOT use `font-family: sans-serif` or `font-family: system-ui` without
+specifying a preferred font. Always define a clear type hierarchy:
+
+```css
+/* Example: pick a Google Font pair with personality */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500&display=swap');
+
+body { font-family: 'Inter', system-ui, sans-serif; }
+h1, h2, h3 { font-family: 'Playfair Display', Georgia, serif; }
+```
+
+The headline font should have a different visual weight or character from the
+body font. Avoid using the same font family for both.
+
+Unless the project design system specifies fonts via `font_heading` / `font_body`
+(see Project Design System Override above) — if those keys are present, use them.
+
+### Principle 2 — A primary colour with deliberate personality
+
+Do NOT default to `#3B82F6` (Tailwind `blue-500`) unless it is the project's
+documented brand colour. Choose a primary colour that conveys the product's
+character:
+
+- A financial dashboard might use deep teal (`#0D9488`) for trust and precision.
+- A creative tool might use warm amber (`#D97706`) for energy.
+- A data-heavy tool might use slate blue (`#475569`) for authority.
+
+State the chosen primary colour and its rationale in a comment at the top of
+the stylesheet or in the component file:
+
+```css
+/* Primary: #0D9488 (deep teal) — chosen for trust and precision in a financial context */
+```
+
+Unless the project design system specifies `primary_colour` — if that key is
+present, use it without modification (see Project Design System Override above).
+
+### Principle 3 — Intentional negative space
+
+Do NOT pack every available pixel with content. White space (or dark space in
+dark-theme UIs) is an active design choice — it gives the eye a place to rest
+and signals hierarchy.
+
+Rules:
+- Heading-to-body margin should be at least 0.5em above and below.
+- Card padding should be at least 1.5rem on all sides; do not use less than 1rem.
+- Between major sections, use a `gap` or `margin` of at least 2rem.
+- Do NOT use `p-2` as the default card padding in Tailwind (that's 8px — too tight).
+
+Prefer CSS custom properties (`--spacing-sm`, `--color-primary`, etc.) over
+hard-coded pixel values. Define them in `:root` or the component's style block.
+Use CSS Grid or Flexbox for layout. Avoid absolute positioning unless the design
+explicitly requires an overlay or a tooltip.
+
+Target WCAG 2.1 AA contrast ratios (4.5:1 for normal text, 3:1 for large text).
+
+### Principle 4 — Deliberate interactive states
+
+Every interactive element (button, link, input, card-with-click) MUST have
+explicit `:hover`, `:focus`, and `:active` styles. Do NOT rely on browser defaults.
+
+```css
+/* Bad: browser default outline only */
+button:focus { outline: auto; }
+
+/* Good: deliberate, visible, on-brand focus ring */
+button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+```
+
+If using Tailwind, use `focus-visible:ring-2 focus-visible:ring-teal-500` (or
+your primary colour). Every interactive element must be keyboard-reachable and
+have a visible focus indicator. Images require an `alt` attribute; decorative
+images use `alt=""`. Form inputs require an associated `<label>` (explicit
+`for=`/`htmlFor` or wrapping label pattern).
+
+### Principle 5 — Component-level personality through detail
+
+Small details make a design feel finished. Apply at least one of the following
+per component:
+
+- A subtle border-radius that is either clearly sharp (0px, 2px) or clearly
+  rounded (12px+). Avoid the default 4px generic rounding.
+- A carefully chosen icon size (20px for inline, 24px for standalone) — do not
+  mix sizes randomly.
+- A micro-animation on state change (200ms ease-out transform or opacity), not
+  a jarring instant switch.
+- A deliberate text-transform choice (uppercase tracking for labels, not for
+  body).
+
+Example of a "finished" button vs a generic one:
+
+```css
+/* Generic */
+.btn { background: #3B82F6; color: white; padding: 8px 16px; border-radius: 4px; }
+
+/* Finished */
+.btn {
+  background: var(--color-primary);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: background 180ms ease-out, transform 120ms ease-out;
+}
+.btn:hover { background: var(--color-primary-dark); transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+```
 
 ### Component structure
 - One component per file. No anonymous default exports — name every component.
@@ -223,17 +330,47 @@ Apply all embedded principles below without modification.
 - Side effects (data fetching, subscriptions) belong in lifecycle hooks or
   custom hooks, not in render functions.
 
-### Accessibility
-- Every interactive element must be keyboard-reachable and have a visible focus
-  indicator.
-- Images require an `alt` attribute; decorative images use `alt=""`.
-- Form inputs require an associated `<label>` (explicit `for=`/`htmlFor` or
-  wrapping label pattern).
-
 ### Performance
 - Lazy-load routes and heavy components (`React.lazy` / dynamic import).
 - Avoid inline function definitions in JSX attributes that cause unnecessary
   re-renders — hoist or memoize where the diff shows a real render cost.
+
+### Pre-Write Checklist (run before producing any markup, CSS, or component output)
+
+Before writing any markup, CSS, or component output, answer each question in
+your reasoning or in a comment:
+
+1. **Font pairing**: have I specified a custom font pair, or am I using the
+   browser default?
+2. **Primary colour**: have I chosen a primary colour with a stated rationale,
+   or did I default to Tailwind blue?
+3. **Negative space**: does the layout have deliberate breathing room, or did
+   I pack every available pixel?
+4. **Interactive states**: do all clickable/focusable elements have `:hover`,
+   `:focus-visible`, and `:active` styles?
+5. **Component detail**: does each component have at least one deliberate
+   design detail that sets it apart from a scaffold default?
+6. **Distinctiveness**: if you imagine 100 other AI-generated UIs, would this
+   one look different? If not, what can you change?
+
+Do not produce output until all 6 questions have an answer you are satisfied with.
+
+### Design Principles Constraints
+
+- These principles are **advisory** — they guide judgment, not algorithmic
+  rules. Use judgment to apply them appropriately to the specific component
+  or page.
+- These principles are **platform-agnostic**: they apply to React, Vue,
+  Svelte, and plain HTML/CSS equally. Do not assume a specific framework.
+- If the project design system specifies a value that conflicts with a
+  principle here (e.g. the brand is deliberately the default Tailwind blue),
+  **defer to the project design system**. These principles are defaults, not
+  overrides.
+- Do NOT import CSS frameworks or fonts that the project does not already use.
+  If the project uses Tailwind, express these principles through Tailwind
+  utilities. If it uses plain CSS, write plain CSS. Check the project's
+  `package.json` or existing stylesheets to determine what is in use before
+  importing anything new.
 
 ## Optional-Skill Integration
 
