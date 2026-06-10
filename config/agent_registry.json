@@ -295,7 +295,7 @@
             "spawn_allowlist": [],
             "spawned_by": [
                 "architect-review",
-                "business-analyst-v3",
+                "business-analyst",
                 "python-coder",
                 "documentation-expert",
                 "reference-author",
@@ -2852,8 +2852,8 @@
             "produces": "prompt"
         },
         {
-            "id": "product-owner-v3",
-            "name": "Product Owner V3",
+            "id": "product-owner",
+            "name": "Product Owner",
             "tier": "utility",
             "role": "analysis",
             "portable": true,
@@ -2862,7 +2862,7 @@
             "spawned_by": [],
             "is_ticket_phase": false,
             "selection_criteria": null,
-            "template_path": "templates/agents/product-owner-v3.md",
+            "template_path": "templates/agents/product-owner.md",
             "model": "opus",
             "skills_used": [
                 "knowledge-query"
@@ -2900,8 +2900,8 @@
             "produces": "analysis"
         },
         {
-            "id": "business-analyst-v3",
-            "name": "Business Analyst V3",
+            "id": "business-analyst",
+            "name": "Business Analyst",
             "tier": "utility",
             "role": "analysis",
             "portable": true,
@@ -2912,7 +2912,7 @@
             "spawned_by": [],
             "is_ticket_phase": false,
             "selection_criteria": null,
-            "template_path": "templates/agents/business-analyst-v3.md",
+            "template_path": "templates/agents/business-analyst.md",
             "model": "opus",
             "skills_used": [
                 "knowledge-query"
@@ -2941,8 +2941,8 @@
             "produces": "analysis"
         },
         {
-            "id": "it-po-v3",
-            "name": "IT Product Owner V3",
+            "id": "it-po",
+            "name": "IT Product Owner",
             "tier": "utility",
             "role": "analysis",
             "portable": true,
@@ -2951,7 +2951,7 @@
             "spawned_by": [],
             "is_ticket_phase": false,
             "selection_criteria": null,
-            "template_path": "templates/agents/it-po-v3.md",
+            "template_path": "templates/agents/it-po.md",
             "model": "opus",
             "skills_used": [
                 "knowledge-query"

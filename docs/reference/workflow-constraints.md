@@ -55,7 +55,7 @@ echo "$CLAUDE_CODE_VERSION"
 | `/build-ticket` (drive a ticket) | Spawns `ticket-supervisor` agent | Runs `build-ticket.js` — all phase agents at depth 1 |
 | `/build-epic` (drive an epic) | Spawns `epic-supervisor` agent (deprecated) | Runs `build-epic.js` — all tickets in parallel batches |
 | `/create-ticket` | Legacy BA/refinement agents removed — use workflow path | Runs `create-ticket.js` — flat sequential/parallel dispatch |
-| `/plan-feature` (AC authoring pipeline) | Spawns `ac-triage` → authoring agents chain | Runs `plan-feature.js` — triage → PO v3/BA v3/IT PO v3 with user gates |
+| `/plan-feature` (AC authoring pipeline) | Spawns `ac-triage` → authoring agents chain | Runs `plan-feature.js` — triage → `product-owner`/`business-analyst`/`it-po` with user gates |
 | Permission prompts | Standard per-command prompts | Reduced via `allowedTools` allowlist in `settings.json` |
 | Mid-run user steering | Available (agent responds to chat) | Only at `prompt()` checkpoints |
 
@@ -180,11 +180,11 @@ as spawn targets:
 |---|---|
 | `create-ticket` | `/create-ticket` workflow command (`create-ticket.js`) |
 | `create-ticket-v2` | `/create-ticket` workflow command (`create-ticket.js`) |
-| `business-analyst` | `business-analyst-v3` |
-| `business-analyst-v2` | `business-analyst-v3` |
+| `business-analyst` (v1) | `business-analyst` (canonical, promoted from v3) |
+| `business-analyst-v2` | `business-analyst` (canonical, promoted from v3) |
 | `create-epic` | `/plan-feature` workflow command (`plan-feature.js`) |
 | `refinement` | Inlined into `create-ticket.js` workflow |
-| `it-po` (v1/v2) | `it-po-v3` |
+| `it-po` (v1/v2) | `it-po` (canonical, promoted from v3) |
 
 These IDs must not appear as `subagent_type`, `agentType`, `spawn_allowlist`,
 or `spawned_by` values in any file under `templates/skills/`, `templates/commands/`,
