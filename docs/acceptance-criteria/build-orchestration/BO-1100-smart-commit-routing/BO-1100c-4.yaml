@@ -1,0 +1,52 @@
+id: BO-1100c-4
+title: "Pattern config reflects the current file contents on every classification invocation"
+component: build-orchestration
+level: L2
+status: active
+readiness: reviewed
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the routing config file contains 5 entries (tickets, new-acs, shipped-acs,
+    implementation, status-changes),
+  And the classifier has already been invoked once (loading those 5 entries),
+  And after that first invocation, a user edits the config file to add a 6th entry:
+    - group: "architecture-docs"
+    - path_pattern: "docs/architecture/**"
+    - template: "docs(architecture): {summary}"
+  When the classifier is invoked a second time within the same process,
+  Then the classifier uses 6 entries (including the newly added "architecture-docs"),
+  And a staged file "docs/architecture/components/new.md" matches the new entry,
+  And the classifier does NOT use stale patterns from the first invocation.
+
+  Given the routing config file has been deleted or renamed between invocations,
+  When the classifier is invoked,
+  Then the classifier reports that the config file is missing,
+  And the classifier does NOT silently fall back to previously cached patterns.
+depends_on: [BO-1100c, BO-1100c-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-1100-smart-commit-routing/BO-1100c-1.yaml
+    relationship: constrains
+    status: exists
+  - path: docs/agents/git/commit.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must not introduce measurable latency for typical config file sizes (< 100 entries)"
+  - "Must handle the config-file-missing case gracefully per the project error handling policy"
+  - "Must not hold file handles open between invocations"
+delivers_to:
+  agent: python-coder
+  contract: "On each invocation, the classifier reads the config file from disk rather than relying on a module-level cache"
+expects_from:
+  ac_id: BO-1100c-1
+  contract: "A JSON config file at a documented path containing routing entries"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

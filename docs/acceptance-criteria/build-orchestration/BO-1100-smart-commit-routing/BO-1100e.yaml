@@ -25,6 +25,6 @@ origin_agent: product-owner-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: [BO-1100e-1, BO-1100e-2, BO-1100e-3]
+covered_by: [BO-1100e-1, BO-1100e-2, BO-1100e-3, BO-1100e-4]
 implemented_by:
 - tickets/00_inbox/TICKET-20260608-BO-1100e.md

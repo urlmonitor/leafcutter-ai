@@ -1,0 +1,54 @@
+id: BO-1100d-5
+title: "Observation store write failure does not crash the commit workflow"
+component: build-orchestration
+level: L2
+status: active
+readiness: reviewed
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the shape-tracking observation store is on a read-only filesystem
+    (or disk is full, or the store directory does not exist),
+  And a commit is in progress with staged files that do not match any routing pattern,
+  When the learner attempts to record the unmatched shape to the observation store,
+  Then the write fails,
+  And the learner logs a warning describing the write failure and the affected path,
+  And the learner does NOT propagate the filesystem error to the calling commit workflow,
+  And the commit workflow continues to produce a commit message for this commit,
+  And no observation data is lost silently (the warning makes the failure visible).
+
+  Given the observation store is writable,
+  And the learner has successfully recorded the shape,
+  And the learner then attempts to evaluate whether a rule proposal is warranted,
+  And the rule-proposal evaluation itself triggers a filesystem error
+    (e.g. reading occurrence counts from a corrupted store),
+  When the error occurs during proposal evaluation,
+  Then the learner logs a warning describing the read failure,
+  And the learner does NOT propagate the error to the commit workflow,
+  And the commit proceeds without a rule proposal for this invocation.
+depends_on: [BO-1100d, BO-1100d-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-1100-smart-commit-routing/BO-1100d-1.yaml
+    relationship: constrains
+    status: exists
+  - path: docs/agents/git/commit.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must log filesystem failures at WARNING level per the project error handling policy"
+  - "Must not propagate exceptions to the calling commit workflow under any filesystem error condition"
+  - "Must not silently discard errors -- every swallowed exception must be logged"
+  - "Must be idempotent -- a retry after a transient failure must not corrupt previously written data"
+delivers_to: null
+expects_from:
+  ac_id: BO-1100d-1
+  contract: "Shape-tracking store write path that must be made resilient to filesystem errors"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
