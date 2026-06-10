@@ -330,5 +330,173 @@ class TestOriginAgentHistoricalValuePasses(unittest.TestCase):
         )
 
 
+class TestOriginAgentAllHistoricalValuePass(unittest.TestCase):
+    """Parametrised edge-case tests for all seven historical origin_agent values
+    enumerated in AC ACD-1100f-1-i.
+
+    origin_agent is a free-form provenance string. The schema validator MUST
+    accept every non-empty string regardless of whether the value corresponds to
+    an agent that is currently registered, deleted, or has been renamed.
+    No data migration or rewrite of existing origin_agent values may occur during
+    a v2.0 upgrade.
+    """
+
+    # Seven representative historical values from ACD-1100f-1-i criteria.
+    _HISTORICAL_VALUES = [
+        "business-analyst",      # v1 name, now reused for promoted v3
+        "business-analyst-v2",   # deleted agent
+        "business-analyst-v3",   # old v3 name, now canonical as "business-analyst"
+        "create-ticket",         # deleted agent
+        "refinement",            # deleted agent
+        "BrainCandy",            # human author
+        "ticket-wiring",         # still-active workflow
+    ]
+
+    def _make_ac_yaml(self, origin_agent_value: str) -> str:
+        """Return a minimal valid AC YAML string with the given origin_agent value.
+
+        Args:
+            origin_agent_value: The string to use as the origin_agent field value.
+
+        Returns:
+            YAML content string suitable for writing to a temporary file.
+        """
+        return textwrap.dedent(f"""\
+            id: FIN-001
+            title: "Historical origin_agent edge case"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+            origin_agent: "{origin_agent_value}"
+        """)
+
+    def test_business_analyst_passes(self) -> None:
+        # covers: ACD-1100f-1-i
+        """origin_agent: business-analyst (v1 name, now reused for v3) exits 0."""
+        value = "business-analyst"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-001.yaml", self._make_ac_yaml(value))
+            result = _run_hook(root)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=f"origin_agent: {value!r} must be accepted as a free-form string. Stderr: {result.stderr}",
+        )
+
+    def test_business_analyst_v2_passes(self) -> None:
+        # covers: ACD-1100f-1-i
+        """origin_agent: business-analyst-v2 (deleted agent) exits 0."""
+        value = "business-analyst-v2"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-001.yaml", self._make_ac_yaml(value))
+            result = _run_hook(root)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=f"origin_agent: {value!r} must be accepted as a free-form string. Stderr: {result.stderr}",
+        )
+
+    def test_business_analyst_v3_passes(self) -> None:
+        # covers: ACD-1100f-1-i
+        """origin_agent: business-analyst-v3 (old v3 name) exits 0."""
+        value = "business-analyst-v3"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-001.yaml", self._make_ac_yaml(value))
+            result = _run_hook(root)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=f"origin_agent: {value!r} must be accepted as a free-form string. Stderr: {result.stderr}",
+        )
+
+    def test_create_ticket_passes(self) -> None:
+        # covers: ACD-1100f-1-i
+        """origin_agent: create-ticket (deleted agent) exits 0."""
+        value = "create-ticket"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-001.yaml", self._make_ac_yaml(value))
+            result = _run_hook(root)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=f"origin_agent: {value!r} must be accepted as a free-form string. Stderr: {result.stderr}",
+        )
+
+    def test_refinement_passes(self) -> None:
+        # covers: ACD-1100f-1-i
+        """origin_agent: refinement (deleted agent) exits 0."""
+        value = "refinement"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-001.yaml", self._make_ac_yaml(value))
+            result = _run_hook(root)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=f"origin_agent: {value!r} must be accepted as a free-form string. Stderr: {result.stderr}",
+        )
+
+    def test_brain_candy_passes(self) -> None:
+        # covers: ACD-1100f-1-i
+        """origin_agent: BrainCandy (human author) exits 0."""
+        value = "BrainCandy"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-001.yaml", self._make_ac_yaml(value))
+            result = _run_hook(root)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=f"origin_agent: {value!r} must be accepted as a free-form string. Stderr: {result.stderr}",
+        )
+
+    def test_ticket_wiring_passes(self) -> None:
+        # covers: ACD-1100f-1-i
+        """origin_agent: ticket-wiring (still-active workflow) exits 0."""
+        value = "ticket-wiring"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-001.yaml", self._make_ac_yaml(value))
+            result = _run_hook(root)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=f"origin_agent: {value!r} must be accepted as a free-form string. Stderr: {result.stderr}",
+        )
+
+    def test_no_migration_occurs_for_historical_values(self) -> None:
+        # covers: ACD-1100f-1-i
+        """Validation of AC files with historical origin_agent values leaves
+        the file content unchanged — no data migration or rewrite occurs.
+        """
+        value = "business-analyst-v2"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            original_content = self._make_ac_yaml(value)
+            ac_path = _write_ac_file(root, "FIN-001.yaml", original_content)
+            result = _run_hook(root)
+            self.assertEqual(result.returncode, 0, msg=result.stderr)
+            # File content must be byte-for-byte identical after validation.
+            after_content = ac_path.read_text(encoding="utf-8")
+        self.assertEqual(
+            original_content,
+            after_content,
+            msg=(
+                "check_ac_schema.py must not rewrite origin_agent values "
+                "during validation (no migration allowed)."
+            ),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

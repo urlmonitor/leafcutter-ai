@@ -91,7 +91,7 @@
         },
         "origin_agent": {
             "type": "string",
-            "description": "Identity of the agent or workflow that created this AC file. Enum: business-analyst | debug | human | ticket-wiring. Free-form string to allow future agents.",
+            "description": "Identity of the agent or workflow that created this AC file. Free-form provenance string — any non-empty value is valid. Historical agent names (e.g. business-analyst-v2, business-analyst-v3, create-ticket, refinement from now-deleted or renamed agents) remain valid and are never rewritten.",
             "minLength": 1
         },
         "readiness": {

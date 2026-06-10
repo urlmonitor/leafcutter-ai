@@ -43,5 +43,6 @@ origin_agent: BrainCandy
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/commit_guardian/test_check_ac_schema.py::TestOriginAgentAllHistoricalValuePass"
 implemented_by: []

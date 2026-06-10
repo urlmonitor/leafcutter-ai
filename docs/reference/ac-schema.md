@@ -38,7 +38,7 @@ Each AC file is a single YAML document with the following fields.
 | `amended_by` | list of strings | no | Ticket paths that subsequently amended this criterion. Default: `[]`. |
 | `covered_by` | list of strings | no | Test file paths (optionally with `::test_function`) that verify this criterion. Default: `[]`. |
 | `implemented_by` | list of strings | no | Source file paths (optionally with `#anchor`) that implement this criterion. Default: `[]`. |
-| `origin_agent` | string | no | Identity of the agent or workflow that created this AC file. Free-form provenance string — any non-empty value is valid. Common values: `business-analyst`, `business-analyst-v2`, `business-analyst-v3`, `debug`, `human`, `ticket-wiring`. Historical agent names (e.g. `business-analyst-v2` from now-deleted agents) remain valid and are never rewritten. |
+| `origin_agent` | string | no | Identity of the agent or workflow that created this AC file. Free-form provenance string — any non-empty value is valid. The field is **not** validated against the current agent registry. Historical agent names (including names of deleted, renamed, or decomissioned agents) remain valid and are never rewritten during schema upgrades. Example values: `business-analyst` (v1 name, reused for promoted v3), `business-analyst-v2` (deleted agent), `business-analyst-v3` (old v3 name), `create-ticket` (deleted agent), `refinement` (deleted agent), `BrainCandy` (human author), `ticket-wiring` (workflow). |
 
 ### Full example
 
