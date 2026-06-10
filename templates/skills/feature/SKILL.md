@@ -9,6 +9,14 @@ name: feature
 
 # Create / Reuse Feature Worktree
 
+> **IMPORTANT — `/quick-fix` exclusion (AC BP-600a-2):**
+> This skill MUST NOT be invoked from the `/quick-fix` workflow or from any agent
+> dispatched by it. The `feature` skill calls `git worktree add`, which violates
+> the quick-fix worktree invariant (AC BP-600a-1: stay in the current worktree,
+> never create a new one). Any `/quick-fix` implementation that loads this skill
+> is non-compliant. See `docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md`
+> §Addendum for the full BP-600a-2 constraint specification.
+
 Set up an isolated workspace for: **$ARGUMENTS**
 
 ## Routing

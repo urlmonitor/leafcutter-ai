@@ -25,6 +25,11 @@ components:
     prefix: BP
     description: "ACs for the build system: phase orchestration, artifact wiring, drift detection, and config-driven path resolution"
     owner: build_pipeline
+    directory_patterns:
+      - "scripts/build*.py"
+      - "scripts/build_phases.py"
+      - "scripts/build_precommit.py"
+      - "leafcutter/scripts/build*.py"
   - id: infrastructure
     prefix: INF
     description: "ACs for cross-cutting infrastructure: agent context injection, pre-commit hooks, and project conventions"

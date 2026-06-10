@@ -276,6 +276,57 @@ discover which tests already exist for an AC. It adds `# covers: XX-NNN`
 tags to every new test function it writes, and appends the new test path to
 the `covered_by` list in the corresponding AC YAML file.
 
+#### `/quick-fix` workflow — test-writer dispatch (AC BP-600c-1)
+
+When the `test-writer` is invoked by the `/quick-fix` workflow (as opposed to a
+standard `build-feature` epic), it receives the AC YAML file created during the
+AC creation phase as an additional structured input. The dispatch contract is:
+
+| Input field | Type | Description |
+|---|---|---|
+| `ac_path` | file_path | Absolute path to the newly created quick-fix AC YAML file |
+| `target_file` | file_path | Absolute path to the buggy source file |
+| `location_hint` | string or null | Line number or function name from the diagnosis |
+| `symptom` | string | Observable incorrect behaviour from the diagnosis |
+
+**`# covers: <AC-ID>` tag requirement (quick-fix context):**
+
+Every test function written for a quick-fix MUST include a `# covers: <AC-ID>` tag
+referencing the newly created AC. The tag may appear:
+
+- On the line immediately above `def test_*`
+- As the first statement inside the function body
+- In the function's docstring
+
+The tag format must match the `check_test_ac_tags.py` hook pattern exactly:
+`# covers: XX-NNN` (e.g. `# covers: BP-601`). The `XX-NNN` value is the `id`
+field from the AC YAML file passed in `ac_path`.
+
+**Ordering invariant (BP-600c-1):**
+
+The test file write and the `covered_by` update to the AC YAML file MUST both
+complete before the fix-implementation phase (`python-coder` or `sql-coder`) is
+dispatched. This red-phase-first ordering is enforced by the sequential phase chain
+in `quick-fix.js` and mirrors the TDD discipline of the standard `build-feature` workflow.
+
+**`covered_by` update (same write batch):**
+
+After writing the test file, the test-writer MUST append the new test path to the
+`covered_by` list in the AC YAML file at `ac_path`. Both writes — the test file
+creation and the `covered_by` update — occur in the same agent turn so they are
+committed atomically.
+
+```yaml
+# Example: after test-writer runs for a quick-fix on build-pipeline
+covered_by:
+  - "unit_tests/test_build_pipeline_BP-601.py::test_executability_probe_not_skipped"
+```
+
+The parent AC's `covered_by` update protocol (see §Authoring agents above) also
+applies here: if the quick-fix AC is a child AC, the parent's `covered_by` list
+is updated to include the child AC ID (this was already done by `build-ac` during
+AC creation). The test-writer only updates the child AC's `covered_by` field.
+
 ### triage agent (glossary-triage, debug)
 
 The `debug` skill and `glossary-triage` agent can look up AC IDs to
@@ -293,6 +344,110 @@ created by the ticket-wiring workflow (e.g. from a ticket's Gherkin block).
 The `ticket-wiring` skill reads existing ACs and skips creation when an
 equivalent AC already exists in the store.
 
+### /quick-fix workflow — ID assignment (AC BP-600b-2)
+
+The `/quick-fix` workflow creates a new AC YAML file as part of its AC creation
+phase (AC BP-600b-1). When assigning the AC ID, the workflow MUST follow the
+algorithm below to ensure the correct component prefix and a strictly sequential,
+non-reusing numeric suffix.
+
+#### Step 1 — Resolve the component prefix
+
+Read `docs/acceptance-criteria/index.yaml`. Locate the entry whose `id` matches
+the target component (e.g. `build-pipeline`). Use its `prefix` field as the
+ID prefix (e.g. `BP`).
+
+If no matching entry exists in `index.yaml`, halt the AC creation phase and
+surface a structured error to the user:
+
+```
+Error: component '<id>' not found in docs/acceptance-criteria/index.yaml.
+Add the component entry before running /quick-fix.
+```
+
+#### Step 2 — Scan existing AC files for the highest numeric suffix
+
+Scan all YAML files directly under `docs/acceptance-criteria/<component-id>/`
+(non-recursively — only root-level L0 and L1 files; subdirectories are skipped).
+Parse each filename matching the pattern `PREFIX-NNN*.yaml`. Extract the numeric
+part `NNN` (zero-padded, three digits) and track the highest value found.
+
+If no existing files match the prefix, start at `001`.
+
+**Retired/deprecated AC IDs are reserved and MUST NOT be reused.** The scan
+reads the `status` field of each matched file. Whether `active`, `deprecated`,
+or `superseded_by`, the numeric slot is permanently occupied. The next
+available integer is `max(occupied_slots) + 1`.
+
+#### Step 3 — Assign the new ID
+
+Assign `ID = PREFIX + "-" + zero_pad(max_seen + 1, width=3)`.
+
+**Example:** if `build-pipeline` already contains `BP-001.yaml` through
+`BP-006.yaml` (including any deprecated files), the next ID is `BP-007`.
+
+#### Step 4 — Atomicity constraint
+
+ID allocation MUST be atomic with respect to concurrent `/quick-fix` invocations.
+Implement atomicity using a file-based lock at
+`docs/acceptance-criteria/<component-id>/.quick-fix-lock` before the scan
+(step 2) and release it after the file is written. Use `O_CREAT | O_EXCL` for
+lock acquisition. Release the lock unconditionally in all exit paths (success
+and error).
+
+If the lock cannot be acquired within 5 seconds, surface an error to the user:
+
+```
+Error: AC store for '<component-id>' is locked by another process.
+Retry after the concurrent quick-fix completes, or manually remove
+docs/acceptance-criteria/<component-id>/.quick-fix-lock if the process
+is no longer running.
+```
+
+### AC persistence guarantee after ticket lifecycle close (AC BP-600b-3)
+
+When the quick-fix workflow completes end-to-end — fix committed and the
+workflow's internal ticket closed — the AC YAML file created during the AC
+creation phase MUST remain untouched in the store.
+
+**Invariant:**
+
+```
+Given the quick-fix workflow has completed end-to-end (fix committed
+  and ticket closed),
+When the user lists AC files under docs/acceptance-criteria/,
+Then the AC YAML file created by the quick-fix workflow still exists,
+And its status field is "active",
+And it is not deleted or moved by the ticket lifecycle close step.
+```
+
+**Implementation constraint for the ticket lifecycle close step:**
+
+The step that marks the quick-fix workflow's internal ticket as `done` (e.g.
+flipping `status: in_progress → done` via `set_ticket_status.py`) MUST NOT
+touch or reference any AC YAML file. Specifically:
+
+- The close step operates only on the ticket markdown file (`*.md`) and the
+  git index for that file.
+- It MUST NOT delete, rename, move, or overwrite any file under
+  `docs/acceptance-criteria/`.
+- It MUST NOT set the AC's `status` field to `deprecated` or `superseded_by`
+  as a side-effect of the ticket closing.
+
+The AC lifecycle (active → deprecated → superseded_by) is governed exclusively
+by human or agent intent expressed in separate commits. A ticket closing is not
+a trigger for AC lifecycle transitions.
+
+**Why this guarantee is necessary:**
+
+The quick-fix workflow creates an AC YAML file as a permanent traceability
+artefact. The AC documents what bug was fixed and what criterion the fix must
+satisfy going forward. If the ticket lifecycle close step were to delete or
+deactivate the AC, the traceability record would be destroyed, the pre-commit
+`check_ac_coverage.py` hook would lose its anchor, and any test tagged
+`# covers: <id>` would reference a ghost criterion. The persistence guarantee
+ensures the AC outlives the workflow that created it.
+
 ---
 
 ## Component Registry (`index.yaml`)
@@ -306,6 +461,7 @@ component IDs to their prefix and description.
 | `prefix` | string | **yes** | 2–6 ALL-CAPS letters used in AC file names. |
 | `description` | string | **yes** | Human-readable description of the component. |
 | `owner` | string or null | no | Team or agent identifier responsible for this namespace. |
+| `directory_patterns` | list of strings | no | Glob patterns for source file paths that belong to this component. Used by `/quick-fix` to infer the component from a diagnosed file path when no explicit component is provided (AC BP-600b-2-i). Example: `["scripts/build_*.py", "scripts/build_phases.py"]`. If absent or empty, component inference falls back to user prompt. |
 
 ---
 
