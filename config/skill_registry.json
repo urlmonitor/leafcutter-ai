@@ -246,7 +246,7 @@
       "domain": null,
       "template_path": "leafcutter/templates/skills/roadmap-steward/",
       "dependencies": [],
-      "description": "Wraps roadmap_query.py --audit to produce audit_result JSON (all_items, starved_items, off_roadmap_tickets) for the product-owner-agent."
+      "description": "Wraps roadmap_query.py --audit to produce audit_result JSON (all_items, starved_items, off_roadmap_tickets) for product owner review workflows."
     },
     {
       "id": "route-knowledge",

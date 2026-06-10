@@ -308,9 +308,7 @@
                 "sql-function-creator",
                 "sql-index-creator",
                 "sql-view-creator",
-                "test-planner",
                 "test-writer",
-                "product-owner-agent",
                 "frontend-coder",
                 "llm-expert"
             ],
@@ -539,44 +537,6 @@
                 ".py"
             ],
             "produces": "production_code"
-        },
-        {
-            "id": "test-planner",
-            "name": "Test Planner",
-            "tier": "utility",
-            "role": "quality",
-            "portable": true,
-            "domain": null,
-            "spawn_allowlist": [
-                "research-agent"
-            ],
-            "spawned_by": [],
-            "is_ticket_phase": false,
-            "selection_criteria": null,
-            "template_path": "templates/agents/test-planner.md",
-            "model": "sonnet",
-            "skills_used": [],
-            "category": "planning",
-            "skills_invoked": [],
-            "knowledge_channels": [
-                {
-                    "channel": 1,
-                    "source": "template description field"
-                },
-                {
-                    "channel": 5,
-                    "source": "skills_config.json config_keys"
-                },
-                {
-                    "channel": 6,
-                    "source": "project files read during execution"
-                },
-                {
-                    "channel": 7,
-                    "source": "bash command output (git, build, tests)"
-                }
-            ],
-            "produces": "test_artifact"
         },
         {
             "id": "test-writer",
@@ -2593,53 +2553,6 @@
                 }
             ],
             "produces": "analysis"
-        },
-        {
-            "id": "product-owner-agent",
-            "name": "Product Owner Agent",
-            "tier": "utility",
-            "role": "orchestration",
-            "portable": true,
-            "domain": null,
-            "spawn_allowlist": [
-                "research-agent"
-            ],
-            "spawned_by": [
-                "user"
-            ],
-            "is_ticket_phase": false,
-            "selection_criteria": null,
-            "template_path": "templates/agents/product-owner-agent.md",
-            "model": "opus",
-            "skills_used": [
-                "roadmap-steward"
-            ],
-            "description": "Periodic product-owner audit agent. Reads vision.md and roadmap.json, invokes roadmap-steward skill, holds interactive PO dialogue, and proposes confirmation-gated actions. Model: opus (ADR-039).",
-            "invocation_surface": [
-                "/po-review"
-            ],
-            "category": "planning",
-            "skills_invoked": [
-                {
-                    "skill_id": "roadmap-steward",
-                    "mode": "conditional"
-                }
-            ],
-            "knowledge_channels": [
-                {
-                    "channel": 1,
-                    "source": "template description field"
-                },
-                {
-                    "channel": 6,
-                    "source": "project files read during execution"
-                },
-                {
-                    "channel": 7,
-                    "source": "bash command output (git, build, tests)"
-                }
-            ],
-            "produces": "orchestration"
         },
         {
             "id": "ac-validator",
