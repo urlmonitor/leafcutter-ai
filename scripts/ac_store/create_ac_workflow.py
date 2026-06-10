@@ -1,12 +1,12 @@
 """
-create_ac_workflow.py — Python implementation of the /create-ac authoring pipeline.
+create_ac_workflow.py — Python implementation of the /plan-feature authoring pipeline.
 
 This module exposes the pipeline runner (`run_authoring_pipeline`) that is
-called by the /create-ac workflow via JavaScript (create-ac.js). The Python
+called by the /plan-feature workflow via JavaScript (plan-feature.js). The Python
 version is used by unit tests (test_create_ac_workflow.py) and by CI pipelines
 that cannot invoke the agent runtime.
 
-The JavaScript workflow (scripts/workflows/create-ac.js) is the production
+The JavaScript workflow (scripts/workflows/plan-feature.js) is the production
 entry point; this module provides the same routing logic in a testable form.
 
 Routing table:
@@ -218,7 +218,7 @@ def run_authoring_pipeline(
 
                     return {
                         "status": "ok",
-                        "message": f"/create-ac complete. {len(all_acs_written)} AC(s) approved with priority: {priority}.",
+                        "message": f"/plan-feature complete. {len(all_acs_written)} AC(s) approved with priority: {priority}.",
                         "acs_approved": all_acs_written,
                         "priority": priority,
                         "route": route,

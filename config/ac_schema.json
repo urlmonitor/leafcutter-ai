@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "config/ac_schema.json",
   "title": "AC Triage — Output Schema",
-  "description": "JSON Schema (draft-07) for the output object returned by the ac-triage agent. Defines the routing decision produced by Stage 0 of the /create-ac workflow.",
+  "description": "JSON Schema (draft-07) for the output object returned by the ac-triage agent. Defines the routing decision produced by Stage 0 of the /plan-feature workflow.",
   "type": "object",
   "required": [
     "route",
