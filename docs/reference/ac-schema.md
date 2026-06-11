@@ -4,7 +4,7 @@ description: "Field-by-field reference for AC YAML files, the hierarchical ID fo
 type: reference
 status: active
 created: 2026-06-04
-last_updated: 2026-06-08
+last_updated: 2026-06-10
 components:
   - build_pipeline
 related_docs:
@@ -38,7 +38,7 @@ Each AC file is a single YAML document with the following fields.
 | `amended_by` | list of strings | no | Ticket paths that subsequently amended this criterion. Default: `[]`. |
 | `covered_by` | list of strings | no | Test file paths (optionally with `::test_function`) that verify this criterion. Default: `[]`. |
 | `implemented_by` | list of strings | no | Source file paths (optionally with `#anchor`) that implement this criterion. Default: `[]`. |
-| `origin_agent` | string | no | Identity of the agent or workflow that created this AC file. Common values: `business-analyst`, `debug`, `human`, `ticket-wiring`. |
+| `origin_agent` | string | no | Identity of the agent or workflow that created this AC file. Free-form provenance string — any non-empty value is valid. The field is **not** validated against the current agent registry. Historical agent names (including names of deleted, renamed, or decomissioned agents) remain valid and are never rewritten during schema upgrades. Example values: `business-analyst` (canonical name, also used historically as v1 and promoted from v3), `business-analyst-v2` (deleted agent), `business-analyst-v3` (legacy v3 name, now renamed to `business-analyst`), `create-ticket` (deleted agent), `refinement` (deleted agent), `BrainCandy` (human author), `ticket-wiring` (workflow). |
 
 ### Full example
 
@@ -190,8 +190,8 @@ Advisory only; never blocks a commit.
 
 ### Authoring agents — parent covered_by update (mandatory)
 
-Every requirement-authoring agent (`business-analyst-v3`, `product-owner-v3`,
-`it-po-v3`) that writes a new child AC file MUST, in the same write batch,
+Every requirement-authoring agent (`business-analyst`, `product-owner`,
+`it-po`) that writes a new child AC file MUST, in the same write batch,
 also update the parent AC file to record the new child. This is the canonical
 mechanic for building the parent-child link from the parent's direction.
 
@@ -248,23 +248,23 @@ files to `docs/acceptance-criteria/<component>/`.
 **Key behaviour:** the agent validates the file against `check_ac_schema.py`
 before finalising. If validation fails, the agent self-corrects the YAML.
 
-### business-analyst-v3
+### business-analyst
 
-The `business-analyst-v3` agent produces L2/L3 AC YAML files from L1 ACs.
+The `business-analyst` agent (promoted from the v3 pipeline) produces L2/L3 AC YAML files from L1 ACs.
 When writing a new L2 or L3 file, it applies the parent covered_by update
 protocol described above: the child's `depends_on` includes the parent ID,
 and the parent's `covered_by` list is updated in the same write batch.
 
-### product-owner-v3
+### product-owner
 
-The `product-owner-v3` agent produces L0 and L1 AC YAML files. When writing
+The `product-owner` agent (promoted from the v3 pipeline) produces L0 and L1 AC YAML files. When writing
 a new L1 file (child of an L0), it applies the parent covered_by update
 protocol: the L1's `depends_on` includes the L0 ID, and the L0's `covered_by`
 list is updated to include the new L1 ID.
 
-### it-po-v3
+### it-po
 
-The `it-po-v3` agent enriches existing L2/L3 AC files. When it creates new
+The `it-po` agent (promoted from the v3 pipeline) enriches existing L2/L3 AC files. When it creates new
 AC files (e.g. split ACs), it applies the parent covered_by update protocol
 for any newly created child AC, ensuring the parent's `covered_by` list is
 updated to include the new child.

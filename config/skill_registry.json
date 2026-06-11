@@ -246,7 +246,7 @@
       "domain": null,
       "template_path": "leafcutter/templates/skills/roadmap-steward/",
       "dependencies": [],
-      "description": "Wraps roadmap_query.py --audit to produce audit_result JSON (all_items, starved_items, off_roadmap_tickets) for the product-owner-agent."
+      "description": "Wraps roadmap_query.py --audit to produce audit_result JSON (all_items, starved_items, off_roadmap_tickets) for product owner review workflows."
     },
     {
       "id": "route-knowledge",
@@ -267,15 +267,15 @@
       "description": "Pre-archive validation gate invoked by finalize-feature.js Step 5 before moving an epic folder to tickets/99_done/. Scans every sub-ticket in the epic's done/ subfolder and verifies frontmatter status: done. Offers confirmation-gated auto-fix for missing entries."
     },
     {
-      "id": "create-ac",
-      "name": "Create AC",
+      "id": "plan-feature",
+      "name": "Plan Feature",
       "portable": true,
       "domain": null,
-      "template_path": "leafcutter/templates/skills/create-ac/",
+      "template_path": "leafcutter/templates/skills/plan-feature/",
       "dependencies": [],
       "description": "Triage, orchestrate, and gate AC authoring for a user's feature request. Dispatches ac-triage (Haiku) to classify the request as strategic / behavioral / technical / covered, then routes through the correct authoring agents (PO v3, BA v3, IT PO v3) with user confirmation gates between stages. All output goes exclusively to the AC store — no ticket files are produced.",
-      "invocation_surface": "/create-ac",
-      "workflow_script": "scripts/workflows/create-ac.js"
+      "invocation_surface": "/plan-feature",
+      "workflow_script": "scripts/workflows/plan-feature.js"
     },
     {
       "id": "ac-tree-split",

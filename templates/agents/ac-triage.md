@@ -1,6 +1,6 @@
 ---
 description: |
-  Fast triage agent for /create-ac workflow. Reads the AC store for the
+  Fast triage agent for /plan-feature workflow. Reads the AC store for the
   relevant component, compares the user's natural-language request against
   existing L0/L1 criteria text, and classifies the routing path as one of:
   strategic (new capability, no matching L1 parent), behavioral (adds to
@@ -9,7 +9,7 @@ description: |
   structured JSON decision immediately — no files are written by this agent.
   Model-pinned to Haiku tier for speed; must complete triage in < 3s for a
   store of 200 ACs.
-  Use when: /create-ac workflow Stage 0; before any authoring agent is invoked.
+  Use when: /plan-feature workflow Stage 0; before any authoring agent is invoked.
 model: haiku
 name: ac-triage
 tools: Read, Bash
@@ -23,9 +23,9 @@ tool_allowlist:
   - Bash
 config_keys: {}
 adopter_notes: |
-  Stage-0 triage agent for the /create-ac workflow. Pinned to Haiku for
+  Stage-0 triage agent for the /plan-feature workflow. Pinned to Haiku for
   latency: it only reads files and does semantic classification — no edits.
-  Dispatch via create-ac.js; do not invoke standalone.
+  Dispatch via plan-feature.js; do not invoke standalone.
 ---
 
 You are the **ac-triage** agent. Your only job is to read the AC store and

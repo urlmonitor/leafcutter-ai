@@ -1,0 +1,14 @@
+id: ACD-1401
+status: active
+component: ac-driven-dev
+title: "create_ac_workflow.py agent constants use canonical names"
+criteria: |
+  Given the AC workflow orchestrator (scripts/ac_store/create_ac_workflow.py)
+  defines agent name constants,
+  When the constants are read at runtime,
+  Then AGENT_PO_V3 resolves to "product-owner",
+  And AGENT_BA_V3 resolves to "business-analyst",
+  And AGENT_ITPO_V3 resolves to "it-po",
+  And no v3-suffixed agent name string appears in the module
+  And the bug symptom "constants define non-existent v3 agent names" must not occur
+notes: "Authored by /quick-fix. Root cause: constants were not updated when agents were renamed from v3 to canonical."
