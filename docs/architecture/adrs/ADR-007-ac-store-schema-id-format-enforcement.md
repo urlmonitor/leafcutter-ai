@@ -181,6 +181,42 @@ equivalent behavior for the same shared pattern — is an authoring discipline
 enforced by review rather than by the schema validator. A future hook
 (`check_ac_pattern_uniqueness.py`) may enforce this mechanically.
 
+### Pattern AC Placement Convention (added 2026-06-11, AC ACS-500a-2)
+
+Pattern ACs follow the **same file placement convention** as every other AC in
+the store. No separate "pattern catalog" directory or registry file is created.
+
+**Decision:** A pattern AC is stored at:
+
+```
+docs/acceptance-criteria/<component>/<feature-folder>/<id>.yaml
+```
+
+This is identical to the path for any non-pattern AC. The presence of
+`pattern_slots` in the YAML body is the sole indicator that an AC is a pattern.
+
+**Rationale:**
+
+1. **No second root.** Introducing a `docs/acceptance-criteria/patterns/`
+   directory would bifurcate the store into two roots, requiring every
+   AC-scanning tool and hook to support two glob patterns. Keeping patterns
+   within the standard hierarchy means `docs/acceptance-criteria/**/*.yaml`
+   continues to be the complete scan expression.
+
+2. **Component coherence.** A pattern AC defines behavior for a specific
+   component. Placing it inside that component's folder (with the same
+   `component` field) makes ownership and co-location obvious. Consumers and
+   patterns are reviewable together in the same directory tree.
+
+3. **Parent traceability unchanged.** A pattern AC appears in its parent AC's
+   `covered_by` list exactly as any other child AC would. The
+   `check_ac_parent_covered_by.py` hook does not need a special code path for
+   patterns — they are just ACs.
+
+4. **ID format unchanged.** Pattern AC IDs follow the same
+   `PREFIX-NNNx-N` format as other L2 ACs. No special namespace, prefix, or
+   reserved range is assigned to patterns.
+
 ## Consequences
 
 **Positive:**

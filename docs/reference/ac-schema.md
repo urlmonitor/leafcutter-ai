@@ -135,6 +135,30 @@ implemented_by: []
 origin_agent: BrainCandy
 ```
 
+### File placement convention for pattern ACs (AC ACS-500a-2)
+
+Pattern ACs follow the **same file placement convention** as all other AC YAML files.
+No separate "pattern catalog" directory or registry file is created.
+
+| Rule | Detail |
+|---|---|
+| **Path** | `docs/acceptance-criteria/<component>/<feature-folder>/<id>.yaml` — identical to any other AC file |
+| **Component** | The `component` field must match the consuming ACs that reference this pattern. Pattern and consumer live in the same component namespace. |
+| **Parent link** | The pattern AC appears in its parent AC's `covered_by` list just like any other child AC. |
+| **No catalog dir** | There is no `docs/acceptance-criteria/patterns/` directory or equivalent. Patterns are discoverable through `pattern_slots` field presence alone. |
+
+**Example (component `ac-store`, feature folder `ACS-500-pattern-reuse`):**
+
+```
+docs/acceptance-criteria/ac-store/ACS-500-pattern-reuse/
+  ACS-500a-1.yaml   ← pattern AC (has pattern_slots)
+  ACS-500a-2.yaml   ← consuming AC (has implements_pattern: ACS-500a-1)
+```
+
+Both files share the same `component: ac-store` field. `ACS-500a-1` appears in
+the `covered_by` list of `ACS-500a` (the L1 parent) exactly as a non-pattern
+child AC would.
+
 ### Authoring rules for pattern ACs
 
 1. **Pattern ACs are L2 only.** L0/L1 ACs are composites; L3 ACs are too

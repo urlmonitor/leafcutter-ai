@@ -51,6 +51,21 @@ components:
       - "scripts/ac_store/*.py"
       - "config/ac_store_schema.json"
 
+# Pattern AC Placement Convention (AC ACS-500a-2)
+#
+# Pattern ACs follow the SAME file-placement convention as all other AC YAML files:
+#
+#   docs/acceptance-criteria/<component>/<feature-folder>/<id>.yaml
+#
+# No separate "pattern catalog" directory or registry file is created.
+# A pattern AC is stored in the same component folder as the consuming ACs
+# that reference it. It uses the same `component` field as those consuming ACs.
+# It appears in the parent AC's `covered_by` list just like any other child AC.
+#
+# Example placement (component: ac-store, feature-folder: ACS-500-pattern-reuse):
+#   docs/acceptance-criteria/ac-store/ACS-500-pattern-reuse/ACS-500a-1.yaml  (pattern)
+#   docs/acceptance-criteria/ac-store/ACS-500-pattern-reuse/ACS-500a-2.yaml  (consuming)
+#
 # Pattern AC example — demonstrates the pattern_slots / implements_pattern / pattern_bindings fields.
 #
 # Pattern AC (ACS-500a-1, stored in docs/acceptance-criteria/ac-store/ACS-500-pattern-reuse/):
