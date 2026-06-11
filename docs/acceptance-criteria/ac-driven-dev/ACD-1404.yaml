@@ -1,0 +1,11 @@
+id: ACD-1404
+status: active
+component: ac-driven-dev
+title: "No orphaned test files reference removed agent templates"
+criteria: |
+  Given the agent template business-analyst-v2.md was removed as part of ACD-1100,
+  When the integration test suite runs,
+  Then no test file attempts to read or assert on business-analyst-v2.md
+  And the orphaned test file test_v2_pipeline_ac_store_wiring.py is deleted
+  And the bug symptom "5 tests fail referencing removed template" must not occur
+notes: "Authored by /quick-fix. Root cause: templates/agents/business-analyst-v2.md was deleted but its integration test file tests/test_v2_pipeline_ac_store_wiring.py was not removed."
