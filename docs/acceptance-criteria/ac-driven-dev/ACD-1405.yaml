@@ -1,0 +1,12 @@
+id: ACD-1405
+status: active
+component: ac-driven-dev
+title: "AC workflow tests assert canonical agent names"
+criteria: |
+  Given the create_ac_workflow.py dispatches agents using canonical names
+  (product-owner, business-analyst, it-po),
+  When the test suite for create_ac_workflow runs,
+  Then all test assertions and mock conditionals use canonical agent names
+  And no test asserts on v3-suffixed agent names (product-owner-v3, business-analyst-v3, it-po-v3)
+  And all tests in test_create_ac_workflow.py pass
+notes: "Authored by /quick-fix. Root cause: test assertions were not updated when create_ac_workflow.py constants were changed from v3 to canonical names."
