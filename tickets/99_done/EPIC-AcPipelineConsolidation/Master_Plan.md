@@ -1,7 +1,7 @@
 ---
 epic_name: EPIC-AcPipelineConsolidation
 created: 2026-06-10
-status: in_progress
+status: done
 components:
   - ac-driven-dev
 source_ac: ACD-1100
