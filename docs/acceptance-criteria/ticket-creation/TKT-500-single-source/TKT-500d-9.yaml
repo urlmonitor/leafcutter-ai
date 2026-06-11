@@ -1,5 +1,5 @@
 id: TKT-500d-9
-readiness: approved
+readiness: draft
 priority: medium
 title: "Old ticket pipeline remains functional after ac-supervisor is deployed"
 component: ticket-creation

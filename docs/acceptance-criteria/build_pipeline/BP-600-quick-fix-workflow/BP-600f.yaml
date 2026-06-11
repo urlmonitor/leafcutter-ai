@@ -1,0 +1,13 @@
+id: BP-600f
+status: active
+component: build-pipeline
+origin_agent: BrainCandy
+title: "Quick-fix workflow allows main-branch usage with explicit user confirmation"
+criteria: |
+  Given the user invokes /quick-fix while on the main or master branch,
+  When the guard phase detects the default branch,
+  Then the workflow warns that commits will land directly on main,
+  And it asks the user to confirm before proceeding,
+  And on confirmation it continues the normal phase sequence,
+  And on rejection it halts cleanly without changes.
+notes: "Authored by /quick-fix. Root cause: guard unconditionally rejects main/master instead of prompting user for confirmation."
