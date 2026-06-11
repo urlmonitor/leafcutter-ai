@@ -42,3 +42,47 @@ components:
     prefix: PER
     description: "ACs for persona definitions, AC targeting by persona, and persona knowledge graph queries"
     owner: null
+  - id: ac-store
+    prefix: ACS
+    description: "ACs for the acceptance-criteria store: schema governance, ID format, bidirectional traceability, pattern reuse, and component registry integrity"
+    owner: null
+    directory_patterns:
+      - "docs/acceptance-criteria/**/*.yaml"
+      - "scripts/ac_store/*.py"
+      - "config/ac_store_schema.json"
+
+# Pattern AC example — demonstrates the pattern_slots / implements_pattern / pattern_bindings fields.
+#
+# Pattern AC (ACS-500a-1, stored in docs/acceptance-criteria/ac-store/ACS-500-pattern-reuse/):
+#
+#   id: ACS-500a-1
+#   title: "Sortable table shared behavior pattern"
+#   component: ac-store
+#   level: L2
+#   status: active
+#   pattern_slots:
+#     - "{columns}"
+#     - "{default_sort}"
+#   criteria: |
+#     Given a page contains a sortable table with columns {columns},
+#     When the user loads the page,
+#     Then the table is sorted by {default_sort} ascending by default,
+#     And each column header is clickable to toggle sort direction.
+#
+# Consuming AC (ACS-500a-2, stored in the same folder):
+#
+#   id: ACS-500a-2
+#   title: "Invoice list page uses sortable table pattern"
+#   component: ac-store
+#   level: L2
+#   status: active
+#   implements_pattern: ACS-500a-1
+#   pattern_bindings:
+#     columns: "invoice_number, date, amount, status"
+#     default_sort: "date"
+#   criteria: |
+#     Given the Invoice List page is open,
+#     When the user loads the page,
+#     Then the table is sorted by date ascending by default,
+#     And each column header (invoice_number, date, amount, status) is clickable
+#       to toggle sort direction.

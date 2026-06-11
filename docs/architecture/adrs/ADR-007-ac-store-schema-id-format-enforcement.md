@@ -160,6 +160,27 @@ blocks from ticket bodies to AC YAML files:
 - No back-migration of existing tickets is required — ACs in ticket bodies
   remain valid; the AC store supplements rather than replaces them.
 
+### Schema Extension: Pattern AC Fields (added 2026-06-11)
+
+Three optional fields were added to `config/ac_store_schema.json` to support
+shared-behavior reuse across ACs (AC ACS-500a-1):
+
+| Field | Type | Purpose |
+|---|---|---|
+| `pattern_slots` | array of strings or null | Declares named curly-brace placeholders on a pattern AC (e.g. `["{columns}", "{default_sort}"]`). Absent or null on non-pattern ACs. |
+| `implements_pattern` | string or null | References the AC ID of the pattern this AC instantiates. Set on consuming ACs only. |
+| `pattern_bindings` | object (string → string) or null | Maps each slot name (without curly braces) to its concrete value. Required when `implements_pattern` is set. |
+
+These fields are all optional and default to null. Existing ACs without pattern
+semantics are unaffected — the schema extension is fully additive. The
+`additionalProperties: false` constraint in the schema was already allowing for
+named optional properties; the three new properties are registered there.
+
+The single-source-of-truth invariant — no two ACs in the store may define an
+equivalent behavior for the same shared pattern — is an authoring discipline
+enforced by review rather than by the schema validator. A future hook
+(`check_ac_pattern_uniqueness.py`) may enforce this mechanically.
+
 ## Consequences
 
 **Positive:**

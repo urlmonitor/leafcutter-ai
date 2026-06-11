@@ -164,6 +164,48 @@
                     "type": "null"
                 }
             ]
+        },
+        "pattern_slots": {
+            "oneOf": [
+                {
+                    "type": "array",
+                    "description": "Named placeholder slots (in curly-brace notation, e.g. '{columns}', '{default_sort}') that consuming ACs must fill via pattern_bindings. Present only on ACs that act as shared-behavior patterns. Empty array or absent means this AC is not a pattern.",
+                    "items": {
+                        "type": "string",
+                        "pattern": "^\\{[a-zA-Z_][a-zA-Z0-9_]*\\}$"
+                    },
+                    "uniqueItems": true
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "implements_pattern": {
+            "oneOf": [
+                {
+                    "type": "string",
+                    "description": "AC ID of the pattern AC that this AC instantiates. Must reference a valid AC in the store whose pattern_slots is non-empty. Consuming ACs set this field; pattern ACs leave it absent or null.",
+                    "pattern": "^[A-Z]{2,6}-[0-9]{3}([a-z]+(-[0-9]+(-[a-z0-9]+)*)?)?$"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "pattern_bindings": {
+            "oneOf": [
+                {
+                    "type": "object",
+                    "description": "Mapping of slot names (without curly braces) to their concrete values for this consuming AC. Every slot declared in the referenced pattern's pattern_slots must be bound here. Only valid when implements_pattern is set.",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                {
+                    "type": "null"
+                }
+            ]
         }
     }
 }

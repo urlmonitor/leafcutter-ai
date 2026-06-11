@@ -39,6 +39,9 @@ Each AC file is a single YAML document with the following fields.
 | `covered_by` | list of strings | no | Test file paths (optionally with `::test_function`) that verify this criterion. Default: `[]`. |
 | `implemented_by` | list of strings | no | Source file paths (optionally with `#anchor`) that implement this criterion. Default: `[]`. |
 | `origin_agent` | string | no | Identity of the agent or workflow that created this AC file. Common values: `business-analyst`, `debug`, `human`, `ticket-wiring`. |
+| `pattern_slots` | list of strings or null | no | Named placeholder slots in curly-brace notation (e.g. `{columns}`, `{default_sort}`) that consuming ACs must fill. Present only on ACs that act as shared-behavior patterns. Absent or null means this AC is not a pattern. |
+| `implements_pattern` | string or null | no | AC ID of the pattern AC that this AC instantiates. Must reference an AC whose `pattern_slots` is non-empty. Set on consuming ACs; absent on pattern ACs. |
+| `pattern_bindings` | mapping (string → string) or null | no | Maps each slot name (without curly braces) to its concrete value for this consuming AC. Every slot in the referenced pattern's `pattern_slots` must appear as a key. Only valid when `implements_pattern` is set. |
 
 ### Full example
 
@@ -60,6 +63,91 @@ implemented_by:
 amended_by: []
 origin_agent: business-analyst
 ```
+
+---
+
+## Pattern ACs — Shared Behavior Reuse
+
+A **pattern AC** is an L2 AC whose `criteria` field contains named placeholders
+in curly-brace notation (e.g. `{columns}`, `{default_sort}`). It defines a
+single authoritative specification for a behavior that multiple pages, endpoints,
+or components share. Each placeholder marks a **slot** that consuming ACs fill
+with concrete values through `pattern_bindings`.
+
+### Three fields involved
+
+| Field | Set on | Value |
+|---|---|---|
+| `pattern_slots` | Pattern AC | List of slot strings, e.g. `["{columns}", "{default_sort}"]` |
+| `implements_pattern` | Consuming AC | AC ID of the pattern, e.g. `ACS-500a-1` |
+| `pattern_bindings` | Consuming AC | Mapping of slot name → concrete value |
+
+### Single source of truth invariant
+
+No two ACs in the store may contain an equivalent `criteria` body for the same
+shared behavior. If a behavior recurs across multiple pages or endpoints, the
+canonical definition lives in exactly one pattern AC. All consuming ACs reference
+it via `implements_pattern` and supply concrete values via `pattern_bindings`.
+
+### Pattern AC example
+
+```yaml
+id: ACS-500a-1
+title: "Sortable table shared behavior pattern"
+component: ac-store
+level: L2
+status: active
+created_by: "tickets/00_inbox/epics/EPIC-PatternReuse/01_pattern_ac.md"
+criteria: |
+  Given a page contains a sortable table with columns {columns},
+  When the user loads the page,
+  Then the table is sorted by {default_sort} ascending by default,
+  And each column header is clickable to toggle sort direction.
+pattern_slots:
+  - "{columns}"
+  - "{default_sort}"
+covered_by: []
+implemented_by: []
+origin_agent: BrainCandy
+```
+
+### Consuming AC example
+
+```yaml
+id: ACS-500a-2
+title: "Invoice list page satisfies the sortable table pattern"
+component: ac-store
+level: L2
+status: active
+created_by: "tickets/00_inbox/epics/EPIC-PatternReuse/01_pattern_ac.md"
+criteria: |
+  Given the Invoice List page is open,
+  When the user loads the page,
+  Then the table is sorted by date ascending by default,
+  And each column header (invoice_number, date, amount, status) is clickable
+    to toggle sort direction.
+implements_pattern: ACS-500a-1
+pattern_bindings:
+  columns: "invoice_number, date, amount, status"
+  default_sort: "date"
+covered_by: []
+implemented_by: []
+origin_agent: BrainCandy
+```
+
+### Authoring rules for pattern ACs
+
+1. **Pattern ACs are L2 only.** L0/L1 ACs are composites; L3 ACs are too
+   fine-grained. The pattern mechanism operates at the implementable-leaf level.
+2. **Slot names must be valid identifiers.** Each `pattern_slots` entry must
+   match `\{[a-zA-Z_][a-zA-Z0-9_]*\}`.
+3. **All slots must be bound.** A consuming AC's `pattern_bindings` must contain
+   a key for every slot declared in the pattern's `pattern_slots`. The schema
+   validator (`check_ac_schema.py`) does not currently enforce binding
+   completeness — authors and reviewers are responsible for this check.
+4. **Pattern ACs remain standalone ACs.** A pattern AC satisfies its own
+   acceptance criterion (the general-case behavior). Consuming ACs satisfy
+   per-instance specializations. Both are independently reviewable and traceable.
 
 ---
 
