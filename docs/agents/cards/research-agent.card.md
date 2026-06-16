@@ -44,9 +44,8 @@ other coding agent carries these tools.
 - `sql-function-creator`
 - `sql-index-creator`
 - `sql-view-creator`
-- `test-planner`
 - `test-writer`
-- `product-owner-agent`
+- `product-owner`
 - `frontend-coder`
 - `llm-expert`
 ---
@@ -68,7 +67,6 @@ flowchart TD
 
     architect_review["architect-review\n(phase tier)"]:::phase
     business_analyst["business-analyst\n(phase tier)"]:::phase
-    business_analyst_v3["business-analyst-v3\n(phase tier)"]:::phase
     python_coder["python-coder\n(phase tier)"]:::phase
     documentation_expert["documentation-expert\n(phase tier)"]:::phase
     reference_author["reference-author\n(phase tier)"]:::phase
@@ -81,16 +79,14 @@ flowchart TD
     sql_function_creator["sql-function-creator\n(phase tier)"]:::phase
     sql_index_creator["sql-index-creator\n(phase tier)"]:::phase
     sql_view_creator["sql-view-creator\n(phase tier)"]:::phase
-    test_planner["test-planner\n(phase tier)"]:::phase
     test_writer["test-writer\n(phase tier)"]:::phase
-    product_owner_agent["product-owner-agent\n(phase tier)"]:::phase
+    product_owner["product-owner\n(phase tier)"]:::phase
     frontend_coder["frontend-coder\n(phase tier)"]:::phase
     llm_expert["llm-expert\n(phase tier)"]:::phase
     research_agent["research-agent\n(utility tier, priority ?)"]:::target
 
     architect_review -->|dispatches| research_agent
     business_analyst -->|dispatches| research_agent
-    business_analyst_v3 -->|dispatches| research_agent
     python_coder -->|dispatches| research_agent
     documentation_expert -->|dispatches| research_agent
     reference_author -->|dispatches| research_agent
@@ -103,9 +99,8 @@ flowchart TD
     sql_function_creator -->|dispatches| research_agent
     sql_index_creator -->|dispatches| research_agent
     sql_view_creator -->|dispatches| research_agent
-    test_planner -->|dispatches| research_agent
     test_writer -->|dispatches| research_agent
-    product_owner_agent -->|dispatches| research_agent
+    product_owner -->|dispatches| research_agent
     frontend_coder -->|dispatches| research_agent
     llm_expert -->|dispatches| research_agent
 ```

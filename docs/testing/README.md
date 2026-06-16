@@ -7,7 +7,6 @@ last_updated: 2026-06-04
 components:
   - infrastructure
 related_docs:
-  - "docs/agents/coding/test-planner.md"
   - "docs/agents/coding/test-writer.md"
   - "docs/agents/coding/test-runner.md"
   - "leafcutter/config/skills_config.default.json"
@@ -16,9 +15,9 @@ related_docs:
 # Portable Testing Conventions
 
 This document describes the test infrastructure conventions that the
-`test-planner`, `test-writer`, and `test-runner` agents rely on. All three
-agents read this knowledge from the `testing_context` block in
-`skills_config.json` at runtime, so adopters can customize per-project.
+`test-writer` and `test-runner` agents rely on. Both agents read this
+knowledge from the `testing_context` block in `skills_config.json` at
+runtime, so adopters can customize per-project.
 
 > **Adopter note**: Copy `leafcutter/config/skills_config.default.json`
 > into your project as `.claude/skills_config.json` and edit the
@@ -33,7 +32,7 @@ unit_tests/
   live_trader/          framework: unittest  db_required: false
   sql_functions/        framework: pytest    db_required: true
   model_retriever/      framework: unittest  db_required: false
-  README.md             primary test reference (read by test-planner at runtime)
+  README.md             primary test reference (read by test-writer at runtime)
   sql_functions/
     README.md           SQL-specific test conventions
 ```
@@ -218,9 +217,9 @@ Edit `testing_context` in your `.claude/skills_config.json`:
 }
 ```
 
-The `test-planner` agent reads this config at runtime and uses `directories`
-to produce valid `target_dir` values. The `test-writer` uses it to select the
-correct framework and setUp pattern.
+The `test-writer` agent reads this config at runtime and uses `directories`
+to produce valid `target_dir` values, selecting the correct framework and
+setUp pattern.
 
 ---
 
@@ -319,7 +318,6 @@ test files as part of its deliverable.
 
 ## Cross-Links
 
-- [docs/agents/coding/test-planner.md](../agents/coding/test-planner.md) — planning-phase test expert
 - [docs/agents/coding/test-writer.md](../agents/coding/test-writer.md) — execution-phase test authoring agent
 - [docs/agents/coding/test-runner.md](../agents/coding/test-runner.md) — test execution agent
 - [leafcutter/config/skills_config.default.json](../../config/skills_config.default.json) — default `testing_context` values

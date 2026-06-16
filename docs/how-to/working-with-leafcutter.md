@@ -87,15 +87,14 @@ epic) to take work from inbox to done.
 Internally, `/build-feature` dispatches `ticket-supervisor`, which walks the
 ticket through a fixed phase sequence:
 
-1. **business-analyst** — refines requirements, identifies files to touch
-2. **test-planner** — writes failing tests (TDD gate)
+1. **architect-review** — validates structural correctness
+2. **test-writer** — writes failing tests (TDD gate)
 3. **python-coder** (or relevant coder) — implements the change
 4. **test-runner** — runs the test suite; retries on failure
-5. **architect-review** — validates structural correctness
-6. **documentation-expert** — writes or updates docs
-7. **pr-reviewer** — reviews the diff before commit
-8. **commit** — commits with a conventional message
-9. **pull-request** — opens a PR against the base branch
+5. **documentation-expert** — writes or updates docs
+6. **pr-reviewer** — reviews the diff before commit
+7. **commit** — commits with a conventional message
+8. **pull-request** — opens a PR against the base branch
 
 Each phase agent signs off when it finishes. If a phase fails after retries, the
 ticket enters a `blocked` state and surfaces a question to you. Resolve it and

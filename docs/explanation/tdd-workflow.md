@@ -37,9 +37,9 @@ in an agentic context.
 
 ## The Three Phases
 
-### Phase 1: test-planner (BA flow, before the build epic starts)
+### Phase 1: BA flow populates Test Requirements (before the build epic starts)
 
-During the business analysis (BA) flow, `test-planner` reads the ticket's
+During the business analysis (BA) flow, `business-analyst` reads the ticket's
 `## Acceptance Criteria` and populates the `## Test Requirements` block. This
 block specifies:
 - What test files to write and where

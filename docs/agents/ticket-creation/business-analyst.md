@@ -69,27 +69,23 @@ ambiguous.
 
 ## 3. Orchestration Sequence
 
-The agent works through two sequential steps:
+The agent works through one step:
 
 **Step 1 — Scope the request.** Apply the five-question framing template (§2)
 to produce `summary`, `deliverables_count`, `routing_decision`, `files_touched`,
-`success_criteria`, `open_questions`, and `agents` fields.
+`success_criteria`, `open_questions`, and `agents` fields. The BA also populates
+the `test_requirements` block directly, specifying which tests should be written,
+what they cover, and where they live (see §3a).
 
-**Step 2 — Spawn test-planner.** After scoping deliverables, the BA always
-spawns `test-planner` via the Agent tool. It passes the user request, the
-`deliverables_count`, and the `files_touched` list. `test-planner` returns a
-`test_requirements` JSON block (see §3a). The BA includes this verbatim in its
-unified output payload.
-
-**Graceful fallback**: if `test-planner` fails or returns a malformed payload,
-the BA sets `test_requirements` to `{"rationale": "test-planner unavailable; test_requirements must be authored manually.", "tests": []}` and continues. It does NOT hard-fail.
+The BA sets `agents.test-writer: "needed"` when `test_requirements.tests` is
+non-empty, and `"not_needed"` when the array is empty.
 
 ---
 
-## 3a. test-planner Spawn and test_requirements Schema
+## 3a. test_requirements Schema
 
-The `test_requirements` field in the BA payload is produced by `test-planner`.
-It describes which tests should be written for this ticket.
+The `test_requirements` field in the BA payload describes which tests should be
+written for this ticket.
 
 ```json
 {
@@ -117,9 +113,6 @@ It describes which tests should be written for this ticket.
 | `type` | string | Exactly `"unit"`, `"integration"`, or `"manual"`. |
 | `target_dir` | string | Matches an existing `unit_tests/<key>/` or notes `"new directory needed"`. |
 | `covers` | string | Specific function, class, or behavior. |
-
-The BA sets `agents.test-writer: "needed"` when `test_requirements.tests` is
-non-empty, and `"not_needed"` when the array is empty.
 
 ---
 
@@ -156,7 +149,7 @@ deterministically; prose around the block is ignored.
 | `routing_rationale` | string | One sentence explaining the routing choice. |
 | `success_criteria` | string[] | Verifiable signals. At least one entry always present. |
 | `open_questions` | string[] | Unresolved ambiguities for downstream agents. `[]` when nothing is open. |
-| `test_requirements` | object | Produced by `test-planner`. See §3a. Always present. |
+| `test_requirements` | object | Produced by `business-analyst`. See §3a. Always present. |
 
 ---
 
@@ -255,8 +248,8 @@ scope?"). After user answers:
   `create-epic` (the route taken when `deliverables_count > 3`).
 - [Ticket 05](../../../tickets/09_done/EPIC-CodingAgents/05_create_ticket_agent.md) —
   `create-ticket` (the orchestrator; routes on BA output).
-- [`docs/agents/coding/test-planner.md`](../coding/test-planner.md) —
-  `test-planner` (the sub-agent spawned by BA in Step 2; produces `test_requirements`).
+- [`docs/agents/coding/test-writer.md`](../coding/test-writer.md) —
+  `test-writer` (reads `test_requirements` to write failing test stubs).
 - [`docs/testing/README.md`](../../testing/README.md) —
   portable testing conventions; source of truth for `testing_context` defaults.
 

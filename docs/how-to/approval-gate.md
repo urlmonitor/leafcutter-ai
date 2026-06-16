@@ -1,6 +1,6 @@
 ---
 title: "How to use the readiness and approval gate"
-description: "Task-oriented guide: read the readiness report, choose a gate option (yes / review-all / cancel), and manage the IT PO v3 review-all path."
+description: "Task-oriented guide: read the readiness report, choose a gate option (yes / review-all / cancel), and manage the IT PO review-all path."
 type: how-to
 category: how-to
 status: active
@@ -22,14 +22,14 @@ related_docs:
 The approval gate is the checkpoint between AC tree traversal and ticket
 generation in the goal-to-epic workflow. Before any ticket files are written,
 the system shows you a **readiness report** and gives you three choices:
-proceed with only the approved ACs, send unapproved ACs to IT PO v3 for bulk
+proceed with only the approved ACs, send unapproved ACs to IT PO for bulk
 review, or cancel.
 
 This guide covers four tasks:
 
 1. [Reading the readiness report](#1-reading-the-readiness-report)
 2. [Choosing your gate option](#2-choosing-your-gate-option)
-3. [The IT PO v3 review-all path](#3-the-it-po-v3-review-all-path)
+3. [The IT PO review-all path](#3-the-it-po-review-all-path)
 4. [Cancelling and returning later](#4-cancelling-and-returning-later)
 
 **Related AC IDs:** ACD-1200b-3 (this guide), ACD-1200b (readiness gate),
@@ -54,8 +54,8 @@ Proceed with 3 approved ACs only? (yes / review-all / cancel):
 | Readiness | Meaning | Eligible for ticket generation? |
 |-----------|---------|--------------------------------|
 | `approved` | You have explicitly approved this AC for building. | Yes |
-| `reviewed` | IT PO v3 has enriched the AC; awaiting your approval. | No — must be promoted to `approved` first |
-| `draft` | AC authored but not yet enriched by IT PO v3. | No |
+| `reviewed` | IT PO has enriched the AC; awaiting your approval. | No — must be promoted to `approved` first |
+| `draft` | AC authored but not yet enriched by IT PO. | No |
 | `unknown` | AC file not found or missing `readiness` field. | No |
 
 ### All-approved fast path
@@ -90,10 +90,10 @@ When to choose this:
 - You want a smaller EPIC with only the highest-priority subset.
 - You plan to revisit the unapproved ACs in a separate `/build-ac` run later.
 
-### `review-all` — Send unapproved ACs to IT PO v3
+### `review-all` — Send unapproved ACs to IT PO
 
-The system dispatches `it-po-v3` to enrich and promote all unapproved ACs
-in the batch. See [The IT PO v3 review-all path](#3-the-it-po-v3-review-all-path).
+The system dispatches `it-po` to enrich and promote all unapproved ACs
+in the batch. See [The IT PO review-all path](#3-the-it-po-review-all-path).
 
 ### `cancel` — Abort without writing any files
 
@@ -106,33 +106,33 @@ Epic generation cancelled. No files written.
 
 ---
 
-## 3. The IT PO v3 review-all path
+## 3. The IT PO review-all path
 
 When you choose `review-all`, the system:
 
 1. Collects all unapproved AC IDs from the readiness report.
-2. Dispatches `it-po-v3` with those IDs and the AC store root.
-3. `it-po-v3` enriches each AC with technical fields
+2. Dispatches `it-po` with those IDs and the AC store root.
+3. `it-po` enriches each AC with technical fields
    (`assigned_agent`, `estimated_complexity`, `delivers_to`, `expects_from`)
    and promotes eligible ACs to `readiness: reviewed`.
-4. The system **re-reads** all AC YAML files from disk after `it-po-v3`
+4. The system **re-reads** all AC YAML files from disk after `it-po`
    returns (it does not rely on cached values).
 5. If all ACs are now `approved` after the re-read, the fast path fires:
    `"All N leaf ACs are approved. Generating epic..."`
 6. If some ACs remain unapproved, the system re-presents the updated
    readiness report and prompts you one more time.
 
-**Note:** `it-po-v3` can enrich and promote `draft` ACs to `reviewed`, but
+**Note:** `it-po` can enrich and promote `draft` ACs to `reviewed`, but
 only you (the user) can promote an AC from `reviewed` to `approved`. After
 the `review-all` pass, you will typically need to manually approve any ACs
-that `it-po-v3` set to `reviewed` before the final `yes` prompt is answered.
+that `it-po` set to `reviewed` before the final `yes` prompt is answered.
 
 ### After the review-all pass
 
 The system shows the updated readiness counts. At this point you can:
 
 - Answer `yes` — proceed with whatever subset is now `approved`.
-- Answer `cancel` — abort. The AC enrichment done by `it-po-v3` is
+- Answer `cancel` — abort. The AC enrichment done by `it-po` is
   preserved on disk (the YAML files now have `readiness: reviewed`), so
   your work is not lost.
 

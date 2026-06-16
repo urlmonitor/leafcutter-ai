@@ -28,7 +28,7 @@ import unittest
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-_HOOK_SCRIPT = _REPO_ROOT / "scripts" / "commit_guardian" / "check_ac_limits.py"
+_HOOK_SCRIPT = _REPO_ROOT / "templates" / "scripts" / "commit_guardian" / "check_ac_limits.py"
 
 # Load the module directly from the scripts path using importlib to avoid
 # package import issues (the hook is a standalone file, not a proper package).
@@ -692,8 +692,8 @@ class TestHookRegisteredInCommitGuardian(unittest.TestCase):
         )
 
     def test_hook_script_exists(self) -> None:
-        """scripts/commit_guardian/check_ac_limits.py must exist."""
-        script = _REPO_ROOT / "scripts" / "commit_guardian" / "check_ac_limits.py"
+        """templates/scripts/commit_guardian/check_ac_limits.py must exist."""
+        script = _REPO_ROOT / "templates" / "scripts" / "commit_guardian" / "check_ac_limits.py"
         self.assertTrue(
             script.is_file(),
             msg=f"Expected check_ac_limits.py at {script}",

@@ -164,7 +164,7 @@ directly when the user wants to run a single pipeline stage.
 
 | Command | Entry Agent | Primary Output |
 |---|---|---|
-| `/create-ticket` | `business-analyst` → `test-planner` → `refinement` + `architect-review` | Ticket `.md` file in `tickets/00_inbox/` |
+| `/create-ticket` | `business-analyst` → `refinement` + `architect-review` | Ticket `.md` file in `tickets/00_inbox/` |
 | `/pick-next-ticket` | `ticket-prioritizer` skill | Top-5 unblocked ticket candidates; optionally dispatches `/build-feature` |
 
 ### Building

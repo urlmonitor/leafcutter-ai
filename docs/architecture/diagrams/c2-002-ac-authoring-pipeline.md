@@ -19,8 +19,8 @@ related_docs:
 # AC Authoring Pipeline — Sequence Diagram
 
 This diagram shows how a new feature request moves through the three-agent
-authoring pipeline — `product-owner-v3`, `business-analyst-v3`, and
-`it-po-v3` — before an AC reaches the User for final approval and the
+authoring pipeline — `product-owner`, `business-analyst`, and
+`it-po` — before an AC reaches the User for final approval and the
 scanner can pick it up.
 
 The readiness state written to each AC YAML at each step is annotated in
@@ -32,9 +32,9 @@ square brackets alongside the arrow label.
 sequenceDiagram
     autonumber
     actor User
-    participant PO as product-owner-v3
-    participant BA as business-analyst-v3
-    participant ITPO as it-po-v3
+    participant PO as product-owner
+    participant BA as business-analyst
+    participant ITPO as it-po
 
     User->>PO: Describe feature / new capability
     Note over PO: Writes L0 and L1 AC YAML files<br/>Sets readiness: draft, priority: medium<br/>Includes documentation_triggers on L1 ACs
@@ -61,9 +61,9 @@ sequenceDiagram
 
 | Stage | Actor | readiness written |
 |---|---|---|
-| L0/L1 authoring | product-owner-v3 | `draft` |
-| L2/L3 decomposition + doc ACs | business-analyst-v3 | `draft` |
-| Technical enrichment | it-po-v3 | `reviewed` |
+| L0/L1 authoring | product-owner | `draft` |
+| L2/L3 decomposition + doc ACs | business-analyst | `draft` |
+| Technical enrichment | it-po | `reviewed` |
 | User approval | User | `approved` |
 | Ticket built and merged | mark_ac_done.py | `done` |
 
@@ -74,8 +74,8 @@ Only ACs with `readiness: approved` are visible to the scanner. ACs at
 
 ## documentation_triggers Flow
 
-When `product-owner-v3` sets a non-empty `documentation_triggers` field on
-an L1 AC, `business-analyst-v3` must produce a documentation AC for each
+When `product-owner` sets a non-empty `documentation_triggers` field on
+an L1 AC, `business-analyst` must produce a documentation AC for each
 trigger type:
 
 | Trigger value | Documentation AC assigned_agent |
@@ -86,7 +86,7 @@ trigger type:
 | `component-diagram` | `architecture-diagram-author` |
 | `reference-doc` | `reference-author` |
 
-`it-po-v3` will not promote a batch to `reviewed` unless all triggered
+`it-po` will not promote a batch to `reviewed` unless all triggered
 documentation ACs are present.
 
 ---

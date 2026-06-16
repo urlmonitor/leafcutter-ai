@@ -97,7 +97,6 @@ graph TD
         brainstorm_lead["Brainstorm Lead"]
         brainstorm_worker["Brainstorm Worker"]
         research_agent["Research Agent"]
-        test_planner["Test Planner"]
         conflict_resolver["Conflict Resolver"]
         worktree_agent["Worktree Agent"]
         changelog_agent["Changelog Agent"]
@@ -146,13 +145,11 @@ graph TD
     create_epic --> business_analyst
     create_epic --> create_ticket
     business_analyst --> research_agent
-    business_analyst --> test_planner
     brainstorm_lead --> brainstorm_worker
     architect_review --> research_agent
     architect_review --> architect_review_deep
     python_coder --> research_agent
     python_coder --> test_runner
-    test_planner --> research_agent
     test_writer --> research_agent
     test_writer --> test_runner
     documentation_expert --> research_agent
@@ -192,7 +189,6 @@ graph TD
     style research_agent fill:#888,color:#fff
     style architect_review fill:#45b37a,color:#fff
     style python_coder fill:#45b37a,color:#fff
-    style test_planner fill:#888,color:#fff
     style test_writer fill:#45b37a,color:#fff
     style test_runner fill:#45b37a,color:#fff
     style documentation_expert fill:#45b37a,color:#fff

@@ -1,7 +1,7 @@
 ---
 allowed-tools: Bash, Read
 description: Wraps roadmap_query.py --audit to produce a structured audit_result
-  JSON for the product-owner-agent. Use when you need to identify starved roadmap
+  JSON for the product-owner. Use when you need to identify starved roadmap
   phases (no open tickets), off-roadmap open tickets, and a full phase inventory.
 name: roadmap-steward
 portable: true
@@ -11,7 +11,7 @@ portable: true
 
 ## When to Use
 
-- You are the product-owner-agent and need a structured audit of ticket-to-roadmap
+- You are the product-owner and need a structured audit of ticket-to-roadmap
   alignment before the PO dialogue.
 - You want to identify phases with no active work (starved items).
 - You want to identify open tickets that are not assigned to any roadmap phase
@@ -71,9 +71,9 @@ The `--audit` flag produces an `audit_result` JSON with this schema:
 | `starved_items` | Phases from `all_items` that have zero open tickets (`roadmap_phase` pointing to them, status: todo or in_progress) |
 | `off_roadmap_tickets` | Open tickets (todo/in_progress) whose `roadmap_phase` field is absent or does not match any phase id in `docs/roadmap.json` |
 
-## Usage Pattern for product-owner-agent
+## Usage Pattern for product-owner
 
-The product-owner-agent invokes this skill in Step 1 (Grounding) as follows:
+The product-owner invokes this skill in Step 1 (Grounding) as follows:
 
 1. Run `--audit` and capture the JSON output.
 2. Parse `starved_items` — these are roadmap items with no active ticket.
