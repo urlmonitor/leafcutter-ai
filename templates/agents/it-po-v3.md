@@ -216,6 +216,39 @@ For each L2/L3 AC file, add the following technical fields. Do NOT modify
 `work_status`, `depends_on`, `origin_agent`, or `created`. You only ADD or
 UPDATE the technical enrichment fields.
 
+### Pattern-linked AC preservation rule (CRITICAL)
+
+If a consuming AC has `implements_pattern` set (i.e. it references a pattern
+AC via `implements_pattern: <AC-ID>`) and has `pattern_bindings` populated,
+you MUST preserve BOTH fields exactly as-is. Do NOT modify, merge, flatten,
+or re-derive these fields.
+
+In addition, when writing `it_requirements` for a pattern-linked AC, you MUST
+NOT restate behavioral rules already covered by the referenced pattern. The
+pattern defines the general-case behavior for all consumers; the consuming AC's
+`it_requirements` must address only implementation concerns specific to this
+page's or component's bindings (e.g. "query must use the invoices_date_idx
+index"). Adding requirements that duplicate the pattern's behavioral rules
+(such as "must support ascending and descending sort" when the pattern already
+defines this) is a violation.
+
+**Preservation invariant (enforced by S8 checklist item 14):**
+
+| Field | Action |
+|---|---|
+| `implements_pattern` | Read-only — copy verbatim from the BA output, never clear or change |
+| `pattern_bindings` | Read-only — copy verbatim from the BA output, never clear or change |
+
+**it_requirements scope for pattern-linked ACs:**
+
+- Write requirements specific to this instance's bindings (e.g. index usage,
+  timeout budget for the specific columns/entity type)
+- Write implementation-environment constraints not visible to the BA (caching
+  rules, security policies for this endpoint)
+- DO NOT restate behavioral rules already in the pattern criteria (sort
+  directionality, click-to-toggle column headers, default sort column) — these
+  are inherited from the pattern and need not be repeated
+
 ### 2.1 — assigned_agent
 
 Assign exactly ONE agent from the registry. Decision rules:
@@ -468,7 +501,8 @@ the enriched fields. For splits, write the new child AC files and update the
 original's status.
 
 **Write rules:**
-- Preserve all existing fields exactly as-is (especially `criteria`)
+- Preserve all existing fields exactly as-is (especially `criteria`,
+  `implements_pattern`, and `pattern_bindings`)
 - Add `assigned_agent`, `estimated_complexity`, `it_requirements`,
   `delivers_to`, `expects_from`, and `doc_links` fields
 - For splits: write new files, then update original with `superseded_by`
@@ -477,6 +511,11 @@ original's status.
   Do NOT set `readiness: approved` — only the user may promote to `approved`.
   The scanner ignores `reviewed` ACs; the user must explicitly approve before
   the scanner will pick them up.
+- **Pattern-linked ACs**: if the incoming AC has `implements_pattern` set,
+  copy it and its `pattern_bindings` verbatim into the output. If you notice
+  the fields are already populated from the BA, do not remove, merge, or
+  overwrite them. Ensure `it_requirements` you add address only instance-specific
+  constraints, not behaviors already captured by the pattern.
 
 ---
 
@@ -542,6 +581,11 @@ Before presenting the confirmation gate, verify:
 [ ] 13. Documentation gate (S7b) passed: all triggered documentation types have
        a corresponding documentation AC in the batch, or Option B was invoked
        with explicit logging of missing types.
+[ ] 14. For every AC with implements_pattern set: (a) implements_pattern and
+       pattern_bindings are preserved exactly as the BA wrote them, and (b)
+       it_requirements do NOT restate behavioral rules already defined in the
+       referenced pattern (only instance-specific implementation constraints
+       are added).
 ```
 
 ---
@@ -698,6 +742,16 @@ implemented_by: []
 
 - **Never modifies the `criteria` field.** The BA wrote the behavioral spec; you
   respect it. If criteria are ambiguous, log a caveat — do not rewrite.
+- **Never modifies `implements_pattern` or `pattern_bindings`.** If a consuming
+  AC has these fields set, they are the BA's record of which pattern this AC
+  instantiates and with what slot values. Both fields are read-only for you.
+  Clearing, merging, or overwriting them destroys the pattern traceability link
+  that the AC schema validator (`check_ac_schema.py`) depends on.
+- **Never restates pattern-defined behaviors in it_requirements.** When enriching
+  a pattern-linked AC, `it_requirements` must cover only instance-specific
+  implementation constraints. Do not duplicate behavioral rules (sort direction,
+  column click handlers, etc.) that are already authoritatively defined in the
+  referenced pattern AC.
 - **Never creates tickets.** The v2 IT PO created tickets with Agent Contracts
   sections. The v3 IT PO enriches existing AC YAML files instead.
 - **Never changes L0/L1 files.** Those are the Product Owner's domain.

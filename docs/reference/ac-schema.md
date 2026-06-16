@@ -464,6 +464,44 @@ AC files (e.g. split ACs), it applies the parent covered_by update protocol
 for any newly created child AC, ensuring the parent's `covered_by` list is
 updated to include the new child.
 
+#### Pattern field preservation (mandatory — AC ACS-500c-2)
+
+When enriching a consuming AC that has `implements_pattern` and `pattern_bindings`
+set, the `it-po-v3` agent MUST preserve both fields exactly as the Business Analyst
+wrote them. Neither field may be cleared, merged, overwritten, or omitted from the
+enriched output.
+
+**Invariant:**
+
+```
+Given an L2 AC has implements_pattern: "ACS-500a-1" and
+  pattern_bindings: {entity_type: "invoices", columns: ["number", "date"]},
+When the it-po-v3 agent adds it_requirements and technical constraints to the AC,
+Then the implements_pattern and pattern_bindings fields remain unchanged,
+And the it_requirements do NOT restate behavioral rules already covered
+  by the referenced pattern (e.g. the agent does NOT add "must support
+  ascending and descending sort" when the pattern already defines this),
+And the it_requirements address only implementation concerns specific
+  to this page's bindings (e.g. "query must use the invoices_date_idx index").
+```
+
+**Why this matters:** The `implements_pattern` and `pattern_bindings` fields are
+the machine-readable link from a consuming AC back to its pattern. The pre-commit
+hook `check_ac_schema.py` uses these links to verify binding completeness — every
+slot declared in the pattern's `pattern_slots` must appear as a key in
+`pattern_bindings`. If the IT PO clears or corrupts these fields, the link is
+broken and the consuming AC loses its traceability to the shared behavior it
+instantiates, defeating the single-source-of-truth invariant for shared behaviors.
+
+**it_requirements scope rule for pattern-linked ACs:**
+
+When writing `it_requirements` for a consuming AC, the IT PO must restrict its
+content to implementation constraints specific to this instance's bindings
+(e.g. index choice for the entity_type's columns, caching budget, security policy
+for this endpoint). Behavioral rules already defined in the pattern AC criteria
+(e.g. sort direction toggle, default ascending sort) are inherited implicitly and
+must not be restated in `it_requirements`.
+
 ### test-writer
 
 The `test-writer` agent reads `covered_by` lists from AC YAML files to
