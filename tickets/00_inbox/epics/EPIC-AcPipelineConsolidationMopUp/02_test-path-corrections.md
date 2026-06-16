@@ -1,6 +1,6 @@
 ---
 title: "Fix 14 consolidation-residue test failures (path and schema mismatches)"
-status: in_progress
+status: done
 components:
   - commit_guardian
   - build_pipeline
@@ -28,7 +28,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 02: Fix 14 consolidation-residue test failures (path and schema mismatches)
@@ -76,7 +76,7 @@ Total: 14 failures. All 14 must go green without changing the behavior under tes
 - [x] test-runner — 2026-06-16 13:45
 - [x] pr-reviewer — 2026-06-16 14:30
 - [x] commit — 2026-06-16 15:00
-- [ ] pull-request
+- [x] pull-request — 2026-06-16 15:45
 
 ## Comments
 
@@ -121,6 +121,14 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Committed 32 files (SHA 430bfdd) resolving 14 consolidation-residue test failures. Pre-commit required PRE_COMMIT_ALLOW_NO_CONFIG=1 because .pre-commit-config.yaml lives in the main leafcutter-ai repo root, not in this git worktree root — this is a known structural quirk of the worktree layout, not a hook failure.
+
+### 2026-06-16 15:45 — pull-request (status: ok)
+feedback-id: fb_2026-06-16_5637ba9f
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Pushed commits 430bfdd + 48f88f4 to existing epic PR #86 (https://github.com/urlmonitor/leafcutter-ai/pull/86). Branch EPIC-AcPipelineConsolidationMopUp is fully up to date. All agents signed_off or not_needed; ticket status flipped to done.
 
 ## Implementation Tasks
 
