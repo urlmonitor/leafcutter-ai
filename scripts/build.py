@@ -313,6 +313,72 @@ def _validate_all(config: dict, package_root: Path, validate_only: bool, dry_run
 
 
 
+# ---------------------------------------------------------------------------
+# AC store source preflight (BP-900a-1-1)
+# ---------------------------------------------------------------------------
+
+#: Canonical list of all 13 Python files expected in ``scripts/ac_store/``.
+#: This list is the source of truth for the preflight check. If a file is
+#: added to or removed from ``scripts/ac_store/``, update this constant.
+_EXPECTED_AC_STORE_FILES: frozenset[str] = frozenset({
+    "__init__.py",
+    "ac_parent_id.py",
+    "ac_prioritizer.py",
+    "ac_triage.py",
+    "backfill_readiness.py",
+    "create_ac_workflow.py",
+    "cross_reference_audit.py",
+    "fix_ac_orphans.py",
+    "generate_ticket_from_ac.py",
+    "mark_ac_done.py",
+    "scan_ac_orphans.py",
+    "scan_ac_store.py",
+    "validate_ac_schema.py",
+})
+
+
+def _validate_ac_store_source(package_root: Path) -> int:
+    """Verify all expected AC store script files are present in the package source.
+
+    Checks that the ``scripts/ac_store/`` directory exists and that every
+    file listed in ``_EXPECTED_AC_STORE_FILES`` is present. If any file is
+    missing, prints an error naming each missing file and returns 1. Returns
+    0 when all files are present.
+
+    This check runs before any output is written to the target directory,
+    ensuring that a broken or partially-deleted package source cannot produce
+    a partial deployment.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.
+
+    Returns:
+        0 if all expected AC store source files are present, 1 if any are missing.
+    """
+    ac_store_src = package_root / "scripts" / "ac_store"
+    if not ac_store_src.is_dir():
+        _error(
+            f"[PREFLIGHT] AC store source directory not found: {ac_store_src}\n"
+            "  Expected: scripts/ac_store/ to exist in the package root.\n"
+            "  Cannot deploy AC store scripts — aborting build."
+        )
+        return 1
+
+    present = {f.name for f in ac_store_src.iterdir() if f.is_file() and f.suffix == ".py"}
+    missing = sorted(_EXPECTED_AC_STORE_FILES - present)
+    if missing:
+        for fname in missing:
+            _error(f"[PREFLIGHT] Missing AC store source file: scripts/ac_store/{fname}")
+        _error(
+            f"[PREFLIGHT] {len(missing)} of {len(_EXPECTED_AC_STORE_FILES)} expected "
+            "AC store script(s) are missing from the package source. "
+            "Restore the missing file(s) and re-run the build."
+        )
+        return 1
+
+    return 0
+
+
 def _read_package_version(package_root: Path) -> str:
     """Read the package version from config/version.json.
 
@@ -726,6 +792,11 @@ def main(argv: list[str] | None = None) -> int:
     if _validate_all(config, package_root, args.validate_only, args.dry_run):
         return 1
 
+    # AC store source preflight: verify all expected scripts are present before
+    # any output is written to the target directory (BP-900a-1-1).
+    if _validate_ac_store_source(package_root):
+        return 1
+
     if args.validate_only:
         _success("Config validation complete (no files written).")
         return 0
@@ -1037,4 +1108,9 @@ if __name__ == "__main__":
 #   build_sync_platforms). Deploys 13 AC pipeline utility scripts from
 #   scripts/ac_store/ to .leafcutter/scripts/ac_store/ in consumer projects.
 #   (#TICKET-20260611-BP-900a-1)
+# - 2026-06-16 [python-coder/TICKET-20260611-BP-900a-1-1]: Added
+#   _validate_ac_store_source() preflight check and _EXPECTED_AC_STORE_FILES
+#   constant. Called in main() after _validate_all() and before any output is
+#   written. Exits non-zero and names each missing source file when any of the
+#   13 expected scripts/ac_store/ files are absent. (BP-900a-1-1)
 # ====================================================================
