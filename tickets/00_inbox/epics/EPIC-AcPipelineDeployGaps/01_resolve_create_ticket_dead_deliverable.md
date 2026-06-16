@@ -14,7 +14,7 @@ agents:
   documentation-expert: signed_off
   commit: signed_off
   pr-reviewer: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 01: Resolve create-ticket.js Dead Deliverable
@@ -246,7 +246,7 @@ And links to the relevant how-to guide
 - [x] documentation-expert — 2026-06-16 12:00
 - [x] pr-reviewer — 2026-06-16 13:00
 - [x] commit — 2026-06-16 14:00
-- [ ] pull-request
+- [x] pull-request — 2026-06-16 15:00
 
 ## Comments
 
@@ -335,6 +335,15 @@ completion_manifest:
   pre_commit_hook_missing_config_handled: true
 
 Committed 7 files (795 insertions, 24 deletions) on branch EPIC-AcPipelineDeployGaps at e886ba6: ADR-012, create-ticket.js retirement guard, unit tests (test_create_ticket_retired, test_create_ticket_dispatch_blocked), docs/how-to/ticket-creation-workflow.md, glossary entries, and ADR README index. Pre-commit hook failure was due to missing .pre-commit-config.yaml in the worktree (not a project hook failure); resolved by passing PRE_COMMIT_ALLOW_NO_CONFIG=1 per the documented workaround.
+
+### 2026-06-16 15:00 — pull-request (status: ok)
+feedback-id: fb_2026-06-16_3def6697
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+  pr_url_captured: true
+
+Pushed branch EPIC-AcPipelineDeployGaps to origin and opened PR #88 at https://github.com/urlmonitor/leafcutter-ai/pull/88 with title "EPIC-AcPipelineDeployGaps: retire create-ticket.js and document canonical /plan-feature + /build-ac path". No existing PR was found; this is the first PR for this epic branch.
 
 ## Implementation Tasks
 
