@@ -1,6 +1,6 @@
 ---
 title: "Resolve create-ticket.js dead deliverable from stale business-analyst contract"
-status: in_progress
+status: done
 components:
   - ticket_creation_pipeline
 created: 2026-06-16
