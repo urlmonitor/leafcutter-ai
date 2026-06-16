@@ -4,7 +4,7 @@ description: "Defines the AC YAML schema, hierarchical ID format with parent der
 type: "adr"
 status: "accepted"
 created: "2026-06-04"
-last_updated: "2026-06-08"
+last_updated: "2026-06-16"
 components:
   - build_pipeline
 ---
@@ -180,6 +180,22 @@ The single-source-of-truth invariant — no two ACs in the store may define an
 equivalent behavior for the same shared pattern — is an authoring discipline
 enforced by review rather than by the schema validator. A future hook
 (`check_ac_pattern_uniqueness.py`) may enforce this mechanically.
+
+**Pattern bindings completeness enforcement (added 2026-06-16, AC ACS-500a-3-i):**
+
+`check_ac_schema.py` now enforces that every consuming AC (one with
+`implements_pattern` set) supplies a `pattern_bindings` entry for every slot
+declared in the referenced pattern's `pattern_slots`. The check runs as part
+of the existing `check-ac-schema` pre-commit hook — no new hook is required.
+
+When a slot is missing, the hook exits 1 with the canonical error:
+
+```
+<consuming_ac_file>: pattern_bindings missing required key '<slot>' for pattern <pattern_id>
+```
+
+Both the consuming AC file path and the missing key name are included in the
+error message so the author can locate and fix the issue immediately.
 
 ### Pattern AC Placement Convention (added 2026-06-11, AC ACS-500a-2)
 

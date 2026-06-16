@@ -4,7 +4,7 @@ description: "Field-by-field reference for AC YAML files, the hierarchical ID fo
 type: reference
 status: active
 created: 2026-06-04
-last_updated: 2026-06-08
+last_updated: 2026-06-16
 components:
   - build_pipeline
 related_docs:
@@ -167,8 +167,9 @@ child AC would.
    match `\{[a-zA-Z_][a-zA-Z0-9_]*\}`.
 3. **All slots must be bound.** A consuming AC's `pattern_bindings` must contain
    a key for every slot declared in the pattern's `pattern_slots`. The schema
-   validator (`check_ac_schema.py`) does not currently enforce binding
-   completeness — authors and reviewers are responsible for this check.
+   validator (`check_ac_schema.py`) enforces binding completeness at commit time:
+   a missing key produces an error naming both the consuming AC file and the
+   missing slot name, blocking the commit.
 4. **Pattern ACs remain standalone ACs.** A pattern AC satisfies its own
    acceptance criterion (the general-case behavior). Consuming ACs satisfy
    per-instance specializations. Both are independently reviewable and traceable.
