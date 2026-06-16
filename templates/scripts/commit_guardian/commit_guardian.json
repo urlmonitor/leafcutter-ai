@@ -715,6 +715,18 @@
                 ],
                 "pass_filenames": false,
                 "_comment": "ACS-100i-2: Blocks commits where a staged child AC file's parent AC does not include the child ID in its covered_by field. Derives the parent ID using derive_parent_id() from scripts/ac_store/ac_parent_id.py. Fail-open on parse errors or missing parent files."
+            },
+            {
+                "id": "check-ac-pattern-refs",
+                "name": "Check AC implements_pattern References (ACS-500a-3)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_ac_pattern_refs.py",
+                "language": "system",
+                "files": "^docs/acceptance-criteria/.*\\.yaml$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "ACS-500a-3: Blocks commits where an AC YAML file's implements_pattern field references a non-existent AC ID or an AC without parameterized slots ({word} placeholders in criteria, or non-empty pattern_slots). Fail-open on parse errors. See docs/acceptance-criteria/ac-store/ACS-500-pattern-reuse/."
             }
         ]
     },
