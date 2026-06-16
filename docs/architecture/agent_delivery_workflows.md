@@ -24,7 +24,6 @@ related_agents:
   - "leafcutter/templates/agents/create-ticket.md"
   - "leafcutter/templates/agents/create-epic.md"
   - "leafcutter/templates/agents/business-analyst.md"
-  - "leafcutter/templates/agents/test-planner.md"
   - "leafcutter/templates/agents/refinement.md"
   - "leafcutter/templates/agents/architect-review.md"
   - "leafcutter/templates/agents/python-coder.md"
@@ -138,7 +137,7 @@ flowchart TD
 
 ## 2. Detail View: Ticket Creation Orchestration (`/create-ticket`)
 
-This view shows how the `create-ticket` orchestrator delegates ticket formulation to specialists, and how it handles fan-out for large requests by escalating to `create-epic`. Note that `business-analyst` always spawns `test-planner` as a sub-agent to produce the `test_requirements` block before the BA payload is returned.
+This view shows how the `create-ticket` orchestrator delegates ticket formulation to specialists, and how it handles fan-out for large requests by escalating to `create-epic`. `business-analyst` produces the `test_requirements` block as part of its payload before returning to the orchestrator.
 
 ```mermaid
 flowchart TD
@@ -146,12 +145,10 @@ flowchart TD
     classDef worker fill:#d1fae5,stroke:#059669,stroke-width:2px;
     classDef gatekeeper fill:#fce7f3,stroke:#db2777,stroke-width:2px;
     classDef decision fill:#fde68a,stroke:#ca8a04,stroke-width:2px;
-    classDef utility fill:#ede9fe,stroke:#7c3aed,stroke-width:2px;
 
     CT_Orch["create-ticket (Orchestrator)"]:::orchestrator
     
-    BA["business-analyst<br/>(Analyzes intent & sets routing decision)"]:::worker
-    TP["test-planner<br/>(Spawned by BA — produces test_requirements)"]:::utility
+    BA["business-analyst<br/>(Analyzes intent & sets routing decision;<br/>produces test_requirements)"]:::worker
     ScaleCheck{"Routing: Epic or Ticket?"}:::decision
     
     Refine["refinement<br/>(Technical clarity + test_requirements validation)"]:::worker
@@ -161,8 +158,6 @@ flowchart TD
     CE_Orch["create-epic (Scaffolder)<br/>Creates Master_Plan + Stubs"]:::orchestrator
 
     CT_Orch --> BA
-    BA -->|Step 2: spawns| TP
-    TP -->|returns test_requirements| BA
     BA --> ScaleCheck
     
     %% Small flow
@@ -232,7 +227,7 @@ This flow illustrates how `epic-supervisor` automates parallel delivery by calcu
 The canonical phase-agent dispatch order is:
 `architect-review → python-coder → test-writer → test-runner → documentation-expert → pr-reviewer → commit → pull-request`
 
-`test-writer` is dispatched when the ticket has a non-empty `test_requirements.tests` array (produced by `test-planner` during ticket creation). If the array is empty (docs-only or config-only tickets), `ticket-wiring` sets `test-writer: not_needed` and the phase is skipped.
+`test-writer` is dispatched when the ticket has a non-empty `test_requirements.tests` array (produced by `business-analyst` during ticket creation). If the array is empty (docs-only or config-only tickets), `ticket-wiring` sets `test-writer: not_needed` and the phase is skipped.
 
 ```mermaid
 flowchart TD
@@ -1400,7 +1395,7 @@ merely a change that compiles.
 When the workflow pauses with a scope-exceeded warning (from BP-600e-1 or BP-600e-2) and
 the user chooses to escalate to the full build pipeline, the quick-fix workflow MUST preserve
 the artefacts already produced — the AC YAML file and the test file — so the user can
-reference them when resuming via `/create-ac` or `/build-feature`. The Gherkin contract:
+reference them when resuming via `/plan-feature` or `/build-feature`. The Gherkin contract:
 
 ```gherkin
 Given the workflow has paused with a scope-exceeded warning
@@ -1411,7 +1406,7 @@ And the test file already written is preserved in the test directory,
 And the workflow outputs a summary of what was completed and what
   remains (AC ID, test file path, diagnosed file, root cause),
 And it provides the AC ID so the user can reference it in
-  /create-ac or /build-feature.
+  /plan-feature or /build-feature.
 ```
 
 **When this section applies:**
@@ -1474,7 +1469,7 @@ All placeholders are resolved from the workflow's in-memory state at the time of
 **AC ID reference in downstream commands:**
 
 The AC ID printed in the escalation summary (`<ac_id>`, e.g. `BP-600e-3`) is the identifier
-that the user can pass to `/create-ac` (to amend the AC) or reference in a new ticket's
+that the user can pass to `/plan-feature` (to amend the AC) or reference in a new ticket's
 `## Acceptance Criteria` section. This ID is the primary link between the quick-fix
 escalation and the full-build pipeline that will complete the fix.
 
@@ -1543,7 +1538,7 @@ DECISION HISTORY
 - 2026-06-08 [llm-expert]: Added AC BP-600a-3 uncommitted changes guard section to Section 5: guard contract, implementation steps, halt message format, and rationale. (#EPIC-QuickFixWorkflow/03)
 - 2026-06-08 [llm-expert]: Added AC BP-600a-2 documentation to Section 5: prohibited isolation infrastructure table, no-worktree-agent/no-feature-skill constraint, and rationale for the exclusion. (#EPIC-QuickFixWorkflow/02)
 - 2026-06-08 [llm-expert]: Added /quick-fix to high-level overview (§1) and Section 5 documenting the current-worktree-only flow, worktree invariant (BP-600a-1), contrast table with /build-feature, and Mermaid flow diagram. (#EPIC-QuickFixWorkflow/01)
-- 2026-05-13 [Antigravity]: Added test-planner spawn to ticket-creation diagram (§2) and test-writer to phase-agent dispatch order (§4) per ADR-018 and ticket 36 (test-expert injection).
+- 2026-05-13 [Antigravity]: Added test-writer to phase-agent dispatch order (§4) per ADR-018 and ticket 36 (test-expert injection).
 - 2026-05-11 [Antigravity]: Refactored to feature layered abstraction, splitting a single large flow into a high-level overview and specific orchestration detail views. Removed non-coding elements like `trade-report`.
 - 2026-05-11 [Antigravity]: Initial creation. Visualises slash command distribution and Epic Supervisor execution flow based on EPIC-CodingAgents and EPIC-AgentSupervisor patterns.
 ====================================================================
