@@ -41,7 +41,7 @@ Each AC file is a single YAML document with the following fields.
 | `origin_agent` | string | no | Identity of the agent or workflow that created this AC file. Common values: `business-analyst`, `debug`, `human`, `ticket-wiring`. |
 | `pattern_slots` | list of strings or null | no | Named placeholder slots in curly-brace notation (e.g. `{columns}`, `{default_sort}`) that consuming ACs must fill. Present only on ACs that act as shared-behavior patterns. Absent or null means this AC is not a pattern. |
 | `implements_pattern` | string or null | no | AC ID of the pattern AC that this AC instantiates. Must reference an AC whose `pattern_slots` is non-empty. Set on consuming ACs; absent on pattern ACs. |
-| `pattern_bindings` | mapping (string → string) or null | no | Maps each slot name (without curly braces) to its concrete value for this consuming AC. Every slot in the referenced pattern's `pattern_slots` must appear as a key. Only valid when `implements_pattern` is set. |
+| `pattern_bindings` | mapping (string → string or string[]) or null | no | Maps each slot name (without curly braces) to its concrete value for this consuming AC. Values may be strings or arrays of strings (e.g. a list of column names). Every slot in the referenced pattern's `pattern_slots` must appear as a key. Only valid when `implements_pattern` is set. |
 
 ### Full example
 
@@ -80,7 +80,7 @@ with concrete values through `pattern_bindings`.
 |---|---|---|
 | `pattern_slots` | Pattern AC | List of slot strings, e.g. `["{columns}", "{default_sort}"]` |
 | `implements_pattern` | Consuming AC | AC ID of the pattern, e.g. `ACS-500a-1` |
-| `pattern_bindings` | Consuming AC | Mapping of slot name → concrete value |
+| `pattern_bindings` | Consuming AC | Mapping of slot name → concrete value (string or array of strings) |
 
 ### Single source of truth invariant
 
@@ -114,26 +114,37 @@ origin_agent: BrainCandy
 ### Consuming AC example
 
 ```yaml
-id: ACS-500a-2
-title: "Invoice list page satisfies the sortable table pattern"
+id: ACS-500b-1
+title: "Invoice list page declares sortable-table pattern with page-specific bindings"
 component: ac-store
 level: L2
 status: active
-created_by: "tickets/00_inbox/epics/EPIC-PatternReuse/01_pattern_ac.md"
+created_by: "tickets/00_inbox/epics/EPIC-Defineabehavioronce,reusethespec/06_TICKET-20260611-ACS-500b-1.md"
 criteria: |
-  Given the Invoice List page is open,
-  When the user loads the page,
-  Then the table is sorted by date ascending by default,
-  And each column header (invoice_number, date, amount, status) is clickable
-    to toggle sort direction.
+  Given the invoices page loads,
+  When the user clicks 'Export',
+  Then a CSV download begins.
 implements_pattern: ACS-500a-1
 pattern_bindings:
-  columns: "invoice_number, date, amount, status"
-  default_sort: "date"
+  entity_type: "invoices"
+  columns:
+    - "number"
+    - "date"
+    - "amount"
+    - "status"
+  default_sort: "date descending"
 covered_by: []
 implemented_by: []
 origin_agent: BrainCandy
 ```
+
+Pattern binding values may be plain strings (e.g. `default_sort: "date descending"`)
+or YAML arrays of strings (e.g. `columns: ["number", "date", "amount", "status"]`).
+Both forms are valid. The schema accepts either type for each binding value.
+
+The `criteria` field contains ONLY page-specific behavior (the CSV export scenario).
+Shared sortable-table behavior — column sorting, sort indicators, keyboard navigation —
+is inherited from `ACS-500a-1` via `implements_pattern` and is not restated here.
 
 ### File placement convention for pattern ACs (AC ACS-500a-2)
 

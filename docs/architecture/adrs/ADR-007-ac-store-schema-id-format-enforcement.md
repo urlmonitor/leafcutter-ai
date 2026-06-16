@@ -169,7 +169,7 @@ shared-behavior reuse across ACs (AC ACS-500a-1):
 |---|---|---|
 | `pattern_slots` | array of strings or null | Declares named curly-brace placeholders on a pattern AC (e.g. `["{columns}", "{default_sort}"]`). Absent or null on non-pattern ACs. |
 | `implements_pattern` | string or null | References the AC ID of the pattern this AC instantiates. Set on consuming ACs only. |
-| `pattern_bindings` | object (string → string) or null | Maps each slot name (without curly braces) to its concrete value. Required when `implements_pattern` is set. |
+| `pattern_bindings` | object (string → string or string[]) or null | Maps each slot name (without curly braces) to its concrete value. Values may be strings or arrays of strings (e.g. a list of column names). Required when `implements_pattern` is set. |
 
 These fields are all optional and default to null. Existing ACs without pattern
 semantics are unaffected — the schema extension is fully additive. The
@@ -180,6 +180,30 @@ The single-source-of-truth invariant — no two ACs in the store may define an
 equivalent behavior for the same shared pattern — is an authoring discipline
 enforced by review rather than by the schema validator. A future hook
 (`check_ac_pattern_uniqueness.py`) may enforce this mechanically.
+
+**Pattern binding values extended to arrays (added 2026-06-16, AC ACS-500b-1):**
+
+`pattern_bindings` values may now be either plain strings or arrays of strings.
+This allows a consuming AC to bind a slot such as `{columns}` to a structured
+list rather than a comma-separated string, improving readability and enabling
+machine-readable binding validation in future tooling. Example:
+
+```yaml
+pattern_bindings:
+  entity_type: "invoices"
+  columns:
+    - "number"
+    - "date"
+    - "amount"
+    - "status"
+  default_sort: "date descending"
+```
+
+The `additionalProperties` constraint on `pattern_bindings` in
+`config/ac_store_schema.json` now accepts `oneOf: [string, array of strings]`
+for each binding value. The binding completeness check (every slot declared in
+the pattern's `pattern_slots` must appear as a key) is unchanged — only the
+allowed value types are broadened. Existing string-valued bindings remain valid.
 
 **Pattern bindings completeness enforcement (added 2026-06-16, AC ACS-500a-3-i):**
 

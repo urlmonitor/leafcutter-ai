@@ -197,9 +197,20 @@
             "oneOf": [
                 {
                     "type": "object",
-                    "description": "Mapping of slot names (without curly braces) to their concrete values for this consuming AC. Every slot declared in the referenced pattern's pattern_slots must be bound here. Only valid when implements_pattern is set.",
+                    "description": "Mapping of slot names (without curly braces) to their concrete values for this consuming AC. Every slot declared in the referenced pattern's pattern_slots must be bound here. Only valid when implements_pattern is set. Values may be strings or arrays of strings (e.g. a list of column names).",
                     "additionalProperties": {
-                        "type": "string"
+                        "oneOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "minItems": 1
+                            }
+                        ]
                     }
                 },
                 {
