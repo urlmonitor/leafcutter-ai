@@ -94,49 +94,58 @@ def test_routing_branches_cover_both_decisions():
 
 
 # ---------------------------------------------------------------------------
-# Test 4 — depth-cap guard is present
+# Test 4 — epic routing returns an instructional error (no agent dispatch)
 # ---------------------------------------------------------------------------
 
-def test_depth_cap_guard_present():
-    """Script enforces a depth >= 3 guard before create-epic dispatch."""
+def test_epic_routing_returns_instructional_error():
+    """Epic path returns an instructional error instead of dispatching create-epic.
+
+    In EPIC-AcPipelineConsolidation v2.0.0, create-epic was removed as a
+    registered agent.  The script must detect routing_decision == 'epic' and
+    return a status:'error' message directing the user to run /create-epic
+    directly.  No depth-cap guard is needed because there is no agent dispatch.
+    """
     content = _read_script()
 
-    # The guard must reference depth >= 3 (or currentDepth >= 3, etc.)
-    # Accept various reasonable spellings, including constant-based comparisons
-    # where DEPTH_CAP = 3 and the check uses >= DEPTH_CAP.
-    has_depth_check = (
-        "currentDepth >= 3" in content
-        or "current_depth >= 3" in content
-        or "depth >= 3" in content
-        or ">= 3" in content  # broader fallback
-        or (
-            # Constant-based guard: const DEPTH_CAP = 3 + currentDepth >= DEPTH_CAP
-            "DEPTH_CAP" in content
-            and "3" in content
-            and ">= DEPTH_CAP" in content
-        )
+    # The epic branch must set status: "error"
+    assert '"error"' in content or "'error'" in content, (
+        "Script does not contain a status:'error' return for the epic path"
     )
-    assert has_depth_check, (
-        "Depth-cap guard (>= 3) not found in script — "
-        "create-epic must not be called when depth is at cap."
+    # The instructional message must mention /create-epic so the user knows
+    # what to do next.
+    assert "/create-epic" in content, (
+        "Script epic-path error message does not mention /create-epic — "
+        "users need to know the correct fallback command."
+    )
+    # create-epic must NOT be dispatched as an agent() call (it was removed).
+    assert 'agentType: "create-epic"' not in content, (
+        "Script still dispatches create-epic as an agent — it was removed in v2.0.0"
     )
 
 
 # ---------------------------------------------------------------------------
-# Test 5 — parallel() used for refinement and architect-review
+# Test 5 — architect-review dispatched sequentially; refinement removed
 # ---------------------------------------------------------------------------
 
-def test_parallel_used_for_refinement_and_architect():
-    """refinement and architect-review are dispatched via parallel() not sequentially."""
+def test_architect_review_dispatched_sequentially_no_refinement():
+    """architect-review is called via agent() sequentially; refinement is absent.
+
+    In EPIC-AcPipelineConsolidation v2.0.0, refinement and ticket-wiring agents
+    were removed and their responsibilities merged into business-analyst.
+    architect-review is now invoked via a single agent() call (not parallel()),
+    conditional on the BA output flagging architectural impact.
+    """
     content = _read_script()
 
-    assert "parallel(" in content or "parallel([" in content, (
-        "parallel() call not found — refinement and architect-review "
-        "must be dispatched concurrently via parallel()."
-    )
-    assert "refinement" in content, (
-        "refinement agent not referenced in script"
-    )
+    # architect-review must still be referenced (it is not removed, only sequential)
     assert "architect-review" in content or "architect_review" in content, (
         "architect-review agent not referenced in script"
+    )
+    # architect-review must be called via agent(), not parallel()
+    assert 'agentType: "architect-review"' in content, (
+        "architect-review is not dispatched via agent() — expected sequential dispatch"
+    )
+    # refinement agent must be absent (intentionally removed in v2.0.0)
+    assert '"refinement"' not in content and "'refinement'" not in content, (
+        "refinement agent reference still present — it was removed in v2.0.0"
     )

@@ -685,47 +685,18 @@ async function run({ userInput, agent, parallel, prompt }) {
           " Needs investigation to determine root cause before adding a known-flaky marker.";
       }
 
-      try {
-        const createTicketResult = await agent({
-          agentType: "create-ticket",
-          input: {
-            request: requestText,
-          },
-        });
-
-        let ticketInfo;
-        try {
-          ticketInfo =
-            typeof createTicketResult === "string"
-              ? JSON.parse(createTicketResult)
-              : createTicketResult;
-        } catch (_parseErr) {
-          ticketInfo = { ticket_path: null };
-        }
-
-        const ticketPath =
-          ticketInfo &&
-          (ticketInfo.ticket_path || ticketInfo.path || ticketInfo.filename);
-
-        if (ticketPath) {
-          createdTrackingTickets.push(ticketPath);
-          console.log(
-            `[finalize-feature] step 6a: created tracking ticket for ${testId}: ${ticketPath}`
-          );
-        } else {
-          // create-ticket succeeded but did not return a path — push null as sentinel.
-          createdTrackingTickets.push(null);
-          console.warn(
-            `[finalize-feature] step 6a: create-ticket for ${testId} returned no ticket_path`
-          );
-        }
-      } catch (createErr) {
-        // Non-fatal: log warning and continue.
-        console.warn(
-          `[finalize-feature] step 6a: create-ticket dispatch failed for ${testId}: ${createErr && createErr.message}`
-        );
-        createdTrackingTickets.push(null);
-      }
+      // create-ticket is a workflow (slash command), not a registered agent,
+      // and was removed from the agent registry in EPIC-AcPipelineConsolidation
+      // v2.0.0. Dispatching it via agent() fails at runtime.
+      // Log the request so the user can create the ticket manually via
+      // /create-ticket.
+      console.warn(
+        `[finalize-feature] step 6a: automatic ticket creation skipped — ` +
+        `create-ticket is a workflow, not an agent. ` +
+        `To track this failure, run /create-ticket manually with the following request:\n` +
+        requestText
+      );
+      createdTrackingTickets.push(null);
     }
 
     if (preExistingEntries.length === 0) {

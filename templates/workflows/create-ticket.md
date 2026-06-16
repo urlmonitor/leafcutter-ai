@@ -6,9 +6,11 @@ description: |
 ---
 
 <!-- v2.1.154+ path: handled by create-ticket.js workflow script -->
-<!-- The JS workflow spawns business-analyst → test-planner → refinement + architect-review -->
-<!-- in parallel — all at depth 1, avoiding the nesting-depth violation. -->
+<!-- The JS workflow spawns business-analyst → architect-review (conditional) -->
+<!-- all at depth 1, avoiding the nesting-depth violation. -->
 <!-- See: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md -->
 
 <!-- Fallback path for Claude Code < v2.1.154 (no workflow script support): -->
-Invoke the `create-ticket` agent with the user's full request: $ARGUMENTS
+<!-- The create-ticket agent was removed in EPIC-AcPipelineConsolidation v2.0.0. -->
+<!-- For older Claude Code installs, please upgrade to v2.1.154+ to use the workflow script. -->
+Please upgrade Claude Code to v2.1.154 or newer to use the /create-ticket workflow. Your request: $ARGUMENTS
