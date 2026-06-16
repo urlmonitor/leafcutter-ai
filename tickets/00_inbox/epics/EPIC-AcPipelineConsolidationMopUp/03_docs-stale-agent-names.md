@@ -1,6 +1,6 @@
 ---
 title: "Remove stale v3 agent names, test-planner refs, and /create-ac mentions from docs"
-status: in_progress
+status: done
 components:
   - documentation_system
 created: 2026-06-11
@@ -36,8 +36,8 @@ agents:
   test-runner: not_needed
   documentation-expert: signed_off
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 03: Remove stale v3 agent names, test-planner refs, and /create-ac mentions from docs
@@ -100,8 +100,8 @@ The pipeline no longer uses the `-v3` suffixed agent names. Canonical names are 
 
 - [x] documentation-expert — 2026-06-16 14:30
 - [x] pr-reviewer — 2026-06-16 15:00
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-16 15:30
+- [x] pull-request — 2026-06-16 15:45
 
 ## Comments
 
@@ -125,6 +125,25 @@ completion_manifest:
   cross_references_intact: true
 
 Reviewed staged diff and working-tree changes. AC-3: all three `/create-ac` occurrences replaced with `/plan-feature` — verified zero residual `/create-ac` matches in `docs/architecture/`. Substitutions are syntactically correct in both prose context (lines 1398, 1472 of agent_delivery_workflows.md) and Gherkin block (line 1409 / ADR-006 line 718). AC-1 and AC-2: the 7 Class-A target files and all Class-B files are clean. One medium-confidence observation: `docs/acceptance-criteria/README.md` rows 50-51 still name `product-owner-v3`/`it-po-v3` in an active workflow table — this file was outside the ticket's target list and is out of scope for this ticket; a follow-on doc sweep may address it. No high-confidence findings; approved to commit.
+
+### 2026-06-16 15:30 — commit (status: ok)
+
+feedback-id: fb_2026-06-16_338a5f3f
+completion_manifest:
+  commit_created: true
+  staged_files_in_scope: true
+  pre_commit_hooks_passed: true
+
+Commit 9d9a83f created on branch EPIC-AcPipelineConsolidationMopUp. Staged and committed: ADR-006-flatten-supervisor-chain.md, agent_delivery_workflows.md (both with /create-ac → /plan-feature substitutions), ticket-01 sign-offs, and ticket-03 sign-offs. Pre-commit hooks passed (no .pre-commit-config.yaml — allowed via PRE_COMMIT_ALLOW_NO_CONFIG=1 per epic convention). 4 files changed, 101 insertions(+), 48 deletions(-).
+
+### 2026-06-16 15:45 — pull-request (status: ok)
+
+feedback-id: fb_2026-06-16_5b1d5dee
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+
+Branch EPIC-AcPipelineConsolidationMopUp pushed to origin. PR #86 opened at https://github.com/urlmonitor/leafcutter-ai/pull/86. No prior PR existed for this branch.
 
 ## Implementation Tasks
 
