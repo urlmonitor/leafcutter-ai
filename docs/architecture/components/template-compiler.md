@@ -99,3 +99,51 @@ When the compiled output includes templates that reference these scripts, the re
 - `scripts/ac_store/ac_prioritizer.py`
 - `scripts/ac_store/generate_ticket_from_ac.py`
 - `scripts/goal_to_epic.py`
+
+## External-Dependency Allowlist and Broken-Reference Guard (BP-900b-1-1)
+
+After script path references are extracted, a cross-check guard compares them against the set of scripts actually deployed to the target project. References that are neither deployed nor allowlisted are classified as **broken references**.
+
+The external-dependency allowlist lets agent templates legitimately reference scripts that are supplied by the user's own project or by an external tool — without triggering a broken-reference failure in the build.
+
+### Allowlist constant
+
+```python
+# scripts/build_propagation_audit.py
+EXTERNAL_DEPENDENCY_ALLOWLIST: frozenset[str] = frozenset()
+```
+
+The constant is a `frozenset[str]` where each entry is a `scripts/<relative-path>` string matching the form produced by `extract_script_path_refs()`. The default value is empty; consumers extend it either by editing the constant or by passing a custom `allowlist` argument to `check_broken_references()`.
+
+### Guard function
+
+```python
+from build_propagation_audit import check_broken_references, EXTERNAL_DEPENDENCY_ALLOWLIST
+from build_referential_integrity import extract_script_path_refs
+from pathlib import Path
+
+compiled_root = Path("/path/to/consumer/.claude")
+refs = extract_script_path_refs(compiled_root)
+
+deployed = {"scripts/ac_store/ac_prioritizer.py", "scripts/goal_to_epic.py"}
+broken = check_broken_references(refs, deployed)
+# broken is a set[str] — empty means build may exit zero
+```
+
+To exempt a known external script:
+
+```python
+custom_allowlist = frozenset({"scripts/external_tool.py"})
+broken = check_broken_references(refs, deployed, allowlist=custom_allowlist)
+# "scripts/external_tool.py" will NOT appear in `broken`
+```
+
+### Behaviour contract
+
+| Ref present in `deployed_scripts` | Ref in `allowlist` | Result |
+|---|---|---|
+| Yes | — | Resolved — not broken |
+| No | Yes | Resolved (allowlisted) — not broken |
+| No | No | **Broken** — appears in return set |
+
+The function is a pure predicate (no I/O, no side effects) and never raises. An empty return set means all references are accounted for and the build may exit zero, satisfying AC BP-900b-1-1.
