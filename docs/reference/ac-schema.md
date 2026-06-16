@@ -185,6 +185,68 @@ child AC would.
    acceptance criterion (the general-case behavior). Consuming ACs satisfy
    per-instance specializations. Both are independently reviewable and traceable.
 
+### Effective behavior propagation — amending a pattern AC (AC ACS-500d-1)
+
+When the `criteria` field of a pattern AC is amended (for example, changing
+"displays total count above the table" to "displays total count below the
+table"), every consuming AC that has `implements_pattern` pointing at that
+pattern **automatically inherits the updated behavior** — no modification to
+the consuming AC's own YAML file is required, and no migration ticket is created.
+
+**How resolution works at read time:**
+
+An agent or tool that needs to understand the effective behavior of a consuming
+AC follows this two-step lookup:
+
+1. Read the consuming AC's own `criteria` field (page-specific behavior, if any).
+2. Follow `implements_pattern` → read the referenced pattern AC's `criteria`
+   field (the shared behavior, including the current slot definitions).
+
+The **effective criteria** of a consuming AC is the union of its own `criteria`
+plus the pattern AC's current `criteria` with `pattern_bindings` substituted for
+each `{slot}`. The pattern AC is the single source of truth for the shared
+behavior; the consuming AC's `pattern_bindings` are the single source of truth
+for the slot values.
+
+**Why no consumer changes are required:**
+
+The consuming AC stores only the `implements_pattern` reference and its
+`pattern_bindings`. It does not cache or restate the pattern's `criteria`
+text. Because the reference is resolved at read time — every time an agent
+reads the consuming AC — the consuming AC always reflects the current state of
+the pattern, not a snapshot from when it was authored.
+
+**Concrete example:**
+
+```
+Pattern AC: PTN-001
+  criteria: |
+    Given a paginated collection page,
+    When the user loads the page,
+    Then the page displays total count above the table.   # ← original
+
+Three consuming ACs each have:
+  implements_pattern: PTN-001
+
+→ Amend PTN-001 criteria: change "above" to "below"
+
+Result: all three consuming ACs now resolve effective behavior as
+  "displays total count below the table" — their YAML files are untouched.
+```
+
+**No migration path exists** because none is needed. There is no "propagation
+step" that pushes the amendment to consumer files. The `implements_pattern`
+reference is the propagation mechanism: it is evaluated live, not at write time.
+
+**Amendment traceability:**
+
+When a pattern AC's `criteria` is amended, the amending ticket path is appended
+to the pattern AC's `amended_by` list. Consuming ACs do not need `amended_by`
+entries for pattern-inherited changes — only for changes to their own page-specific
+`criteria` field. An agent auditing which consuming ACs were affected by a pattern
+amendment reads the pattern AC's `amended_by` list, then queries the store for all
+ACs with `implements_pattern: <pattern-id>`.
+
 ### Pattern deviations — separate files, not inline overrides (AC ACS-500b-2)
 
 When a page or component needs behavior that differs from a pattern in one

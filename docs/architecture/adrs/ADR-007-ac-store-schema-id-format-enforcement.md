@@ -329,6 +329,67 @@ values for pattern slots. Such ACs must instead use `implements_pattern` +
   `check_ac_pattern_uniqueness.py` hook. This keeps the hook surface minimal
   and avoids requiring a separate hook registration entry.
 
+### Pattern Criteria Propagation — Effective Behavior at Read Time (added 2026-06-16, AC ACS-500d-1)
+
+When a pattern AC's `criteria` field is amended, every consuming AC that
+references it via `implements_pattern` automatically inherits the updated
+behavior. No change to consuming AC files is required, and no migration ticket
+is created.
+
+**Decision:** Pattern criteria propagation is a read-time resolution, not a
+write-time fan-out.
+
+A consuming AC stores only:
+- `implements_pattern: <pattern-id>` — the reference to the pattern.
+- `pattern_bindings: {...}` — the concrete values for each slot.
+
+The consuming AC's effective behavior is evaluated by any reader (agent, tool,
+or human) at the time the AC is read:
+
+1. Read the consuming AC's own `criteria` (page-specific behavior, if present).
+2. Follow `implements_pattern` → read the pattern AC's current `criteria`.
+3. Substitute `pattern_bindings` values for each `{slot}` placeholder in the
+   pattern criteria.
+4. The effective criteria is the union of steps 1 and 3.
+
+Because the reference is resolved at read time, amending the pattern AC's
+`criteria` is immediately reflected in all consumers' effective behavior without
+any additional writes.
+
+**Rationale:**
+
+1. **Zero-cost propagation.** A write-time fan-out would require the amending
+   agent to locate all consumers, update each one, and commit all changes
+   atomically. With N consumers this is an O(N) write operation that is error-
+   prone and produces noisy diffs. Read-time resolution makes propagation
+   O(0) writes and O(1) per read.
+
+2. **Consumer files are immutable records of instantiation.** A consuming AC's
+   YAML records "which pattern, with what bindings, for which component." That
+   record does not change when the pattern's behavior changes — the record
+   accurately describes the consuming AC's intent at all times. Rewriting the
+   consumer file on every pattern amendment would conflate amendment history with
+   instantiation records.
+
+3. **Consistent with the single-source-of-truth invariant.** The pattern AC is
+   the sole owner of the shared behavior definition. Propagating criteria to
+   consumer files would create N+1 copies of the definition — exactly the
+   redundancy the pattern mechanism was designed to eliminate.
+
+4. **No schema change required.** The `implements_pattern` reference field
+   already carries the information needed for read-time resolution. No new field
+   (e.g. `criteria_inherited_version`) is introduced.
+
+**Amendment traceability:** When a pattern AC's `criteria` is amended, the
+amending ticket path is appended to the pattern AC's `amended_by` list. Consumer
+ACs do not receive `amended_by` entries for pattern-inherited changes. An auditor
+who wants to know which consumers were affected by a pattern amendment reads the
+pattern AC's `amended_by` list and queries `implements_pattern: <pattern-id>`
+across the store.
+
+**Detailed specification:** see `docs/reference/ac-schema.md` under
+"Effective behavior propagation — amending a pattern AC."
+
 ### Pattern AC Placement Convention (added 2026-06-11, AC ACS-500a-2)
 
 Pattern ACs follow the **same file placement convention** as every other AC in
