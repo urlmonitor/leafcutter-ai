@@ -1175,6 +1175,73 @@ def build_ac_store_scripts(target_root: Path, config: dict[str, Any],
     return written
 
 
+def build_standalone_scripts(target_root: Path, config: dict[str, Any],
+                             dry_run: bool, force: bool) -> int:
+    """Deploy standalone scripts goal_to_epic.py and build_ac_mode_detection.py.
+
+    Copies ``goal_to_epic.py`` and ``build_ac_mode_detection.py`` from
+    ``templates/scripts/`` to ``{target_root}/scripts/`` so consumer projects have
+    access to these standalone utilities. Each deployed file is byte-identical
+    to its source in ``templates/scripts/``.
+
+    Files are copied verbatim. The compare-before-write guard skips byte-
+    identical files to eliminate mtime churn.
+
+    Args:
+        target_root: Absolute path to the target project output root.
+        config: Merged config dictionary (not used; accepted for interface parity).
+        dry_run: When True, logs intent but writes nothing.
+        force: When True, overwrites existing files.
+
+    Returns:
+        Count of files written (or that would be written in dry-run mode).
+
+    # DECISION HISTORY
+    # - 2026-06-16 [python-coder/TICKET-20260611-BP-900a-2]:
+    #   Added build_standalone_scripts() phase. Deploys goal_to_epic.py and
+    #   build_ac_mode_detection.py from templates/scripts/ to .leafcutter/scripts/
+    #   verbatim. Shims at {target}/scripts/ point to .leafcutter/scripts/.
+    #   (#TICKET-20260611-BP-900a-2)
+    """
+    _STANDALONE_SCRIPTS = ["goal_to_epic.py", "build_ac_mode_detection.py"]
+    output_dir = target_root / "scripts"
+    written = 0
+
+    for script_name in _STANDALONE_SCRIPTS:
+        src_file = TEMPLATES_DIR / "scripts" / script_name
+        if not src_file.is_file():
+            _log.warning("build_standalone_scripts: source not found: %s", src_file)
+            continue
+        output_path = output_dir / script_name
+
+        if not _should_overwrite(output_path, force):
+            continue
+
+        if _files_content_identical(src_file, output_path):
+            global _uptodate_count  # noqa: PLW0603
+            _uptodate_count += 1
+            continue
+
+        if dry_run:
+            print(f"  [DRY-RUN] would copy scripts/{script_name}")
+            written += 1
+        else:
+            try:
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src_file, output_path)
+            except OSError as exc:
+                _log.warning(
+                    "build_standalone_scripts: failed to copy %s: %s",
+                    script_name,
+                    exc,
+                )
+                continue
+            print(f"  scripts/{script_name}")
+            written += 1
+
+    return written
+
+
 def build_ac_store_docs(target_root: Path, config: dict[str, Any],
                         dry_run: bool, force: bool) -> int:
     """Install AC Traceability Store documentation into the target project.
@@ -1681,4 +1748,11 @@ def clean_stale_artifacts(
 #   ac_store/, copy via shutil.copy2 with _files_content_identical guard.
 #   Registered in build.py internal_phases list after ("Sync platforms",
 #   build_sync_platforms). (#TICKET-20260611-BP-900a-1)
+# - 2026-06-16 [python-coder/TICKET-20260611-BP-900a-2]:
+#   Added build_standalone_scripts() phase. Deploys goal_to_epic.py and
+#   build_ac_mode_detection.py from templates/scripts/ to .leafcutter/scripts/
+#   verbatim (byte-identical, SHA-256 compare-before-copy guard). Shims at
+#   {target}/scripts/ created by install_shims() in build_helpers.py.
+#   Registered in build.py internal_phases list after ("AC store scripts",
+#   build_ac_store_scripts). (#TICKET-20260611-BP-900a-2)
 # ====================================================================

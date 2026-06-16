@@ -43,6 +43,7 @@ from build_phases import (
     build_antigravity_instructions,
     build_sync_platforms,
     build_ac_store_scripts,
+    build_standalone_scripts,
     build_ac_store_docs,
     build_agent_cards,
     validate_agent_self_description,
@@ -523,6 +524,7 @@ def _run_phases(
         ("Doc compliance", build_doc_compliance),
         ("Sync platforms", build_sync_platforms),
         ("AC store scripts", build_ac_store_scripts),
+        ("Standalone scripts", build_standalone_scripts),
     ]
 
     # Phases that write user-curated scaffolds at target_root (write-if-absent)
@@ -1113,4 +1115,11 @@ if __name__ == "__main__":
 #   constant. Called in main() after _validate_all() and before any output is
 #   written. Exits non-zero and names each missing source file when any of the
 #   13 expected scripts/ac_store/ files are absent. (BP-900a-1-1)
+# - 2026-06-16 [python-coder/TICKET-20260611-BP-900a-2]: Imported
+#   build_standalone_scripts from build_phases and added ("Standalone scripts",
+#   build_standalone_scripts) entry to internal_phases after ("AC store scripts",
+#   build_ac_store_scripts). Deploys goal_to_epic.py and build_ac_mode_detection.py
+#   from templates/scripts/ to .leafcutter/scripts/ in consumer projects.
+#   Shims at {target}/scripts/ are created by install_shims() in build_helpers.py.
+#   (#TICKET-20260611-BP-900a-2)
 # ====================================================================

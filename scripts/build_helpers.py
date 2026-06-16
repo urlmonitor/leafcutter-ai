@@ -384,6 +384,8 @@ def install_shims(
     file_shims: list[tuple[str, str]] = [
         (".pre-commit-config.yaml", "pre-commit-config.yaml"),
         (".claude/settings.json", "settings.json"),
+        ("scripts/goal_to_epic.py", "scripts/goal_to_epic.py"),
+        ("scripts/build_ac_mode_detection.py", "scripts/build_ac_mode_detection.py"),
     ]
 
     for canonical_rel, output_rel in file_shims:
@@ -629,4 +631,12 @@ def install_hooks(target_root, dry_run=False):
 #   succeeds before tier 3 runs). Added BLE001 noqa on unavoidable broad-except
 #   blocks in seed_docs() and update_diagrams(). Refactored try/except in
 #   _create_shim() and _create_file_shim() to use else clause (Ruff compliance).
+# - 2026-06-16 [python-coder/TICKET-20260611-BP-900a-2]: Added two file shims
+#   to install_shims() file_shims list:
+#     ("scripts/goal_to_epic.py", "scripts/goal_to_epic.py")
+#     ("scripts/build_ac_mode_detection.py", "scripts/build_ac_mode_detection.py")
+#   Creates {target}/scripts/goal_to_epic.py and
+#   {target}/scripts/build_ac_mode_detection.py as symlinks (or copies) pointing
+#   to their counterparts in .leafcutter/scripts/, satisfying AC BP-900a-2.
+#   (#TICKET-20260611-BP-900a-2)
 # ====================================================================
