@@ -63,3 +63,39 @@ After deployment, a directory shim is installed by `install_shims()` in `build_h
 ```
 
 This shim means that any process running from `{consumer}/` can add `scripts/ac_store` to `sys.path` and import `ac_prioritizer`, `generate_ticket_from_ac`, and `scan_ac_store` without error. Agent templates (e.g. `build-ac.md`) and skills (e.g. `ac-scanner/SKILL.md`) rely on this importability contract.
+
+## Post-Compile Script Path Reference Extraction (BP-900b-1)
+
+After `build.py` compiles agent templates and skill files to the output directory, a post-compile validation phase can scan every `.md` file in the compiled `agents/` and `skills/` directories and extract all script path references. This extraction is implemented by `extract_script_path_refs()` in `scripts/build_referential_integrity.py`.
+
+### Patterns matched
+
+The extractor recognises four reference forms:
+
+| Pattern form | Example |
+|---|---|
+| `python3 scripts/<path>` | `python3 scripts/ac_store/ac_prioritizer.py` |
+| `python scripts/<path>` | `python scripts/goal_to_epic.py` |
+| `sys.path.insert(<N>, 'scripts/<path>')` | `sys.path.insert(0, 'scripts/ac_store')` |
+| `sys.path.insert(<N>, "scripts/<path>")` | `sys.path.insert(0, "scripts/ac_store")` |
+
+### API
+
+```python
+from build_referential_integrity import extract_script_path_refs
+from pathlib import Path
+
+compiled_root = Path("/path/to/consumer/.claude")
+refs = extract_script_path_refs(compiled_root)
+# refs is a set[str] — e.g. {"scripts/ac_store/ac_prioritizer.py", ...}
+```
+
+`compiled_root` is typically `<target>/.leafcutter` or `<target>/.claude`. The function looks for `.md` files recursively under `compiled_root/agents/` and `compiled_root/skills/`. It is intentionally fail-open: unreadable files are silently skipped and the function never raises.
+
+### Minimum expected paths
+
+When the compiled output includes templates that reference these scripts, the returned set will include at minimum:
+
+- `scripts/ac_store/ac_prioritizer.py`
+- `scripts/ac_store/generate_ticket_from_ac.py`
+- `scripts/goal_to_epic.py`
