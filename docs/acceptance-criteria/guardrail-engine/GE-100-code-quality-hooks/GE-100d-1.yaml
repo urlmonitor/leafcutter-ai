@@ -1,0 +1,52 @@
+id: GE-100d-1
+readiness: approved
+priority: high
+title: "diff-cover hook falls back through compare branch chain when origin/main is unavailable"
+component: guardrail-engine
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100.yaml"
+criteria: |
+  Given the commit guardian configuration has the diff_coverage section with:
+    enabled: true
+    compare_branch: "origin/main"
+  And the diff-cover binary is installed
+  And coverage.xml exists and is fresh
+  And the git remote "origin" does not have a "main" branch
+    (e.g. the remote uses "master" or the remote is unreachable)
+  But the local branch "main" exists
+  When the diff-cover hook runs at pre-commit time
+  Then the hook falls back to comparing against the local "main" branch
+  And the coverage check proceeds using "main" as the comparison base
+
+  ---
+
+  Given the same configuration
+  And neither "origin/main" nor a local "main" branch exists
+  When the diff-cover hook runs at pre-commit time
+  Then the hook falls back to comparing against "HEAD~1"
+  And the coverage check proceeds using the previous commit as the base
+depends_on:
+  - GE-100d
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100d.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-100d
+  contract: "The compare-branch resolution function that implements the fallback chain: origin/main -> main -> HEAD~1"
+origin_agent: BrainCandy
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260616-GE-100d-1.md

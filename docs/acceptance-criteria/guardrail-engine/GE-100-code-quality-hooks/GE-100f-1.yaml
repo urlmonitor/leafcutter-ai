@@ -1,0 +1,49 @@
+id: GE-100f-1
+readiness: approved
+priority: high
+title: "diff-cover hook uses HEAD~1 as fallback when all compare branches are unreachable in a shallow clone"
+component: guardrail-engine
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100.yaml"
+criteria: |
+  Given the commit guardian configuration has the diff_coverage section with:
+    enabled: true
+    strict: true
+    compare_branch: "origin/main"
+  And the repository is a shallow clone with depth 1
+    (only the current commit is available)
+  And git rev-parse --is-shallow-repository returns "true"
+  And diff-cover cannot resolve any of the fallback branches
+    because the shallow history does not contain them
+  When the diff-cover hook runs at pre-commit time
+  Then the hook detects the shallow-clone condition before attempting
+    any branch resolution
+  And the hook exits with code 0 (fail-open)
+  And it emits an advisory message explaining that coverage checking
+    requires full git history (fetch-depth: 0)
+  And the commit proceeds without coverage enforcement
+depends_on:
+  - GE-100f
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100f.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-100f
+  contract: "The shallow-clone detection function that checks git repository state before branch resolution"
+origin_agent: BrainCandy
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260616-GE-100f-1.md

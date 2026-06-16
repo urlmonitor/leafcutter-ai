@@ -42,3 +42,10 @@ components:
     prefix: PER
     description: "ACs for persona definitions, AC targeting by persona, and persona knowledge graph queries"
     owner: null
+  - id: guardrail-engine
+    prefix: GE
+    description: "ACs for code quality guardrails: duplicate detection, coverage gating, complexity enforcement, and change-driven quality gates"
+    owner: null
+    directory_patterns:
+      - "scripts/commit_guardian/check_*.py"
+      - "templates/commit-guardian/check_*.py"

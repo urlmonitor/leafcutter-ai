@@ -1,0 +1,66 @@
+id: GE-100h
+readiness: approved
+priority: high
+title: "Both hooks ship disabled in commit_guardian.json with correct hooks_manifest entries"
+component: guardrail-engine
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100.yaml"
+criteria: |
+  Given the canonical commit_guardian.json is read after the hooks are added
+  When a consumer inspects the hooks_manifest.hooks array
+  Then it contains an entry for the duplicate code hook with:
+    - id: "check-duplicate-code"
+    - enabled: false
+    - files pattern matching: "\.(py|ts|js|tsx|jsx|sql)$"
+    - pass_filenames: false
+    - stages: ["pre-commit"]
+  And it contains an entry for the diff coverage hook with:
+    - id: "check-diff-coverage"
+    - enabled: false
+    - files pattern matching: "\.(py|sql)$"
+    - pass_filenames: false
+    - stages: ["pre-commit"]
+  And the top-level JSON contains a "duplicate_code" configuration section with:
+    - enabled: false
+    - strict: false
+    - min_lines: 5
+    - min_tokens: 50
+    - threshold_percent: 5
+    - checked_extensions: [".py", ".ts", ".js", ".tsx", ".jsx", ".sql"]
+    - excluded_dirs: ["node_modules", ".venv", "__pycache__"]
+  And the top-level JSON contains a "diff_coverage" configuration section with:
+    - enabled: false
+    - strict: false
+    - min_coverage_percent: 80
+    - coverage_xml_path: "coverage.xml"
+    - compare_branch: "origin/main"
+    - max_age_seconds: 3600
+depends_on:
+  - GE-100
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: "A commit_guardian.json structure that both hook scripts read at runtime for their configuration"
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-100h-1
+implemented_by:
+- tickets/00_inbox/TICKET-20260616-GE-100h.md
