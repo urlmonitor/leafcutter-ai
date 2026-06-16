@@ -12,7 +12,7 @@ agents:
   python-coder: signed_off
   test-writer: signed_off
   documentation-expert: signed_off
-  commit: needed
+  commit: signed_off
   pr-reviewer: signed_off
   pull-request: needed
 ---
@@ -245,7 +245,7 @@ And links to the relevant how-to guide
 - [x] test-writer — 2026-06-16 00:00
 - [x] documentation-expert — 2026-06-16 12:00
 - [x] pr-reviewer — 2026-06-16 13:00
-- [ ] commit
+- [x] commit — 2026-06-16 14:00
 - [ ] pull-request
 
 ## Comments
@@ -326,6 +326,15 @@ completion_manifest:
   all_7_tests_green: true
 
 All review criteria pass. Retirement guard in create-ticket.js is the first statement in `run()` and returns `{status: "error", exit_code: 1}` before any agent dispatch. ADR-012 clearly records the Option C decision with full alternatives analysis (Options A and B rejected with rationale). Tests 6 and 7 pass and correctly verify AC-6, AC-6-Edge, and AC-7. How-to guide covers canonical path, phase separation rationale, worked example, and migration guidance (AC-9). Glossary entries name /plan-feature + /build-ac as canonical and reference ADR-012 (AC-9-Edge). No active routing dispatch to create-ticket.js found in templates/, agents/, or skills/. No deprecated field names (routing_decision, open_questions, requires_architect_review, ticket_path) appear in any new code — only in the dead-code section and pre-existing tests.
+
+### 2026-06-16 14:00 — commit (status: ok)
+feedback-id: fb_2026-06-16_677b5f53
+completion_manifest:
+  staged_files_verified: true
+  commit_created: true
+  pre_commit_hook_missing_config_handled: true
+
+Committed 7 files (795 insertions, 24 deletions) on branch EPIC-AcPipelineDeployGaps at e886ba6: ADR-012, create-ticket.js retirement guard, unit tests (test_create_ticket_retired, test_create_ticket_dispatch_blocked), docs/how-to/ticket-creation-workflow.md, glossary entries, and ADR README index. Pre-commit hook failure was due to missing .pre-commit-config.yaml in the worktree (not a project hook failure); resolved by passing PRE_COMMIT_ALLOW_NO_CONFIG=1 per the documented workaround.
 
 ## Implementation Tasks
 
