@@ -1654,6 +1654,95 @@ def clean_stale_artifacts(
     return removed
 
 
+# ---------------------------------------------------------------------------
+# Script reference guard (AC BP-900b-2)
+# ---------------------------------------------------------------------------
+
+def cross_check_script_references(
+    refs: set[str],
+    deployed: set[str],
+) -> dict[str, list[str]]:
+    """Cross-check extracted script references against the deployable manifest.
+
+    Compares each reference in ``refs`` against the set of scripts that
+    ``build.py`` will deploy.  A reference that matches an entry in
+    ``deployed`` is classified as *resolved*; one that does not match is
+    classified as *broken*.
+
+    Args:
+        refs: Set of script path strings extracted from compiled templates
+            (e.g. ``{"scripts/ac_store/ac_prioritizer.py"}``).
+        deployed: Set of script path strings that ``build.py`` will deploy
+            to the target project (e.g. from ``get_deployable_scripts()``).
+
+    Returns:
+        A dict with two keys:
+
+        * ``"resolved"`` — list of references that matched a deployed script.
+        * ``"broken"`` — list of references that had no match; zero or more
+          items satisfy the AC requirement of "a list of zero or more broken
+          references".
+    """
+    resolved: list[str] = []
+    broken: list[str] = []
+    for ref in refs:
+        if ref in deployed:
+            resolved.append(ref)
+        else:
+            broken.append(ref)
+    return {"resolved": resolved, "broken": broken}
+
+
+def get_deployable_scripts(target: Path) -> set[str]:
+    """Build the deployable script manifest for a target project.
+
+    Inspects two locations in the target directory tree:
+
+    * ``{target}/.leafcutter/scripts/`` — scripts deployed by
+      ``build_ac_store_scripts()``; the ``.leafcutter/`` prefix is stripped
+      so paths are normalised to ``"scripts/..."`` (e.g.
+      ``"scripts/ac_store/ac_prioritizer.py"``).
+    * ``{target}/scripts/`` — standalone scripts deployed by
+      ``build_standalone_scripts()`` and feedback scripts deployed by
+      ``build_feedback()``; paths are relative to ``target`` so they are
+      already in ``"scripts/..."`` form.
+
+    Only regular files are included; directories are skipped.
+
+    Args:
+        target: Absolute path to the target project root directory.
+
+    Returns:
+        Set of script path strings using forward slashes relative to
+        ``target`` (e.g. ``{"scripts/ac_store/ac_prioritizer.py",
+        "scripts/goal_to_epic.py"}``).  Returns an empty set when neither
+        location exists or contains files.
+    """
+    manifest: set[str] = set()
+
+    # --- .leafcutter/scripts/ (ac_store scripts and similar) ---
+    leafcutter_scripts = target / ".leafcutter" / "scripts"
+    if leafcutter_scripts.exists():
+        for file_path in leafcutter_scripts.rglob("*"):
+            if not file_path.is_file():
+                continue
+            # Strip the .leafcutter/ prefix: path relative to target starts
+            # with ".leafcutter/scripts/..." → normalise to "scripts/..."
+            rel = file_path.relative_to(target / ".leafcutter")
+            manifest.add(rel.as_posix())
+
+    # --- scripts/ (standalone + feedback scripts) ---
+    scripts_dir = target / "scripts"
+    if scripts_dir.exists():
+        for file_path in scripts_dir.rglob("*"):
+            if not file_path.is_file():
+                continue
+            rel = file_path.relative_to(target)
+            manifest.add(rel.as_posix())
+
+    return manifest
+
+
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
