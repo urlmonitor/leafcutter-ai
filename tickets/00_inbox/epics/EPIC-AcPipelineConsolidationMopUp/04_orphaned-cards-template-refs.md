@@ -1,6 +1,6 @@
 ---
 title: "Delete orphaned agent card files and fix template stale cross-references"
-status: in_progress
+status: done
 components:
   - documentation_system
 created: 2026-06-11
@@ -31,7 +31,7 @@ agents:
   documentation-expert: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 04: Delete orphaned agent card files and fix template stale cross-references
@@ -83,7 +83,7 @@ These agent cards reference agents that were removed in the consolidation. They 
 - [x] documentation-expert — 2026-06-16 11:45
 - [x] pr-reviewer — 2026-06-16 12:15
 - [x] commit — 2026-06-16 12:30
-- [ ] pull-request
+- [x] pull-request — 2026-06-16 13:00
 
 ## Comments
 
@@ -123,6 +123,14 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Committed SHA cdd35d2: deletes 6 orphaned agent card files and fixes stale template cross-references. Pre-commit hooks passed with PRE_COMMIT_ALLOW_NO_CONFIG=1 (worktree lacks .pre-commit-config.yaml — expected for worktrees; hooks run from main repo .git/hooks/). All 9 files committed successfully.
+
+### 2026-06-16 13:00 — pull-request (status: ok)
+feedback-id: fb_2026-06-16_2008f53a
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+PR #86 already exists for branch EPIC-AcPipelineConsolidationMopUp (https://github.com/urlmonitor/leafcutter-ai/pull/86) — no new PR required for this epic branch. All agents are now signed_off or not_needed; ticket marked done.
 
 ## Implementation Tasks
 
