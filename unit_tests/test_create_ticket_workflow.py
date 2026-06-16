@@ -149,3 +149,113 @@ def test_architect_review_dispatched_sequentially_no_refinement():
     assert '"refinement"' not in content and "'refinement'" not in content, (
         "refinement agent reference still present — it was removed in v2.0.0"
     )
+
+
+# ---------------------------------------------------------------------------
+# Test 6 — retirement contract: retirement guard is present (AC-6 / AC-7)
+# ---------------------------------------------------------------------------
+
+def test_create_ticket_retired():
+    """create-ticket.js has a retirement guard that emits an error and exits.
+
+    AC-6 (Option C): When create-ticket.js is invoked, it must emit a clear
+    error message: "create-ticket.js is retired. Use /plan-feature + /build-ac
+    instead." and return exit_code 1 so there is no silent-continuation mode.
+
+    AC-7 (Option C): Unit test verifies the retirement contract: the guard is
+    present, names the canonical replacement, and exits with code 1.
+    """
+    content = _read_script()
+
+    # The retirement guard must be the FIRST real statement in `run()` —
+    # i.e., it must return before any agent dispatch call.  We confirm this
+    # by checking that the return statement containing exit_code:1 appears
+    # in the file and comes before any `await agent(` call.
+    assert "exit_code: 1" in content or '"exit_code": 1' in content or "exit_code:1" in content, (
+        "create-ticket.js retirement guard must return exit_code 1"
+    )
+
+    # The retirement message must name the canonical replacement path.
+    assert "/plan-feature" in content, (
+        "Retirement error message must mention /plan-feature as the canonical replacement"
+    )
+    assert "/build-ac" in content, (
+        "Retirement error message must mention /build-ac as the canonical replacement"
+    )
+
+    # The retirement message must be a status: "error" return.
+    assert '"error"' in content or "'error'" in content, (
+        "Retirement guard must return status: 'error'"
+    )
+
+    # The guard must appear before the first agent dispatch in run().
+    # Find the positions of the guard return and the first agent() call.
+    guard_marker = "exit_code: 1"
+    agent_dispatch_marker = 'agentType: "business-analyst"'
+
+    guard_pos = content.find(guard_marker)
+    dispatch_pos = content.find(agent_dispatch_marker)
+
+    assert guard_pos != -1, (
+        f"guard marker '{guard_marker}' not found in create-ticket.js"
+    )
+    assert dispatch_pos != -1, (
+        f"dispatch marker '{agent_dispatch_marker}' not found in create-ticket.js — "
+        "the dead-code section should still be present for archaeological reference"
+    )
+    assert guard_pos < dispatch_pos, (
+        "Retirement guard (exit_code 1) must appear BEFORE the business-analyst "
+        "dispatch in the file — the guard short-circuits execution before any "
+        "agent is invoked"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 7 — no active routing dispatches to create-ticket.js (AC-6-Edge)
+# ---------------------------------------------------------------------------
+
+def test_create_ticket_dispatch_blocked():
+    """No active routing path dispatches to a live create-ticket.js invocation.
+
+    AC-6-Edge: A grep across templates/, skills/, agents/, and docs/ must show
+    that every reference to 'create-ticket.js' is either a comment, a
+    documentation link, or a deprecated-dispatch error message — not active
+    routing code.
+
+    This test checks the templates/ tree (the source of deployed artefacts).
+    It excludes the file itself and known-safe ADR / reference doc locations.
+    """
+    templates_root = _REPO_ROOT / "templates"
+
+    # Patterns that constitute ACTIVE routing — i.e., something that would
+    # dispatch a live create-ticket.js invocation at runtime.
+    active_routing_patterns = [
+        'require("./create-ticket")',
+        "require('./create-ticket')",
+        'import("./create-ticket")',
+        "import('./create-ticket')",
+        'import * from "./create-ticket"',
+        "import * from './create-ticket'",
+        'run("create-ticket")',
+        "run('create-ticket')",
+    ]
+
+    violations: list[str] = []
+
+    for js_file in templates_root.rglob("*.js"):
+        # Skip the retired file itself — it's the subject of this test, not a
+        # caller.
+        if js_file.name == "create-ticket.js":
+            continue
+        file_content = js_file.read_text(encoding="utf-8")
+        for pattern in active_routing_patterns:
+            if pattern in file_content:
+                violations.append(
+                    f"{js_file.relative_to(_REPO_ROOT)}: contains active routing "
+                    f"pattern {pattern!r}"
+                )
+
+    assert not violations, (
+        "Active routing to create-ticket.js detected in templates/:\n"
+        + "\n".join(f"  - {v}" for v in violations)
+    )

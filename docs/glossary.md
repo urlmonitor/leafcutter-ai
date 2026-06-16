@@ -30,3 +30,9 @@ An AI IDE/agent runner platform supported by leafcutter-ai, alongside Claude Cod
 
 ### ticket_frontmatter_guard
 A pre-commit hook (`scripts/commit_guardian/check_ticket_frontmatter.py`) that validates every staged ticket file's YAML frontmatter against the required field schema. It enforces the presence of `requires_diagram`, `requires_adr`, `agents`, and `files_touched` fields, and verifies that the `## Sign-offs` section lists exactly those agents whose `agents:` map value is `needed`. Generated tickets (from `generate_ticket_from_ac.py`) must pass this guard before their commit is accepted.
+
+### create-ticket.js
+The `templates/workflows-js/create-ticket.js` workflow script — **retired as of ADR-012 (2026-06-16)**. It was introduced under ADR-006 (flatten the supervisor chain) to provide a flat sequential dispatch path for ticket creation. It consumed four fields from the pre-v3 business-analyst JSON contract (`routing_decision`, `open_questions`, `requires_architect_review`, `ticket_path`); the v3 business-analyst produces AC YAML instead, making all four fields undefined at runtime. No ticket file was ever produced since the v3 BA was shipped. The canonical ticket-creation path is `/plan-feature + /build-ac` (see ADR-010, ADR-012, and `docs/how-to/ticket-creation-workflow.md`).
+
+### ticket creation pipeline
+The end-to-end process for producing a ticket file from a feature request. The canonical path is `/plan-feature` (PO → BA → IT PO authoring pipeline that produces AC YAML in `docs/acceptance-criteria/`) followed by `/build-ac` (`scan_ac_store.py` selects the next ready leaf AC, `generate_ticket_from_ac.py` writes the ticket file with `implemented_by` back-link). This path enforces `depends_on` ordering and maintains full AC-to-ticket traceability. The pre-ADR-010 path via `create-ticket.js` is retired. See `docs/how-to/ticket-creation-workflow.md`.
