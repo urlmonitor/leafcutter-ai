@@ -14,9 +14,12 @@ ARCHITECTURE: Discovers all AC YAML files under docs/acceptance-criteria/,
     pattern_bindings completeness validation: consuming ACs whose
     implements_pattern references a pattern AC must bind every slot declared in
     that pattern's pattern_slots. Also validates that implements_pattern does not
-    reference a deprecated pattern AC (ACS-500a-3-ii). Exits 0 when all files
-    pass; exits 1 with per-file error messages.
-    Standalone stdlib script — no leafcutter imports.
+    reference a deprecated pattern AC (ACS-500a-3-ii). Also detects when a new
+    AC's criteria duplicates the structural form of an existing pattern AC by
+    restating the same behavior with concrete values in place of pattern slots —
+    such ACs should use implements_pattern + pattern_bindings instead
+    (ACS-500c-3). Exits 0 when all files pass; exits 1 with per-file error
+    messages. Standalone stdlib script — no leafcutter imports.
 """
 
 from __future__ import annotations
@@ -243,6 +246,149 @@ def _validate_pattern_bindings_completeness(
 
 
 # ---------------------------------------------------------------------------
+# Duplicate criteria detection (ACS-500c-3)
+# ---------------------------------------------------------------------------
+
+
+def _normalize_criteria_whitespace(text: str) -> str:
+    """Collapse all whitespace runs to a single space and strip leading/trailing.
+
+    Normalizes multi-line Gherkin criteria to a single comparable string so
+    that minor formatting differences (extra spaces, different indentation)
+    do not prevent structural equivalence detection.
+
+    Args:
+        text: Raw criteria string from an AC YAML file.
+
+    Returns:
+        Whitespace-normalized string.
+    """
+    return re.sub(r"\s+", " ", text.strip())
+
+
+def _build_pattern_duplicate_regex(pattern_criteria: str) -> str | None:
+    """Build a regex that matches criteria text structurally equivalent to the pattern.
+
+    Takes a pattern AC's criteria text (which contains ``{slot_name}``
+    placeholders) and constructs a regex where each slot is replaced with a
+    ``.*`` wildcard that matches any concrete value. The fixed text between
+    slots is regex-escaped so it must match literally.
+
+    After whitespace normalization, a candidate AC's criteria is structurally
+    equivalent to the pattern if and only if its normalized text matches the
+    resulting regex.
+
+    Args:
+        pattern_criteria: Multi-line Gherkin criteria string from a pattern AC.
+            Must contain at least one ``{slot_name}`` placeholder.
+
+    Returns:
+        A compiled-ready regex string, or None if the pattern criteria
+        contains no slot placeholders (in which case there is nothing to detect).
+    """
+    norm = _normalize_criteria_whitespace(pattern_criteria)
+    if not _SLOT_REGEX.search(norm):
+        return None
+
+    parts = _SLOT_REGEX.split(norm)
+    regex_parts: list[str] = []
+    for idx, part in enumerate(parts):
+        if idx % 2 == 0:
+            # Fixed text between slots — escape for literal matching.
+            regex_parts.append(re.escape(part))
+        else:
+            # Slot name (odd indices after split on a group pattern) —
+            # match one or more characters (greedy).
+            regex_parts.append(".+")
+    return "".join(regex_parts)
+
+
+def _validate_criteria_not_pattern_duplicate(
+    candidate_path: Path,
+    candidate_data: dict[str, Any],
+    all_ac_data: dict[str, dict[str, Any]],
+) -> list[str]:
+    """Validate that a standalone AC's criteria does not duplicate a pattern.
+
+    A standalone AC is one that does NOT have ``implements_pattern`` set.
+    For each active pattern AC in the store, this function checks whether
+    the candidate AC's ``criteria`` text is structurally equivalent to the
+    pattern (i.e., the same Gherkin steps with concrete values in place of
+    ``{slot_name}`` placeholders). If so, the candidate is a likely duplicate
+    that should instead use ``implements_pattern`` + ``pattern_bindings``.
+
+    This check enforces the single-source-of-truth invariant for shared
+    behaviors (AC ACS-500c-3).
+
+    The error message follows the canonical format:
+    ``"criteria is a likely duplicate of pattern <id>; use implements_pattern:
+    <id> with pattern_bindings instead of restating the behavior inline"``
+
+    Args:
+        candidate_path: Filesystem path to the candidate AC file
+            (for error messages).
+        candidate_data: Parsed YAML content of the candidate AC.
+        all_ac_data: Mapping of AC id → parsed YAML content for every AC
+            file discovered in the store. Used to look up pattern ACs.
+
+    Returns:
+        List of error message strings; empty when no duplicate is detected.
+    """
+    # Only check ACs that do not already reference a pattern.
+    if candidate_data.get("implements_pattern"):
+        return []
+
+    candidate_criteria_raw = candidate_data.get("criteria")
+    if not candidate_criteria_raw or not isinstance(candidate_criteria_raw, str):
+        return []
+
+    candidate_norm = _normalize_criteria_whitespace(candidate_criteria_raw)
+
+    candidate_id = candidate_data.get("id")
+
+    errors: list[str] = []
+    for pattern_id, pattern_data in all_ac_data.items():
+        # Skip the candidate itself (compare by id string, not object identity,
+        # because the index and the validated file are loaded as separate dicts).
+        if candidate_id and str(candidate_id) == str(pattern_id):
+            continue
+
+        # Only match against ACs that explicitly declare pattern_slots — ACs that
+        # happen to contain curly-brace notation in their criteria text for other
+        # reasons (e.g. describing filename patterns like {PREFIX}-{NNN}) are not
+        # patterns. This avoids false positives from ACs without pattern_slots.
+        raw_slots = pattern_data.get("pattern_slots")
+        if not isinstance(raw_slots, list) or len(raw_slots) == 0:
+            continue
+
+        pattern_criteria_raw = pattern_data.get("criteria")
+        if not pattern_criteria_raw or not isinstance(pattern_criteria_raw, str):
+            continue
+
+        # Skip deprecated patterns — a duplicate of a deprecated pattern is not
+        # actionable (there is no live pattern to reference).
+        if pattern_data.get("status") == "deprecated":
+            continue
+
+        duplicate_regex = _build_pattern_duplicate_regex(str(pattern_criteria_raw))
+        if duplicate_regex is None:
+            continue
+
+        try:
+            if re.fullmatch(duplicate_regex, candidate_norm, re.DOTALL):
+                errors.append(
+                    f"{candidate_path}: criteria is a likely duplicate of pattern "
+                    f"{pattern_id}; use implements_pattern: {pattern_id} with "
+                    f"pattern_bindings instead of restating the behavior inline"
+                )
+        except re.error:
+            # Regex construction failed — skip this pattern (fail-open).
+            continue
+
+    return errors
+
+
+# ---------------------------------------------------------------------------
 # Deprecated pattern reference validation
 # ---------------------------------------------------------------------------
 
@@ -414,6 +560,12 @@ def _validate_file(
     if all_ac_data is not None:
         errors.extend(
             _validate_deprecated_pattern_reference(path, data, all_ac_data)
+        )
+
+    # Duplicate criteria detection (ACS-500c-3).
+    if all_ac_data is not None:
+        errors.extend(
+            _validate_criteria_not_pattern_duplicate(path, data, all_ac_data)
         )
 
     return errors

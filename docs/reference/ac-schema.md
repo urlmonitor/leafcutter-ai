@@ -346,6 +346,32 @@ use its successor (see <pattern_id> superseded_by field) or remove the reference
 
 The error names both the consuming AC file path and the deprecated pattern ID.
 
+Also detects when a new standalone AC's `criteria` text structurally duplicates
+an existing pattern AC — i.e., the criteria body is the same as the pattern with
+concrete values substituted for `{slot}` placeholders (AC ACS-500c-3). When
+detected, the hook exits 1 with:
+
+```
+<candidate_ac_file>: criteria is a likely duplicate of pattern <pattern_id>; use
+implements_pattern: <pattern_id> with pattern_bindings instead of restating the
+behavior inline
+```
+
+This enforces the single-source-of-truth invariant: shared behavior definitions
+must live in exactly one pattern AC. Consuming ACs must instantiate the pattern
+via `implements_pattern` and supply concrete values via `pattern_bindings`.
+
+**Duplicate detection algorithm:**
+
+1. Only standalone ACs (those without `implements_pattern`) are checked.
+2. For each active pattern AC in the store, the hook normalizes the pattern's
+   `criteria` (collapses whitespace) and builds a structural regex by escaping
+   fixed text and replacing each `{slot_name}` with a `.+` wildcard.
+3. The candidate AC's `criteria` is normalized the same way.
+4. `re.fullmatch` is applied — a full match confirms structural equivalence.
+5. Fail-open: if a pattern's criteria produces an invalid regex, the check
+   is skipped for that pattern without blocking the commit.
+
 ### `check_test_ac_tags.py` (configurable)
 
 Verifies that every `def test_*` function in staged test files carries a

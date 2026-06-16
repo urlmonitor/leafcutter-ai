@@ -177,9 +177,9 @@ semantics are unaffected — the schema extension is fully additive. The
 named optional properties; the three new properties are registered there.
 
 The single-source-of-truth invariant — no two ACs in the store may define an
-equivalent behavior for the same shared pattern — is an authoring discipline
-enforced by review rather than by the schema validator. A future hook
-(`check_ac_pattern_uniqueness.py`) may enforce this mechanically.
+equivalent behavior for the same shared pattern — is enforced by
+`check_ac_schema.py` at commit time (AC ACS-500c-3). See the section below for
+the duplicate detection algorithm.
 
 **Pattern binding values extended to arrays (added 2026-06-16, AC ACS-500b-1):**
 
@@ -278,6 +278,56 @@ consuming AC, or introducing ad-hoc fields — are not permitted.
 
 This convention is described in detail in `docs/reference/ac-schema.md` under
 the subsection "Pattern deviations — separate files, not inline overrides."
+
+### Duplicate Criteria Detection (added 2026-06-16, AC ACS-500c-3)
+
+`check_ac_schema.py` now detects when a new standalone AC's `criteria` text
+restates the same behavior as an existing pattern AC by substituting concrete
+values for pattern slots. Such ACs must instead use `implements_pattern` +
+`pattern_bindings` to preserve the single-source-of-truth invariant.
+
+**Algorithm:**
+
+1. For every AC file being validated that does NOT have `implements_pattern` set:
+2. Collect all pattern ACs in the store (those with a non-empty `pattern_slots`
+   list, or whose `criteria` text contains at least one `{slot}` placeholder).
+   Skip deprecated patterns (no live pattern to reference).
+3. For each pattern AC, normalize its criteria: collapse whitespace runs to a
+   single space. Build a regex by escaping fixed text between slots and replacing
+   each `{slot_name}` with `.+` (one-or-more-character wildcard).
+4. Normalize the candidate AC's criteria the same way (whitespace collapse).
+5. Apply `re.fullmatch` against the normalized candidate criteria. A full match
+   means the candidate criteria is structurally identical to the pattern with
+   slots filled in.
+6. On a match, emit an error:
+   ```
+   <file>: criteria is a likely duplicate of pattern <id>; use
+   implements_pattern: <id> with pattern_bindings instead of restating
+   the behavior inline
+   ```
+   The commit is blocked (exit 1).
+
+**Design choices:**
+
+- **Whitespace normalization before matching.** Gherkin criteria often have
+  varying indentation (leading spaces on continuation lines). Normalizing to a
+  single flat string ensures matching works regardless of formatting style.
+- **`re.fullmatch` for structural equivalence.** Partial matches (substring
+  presence) would produce excessive false positives on criteria that share
+  common Gherkin phrases. A full match requires the entire criteria body to
+  follow the pattern structure.
+- **Greedy `.+` per slot (not `.*`).** Each slot must be filled with at least
+  one character. This prevents erroneous matches on boundary-adjacent patterns
+  and makes the match semantically accurate (a slot that bound to an empty
+  string would not be a valid binding).
+- **Fail-open on regex compilation errors.** If a pattern AC's criteria
+  produces an invalid regex (e.g., unmatched curly braces in non-slot
+  positions), the check is skipped for that pattern rather than blocking
+  all commits. The pattern author should fix the malformed criteria.
+- **No hook file added.** The check is integrated into the existing
+  `check-ac-schema` hook rather than introducing a new
+  `check_ac_pattern_uniqueness.py` hook. This keeps the hook surface minimal
+  and avoids requiring a separate hook registration entry.
 
 ### Pattern AC Placement Convention (added 2026-06-11, AC ACS-500a-2)
 
