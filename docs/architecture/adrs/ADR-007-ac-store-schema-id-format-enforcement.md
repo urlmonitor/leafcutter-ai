@@ -239,6 +239,46 @@ reference. The `superseded_by` field on the deprecated pattern AC identifies the
 correct replacement; if no successor exists, the `implements_pattern` field must be
 removed.
 
+### Pattern Deviation Convention — Separate Files Only (added 2026-06-16, AC ACS-500b-2)
+
+When a consuming page or component needs behavior that differs from a pattern
+on one specific axis, that deviation is written as a **separate AC file** in
+the same feature folder. Inline overrides — modifying `pattern_bindings` on the
+consuming AC, or introducing ad-hoc fields — are not permitted.
+
+**Decision:** A deviation AC is a standalone YAML file that:
+
+1. Has its own `id` (following the normal `PREFIX-NNNx-N` L2 format).
+2. Contains a full `criteria` block (Given/When/Then) describing only the
+   non-standard behavior.
+3. Sets `depends_on` to include the consuming AC that instantiates the pattern
+   (establishing the traceability link back to the pattern instantiation context).
+4. Does **not** set `implements_pattern` — a deviation AC is not a pattern
+   instantiation; it describes an explicit override for one component.
+5. The original consuming AC's `pattern_bindings` remain unchanged.
+
+**Rationale:**
+
+1. **Single-responsibility.** Each AC file describes one testable behavior.
+   Mixing a pattern instantiation record with a deviation in the same file
+   creates an ambiguous contract that is hard to review and test independently.
+2. **Stable traceability.** The consuming AC's `pattern_bindings` is a
+   snapshot of "which pattern with what slot values." If a deviation modified
+   the bindings, the bindings would no longer accurately represent the pattern
+   in use — they would partially describe a custom behavior instead.
+3. **No new schema fields needed.** A deviation AC uses the existing required
+   fields (`id`, `title`, `component`, `status`, `created_by`, `criteria`) and
+   the existing `depends_on` pointer. The schema extension is purely a
+   convention that authoring agents enforce; the JSON Schema validator requires
+   no changes.
+4. **Tooling simplicity.** A scanner that identifies all ACs with
+   `implements_pattern` gets a clean list of pattern instantiations. Deviation
+   ACs (no `implements_pattern`) are simply additional ACs in the feature
+   folder — the scanner does not need a special code path to handle them.
+
+This convention is described in detail in `docs/reference/ac-schema.md` under
+the subsection "Pattern deviations — separate files, not inline overrides."
+
 ### Pattern AC Placement Convention (added 2026-06-11, AC ACS-500a-2)
 
 Pattern ACs follow the **same file placement convention** as every other AC in

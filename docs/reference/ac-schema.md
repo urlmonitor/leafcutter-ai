@@ -185,6 +185,68 @@ child AC would.
    acceptance criterion (the general-case behavior). Consuming ACs satisfy
    per-instance specializations. Both are independently reviewable and traceable.
 
+### Pattern deviations — separate files, not inline overrides (AC ACS-500b-2)
+
+When a page or component needs behavior that differs from a pattern in one
+specific respect (a **deviation**), that deviation is expressed as a **separate
+AC file** in the same feature folder. It is never expressed by modifying the
+consuming AC's `pattern_bindings` or by adding ad-hoc fields to the consuming
+AC.
+
+**Rule summary:**
+
+| What | How |
+|---|---|
+| Non-standard behavior on one axis of a pattern | Write a new deviation AC file in the same feature folder |
+| Original consuming AC | Leave unchanged — `pattern_bindings` must not be modified to encode the deviation |
+| Deviation AC | Has its own `id`, a full `criteria` block (Given/When/Then), and a `depends_on` referencing the consuming AC |
+| `implements_pattern` on deviation AC | Absent — a deviation AC does NOT reference the pattern |
+
+**Concrete example:**
+
+A page uses the `sortable-table` pattern (via `implements_pattern: ACS-500a-1`)
+with standard column-header sort behavior. The status column must sort by
+priority order rather than alphabetically. The correct approach:
+
+1. Leave the consuming AC (`ACS-500b-1.yaml`, with `implements_pattern` and
+   `pattern_bindings`) **unchanged**.
+2. Write a new deviation AC file — e.g. `ACS-500b-2.yaml` — in the same
+   feature folder:
+
+```yaml
+id: ACS-500b-2
+title: "Invoice list page — status column sorts by priority order, not alphabetical"
+component: ac-store
+level: L2
+status: active
+created_by: "tickets/..."
+criteria: |
+  Given the invoice list page displays a sortable table,
+  When the user sorts by the status column,
+  Then rows are ordered by business priority (Open > Pending > Closed),
+  And alphabetical sort order is NOT used for the status column.
+depends_on:
+  - ACS-500b-1
+covered_by: []
+implemented_by: []
+origin_agent: BrainCandy
+```
+
+**Why no `implements_pattern` on the deviation AC:** A deviation is
+page-specific behavior that explicitly overrides one aspect of the shared
+pattern for a particular context. It is not an instantiation of the pattern —
+it describes what is _different_ from the pattern. Mixing these two concepts
+would make the deviation's scope ambiguous and would prevent tooling from
+distinguishing "this page uses the pattern" from "this page uses the pattern
+except for this one aspect."
+
+**Invariant enforced by authoring discipline (not the schema validator):**
+The original consuming AC's `pattern_bindings` field is the unchanging
+record of which pattern is instantiated and with what slot values. No inline
+override mechanism exists. If a deviation requires that the consuming AC's
+`pattern_bindings` change (e.g. a slot value is wrong), that is a correction
+to the consuming AC itself — not a deviation AC.
+
 ---
 
 ## ID Format and Assignment
