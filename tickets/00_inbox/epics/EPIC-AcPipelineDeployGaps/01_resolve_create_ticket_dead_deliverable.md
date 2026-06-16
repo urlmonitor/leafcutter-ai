@@ -1,0 +1,290 @@
+---
+title: "Resolve create-ticket.js dead deliverable from stale business-analyst contract"
+status: todo
+components:
+  - ticket_creation_pipeline
+created: 2026-06-16
+depends_on: []
+priority: high
+agents:
+  architect-review: needed
+  llm-expert: needed
+  python-coder: needed
+  test-writer: needed
+  documentation-expert: needed
+  commit: needed
+  pr-reviewer: needed
+  pull-request: needed
+---
+
+# 01: Resolve create-ticket.js Dead Deliverable
+
+## Goal
+
+Make create-ticket.js either reliably produce a ticket file end-to-end with an updated business-analyst contract, or retire it as a documented entry point with /plan-feature + /build-ac as the canonical path.
+
+## Context
+
+**Design Decision Required: architect-review MUST adjudicate and record the decision before implementation begins.**
+
+create-ticket.js was written against the pre-v3 business-analyst that returned JSON with `routing_decision`, `open_questions`, `requires_architect_review`, and `ticket_path` fields. The v3 business-analyst now emits AC YAML instead, so every consumed field is undefined at runtime:
+
+- `routing` gate never fires (always falsy or undefined)
+- `open_questions` gate never fires (undefined)
+- `requires_architect_review` is always truthy (undefined → default)
+- `ticket_path` is undefined, so no ticket file is ever produced
+
+This is a silent primary-deliverable failure. Unit tests pass green because they assert only that the create-epic string is absent, never that a ticket file exists on disk.
+
+**Why this is a design decision, not just a bug fix:**
+
+ADR-010 already inverted the source-of-truth to the AC store and named /build-ac as the authoritative backlog-to-ticket path. Patching create-ticket.js to restore the old field contract would re-entrench a path that ADR-010 explicitly superseded. The decision is structural: should the ticket-creation pipeline support both paths, or consolidate on one?
+
+**IT PO recommendation:** Retire create-ticket.js entirely (option c) with /plan-feature + /build-ac documented as the canonical path. If that's too aggressive, option (a) — rewrite create-ticket.js around the AC-store model — is the fallback.
+
+## Acceptance Criteria
+
+### Architectural Decision Gate
+
+**AC-1: Design Decision Recorded and Adjudicated (ALL OPTIONS)**
+
+```gherkin
+Given the architect-review agent has reviewed ADR-010 and the current create-ticket.js pipeline shape
+When a design decision is made to pursue option (a), (b), or (c)
+Then the decision is recorded with rationale in one of:
+  - An inline comment in the ticket with "DECISION:" label
+  - A new ADR if the pipeline shape changes materially
+  - A sign-off in the architect-review frontmatter field
+And the decision identifies which option was chosen and why
+```
+
+**AC-1-Edge: No Ambiguous Decisions**
+
+```gherkin
+Given two or more implementation paths remain viable after architect-review
+When the review is marked complete
+Then the decision MUST name exactly one path (a/b/c) and explain the trade-off that ruled out alternatives
+And the ticket MUST NOT proceed to implementation until the decision is unambiguous
+```
+
+### Option (A): Rewrite create-ticket.js to Use v3 Business-Analyst Output
+
+**AC-2: create-ticket.js End-to-End Produces Ticket File (OPTION A)**
+
+```gherkin
+Given a valid user request provided to create-ticket.js
+When the create-ticket.js workflow executes with v3 business-analyst output
+Then a .md file is written to disk at the location specified by the AC store
+And the file contains valid frontmatter (title, status, components, agents, depends_on)
+And the file contains a ## Goal section, ## Context section, and ## Acceptance Criteria section
+And the file is named per the ticket naming convention (NN_<slug>.md)
+```
+
+**AC-2-Edge: Error Handling on Missing v3 Output**
+
+```gherkin
+Given the create-ticket.js workflow receives a response from business-analyst
+When the response lacks one or more required v3 fields (ac_yaml, ticket_slug)
+Then the workflow logs a clear error message naming the missing field
+And NO ticket file is written
+And the error message directs the user to the canonical path (/plan-feature + /build-ac)
+```
+
+**AC-2-Edge: Contract Validation at Dispatch**
+
+```gherkin
+Given the create-ticket.js workflow is about to dispatch the business-analyst agent
+When a wrapper validates the incoming request shape
+Then it asserts that the request contains a well-formed natural-language description
+And it asserts that the request contains metadata sufficient for routing (component, priority, or similar)
+And if validation fails, a user-facing error is returned before business-analyst is invoked
+```
+
+**AC-3: Unit Tests Assert Primary Deliverable (OPTION A)**
+
+```gherkin
+Given the test suite for create-ticket.js
+When a test labeled `test_create_ticket_produces_ticket_file` runs
+Then it asserts that after invoking create-ticket.js with a representative input, a .md file exists on disk
+And the test is NOT skipped or marked xfail
+And the test is isolated (no side effects persist after completion)
+```
+
+**AC-3-Edge: Test Fixtures Reflect Real v3 Output**
+
+```gherkin
+Given a unit test that stubs the business-analyst response
+When the stub is created or updated
+Then it MUST use a fixture that matches the actual v3 business-analyst AC YAML return shape
+And NOT the pre-v3 JSON shape with routing_decision/open_questions/requires_architect_review
+And the fixture path is documented in a comment so future maintainers know where to update it
+```
+
+### Option (B): Re-Point create-ticket.js to a Dedicated Ticket-Drafting Agent
+
+**AC-4: Dedicated Agent Receives v3 Output and Drafts Ticket (OPTION B)**
+
+```gherkin
+Given the dedicated ticket-drafting agent exists and is registered in the package
+When create-ticket.js dispatches this agent with a business-analyst AC YAML payload
+Then the agent reads the AC YAML and drafts a ticket file on disk
+And the ticket file contains the same frontmatter + sections as option (a)
+And the agent does not reference deprecated v3 field names (routing_decision, open_questions, ticket_path)
+```
+
+**AC-4-Edge: Circular Dispatch Prevention**
+
+```gherkin
+Given a call chain: create-ticket.js → dedicated agent → [sub-agents or skills]
+When any sub-agent or skill would re-invoke create-ticket.js or the parent dispatcher
+Then the workflow detects the cycle and halts with a clear "circular dispatch" error
+And the error does not appear in user-facing output; it is logged only for debugging
+```
+
+**AC-5: Documentation Reflects New Dispatch Boundary (OPTION B)**
+
+```gherkin
+Given the option (b) implementation is complete
+When a consumer reads docs/how-to/ticket-creation-workflows.md
+Then the documentation names the dedicated agent as an internal detail of create-ticket.js
+And the documentation does NOT mention create-ticket.js dispatch to business-analyst directly
+And an example shows a valid end-to-end request → ticket file result
+```
+
+### Option (C): Retire create-ticket.js with /plan-feature + /build-ac as Canonical
+
+**AC-6: create-ticket.js Removed or Stubbed with Clear Error (OPTION C)**
+
+```gherkin
+Given the option (c) decision is recorded
+When create-ticket.js is invoked (directly or via dispatch)
+Then one of the following occurs:
+  - The file is removed entirely and removed from all CLI routing (no dead entry point)
+  - The file is stubbed to emit a clear error message: "create-ticket.js is retired. Use /plan-feature + /build-ac instead."
+And the error message includes a link to the canonical documentation
+And the script exits with status code 1 (or raises an error that prevents silent continuation)
+```
+
+**AC-6-Edge: No Dispatch Path Leads to Retired create-ticket.js**
+
+```gherkin
+Given that create-ticket.js is retired (option c)
+When a grep search runs for "create-ticket.js" across templates/, skills/, agents/, and docs/
+Then every matching line is either:
+  - A comment explaining the retirement
+  - A documentation link to the canonical path
+  - A deprecated-dispatch error message
+And NO active routing logic dispatches to create-ticket.js
+```
+
+**AC-7: Unit Tests Verify Retirement Contract (OPTION C)**
+
+```gherkin
+Given the test suite after option (c) is implemented
+When a test labeled `test_create_ticket_retired` or `test_create_ticket_dispatch_blocked` runs
+Then the test asserts that no live dispatch path leads to create-ticket.js
+And the test asserts that invoking create-ticket.js (if the file still exists) emits an error
+And the test is NOT skipped
+```
+
+### Cross-Option: Field Contract Consistency (ALL OPTIONS)
+
+**AC-8: No Mismatch Between v3 Business-Analyst Output and Consumed Fields**
+
+```gherkin
+Given a consumer install with /plan-feature + /build-ac as the documented flow
+When a user follows the documented ticket-creation workflow
+Then every field consumed by create-ticket.js, the dedicated agent (option b), or any dispatch logic matches a field that v3 business-analyst returns
+And NO code attempts to access:
+  - routing_decision (deprecated in v3)
+  - open_questions (deprecated in v3)
+  - requires_architect_review (deprecated in v3)
+  - ticket_path (deprecated in v3; replaced by ac_store reference)
+And if such a field is accessed, a unit test fails at commit time
+```
+
+**AC-8-Edge: Defensive Field Access**
+
+```gherkin
+Given production code that accesses a potentially-undefined field from business-analyst output
+When the field is accessed
+Then a defensive guard is in place:
+  - Either the field is asserted to be non-None before use (with clear error message)
+  - Or the code uses a fallback/default that matches the intended behavior
+And the guard is covered by a unit test that verifies the fallback path
+```
+
+### Documentation and Migration (ALL OPTIONS)
+
+**AC-9: Canonical Path Documentation Is Complete and Discoverable**
+
+```gherkin
+Given a new user who wants to create a ticket
+When they search docs/how-to/ for "ticket creation" or "create-ticket"
+Then they find a guide that recommends /plan-feature + /build-ac as the primary path
+And the guide explains the phase separation (plan → build-ac)
+And the guide includes a worked example from request to completed ticket
+And for option (c) the guide includes migration guidance for users familiar with the old create-ticket.js path
+```
+
+**AC-9-Edge: Glossary Entry for "Canonical Path"**
+
+```gherkin
+Given the project glossary at docs/glossary.md
+When the entry for "create-ticket.js" or "ticket creation pipeline" is read
+Then the glossary entry names /plan-feature + /build-ac as the canonical path
+And explains why the old create-ticket.js path is no longer recommended or is retired
+And links to the relevant how-to guide
+```
+
+## Sign-offs
+
+- [ ] architect-review
+- [ ] llm-expert
+- [ ] python-coder
+- [ ] test-writer
+- [ ] documentation-expert
+- [ ] pr-reviewer
+- [ ] commit
+- [ ] pull-request
+
+## Comments
+
+Stub generated by create-epic. Harden with create-ticket (depth 3).
+
+## Implementation Tasks
+
+### architect-review
+
+- [ ] Load ADR-010 and adjacent decision docs to understand the source-of-truth inversion to AC store.
+- [ ] Adjudicate and record the design decision: should create-ticket.js be (a) rewritten around AC-store model, (b) re-pointed at a dedicated ticket-drafting agent, or (c) retired with /plan-feature + /build-ac documented as canonical.
+- [ ] If routing the decision changes the pipeline shape, author or recommend an ADR.
+
+### llm-expert
+
+- [ ] Audit the current create-ticket.js prompt and dispatch contract against v3 business-analyst return fields.
+- [ ] For option (a/b): reconcile the step that dispatches business-analyst with the AC YAML return shape (nest the AC output in an envelope, or read AC store directly).
+- [ ] For option (c): document the retirement decision in templates/workflows-js/ or docs/how-to/ so users understand why /plan-feature + /build-ac is the forward path.
+
+### python-coder
+
+- [ ] For option (a/b): rewrite create-ticket.js to accept the v3 business-analyst AC YAML output (or read the AC store directly) and produce a valid ticket file.
+- [ ] Ensure the new flow end-to-end produces a .md file with correct frontmatter and body sections (per SKILL.md).
+- [ ] For option (c): remove or stub create-ticket.js, leaving a clear error message if invoked.
+
+### test-writer
+
+- [ ] For option (a/b): add a test that asserts the primary deliverable: `test_create_ticket_produces_ticket_file` verifies a .md file exists on disk after invoking create-ticket.js with a representative input.
+- [ ] Refactor existing tests that mask the failure (currently assert only create-epic string is absent) to assert the real contract.
+- [ ] For option (c): add a test that asserts the retirement contract (no live dispatch path leads to create-ticket.js, or it errors with a clear message).
+
+### documentation-expert
+
+- [ ] For option (a/b): update docs/how-to/ to reflect the updated business-analyst contract and show an end-to-end example of ticket creation via create-ticket.js with the new flow.
+- [ ] For option (c): document the canonical ticket-creation path (/plan-feature → /build-ac) in docs/how-to/, with migration guidance for users who may be relying on the old create-ticket.js path.
+
+## Risk & Safety
+
+- Touches money? No.
+- Touches data? No (affects workflow dispatch only).
+- Reversibility? High. Retiring create-ticket.js is reversible if /plan-feature + /build-ac proves insufficient.
