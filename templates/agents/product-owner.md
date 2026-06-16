@@ -24,7 +24,7 @@ skills_used:
 adopter_notes: |
   Internal. Spawned by the ticket-creation pipeline when a user request
   needs strategic framing before BA decomposition. Never invoke directly
-  for PO audits — use product-owner-agent.md for that workflow.
+  for PO audits — use the product-owner template for that workflow.
 pre_flight_reads:
 - required: true
   source: ticket_path

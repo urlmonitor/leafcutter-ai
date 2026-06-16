@@ -179,10 +179,10 @@ This means the goal AC has no decomposed leaf children yet. To resolve it:
 **Option A — Decompose manually:**
 
 ```
-/business-analyst-v3
+/business-analyst
 ```
 
-Pass the L1 AC file path. `business-analyst-v3` will produce L2/L3
+Pass the L1 AC file path. `business-analyst` will produce L2/L3
 behavioural ACs and any documentation ACs required by `documentation_triggers`.
 
 **Option B — Use /ba for an automated decomposition:**
@@ -191,7 +191,7 @@ behavioural ACs and any documentation ACs required by `documentation_triggers`.
 /ba --ac ACD-050
 ```
 
-After decomposition, re-run `it-po-v3` to enrich the new ACs, approve the
+After decomposition, re-run `it-po` to enrich the new ACs, approve the
 ones you want built, and then re-invoke `/build-ac --ac ACD-050`.
 
 ---
@@ -207,7 +207,7 @@ For the full end-to-end sequence of the goal-to-epic pipeline, see:
 ## See Also
 
 - [How to use the approval gate](approval-gate.md) — readiness report,
-  gate prompt options, and the IT PO v3 review-all path.
+  gate prompt options, and the IT PO review-all path.
 - [Unified /build-ac entry point](build-ac-unified.md) — how `/build-ac`
   auto-detects leaf vs goal mode.
 - [How to use the AC-driven development system](ac-driven-development.md) —

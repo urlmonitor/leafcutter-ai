@@ -10,7 +10,7 @@ card_version: "generated"
 
 **TDD test-first authoring agent. Spawned by ticket-supervisor at priority 5,
 BEFORE python-coder or sql-coder run. Reads the ## Test Requirements section
-from the ticket body (produced by test-planner during ticket creation), writes
+from the ticket body (produced by business-analyst during ticket creation), writes
 the specified failing test stubs, runs the suite to confirm all new tests are
 RED (non-zero exit), captures a structured red_baseline block in its sign-off
 comment, and hands off to coders whose job is to make the red-baseline green.

@@ -8,7 +8,6 @@ components:
   - infrastructure
 related_docs:
   - "docs/agents/conventions.md"
-  - "docs/agents/coding/test-planner.md"
   - "docs/agents/coding/test-runner.md"
   - "docs/testing/README.md"
 related_code:
@@ -184,7 +183,7 @@ From `agent_registry.json`:
 
 ## 9. Cross-Links
 
-- [docs/agents/coding/test-planner.md](test-planner.md) — produces the `test_requirements` spec that test-writer consumes.
+- [docs/agents/ticket-creation/business-analyst.md](../ticket-creation/business-analyst.md) — produces the `test_requirements` spec that test-writer consumes.
 - [docs/agents/coding/test-runner.md](test-runner.md) — runs the tests written by test-writer.
 - [docs/testing/README.md](../../testing/README.md) — portable testing conventions.
 - [leafcutter/templates/agents/test-writer.md](../../../templates/agents/test-writer.md) — the agent template itself.

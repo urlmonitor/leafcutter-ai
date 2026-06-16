@@ -142,7 +142,7 @@ least resistance when under pressure. The hook closes this escape hatch.
 - `test-writer` must complete before coders start — a sequential constraint that
   cannot be parallelized when both are in the same ticket.
 - Some tickets will trigger the docs-only skip rule; ticket authors must ensure
-  `## Test Requirements` is populated for code tickets (test-planner does this
+  `## Test Requirements` is populated for code tickets (business-analyst does this
   during the BA flow).
 - The hook may produce false positives on legitimate test refactor commits that
   coincidentally also include production code changes. The conjunction guard

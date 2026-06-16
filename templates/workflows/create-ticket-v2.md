@@ -10,4 +10,4 @@ description: |
 <!-- This command does NOT modify create-ticket, business-analyst, or any v1 templates. -->
 <!-- See EPIC-ContractDrivenACs ticket 00_create_ticket_v2 for the testing strategy. -->
 
-Invoke the `create-ticket-v2` agent with the user's full request: $ARGUMENTS
+The `create-ticket-v2` agent was removed in EPIC-AcPipelineConsolidation v2.0.0. Use `/create-ticket` instead, which now runs the consolidated pipeline: $ARGUMENTS
