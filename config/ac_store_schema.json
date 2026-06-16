@@ -47,7 +47,7 @@
         },
         "criteria": {
             "type": "string",
-            "description": "Multi-line Gherkin scenario body (Given/When/Then/And).",
+            "description": "Multi-line Gherkin scenario body (Given/When/Then/And). When implements_pattern is set and the AC has no unique behavior beyond what the pattern provides, a plain-text placeholder is acceptable (e.g. 'No page-specific behavior — all behavior inherited from pattern.').",
             "minLength": 1
         },
         "superseded_by": {
@@ -159,6 +159,30 @@
                         "L2",
                         "L3"
                     ]
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "implements_pattern": {
+            "oneOf": [
+                {
+                    "type": "string",
+                    "description": "ID of the reusable behavior pattern this AC inherits from (e.g. 'PTN-001'). When set, the effective behavior is derived from the referenced pattern combined with any pattern_bindings. The criteria field may contain a plain-text placeholder rather than a full Given/When/Then scenario.",
+                    "minLength": 1
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "pattern_bindings": {
+            "oneOf": [
+                {
+                    "type": "object",
+                    "description": "Key-value bindings that instantiate the referenced pattern for this AC. Values may be strings, arrays, or objects. Only meaningful when implements_pattern is set.",
+                    "additionalProperties": true
                 },
                 {
                     "type": "null"

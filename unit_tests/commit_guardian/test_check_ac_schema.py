@@ -498,5 +498,125 @@ class TestOriginAgentAllHistoricalValuePass(unittest.TestCase):
         )
 
 
+class TestImplementsPatternWithEmptyCriteria(unittest.TestCase):
+    """AC with implements_pattern and a plain-text criteria placeholder must pass.
+
+    When an AC inherits all behavior from a reusable pattern via implements_pattern,
+    the criteria field may contain a plain-text placeholder instead of a full
+    Given/When/Then scenario. The schema validator must accept this form.
+
+    See: ACS-500b-1-i, ADR-007 §Pattern-inherited ACs.
+    """
+
+    def test_implements_pattern_with_plain_text_criteria_passes(self) -> None:
+        # covers: ACS-500b-1-i
+        """An AC with implements_pattern set and plain-text criteria exits 0.
+
+        The schema validator must accept a non-Gherkin criteria string when
+        implements_pattern is present, because the effective behavior is
+        entirely derived from the referenced pattern.
+        """
+        content = textwrap.dedent("""\
+            id: PAG-001
+            title: "Users list page — standard CRUD table (PTN-001)"
+            component: users-ui
+            status: active
+            created_by: "tickets/test.md"
+            criteria: "No page-specific behavior — all behavior inherited from pattern."
+            implements_pattern: "PTN-001"
+            pattern_bindings:
+              entity_type: "users"
+              columns:
+                - "name"
+                - "email"
+            priority: medium
+            readiness: draft
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "PAG-001.yaml", content)
+            result = _run_hook(root)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "AC with implements_pattern and plain-text criteria placeholder "
+                f"must be accepted by the schema validator. Stderr: {result.stderr}"
+            ),
+        )
+
+    def test_implements_pattern_null_with_gherkin_criteria_passes(self) -> None:
+        # covers: ACS-500b-1-i
+        """An AC with implements_pattern: null and full Gherkin criteria exits 0.
+
+        The implements_pattern field is optional. When absent or null, the AC
+        must still pass if criteria contains valid Gherkin (standard case).
+        """
+        content = textwrap.dedent("""\
+            id: PAG-002
+            title: "Login page — standard Gherkin"
+            component: users-ui
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given the user is on the login page
+              When they submit valid credentials
+              Then they are redirected to the dashboard
+            implements_pattern: null
+            priority: medium
+            readiness: draft
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "PAG-002.yaml", content)
+            result = _run_hook(root)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "AC with implements_pattern: null and Gherkin criteria must pass. "
+                f"Stderr: {result.stderr}"
+            ),
+        )
+
+    def test_implements_pattern_with_pattern_bindings_passes(self) -> None:
+        # covers: ACS-500b-1-i
+        """An AC with implements_pattern and pattern_bindings exits 0.
+
+        The pattern_bindings object field must be accepted by the schema
+        validator as an optional object field with unrestricted keys.
+        """
+        content = textwrap.dedent("""\
+            id: PAG-003
+            title: "Products list page — inherits PTN-001"
+            component: products-ui
+            status: active
+            created_by: "tickets/test.md"
+            criteria: "No page-specific behavior — all behavior inherited from pattern."
+            implements_pattern: "PTN-001"
+            pattern_bindings:
+              entity_type: "products"
+              columns:
+                - "sku"
+                - "name"
+                - "price"
+              filters_enabled: true
+            priority: low
+            readiness: draft
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "PAG-003.yaml", content)
+            result = _run_hook(root)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "AC with implements_pattern, pattern_bindings, and plain-text "
+                f"criteria must pass schema validation. Stderr: {result.stderr}"
+            ),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

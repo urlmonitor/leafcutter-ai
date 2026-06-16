@@ -39,6 +39,8 @@ Each AC file is a single YAML document with the following fields.
 | `covered_by` | list of strings | no | Test file paths (optionally with `::test_function`) that verify this criterion. Default: `[]`. |
 | `implemented_by` | list of strings | no | Source file paths (optionally with `#anchor`) that implement this criterion. Default: `[]`. |
 | `origin_agent` | string | no | Identity of the agent or workflow that created this AC file. Free-form provenance string — any non-empty value is valid. The field is **not** validated against the current agent registry. Historical agent names (including names of deleted, renamed, or decomissioned agents) remain valid and are never rewritten during schema upgrades. Example values: `business-analyst` (canonical name, also used historically as v1 and promoted from v3), `business-analyst-v2` (deleted agent), `business-analyst-v3` (legacy v3 name, now renamed to `business-analyst`), `create-ticket` (deleted agent), `refinement` (deleted agent), `BrainCandy` (human author), `ticket-wiring` (workflow). |
+| `implements_pattern` | string or null | no | ID of the reusable behavior pattern this AC inherits from (e.g. `PTN-001`). When set, the effective behavior is derived from the referenced pattern combined with any `pattern_bindings`. The `criteria` field may contain a plain-text placeholder rather than a full `Given`/`When`/`Then` scenario. |
+| `pattern_bindings` | object or null | no | Key-value bindings that instantiate the referenced pattern for this AC. Values may be strings, arrays, or objects. Only meaningful when `implements_pattern` is set. Example: `{entity_type: "users", columns: ["name", "email"]}`. |
 
 ### Full example
 
@@ -60,6 +62,36 @@ implemented_by:
 amended_by: []
 origin_agent: business-analyst
 ```
+
+### Pattern-inherited AC example (empty criteria)
+
+When an AC inherits all of its behavior from a reusable pattern, the `criteria`
+field may contain a plain-text placeholder instead of a full `Given`/`When`/`Then`
+scenario. The schema validator accepts this form when `implements_pattern` is set.
+
+```yaml
+id: PAGE-005
+title: "Users list page — standard CRUD table (PTN-001)"
+component: users-ui
+status: active
+created_by: "tickets/00_inbox/epics/EPIC-UsersUI/03_users_list.md"
+criteria: "No page-specific behavior — all behavior inherited from pattern."
+implements_pattern: "PTN-001"
+pattern_bindings:
+  entity_type: "users"
+  columns:
+    - "name"
+    - "email"
+readiness: draft
+priority: medium
+origin_agent: business-analyst
+```
+
+**Key points:**
+- `criteria` must still be a non-empty string (the schema requires `minLength: 1`).
+- A plain-text placeholder like `"No page-specific behavior — all behavior inherited from pattern."` satisfies this requirement.
+- The effective behavior is entirely derived from the pattern referenced in `implements_pattern`, instantiated with the `pattern_bindings` values.
+- The schema validator does **not** enforce `Given`/`When`/`Then` format — any non-empty string is valid.
 
 ---
 

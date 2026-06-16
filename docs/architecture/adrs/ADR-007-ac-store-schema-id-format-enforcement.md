@@ -65,6 +65,21 @@ following fields:
 | `amended_by` | array of strings | Ticket paths that subsequently amended this AC |
 | `covered_by` | array of strings | Test file paths (and optionally `::test_func`) that verify this AC |
 | `implemented_by` | array of strings | Source file paths (and optionally `#anchor`) that implement this AC |
+| `implements_pattern` | string or null | ID of the reusable behavior pattern this AC inherits from (e.g. `PTN-001`). When set, the `criteria` field may be a plain-text placeholder rather than a full Gherkin scenario (see below). |
+| `pattern_bindings` | object or null | Key-value bindings that instantiate the referenced pattern. Only meaningful when `implements_pattern` is set. |
+
+**Pattern-inherited ACs and the `criteria` field:**
+
+When `implements_pattern` is set, the AC's effective behavior is entirely derived
+from the referenced pattern combined with `pattern_bindings`. In this case, the
+`criteria` field may contain a plain-text placeholder such as
+`"No page-specific behavior — all behavior inherited from pattern."` instead of a
+full `Given`/`When`/`Then` scenario. The schema validator accepts any non-empty
+string for `criteria` — it does not enforce Gherkin format. This is by design: the
+schema's role is structural integrity (field presence and type), not behavioral
+completeness (which is owned by the pattern registry). ACs that have no unique
+page-specific behavior are therefore valid with an empty-criteria placeholder as
+long as `implements_pattern` is set.
 
 ### ID Format
 
