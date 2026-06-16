@@ -51,3 +51,15 @@ The `build_ac_store_scripts` phase (AC BP-900a-1) deploys the following 13 files
 - `__init__.py` — makes the directory a valid Python package
 
 Each deployed file is byte-identical to its source (no template compilation). The phase runs in `internal_phases` so output goes into `.leafcutter/scripts/ac_store/` under the consumer project's output root.
+
+The `__init__.py` is included in the deployed directory, making `scripts/ac_store/` a valid Python package.
+
+## AC Store Script Importability (BP-900a-3)
+
+After deployment, a directory shim is installed by `install_shims()` in `build_helpers.py`:
+
+```
+{consumer}/scripts/ac_store  →  {consumer}/.leafcutter/scripts/ac_store/
+```
+
+This shim means that any process running from `{consumer}/` can add `scripts/ac_store` to `sys.path` and import `ac_prioritizer`, `generate_ticket_from_ac`, and `scan_ac_store` without error. Agent templates (e.g. `build-ac.md`) and skills (e.g. `ac-scanner/SKILL.md`) rely on this importability contract.

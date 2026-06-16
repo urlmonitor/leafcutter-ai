@@ -333,6 +333,7 @@ def install_shims(
         (".claude/hooks", "hooks"),
         (".claude/workflows", "workflows"),
         (".gemini", "gemini"),
+        ("scripts/ac_store", "scripts/ac_store"),
     ]
 
     results: list[dict[str, str]] = []
@@ -639,4 +640,11 @@ def install_hooks(target_root, dry_run=False):
 #   {target}/scripts/build_ac_mode_detection.py as symlinks (or copies) pointing
 #   to their counterparts in .leafcutter/scripts/, satisfying AC BP-900a-2.
 #   (#TICKET-20260611-BP-900a-2)
+# - 2026-06-16 [python-coder/TICKET-20260611-BP-900a-3]: Added directory shim
+#   ("scripts/ac_store", "scripts/ac_store") to install_shims() shim_map.
+#   Creates {target}/scripts/ac_store as a symlink (or copy) pointing to
+#   .leafcutter/scripts/ac_store/ so agent templates that use sys.path.insert(0,
+#   'scripts/ac_store') or call python3 scripts/ac_store/*.py can import the
+#   deployed AC pipeline utilities. Satisfies AC BP-900a-3.
+#   (#TICKET-20260611-BP-900a-3)
 # ====================================================================
