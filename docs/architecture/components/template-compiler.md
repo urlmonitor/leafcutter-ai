@@ -31,3 +31,23 @@ The Template Compiler transforms templates from `templates/agents/`, `templates/
 ## Integration
 
 The `build-self.sh` script invokes the compiler for local development. Consumer installs run `python leafcutter-ai/scripts/build.py --target-dir .` to deploy compiled artifacts.
+
+## AC Store Script Deployment
+
+The `build_ac_store_scripts` phase (AC BP-900a-1) deploys the following 13 files from `scripts/ac_store/` to `{consumer}/.leafcutter/scripts/ac_store/`:
+
+- `ac_prioritizer.py` — ranks unimplemented ACs by priority
+- `generate_ticket_from_ac.py` — scaffolds a ticket file from an AC store entry
+- `scan_ac_store.py` — scans the AC YAML store for entries
+- `mark_ac_done.py` — marks an AC as implemented in the store
+- `validate_ac_schema.py` — validates AC YAML against schema
+- `ac_triage.py` — fast triage agent for /plan-feature workflow
+- `create_ac_workflow.py` — creates AC workflow scaffolds
+- `cross_reference_audit.py` — audits cross-references between ACs
+- `backfill_readiness.py` — checks readiness for AC backfill
+- `ac_parent_id.py` — resolves parent AC IDs
+- `scan_ac_orphans.py` — finds ACs without parent linkage
+- `fix_ac_orphans.py` — repairs orphaned AC entries
+- `__init__.py` — makes the directory a valid Python package
+
+Each deployed file is byte-identical to its source (no template compilation). The phase runs in `internal_phases` so output goes into `.leafcutter/scripts/ac_store/` under the consumer project's output root.

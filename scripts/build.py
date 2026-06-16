@@ -42,6 +42,7 @@ from build_phases import (
     build_components_registry,
     build_antigravity_instructions,
     build_sync_platforms,
+    build_ac_store_scripts,
     build_ac_store_docs,
     build_agent_cards,
     validate_agent_self_description,
@@ -455,6 +456,7 @@ def _run_phases(
         ("Propagation audit", propagation_audit),
         ("Doc compliance", build_doc_compliance),
         ("Sync platforms", build_sync_platforms),
+        ("AC store scripts", build_ac_store_scripts),
     ]
 
     # Phases that write user-curated scaffolds at target_root (write-if-absent)
@@ -1029,4 +1031,10 @@ if __name__ == "__main__":
 #   Writes LEAFCUTTER_VERSION file to target_root so deployed consumers can
 #   determine the package version without reading the source package directly.
 #   Fallback: "unknown" on any read error. (#EPIC-AcPipelineConsolidation/12)
+# - 2026-06-16 [python-coder/TICKET-20260611-BP-900a-1]: Imported
+#   build_ac_store_scripts from build_phases and added ("AC store scripts",
+#   build_ac_store_scripts) entry to internal_phases after ("Sync platforms",
+#   build_sync_platforms). Deploys 13 AC pipeline utility scripts from
+#   scripts/ac_store/ to .leafcutter/scripts/ac_store/ in consumer projects.
+#   (#TICKET-20260611-BP-900a-1)
 # ====================================================================

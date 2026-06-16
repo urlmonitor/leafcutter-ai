@@ -1100,6 +1100,81 @@ def build_sync_platforms(target_root: Path, config: dict[str, Any],
     return written
 
 
+def build_ac_store_scripts(target_root: Path, config: dict[str, Any],
+                           dry_run: bool, force: bool) -> int:
+    """Deploy AC store scripts to ``<target_root>/scripts/ac_store/``.
+
+    Copies all Python scripts from the package's ``scripts/ac_store/`` directory
+    to ``{target_root}/scripts/ac_store/`` so consumer projects have access to the
+    AC pipeline utilities (prioritiser, ticket generator, schema validator, etc.).
+
+    Files are copied verbatim — no template compilation. The compare-before-write
+    guard skips byte-identical files to eliminate mtime churn. The ``__init__.py``
+    is included so the deployed directory is a valid Python package.
+
+    Args:
+        target_root: Absolute path to the target project output root (typically
+            ``<consumer_project>/.leafcutter/`` when called from an
+            ``internal_phases`` dispatch in ``_run_phases``).
+        config: Merged config dictionary (not used; accepted for interface parity).
+        dry_run: When True, logs intent but writes nothing.
+        force: When True, overwrites existing files.
+
+    Returns:
+        Count of files written (or that would be written in dry-run mode).
+
+    # DECISION HISTORY
+    # - 2026-06-16 [python-coder/TICKET-20260611-BP-900a-1]:
+    #   Added build_ac_store_scripts() phase. Deploys all 13 scripts from
+    #   scripts/ac_store/ to .leafcutter/scripts/ac_store/ in the consumer
+    #   project. Follows the build_feedback() pattern (source from PACKAGE_ROOT
+    #   /scripts/<dir>, deploy verbatim via _files_content_identical guard).
+    #   (#TICKET-20260611-BP-900a-1)
+    """
+    ac_store_src = PACKAGE_ROOT / "scripts" / "ac_store"
+    if not ac_store_src.exists():
+        print("AC store scripts: 0 deployed (scripts/ac_store/ not found in package)")
+        return 0
+
+    output_dir = target_root / "scripts" / "ac_store"
+    written = 0
+
+    for script_file in sorted(ac_store_src.iterdir()):
+        if not script_file.is_file():
+            continue
+        # Skip compiled bytecode artefacts — only copy source files.
+        if script_file.suffix == ".pyc":
+            continue
+        output_path = output_dir / script_file.name
+
+        if not _should_overwrite(output_path, force):
+            continue
+
+        if _files_content_identical(script_file, output_path):
+            global _uptodate_count  # noqa: PLW0603
+            _uptodate_count += 1
+            continue
+
+        if dry_run:
+            print(f"  [DRY-RUN] would copy scripts/ac_store/{script_file.name}")
+            written += 1
+        else:
+            try:
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(script_file, output_path)
+            except OSError as exc:
+                _log.warning(
+                    "build_ac_store_scripts: failed to copy %s: %s",
+                    script_file.name,
+                    exc,
+                )
+                continue
+            print(f"  scripts/ac_store/{script_file.name}")
+            written += 1
+
+    return written
+
+
 def build_ac_store_docs(target_root: Path, config: dict[str, Any],
                         dry_run: bool, force: bool) -> int:
     """Install AC Traceability Store documentation into the target project.
@@ -1599,4 +1674,11 @@ def clean_stale_artifacts(
 #   target_root/".claude"/"workflows" to match .claude/ layout convention and
 #   fix unit_tests/test_build_workflow_phase.py assertions.
 #   (#TICKET-20260604-FixFailingBuildPipelineTests)
+# - 2026-06-16 [python-coder/TICKET-20260611-BP-900a-1]:
+#   Added build_ac_store_scripts() phase. Deploys all 13 scripts from
+#   scripts/ac_store/ verbatim to .leafcutter/scripts/ac_store/ in the consumer
+#   project. Follows build_feedback() pattern: source from PACKAGE_ROOT/scripts/
+#   ac_store/, copy via shutil.copy2 with _files_content_identical guard.
+#   Registered in build.py internal_phases list after ("Sync platforms",
+#   build_sync_platforms). (#TICKET-20260611-BP-900a-1)
 # ====================================================================
