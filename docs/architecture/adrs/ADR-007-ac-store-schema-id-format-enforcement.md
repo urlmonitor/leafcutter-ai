@@ -197,6 +197,24 @@ When a slot is missing, the hook exits 1 with the canonical error:
 Both the consuming AC file path and the missing key name are included in the
 error message so the author can locate and fix the issue immediately.
 
+**Deprecated pattern reference enforcement (added 2026-06-16, AC ACS-500a-3-ii):**
+
+`check_ac_schema.py` now enforces that no consuming AC references a pattern AC
+that has `status: deprecated` via its `implements_pattern` field. The check runs
+as part of the same `check-ac-schema` pre-commit hook — no new hook is required.
+
+When a consuming AC references a deprecated pattern, the hook exits 1 with:
+
+```
+<consuming_ac_file>: implements_pattern references deprecated pattern <pattern_id>;
+use its successor (see <pattern_id> superseded_by field) or remove the reference
+```
+
+The error names the consuming AC file path so the author can locate and update the
+reference. The `superseded_by` field on the deprecated pattern AC identifies the
+correct replacement; if no successor exists, the `implements_pattern` field must be
+removed.
+
 ### Pattern AC Placement Convention (added 2026-06-11, AC ACS-500a-2)
 
 Pattern ACs follow the **same file placement convention** as every other AC in

@@ -13,8 +13,9 @@ ARCHITECTURE: Discovers all AC YAML files under docs/acceptance-criteria/,
     jsonschema is available, performs full draft-07 validation. Also performs
     pattern_bindings completeness validation: consuming ACs whose
     implements_pattern references a pattern AC must bind every slot declared in
-    that pattern's pattern_slots. Exits 0 when all files pass; exits 1 with
-    per-file error messages.
+    that pattern's pattern_slots. Also validates that implements_pattern does not
+    reference a deprecated pattern AC (ACS-500a-3-ii). Exits 0 when all files
+    pass; exits 1 with per-file error messages.
     Standalone stdlib script — no leafcutter imports.
 """
 
@@ -242,6 +243,56 @@ def _validate_pattern_bindings_completeness(
 
 
 # ---------------------------------------------------------------------------
+# Deprecated pattern reference validation
+# ---------------------------------------------------------------------------
+
+
+def _validate_deprecated_pattern_reference(
+    consuming_path: Path,
+    consuming_data: dict[str, Any],
+    all_ac_data: dict[str, dict[str, Any]],
+) -> list[str]:
+    """Validate that implements_pattern does not reference a deprecated pattern AC.
+
+    A consuming AC is one where ``implements_pattern`` is set to a non-null
+    AC ID. If the referenced pattern AC has ``status: deprecated``, the
+    consuming AC must be updated to either reference the successor (identified
+    by the pattern's ``superseded_by`` field) or remove the reference entirely.
+
+    The error message follows the canonical format from AC ACS-500a-3-ii:
+    ``"implements_pattern references deprecated pattern <id>; use its successor
+    (see <id> superseded_by field) or remove the reference"``.
+
+    Args:
+        consuming_path: Filesystem path to the consuming AC file (for error messages).
+        consuming_data: Parsed YAML content of the consuming AC.
+        all_ac_data: Mapping of AC id → parsed YAML content for every AC
+            file discovered in the store. Used to look up the pattern AC status.
+
+    Returns:
+        List of error message strings; empty when the reference is valid.
+    """
+    pattern_id = consuming_data.get("implements_pattern")
+    if not pattern_id:
+        return []
+
+    pattern_data = all_ac_data.get(str(pattern_id))
+    if pattern_data is None:
+        # Pattern AC not found in this scan — status cannot be checked.
+        # Missing-reference errors are out of scope for this hook.
+        return []
+
+    if pattern_data.get("status") != "deprecated":
+        return []
+
+    return [
+        f"{consuming_path}: implements_pattern references deprecated pattern "
+        f"{pattern_id}; use its successor (see {pattern_id} superseded_by field) "
+        f"or remove the reference"
+    ]
+
+
+# ---------------------------------------------------------------------------
 # File discovery
 # ---------------------------------------------------------------------------
 
@@ -357,6 +408,12 @@ def _validate_file(
     if all_ac_data is not None:
         errors.extend(
             _validate_pattern_bindings_completeness(path, data, all_ac_data)
+        )
+
+    # Deprecated pattern reference check (ACS-500a-3-ii).
+    if all_ac_data is not None:
+        errors.extend(
+            _validate_deprecated_pattern_reference(path, data, all_ac_data)
         )
 
     return errors

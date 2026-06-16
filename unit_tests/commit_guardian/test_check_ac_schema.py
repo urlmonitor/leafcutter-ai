@@ -280,5 +280,163 @@ class TestOriginAgentEmptyStringBlocked(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
 
 
+class TestDeprecatedPatternReferenceBlocked(unittest.TestCase):
+    """Consuming AC that implements_pattern referencing a deprecated pattern AC exits 1."""
+
+    def test_deprecated_pattern_reference_blocked(self) -> None:
+        """A consuming AC referencing a deprecated pattern exits 1 with the canonical error.
+
+        Writes two AC YAML files into a temporary directory: a pattern AC with
+        ``status: deprecated`` and a consuming AC with ``implements_pattern``
+        pointing to it. Runs the hook and asserts that the process exits 1 and
+        that stderr contains the canonical error string from ACS-500a-3-ii.
+        """
+        pattern_content = textwrap.dedent("""\
+            id: PTN-001
+            title: "Deprecated pattern"
+            component: finalize
+            status: deprecated
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+        """)
+        consuming_content = textwrap.dedent("""\
+            id: FIN-010
+            title: "Consuming AC referencing deprecated pattern"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+            implements_pattern: "PTN-001"
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "PTN-001.yaml", pattern_content)
+            consuming_path = _write_ac_file(root, "FIN-010.yaml", consuming_content)
+            result = _run_hook(root)
+        self.assertEqual(result.returncode, 1, msg=result.stderr)
+        self.assertIn(
+            "implements_pattern references deprecated pattern PTN-001",
+            result.stderr,
+        )
+        self.assertIn(
+            "use its successor (see PTN-001 superseded_by field) or remove the reference",
+            result.stderr,
+        )
+        self.assertIn(str(consuming_path.name), result.stderr)
+
+
+class TestActivePatternReferenceAllowed(unittest.TestCase):
+    """Consuming AC that implements_pattern referencing an active pattern AC exits 0."""
+
+    def test_active_pattern_reference_passes(self) -> None:
+        """A consuming AC referencing an active pattern exits 0 with no deprecated-pattern error.
+
+        Writes two AC YAML files: a pattern AC with ``status: active`` and a
+        consuming AC with ``implements_pattern`` pointing to it. Runs the hook
+        and asserts that the process exits 0 and that no deprecated-pattern
+        error appears in stderr.
+        """
+        pattern_content = textwrap.dedent("""\
+            id: PTN-002
+            title: "Active pattern"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+        """)
+        consuming_content = textwrap.dedent("""\
+            id: FIN-011
+            title: "Consuming AC referencing active pattern"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+            implements_pattern: "PTN-002"
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "PTN-002.yaml", pattern_content)
+            _write_ac_file(root, "FIN-011.yaml", consuming_content)
+            result = _run_hook(root)
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertNotIn("references deprecated pattern", result.stderr)
+
+
+class TestDeprecatedPatternReferenceNamesConsumingFilePath(unittest.TestCase):
+    """Error output for a deprecated-pattern reference includes the consuming file path."""
+
+    def test_deprecated_pattern_error_names_consuming_path(self) -> None:
+        """The error message for a deprecated-pattern reference names the consuming AC path.
+
+        Verifies the consuming file path (FIN-012.yaml) appears in the hook
+        stderr when the consuming AC's implements_pattern points to a deprecated
+        pattern AC (PTN-003).
+        """
+        pattern_content = textwrap.dedent("""\
+            id: PTN-003
+            title: "Another deprecated pattern"
+            component: finalize
+            status: deprecated
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+        """)
+        consuming_content = textwrap.dedent("""\
+            id: FIN-012
+            title: "Consuming AC for path-naming test"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+            implements_pattern: "PTN-003"
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "PTN-003.yaml", pattern_content)
+            consuming_path = _write_ac_file(root, "FIN-012.yaml", consuming_content)
+            result = _run_hook(root)
+        self.assertEqual(result.returncode, 1, msg=result.stderr)
+        # The error must name either the relative or absolute path of the consuming file.
+        # The main loop uses relative paths; the function embeds the absolute path.
+        # Either form satisfies the AC requirement.
+        self.assertTrue(
+            str(consuming_path.name) in result.stderr
+            or str(consuming_path) in result.stderr,
+            msg=(
+                f"Expected consuming file path ({consuming_path.name} or "
+                f"{consuming_path}) in stderr:\n{result.stderr}"
+            ),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

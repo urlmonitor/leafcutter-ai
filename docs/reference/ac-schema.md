@@ -262,7 +262,16 @@ Validates every YAML file under `docs/acceptance-criteria/` against
 
 Validates: required fields present, `status` is one of the allowed enum
 values, `id` matches the `PREFIX-NNN` regex, `superseded_by` is non-null
-only when `status == superseded_by`.
+only when `status == superseded_by`. Also validates that `implements_pattern`
+does not reference a pattern AC whose `status` is `deprecated`. When a
+consuming AC references a deprecated pattern, the hook exits 1 with:
+
+```
+<consuming_ac_file>: implements_pattern references deprecated pattern <pattern_id>;
+use its successor (see <pattern_id> superseded_by field) or remove the reference
+```
+
+The error names both the consuming AC file path and the deprecated pattern ID.
 
 ### `check_test_ac_tags.py` (configurable)
 
