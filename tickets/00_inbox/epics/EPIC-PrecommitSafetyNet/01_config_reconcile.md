@@ -1,6 +1,6 @@
 ---
 title: "Reconcile precommit-autofix.json to documented schema with blocking_hook_ids"
-status: in_progress
+status: done
 components:
   - precommit_hooks
   - commit_guardian
@@ -31,7 +31,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 user_facing_surface: null
 ---
 
@@ -146,7 +146,7 @@ originator re-dispatch."
 - [x] python-coder — 2026-06-17 12:00
 - [x] pr-reviewer — 2026-06-17 15:45
 - [x] commit — 2026-06-17 16:10
-- [ ] pull-request
+- [x] pull-request — 2026-06-17 17:00
 
 ## Comments
 
@@ -177,3 +177,11 @@ completion_manifest:
   implementation_committed: true
   ticket_signed_off: true
 Implementation files committed. Ticket sign-off complete.
+
+### 2026-06-17 17:00 — pull-request (status: ok)
+feedback-id: fb_2026-06-17_00f7e8a0
+completion_manifest:
+  branch_pushed: true
+  pr_opened_or_existing: true
+  ticket_signed_off: true
+Branch pushed to origin. PR #89 already open for EPIC-PrecommitSafetyNet (feat(EPIC-PrecommitSafetyNet): pre-commit safety net — coder templates emit context_capsule on warn-tier signal). No new commits to push at sign-off time; branch tip was already at origin. Ticket status flipped to done (pull-request was the last needed agent).
