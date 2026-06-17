@@ -59,18 +59,20 @@ For each failing `hook_id`:
 2. If the rule's `model` or `subagent_type` is `null` (e.g. `apply-sql-changes`), **skip** — no agent dispatch needed; report it.
 3. If no matching rule, fall back to `defaults`.
 4. Check whether the `hook_id` appears in `blocking_hook_ids` (from the config). If it does not appear in `blocking_hook_ids`, the hook is **non-gating** — skip it entirely, do not dispatch any fixer.
-5. For hooks in `blocking_hook_ids`, look up the hook's `tier` in the `hooks_manifest` section of the config:
-   - `tier: transform` — these hooks self-heal and exit 0; if they somehow appear in failures, skip.
-   - `tier: judgment` — use the **originator re-dispatch path** (see Step 4a below).
-   - Any other tier, or `tier` absent — use the **generic light-model route** (see Step 4b below).
+5. For hooks in `blocking_hook_ids`, classify the **tier** from the matching `rules[]` entry's `category` field (already loaded from `.claude/precommit-autofix.json` in Step 1 — no other file is read):
+   - `category: structural` — judgment is required; use the **originator re-dispatch path** (see Step 4a below). Every hook in `blocking_hook_ids` ships as `category: structural`, so the seven gating hooks (`check-complexity`, `check-docstrings`, `check-exception-handling`, `check-file-size`, `check-ac-schema`, `check-ac-limits`, `check-contract-shrinking`) all route here.
+   - `category: mechanical` — use the **generic light-model route** (see Step 4b below).
+   - `category` absent / no matching rule — default to the **generic light-model route** (Step 4b); never block on an unclassified hook.
+
+   > **Single source of truth.** Tier is derived from the `category` field on the rule you already loaded — the skill never opens `commit_guardian.json`. The hook-script `tier:` field in `commit_guardian.json` exists for the transform-vs-validator ordering of the pure-Python hooks (see the transform tier in `managing-pre-commit-hooks.md`); the autofix routing decision is governed solely by `category` here, so the two surfaces cannot drift the dispatch path.
 
 **Agent frontmatter overrides the dispatch model.** Some specialized agents pin their own model (e.g. `code-refactoring-specialist`, `architecture-planner`, `smart-bug-resolver` all pin `model: opus`; `feature-dev:code-reviewer` pins `model: sonnet`). The rule's `effective_model` field documents what actually runs after that override. When deciding whether to escalate (Step 4b retry), compare against `effective_model`, not `model` — escalating from `effective_model: opus` is meaningless.
 
 Group **non-judgment** hooks by `(effective_model, subagent_type)` so a single agent can fix multiple related failures in one dispatch instead of spawning one agent per hook.
 
-## Step 4a — Originator re-dispatch (judgment-tier gating hooks)
+## Step 4a — Originator re-dispatch (structural-category gating hooks)
 
-For each failing hook whose `tier` is `judgment` and whose `hook_id` is in `blocking_hook_ids`:
+For each failing hook whose rule `category` is `structural` (judgment-tier) and whose `hook_id` is in `blocking_hook_ids`:
 
 ### Step 4a.1 — Parse the originating agent
 
@@ -159,9 +161,9 @@ After the re-dispatched agent returns:
 - If the agent returned `AUTOFIX_RESULT: blocker`: surface the blocker to the user immediately. **Do NOT retry the commit.** Stop here and present the agent's blocker explanation.
 - If the agent returned `AUTOFIX_RESULT: fixed`: stage the changed files, then retry the commit once (see Step 5).
 
-## Step 4b — Generic light-model route (mechanical-tier and non-judgment hooks)
+## Step 4b — Generic light-model route (mechanical-category and unclassified hooks)
 
-For each failing hook that is **not** judgment-tier (tier is absent, transform, or any non-judgment value) and is in `blocking_hook_ids`, use the existing generic dispatch:
+For each failing hook whose rule `category` is **not** `structural` (i.e. `mechanical`, absent, or no matching rule) and is in `blocking_hook_ids`, use the existing generic dispatch:
 
 Use the `Agent` tool with:
 
