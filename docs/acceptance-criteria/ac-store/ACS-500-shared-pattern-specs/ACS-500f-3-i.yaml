@@ -35,7 +35,7 @@ expects_from:
   contract: "The widened ac_store_schema.json whose tightened-but-still-strict boundaries this edge case exercises"
 origin_agent: business-analyst
 created: 2026-06-17
-readiness: draft
+readiness: approved
 priority: medium
 notes: |
   ACS-500 post-implementation spot-check, GAP C edge case. Widening the id pattern
@@ -46,4 +46,5 @@ notes: |
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-Acpatternenforcementismechanically/05_TICKET-20260617-ACS-500f-3-i.md
