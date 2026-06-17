@@ -19,7 +19,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -128,7 +128,7 @@ Scenario: full feedback set included in manifest (AC-4)
 - [x] python-coder — 2026-06-17 23:30
 - [x] test-runner — 2026-06-17 21:28
 - [x] pr-reviewer — 2026-06-17 23:55
-- [ ] commit
+- [x] commit — 2026-06-17 23:59
 - [ ] pull-request
 
 ## Comments
@@ -244,3 +244,12 @@ completion_manifest:
   new_high_confidence_issues: false
 
 H-1 and H-2 confirmed resolved: `extract_script_path_refs()` (line 124) and `extract_script_path_refs_with_sources()` (line 169) both now call `_log.debug("Skipping unreadable template: %s", md_file)` before `continue` in their `except OSError` blocks. `import logging` and `_log = logging.getLogger(__name__)` are present at module level. The fix is additive-only and introduces no new high-confidence issues. M-1 (ac_store suffix filter asymmetry) remains a previously-noted medium finding with no new evidence of a concrete defect.
+
+### 2026-06-17 23:59 — commit (status: ok)
+feedback-id: fb_2026-06-17_061ba662
+Auto-authorized commit gate: subject "fix(build): derive deployable-scripts manifest from build phases (ticket 02)"; staged files: scripts/build.py, scripts/build_propagation_audit.py, scripts/build_referential_integrity.py, unit_tests/test_build_package_version.py, unit_tests/test_build_version_wiring.py, tickets/00_inbox/epics/EPIC-BuildGuardFalsePositive/02_fix_class_a_manifest.md. Prior gates passed: test-runner signed_off, pr-reviewer signed_off. SHA: 068e37e.
+
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
