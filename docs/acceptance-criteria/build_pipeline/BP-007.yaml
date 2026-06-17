@@ -1,0 +1,19 @@
+id: BP-007
+status: active
+origin_agent: BrainCandy
+component: build-pipeline
+title: "install_hooks skips gracefully when the build target is not a git repository"
+criteria: |
+  Given build.py runs install_hooks(target_root) against a target_root that is
+    not inside a git working tree (no reachable .git)
+  When the hook-install step runs
+  Then install_hooks detects the absent git repository before invoking
+    'pre-commit install'
+  And it returns a graceful "skipped (not a git repo)" status with an
+    informational message — not a "failed" status
+  And the bug symptom ("prints [ERROR] pre-commit install failed: with empty
+    stderr and returns 'failed' when target_root is not a git repo") must not occur
+  And when target_root IS a git repo and 'pre-commit install' genuinely fails,
+    install_hooks still surfaces the error and returns "failed" (the loud-failure
+    path for real repos is preserved)
+notes: "Authored by /quick-fix. Root cause: install_hooks() guards for pre-commit-not-found and custom core.hooksPath, but has no guard for a non-git target_root; it runs 'pre-commit install' unconditionally and reports the resulting CalledProcessError via _error() as a hard 'failed', producing a misleading [ERROR] on the self-hosting parent-workspace build target."
