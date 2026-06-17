@@ -1,0 +1,54 @@
+id: ACS-500d-1
+readiness: approved
+priority: high
+title: "Updating a pattern AC's criteria changes effective behavior for all consumers"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given three page-level ACs each have implements_pattern: "PTN-001"
+    referencing a pattern that defines "paginated-collection" with
+    criteria including "displays total count above the table",
+  When the pattern AC (PTN-001) is amended to change the criteria to
+    "displays total count below the table",
+  Then each consuming AC inherits the updated behavior without any
+    modification to its own YAML file,
+  And an agent reading any of the three consuming ACs resolves the
+    effective behavior by following the implements_pattern reference
+    to retrieve the current pattern criteria,
+  And no migration ticket or manual update to the three consuming
+    ACs is required.
+depends_on: [ACS-500d, ACS-500b-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Pattern resolution must be a reusable function callable by scan_ac_store.py and generate_ticket_from_ac.py"
+  - "Resolution must follow implements_pattern references at read time -- no denormalization or caching of pattern criteria into consuming ACs"
+  - "Must handle errors gracefully when a referenced pattern AC file is missing (log warning, do not crash)"
+  - "Must complete pattern resolution in <100ms per AC for typical stores"
+  - "Must be idempotent -- resolving the same AC multiple times produces the same effective behavior"
+delivers_to:
+  agent: python-coder
+  contract: "Pattern resolution function that accepts an AC dict with implements_pattern, reads the referenced pattern file, and returns the effective criteria with bindings applied"
+expects_from:
+  ac_id: ACS-500b-1
+  contract: "Consuming ACs with valid implements_pattern and pattern_bindings fields that pass schema validation"
+origin_agent: business-analyst-v3
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: [ACS-500d-1-i]
+implemented_by:
+- tickets/00_inbox/TICKET-20260611-ACS-500d-1.md

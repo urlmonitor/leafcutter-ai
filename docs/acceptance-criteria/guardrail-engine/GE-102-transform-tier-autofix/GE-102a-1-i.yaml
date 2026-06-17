@@ -1,0 +1,42 @@
+id: GE-102a-1-i
+readiness: approved
+priority: high
+title: "Doc-frontmatter transform fails open on parse uncertainty and no-ops when the docs layout is absent"
+component: guardrail-engine
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200b-3.yaml"
+criteria: |
+  Given the doc-frontmatter transform hook is invoked,
+  When the staged file's frontmatter cannot be parsed unambiguously (malformed YAML, ambiguous
+    boundaries, or an unexpected structure),
+  Then the hook makes no edit, leaves the file untouched, and exits with code 0 (fail-open),
+  And when the project has no docs/ layout at all (the path the config targets does not exist),
+  Then the hook no-ops silently and exits with code 0,
+  And in neither case does the hook block the commit or raise an unhandled error.
+depends_on: [GE-102a]
+doc_links:
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Any parse uncertainty results in a no-op fail-open, never a wrong edit"
+  - "Absent docs/ layout is a silent no-op (portability into projects without docs/)"
+  - "Error handling on the file-read/parse boundary must follow the project error handling policy"
+delivers_to: null
+expects_from:
+  ac_id: GE-102a
+  contract: "The transform hook whose fail-open and portability behavior this edge case fixes"
+origin_agent: business-analyst
+created: 2026-06-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

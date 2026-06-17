@@ -1,0 +1,48 @@
+id: BO-210a-2
+readiness: approved
+priority: high
+title: "A blocking_hook_ids array is the single authority on which hooks gate a commit"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200b-3.yaml"
+criteria: |
+  Given the reconciled routing config,
+  When a reader inspects it for the list of gating hooks,
+  Then the config contains exactly one blocking_hook_ids array,
+  And that array lists the gating hook ids: check-complexity, check-docstrings,
+    check-exception-handling, check-file-size, check-ac-schema, check-ac-limits,
+    and check-contract-shrinking,
+  And no other field in the config independently determines whether a hook gates a commit,
+  And a hook id absent from blocking_hook_ids is treated as non-gating by any reader.
+depends_on: [BO-210a, BO-210a-1]
+doc_links:
+  - path: "templates/skills/precommit-autofix/SKILL.md"
+    relationship: describes
+    status: exists
+  - path: ".claude/precommit-autofix.json"
+    relationship: configures
+    status: exists
+  - path: "docs/build-pipeline.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "blocking_hook_ids must be the sole gating list — no parallel gating signal"
+  - "The candidate gating hook ids must all be present in the array"
+  - "Edit the deployed config and its packaged template source together; the build.py round-trip must leave both in parity"
+delivers_to:
+  agent: llm-expert
+  contract: "A top-level blocking_hook_ids JSON array (array of hook-id strings) in precommit-autofix.json that the re-dispatch skill logic reads to decide which failures trigger originator re-dispatch"
+expects_from:
+  ac_id: BO-210a-1
+  contract: "The reconciled routing config document to add the array into"
+origin_agent: business-analyst
+created: 2026-06-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

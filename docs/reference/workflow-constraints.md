@@ -3,13 +3,14 @@ title: "Reference: Claude Code Workflow Script Constraints"
 type: reference
 status: active
 created: 2026-06-01
-last_updated: 2026-06-01
+last_updated: 2026-06-10
 components:
   - build_pipeline
 related_docs:
   - "templates/workflows-js/build-ticket.js"
   - "templates/workflows-js/build-epic.js"
   - "templates/workflows-js/create-ticket.js"
+  - "scripts/workflows/plan-feature.js"
   - "docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md"
   - "docs/how-to/configure-workflow-allowlist.md"
   - "templates/agents/onboard.md"
@@ -53,7 +54,8 @@ echo "$CLAUDE_CODE_VERSION"
 |---|---|---|
 | `/build-ticket` (drive a ticket) | Spawns `ticket-supervisor` agent | Runs `build-ticket.js` — all phase agents at depth 1 |
 | `/build-epic` (drive an epic) | Spawns `epic-supervisor` agent (deprecated) | Runs `build-epic.js` — all tickets in parallel batches |
-| `/create-ticket` | Spawns BA → refinement chain | Runs `create-ticket.js` — flat sequential/parallel dispatch |
+| `/create-ticket` | Legacy BA/refinement agents removed — use workflow path | Runs `create-ticket.js` — flat sequential/parallel dispatch |
+| `/plan-feature` (AC authoring pipeline) | Spawns `ac-triage` → authoring agents chain | Runs `plan-feature.js` — triage → `product-owner`/`business-analyst`/`it-po` with user gates |
 | Permission prompts | Standard per-command prompts | Reduced via `allowedTools` allowlist in `settings.json` |
 | Mid-run user steering | Available (agent responds to chat) | Only at `prompt()` checkpoints |
 
@@ -168,6 +170,29 @@ See `docs/how-to/drive-epic-manually.md` for manual recovery steps.
 
 ---
 
+## Removed Legacy Agents (AC ACD-1100a-3)
+
+The following seven agents were removed as part of EPIC-AcPipelineConsolidation.
+No workflow script, skill file, or command template may dispatch these agent IDs
+as spawn targets:
+
+| Removed Agent ID | Replacement |
+|---|---|
+| `create-ticket` | `/create-ticket` workflow command (`create-ticket.js`) |
+| `create-ticket-v2` | `/create-ticket` workflow command (`create-ticket.js`) |
+| `business-analyst` (v1) | `business-analyst` (canonical, promoted from v3) |
+| `business-analyst-v2` | `business-analyst` (canonical, promoted from v3) |
+| `create-epic` | `/plan-feature` workflow command (`plan-feature.js`) |
+| `refinement` | Inlined into `create-ticket.js` workflow |
+| `it-po` (v1/v2) | `it-po` (canonical, promoted from v3) |
+
+These IDs must not appear as `subagent_type`, `agentType`, `spawn_allowlist`,
+or `spawned_by` values in any file under `templates/skills/`, `templates/commands/`,
+`scripts/workflows/`, or `config/agent_registry.json`. Any reference found is a
+dispatch-target violation and must be removed.
+
+---
+
 ## Cross-References
 
 - `docs/how-to/configure-workflow-allowlist.md` — how to configure the
@@ -177,5 +202,7 @@ See `docs/how-to/drive-epic-manually.md` for manual recovery steps.
   architectural decision that introduced the workflow scripts and the
   depth-1 dispatch model.
 - `templates/workflows-js/` — the workflow script source files.
+- `scripts/workflows/plan-feature.js` — the `/plan-feature` workflow script
+  (AC authoring pipeline); replaced the legacy `/create-ac` command in v2.0.
 - `templates/agents/onboard.md` — the onboarding wizard, which checks the
   Claude Code version at Step 1b and warns if below 2.1.154.

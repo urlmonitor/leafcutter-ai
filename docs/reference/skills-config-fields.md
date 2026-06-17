@@ -182,9 +182,9 @@ Controls which paths are excluded from glossary coverage scanning.
 
 ## Testing Context (`testing_context` object)
 
-A structured block shared by the `test-planner`, `test-writer`, and
-`test-runner` agents. Adopters customize this block to match their project's
-test layout; the defaults reflect the original Bybit-Trader project.
+A structured block shared by the `test-writer` and `test-runner` agents.
+Adopters customize this block to match their project's test layout; the
+defaults reflect the original Bybit-Trader project.
 
 The block is read at agent runtime, not at build time. Required sub-fields are
 marked below.
@@ -192,8 +192,8 @@ marked below.
 | Field | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `testing_context.test_root` | string | yes | `unit_tests/` | Root directory containing all test subdirectories. |
-| `testing_context.readme_path` | string | yes | `unit_tests/README.md` | Path to the primary test README. Read by `test-planner` at runtime for directory layout, naming conventions, and performance constraints. |
-| `testing_context.directories` | object | yes | (see below) | Maps each test subdirectory name to its framework and DB-dependency flag. Used by `test-planner` to produce valid `target_dir` values and by `test-writer` to pick the correct `setUp`/`tearDown` pattern. |
+| `testing_context.readme_path` | string | yes | `unit_tests/README.md` | Path to the primary test README. Read by `test-writer` at runtime for directory layout, naming conventions, and performance constraints. |
+| `testing_context.directories` | object | yes | (see below) | Maps each test subdirectory name to its framework and DB-dependency flag. Used by `test-writer` to produce valid `target_dir` values and to pick the correct `setUp`/`tearDown` pattern. |
 | `testing_context.max_test_duration_seconds` | integer | yes | `5` | Maximum allowed wall-clock duration for any auto-running test. Tests that exceed this limit must use `manual_test_suffix`. |
 | `testing_context.manual_test_suffix` | string | no | `_MANUAL` | Suffix appended to test function names excluded from the standard pre-commit suite (slow or DB-requiring tests). |
 | `testing_context.db_connection_test` | string | no | `postgresql://trader:trader@localhost:5403/LIVE` | Connection string for the test database environment. Used in `setUp` for DB-requiring tests. |
@@ -208,7 +208,7 @@ Each value is an object with two required fields:
 | Sub-field | Type | Allowed values | Description |
 |---|---|---|---|
 | `framework` | enum | `unittest`, `pytest` | Test framework used in this subdirectory. Determines how `test-writer` generates `setUp`/`tearDown` boilerplate. |
-| `db_required` | boolean | `true`, `false` | Whether tests in this subdirectory require a running database. When `true`, the pre-commit hook skips these tests; `test-planner` routes them to the manual/slow suite. |
+| `db_required` | boolean | `true`, `false` | Whether tests in this subdirectory require a running database. When `true`, the pre-commit hook skips these tests; `test-writer` routes them to the manual/slow suite. |
 
 **Example `directories` block:**
 

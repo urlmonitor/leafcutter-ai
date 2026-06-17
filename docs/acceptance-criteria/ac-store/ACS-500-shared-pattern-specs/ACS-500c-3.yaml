@@ -1,0 +1,51 @@
+id: ACS-500c-3
+readiness: approved
+priority: high
+title: "Duplicate detection rejects AC whose criteria duplicates an existing pattern"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the AC store contains a pattern AC (id: "PTN-001") defining
+    "paginated-collection" behavior with criteria covering page size,
+    next/previous navigation, and total count display,
+  When an authoring agent attempts to create a new AC whose criteria field
+    restates the same pagination behavior with different entity nouns
+    (e.g. "orders" instead of the pattern's placeholder),
+  Then the validation step flags the new AC as a likely duplicate of PTN-001,
+  And the agent is prompted to use implements_pattern: "PTN-001"
+    with pattern_bindings instead of creating a standalone AC,
+  And the duplicate AC is NOT written to the store.
+depends_on: [ACS-500c, ACS-500a-3]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "Advisory mode only -- emit warning, do not block commit. Semantic similarity detection may use lightweight string-distance heuristics (not LLM calls) at commit time"
+  - "Must not regress any existing validation behavior in scripts/ac_store/validate_ac_schema.py"
+  - "Must complete duplicate detection in <500ms for AC stores with up to 500 files"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Warning output must name both the new AC file and the existing pattern AC it likely duplicates"
+  - "Must be stdlib-only consistent with ADR-007 (no external NLP or ML dependencies)"
+delivers_to: null
+expects_from:
+  ac_id: ACS-500a-3
+  contract: "Validation infrastructure that can scan all AC files in the store and access their criteria fields"
+origin_agent: business-analyst-v3
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260611-ACS-500c-3.md

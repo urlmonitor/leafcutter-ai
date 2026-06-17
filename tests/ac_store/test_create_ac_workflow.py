@@ -257,13 +257,12 @@ class TestStrategicRouteDispatch:
             dispatch_fn=mock_dispatch,
             gate_fn=mock_gate,
         )
-        assert "product-owner-v3" in agent_calls
-        assert "business-analyst-v3" in agent_calls
-        assert "it-po-v3" in agent_calls
-        # Order: PO v3 before BA v3 before IT PO v3
-        po_idx = agent_calls.index("product-owner-v3")
-        ba_idx = agent_calls.index("business-analyst-v3")
-        itpo_idx = agent_calls.index("it-po-v3")
+        assert "product-owner" in agent_calls
+        assert "business-analyst" in agent_calls
+        assert "it-po" in agent_calls
+        po_idx = agent_calls.index("product-owner")
+        ba_idx = agent_calls.index("business-analyst")
+        itpo_idx = agent_calls.index("it-po")
         assert po_idx < ba_idx < itpo_idx
 
 
@@ -302,9 +301,9 @@ class TestBehavioralRouteSkipsPO:
             dispatch_fn=mock_dispatch,
             gate_fn=mock_gate,
         )
-        assert "product-owner-v3" not in agent_calls
-        assert "business-analyst-v3" in agent_calls
-        assert "it-po-v3" in agent_calls
+        assert "product-owner" not in agent_calls
+        assert "business-analyst" in agent_calls
+        assert "it-po" in agent_calls
 
 
 # ---------------------------------------------------------------------------
@@ -342,9 +341,9 @@ class TestTechnicalRouteSkipsPOAndBA:
             dispatch_fn=mock_dispatch,
             gate_fn=mock_gate,
         )
-        assert "product-owner-v3" not in agent_calls
-        assert "business-analyst-v3" not in agent_calls
-        assert "it-po-v3" in agent_calls
+        assert "product-owner" not in agent_calls
+        assert "business-analyst" not in agent_calls
+        assert "it-po" in agent_calls
 
 
 # ---------------------------------------------------------------------------
@@ -391,8 +390,8 @@ class TestCancelAtGatePreservesDrafts:
             gate_fn=mock_gate,
         )
         # After cancel, BA v3 and IT PO v3 must NOT be called
-        assert "business-analyst-v3" not in agent_calls
-        assert "it-po-v3" not in agent_calls
+        assert "business-analyst" not in agent_calls
+        assert "it-po" not in agent_calls
         # Result should indicate cancellation
         assert result.get("status") in ("cancelled", "ok")
 
@@ -419,7 +418,7 @@ class TestFinalGateSetsApprovedAndPriority:
         written_acs: list[dict] = []
 
         def mock_dispatch(agent_name: str, **kwargs: object) -> dict:
-            if agent_name == "it-po-v3":
+            if agent_name == "it-po":
                 return {
                     "status": "ok",
                     "acs_written": [

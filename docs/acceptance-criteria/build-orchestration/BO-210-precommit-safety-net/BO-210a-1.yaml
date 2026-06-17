@@ -1,0 +1,47 @@
+id: BO-210a-1
+readiness: approved
+priority: high
+title: "Routing config is rewritten from the dead stub to the documented defaults/commit_review/rules shape"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200b-3.yaml"
+criteria: |
+  Given the pre-commit auto-fix routing config currently contains only an empty
+    routes object and does not match the documented schema,
+  When the config is reconciled,
+  Then the resulting config is a single document containing a defaults section
+    (a model and an agent), a commit_review section (an enabled flag, a model, and
+    an agent), and a rules list,
+  And each rule entry names a hook_id, a category, a model, and an agent,
+  And the empty routes object is removed,
+  And a reader loading the config finds no fields outside the documented schema.
+depends_on: [BO-210a]
+doc_links:
+  - path: "templates/skills/precommit-autofix/SKILL.md"
+    relationship: describes
+    status: exists
+  - path: ".claude/precommit-autofix.json"
+    relationship: configures
+    status: exists
+  - path: "docs/build-pipeline.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Config must parse as valid JSON conforming to the documented schema"
+  - "No legacy keys (e.g. the empty routes object) may remain after reconcile"
+  - "Edit the deployed .claude/precommit-autofix.json and its packaged template source under templates/scripts/ together, then verify parity via the build.py round-trip — never edit one side only"
+delivers_to:
+  agent: python-coder
+  contract: "A populated routing config the auto-fix skill reads to map each failing hook to a model and agent"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-16
+amended_by: []
+superseded_by: null
+covered_by: [BO-210a-1-i]
+implemented_by: []

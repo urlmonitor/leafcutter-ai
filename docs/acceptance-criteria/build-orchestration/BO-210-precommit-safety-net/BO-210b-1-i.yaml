@@ -1,0 +1,43 @@
+id: BO-210b-1-i
+readiness: approved
+priority: high
+title: "An oversized context_capsule is truncated to the length cap rather than written unbounded"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200b-3.yaml"
+criteria: |
+  Given a coder has gathered design context whose combined length exceeds the
+    capsule length cap (for example a ticket touching 30 files, each with a
+    multi-line rationale),
+  When the coder writes the context_capsule block,
+  Then the block is truncated to the documented length cap,
+  And the intent field and the consumers_checked field are preserved in full,
+  And the truncation is marked so a reader can tell the capsule was shortened,
+  And the resulting sign-off comment still parses as a valid sign-off entry.
+depends_on: [BO-210b-1]
+doc_links:
+  - path: "templates/skills/signoff/SKILL.md"
+    relationship: describes
+    status: exists
+  - path: "templates/agents/python-coder.md"
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The capsule must respect a documented maximum length stated in the template/skill instruction"
+  - "Truncation must preserve intent and consumers_checked as the highest-value fields"
+  - "The truncated capsule must still satisfy the sign-off parser's schema so the entry remains valid"
+delivers_to: null
+expects_from:
+  ac_id: BO-210b-1
+  contract: "The five-field capsule structure that this edge case bounds the size of"
+origin_agent: business-analyst
+created: 2026-06-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

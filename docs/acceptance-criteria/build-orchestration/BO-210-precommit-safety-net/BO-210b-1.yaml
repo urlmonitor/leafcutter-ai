@@ -1,0 +1,50 @@
+id: BO-210b-1
+readiness: approved
+priority: high
+title: "Coder emits a context_capsule with the five required design fields only when a warn-tier signal trips"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200b-3.yaml"
+criteria: |
+  Given a coder agent (python-coder, sql-coder, or frontend-coder) is finishing a ticket
+    and its own pre-completion check reports a warn-tier complexity or size signal,
+  When the coder writes its sign-off comment,
+  Then the comment body includes a context_capsule block containing exactly these fields:
+    intent (one sentence), files_touched_rationale (one line per touched file),
+    consumers_checked (reused from the blast-radius results already gathered for the
+    contract-shrinkage guard), red_baseline (the red-phase test names), and
+    design_constraints (the file-split plan and error-handling decisions),
+  And the consumers_checked field is not re-derived but copied from the blast-radius results,
+  And when the coder's pre-completion check reports NO warn-tier signal, no context_capsule
+    block is written.
+depends_on: [BO-210b]
+doc_links:
+  - path: "templates/skills/signoff/SKILL.md"
+    relationship: describes
+    status: exists
+  - path: "templates/agents/python-coder.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "The capsule-emission instruction must be added to all three coder agent templates (python-coder.md, sql-coder.md, frontend-coder.md) so any originating coder type produces it"
+  - "The capsule is gated strictly on a warn-tier complexity/size signal from the coder's own check"
+  - "consumers_checked must reuse the already-gathered blast-radius results, not trigger new lookups"
+  - "Every documented shell command in the edited templates must be a single simple command per the project shell convention"
+delivers_to:
+  agent: llm-expert
+  contract: "A context_capsule block in the sign-off comment, keyed by originating agent id, with the five fields {intent, files_touched_rationale, consumers_checked, red_baseline, design_constraints}, that the re-dispatch skill logic reads"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-16
+amended_by: []
+superseded_by: null
+covered_by: [BO-210b-1-i]
+implemented_by: []

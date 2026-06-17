@@ -1,0 +1,36 @@
+id: BP-900a
+title: "Use /build-ac in any consumer project without missing scripts"
+component: build_pipeline
+level: L1
+status: active
+req_status: approved
+readiness: approved
+priority: critical
+work_status: not_started
+criteria: |
+  Given a consumer project that has run build.py successfully,
+  When the user invokes /build-ac (which dispatches the build-ac agent),
+  Then all scripts referenced by the build-ac agent template and the ac-scanner
+  skill are present on disk at paths the agent can resolve,
+  And the scripts include at minimum: ac_prioritizer.py, generate_ticket_from_ac.py,
+  goal_to_epic.py, mark_ac_done.py, scan_ac_store.py, build_ac_mode_detection.py,
+  And no "script not found" or "No such file or directory" error occurs.
+depends_on: [BP-900]
+doc_links:
+  - scripts/ac_store/generate_ticket_from_ac.py
+  - scripts/ac_store/ac_prioritizer.py
+  - scripts/goal_to_epic.py
+  - templates/agents/build-ac.md
+  - templates/skills/ac-scanner/SKILL.md
+  - templates/skills/build-ac/SKILL.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-11
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: [BP-900a-1, BP-900a-2, BP-900a-3]
+implemented_by: []

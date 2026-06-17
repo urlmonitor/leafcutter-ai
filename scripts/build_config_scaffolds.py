@@ -8,20 +8,53 @@ BUSINESS CONTEXT: skills_config.json references paths like testing_context.readm
     fail at runtime. This phase creates write-if-absent scaffolds for each.
 ARCHITECTURE: Single build phase function build_config_scaffolds() that checks each
     known config-referenced path and writes a minimal-valid scaffold if absent.
-    Uses force=False always (never overwrites user content).
+    The precommit-autofix scaffold is loaded from the canonical template source at
+    templates/scripts/precommit-autofix.json so that the deployed config and the
+    packaged template are always in parity. Uses force=False always (never overwrites
+    user content).
 """
 
 from __future__ import annotations
 
+import json
+import sys
 from pathlib import Path
 from typing import Any
 
+# Canonical template source for the precommit-autofix config.
+# Resolved relative to this file's package root (one level up from scripts/).
+_PRECOMMIT_AUTOFIX_TEMPLATE_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "templates"
+    / "scripts"
+    / "precommit-autofix.json"
+)
 
-_PRECOMMIT_AUTOFIX_SCAFFOLD = """{
-  "_comment": "Precommit-autofix routing table. Maps check names to fix commands.",
-  "routes": {}
-}
-"""
+
+def _load_precommit_autofix_scaffold() -> str:
+    """Load the precommit-autofix scaffold content from the canonical template source.
+
+    Reads templates/scripts/precommit-autofix.json relative to the package root
+    and returns its content as a string. Falls back to a minimal stub if the
+    template file is absent or malformed, so that the build phase is never
+    hard-blocked by a missing template.
+
+    Returns:
+        String content of the precommit-autofix.json scaffold.
+    """
+    try:
+        content = _PRECOMMIT_AUTOFIX_TEMPLATE_PATH.read_text(encoding="utf-8")
+        # Validate that it parses as JSON to catch malformed templates early.
+        json.loads(content)
+    except (OSError, json.JSONDecodeError) as exc:
+        sys.stderr.write(
+            f"[build_config_scaffolds] WARNING: could not load precommit-autofix "
+            f"template from {_PRECOMMIT_AUTOFIX_TEMPLATE_PATH}: {exc}. "
+            f"Falling back to minimal stub.\n"
+        )
+        return '{\n  "_comment": "Precommit-autofix routing table. Maps check names to fix commands.",\n  "routes": {}\n}\n'
+    else:
+        return content
 
 _CHANGELOG_CATEGORIES_SCAFFOLD = """# Changelog Categories
 
@@ -83,7 +116,7 @@ def build_config_scaffolds(
     scaffolds: list[tuple[str, str]] = [
         (
             config.get("precommit_autofix_config_path", ".claude/precommit-autofix.json"),
-            _PRECOMMIT_AUTOFIX_SCAFFOLD,
+            _load_precommit_autofix_scaffold(),
         ),
         (
             config.get("changelog_categories_path", ".claude/changelog_categories.md"),

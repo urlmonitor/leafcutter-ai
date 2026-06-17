@@ -312,6 +312,29 @@ def _validate_all(config: dict, package_root: Path, validate_only: bool, dry_run
 
 
 
+def _read_package_version(package_root: Path) -> str:
+    """Read the package version from config/version.json.
+
+    Returns the ``version`` string from ``config/version.json`` relative to
+    *package_root*.  Falls back to ``"unknown"`` when the file is absent or
+    malformed so the build never hard-fails on a missing version marker.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.  The file
+            ``config/version.json`` must live directly under this directory.
+
+    Returns:
+        Version string (e.g. ``"2.0.0"``), or ``"unknown"`` on any read error.
+    """
+    version_path = package_root / "config" / "version.json"
+    try:
+        with version_path.open(encoding="utf-8") as fh:
+            data = json.load(fh)
+        return str(data["version"])
+    except (OSError, json.JSONDecodeError, KeyError, TypeError):
+        return "unknown"
+
+
 def _compute_version_str(package_root: Path) -> str:
     """Derive the next SemVer version by scanning changelog entries.
 
@@ -710,6 +733,11 @@ def main(argv: list[str] | None = None) -> int:
     # (prints the version but does not write the VERSION file).
     computed_version = _compute_version_str(package_root)
 
+    # Read the declared package version from config/version.json (ACD-1100e-2).
+    # This is the stable marketing version (e.g. "2.0.0") that consumers see;
+    # computed_version is the granular SemVer derived from changelog entries.
+    package_version = _read_package_version(package_root)
+
     if args.migrate:
         output_root_name = config.get("output_root", ".leafcutter")
         output_root = target_root / output_root_name
@@ -805,6 +833,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Up-to-date: {uptodate} files (unchanged)")
 
     print(f"Build version: {GREEN}{computed_version}{RESET}")
+    print(f"Package version: {GREEN}{package_version}{RESET}")
 
     # Write the VERSION file to target_root so downstream tooling can read the
     # computed version without re-running compute_next_version.py.
@@ -812,8 +841,13 @@ def main(argv: list[str] | None = None) -> int:
     if not args.dry_run:
         version_file = target_root / "VERSION"
         version_file.write_text(computed_version + "\n", encoding="utf-8")
+        # Write LEAFCUTTER_VERSION file so deployed consumers can determine the
+        # package version without reading the source package directly (ACD-1100e-2).
+        lv_file = target_root / "LEAFCUTTER_VERSION"
+        lv_file.write_text(package_version + "\n", encoding="utf-8")
     else:
         _dry_run_msg(f"would write {target_root / 'VERSION'}")
+        _dry_run_msg(f"would write {target_root / 'LEAFCUTTER_VERSION'}")
 
     print()
     _heading("Build manifest")
@@ -989,4 +1023,10 @@ if __name__ == "__main__":
 #   When enforcement='error' and errors found, main() returns 1 after printing
 #   all errors (aggregated output, never halts on first error). When enforcement
 #   ='warning', main() continues with 0 exit code. (#EPIC-SelfDescribingAgents/04)
+# - 2026-06-10 [python-coder/EPIC-AcPipelineConsolidation/12]: Added
+#   _read_package_version() to read config/version.json. Called in main() after
+#   _compute_version_str(). Prints "Package version: X.Y.Z" in build summary.
+#   Writes LEAFCUTTER_VERSION file to target_root so deployed consumers can
+#   determine the package version without reading the source package directly.
+#   Fallback: "unknown" on any read error. (#EPIC-AcPipelineConsolidation/12)
 # ====================================================================

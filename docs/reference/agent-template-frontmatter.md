@@ -194,7 +194,8 @@ in the ecosystem. Each entry in the `agents` array describes one agent.
 | 9 | `test-runner` |
 | 10 | `change-scope-reviewer`, `documentation-expert`, `explanation-author`, `how-to-author`, `reference-author` |
 | 11 | `pr-reviewer` |
-| 11.5 | `user-surface-smoker` |
+| 11.5 | `ac-validator`, `user-surface-smoker` |
+| 11.7 | `ac-fulfillment-gate` |
 | 12 | `commit` |
 | 13 | `pull-request` |
 

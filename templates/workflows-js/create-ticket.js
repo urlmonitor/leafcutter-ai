@@ -1,37 +1,35 @@
 /**
  * create-ticket.js — Claude Code Workflow script
  *
- * Replaces the BA → test-planner → refinement → architect-review agent chain
- * (which violated the depth-1 nesting limit) with a flat sequential/parallel
- * dispatch pattern where every agent call is at depth 1.
+ * Replaces the BA → architect-review agent chain (which violated the
+ * depth-1 nesting limit) with a flat sequential/parallel dispatch pattern
+ * where every agent call is at depth 1.
+ *
+ * CONSOLIDATION NOTE (EPIC-AcPipelineConsolidation v2.0.0):
+ * test-planner, refinement, and ticket-wiring agents were removed and their
+ * responsibilities merged into business-analyst. create-epic was removed as
+ * an agent — users must run /create-epic directly for epic-scoped requests.
  *
  * ADR: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
  * Ticket: EPIC-FlattenSupervisorChain/04_create_ticket_workflow.md
  *
  * Minimum Claude Code version: 2.1.154 (workflow script support)
- * Fallback: for older installs, create-ticket.md invokes the agent directly.
+ * Fallback: for older installs, create-ticket.md prompts the user to use
+ * the business-analyst agent directly.
  */
 
 export const meta = {
   name: "create-ticket",
   description:
     "Create a well-formed ticket by sequentially running business-analyst, " +
-    "optionally surfacing open questions, then running refinement and " +
-    "architect-review in parallel — all at depth 1.",
+    "optionally surfacing open questions, then running architect-review — " +
+    "all at depth 1.",
   phases: [
     "business-analyst",
     "user-prompt (conditional)",
-    "test-planner",
-    "refinement + architect-review (parallel)",
-    "ticket-write",
+    "architect-review (conditional)",
   ],
 };
-
-/**
- * Maximum dispatch depth before we refuse to spawn create-epic
- * to avoid re-entering a nesting violation.
- */
-const DEPTH_CAP = 3;
 
 /**
  * Main entry point called by the Claude Code workflow runtime.
@@ -48,7 +46,7 @@ const DEPTH_CAP = 3;
  * @param {Function} params.parallel - Runtime-provided parallel dispatch helper.
  * @param {Function} params.prompt   - Runtime-provided user-prompt helper.
  */
-async function run({ userInput, currentDepth = 1, agent, parallel, prompt }) {
+async function run({ userInput, currentDepth = 1, agent, prompt }) {
   // -------------------------------------------------------------------------
   // Step 1 — Spawn business-analyst at depth 1
   // -------------------------------------------------------------------------
@@ -63,28 +61,16 @@ async function run({ userInput, currentDepth = 1, agent, parallel, prompt }) {
   // Step 2 — Route on routing_decision
   // -------------------------------------------------------------------------
   if (routingDecision === "epic") {
-    // Depth-cap guard: refuse to spawn create-epic if we are already deep.
-    if (currentDepth >= DEPTH_CAP) {
-      return {
-        status: "error",
-        message:
-          `Depth-cap reached (currentDepth=${currentDepth} >= ${DEPTH_CAP}). ` +
-          "Cannot spawn create-epic. Surface this request to the user and ask " +
-          "them to run /create-epic directly.",
-      };
-    }
-
-    // Spawn create-epic at depth 1 with the BA output.
-    const epicResult = await agent({
-      agentType: "create-epic",
-      input: {
-        request: userInput,
-        ba_output: baResult,
-        current_depth: currentDepth + 1,
-      },
-    });
-
-    return { status: "ok", result: epicResult };
+    // create-epic is no longer a registered agent (removed in
+    // EPIC-AcPipelineConsolidation v2.0.0). Users must invoke /create-epic
+    // directly. Return an instructional error regardless of depth.
+    return {
+      status: "error",
+      message:
+        "This request requires epic-level planning. " +
+        "The create-epic agent was removed in v2.0.0. " +
+        "Please run /create-epic directly with your request.",
+    };
   }
 
   // routing_decision == "standard_ticket" (default path)
@@ -111,55 +97,34 @@ async function run({ userInput, currentDepth = 1, agent, parallel, prompt }) {
   }
 
   // -------------------------------------------------------------------------
-  // Step 3 — Spawn test-planner at depth 1 with BA output
+  // Step 3 — Spawn architect-review at depth 1 (conditional on BA output)
+  //
+  // NOTE: test-planner, refinement, and ticket-wiring agents were removed in
+  // EPIC-AcPipelineConsolidation v2.0.0. The business-analyst now produces
+  // the full ticket draft including test requirements. architect-review runs
+  // when the BA output signals architectural impact.
   // -------------------------------------------------------------------------
-  const tpResult = await agent({
-    agentType: "test-planner",
-    input: {
-      ba_output: baResult,
-      clarifications,
-    },
-  });
+  const requiresArchReview =
+    baResult.requires_architect_review !== false &&
+    baResult.routing_decision !== "trivial";
 
-  // -------------------------------------------------------------------------
-  // Step 4 — Spawn refinement and architect-review in parallel at depth 1
-  // -------------------------------------------------------------------------
-  const [refinementResult, architectResult] = await parallel([
-    agent({
-      agentType: "refinement",
-      input: {
-        ba_output: baResult,
-        tp_output: tpResult,
-        clarifications,
-      },
-    }),
-    agent({
+  let architectResult = null;
+  if (requiresArchReview) {
+    architectResult = await agent({
       agentType: "architect-review",
       input: {
         ba_output: baResult,
-        tp_output: tpResult,
         clarifications,
       },
-    }),
-  ]);
-
-  // -------------------------------------------------------------------------
-  // Step 5 — Assemble and write the ticket file via ticket-wiring agent
-  // -------------------------------------------------------------------------
-  const ticketResult = await agent({
-    agentType: "ticket-wiring",
-    input: {
-      ba_output: baResult,
-      tp_output: tpResult,
-      refinement_output: refinementResult,
-      architect_output: architectResult,
-      original_request: userInput,
-    },
-  });
+    });
+  }
 
   return {
     status: "ok",
-    ticket_path: ticketResult.ticket_path,
-    result: ticketResult,
+    ticket_path: baResult.ticket_path,
+    result: {
+      ba_output: baResult,
+      architect_output: architectResult,
+    },
   };
 }

@@ -7,7 +7,7 @@ description: "Auto-generated index of all documentation files in the project"
 > **Auto-generated — do not edit manually.**
 > Run `python scripts/generate_doc_index.py` to regenerate.
 >
-> Generated: 2026-06-08 18:45 UTC
+> Generated: 2026-06-11 14:55 UTC
 
 This index lists every documentation file in the project.  BA and IT PO agents
 should read this index first, identify which docs are relevant to the current

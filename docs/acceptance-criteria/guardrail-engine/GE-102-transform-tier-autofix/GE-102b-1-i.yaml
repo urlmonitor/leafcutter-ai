@@ -1,0 +1,42 @@
+id: GE-102b-1-i
+readiness: approved
+priority: high
+title: "Description-field transform fails open when no title exists and no-ops on absent layout"
+component: guardrail-engine
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200b-3.yaml"
+criteria: |
+  Given the description-field transform hook is invoked,
+  When the staged file has no title field to derive a description from, or its frontmatter
+    cannot be parsed unambiguously,
+  Then the hook makes no edit and exits with code 0 (fail-open),
+  And when the project has no docs/ layout the config targets,
+  Then the hook no-ops silently and exits with code 0,
+  And in neither case does the hook block the commit or raise an unhandled error.
+depends_on: [GE-102b]
+doc_links:
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "No title means no stub is invented; the hook fails open"
+  - "Absent docs/ layout is a silent no-op"
+  - "Error handling on the file-read/parse boundary must follow the project error handling policy"
+delivers_to: null
+expects_from:
+  ac_id: GE-102b
+  contract: "The transform hook whose fail-open and portability behavior this edge case fixes"
+origin_agent: business-analyst
+created: 2026-06-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

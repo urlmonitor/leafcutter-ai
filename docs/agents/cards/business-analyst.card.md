@@ -12,7 +12,7 @@ card_version: "generated"
 creation request. Always spawned as the first stage of create-ticket.
 Returns a structured JSON payload including summary, routing_decision
 (standard_ticket or epic), deliverables_count, open_questions,
-success_criteria, and test_requirements (produced by test-planner).
+success_criteria, and test_requirements.
 Use when: create-ticket needs to understand the scope and business value of
 a user request before routing it.**
 
@@ -53,12 +53,10 @@ flowchart TD
     create_epic["create-epic\n(phase tier)"]:::phase
     business_analyst["business-analyst\n(utility tier, priority ?)"]:::target
     research_agent["research-agent\n(utility tier)"]:::utility
-    test_planner["test-planner\n(phase tier)"]:::phase
 
     create_ticket -->|dispatches| business_analyst
     create_epic -->|dispatches| business_analyst
     business_analyst -->|spawns| research_agent
-    business_analyst -->|spawns| test_planner
 ```
 ---
 

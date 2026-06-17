@@ -9,11 +9,11 @@ For background on why this flow exists, see
 
 ---
 
-## Step 1: Populate `## Test Requirements` (or ensure test-planner will)
+## Step 1: Populate `## Test Requirements` (or ensure the BA flow will)
 
 The TDD flow depends on the `## Test Requirements` block being present in your
 ticket body and populated with at least one test entry. This block is authored
-during the business analysis (BA) flow by `test-planner`.
+during the business analysis (BA) flow by `business-analyst`.
 
 If you are writing a ticket manually (without running `/create-ticket`), ensure
 the `## Test Requirements` block exists and has entries:
@@ -92,7 +92,7 @@ silence a test rather than fix the underlying issue. The correct resolution is:
 
 ## FAQ
 
-### What if test-planner left my tests array empty?
+### What if the tests array is empty?
 
 If `## Test Requirements` has `tests: []` or the block is absent, `test-writer`
 is automatically skipped. The `ticket-supervisor` detects the empty array and

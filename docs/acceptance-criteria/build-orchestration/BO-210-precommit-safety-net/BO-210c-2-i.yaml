@@ -1,0 +1,45 @@
+id: BO-210c-2-i
+readiness: approved
+priority: high
+title: "Re-dispatched coder returns a blocker when the fix genuinely needs fresh cross-file lookup"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200b-3.yaml"
+criteria: |
+  Given the originating coder has been re-dispatched at depth 2 to satisfy a judgment-tier hook,
+  And it is forbidden from spawning a sub-agent,
+  When fixing the violation would require a refactor that depends on cross-file information
+    not present in the capsule's consumers_checked,
+  Then the re-dispatched coder does NOT spawn a research-agent and does NOT guess,
+  And it returns a status of blocker describing the missing cross-file information,
+  And the commit is not retried on that pass,
+  And the blocker is surfaced so a full-context pass can be scheduled outside the depth-2 fixer.
+depends_on: [BO-210c-2]
+doc_links:
+  - path: "templates/skills/precommit-autofix/SKILL.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md"
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The coder agent templates and the re-dispatch prompt must instruct a depth-2 coder to escalate via blocker rather than spawn a sub-agent for fresh lookups (ADR-006 depth cap)"
+  - "The blocker payload must name the missing cross-file information"
+delivers_to: null
+expects_from:
+  ac_id: BO-210c-1
+  contract: "The re-dispatch invocation and its no-sub-agent constraint that this escalation path complements"
+origin_agent: business-analyst
+created: 2026-06-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

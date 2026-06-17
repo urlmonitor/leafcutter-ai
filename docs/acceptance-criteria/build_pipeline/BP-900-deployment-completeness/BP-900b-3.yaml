@@ -1,0 +1,42 @@
+id: BP-900b-3
+title: "Build exits non-zero when broken references are found"
+component: build_pipeline
+level: L2
+status: active
+req_status: approved
+readiness: approved
+priority: critical
+work_status: not_started
+criteria: |
+  Given the guard has identified one or more broken script references
+  (scripts referenced in templates but not present in the deployable set),
+  When the guard completes its scan,
+  Then build.py exits with a non-zero exit code
+  And the build does NOT produce a successful output directory
+  And no partial deployment is written to the target
+depends_on: [BP-900b, BP-900b-2]
+doc_links:
+  - path: scripts/build.py
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must prevent any partial deployment when broken references are detected — fail-fast before writing to target"
+  - "Must integrate with the existing build.py exit code conventions"
+  - "Must handle errors gracefully per the project error handling policy"
+delivers_to: null
+expects_from:
+  ac_id: BP-900b-2
+  contract: "list[dict] — list of broken references (non-empty list triggers non-zero exit); each entry has 'missing_path' and 'referencing_template' keys"
+origin_agent: business-analyst-v3
+created: 2026-06-11
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260611-BP-900b-3.md

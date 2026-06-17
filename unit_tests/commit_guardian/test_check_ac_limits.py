@@ -28,7 +28,7 @@ import unittest
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-_HOOK_SCRIPT = _REPO_ROOT / "scripts" / "commit_guardian" / "check_ac_limits.py"
+_HOOK_SCRIPT = _REPO_ROOT / "templates" / "scripts" / "commit_guardian" / "check_ac_limits.py"
 
 # Load the module directly from the scripts path using importlib to avoid
 # package import issues (the hook is a standalone file, not a proper package).
@@ -607,7 +607,7 @@ class TestAcTreeSplitSkillDeployment(unittest.TestCase):
 
 
 class TestAgentTemplatesSkillsUsed(unittest.TestCase):
-    """product-owner-v3.md and business-analyst-v3.md must reference ac-tree-split."""
+    """product-owner.md and business-analyst.md must reference ac-tree-split."""
 
     _AGENTS_DIR = _REPO_ROOT / "templates" / "agents"
 
@@ -617,55 +617,55 @@ class TestAgentTemplatesSkillsUsed(unittest.TestCase):
         return path.read_text(encoding="utf-8")
 
     def test_product_owner_v3_has_ac_tree_split(self) -> None:
-        """product-owner-v3.md must include ac-tree-split in skills_used."""
-        content = self._read_agent("product-owner-v3.md")
+        """product-owner.md must include ac-tree-split in skills_used."""
+        content = self._read_agent("product-owner.md")
         self.assertIn(
             "ac-tree-split",
             content,
-            msg="Expected 'ac-tree-split' in product-owner-v3.md skills_used",
+            msg="Expected 'ac-tree-split' in product-owner.md skills_used",
         )
 
     def test_business_analyst_v3_has_ac_tree_split(self) -> None:
-        """business-analyst-v3.md must include ac-tree-split in skills_used."""
-        content = self._read_agent("business-analyst-v3.md")
+        """business-analyst.md must include ac-tree-split in skills_used."""
+        content = self._read_agent("business-analyst.md")
         self.assertIn(
             "ac-tree-split",
             content,
-            msg="Expected 'ac-tree-split' in business-analyst-v3.md skills_used",
+            msg="Expected 'ac-tree-split' in business-analyst.md skills_used",
         )
 
     def test_product_owner_v3_skills_used_is_in_frontmatter(self) -> None:
         """skills_used must appear within the frontmatter block (between --- markers)."""
-        content = self._read_agent("product-owner-v3.md")
+        content = self._read_agent("product-owner.md")
         parts = content.split("---", 2)
-        self.assertGreaterEqual(len(parts), 3, msg="No frontmatter found in product-owner-v3.md")
+        self.assertGreaterEqual(len(parts), 3, msg="No frontmatter found in product-owner.md")
         frontmatter = parts[1]
         self.assertIn(
             "skills_used",
             frontmatter,
-            msg="'skills_used' must be in the frontmatter of product-owner-v3.md",
+            msg="'skills_used' must be in the frontmatter of product-owner.md",
         )
         self.assertIn(
             "ac-tree-split",
             frontmatter,
-            msg="'ac-tree-split' must be in the skills_used frontmatter of product-owner-v3.md",
+            msg="'ac-tree-split' must be in the skills_used frontmatter of product-owner.md",
         )
 
     def test_business_analyst_v3_skills_used_is_in_frontmatter(self) -> None:
         """skills_used must appear within the frontmatter block (between --- markers)."""
-        content = self._read_agent("business-analyst-v3.md")
+        content = self._read_agent("business-analyst.md")
         parts = content.split("---", 2)
-        self.assertGreaterEqual(len(parts), 3, msg="No frontmatter found in business-analyst-v3.md")
+        self.assertGreaterEqual(len(parts), 3, msg="No frontmatter found in business-analyst.md")
         frontmatter = parts[1]
         self.assertIn(
             "skills_used",
             frontmatter,
-            msg="'skills_used' must be in the frontmatter of business-analyst-v3.md",
+            msg="'skills_used' must be in the frontmatter of business-analyst.md",
         )
         self.assertIn(
             "ac-tree-split",
             frontmatter,
-            msg="'ac-tree-split' must be in the skills_used frontmatter of business-analyst-v3.md",
+            msg="'ac-tree-split' must be in the skills_used frontmatter of business-analyst.md",
         )
 
 
@@ -692,8 +692,8 @@ class TestHookRegisteredInCommitGuardian(unittest.TestCase):
         )
 
     def test_hook_script_exists(self) -> None:
-        """scripts/commit_guardian/check_ac_limits.py must exist."""
-        script = _REPO_ROOT / "scripts" / "commit_guardian" / "check_ac_limits.py"
+        """templates/scripts/commit_guardian/check_ac_limits.py must exist."""
+        script = _REPO_ROOT / "templates" / "scripts" / "commit_guardian" / "check_ac_limits.py"
         self.assertTrue(
             script.is_file(),
             msg=f"Expected check_ac_limits.py at {script}",

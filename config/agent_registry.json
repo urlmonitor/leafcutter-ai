@@ -198,218 +198,6 @@
             "produces": "orchestration"
         },
         {
-            "id": "create-ticket",
-            "name": "Create Ticket",
-            "tier": "supervisor",
-            "role": "orchestration",
-            "portable": true,
-            "domain": null,
-            "spawn_allowlist": [
-                "business-analyst",
-                "refinement",
-                "architect-review",
-                "create-epic",
-                "it-po",
-                "brainstorm-lead"
-            ],
-            "spawned_by": [
-                "user",
-                "create-epic",
-                "product-owner-agent"
-            ],
-            "is_ticket_phase": false,
-            "selection_criteria": null,
-            "template_path": "templates/agents/create-ticket.md",
-            "model": "sonnet",
-            "skills_used": [
-                "ticket-authoring"
-            ],
-            "category": "supervisor",
-            "skills_invoked": [
-                {
-                    "skill_id": "ticket-wiring",
-                    "mode": "always"
-                },
-                {
-                    "skill_id": "ticket-authoring",
-                    "mode": "always"
-                }
-            ],
-            "knowledge_channels": [
-                {
-                    "channel": 1,
-                    "source": "template description field"
-                },
-                {
-                    "channel": 6,
-                    "source": "project files read during execution"
-                },
-                {
-                    "channel": 7,
-                    "source": "bash command output (git, build, tests)"
-                }
-            ],
-            "produces": "orchestration"
-        },
-        {
-            "id": "create-epic",
-            "name": "Create Epic",
-            "tier": "supervisor",
-            "role": "orchestration",
-            "portable": true,
-            "domain": null,
-            "spawn_allowlist": [
-                "business-analyst",
-                "create-ticket"
-            ],
-            "spawned_by": [
-                "user",
-                "create-ticket"
-            ],
-            "is_ticket_phase": false,
-            "selection_criteria": null,
-            "template_path": "templates/agents/create-epic.md",
-            "model": "sonnet",
-            "skills_used": [
-                "ticket-authoring"
-            ],
-            "category": "supervisor",
-            "skills_invoked": [
-                {
-                    "skill_id": "ticket-authoring",
-                    "mode": "always"
-                }
-            ],
-            "knowledge_channels": [
-                {
-                    "channel": 1,
-                    "source": "template description field"
-                },
-                {
-                    "channel": 6,
-                    "source": "project files read during execution"
-                },
-                {
-                    "channel": 7,
-                    "source": "bash command output (git, build, tests)"
-                }
-            ],
-            "produces": "orchestration"
-        },
-        {
-            "id": "business-analyst",
-            "name": "Business Analyst",
-            "tier": "utility",
-            "role": "analysis",
-            "portable": true,
-            "domain": null,
-            "spawn_allowlist": [
-                "research-agent",
-                "test-planner"
-            ],
-            "spawned_by": [
-                "create-ticket",
-                "create-epic"
-            ],
-            "is_ticket_phase": false,
-            "selection_criteria": null,
-            "template_path": "templates/agents/business-analyst.md",
-            "model": "sonnet",
-            "skills_used": [],
-            "category": "planning",
-            "skills_invoked": [],
-            "knowledge_channels": [
-                {
-                    "channel": 1,
-                    "source": "template description field"
-                },
-                {
-                    "channel": 6,
-                    "source": "project files read during execution"
-                },
-                {
-                    "channel": 7,
-                    "source": "bash command output (git, build, tests)"
-                }
-            ],
-            "produces": "analysis"
-        },
-        {
-            "id": "business-analyst-v2",
-            "name": "Business Analyst V2",
-            "tier": "utility",
-            "role": "analysis",
-            "portable": true,
-            "domain": null,
-            "spawn_allowlist": [],
-            "spawned_by": [
-                "create-ticket-v2"
-            ],
-            "is_ticket_phase": false,
-            "selection_criteria": null,
-            "template_path": "templates/agents/business-analyst-v2.md",
-            "model": "opus",
-            "skills_used": [],
-            "description": "Enhanced Opus BA for v2 ticket-creation pipeline. Parallel test path — does not replace business-analyst.md.",
-            "category": "planning",
-            "skills_invoked": [],
-            "knowledge_channels": [
-                {
-                    "channel": 1,
-                    "source": "template description field"
-                },
-                {
-                    "channel": 6,
-                    "source": "project files read during execution"
-                },
-                {
-                    "channel": 7,
-                    "source": "bash command output (git, build, tests)"
-                }
-            ],
-            "produces": "analysis"
-        },
-        {
-            "id": "create-ticket-v2",
-            "name": "Create Ticket V2",
-            "tier": "supervisor",
-            "role": "orchestration",
-            "portable": true,
-            "domain": null,
-            "spawn_allowlist": [
-                "business-analyst-v2",
-                "it-po"
-            ],
-            "spawned_by": [
-                "user"
-            ],
-            "is_ticket_phase": false,
-            "selection_criteria": null,
-            "template_path": "templates/agents/create-ticket-v2.md",
-            "model": "sonnet",
-            "skills_used": [
-                "ticket-authoring"
-            ],
-            "description": "V2 parallel ticket-creation pipeline orchestrator. Routes by complexity (trivial/simple → refinement, standard/novel → it-po). Does not modify v1 templates.",
-            "category": "supervisor",
-            "skills_invoked": [],
-            "knowledge_channels": [
-                {
-                    "channel": 1,
-                    "source": "template description field"
-                },
-                {
-                    "channel": 6,
-                    "source": "project files read during execution"
-                },
-                {
-                    "channel": 7,
-                    "source": "bash command output (git, build, tests)"
-                }
-            ],
-            "produces": "orchestration"
-        },
-        {
             "id": "brainstorm-lead",
             "name": "Brainstorm Lead",
             "tier": "utility",
@@ -420,8 +208,7 @@
                 "brainstorm-worker"
             ],
             "spawned_by": [
-                "ticket-supervisor",
-                "create-ticket"
+                "ticket-supervisor"
             ],
             "is_ticket_phase": false,
             "selection_criteria": null,
@@ -509,7 +296,6 @@
             "spawned_by": [
                 "architect-review",
                 "business-analyst",
-                "business-analyst-v3",
                 "python-coder",
                 "documentation-expert",
                 "reference-author",
@@ -522,9 +308,7 @@
                 "sql-function-creator",
                 "sql-index-creator",
                 "sql-view-creator",
-                "test-planner",
                 "test-writer",
-                "product-owner-agent",
                 "frontend-coder",
                 "llm-expert"
             ],
@@ -572,8 +356,7 @@
                 "architect-review-deep"
             ],
             "spawned_by": [
-                "ticket-supervisor",
-                "create-ticket"
+                "ticket-supervisor"
             ],
             "is_ticket_phase": true,
             "selection_criteria": {
@@ -754,46 +537,6 @@
                 ".py"
             ],
             "produces": "production_code"
-        },
-        {
-            "id": "test-planner",
-            "name": "Test Planner",
-            "tier": "utility",
-            "role": "quality",
-            "portable": true,
-            "domain": null,
-            "spawn_allowlist": [
-                "research-agent"
-            ],
-            "spawned_by": [
-                "business-analyst"
-            ],
-            "is_ticket_phase": false,
-            "selection_criteria": null,
-            "template_path": "templates/agents/test-planner.md",
-            "model": "sonnet",
-            "skills_used": [],
-            "category": "planning",
-            "skills_invoked": [],
-            "knowledge_channels": [
-                {
-                    "channel": 1,
-                    "source": "template description field"
-                },
-                {
-                    "channel": 5,
-                    "source": "skills_config.json config_keys"
-                },
-                {
-                    "channel": 6,
-                    "source": "project files read during execution"
-                },
-                {
-                    "channel": 7,
-                    "source": "bash command output (git, build, tests)"
-                }
-            ],
-            "produces": "test_artifact"
         },
         {
             "id": "test-writer",
@@ -1114,7 +857,7 @@
             ],
             "is_ticket_phase": true,
             "selection_criteria": {
-                "description": "Assign to every ticket that produces a code or documentation change — this is the final quality gate before commit.",
+                "description": "Assign to every ticket that produces a code or documentation change \u2014 this is the final quality gate before commit.",
                 "trigger_conditions": [
                     {
                         "type": "llm",
@@ -1587,40 +1330,6 @@
                     "mode": "always"
                 }
             ],
-            "knowledge_channels": [
-                {
-                    "channel": 1,
-                    "source": "template description field"
-                },
-                {
-                    "channel": 6,
-                    "source": "project files read during execution"
-                },
-                {
-                    "channel": 7,
-                    "source": "bash command output (git, build, tests)"
-                }
-            ],
-            "produces": "analysis"
-        },
-        {
-            "id": "refinement",
-            "name": "Refinement",
-            "tier": "utility",
-            "role": "analysis",
-            "portable": true,
-            "domain": null,
-            "spawn_allowlist": [],
-            "spawned_by": [
-                "create-ticket"
-            ],
-            "is_ticket_phase": false,
-            "selection_criteria": null,
-            "template_path": "templates/agents/refinement.md",
-            "model": "sonnet",
-            "skills_used": [],
-            "category": "planning",
-            "skills_invoked": [],
             "knowledge_channels": [
                 {
                     "channel": 1,
@@ -2846,54 +2555,6 @@
             "produces": "analysis"
         },
         {
-            "id": "product-owner-agent",
-            "name": "Product Owner Agent",
-            "tier": "utility",
-            "role": "orchestration",
-            "portable": true,
-            "domain": null,
-            "spawn_allowlist": [
-                "create-ticket",
-                "research-agent"
-            ],
-            "spawned_by": [
-                "user"
-            ],
-            "is_ticket_phase": false,
-            "selection_criteria": null,
-            "template_path": "templates/agents/product-owner-agent.md",
-            "model": "opus",
-            "skills_used": [
-                "roadmap-steward"
-            ],
-            "description": "Periodic product-owner audit agent. Reads vision.md and roadmap.json, invokes roadmap-steward skill, holds interactive PO dialogue, and proposes confirmation-gated actions. Model: opus (ADR-039).",
-            "invocation_surface": [
-                "/po-review"
-            ],
-            "category": "planning",
-            "skills_invoked": [
-                {
-                    "skill_id": "roadmap-steward",
-                    "mode": "conditional"
-                }
-            ],
-            "knowledge_channels": [
-                {
-                    "channel": 1,
-                    "source": "template description field"
-                },
-                {
-                    "channel": 6,
-                    "source": "project files read during execution"
-                },
-                {
-                    "channel": 7,
-                    "source": "bash command output (git, build, tests)"
-                }
-            ],
-            "produces": "orchestration"
-        },
-        {
             "id": "ac-validator",
             "name": "AC Validator",
             "tier": "phase",
@@ -2927,7 +2588,7 @@
             "priority": 11.5,
             "priority_rationale": "Final AC coverage gate; runs after pr-reviewer (11) and before commit (12) to verify all ACs are evidenced before the worktree is locked",
             "requires_ticket_section": false,
-            "description": "Reads ticket ACs, the working diff, and test output; produces a coverage verdict (ok / blocker / question). Never implements — read-only on code files, edits only the ticket file.",
+            "description": "Reads ticket ACs, the working diff, and test output; produces a coverage verdict (ok / blocker / question). Never implements \u2014 read-only on code files, edits only the ticket file.",
             "category": "testing",
             "skills_invoked": [
                 {
@@ -3018,74 +2679,6 @@
             "produces": "test_artifact"
         },
         {
-            "id": "it-po",
-            "name": "IT Product Owner",
-            "tier": "utility",
-            "role": "analysis",
-            "portable": true,
-            "domain": null,
-            "spawn_allowlist": [],
-            "spawned_by": [
-                "create-ticket",
-                "create-ticket-v2",
-                "ticket-supervisor"
-            ],
-            "is_ticket_phase": true,
-            "selection_criteria": {
-                "description": "Assign when the ticket has more than one coder agent (python-coder, sql-coder, frontend-coder) in the agents map with status needed. For single-coder tickets, it-po signs off immediately as not_needed.",
-                "trigger_conditions": [
-                    {
-                        "type": "llm",
-                        "expression": "ticket agents map has more than one coder agent with status needed (python-coder, sql-coder, or frontend-coder)"
-                    },
-                    {
-                        "type": "llm",
-                        "expression": "ticket requires per-agent technical contracts with explicit interface specifications between agents"
-                    }
-                ],
-                "default_status": "not_needed"
-            },
-            "template_path": "templates/agents/it-po.md",
-            "model": "opus",
-            "skills_used": [
-                "signoff"
-            ],
-            "priority": 3.5,
-            "priority_rationale": "Runs after architecture-diagram-author (3) and before architect-review (4); produces per-agent contracts that architect-review can validate before any coder starts",
-            "requires_ticket_section": false,
-            "description": "Opus-tier IT PO. Reads architecture docs only (never source files). Asks clarifying questions before producing contracts. Activates only for multi-coder tickets. Handles check_ac_limits split protocol.",
-            "category": "planning",
-            "skills_invoked": [
-                {
-                    "skill_id": "signoff",
-                    "mode": "conditional"
-                }
-            ],
-            "knowledge_channels": [
-                {
-                    "channel": 1,
-                    "source": "template description field"
-                },
-                {
-                    "channel": 3,
-                    "source": "ticket_path from ticket-supervisor"
-                },
-                {
-                    "channel": 6,
-                    "source": "project files read during execution"
-                },
-                {
-                    "channel": 7,
-                    "source": "bash command output (git, build, tests)"
-                },
-                {
-                    "channel": 8,
-                    "source": "PROJECT_CONTEXT.md"
-                }
-            ],
-            "produces": "analysis"
-        },
-        {
             "id": "llm-expert",
             "name": "LLM Expert",
             "tier": "phase",
@@ -3172,8 +2765,8 @@
             "produces": "prompt"
         },
         {
-            "id": "product-owner-v3",
-            "name": "Product Owner V3",
+            "id": "product-owner",
+            "name": "Product Owner",
             "tier": "utility",
             "role": "analysis",
             "portable": true,
@@ -3182,7 +2775,7 @@
             "spawned_by": [],
             "is_ticket_phase": false,
             "selection_criteria": null,
-            "template_path": "templates/agents/product-owner-v3.md",
+            "template_path": "templates/agents/product-owner.md",
             "model": "opus",
             "skills_used": [
                 "knowledge-query"
@@ -3220,8 +2813,8 @@
             "produces": "analysis"
         },
         {
-            "id": "business-analyst-v3",
-            "name": "Business Analyst V3",
+            "id": "business-analyst",
+            "name": "Business Analyst",
             "tier": "utility",
             "role": "analysis",
             "portable": true,
@@ -3232,7 +2825,7 @@
             "spawned_by": [],
             "is_ticket_phase": false,
             "selection_criteria": null,
-            "template_path": "templates/agents/business-analyst-v3.md",
+            "template_path": "templates/agents/business-analyst.md",
             "model": "opus",
             "skills_used": [
                 "knowledge-query"
@@ -3261,8 +2854,8 @@
             "produces": "analysis"
         },
         {
-            "id": "it-po-v3",
-            "name": "IT Product Owner V3",
+            "id": "it-po",
+            "name": "IT Product Owner",
             "tier": "utility",
             "role": "analysis",
             "portable": true,
@@ -3271,7 +2864,7 @@
             "spawned_by": [],
             "is_ticket_phase": false,
             "selection_criteria": null,
-            "template_path": "templates/agents/it-po-v3.md",
+            "template_path": "templates/agents/it-po.md",
             "model": "opus",
             "skills_used": [
                 "knowledge-query"
@@ -3317,7 +2910,7 @@
             "template_path": "templates/agents/build-ac.md",
             "model": "sonnet",
             "skills_used": [],
-            "description": "AC-to-ticket-to-build entry-point coordinator. Calls ac_prioritizer.py to find the top-ranked ready AC, generates a ticket via generate_ticket_from_ac.py, surfaces the ticket to the user for confirmation (yes / review / skip), and documents how to mark the AC done after a successful build. Does NOT call /build-feature inline — depth-cap constraint (ADR-006). Invoked by /build-ac slash command.",
+            "description": "AC-to-ticket-to-build entry-point coordinator. Calls ac_prioritizer.py to find the top-ranked ready AC, generates a ticket via generate_ticket_from_ac.py, surfaces the ticket to the user for confirmation (yes / review / skip), and documents how to mark the AC done after a successful build. Does NOT call /build-feature inline \u2014 depth-cap constraint (ADR-006). Invoked by /build-ac slash command.",
             "invocation_surface": [
                 "/build-ac"
             ],
@@ -3340,7 +2933,7 @@
             "template_path": "templates/agents/ac-triage.md",
             "model": "haiku",
             "skills_used": [],
-            "description": "Haiku-pinned AC store triage agent. Stage 0 of the /create-ac workflow. Reads active ACs for the relevant component, classifies the user's request as strategic / behavioral / technical / covered, and returns a structured JSON routing decision. Read-only — never writes files. Must complete in < 3s for ≤200 ACs.",
+            "description": "Haiku-pinned AC store triage agent. Stage 0 of the /plan-feature workflow. Reads active ACs for the relevant component, classifies the user's request as strategic / behavioral / technical / covered, and returns a structured JSON routing decision. Read-only \u2014 never writes files. Must complete in < 3s for \u2264200 ACs.",
             "produces": "analysis"
         },
         {

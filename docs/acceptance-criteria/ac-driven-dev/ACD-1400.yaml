@@ -1,0 +1,13 @@
+id: ACD-1400
+status: active
+component: ac-driven-dev
+title: "plan-feature workflow dispatches canonical agent names"
+criteria: |
+  Given the plan-feature workflow script (scripts/workflows/plan-feature.js)
+  dispatches agents by name,
+  When the workflow runs,
+  Then all agent dispatch references use canonical names
+  (product-owner, business-analyst, it-po)
+  And no v3-suffixed agent names (product-owner-v3, business-analyst-v3, it-po-v3) appear
+  And the bug symptom "workflow dispatches non-existent v3 agent names" must not occur
+notes: "Authored by /quick-fix. Root cause: create-ac-to-plan-feature rename updated the file/skill name but missed the agent dispatch references inside the script."

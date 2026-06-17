@@ -21,7 +21,7 @@ related_docs:
 
 The AC-driven development system turns the AC store into the authoritative
 backlog. Instead of writing tickets by hand, you author acceptance criteria
-once through the `product-owner-v3` / `business-analyst-v3` / `it-po-v3`
+once through the `product-owner` / `business-analyst` / `it-po`
 pipeline, approve the ones you want built, and let `/build-ac` generate
 the ticket and drive it through the full agent build pipeline.
 
@@ -49,54 +49,54 @@ This guide covers six tasks:
 ## 1. Authoring new ACs via the PO/BA pipeline
 
 New ACs are authored through a three-agent pipeline. You describe the
-feature to `product-owner-v3`, which writes L0/L1 ACs; `business-analyst-v3`
+feature to `product-owner`, which writes L0/L1 ACs; `business-analyst`
 decomposes them into L2/L3 behavioural ACs and produces documentation ACs
-where needed; `it-po-v3` enriches the ACs with technical fields and sets
+where needed; `it-po` enriches the ACs with technical fields and sets
 them to `readiness: reviewed`.
 
-### Step 1: Invoke product-owner-v3
+### Step 1: Invoke product-owner
 
 Open a new Claude Code conversation and run:
 
 ```
-/product-owner-v3
+/product-owner
 ```
 
 Describe the feature you want to build. Be as specific as you can about
 the observable behaviour you expect (inputs, outputs, error cases).
 
-`product-owner-v3` will produce L0 and L1 AC YAML files under
+`product-owner` will produce L0 and L1 AC YAML files under
 `docs/acceptance-criteria/<component>/`. Each AC is written with
 `readiness: draft` and `priority: medium`. L1 ACs include a
 `documentation_triggers` field listing which diagram and guide types
 are needed (e.g. `[how-to, sequence-diagram]`).
 
-### Step 2: Let business-analyst-v3 decompose the L1 ACs
+### Step 2: Let business-analyst decompose the L1 ACs
 
-`product-owner-v3` will automatically hand off to `business-analyst-v3`,
+`product-owner` will automatically hand off to `business-analyst`,
 or you can invoke it directly:
 
 ```
-/business-analyst-v3
+/business-analyst
 ```
 
-Pass the L1 AC file paths. `business-analyst-v3` will produce L2/L3
+Pass the L1 AC file paths. `business-analyst` will produce L2/L3
 behavioural ACs and, for each `documentation_triggers` entry on the parent
 L1, a corresponding documentation AC (e.g. a how-to AC assigned to
 `documentation-expert`). All new ACs are written with `readiness: draft`.
 
-### Step 3: Let it-po-v3 enrich and gate the batch
+### Step 3: Let it-po enrich and gate the batch
 
-Invoke `it-po-v3` and pass the new AC files:
+Invoke `it-po` and pass the new AC files:
 
 ```
-/it-po-v3
+/it-po
 ```
 
-`it-po-v3` adds technical fields (`assigned_agent`, `estimated_complexity`,
+`it-po` adds technical fields (`assigned_agent`, `estimated_complexity`,
 `delivers_to`, `expects_from`) and checks the documentation gate: for any
 L1 with `documentation_triggers`, at least one documentation AC must exist
-for each trigger type. When the gate passes, `it-po-v3` sets
+for each trigger type. When the gate passes, `it-po` sets
 `readiness: reviewed` on the batch.
 
 ### Step 4: Validate and commit
@@ -112,7 +112,7 @@ Fix any reported errors and commit again.
 
 ## 2. Reviewing and approving ACs
 
-After `it-po-v3` sets `readiness: reviewed`, the AC is visible to you but
+After `it-po` sets `readiness: reviewed`, the AC is visible to you but
 not yet eligible for ticket generation. Only you (the user) may promote an
 AC to `readiness: approved`.
 
@@ -260,7 +260,7 @@ python scripts/ac_store/scan_ac_store.py --level leaf --work-status todo --readi
 python scripts/ac_store/scan_ac_store.py --level leaf --work-status todo --readiness reviewed
 ```
 
-Use these commands to track which ACs are waiting for `it-po-v3` enrichment
+Use these commands to track which ACs are waiting for `it-po` enrichment
 (`draft`) or waiting for your approval (`reviewed`).
 
 ### Validate the entire store

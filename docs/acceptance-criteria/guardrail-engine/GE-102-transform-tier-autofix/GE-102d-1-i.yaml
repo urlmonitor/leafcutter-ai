@@ -1,0 +1,38 @@
+id: GE-102d-1-i
+readiness: approved
+priority: high
+title: "Exception-handling check emits no AUTOFIX_AGENT line on a clean pass"
+component: guardrail-engine
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200b-3.yaml"
+criteria: |
+  Given a staged Python file that fully complies with the exception-handling rules,
+  When the exception-handling check runs,
+  Then it exits with code 0,
+  And it emits NO AUTOFIX_AGENT line,
+  so the auto-fix path is never triggered for a file that has no exception-handling violation.
+depends_on: [GE-102d]
+doc_links:
+  - path: "templates/commit-guardian/check_exception_handling.py"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "AUTOFIX_AGENT emission is strictly confined to the violation path — a clean pass prints nothing on that channel"
+delivers_to: null
+expects_from:
+  ac_id: GE-102d
+  contract: "The violation-path emission whose clean-pass silence this edge case guarantees"
+origin_agent: business-analyst
+created: 2026-06-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

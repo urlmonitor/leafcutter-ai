@@ -715,7 +715,7 @@ And the test file already written is preserved in the test directory,
 And the workflow outputs a summary of what was completed and what
   remains (AC ID, test file path, diagnosed file, root cause),
 And it provides the AC ID so the user can reference it in
-  /create-ac or /build-feature.
+  /plan-feature or /build-feature.
 ```
 
 **Relationship to the depth model (this ADR):**

@@ -246,7 +246,7 @@
       "domain": null,
       "template_path": "leafcutter/templates/skills/roadmap-steward/",
       "dependencies": [],
-      "description": "Wraps roadmap_query.py --audit to produce audit_result JSON (all_items, starved_items, off_roadmap_tickets) for the product-owner-agent."
+      "description": "Wraps roadmap_query.py --audit to produce audit_result JSON (all_items, starved_items, off_roadmap_tickets) for product owner review workflows."
     },
     {
       "id": "route-knowledge",
@@ -267,15 +267,15 @@
       "description": "Pre-archive validation gate invoked by finalize-feature.js Step 5 before moving an epic folder to tickets/99_done/. Scans every sub-ticket in the epic's done/ subfolder and verifies frontmatter status: done. Offers confirmation-gated auto-fix for missing entries."
     },
     {
-      "id": "create-ac",
-      "name": "Create AC",
+      "id": "plan-feature",
+      "name": "Plan Feature",
       "portable": true,
       "domain": null,
-      "template_path": "leafcutter/templates/skills/create-ac/",
+      "template_path": "leafcutter/templates/skills/plan-feature/",
       "dependencies": [],
       "description": "Triage, orchestrate, and gate AC authoring for a user's feature request. Dispatches ac-triage (Haiku) to classify the request as strategic / behavioral / technical / covered, then routes through the correct authoring agents (PO v3, BA v3, IT PO v3) with user confirmation gates between stages. All output goes exclusively to the AC store — no ticket files are produced.",
-      "invocation_surface": "/create-ac",
-      "workflow_script": "scripts/workflows/create-ac.js"
+      "invocation_surface": "/plan-feature",
+      "workflow_script": "scripts/workflows/plan-feature.js"
     },
     {
       "id": "ac-tree-split",
@@ -295,6 +295,34 @@
       "template_path": "leafcutter/templates/skills/add-component/",
       "dependencies": [],
       "description": "Agent-facing wrapper around scripts/add_component.py. Provides a structured interface so agents can add a new entry to docs/components.json during a workflow without knowing the script path or argument format."
+    },
+    {
+      "id": "ac-scanner",
+      "name": "AC Scanner",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/ac-scanner/",
+      "dependencies": [],
+      "description": "AC store scanner and ticket generator. Wraps scan_ac_store.py (queries the AC YAML store for ready leaf-level ACs) and generate_ticket_from_ac.py (generates a fully-wired ticket file from a single AC YAML record and writes the implemented_by back-reference). Used by the /build-ac command to drive the AC-first build loop."
+    },
+    {
+      "id": "build-ac",
+      "name": "Build AC",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/build-ac/",
+      "dependencies": [],
+      "description": "Reference skill for the build-ac coordinator. Documents the three routing modes (leaf, goal, L1-no-children), the mode-detection algorithm, and the exact output contracts for each path. Load when implementing or auditing the build-ac agent template, writing tests for mode-detection logic, or diagnosing a mis-routing bug."
+    },
+    {
+      "id": "quick-fix",
+      "name": "Quick Fix",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/quick-fix/",
+      "dependencies": [],
+      "description": "Fast, in-place bug-fix pipeline. Operates in the current worktree without creating a new branch or worktree. Accepts a structured bug diagnosis and drives: AC creation, test-first (red), warning check, fix, green phase, commit, and close. Escalates to the full /build-feature pipeline when scope expands beyond the single target file.",
+      "invocation_surface": "/quick-fix"
     }
   ]
 }

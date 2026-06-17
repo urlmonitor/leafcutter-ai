@@ -67,7 +67,7 @@ sequenceDiagram
         Note over BAC: Proceed with approved IDs only
     else User answers review-all
         User-->>BAC: review-all
-        BAC->>GTE: dispatch_it_po_v3(unapproved_ids)
+        BAC->>GTE: dispatch_it_po(unapproved_ids)
         GTE-->>BAC: Unapproved ACs enriched / promoted
         BAC->>GTE: classify_readiness(all_ids) (re-read from disk)
         GTE-->>BAC: Updated {approved: [...], unapproved: [...]}
@@ -110,7 +110,7 @@ Parent: [Agent Delivery Workflows](../agent_delivery_workflows.md)
 | 1 | `build_ac_mode_detection.py` | Reads `level` and `covered_by` from the AC YAML; returns `mode: goal` when L0/L1 has children. |
 | 2 | `scan_ac_store.traverse_ac_tree()` | Walks the AC tree depth-first from the goal ID; returns only leaf-level IDs (L2/L3). |
 | 3 | `goal_to_epic.classify_readiness()` | Reads `readiness` field from each leaf AC YAML; classifies into `approved` vs `unapproved`. |
-| 4 | User prompt | Three-choice gate: `yes` (approved only), `review-all` (dispatch IT PO v3), or `cancel`. |
+| 4 | User prompt | Three-choice gate: `yes` (approved only), `review-all` (dispatch IT PO), or `cancel`. |
 | 5 | `goal_to_epic.resolve_leaf_dependencies()` | Builds leaf-to-leaf dep map by resolving `depends_on` chains through composite ACs. |
 | 6 | `goal_to_epic.topological_sort()` | Kahn's BFS algorithm; raises `CyclicDependencyError` if a cycle is detected (before any file writes). |
 | 7 | `generate_ticket_from_ac.py` | Called once per leaf AC in topological order; writes a ticket to `tickets/00_inbox/`. |

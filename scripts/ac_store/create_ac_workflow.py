@@ -1,18 +1,18 @@
 """
-create_ac_workflow.py — Python implementation of the /create-ac authoring pipeline.
+create_ac_workflow.py — Python implementation of the /plan-feature authoring pipeline.
 
 This module exposes the pipeline runner (`run_authoring_pipeline`) that is
-called by the /create-ac workflow via JavaScript (create-ac.js). The Python
+called by the /plan-feature workflow via JavaScript (plan-feature.js). The Python
 version is used by unit tests (test_create_ac_workflow.py) and by CI pipelines
 that cannot invoke the agent runtime.
 
-The JavaScript workflow (scripts/workflows/create-ac.js) is the production
+The JavaScript workflow (scripts/workflows/plan-feature.js) is the production
 entry point; this module provides the same routing logic in a testable form.
 
 Routing table:
-    strategic  → PO v3 → gate → BA v3 → gate → IT PO v3 → final gate
-    behavioral → BA v3 → gate → IT PO v3 → final gate
-    technical  → IT PO v3 → final gate
+    strategic  → PO → gate → BA → gate → IT PO → final gate
+    behavioral → BA → gate → IT PO → final gate
+    technical  → IT PO → final gate
     covered    → no authoring agents dispatched (handled before this module)
 
 Source ticket: EPIC-ACDrivenDevelopment/08_create_ac_workflow.md
@@ -28,9 +28,9 @@ from typing import Any, Callable
 # Constants
 # ---------------------------------------------------------------------------
 
-AGENT_PO_V3 = "product-owner-v3"
-AGENT_BA_V3 = "business-analyst-v3"
-AGENT_ITPO_V3 = "it-po-v3"
+AGENT_PO_V3 = "product-owner"
+AGENT_BA_V3 = "business-analyst"
+AGENT_ITPO_V3 = "it-po"
 
 ROUTE_STRATEGIC = "strategic"
 ROUTE_BEHAVIORAL = "behavioral"
@@ -218,7 +218,7 @@ def run_authoring_pipeline(
 
                     return {
                         "status": "ok",
-                        "message": f"/create-ac complete. {len(all_acs_written)} AC(s) approved with priority: {priority}.",
+                        "message": f"/plan-feature complete. {len(all_acs_written)} AC(s) approved with priority: {priority}.",
                         "acs_approved": all_acs_written,
                         "priority": priority,
                         "route": route,

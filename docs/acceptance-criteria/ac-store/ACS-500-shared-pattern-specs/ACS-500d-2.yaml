@@ -1,0 +1,46 @@
+id: ACS-500d-2
+readiness: approved
+priority: high
+title: "Existing page deviations survive pattern updates unchanged"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a page AC has implements_pattern: "PTN-001" (paginated-collection),
+  And a separate deviation AC exists for that page overriding one behavior
+    (e.g. "status column uses priority sort order instead of alphabetical"),
+  When the pattern AC (PTN-001) is amended to add a new behavior
+    (e.g. "displays loading skeleton during fetch"),
+  Then the page inherits the new loading-skeleton behavior from the pattern,
+  And the existing deviation AC remains unchanged and still overrides
+    the specific behavior it was written for,
+  And no conflict or merge error occurs between the deviation and the
+    updated pattern.
+depends_on: [ACS-500d, ACS-500b-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Convention only -- deviations are separate AC files with their own criteria that are independent of the pattern they override"
+  - "Pattern resolution must not touch or modify deviation ACs when the pattern is updated"
+  - "No automated conflict detection between deviations and updated patterns is required for this AC"
+  - "Document in docs/reference/ac-schema.md that deviations take precedence over pattern behavior for their specific aspect"
+delivers_to: null
+expects_from:
+  ac_id: ACS-500b-2
+  contract: "Deviation AC convention is documented -- deviations are standard ACs with depends_on referencing the consuming AC"
+origin_agent: business-analyst-v3
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260611-ACS-500d-2.md

@@ -1,0 +1,30 @@
+id: BP-900
+title: "Every leafcutter capability you install actually works when you use it"
+component: build_pipeline
+level: L0
+status: active
+req_status: approved
+readiness: approved
+priority: critical
+work_status: not_started
+criteria: |
+  A consumer project that runs build.py can immediately use every slash command,
+  agent, and workflow that the package advertises — no silent failures from missing
+  runtime scripts. When a new capability is added to the package, it either deploys
+  completely or the build fails with a clear explanation of what is missing.
+depends_on: []
+doc_links:
+  - scripts/build.py
+  - scripts/build_phases.py
+  - scripts/build_propagation_audit.py
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-11
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: [BP-900a, BP-900b, BP-900c]
+implemented_by: []

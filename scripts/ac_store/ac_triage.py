@@ -2,10 +2,10 @@
 ac_triage.py — Python implementation of the AC triage logic.
 
 This module provides a Python-callable interface to the triage routing logic
-used by the /create-ac workflow. It is called by create_ac_workflow.py and
+used by the /plan-feature workflow. It is called by create_ac_workflow.py and
 tested by tests/ac_store/test_create_ac_workflow.py.
 
-The JavaScript counterpart (create-ac.js) dispatches the ac-triage agent
+The JavaScript counterpart (plan-feature.js) dispatches the ac-triage agent
 template (Haiku-pinned, read-only). This Python module mirrors that logic
 for unit-testing purposes and for use in CI pipelines that cannot invoke
 the agent runtime.

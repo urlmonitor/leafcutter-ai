@@ -370,6 +370,7 @@
         "hooks": [
             {
                 "id": "check-build-drift",
+                "tier": "judgment",
                 "name": "Check Build Drift (leafcutter)",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_build_drift.py",
                 "language": "system",
@@ -381,6 +382,7 @@
             },
             {
                 "id": "check-secrets",
+                "tier": "judgment",
                 "name": "Check Secrets",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_secrets.py",
                 "language": "system",
@@ -391,6 +393,7 @@
             },
             {
                 "id": "check-doc-length",
+                "tier": "judgment",
                 "name": "Check Documentation Length",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_doc_length.py",
                 "language": "system",
@@ -405,6 +408,7 @@
             },
             {
                 "id": "check-structural-change",
+                "tier": "judgment",
                 "name": "Check Structural Change \u2014 Architecture Docs Required",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_structural_change.py",
                 "language": "system",
@@ -415,6 +419,7 @@
             },
             {
                 "id": "check-components-integrity",
+                "tier": "judgment",
                 "name": "Check Components Registry Integrity",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_components_integrity.py",
                 "language": "system",
@@ -426,6 +431,7 @@
             },
             {
                 "id": "check-adr-coverage",
+                "tier": "judgment",
                 "name": "Check ADR Coverage",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_adr_coverage.py",
                 "language": "system",
@@ -436,6 +442,7 @@
             },
             {
                 "id": "check-adr-cross-reference",
+                "tier": "judgment",
                 "name": "Check ADR Cross-References",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_adr_cross_reference.py",
                 "language": "system",
@@ -447,6 +454,7 @@
             },
             {
                 "id": "check-infra-docs",
+                "tier": "judgment",
                 "name": "Check Infrastructure Documentation",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_infra_docs.py",
                 "language": "system",
@@ -458,6 +466,7 @@
             },
             {
                 "id": "check-agent-diagrams",
+                "tier": "judgment",
                 "name": "Check Agent Diagrams",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_agent_diagrams.py",
                 "language": "system",
@@ -468,6 +477,7 @@
             },
             {
                 "id": "check-agent-registry",
+                "tier": "judgment",
                 "name": "Check Agent Registry",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_agent_registry.py",
                 "language": "system",
@@ -478,6 +488,7 @@
             },
             {
                 "id": "check-agent-spawn-consistency",
+                "tier": "judgment",
                 "name": "Check Agent Spawn Bidirectionality (registry edit guard)",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/hooks/check_agent_spawn_consistency.py",
                 "language": "system",
@@ -490,6 +501,7 @@
             },
             {
                 "id": "check-mermaid-drift",
+                "tier": "judgment",
                 "name": "Check Mermaid Diagram Drift",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_mermaid_drift.py",
                 "language": "system",
@@ -503,6 +515,7 @@
             },
             {
                 "id": "check-mermaid-parent-link",
+                "tier": "judgment",
                 "name": "Check Mermaid Parent-Link Bidirectionality",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_mermaid_parent_link.py",
                 "language": "system",
@@ -514,6 +527,7 @@
             },
             {
                 "id": "check-diagram-naming",
+                "tier": "judgment",
                 "name": "Check Architecture Diagram Filename Convention",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_diagram_naming.py",
                 "language": "system",
@@ -527,6 +541,7 @@
             },
             {
                 "id": "check-paths-integrity",
+                "tier": "judgment",
                 "name": "Check Paths JSON Integrity",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_paths_integrity.py",
                 "language": "system",
@@ -538,6 +553,7 @@
             },
             {
                 "id": "check-architecture-scaffolds",
+                "tier": "judgment",
                 "name": "Check Architecture Scaffold Integrity",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_architecture_scaffolds.py",
                 "language": "system",
@@ -549,6 +565,7 @@
             },
             {
                 "id": "check-feedback-id",
+                "tier": "judgment",
                 "name": "Check Feedback ID in Signoff Comments",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_feedback_id.py",
                 "language": "system",
@@ -560,6 +577,7 @@
             },
             {
                 "id": "check-output-drift",
+                "tier": "judgment",
                 "name": "Check Output Drift (leafcutter Direction B)",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_output_drift.py",
                 "language": "system",
@@ -572,6 +590,7 @@
             },
             {
                 "id": "check-glossary-coverage",
+                "tier": "judgment",
                 "name": "Check Glossary Coverage (GlossaryAutomation)",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_glossary_coverage.py",
                 "language": "system",
@@ -585,6 +604,7 @@
             },
             {
                 "id": "check-placeholder-defaults",
+                "tier": "judgment",
                 "name": "Check Placeholder-Default Pattern (UserSurfaceVerification)",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_placeholder_defaults.py",
                 "language": "system",
@@ -597,6 +617,7 @@
             },
             {
                 "id": "check-commit-scope",
+                "tier": "judgment",
                 "name": "Check Commit Scope (warn-only \u2014 staged vs files_touched)",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_commit_scope.py",
                 "language": "system",
@@ -608,6 +629,7 @@
             },
             {
                 "id": "check-doc-types-agents",
+                "tier": "judgment",
                 "name": "Check Doc Types Agent References",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_doc_types_agents.py",
                 "language": "system",
@@ -620,6 +642,7 @@
             },
             {
                 "id": "check-roadmap-schema",
+                "tier": "judgment",
                 "name": "Check Roadmap JSON Schema Compliance",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_roadmap_schema.py",
                 "language": "system",
@@ -632,6 +655,7 @@
             },
             {
                 "id": "regenerate-roadmap-mirror",
+                "tier": "judgment",
                 "name": "Regenerate docs/roadmap.md mirror",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/regenerate_roadmap_mirror.py",
                 "language": "system",
@@ -644,6 +668,7 @@
             },
             {
                 "id": "check-mermaid-complexity",
+                "tier": "judgment",
                 "name": "Check Mermaid Diagram Complexity",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_mermaid_complexity.py",
                 "language": "system",
@@ -656,6 +681,7 @@
             },
             {
                 "id": "check-contract-shrinking",
+                "tier": "judgment",
                 "name": "Check Contract Shrinking (TDD Guard)",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_contract_shrinking.py",
                 "language": "system",
@@ -667,6 +693,7 @@
             },
             {
                 "id": "check-test-fixture-bloat",
+                "tier": "judgment",
                 "name": "Check Test Fixture Bloat",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_test_fixture_bloat.py",
                 "language": "system",
@@ -679,6 +706,7 @@
             },
             {
                 "id": "check-exception-handling",
+                "tier": "judgment",
                 "name": "Check Exception Handling (AST I/O Boundary Guard)",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_exception_handling.py",
                 "language": "system",
@@ -691,6 +719,7 @@
             },
             {
                 "id": "check-ac-limits",
+                "tier": "judgment",
                 "name": "Check AC Limits (per-agent and total AC count guard)",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/hooks/check_ac_limits.py",
                 "language": "system",
@@ -702,7 +731,32 @@
                 "_comment": "EPIC-ContractDrivenACs/02b: Blocks commits when any staged ticket file has >7 ACs for a single agent block or >20 ACs total. Integration ACs (<!-- scope: integration -->) excluded from per-agent counts. Emits structured JSON ({hook, fix_agent, violations}) for precommit-autofix routing to IT PO. Override: ac_limit_override: true in frontmatter warns but does not block. v1 tickets (no ## Agent Contracts) skipped silently."
             },
             {
+                "id": "transform-doc-frontmatter",
+                "tier": "transform",
+                "name": "Transform Doc Frontmatter (fill missing fields)",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/transform_doc_frontmatter.py",
+                "language": "system",
+                "files": "^docs/.*\\.md$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false
+            },
+            {
+                "id": "transform-description-field",
+                "tier": "transform",
+                "name": "Transform Description Field (stub from title)",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/transform_description_field.py",
+                "language": "system",
+                "files": "^docs/.*\\.md$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false
+            },
+            {
                 "id": "check-description-field",
+                "tier": "judgment",
                 "name": "Check Description Field (doc frontmatter enforcement)",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_description_field.py",
                 "language": "system",
@@ -718,6 +772,7 @@
             },
             {
                 "id": "check-ac-tree-limits",
+                "tier": "judgment",
                 "name": "Check AC Tree Depth Limits (ACS-100c-1/c-2)",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_ac_limits.py",
                 "language": "system",
@@ -730,6 +785,7 @@
             },
             {
                 "id": "check-ac-governance",
+                "tier": "judgment",
                 "name": "Check AC Governance (ACS-400 write-lock for requirement-defining fields)",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_ac_governance.py",
                 "language": "system",
@@ -742,6 +798,7 @@
             },
             {
                 "id": "check-ac-parent-covered-by",
+                "tier": "judgment",
                 "name": "Check AC Parent covered_by Back-Link (ACS-100i-2)",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_ac_parent_covered_by.py",
                 "language": "system",

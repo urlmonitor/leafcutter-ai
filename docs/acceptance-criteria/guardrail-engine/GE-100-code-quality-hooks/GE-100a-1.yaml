@@ -1,0 +1,43 @@
+id: GE-100a-1
+readiness: approved
+priority: high
+title: "jscpd hook rejects version 4.x with an actionable error and exits fail-open"
+component: guardrail-engine
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100.yaml"
+criteria: |
+  Given the commit guardian configuration has the duplicate_code section with:
+    enabled: true
+  And the jscpd binary is present on the system PATH
+  And running jscpd --version returns "4.0.0"
+  When the duplicate code hook runs at pre-commit time
+  Then the hook does NOT invoke jscpd for scanning
+  And it emits a warning to stderr stating that jscpd v4.x has incompatible
+    CLI flags and is not supported
+  And the warning recommends installing jscpd v3.x
+  And the hook exits with code 0 (fail-open)
+depends_on:
+  - GE-100a
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-100a
+  contract: "The version parsing function that extracts the major version from jscpd --version output"
+origin_agent: BrainCandy
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260616-GE-100a-1.md

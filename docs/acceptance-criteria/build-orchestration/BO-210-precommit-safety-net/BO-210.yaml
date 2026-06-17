@@ -1,0 +1,41 @@
+id: BO-210
+readiness: approved
+priority: high
+title: "A pre-commit hook failure reuses the original coder's context instead of resetting it"
+component: build-orchestration
+level: L0
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200b-3.yaml"
+criteria: |
+  Given a coder agent has signed off on a ticket and the commit phase later fails a pre-commit hook,
+  When the pre-commit auto-fix path recovers the commit,
+  Then the agent that fixes the violation is the SAME agent type that authored the work,
+  And that agent receives the original coder's design context (intent, file rationale,
+    consumers already checked, red-baseline test names, design constraints),
+  And it fixes only what the hook requires without re-deriving the design from scratch,
+  And the commit is retried once, exactly as today,
+  And the safety net never weakens the hooks themselves (the skill-vs-hook parity drift
+    root cause is explicitly out of scope and handled separately).
+depends_on: [BO-200b-3]
+doc_links:
+  - path: "templates/skills/precommit-autofix/SKILL.md"
+    relationship: describes
+    status: exists
+  - path: "templates/skills/signoff/SKILL.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-16
+amended_by: []
+superseded_by: null
+covered_by: [BO-210a, BO-210b, BO-210c]
+implemented_by: []

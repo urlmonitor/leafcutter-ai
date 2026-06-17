@@ -50,6 +50,13 @@ components:
       - "docs/acceptance-criteria/**/*.yaml"
       - "scripts/ac_store/*.py"
       - "config/ac_store_schema.json"
+  - id: guardrail-engine
+    prefix: GE
+    description: "ACs for code quality guardrails: duplicate detection, coverage gating, complexity enforcement, and change-driven quality gates"
+    owner: null
+    directory_patterns:
+      - "scripts/commit_guardian/check_*.py"
+      - "templates/commit-guardian/check_*.py"
 
 # Composite Pattern AC Example (AC ACS-500e-1)
 #

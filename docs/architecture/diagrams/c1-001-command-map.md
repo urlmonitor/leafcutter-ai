@@ -62,7 +62,7 @@ flowchart TD
         PO["/po\nProduct Owner v3\nL0/L1 AC authoring\nCustomer goals → AC YAML"]:::req
         BA["/ba\nBusiness Analyst v3\nL1 → L2/L3 Gherkin\nbehavioural decomposition"]:::req
         ITPO["/it-po\nIT Product Owner v3\nTechnical enrichment\nassigned_agent + complexity"]:::req
-        CAC["/create-ac\nAC authoring pipeline\nPO v3 → BA v3 → IT PO v3\nProduces AC YAML files"]:::req
+        PF["/plan-feature\nAC authoring pipeline\nPO → BA → IT PO\nProduces AC YAML files"]:::req
     end
 
     %% ── Stage 2: Planning ────────────────────────────────────────────
@@ -105,7 +105,7 @@ flowchart TD
     end
 
     %% ── User entry points ────────────────────────────────────────────
-    DEV --> CAC
+    DEV --> PF
     DEV --> PO
     DEV --> BA
     DEV --> ITPO
@@ -125,7 +125,7 @@ flowchart TD
     DEV --> FR
 
     %% ── Cross-stage flows ────────────────────────────────────────────
-    CAC -->|"AC YAML files\n(readiness: approved)"| BAC
+    PF -->|"AC YAML files\n(readiness: approved)"| BAC
     PO -->|"L0/L1 draft ACs"| BA
     BA -->|"L2/L3 draft ACs"| ITPO
     ITPO -->|"readiness: reviewed\n→ user approves"| BAC
@@ -151,12 +151,12 @@ flowchart TD
 
 | Command | Entry Agent | Primary Output |
 |---|---|---|
-| `/create-ac` | Full PO→BA→IT PO pipeline | L0–L3 AC YAML files in `docs/acceptance-criteria/` |
-| `/po` | `product-owner-v3` | L0 (goal) and L1 (feature) AC YAML files |
-| `/ba` | `business-analyst-v3` | L2 (behavioural) and L3 (edge-case) AC YAML files |
-| `/it-po` | `it-po-v3` | Enriched ACs: `assigned_agent`, `estimated_complexity`, `delivers_to`/`expects_from` |
+| `/plan-feature` | Full PO→BA→IT PO pipeline | L0–L3 AC YAML files in `docs/acceptance-criteria/` |
+| `/po` | `product-owner` | L0 (goal) and L1 (feature) AC YAML files |
+| `/ba` | `business-analyst` | L2 (behavioural) and L3 (edge-case) AC YAML files |
+| `/it-po` | `it-po` | Enriched ACs: `assigned_agent`, `estimated_complexity`, `delivers_to`/`expects_from` |
 
-`/create-ac` is the pipeline shortcut — it sequences PO v3 → BA v3 → IT PO v3
+`/plan-feature` is the pipeline shortcut — it sequences PO → BA → IT PO
 in one invocation. `/po`, `/ba`, and `/it-po` are the individual agents invoked
 directly when the user wants to run a single pipeline stage.
 
@@ -164,7 +164,7 @@ directly when the user wants to run a single pipeline stage.
 
 | Command | Entry Agent | Primary Output |
 |---|---|---|
-| `/create-ticket` | `business-analyst` → `test-planner` → `refinement` + `architect-review` | Ticket `.md` file in `tickets/00_inbox/` |
+| `/create-ticket` | `business-analyst` → `refinement` + `architect-review` | Ticket `.md` file in `tickets/00_inbox/` |
 | `/pick-next-ticket` | `ticket-prioritizer` skill | Top-5 unblocked ticket candidates; optionally dispatches `/build-feature` |
 
 ### Building
@@ -213,7 +213,7 @@ local main sync → pre-existing failure tickets → worktree removal.
 
 | From | To | What is passed |
 |---|---|---|
-| `/create-ac` or `/it-po` | `/build-ac` | AC YAML files with `readiness: approved` |
+| `/plan-feature` or `/it-po` | `/build-ac` | AC YAML files with `readiness: approved` |
 | `/build-ac` | `/build-feature` | Ticket `.md` path (user hand-off, not automatic dispatch) |
 | `/create-ticket` or `/pick-next-ticket` | `/build-feature` | Ticket `.md` path |
 | `/build-backlog` | `/build-feature` (internally) | Ordered ticket list from `ticket-prioritizer` skill |

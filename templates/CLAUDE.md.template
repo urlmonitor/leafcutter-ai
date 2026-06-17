@@ -65,7 +65,7 @@ DECISION HISTORY
 The AC store (`docs/acceptance-criteria/`) is the authoritative definition of "done".
 Requirement-defining fields are write-locked to authorized agents only.
 
-**Authorized agents for protected fields:** `product-owner-v3`, `business-analyst-v3`, `it-po-v3`, human user (any identity not in `config/agent_registry.json`)
+**Authorized agents for protected fields:** `product-owner`, `business-analyst`, `it-po`, human user (any identity not in `config/agent_registry.json`)
 
 **Protected fields** (only authorized agents may add or modify):
 - `criteria` — the acceptance test definition

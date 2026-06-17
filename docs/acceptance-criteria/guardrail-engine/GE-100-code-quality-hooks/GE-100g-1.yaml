@@ -1,0 +1,51 @@
+id: GE-100g-1
+readiness: approved
+priority: high
+title: "Onboarding wizard offers diff-cover enablement following the same detect-then-prompt pattern"
+component: guardrail-engine
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100.yaml"
+criteria: |
+  Given the onboarding wizard is running its hook configuration step
+  And the diff-cover binary IS detected on the system PATH
+  When the wizard reaches the diff-coverage hook configuration prompt
+  Then it asks the user whether to enable the diff coverage check
+  And if the user accepts, it sets diff_coverage.enabled to true in
+    the project's commit_guardian.json
+  And if the user declines, it leaves diff_coverage.enabled as false
+  And it does NOT prompt for min_coverage_percent or compare_branch
+    (uses the defaults: 80% and origin/main)
+
+  ---
+
+  Given the onboarding wizard is running its hook configuration step
+  And the diff-cover binary is NOT detected on the system PATH
+  When the wizard reaches the diff-coverage hook configuration step
+  Then it silently skips the prompt entirely
+  And it adds "diff-cover (test coverage gating)" to the post-onboard
+    checklist of optional tools the user can install later
+depends_on:
+  - GE-100g
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100g.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-100g
+  contract: "The tool detection and prompt pattern established by the jscpd onboarding step, reused for diff-cover"
+origin_agent: BrainCandy
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260616-GE-100g-1.md

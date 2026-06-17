@@ -1,0 +1,33 @@
+id: BO-210b
+readiness: approved
+priority: high
+title: "Coders emit a design-context capsule in their sign-off when they trip a warn-tier signal"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200b-3.yaml"
+criteria: |
+  When a coder agent's own pre-completion check detects a warn-tier complexity or
+  size signal, the coder records a length-capped context capsule inside its sign-off
+  comment, capturing the design context a later fixer would otherwise have to
+  re-derive: the intent, the rationale per touched file, the consumers already
+  checked, the red-baseline test names, and the design constraints. The capsule is
+  optional and backward-compatible — consumers tolerate its absence exactly like
+  the existing completion manifest.
+depends_on: [BO-210]
+doc_links:
+  - path: "templates/skills/signoff/SKILL.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-16
+amended_by: []
+superseded_by: null
+covered_by: [BO-210b-1, BO-210b-2, BO-210b-1-i]
+implemented_by: []

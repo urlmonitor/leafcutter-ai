@@ -22,6 +22,7 @@ from pathlib import Path
 
 HOOK_SCRIPT = (
     Path(__file__).parent.parent
+    / "templates"
     / "scripts"
     / "commit_guardian"
     / "check_description_field.py"
