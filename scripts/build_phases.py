@@ -357,7 +357,7 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
         print("Workflow scripts: 0 installed (templates/workflows-js/ absent)")
         return 0
 
-    output_dir = target_root / ".claude" / "workflows"
+    output_dir = target_root / "workflows"
     written = 0
     unchanged = 0
 
