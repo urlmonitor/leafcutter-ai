@@ -229,3 +229,55 @@ If the command exits non-zero, the sink is unreachable — fix before invoking `
 run. 23 `submit-failed` events occurred without detection — the drive completed but zero
 telemetry was captured, making the retrospective impossible.
 (Root cause ticket: TICKET-20260527-FeedbackSinkPreDriveCheck)
+
+### Worktree pre-commit config (MANDATORY for worktree-based drives)
+
+Worktrees do not inherit `.pre-commit-config.yaml` from the main working tree.
+It is a `.leafcutter` symlink created by `install_shims` in the project root only —
+a fresh worktree created from `origin/main` has neither the symlink nor a populated
+`.leafcutter/`. If the worktree root lacks it, ALL package hooks are silently skipped
+for the entire drive (`git commit` runs with `PRE_COMMIT_ALLOW_NO_CONFIG=1`).
+
+**Check:**
+```bash
+ls <worktree-root>/.pre-commit-config.yaml 2>/dev/null || ls <worktree-root>/.leafcutter 2>/dev/null
+```
+
+**Fix (if absent):**
+```bash
+# Option A — symlink (preferred, requires native Linux FS):
+ln -s <main-tree-root>/.leafcutter <worktree-root>/.leafcutter
+
+# Option B — copy (for NTFS/WSL2 where symlinks are restricted):
+cp <main-tree-root>/.pre-commit-config.yaml <worktree-root>/.pre-commit-config.yaml
+```
+
+**Why this matters:** During EPIC-AcPipelineDeployGaps (2026-06-17), all nine package
+hooks were silently skipped for the entire drive. A post-drive diagnostic found 14
+would-have-blocked findings (7 `check-feedback-id` + 7 `check-description-field`) that
+required a dedicated fix commit after merge. If you cannot establish the config, run the
+package hooks manually against the branch diff before merge.
+(Permanent fix tracked in TICKET-20260617-Worktree_Precommit_Bootstrap.md)
+
+### Push scaffold commit before creating the epic worktree
+
+After running `/create-epic`, confirm the scaffold commit (Master_Plan.md + sub-ticket
+stubs) is already on `origin/main` before calling `worktree-agent` to create the epic
+worktree.
+
+```bash
+# The scaffold files must be reachable from origin/main (empty output = nothing unpushed):
+git -C <repo> log --oneline origin/main..main
+```
+
+If that lists the scaffold commit (i.e. it is unpushed), push first:
+```bash
+git -C <repo> push origin main
+```
+
+**If you skip this:** the epic worktree (created from `origin/main`) diverges at a stale
+point — the scaffold files are unreachable inside it and ticket agents cannot read them
+until the scaffold commit is cherry-picked onto the epic branch. Worse, when the scaffold
+later reaches `origin/main` independently, the epic PR hits an add/add merge conflict on
+those files at finalize (resolve in favor of the branch — the `status: done` versions win).
+(Source: EPIC-AcPipelineDeployGaps retrospective, 2026-06-17, Findings #1 + #5)

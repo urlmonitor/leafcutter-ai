@@ -237,6 +237,17 @@ For each finding from the raw set, assign exactly one confidence class:
   exceptions on I/O or DB operations.
 - Security smells: credentials in code, SQL injection surface, unsafe
   deserialization.
+- **Path-convention change without a full test grep.** When the diff changes a
+  path constant, output directory name, or file-location convention, check whether
+  any test still asserts the OLD path string:
+  ```bash
+  grep -r "<old_path>" tests/ unit_tests/
+  ```
+  If matches exist and the diff does not update them, surface as a high-confidence
+  finding: "path-change without full test-grep — N test file(s) still assert the
+  old path". Incremental per-file fixes are the trap — a single path change must
+  update every asserting test in one pass. (Source: EPIC-AcPipelineDeployGaps/BP-811,
+  2026-06-17 — the first fix missed two files; finalize triage caught the rest.)
 - Any finding the sub-skill marks as severity `critical` or `error`.
 
 ### Medium — bundle for potential Opus escalation

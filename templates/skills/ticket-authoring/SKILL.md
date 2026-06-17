@@ -275,6 +275,37 @@ the `user-surface-smoker` agent itself) MUST include a Smoke Fixture block that 
 would pass once shipped. This prevents the "the new agent is exempt from its own gate"
 exception.
 
+### Deployment tickets: require reachability ACs, not only copy ACs
+
+When a ticket's primary deliverable is a file that must be **callable at runtime** on a
+consumer install (workflow `.js` script, deployed script, agent template, skill SKILL.md,
+pre-commit hook), the acceptance criteria MUST include a **reachability** scenario in
+addition to any copy/presence check. The two tiers are distinct:
+
+- **Copy tier** — "file is present in the build output directory" (e.g. `templates/workflows-js/`).
+- **Reachability tier** — "the canonical entry point resolves and executes through the
+  deployed shim path without file-not-found or import-resolution error."
+
+A copy AC passes even when the artifact is unreachable. Both of these shipped green on
+copy ACs and were caught only by post-sign-off manual angle-testing:
+- The build phase wrote to a path the shim does not map (workflow `.js` written to
+  `.claude/workflows/` while the shim sources `output_root/workflows/` — BP-811).
+- The agent template invoked the script at a bare `scripts/ac_store/...` path that
+  resolves nowhere on a consumer install (EPIC-AcPipelineDeployGaps ticket 05).
+
+Reachability ACs catch both failure modes; copy ACs catch neither. Template:
+
+```gherkin
+Scenario: consumer-facing reachability
+  Given a simulated consumer install with <component> deployed
+  When the canonical entry point is invoked at <deployed-shim-path>/<name>
+  Then the invocation exits without file-not-found or import-resolution error
+  And the output matches the expected command signature
+```
+
+Add this scenario to every deployment-artifact ticket.
+(Source: EPIC-AcPipelineDeployGaps retrospective, 2026-06-17)
+
 ### Agent Contracts Block (required for multi-coder tickets)
 
 When a ticket's `agents:` map has **more than one coder agent** (`python-coder`,
