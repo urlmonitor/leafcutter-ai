@@ -267,18 +267,79 @@ Three hooks are installed by `build.py` to enforce the AC store at commit time.
 
 ### `check_ac_schema.py` (blocking)
 
-Validates every YAML file under `docs/acceptance-criteria/` against
-`config/ac_store_schema.json` (JSON Schema draft-07).
+Validates every staged YAML file under `docs/acceptance-criteria/` against
+`config/ac_store_schema.json` (JSON Schema draft-07). Runs two phases:
+Phase 1 (schema + cross-file checks) and Phase 2 (field-preservation).
 
 | Attribute | Value |
 |---|---|
-| Exit code | `1` on schema violation; `0` when all files pass. |
+| Hook ID | `check-ac-schema` |
+| Exit code | `1` on any violation; `0` when all files pass. |
 | Mode | Always blocking (`error` mode). |
-| Invocation | `python check_ac_schema.py [file ...]` |
+| Invocation | `python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_ac_schema.py` |
+| Scoped to | `docs/acceptance-criteria/` staged files |
+| Registered in | `commit_guardian.json` → `hooks_manifest.hooks` |
 
-Validates: required fields present, `status` is one of the allowed enum
+#### Phase 1 — Schema and cross-file checks
+
+Validates required fields present, `status` is one of the allowed enum
 values, `id` matches the `PREFIX-NNN` regex, `superseded_by` is non-null
 only when `status == superseded_by`.
+
+Additionally performs three cross-file checks against the full AC store index:
+
+**Pattern bindings completeness (ACS-500f-1):**
+When a staged AC has `implements_pattern` set, the hook loads the referenced
+pattern AC and derives its required slots from `pattern_slots` (or by scanning
+for `{slot_name}` placeholders in `criteria`). Every slot must appear as a key
+in the consuming AC's `pattern_bindings`. If any slot is missing the commit is
+blocked with an error that names the missing key and the pattern AC id:
+
+```
+<file>: pattern_bindings missing required key '<slot>' for pattern <pattern-id>
+```
+
+**Deprecated pattern reference (ACS-500a-3-ii):**
+When `implements_pattern` references a pattern AC whose `status` is
+`deprecated`, the commit is blocked with:
+
+```
+<file>: implements_pattern references deprecated pattern <id>;
+        use its successor (see <id> superseded_by field) or remove the reference
+```
+
+**Duplicate criteria detection (ACS-500c-3):**
+When a standalone AC (no `implements_pattern`) has `criteria` text
+structurally equivalent to a live pattern AC (same Gherkin steps with
+concrete values in place of `{slot}` placeholders), the commit is blocked:
+
+```
+<file>: criteria is a likely duplicate of pattern <id>;
+        use implements_pattern: <id> with pattern_bindings instead
+```
+
+#### Phase 2 — implements_pattern field-preservation (ACS-500f-1)
+
+For each staged *modified* AC YAML file (diff-filter M — files that already
+existed in HEAD), the hook loads both the HEAD version (via `git show HEAD:`)
+and the staged (disk) version. If `implements_pattern` was present and
+non-empty in HEAD but is absent or empty in the staged version, the commit is
+blocked:
+
+```
+<file>: implements_pattern was dropped — this field must not be removed
+        from an AC that previously declared it (was: '<old-value>')
+```
+
+**Rationale:** Silently removing `implements_pattern` while leaving the AC
+otherwise in place breaks the pattern-reuse contract without triggering
+`check_ac_pattern_refs.py` (which only fires on referenced-but-nonexistent
+patterns). The field-preservation check catches this category of unintentional
+or unauthorized removal at commit time.
+
+**Fail-open behaviour:** Any unexpected exception (I/O error, git subprocess
+failure, parse error) causes the hook to exit `0` with a warning on stderr
+so a script error never hard-blocks an unrelated commit.
 
 ### `check_test_ac_tags.py` (configurable)
 
