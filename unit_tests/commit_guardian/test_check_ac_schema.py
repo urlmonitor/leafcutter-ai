@@ -91,12 +91,16 @@ def _run_hook(root: Path) -> subprocess.CompletedProcess:
 
     env = os.environ.copy()
     env["HOOK_ROOT"] = str(root)
-    return subprocess.run(
-        [sys.executable, str(HOOK_SCRIPT)],
-        env=env,
-        capture_output=True,
-        text=True,
-    )
+    try:
+        return subprocess.run(
+            [sys.executable, str(HOOK_SCRIPT)],
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        print(f"hook subprocess error: {exc}", file=sys.stderr)
+        raise
 
 
 class TestValidAcPasses(unittest.TestCase):
@@ -773,6 +777,188 @@ class TestImplementsPatternWithEmptyCriteria(unittest.TestCase):
                 "AC with implements_pattern, pattern_bindings, and plain-text "
                 f"criteria must pass schema validation. Stderr: {result.stderr}"
             ),
+        )
+
+
+class TestFailOpenOnInternalError(unittest.TestCase):
+    """AC1: Hook exits 0 when it encounters an unexpected internal error.
+
+    The standalone templates version does not make git subprocess calls, so
+    we trigger an unexpected exception via a malformed schema file and verify
+    the __main__ exception handler catches it, exits 0, and writes a diagnostic.
+    """
+
+    def test_valid_ac_with_schema_present_exits_zero(self) -> None:
+        # covers: ACS-500f-1-i (AC1 — normal path: no blocking on valid input)
+        """Hook exits 0 when AC file is valid and schema is present.
+
+        With a well-formed schema and a valid AC file the hook must exit 0.
+        This confirms the hook does not incorrectly flag valid input as an error.
+        """
+        import os
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-001.yaml", _VALID_AC_YAML)
+            env = os.environ.copy()
+            env["HOOK_ROOT"] = str(root)
+            result = subprocess.run(
+                [sys.executable, str(HOOK_SCRIPT)],
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+    def test_hook_exits_zero_when_no_ac_dir(self) -> None:
+        # covers: ACS-500f-1-i (AC2 — exit 0 when no relevant staged files)
+        """Hook exits 0 when docs/acceptance-criteria/ does not exist.
+
+        When the AC directory is absent, _find_ac_files() returns [] and
+        main() returns 0. This is the canonical no-relevant-staged-files path.
+        The hook must not block the commit.
+        """
+        import os
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            # No docs/acceptance-criteria/ directory.
+            env = os.environ.copy()
+            env["HOOK_ROOT"] = str(root)
+            result = subprocess.run(
+                [sys.executable, str(HOOK_SCRIPT)],
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+
+class TestFailOpenOnNoStagedRelevantFiles(unittest.TestCase):
+    """AC2: Hook exits 0 when no staged AC files violate the schema.
+
+    These tests verify the pass-through path: valid AC files present,
+    no schema violations, no implements_pattern preservation issue.
+    """
+
+    def test_valid_ac_no_implements_pattern_exits_zero(self) -> None:
+        # covers: ACS-500f-1-i (AC2 — no staged file has implements_pattern)
+        """AC YAML with no implements_pattern field and valid schema exits 0.
+
+        When no staged AC file has an implements_pattern field and no AC file
+        violates the store schema, the hook must exit 0 and not block the commit.
+        """
+        import os
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-001.yaml", _VALID_AC_YAML)
+            env = os.environ.copy()
+            env["HOOK_ROOT"] = str(root)
+            result = subprocess.run(
+                [sys.executable, str(HOOK_SCRIPT)],
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+    def test_multiple_valid_acs_no_implements_pattern_exits_zero(self) -> None:
+        # covers: ACS-500f-1-i (AC2 — no staged files with implements_pattern)
+        """Multiple valid AC YAML files with no implements_pattern exits 0.
+
+        When several AC files exist and none violates the schema or has an
+        implements_pattern field, the hook must exit 0 without blocking.
+        """
+        import os
+
+        content_2 = textwrap.dedent("""\
+            id: FIN-002
+            title: "Second valid criterion"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given a second scenario
+              When it validates
+              Then it passes
+            priority: low
+            readiness: draft
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-001.yaml", _VALID_AC_YAML)
+            _write_ac_file(root, "FIN-002.yaml", content_2)
+            env = os.environ.copy()
+            env["HOOK_ROOT"] = str(root)
+            result = subprocess.run(
+                [sys.executable, str(HOOK_SCRIPT)],
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+
+class TestMainBlockExceptionHandler(unittest.TestCase):
+    """AC1: The __main__ exception handler exits 0 and writes a diagnostic to stderr.
+
+    This test verifies that if main() raises an unhandled exception, the outer
+    try/except in the __main__ block catches it, prints a diagnostic to stderr
+    (containing '[check-ac-schema]'), and exits 0 rather than propagating the
+    error and blocking the commit.
+    """
+
+    def test_hook_module_main_exception_exits_zero_with_diagnostic(self) -> None:
+        # covers: ACS-500f-1-i (AC1 — unexpected internal error → fail-open)
+        """Malformed JSON schema triggers the fail-open __main__ exception handler.
+
+        We force an unexpected exception inside the hook by creating a malformed
+        config/ac_store_schema.json. The _load_schema() function calls json.load()
+        without catching json.JSONDecodeError (a ValueError subclass). The error
+        propagates out of _load_schema() and out of main() to the __main__
+        exception handler, which must exit 0 and write a diagnostic to stderr
+        containing '[check-ac-schema]'.
+
+        This is the canonical AC1 fail-open scenario: the hook encounters an
+        unexpected internal error and must NOT block the commit.
+        """
+        import os
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            # Malformed JSON causes json.JSONDecodeError in _load_schema(),
+            # which propagates to the __main__ exception handler.
+            config_dir = root / "config"
+            config_dir.mkdir(parents=True)
+            (config_dir / "ac_store_schema.json").write_text(
+                "{ invalid json !!!", encoding="utf-8"
+            )
+            ac_dir = root / "docs" / "acceptance-criteria"
+            ac_dir.mkdir(parents=True)
+            (ac_dir / "FIN-001.yaml").write_text(_VALID_AC_YAML, encoding="utf-8")
+            env = os.environ.copy()
+            env["HOOK_ROOT"] = str(root)
+            result = subprocess.run(
+                [sys.executable, str(HOOK_SCRIPT)],
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+        # json.JSONDecodeError propagates out of _load_schema(), caught by __main__:
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "Malformed JSON schema must trigger the fail-open __main__ exception "
+                f"handler (exit 0). Stderr: {result.stderr}"
+            ),
+        )
+        # The diagnostic must identify the hook and the error.
+        self.assertIn(
+            "[check-ac-schema]",
+            result.stderr,
+            msg=f"Diagnostic must name the hook. Stderr: {result.stderr}",
         )
 
 
