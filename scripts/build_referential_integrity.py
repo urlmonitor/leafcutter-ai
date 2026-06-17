@@ -124,6 +124,56 @@ def extract_script_path_refs(compiled_root: Path) -> set[str]:
     return refs
 
 
+def extract_script_path_refs_with_sources(
+    compiled_root: Path,
+) -> dict[str, set[str]]:
+    """Extract script path references mapped to the templates that reference them.
+
+    Identical scanning logic to ``extract_script_path_refs()``, but instead of
+    returning a flat set of script paths this function returns a mapping from
+    each script path to the set of relative template paths (e.g.
+    ``"agents/build-ac.md"``) in which that script path was found.
+
+    This richer shape is required by the broken-reference report (AC BP-900c-1)
+    which must name the referencing template alongside the missing script path
+    and a suggested action.
+
+    Args:
+        compiled_root: Path to the compiled output root.  Typically
+            ``<target>/.leafcutter`` or ``<target>/.claude``.  The function
+            looks for ``.md`` files under ``compiled_root/agents/`` and
+            ``compiled_root/skills/``.
+
+    Returns:
+        Dict mapping ``"scripts/<path>"`` strings to a set of relative
+        template path strings (e.g. ``{"scripts/ac_store/ac_prioritizer.py":
+        {"agents/build-ac.md"}}``).  Returns an empty dict when no matching
+        references are found or when neither ``agents/`` nor ``skills/`` exist.
+    """
+    refs_to_sources: dict[str, set[str]] = {}
+    dirs_to_scan = [
+        compiled_root / "agents",
+        compiled_root / "skills",
+    ]
+    for scan_dir in dirs_to_scan:
+        if not scan_dir.exists():
+            continue
+        for md_file in scan_dir.rglob("*.md"):
+            try:
+                text = md_file.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            try:
+                rel_path = md_file.relative_to(compiled_root).as_posix()
+            except ValueError:
+                rel_path = md_file.name
+            for pattern in _SCRIPT_PATTERNS:
+                for match in pattern.finditer(text):
+                    script_path = match.group(1)
+                    refs_to_sources.setdefault(script_path, set()).add(rel_path)
+    return refs_to_sources
+
+
 def check_referential_integrity(
     target_root: Path,
     config: dict[str, Any],

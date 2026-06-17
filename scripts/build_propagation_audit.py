@@ -12,8 +12,11 @@ BUSINESS CONTEXT: EPIC-PortableInstallHardening discovered 5 scripts registered
     smoke-test time on a fresh install. AC BP-900b-1-1 adds an external-dependency
     allowlist so agent templates that legitimately reference external scripts
     (e.g. a user-supplied tool path) do not produce broken-reference failures.
-ARCHITECTURE: One public phase function ``propagation_audit`` and one guard
-    function ``check_broken_references``. Parsing uses ``yaml.safe_load`` with a
+    AC BP-900c-1 adds a three-field broken-reference report entry: missing path,
+    referencing template, and a suggested action.
+ARCHITECTURE: One public phase function ``propagation_audit``, one guard
+    function ``check_broken_references``, a ``BrokenRefEntry`` dataclass, and
+    a ``build_broken_ref_report`` factory. Parsing uses ``yaml.safe_load`` with a
     regex fallback if PyYAML is absent. The audit is intentionally fail-open: it
     never raises and always returns, even when warnings are emitted. The allowlist
     is a module-level frozenset constant that callers can extend by passing an
@@ -26,6 +29,7 @@ import logging
 import re
 import shutil
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -138,6 +142,125 @@ def check_broken_references(
     return refs - resolved
 
 
+# ---------------------------------------------------------------------------
+# Broken-reference report entries (AC BP-900c-1)
+# ---------------------------------------------------------------------------
+
+#: Suggested action when the missing script belongs to the leafcutter build
+#: pipeline and should be added as a new deploy phase.
+ACTION_ADD_DEPLOY_PHASE = "add a deploy phase in build_phases.py"
+
+#: Suggested action when the missing script is supplied externally (not built
+#: by leafcutter) and should be registered in the allowlist instead.
+ACTION_ADD_TO_ALLOWLIST = "add to the external-dependency allowlist"
+
+
+def _suggest_action(missing_path: str, allowlist: frozenset[str]) -> str:
+    """Return the appropriate suggested action for a single broken reference.
+
+    A path that is already present in the allowlist constant but still reached
+    this function (e.g. because the caller bypassed the allowlist check) gets
+    the allowlist suggestion so the human understands their options.
+
+    For all other paths the heuristic is: if the path sits under
+    ``scripts/ac_store/`` or ``scripts/feedback/`` — directories that leafcutter
+    owns and deploys — the suggestion is to add a deploy phase.  Everything else
+    defaults to the allowlist suggestion, directing the developer to register the
+    path as an external dependency.
+
+    Args:
+        missing_path: The ``scripts/<path>`` string that was not deployed and not
+            allowlisted.
+        allowlist: The effective allowlist in use during the audit.  Used only as
+            an informational hint; the path is presumed broken when this function
+            is called.
+
+    Returns:
+        One of ``ACTION_ADD_DEPLOY_PHASE`` or ``ACTION_ADD_TO_ALLOWLIST``.
+    """
+    leafcutter_owned_prefixes = (
+        "scripts/ac_store/",
+        "scripts/feedback/",
+        "scripts/commit_guardian/",
+    )
+    if any(missing_path.startswith(prefix) for prefix in leafcutter_owned_prefixes):
+        return ACTION_ADD_DEPLOY_PHASE
+    return ACTION_ADD_TO_ALLOWLIST
+
+
+@dataclass(frozen=True)
+class BrokenRefEntry:
+    """A single broken-reference report entry with all three required fields.
+
+    AC BP-900c-1 requires that each broken-reference entry names the missing
+    script path, the compiled template that references it, and a suggested
+    corrective action.  This dataclass is the canonical carrier for that
+    three-field payload.
+
+    Attributes:
+        missing_path: The ``scripts/<path>`` string that was referenced in
+            the template but is absent from the deployable script set
+            (e.g. ``"scripts/ac_store/ac_prioritizer.py"``).
+        referencing_template: The relative path of the compiled template file
+            in which the missing script was referenced
+            (e.g. ``"agents/build-ac.md"``).
+        suggested_action: A human-readable corrective action.  Always one of
+            ``ACTION_ADD_DEPLOY_PHASE`` or ``ACTION_ADD_TO_ALLOWLIST``.
+    """
+
+    missing_path: str
+    referencing_template: str
+    suggested_action: str
+
+
+def build_broken_ref_report(
+    refs_to_sources: dict[str, set[str]],
+    deployed_scripts: set[str],
+    allowlist: frozenset[str] | None = None,
+) -> list[BrokenRefEntry]:
+    """Build a list of broken-reference report entries with three fields each.
+
+    For every script path in ``refs_to_sources`` that is neither deployed nor
+    allowlisted, this function emits one ``BrokenRefEntry`` per unique
+    (missing_path, referencing_template) pair.  The third field — the suggested
+    action — is derived by ``_suggest_action``.
+
+    This function satisfies AC BP-900c-1: no entry has an empty field, and every
+    entry names the missing path, the referencing template, and a suggested action.
+
+    Args:
+        refs_to_sources: Mapping from ``scripts/<path>`` strings to the set of
+            relative compiled-template paths that reference them.  Typically
+            produced by
+            ``build_referential_integrity.extract_script_path_refs_with_sources()``.
+        deployed_scripts: Set of ``scripts/<path>`` strings that are present in
+            the deployable script manifest.  References found here are resolved.
+        allowlist: Frozenset of ``scripts/<path>`` strings exempt from failure.
+            Defaults to ``EXTERNAL_DEPENDENCY_ALLOWLIST`` when ``None``.
+
+    Returns:
+        List of ``BrokenRefEntry`` instances, one per broken (missing_path,
+        referencing_template) pair.  An empty list means all references are
+        accounted for.
+    """
+    effective_allowlist = EXTERNAL_DEPENDENCY_ALLOWLIST if allowlist is None else allowlist
+    resolved = deployed_scripts | effective_allowlist
+    entries: list[BrokenRefEntry] = []
+    for script_path, source_templates in refs_to_sources.items():
+        if script_path in resolved:
+            continue
+        action = _suggest_action(script_path, effective_allowlist)
+        for template_path in sorted(source_templates):
+            entries.append(
+                BrokenRefEntry(
+                    missing_path=script_path,
+                    referencing_template=template_path,
+                    suggested_action=action,
+                )
+            )
+    return entries
+
+
 def propagation_audit(
     target_root: Path,
     config: dict[str, Any],
@@ -218,4 +341,5 @@ def propagation_audit(
 # ===========================================================================
 # - 2026-05-18 11:30 [EPIC-PortableInstallHardening/T04]: Created module. Fail-open propagation audit that walks .pre-commit-config.yaml hook entries, auto-copies missing scripts from templates, and warns when no template is found. Extracted as sibling module to keep build_phases.py within 400-line limit. (#EPIC-PortableInstallHardening/T04)
 # - 2026-06-16 [BP-900b-1-1]: Added EXTERNAL_DEPENDENCY_ALLOWLIST constant and check_broken_references() guard function. Allowlisted refs are treated as resolved and do not appear in the broken-reference list, satisfying AC BP-900b-1-1.
+# - 2026-06-17 [BP-900c-1]: Added BrokenRefEntry dataclass, _suggest_action() helper, and build_broken_ref_report() factory. Each broken-reference entry now carries all three required fields: missing_path, referencing_template, and suggested_action. Satisfies AC BP-900c-1.
 # ===========================================================================

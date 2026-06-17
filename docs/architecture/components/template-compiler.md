@@ -147,3 +147,51 @@ broken = check_broken_references(refs, deployed, allowlist=custom_allowlist)
 | No | No | **Broken** — appears in return set |
 
 The function is a pure predicate (no I/O, no side effects) and never raises. An empty return set means all references are accounted for and the build may exit zero, satisfying AC BP-900b-1-1.
+
+## Three-Field Broken-Reference Report (BP-900c-1)
+
+When a broken reference is detected, the error report entry must carry three fields so that the developer knows exactly what is wrong and how to fix it:
+
+1. **Missing path** — the `scripts/<path>` string that was referenced but not deployed (e.g. `"scripts/ac_store/ac_prioritizer.py"`)
+2. **Referencing template** — the relative path of the compiled template that contains the reference (e.g. `"agents/build-ac.md"`)
+3. **Suggested action** — one of two canonical strings:
+   - `"add a deploy phase in build_phases.py"` — for paths under leafcutter-owned directories (`scripts/ac_store/`, `scripts/feedback/`, `scripts/commit_guardian/`)
+   - `"add to the external-dependency allowlist"` — for all other paths (externally-supplied scripts)
+
+No field may be empty or omitted.
+
+### Data types
+
+```python
+# scripts/build_propagation_audit.py
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class BrokenRefEntry:
+    missing_path: str           # e.g. "scripts/ac_store/ac_prioritizer.py"
+    referencing_template: str   # e.g. "agents/build-ac.md"
+    suggested_action: str       # ACTION_ADD_DEPLOY_PHASE or ACTION_ADD_TO_ALLOWLIST
+```
+
+### Full-pipeline example
+
+```python
+from build_referential_integrity import extract_script_path_refs_with_sources
+from build_propagation_audit import build_broken_ref_report
+from pathlib import Path
+
+compiled_root = Path("/path/to/consumer/.claude")
+# Step 1 — extract refs WITH source template information
+refs_to_sources = extract_script_path_refs_with_sources(compiled_root)
+# e.g. {"scripts/ac_store/ac_prioritizer.py": {"agents/build-ac.md"}}
+
+deployed = {"scripts/ac_store/generate_ticket_from_ac.py"}
+# Step 2 — build the three-field report
+report = build_broken_ref_report(refs_to_sources, deployed)
+for entry in report:
+    print(entry.missing_path)          # "scripts/ac_store/ac_prioritizer.py"
+    print(entry.referencing_template)  # "agents/build-ac.md"
+    print(entry.suggested_action)      # "add a deploy phase in build_phases.py"
+```
+
+The `extract_script_path_refs_with_sources()` function is provided by `build_referential_integrity.py` alongside the existing `extract_script_path_refs()`. It returns a `dict[str, set[str]]` mapping each script path to the set of template paths that reference it, preserving the per-template provenance required by BP-900c-1.
