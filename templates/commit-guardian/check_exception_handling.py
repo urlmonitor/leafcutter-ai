@@ -27,6 +27,20 @@ DECISION HISTORY
        in a try/except block.
   Exit code 1 on any violation; 0 on clean file.
   Self-contained: only stdlib imports (ast, sys, pathlib).
+- 2026-06-17 [GE-107]: Two robustness bug fixes.
+  Fix 1 — cursor false-positive: _call_matches_io_boundary previously matched
+    .execute()/.executemany()/.callproc() on ANY ast.Name receiver, causing
+    false IO-001 violations for unrelated objects (command.execute(),
+    workflow.executemany(), executor.callproc()). Narrowed to
+    _CURSOR_RECEIVER_NAMES frozenset (cursor, cur, crsr, db_cursor, _cursor,
+    dbcur) so only recognised cursor identifiers are flagged.
+  Fix 2 — uncaught OSError: main() caught only SyntaxError from analyse_file,
+    so path.read_text() raising IsADirectoryError/PermissionError on an
+    unreadable .py path produced an uncaught traceback and an exit 1 that
+    collided with the legitimate "violations found" exit code. Added
+    except OSError alongside except SyntaxError, with a skip message to
+    stderr and continue, mirroring check_placeholder_defaults' OSError
+    handling and satisfying Error Handling Policy Rule 1.
 ====================================================================
 """
 
@@ -82,6 +96,20 @@ _IO_BOUNDARIES: list[tuple[str | None, str]] = [
     ("cursor", "executemany"),
     ("cursor", "callproc"),
 ]
+
+# Recognised cursor receiver names for IO boundary detection.
+# Only ast.Name receiver ids in this set trigger IO-001 for cursor methods
+# (execute, executemany, callproc). Names outside this set are not database
+# cursors and must not be flagged, avoiding false positives on objects such
+# as command.execute(), workflow.executemany(), executor.callproc().
+_CURSOR_RECEIVER_NAMES: frozenset[str] = frozenset({
+    "cursor",
+    "cur",
+    "crsr",
+    "db_cursor",
+    "_cursor",
+    "dbcur",
+})
 
 # Exception type names considered "blind" — too broad without reraise/log
 _BLIND_EXCEPTION_NAMES: frozenset[str] = frozenset({"Exception", "BaseException"})
@@ -199,8 +227,11 @@ def _call_matches_io_boundary(call: ast.Call) -> tuple[str, str] | None:
                 # Named module: requests.get, cursor.execute, etc.
                 if isinstance(value, ast.Name) and value.id == mod:
                     return (mod, attr)
-                # For cursor.execute: match any variable name whose attr is execute
-                if mod == "cursor" and isinstance(value, ast.Name):
+                # For cursor methods (execute, executemany, callproc): only match
+                # receiver names that are recognised cursor identifiers
+                # (_CURSOR_RECEIVER_NAMES). This prevents false positives on
+                # unrelated objects such as command.execute(), executor.callproc().
+                if mod == "cursor" and isinstance(value, ast.Name) and value.id in _CURSOR_RECEIVER_NAMES:
                     return (value.id, attr)
         return None
     if isinstance(func, ast.Name):
@@ -397,6 +428,17 @@ def main() -> int:
             # Syntax errors are already caught by other hooks (e.g. ruff); skip.
             print(
                 f"check_exception_handling: syntax error in {file_path}: {exc}",
+                file=sys.stderr,
+            )
+            continue
+        except OSError as exc:
+            # path.read_text() raises OSError (IsADirectoryError, PermissionError,
+            # etc.) when the path ends in .py but cannot be read as a text file.
+            # Catch and skip rather than letting the traceback propagate — mirrors
+            # check_placeholder_defaults' OSError handling and satisfies Error
+            # Handling Policy Rule 1 (external I/O must be wrapped).
+            print(
+                f"check_exception_handling: cannot read {file_path}: {exc}",
                 file=sys.stderr,
             )
             continue
