@@ -31,8 +31,6 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-
 # ---------------------------------------------------------------------------
 # Path setup — make scripts/ importable regardless of working directory.
 # ---------------------------------------------------------------------------

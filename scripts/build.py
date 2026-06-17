@@ -68,7 +68,6 @@ from build_helpers import (
 from build_glossary import build_glossary
 from build_propagation_audit import (
     propagation_audit,
-    check_broken_references,
     build_broken_ref_report,
     emit_broken_ref_report_jsonl,
 )
