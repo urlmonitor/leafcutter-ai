@@ -44,7 +44,7 @@ delivers_to: null
 expects_from: null
 origin_agent: business-analyst
 created: 2026-06-17
-readiness: draft
+readiness: approved
 priority: medium
 notes: |
   ACS-500 post-implementation spot-check, GAP C. config/ac_store_schema.json's id
@@ -60,4 +60,5 @@ notes: |
 amended_by: []
 superseded_by: null
 covered_by: [ACS-500f-3-i]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-Acpatternenforcementismechanically/04_TICKET-20260617-ACS-500f-3.md
