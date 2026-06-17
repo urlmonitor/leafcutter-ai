@@ -34,7 +34,7 @@ agents:
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
-  llm-expert: needed
+  llm-expert: signed_off
   documentation-expert: not_needed
   pr-reviewer: needed
   commit: needed
@@ -170,22 +170,22 @@ invocation — no `&&`, `;`, `||`, or `cd`-prefixed chains.
 
 | AC | AC ID | Test | Implementation | Validated |
 |----|-------|------|----------------|-----------|
-| AC-1 | BO-210c-1 | | | |
-| AC-2 | BO-210c-2 | | | |
-| AC-3 | BO-210c-1-i | | | |
-| AC-4 | BO-210c-1-ii | | | |
-| AC-5 | BO-210c-1-iii | | | |
-| AC-6 | BO-210c-2-i | | | |
-| AC-7 | BO-210c | | | |
+| AC-1 | BO-210c-1 | | Added Steps 4a.1–4a.3 in SKILL.md: parse AUTOFIX_AGENT, read capsule, dispatch originator with {ticket_path, context_capsule, failing_hook_ids, raw_hook_output} | |
+| AC-2 | BO-210c-2 | | Step 4b preserves generic light-model route for non-judgment hooks; Step 5 caps retry at exactly once, surfaces on second failure | |
+| AC-3 | BO-210c-1-i | | Re-dispatch prompt instruction 4 explicitly forbids sub-agent spawning, instruction 3 instructs reuse of capsule.consumers_checked | |
+| AC-4 | BO-210c-1-ii | | Step 4a.2 emits warning and continues with empty capsule when context_capsule absent — never blocks | |
+| AC-5 | BO-210c-1-iii | | All new Bash blocks are single-command; pre-existing `\|\| true` chains in commit.md Step 0 split into separate blocks | |
+| AC-6 | BO-210c-2-i | | Re-dispatch prompt instruction 5 instructs coder to return status: blocker, not spawn research-agent, not guess | |
+| AC-7 | BO-210c | | commit.md Step 5 updated to pass ticket_path to precommit-autofix skill with explanation of its use | |
 
 ## Implementation Tasks
 
-- [ ] Read `templates/skills/precommit-autofix/SKILL.md` in full to understand
+- [x] Read `templates/skills/precommit-autofix/SKILL.md` in full to understand
   the current dispatch logic (where the hook failure is parsed, where the fixer
   is chosen, and where retry happens).
-- [ ] Read `templates/agents/commit.md` to understand how the autofix skill is
+- [x] Read `templates/agents/commit.md` to understand how the autofix skill is
   invoked today and where `ticket_path` must be threaded in.
-- [ ] Edit `precommit-autofix` SKILL.md to add the originator re-dispatch routing:
+- [x] Edit `precommit-autofix` SKILL.md to add the originator re-dispatch routing:
   - For each gating hook failure: check `blocking_hook_ids` list (from ticket 01).
   - Look up the hook's `tier` in hooks_manifest (from ticket 02).
   - `judgment` tier: parse `AUTOFIX_AGENT:` line from hook output; read capsule
@@ -197,8 +197,8 @@ invocation — no `&&`, `;`, `||`, or `cd`-prefixed chains.
     cross-file info is needed that is absent from the capsule.
   - Absent capsule: warn-and-proceed, dispatch with empty capsule.
   - Single retry after any fixer; surface on second failure.
-- [ ] Edit `commit.md` to thread `ticket_path` into the autofix call.
-- [ ] Verify every Bash command example in all touched files is a single simple
+- [x] Edit `commit.md` to thread `ticket_path` into the autofix call.
+- [x] Verify every Bash command example in all touched files is a single simple
   command (no chains, no `cd`-prefix).
 
 ## Risk & Safety
@@ -215,6 +215,18 @@ invocation — no `&&`, `;`, `||`, or `cd`-prefixed chains.
   SKILL.md, signoff SKILL.md, commit.md, and the three coder templates if
   re-touched) must be single simple commands.
 
+## Sign-offs
+
+- [x] llm-expert — 2026-06-17 10:00
+
 ## Comments
 
-_(Append-only log — leave blank when authoring.)_
+### 2026-06-17 10:00 — llm-expert (status: ok)
+
+feedback-id: fb_2026-06-17_36c7c7b4
+completion_manifest:
+  template_written: true
+  prompt_quality_checklist_passed: true
+  convention_violations_resolved: true
+
+Implemented originator re-dispatch routing in `templates/skills/precommit-autofix/SKILL.md` by adding Steps 4a (judgment-tier: parse AUTOFIX_AGENT, read context_capsule from ticket sign-off, dispatch originator with capsule, retry once) and 4b (non-judgment generic route preserved). Threaded `ticket_path` into the `precommit-autofix` skill invocation in `templates/agents/commit.md` Step 5 with an explanation of its role. Fixed pre-existing shell convention violations in commit.md Step 0 (split `|| true` chains into separate single-command blocks). All seven ACs satisfied; no outstanding convention violations.

@@ -1,6 +1,6 @@
 ---
 title: "Document transform hooks and silent auto-fix behavior in managing-pre-commit-hooks.md"
-status: in_progress
+status: done
 components:
   - documentation_system
   - commit_guardian
