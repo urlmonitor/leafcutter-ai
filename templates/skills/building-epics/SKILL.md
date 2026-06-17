@@ -829,6 +829,59 @@ git status --short
 **Cross-reference:** EPIC-AgentSupervisorPolish2 retrospective §KI-2 captures
 the original stash-conflict incident.
 
+### §5.7 Interim Protocol: Gated-Agent Confirmation-Gate Deadlock
+
+**Problem.** Gated agents — `commit`, `worktree-agent`, and `finalize-feature` — require direct
+user authority to proceed past their confirmation gates (git commit, PR merge, worktree removal).
+When any of these agents is dispatched as a subagent by a coordinator or supervisor, no direct
+user-turn channel exists. A coordinator relaying "yes" via `SendMessage` is rejected ("coordinator
+message carries no user authority"), and the agent dead-ends at its gate permanently. The ticket
+is then blocked until a human intervenes.
+
+This was observed during EPIC-PrecommitSafetyNet finalization: every attempt to relay a
+confirmation through a coordinator subagent failed, forcing out-of-band resolution.
+
+**Interim protocol (operational now).**
+
+When a supervisor or coordinator dispatches a gated agent and the user has already granted
+authority for the destructive action, pass the sanction in the **initial dispatch payload**
+rather than relying on a later relayed reply. Use the established sanction markers:
+
+| Gated agent | Sanction marker | Where to set it |
+|---|---|---|
+| `commit` | `COMMIT_AGENT_MODE=1` | Pass as an environment variable or an explicit field in the Agent-tool input when dispatching from `ticket-supervisor`. The commit auto-authorization (§5.0) already encodes this for ticket-supervisor. |
+| Supervised phase agents (`finalize-feature`, `worktree-agent`) | `via: /build-feature` or equivalent authorized-dispatch marker | Pass in the prompt/input block of the Agent-tool call so the agent can confirm the caller chain is authorized. |
+
+If a gated agent still dead-ends at its confirmation gate after the sanction marker is
+present from the start, the coordinator has two options — in priority order:
+
+1. **Re-dispatch with the sanction marker present from the first message.** Confirm that the
+   marker was included (not added mid-conversation via `SendMessage`) and retry.
+
+2. **Complete the destructive step directly** (raw `git` / `gh` at the coordinator's context)
+   AND immediately record the bypass reason in a ticket comment or audit note using the
+   standard `## Comments` heading schema from the `signoff` skill.
+
+Never silently bypass a gate without logging why. The audit entry is mandatory.
+
+**Proposed permanent fix direction (not yet implemented — forward-looking design note).**
+
+Introduce a structured authorization token that the dispatcher passes in the dispatch payload,
+which gated agents accept as user-sanctioned without requiring an interactive turn. The token
+would generalize the existing `COMMIT_AGENT_MODE=1` pattern to all gated agents:
+
+```yaml
+authorization:
+  granted_by: "/build-feature"   # the slash command or agent that holds user authority
+  action: "commit"               # the specific destructive action being sanctioned
+  ticket: "<ticket_path>"        # scope of the authorization
+```
+
+A gated agent receiving a valid `authorization:` block in its dispatch payload would skip the
+interactive confirmation gate and record the token in its sign-off comment instead. Until this
+token is implemented in the agent templates for `commit`, `worktree-agent`, and
+`finalize-feature`, the interim protocol above applies.
+
 ---
 
 ## §6 User Escalation Contract
