@@ -30,7 +30,7 @@ agents:
   test-runner: not_needed
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 user_facing_surface: null
 ---
@@ -145,7 +145,7 @@ originator re-dispatch."
 ## Sign-offs
 - [x] python-coder — 2026-06-17 12:00
 - [x] pr-reviewer — 2026-06-17 15:45
-- [ ] commit
+- [x] commit — 2026-06-17 16:10
 - [ ] pull-request
 
 ## Comments
@@ -170,3 +170,10 @@ completion_manifest:
   ac4_verified: true
   no_high_confidence_blockers: true
 All four ACs verified against the staged diff and the deployed config. AC-1: `.claude/precommit-autofix.json` has `defaults`, `commit_review`, `rules`; no `routes` key present. AC-2: `blocking_hook_ids` array contains exactly the seven required hook IDs as the sole gating authority. AC-3: `templates/scripts/precommit-autofix.json` is byte-identical to the deployed config. AC-4: `build_config_scaffolds.py` loads the scaffold from the canonical template at build time, replacing the old inline stub; error handling is properly scoped (OSError, JSONDecodeError) with a fallback. No high-confidence blockers found.
+
+### 2026-06-17 16:10 — commit (status: ok)
+feedback-id: fb_2026-06-17_0b1831d1
+completion_manifest:
+  implementation_committed: true
+  ticket_signed_off: true
+Implementation files committed. Ticket sign-off complete.
