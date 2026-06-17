@@ -63,11 +63,20 @@ from build_helpers import (
     write_build_manifest,
 )
 from build_glossary import build_glossary
-from build_propagation_audit import propagation_audit
+from build_propagation_audit import (
+    propagation_audit,
+    check_broken_references,
+    build_broken_ref_report,
+    emit_broken_ref_report_jsonl,
+)
 from build_claude_settings import build_claude_settings
 from build_roadmap_phase import build_roadmap
 from build_placeholder_detection import scan_for_placeholders, format_placeholder_report
-from build_referential_integrity import check_referential_integrity, format_integrity_report
+from build_referential_integrity import (
+    check_referential_integrity,
+    format_integrity_report,
+    extract_script_path_refs_with_sources,
+)
 from build_config_scaffolds import build_config_scaffolds
 from build_ac_store_scaffold import build_ac_store_scaffold
 from build_halt_guard import (
@@ -311,6 +320,163 @@ def _validate_all(config: dict, package_root: Path, validate_only: bool, dry_run
             return 1
     return 0
 
+
+def _manifest_ac_store_scripts(package_root: Path) -> set[str]:
+    """Return ``scripts/ac_store/<name>`` entries for all non-.pyc source files.
+
+    Scans ``package_root/scripts/ac_store/`` and returns one manifest entry per
+    file, matching what ``build_ac_store`` deploys to the target project.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.
+
+    Returns:
+        Set of ``scripts/ac_store/<name>`` strings, or empty set when absent.
+    """
+    result: set[str] = set()
+    src = package_root / "scripts" / "ac_store"
+    if src.is_dir():
+        for f in src.iterdir():
+            if f.is_file() and f.suffix != ".pyc":
+                result.add(f"scripts/ac_store/{f.name}")
+    return result
+
+
+def _manifest_commit_guardian_scripts(package_root: Path) -> set[str]:
+    """Return ``scripts/commit_guardian/<rel>`` entries for all template .py files.
+
+    Scans both ``templates/scripts/commit_guardian/`` (canonical) and
+    ``templates/commit-guardian/`` (legacy) and unions their ``.py`` files.
+    Scanning both paths prevents false positives for scripts that reside only in
+    the legacy location (e.g. ``check_v2_ac_store_alignment.py``).
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.
+
+    Returns:
+        Set of ``scripts/commit_guardian/<rel>`` strings, or empty set when
+        both source directories are absent.
+    """
+    result: set[str] = set()
+    for src in (
+        package_root / "templates" / "scripts" / "commit_guardian",
+        package_root / "templates" / "commit-guardian",
+    ):
+        if src.is_dir():
+            for f in src.rglob("*"):
+                if f.is_file() and f.suffix == ".py":
+                    result.add(f"scripts/commit_guardian/{f.relative_to(src).as_posix()}")
+    return result
+
+
+def _manifest_feedback_scripts(package_root: Path) -> set[str]:
+    """Return ``scripts/feedback/<name>`` entries for all source .py files.
+
+    Scans ``package_root/scripts/feedback/`` dynamically, eliminating the
+    previous hardcoded three-name list that caused Class A false positives for
+    ``aggregate.py`` and ``resolve_feedback.py``.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.
+
+    Returns:
+        Set of ``scripts/feedback/<name>`` strings, or empty set when absent.
+    """
+    result: set[str] = set()
+    src = package_root / "scripts" / "feedback"
+    if src.is_dir():
+        for f in src.iterdir():
+            if f.is_file() and f.suffix == ".py":
+                result.add(f"scripts/feedback/{f.name}")
+    return result
+
+
+def _get_source_deployable_scripts(package_root: Path) -> set[str]:
+    """Compute the set of script paths that build.py will deploy from package source.
+
+    Delegates to per-phase helper functions and unions their results.  Four
+    deployment locations are covered:
+
+    * ``scripts/ac_store/`` — from ``_manifest_ac_store_scripts``.
+    * ``scripts/commit_guardian/`` — from ``_manifest_commit_guardian_scripts``.
+    * ``scripts/feedback/`` — from ``_manifest_feedback_scripts``.
+    * ``scripts/<name>`` — two named standalone scripts from ``templates/scripts/``.
+
+    This function is intentionally source-only and never reads the target
+    project directory: it is used as a preflight guard BEFORE any output is
+    written, so the result reflects what *will* be deployed rather than what
+    *has* been deployed.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.
+
+    Returns:
+        Set of ``scripts/<path>`` strings (forward-slash separated) for all
+        scripts that will be deployed to the target project on the next build
+        run.  Returns an empty set when all source directories are absent.
+    """
+    manifest = (
+        _manifest_ac_store_scripts(package_root)
+        | _manifest_commit_guardian_scripts(package_root)
+        | _manifest_feedback_scripts(package_root)
+    )
+
+    # Standalone scripts (build_standalone_scripts) — two named scripts only
+    templates_scripts = package_root / "templates" / "scripts"
+    for fname in ("goal_to_epic.py", "build_ac_mode_detection.py"):
+        if (templates_scripts / fname).is_file():
+            manifest.add(f"scripts/{fname}")
+
+    return manifest
+
+
+def _check_script_reference_guard(package_root: Path) -> int:
+    """Preflight guard: exit non-zero when broken script references are detected.
+
+    Scans all source agent and skill templates for script path references
+    (patterns: ``python3 scripts/<path>``, ``python scripts/<path>``,
+    ``sys.path.insert(<N>, 'scripts/<path>')`` and the double-quoted variant).
+    Cross-checks the extracted references against the set of scripts that this
+    build run will deploy, using the external-dependency allowlist from
+    ``build_propagation_audit.EXTERNAL_DEPENDENCY_ALLOWLIST``.
+
+    When broken references are found, the error report is emitted to stderr as
+    JSONL (one JSON object per line) with keys ``"missing_path"``,
+    ``"referencing_template"``, and ``"suggested_action"`` (AC BP-900c-2).
+    No error output is written to stdout so that piped build output is not
+    polluted.
+
+    This guard runs BEFORE ``_run_phases()`` writes any output to the target
+    project directory, so no partial deployment is written when broken
+    references exist.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root. Used to
+            locate ``templates/agents/``, ``templates/skills/``, and the
+            source script directories.
+
+    Returns:
+        0 if all script references are resolved (build may continue).
+        1 if one or more broken references are found (build must abort).
+    """
+    templates_dir = package_root / "templates"
+
+    # Extract script references with source-template provenance for JSONL reporting.
+    refs_to_sources = extract_script_path_refs_with_sources(templates_dir)
+
+    if not refs_to_sources:
+        return 0
+
+    deployable = _get_source_deployable_scripts(package_root)
+    entries = build_broken_ref_report(refs_to_sources, deployable)
+
+    if not entries:
+        return 0
+
+    # Emit structured JSONL to stderr (AC BP-900c-2): all error output on stderr,
+    # nothing on stdout, so piped build output is never polluted.
+    emit_broken_ref_report_jsonl(entries)
+    return 1
 
 
 def _read_package_version(package_root: Path) -> str:
@@ -726,6 +892,14 @@ def main(argv: list[str] | None = None) -> int:
     if _validate_all(config, package_root, args.validate_only, args.dry_run):
         return 1
 
+    # Script reference guard: exit non-zero and halt before writing any output
+    # when templates reference scripts that will not be deployed (BP-900b-3).
+    # Skip under --validate-only since the guard is a deployment preflight, not
+    # a config correctness check.
+    if not args.validate_only:
+        if _check_script_reference_guard(package_root):
+            return 1
+
     if args.validate_only:
         _success("Config validation complete (no files written).")
         return 0
@@ -1036,4 +1210,13 @@ if __name__ == "__main__":
 #   build_ac_store) entry to artifact_phases after ("Workflow scripts",
 #   build_workflow_scripts). Closes the portable-skill/missing-script gap
 #   for ac-scanner and build-ac per ADR-013. (#EPIC-AcPipelineDeployGaps/03)
+# - 2026-06-17 [python-coder/EPIC-BuildGuardFalsePositive/02]: Added
+#   _get_source_deployable_scripts() and _check_script_reference_guard() preflight
+#   functions. The manifest function now scans commit_guardian and feedback source
+#   directories dynamically — eliminating the hardcoded name lists that caused 10
+#   Class A false positives (8 commit_guardian + 2 feedback). The guard emits
+#   broken-ref JSONL to stderr and exits 1 before _run_phases() writes any output.
+#   Added extract_script_path_refs_with_sources import from build_referential_integrity
+#   and build_broken_ref_report/emit_broken_ref_report_jsonl from build_propagation_audit.
+#   (#EPIC-BuildGuardFalsePositive/02)
 # ====================================================================
