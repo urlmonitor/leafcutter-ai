@@ -1,6 +1,6 @@
 ---
 title: "Reconcile precommit-autofix.json to documented schema with blocking_hook_ids"
-status: todo
+status: in_progress
 components:
   - precommit_hooks
   - commit_guardian
@@ -21,11 +21,11 @@ ac_traceability:
   - BO-210a-1
   - BO-210a-2
   - BO-210a-1-i
-ac_coverage: 0/4
+ac_coverage: 4/4
 agents:
   architect-review: not_needed
   test-writer: not_needed
-  python-coder: needed
+  python-coder: signed_off
   sql-coder: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
@@ -89,48 +89,48 @@ originator re-dispatch."
 
 ## Acceptance Criteria
 
-- [ ] AC-1 (BO-210a-1): The deployed `.claude/precommit-autofix.json` contains a
+- [x] AC-1 (BO-210a-1): The deployed `.claude/precommit-autofix.json` contains a
   `defaults` section (model + agent), a `commit_review` section (enabled flag,
   model, agent), and a `rules` list — the empty `routes` object is gone and no
   field outside the documented schema exists.
-- [ ] AC-2 (BO-210a-2): The config contains exactly one `blocking_hook_ids` array
+- [x] AC-2 (BO-210a-2): The config contains exactly one `blocking_hook_ids` array
   listing all seven gating hook ids: `check-complexity`, `check-docstrings`,
   `check-exception-handling`, `check-file-size`, `check-ac-schema`,
   `check-ac-limits`, `check-contract-shrinking`. No other field independently
   determines whether a hook gates a commit.
-- [ ] AC-3 (BO-210a-1-i): The packaged template source under `templates/scripts/`
+- [x] AC-3 (BO-210a-1-i): The packaged template source under `templates/scripts/`
   contains the same `defaults`, `commit_review`, `rules`, and `blocking_hook_ids`
   content as the deployed config. A fresh consumer install receives the populated
   config, not the empty stub.
-- [ ] AC-4 (BO-210a): The build.py round-trip verifies parity between the deployed
+- [x] AC-4 (BO-210a): The build.py round-trip verifies parity between the deployed
   config and the template source — neither diverges after reconcile.
 
 ## AC Coverage
 
 | AC | AC ID | Test | Implementation | Validated |
 |----|-------|------|----------------|-----------|
-| AC-1 | BO-210a-1 | | | |
-| AC-2 | BO-210a-2 | | | |
-| AC-3 | BO-210a-1-i | | | |
-| AC-4 | BO-210a | | | |
+| AC-1 | BO-210a-1 | | Rewrote `.claude/precommit-autofix.json` with defaults/commit_review/rules; removed routes key | |
+| AC-2 | BO-210a-2 | | Added `blocking_hook_ids` array with all 7 gating hook ids as sole authority | |
+| AC-3 | BO-210a-1-i | | Created `templates/scripts/precommit-autofix.json`; updated `build_config_scaffolds.py` to load from it; diff confirms byte-identical parity | |
+| AC-4 | BO-210a | | build_config_scaffolds loads template at build time; `diff` of both files shows no divergence | |
 
 ## Implementation Tasks
 
-- [ ] Read `templates/skills/precommit-autofix/SKILL.md` to extract the exact
+- [x] Read `templates/skills/precommit-autofix/SKILL.md` to extract the exact
   documented schema fields (`defaults`, `commit_review`, `rules[]`).
-- [ ] Read `scripts/build.py` to find the template source path for
+- [x] Read `scripts/build.py` to find the template source path for
   `precommit-autofix.json` (look for how `commit_guardian.json` template path
   is referenced as a model).
-- [ ] Rewrite `.claude/precommit-autofix.json` with:
+- [x] Rewrite `.claude/precommit-autofix.json` with:
   - `defaults` section (model: haiku tier, agent: generic)
   - `commit_review` section (enabled: true, model: sonnet tier, agent: commit-reviewer)
   - `rules` list (per-hook overrides for the documented hook ids)
   - `blocking_hook_ids` array with all seven hook ids listed above
   - Remove the empty `routes` key
-- [ ] Apply the same change to the packaged template source under `templates/scripts/`
+- [x] Apply the same change to the packaged template source under `templates/scripts/`
   (never edit one side only).
-- [ ] Run the build.py round-trip to verify parity between deployed and template.
-- [ ] Validate the result parses as valid JSON conforming to the schema.
+- [x] Run the build.py round-trip to verify parity between deployed and template.
+- [x] Validate the result parses as valid JSON conforming to the schema.
 
 ## Risk & Safety
 
@@ -142,6 +142,21 @@ originator re-dispatch."
 - Shell convention: all Bash commands in any edited template block must be
   single simple invocations (no `&&`, `;`, `||`, or `cd`-prefixed chains).
 
+## Sign-offs
+- [x] python-coder — 2026-06-17 12:00
+- [ ] pr-reviewer
+- [ ] commit
+- [ ] pull-request
+
 ## Comments
 
-_(Append-only log — leave blank when authoring.)_
+### 2026-06-17 12:00 — python-coder (status: ok)
+feedback-id: fb_2026-06-17_1d546f22
+completion_manifest:
+  deployed_config_written: true
+  template_source_created: true
+  build_config_scaffolds_updated: true
+  json_parity_verified: true
+  blocking_hook_ids_correct: true
+  ruff_clean: true
+Created `templates/scripts/precommit-autofix.json` as the canonical template source containing the full documented schema (`defaults`, `commit_review`, `blocking_hook_ids`, `rules`). Wrote the same content to `.claude/precommit-autofix.json` (gitignored deployed config). Updated `build_config_scaffolds.py` to load the scaffold content from the template file at build time instead of using an inline stub, establishing the build.py round-trip parity required by AC-4. `diff` of both JSON files confirms byte-identical parity; ruff check passes; all 7 blocking hook IDs are present.

@@ -1,6 +1,6 @@
 ---
 title: "New transform-tier hooks, manifest tier field, and AUTOFIX_AGENT emission"
-status: todo
+status: in_progress
 components:
   - commit_guardian
   - precommit_hooks
@@ -33,7 +33,7 @@ ac_traceability:
 ac_coverage: 0/7
 agents:
   architect-review: not_needed
-  test-writer: needed
+  test-writer: signed_off
   python-coder: needed
   sql-coder: not_needed
   test-runner: needed
@@ -286,6 +286,23 @@ assertion: "exit.*0|Transformed|git add"
 placeholder_signature: "TODO|PLACEHOLDER"
 ```
 
+## Sign-offs
+
+- [x] test-writer — 2026-06-17 11:30
+- [ ] python-coder
+- [ ] test-runner
+- [ ] pr-reviewer
+- [ ] commit
+- [ ] pull-request
+
 ## Comments
 
 _(Append-only log — leave blank when authoring.)_
+
+### 2026-06-17 11:30 — test-writer (status: ok)
+feedback-id: fb_2026-06-17_6505d721
+completion_manifest:
+  test_stubs_written: true
+  tests_confirmed_red: true
+  test_file_location_correct: true
+Wrote 12 failing test stubs in unit_tests/commit_guardian/test_transform_hooks_and_autofix_emission.py covering all 7 ACs (AC-1 through AC-7). All 12 tests confirmed RED: 10 fail with FileNotFoundError (transform modules not yet implemented), 2 fail with exit code 2 (check_exception_handling.py not yet in scripts/commit_guardian/). Red baseline established — python-coder must implement transform_doc_frontmatter.py, transform_description_field.py, add tier fields to commit_guardian.json, add check_exception_handling.py to scripts/commit_guardian/, and add AUTOFIX_AGENT emission to make all tests green.

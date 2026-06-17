@@ -1,6 +1,6 @@
 ---
 title: "Coder templates emit gated context_capsule in sign-off; backward-compatible"
-status: todo
+status: in_progress
 components:
   - llm_authoring
   - python_coding
@@ -32,9 +32,9 @@ agents:
   sql-coder: not_needed
   frontend-coder: not_needed
   test-runner: not_needed
-  llm-expert: needed
+  llm-expert: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 user_facing_surface: null
@@ -150,9 +150,9 @@ skill logic reads."
 
 ## Implementation Tasks
 
-- [ ] Read the current `templates/agents/python-coder.md` sign-off section to
+- [x] Read the current `templates/agents/python-coder.md` sign-off section to
   understand where the completion_manifest instruction sits.
-- [ ] Add capsule-emission instruction to the sign-off section of all three
+- [x] Add capsule-emission instruction to the sign-off section of all three
   coder templates:
   - Gate: fires only when coder's own pre-completion check reports a
     warn-tier complexity or file-size signal.
@@ -163,15 +163,15 @@ skill logic reads."
     lower-priority fields first (files_touched_rationale and design_constraints
     before red_baseline), append `# TRUNCATED` marker, always preserve `intent`
     and `consumers_checked` in full.
-- [ ] Edit `templates/skills/signoff/SKILL.md`:
+- [x] Edit `templates/skills/signoff/SKILL.md`:
   - Add a section documenting `context_capsule` as optional and
     backward-compatible-absent.
   - State the length cap and truncation rule.
   - Mirror the existing completion_manifest absence-handling language.
-- [ ] Edit `templates/skills/precommit-autofix/SKILL.md`:
+- [x] Edit `templates/skills/precommit-autofix/SKILL.md`:
   - Add a note that an absent capsule is warn-and-proceed, never block
     (the full re-dispatch logic editing happens in ticket 04).
-- [ ] Verify all edited Bash command examples in touched templates are single
+- [x] Verify all edited Bash command examples in touched templates are single
   simple commands (no chains).
 
 ## Risk & Safety
@@ -185,6 +185,30 @@ skill logic reads."
 - Shell convention: verify all Bash blocks in touched templates use single
   simple commands.
 
+## Sign-offs
+
+- [x] llm-expert — 2026-06-17 15:00
+- [x] pr-reviewer — 2026-06-17 15:30
+
 ## Comments
 
 _(Append-only log — leave blank when authoring.)_
+
+### 2026-06-17 15:30 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-17_dcc28185
+completion_manifest:
+  all_acs_verified: true
+  bash_chain_check: true
+  high_confidence_blockers: none
+AC-1 (BO-210b-1): PASS — All three coder templates (python-coder, sql-coder, frontend-coder) contain a `context_capsule:` emission instruction gated on warn-tier signal with exactly the five required fields: `intent`, `files_touched_rationale`, `consumers_checked`, `red_baseline`, `design_constraints`.
+AC-2 (BO-210b-2): PASS — `signoff/SKILL.md` §2b.1 explicitly states the capsule is optional and backward-compatible-absent. `precommit-autofix/SKILL.md` documents warn-and-proceed on absent capsule and adds a Constraints bullet enforcing the same.
+AC-3 (BO-210b-1-i): PASS — All three coder templates document a 2000-character cap, truncation order (files_touched_rationale → design_constraints → red_baseline), preservation of `intent` and `consumers_checked` in full, and appending `# TRUNCATED` marker.
+AC-4 (BO-210b): PASS — All new template blocks contain zero Bash commands (YAML + prose only); no `&&`, `;`, `||`, or `cd` chains present.
+
+### 2026-06-17 15:00 — llm-expert (status: ok)
+feedback-id: fb_2026-06-17_199c96ca
+completion_manifest:
+  template_written: true
+  prompt_quality_checklist_passed: true
+  convention_violations_resolved: true
+Added `context_capsule:` emission instructions (gated on warn-tier signal, 5 fields, 2000-char cap, truncation rule preserving `intent` + `consumers_checked`) to sign-off sections of `python-coder.md`, `sql-coder.md`, and `frontend-coder.md`. Added §2b.1 to `signoff/SKILL.md` documenting the capsule as optional and backward-compatible-absent with the full length-cap and truncation spec. Added warn-and-proceed absence-handling note and constraint to `precommit-autofix/SKILL.md`. All new template blocks contain zero Bash commands (YAML + prose only); AC-4 verified clean.

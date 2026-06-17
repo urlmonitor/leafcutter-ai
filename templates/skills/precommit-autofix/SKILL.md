@@ -101,12 +101,29 @@ When invoked **before** `git commit` (not in response to a failure), and `commit
 3. Prompt the reviewer with the diff and the project conventions in `CLAUDE.md`. Ask for blocking issues only — bugs, missing tests, convention drift. Tell it to skip nits.
 4. Surface the reviewer's findings to the user before committing. If blocking issues are reported, fix them or get user approval to proceed anyway.
 
+## Context Capsule — absence handling
+
+When reading a sign-off comment to gather context for re-dispatch (e.g. to
+pass the originating coder's design context to a re-dispatched fixer), a
+`context_capsule:` block may or may not be present.
+
+**Treat an absent `context_capsule:` block as backward-compatible-absent:**
+
+- Emit one warning line: `context_capsule absent in <agent-name> sign-off — proceeding without design context`.
+- Continue the re-dispatch path with whatever context is available.
+- **Never block** a fix attempt or a commit retry because the capsule is absent.
+
+This mirrors the existing `completion_manifest` legacy-compatibility behavior
+(see signoff SKILL.md §2b). An absent capsule is not an error — it means
+the originating coder's pre-completion checks emitted no warn-tier signals.
+
 ## Constraints
 
 - **Never bypass hooks** with `--no-verify`. The whole point is to satisfy them, not skip them.
 - **Never escalate beyond one bump** without telling the user — if Sonnet can't fix it after Haiku tried, that signals a real problem worth surfacing.
 - **Trust the JSON.** If a routing decision feels wrong, edit the JSON and reload — don't hardcode overrides in this skill.
 - **Don't dispatch for `apply-sql-changes` or other `category: auto` rules** — those are auto-applied by the guardian.
+- **Don't block on absent `context_capsule`** — treat it as warn-and-proceed per the Context Capsule — absence handling section above.
 
 ## Example invocation
 
