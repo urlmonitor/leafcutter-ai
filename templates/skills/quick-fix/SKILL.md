@@ -167,6 +167,7 @@ id: <AC-ID>
 status: active
 component: <component-id>
 title: "<one-line title describing the correct behaviour the fix enforces>"
+origin_agent: <committing user or agent identity>
 criteria: |
   Given <context matching the diagnosed situation>
   When  <the action or input that previously triggered the bug>
@@ -174,6 +175,12 @@ criteria: |
   And   the bug symptom ("<symptom>") must not occur
 notes: "Authored by /quick-fix. Root cause: <root_cause>."
 ```
+
+The `origin_agent` field is **required** on every new AC file by the
+`check-ac-governance` pre-commit hook (ACS-400c-1) — it identifies the criteria
+author. Omitting it hard-blocks the Phase 5 commit. Set it to the committing
+user's identity (the human running `/quick-fix`); fall back to a recognised
+authoring agent name only when no human identity is available.
 
 This AC YAML file is permanent. It must NOT be deleted or moved after the
 ticket lifecycle closes. Use the `Write` tool to create it.
