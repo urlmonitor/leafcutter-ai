@@ -1,6 +1,6 @@
 ---
 title: "Originator re-dispatch: precommit-autofix reads capsule and re-dispatches originating agent"
-status: in_progress
+status: done
 components:
   - precommit_hooks
   - supervisor_system
@@ -38,7 +38,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 user_facing_surface: null
 ---
 
@@ -220,6 +220,7 @@ invocation — no `&&`, `;`, `||`, or `cd`-prefixed chains.
 - [x] llm-expert — 2026-06-17 10:00
 - [x] pr-reviewer — 2026-06-17 11:30
 - [x] commit — 2026-06-17 12:00
+- [x] pull-request — 2026-06-17 12:30
 
 ## Comments
 
@@ -252,3 +253,13 @@ Reviewed the diff across `templates/skills/precommit-autofix/SKILL.md` (173 inse
 Committed: feat(precommit-autofix): add originator re-dispatch for judgment-tier hook failures
 SHA: 1be80a9
 3 files changed, 198 insertions(+), 41 deletions(-)
+
+### 2026-06-17 12:30 — pull-request (status: ok)
+
+feedback-id: fb_2026-06-17_c9f7e76f
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+
+Pushed branch EPIC-PrecommitSafetyNet to origin (7b1cd96..3463ceb); existing PR #89 updated. All agents signed_off or not_needed — ticket marked done.
