@@ -124,13 +124,11 @@ def _extract_description(path: Path) -> str:
 
     # --- Fall back to first non-blank, non-heading, non-comment body line ---
     in_frontmatter = text.startswith("---")
-    past_frontmatter = not in_frontmatter
     in_html_comment = False
     for line in text.splitlines():
         if in_frontmatter:
             if line.strip() == "---":
                 in_frontmatter = False
-                past_frontmatter = True
             continue
         # Track multi-line HTML comment blocks.
         if in_html_comment:

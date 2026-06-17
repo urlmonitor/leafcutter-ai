@@ -15,7 +15,6 @@ ARCHITECTURE: Tests invoke the validation function directly (not via subprocess)
 from __future__ import annotations
 
 import importlib.util
-import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -342,7 +341,7 @@ class TestComponentsJsonCurrentState(unittest.TestCase):
         self.assertEqual(
             all_errors,
             [],
-            f"docs/components.json has minimum-schema violations:\n" + "\n".join(all_errors),
+            "docs/components.json has minimum-schema violations:\n" + "\n".join(all_errors),
         )
 
 

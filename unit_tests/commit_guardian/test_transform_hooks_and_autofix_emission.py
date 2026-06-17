@@ -465,7 +465,7 @@ class TestHooksManifestTierField(unittest.TestCase):
             [],
             msg=(
                 "The following hooks_manifest entries are missing a valid tier field "
-                f"(expected 'transform' or 'judgment'):\n  "
+                "(expected 'transform' or 'judgment'):\n  "
                 + "\n  ".join(missing_tier)
             ),
         )

@@ -16,7 +16,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 import unittest
 
 from commit_classifier import (
-    ClassificationResult,
     FileGroup,
     classify_staged_files,
     group_files_by_type,

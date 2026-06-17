@@ -18,7 +18,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-import pytest
 import yaml
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -305,7 +304,7 @@ class TestResolveEdgeCases:
             f"Expected 4 layers even when one atomic is missing, got {len(stack)}"
         )
         missing_layer = next(
-            (l for l in stack if l["ac_id"] == "PTN-MISSING"), None
+            (item for item in stack if item["ac_id"] == "PTN-MISSING"), None
         )
         assert missing_layer is not None, "PTN-MISSING layer must still appear"
         assert missing_layer["criteria"] is None, (
@@ -359,7 +358,7 @@ class TestLayerOrdering:
         stack = resolve_behavior_stack("PAGE-001", id_index)
 
         composite_idx = next(
-            i for i, l in enumerate(stack) if l["layer"] == "composite"
+            i for i, item in enumerate(stack) if item["layer"] == "composite"
         )
         for i, layer in enumerate(stack):
             if layer["layer"] == "atomic":
@@ -381,7 +380,7 @@ class TestLayerOrdering:
         id_index = _build_index_from_dir(tmp_path)
         stack = resolve_behavior_stack("PAGE-001", id_index)
 
-        atomic_ids = [l["ac_id"] for l in stack if l["layer"] == "atomic"]
+        atomic_ids = [item["ac_id"] for item in stack if item["layer"] == "atomic"]
         assert atomic_ids == declared_order, (
             f"Atomics must appear in depends_on declaration order "
             f"({declared_order}), got: {atomic_ids}"

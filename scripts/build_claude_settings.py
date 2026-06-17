@@ -14,7 +14,6 @@ ARCHITECTURE: One public function ``build_claude_settings`` (matches the standar
 
 from __future__ import annotations
 
-import shutil
 import hashlib
 from pathlib import Path
 from typing import Any

@@ -15,7 +15,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 # Make the scripts directory importable
 sys.path.insert(
@@ -24,7 +24,6 @@ sys.path.insert(
 )
 
 from known_failing_tests import (
-    collect_failing_tests,
     load_baseline,
     run_hook,
     run_update,

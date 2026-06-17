@@ -8,9 +8,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-import tempfile
 
-import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _SCRIPTS_DIR = _REPO_ROOT / "scripts"

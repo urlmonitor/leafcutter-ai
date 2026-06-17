@@ -83,8 +83,13 @@ def _parse_frontmatter(content: str) -> dict | None:
     raw = content[3:end].strip()
     try:
         import yaml  # type: ignore[import]
+    except ImportError as exc:
+        print(f"WARNING: PyYAML not available, cannot parse frontmatter: {exc}", file=sys.stderr)
+        return None
+    try:
         parsed = yaml.safe_load(raw)
-    except Exception:
+    except yaml.YAMLError as exc:
+        print(f"WARNING: could not parse frontmatter YAML: {exc}", file=sys.stderr)
         return None
     return parsed if isinstance(parsed, dict) else None
 
@@ -239,7 +244,7 @@ def _run_git_log(epic_path: Path) -> list[str]:
             encoding="utf-8",
             errors="replace",
         )
-        lines = [l.strip() for l in result.stdout.splitlines() if l.strip()]
+        lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
         return lines
     except OSError:
         return []
@@ -263,7 +268,7 @@ def _git_date_from_log(epic_path: Path, extra_flags: list[str]) -> str | None:
             encoding="utf-8",
             errors="replace",
         )
-        lines = [l.strip() for l in result.stdout.splitlines() if l.strip()]
+        lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
         return lines[0] if lines else None
     except OSError:
         return None

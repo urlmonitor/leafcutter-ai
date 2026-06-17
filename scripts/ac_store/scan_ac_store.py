@@ -492,7 +492,8 @@ def traverse_ac_tree(
         return []
 
     leaves: list[str] = []
-    _dfs_collect_leaves(root_id, id_index, leaves)
+    seen: set[str] = set()
+    _dfs_collect_leaves(root_id, id_index, leaves, seen)
     return leaves
 
 
@@ -500,16 +501,26 @@ def _dfs_collect_leaves(
     node_id: str,
     id_index: dict[str, AcRecord],
     result: list[str],
+    seen: set[str],
 ) -> None:
     """Recursive DFS helper that appends leaf ids to *result*.
 
     Visits children in alphabetical order (depth-first, alphabetical siblings).
+    Each node is processed at most once — if *node_id* is already in *seen*,
+    the function returns immediately.  This prevents duplicate emissions when a
+    node is reachable by more than one covered_by path (ACD-1200a-9-i).
 
     Args:
         node_id: Current AC id being visited.
         id_index: Full id-to-record mapping built from the AC store.
         result: Accumulator list — leaf ids are appended here in traversal order.
+        seen: Set of already-visited node ids; mutated in place to guard against
+            re-traversal.  First-visit order wins.
     """
+    if node_id in seen:
+        return
+    seen.add(node_id)
+
     record = id_index.get(node_id)
     if record is None:
         return
@@ -524,7 +535,7 @@ def _dfs_collect_leaves(
 
     # Recurse into covered_by children for any level that has them.
     for child_id in sorted(children):
-        _dfs_collect_leaves(child_id, id_index, result)
+        _dfs_collect_leaves(child_id, id_index, result, seen)
 
 
 # ---------------------------------------------------------------------------

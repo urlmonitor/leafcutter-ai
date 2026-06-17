@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import subprocess
 import tempfile
-import textwrap
 import unittest
 from pathlib import Path
 
@@ -142,7 +141,7 @@ class TestSchemaRejectsMissingReadiness(unittest.TestCase):
             )
         ac_without_readiness = _make_ac_yaml()
         # Remove readiness field
-        lines = [l for l in ac_without_readiness.splitlines() if not l.startswith("readiness:")]
+        lines = [line for line in ac_without_readiness.splitlines() if not line.startswith("readiness:")]
         ac_without_readiness = "\n".join(lines) + "\n"
 
         result = _run_validator(ac_without_readiness)
@@ -185,7 +184,7 @@ class TestSchemaRejectsMissingPriority(unittest.TestCase):
                 "Expected: python-coder creates this script as part of ticket 00."
             )
         ac_without_priority = _make_ac_yaml()
-        lines = [l for l in ac_without_priority.splitlines() if not l.startswith("priority:")]
+        lines = [line for line in ac_without_priority.splitlines() if not line.startswith("priority:")]
         ac_without_priority = "\n".join(lines) + "\n"
 
         result = _run_validator(ac_without_priority)

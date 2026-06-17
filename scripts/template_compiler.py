@@ -37,6 +37,7 @@ except ImportError:
     _YAML_AVAILABLE = False
 
 from injection_builders import (  # noqa: E402
+    _load_registry,  # noqa: F401  # re-exported; consumed by build_phases / build_helpers
     build_agent_priority_table,
     build_doc_type_reference_table,
     build_doc_types_dispatch_table,
@@ -45,7 +46,6 @@ from injection_builders import (  # noqa: E402
     build_project_paths_table,
     build_registry_block,
     build_signoff_block,
-    _load_registry,
 )
 
 _log = logging.getLogger(__name__)

@@ -207,7 +207,7 @@ class TestBuildChildrenMap(unittest.TestCase):
         Returns:
             List of AcNode objects.
         """
-        return [AcNode(ac_id=i, level=l, depends_on=d) for i, l, d in specs]
+        return [AcNode(ac_id=i, level=lvl, depends_on=d) for i, lvl, d in specs]
 
     @_requires_import
     def test_single_l0_with_l1_children(self) -> None:
@@ -262,7 +262,7 @@ class TestCheckLimitsHardCap(unittest.TestCase):
     """_check_limits emits TreeViolation when parent exceeds its child limit."""
 
     def _nodes(self, specs: list[tuple[str, str, list[str]]]) -> list:
-        return [AcNode(ac_id=i, level=l, depends_on=d) for i, l, d in specs]
+        return [AcNode(ac_id=i, level=lvl, depends_on=d) for i, lvl, d in specs]
 
     @_requires_import
     def test_l0_over_7_l1s_blocks(self) -> None:
@@ -363,7 +363,7 @@ class TestCheckLimitsSparseAdvisory(unittest.TestCase):
     """_check_limits emits TreeAdvisory when a staged parent has fewer than 3 children."""
 
     def _nodes(self, specs: list[tuple[str, str, list[str]]]) -> list:
-        return [AcNode(ac_id=i, level=l, depends_on=d) for i, l, d in specs]
+        return [AcNode(ac_id=i, level=lvl, depends_on=d) for i, lvl, d in specs]
 
     @_requires_import
     def test_l0_with_1_l1_child_advisory(self) -> None:
@@ -483,7 +483,7 @@ class TestCheckAcLimitsCLI(unittest.TestCase):
                     _make_l1(f"ACS-100{letter}", "ACS-100"),
                 )
 
-            staged = [f"docs/acceptance-criteria/ACS-100{l}.yaml" for l in "abc"]
+            staged = [f"docs/acceptance-criteria/ACS-100{suffix}.yaml" for suffix in "abc"]
             result = self._run_hook(root, staged)
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 

@@ -5,7 +5,6 @@ GOAL: Unit tests for build_antigravity_instructions phase logic, verifying compi
 
 import sys
 from pathlib import Path
-import tempfile
 import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent

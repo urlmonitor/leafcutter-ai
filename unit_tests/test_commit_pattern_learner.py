@@ -131,7 +131,7 @@ class TestRecordUnknownShape(unittest.TestCase):
             record_unknown_shape(["a/x.go"], obs_path=obs_path)
             record_unknown_shape(["a/y.go"], obs_path=obs_path)
             record_unknown_shape(["a/z.go"], obs_path=obs_path)
-            lines = [l for l in obs_path.read_text().splitlines() if l.strip()]
+            lines = [line for line in obs_path.read_text().splitlines() if line.strip()]
             self.assertEqual(len(lines), 3)
 
     def test_creates_parent_directory_if_absent(self):
@@ -229,7 +229,6 @@ class TestProposeRule(unittest.TestCase):
 
     def test_group_key_is_valid_identifier_chars(self):
         """group_key should contain only lowercase alphanumeric and underscores."""
-        import re
         shape = extract_shape(["some-dir/build.go"])
         proposal = propose_rule(shape)
         self.assertRegex(proposal["group_key"], r"^[a-z0-9_]+$")
@@ -315,7 +314,7 @@ class TestMaybeProposeRule(unittest.TestCase):
             paths = ["tools/foo.rb"]
             for _ in range(3):
                 maybe_propose_rule(paths, obs_path=obs_path)
-            lines = [l for l in obs_path.read_text().splitlines() if l.strip()]
+            lines = [line for line in obs_path.read_text().splitlines() if line.strip()]
             self.assertEqual(len(lines), 3)
 
     def test_custom_threshold(self):
@@ -344,12 +343,10 @@ class TestProposalIsNonDestructive(unittest.TestCase):
         """Even at threshold, only the observation store is written — not the config."""
         import sys
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
-        import commit_pattern_learner
 
         with tempfile.TemporaryDirectory() as tmp:
             obs_path = Path(tmp) / "obs.jsonl"
             # Point the module at a non-existent patterns path inside tmp
-            original_path = commit_pattern_learner._DEFAULT_PATTERNS_PATH
             dummy_patterns_path = Path(tmp) / "commit_message_patterns.json"
 
             paths = ["tools/foo.rb"]

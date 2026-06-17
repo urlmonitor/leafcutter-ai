@@ -11,13 +11,10 @@ Verifies that:
 from __future__ import annotations
 
 import json
-import shutil
 import tempfile
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
 
-import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SETTINGS_TEMPLATE = REPO_ROOT / "templates" / "settings.json"

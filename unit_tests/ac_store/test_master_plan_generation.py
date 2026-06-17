@@ -572,10 +572,10 @@ class TestMasterPlanEdgeCases:
         content = (epic_folder / "Master_Plan.md").read_text(encoding="utf-8")
         lines = content.splitlines()
         # Find the table header line
-        header_lines = [l for l in lines if "| # |" in l]
+        header_lines = [line for line in lines if "| # |" in line]
         assert header_lines, "Tickets table header must appear even with zero tickets"
         # Data rows in the table would start with "| " followed by a digit.
-        data_rows = [l for l in lines if l.startswith("| ") and l[2].isdigit()]
+        data_rows = [line for line in lines if line.startswith("| ") and line[2].isdigit()]
         assert data_rows == [], (
             f"Expected zero ticket data rows, found: {data_rows}"
         )
@@ -746,7 +746,7 @@ class TestMasterPlanEdgeCases:
         content = (epic_folder / "Master_Plan.md").read_text(encoding="utf-8")
         # "shared-comp" should appear as a component exactly once in the frontmatter list.
         fm_lines = content.split("---")[1].splitlines()
-        comp_lines = [l for l in fm_lines if "shared-comp" in l]
+        comp_lines = [line for line in fm_lines if "shared-comp" in line]
         assert len(comp_lines) == 1, (
             f"Expected 'shared-comp' to appear once in frontmatter; "
             f"found {len(comp_lines)} times: {comp_lines}"

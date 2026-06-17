@@ -60,7 +60,7 @@ _log = logging.getLogger(__name__)
 
 # Re-export build_precommit_config so callers (build.py, tests) can import it
 # from either module.
-from build_precommit import (  # noqa: E402
+from build_precommit import (  # noqa: E402, F401  # re-exported for callers
     build_precommit_config,
     _render_hook_yaml,
     _strip_package_managed_blocks,

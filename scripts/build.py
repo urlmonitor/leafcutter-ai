@@ -878,7 +878,7 @@ def _run_migration_report(target_root: Path, output_root: Path) -> int:
         kind = "directory" if full.is_dir() else "file"
         print(f"  STALE: {p} ({kind})")
 
-    print(f"\nTo remove stale files, run:")
+    print("\nTo remove stale files, run:")
     for p in stale:
         full = target_root / p
         if full.is_dir():

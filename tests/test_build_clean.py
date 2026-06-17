@@ -241,7 +241,7 @@ class TestCleanDoesNotRemoveUnmanagedFiles(unittest.TestCase):
                 "hooks": set(),
             }
 
-            removed_count = clean_fn(target, source_manifests)
+            clean_fn(target, source_manifests)
 
             self.assertTrue(
                 user_file.exists(),
@@ -275,7 +275,6 @@ class TestBuildCleanArgument(unittest.TestCase):
         # actually run the build phases (which need a real config).
         # But first, just check the parser accepts --clean by importing
         # and calling parse_args directly.
-        import argparse
 
         # Build a minimal parser mirror by parsing --help output, OR
         # just call main() and expect it to fail for config reasons (not argparse).

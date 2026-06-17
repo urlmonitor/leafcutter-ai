@@ -1,0 +1,57 @@
+id: ACD-1200f-2-i
+readiness: approved
+priority: high
+title: "traverse_ac_tree emits each leaf once even when reachable by multiple covered_by paths"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the AC store contains a tree where a leaf is reachable by more than one
+    covered_by path — e.g. an L1 whose covered_by lists ALL descendants
+    (children and grandchildren) while each L2 child ALSO lists its own L3
+    children:
+    - ROOT-002 (level: L0, covered_by: [ROOT-002a])
+    - ROOT-002a (level: L1, covered_by: [ROOT-002a-1, ROOT-002a-1-i, ROOT-002a-2])
+      - ROOT-002a-1 (level: L2, covered_by: [ROOT-002a-1-i])
+        - ROOT-002a-1-i (level: L3, covered_by: [])
+      - ROOT-002a-2 (level: L2, covered_by: [])
+  When traverse_ac_tree is called with root_id=ROOT-002,
+  Then the result contains ROOT-002a-1-i EXACTLY ONCE (not twice), even though
+    it is reachable both directly from ROOT-002a's covered_by and indirectly
+    via ROOT-002a-1's covered_by,
+  And every other leaf (ROOT-002a-1, ROOT-002a-2) appears exactly once,
+  And the total leaf count is 3 (no duplicates).
+
+  And the bug symptom (a leaf id appearing more than once in the returned list,
+    which causes goal_to_epic to generate duplicate tickets for the same AC)
+    must not occur.
+depends_on:
+  - ACD-1200f-2
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: implements
+    status: exists
+  - path: scripts/goal_to_epic.py
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Add a visited/seen guard to _dfs_collect_leaves so each node is emitted at most once regardless of how many covered_by paths reach it"
+  - "Preserve existing depth-first, alphabetical-sibling ordering and the level-in-{L2,L3} leaf rule from ACD-1200f-2"
+  - "First-visit order wins (a node keeps the position of its first emission)"
+delivers_to:
+  agent: python-coder
+  contract: "Guard _dfs_collect_leaves() against re-emitting a node reachable by multiple covered_by paths; emit each leaf once, first-visit order preserved."
+expects_from:
+  ac_id: ACD-1200f-2
+  contract: "Level-based leaf detection (level in {L2,L3}) that this dedup guard extends"
+origin_agent: BrainCandy
+created: 2026-06-17
+amended_by:
+  - reason: "split: re-parented ACD-1200a-9-i -> ACD-1200f-2-i (preserved in-flight bug-fix L3), 2026-06-17"
+superseded_by: null
+covered_by: []
+implemented_by: []

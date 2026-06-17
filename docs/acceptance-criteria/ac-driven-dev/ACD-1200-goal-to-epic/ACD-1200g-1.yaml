@@ -1,4 +1,4 @@
-id: ACD-1200a-4
+id: ACD-1200g-1
 readiness: reviewed
 priority: medium
 title: "How-to guide documents the goal-to-epic workflow for users"
@@ -17,7 +17,7 @@ criteria: |
     - How the generated epic folder maps to existing /build-feature usage
   And the guide is placed under docs/how-to/ with a descriptive filename
   And the guide references the ACD-1200 feature family for traceability.
-depends_on: [ACD-1200a-3]
+depends_on: [ACD-1200g, ACD-1200a-3]
 doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
@@ -39,7 +39,8 @@ expects_from:
   contract: "Implemented goal-to-epic workflow to document"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: "split: re-parented ACD-1200a-4 -> ACD-1200g-1, 2026-06-17"
 superseded_by: null
 covered_by: []
 implemented_by: []

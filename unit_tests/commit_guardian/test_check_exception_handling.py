@@ -317,5 +317,175 @@ class TestRuffE722Integration(unittest.TestCase):
             Path(tmp_path).unlink(missing_ok=True)
 
 
+# ---------------------------------------------------------------------------
+# GE-107 tests — robustness bug fixes
+# ---------------------------------------------------------------------------
+
+
+class TestCursorFalsePositiveNonCursorReceiver(unittest.TestCase):
+    """GE-107 Bug 1 — IO-001 over-broad receiver match.
+
+    Calls to .execute() / .executemany() / .callproc() on receivers that are
+    plainly NOT database cursors (e.g. ``command``, ``workflow``) must NOT be
+    flagged as IO-001 violations. The current implementation fires on any
+    ast.Name receiver, blocking legitimate commits.
+    """
+
+    def test_ac_ge107_non_cursor_execute_exits_zero(self) -> None:
+        # covers: GE-107
+        """AC GE-107: .execute() on a non-cursor receiver must NOT trigger IO-001.
+
+        The hook should exit 0 (no violation) when the receiver name is not a
+        recognised cursor identifier (cursor / cur / crsr / db_cursor).
+        Currently exits 1 with an IO-001 message — that is the bug this test
+        exposes and must fail RED against the unmodified code.
+        """
+        result = _run_hook("""\
+            def dispatch(command, workflow, items):
+                command.execute()
+                workflow.executemany(items)
+        """)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "Expected exit 0 for .execute() / .executemany() on non-cursor "
+                f"receivers, got {result.returncode}.\n"
+                "This is the GE-107 false-positive bug.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+    def test_ac_ge107_non_cursor_callproc_exits_zero(self) -> None:
+        # covers: GE-107
+        """AC GE-107: .callproc() on a non-cursor receiver must NOT trigger IO-001.
+
+        Same false-positive bug path as test_ac_ge107_non_cursor_execute_exits_zero
+        but exercises .callproc() specifically.
+        """
+        result = _run_hook("""\
+            def run(executor, args):
+                executor.callproc(args)
+        """)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "Expected exit 0 for .callproc() on non-cursor receiver 'executor', "
+                f"got {result.returncode}.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+
+class TestCursorTruePositiveGuard(unittest.TestCase):
+    """GE-107 Bug 1 — regression guard: genuine cursor.execute() must still be flagged.
+
+    This test MUST stay green both before AND after the fix. A receiver literally
+    named ``cursor`` (the canonical cursor identifier) calling .execute() outside
+    try/except must still exit 1 with an IO-001 message.
+    """
+
+    def test_ac_ge107_genuine_cursor_execute_still_flagged(self) -> None:
+        # covers: GE-107
+        """Regression guard: cursor.execute() without try/except must exit 1 (IO-001).
+
+        True-positive path — a receiver named ``cursor`` calling .execute() outside
+        any try/except block must be flagged. This test verifies the fix does not
+        break genuine cursor detection.
+        """
+        result = _run_hook("""\
+            def query(cursor):
+                cursor.execute("SELECT 1")
+        """)
+        self.assertEqual(
+            result.returncode,
+            1,
+            msg=(
+                "Expected exit 1 for unwrapped cursor.execute(), "
+                f"got {result.returncode}.\n"
+                "Genuine cursor calls must remain flagged after the GE-107 fix.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+        combined = result.stdout + result.stderr
+        self.assertTrue(
+            any(kw in combined for kw in ("IO-001", "cursor", "execute")),
+            msg=(
+                "Expected IO-001 / cursor / execute keyword in output. "
+                f"Got: {combined!r}"
+            ),
+        )
+
+
+class TestOSErrorOnDirectoryPath(unittest.TestCase):
+    """GE-107 Bug 2 — uncaught OSError when a .py-suffixed path is a directory.
+
+    main() wraps analyse_file only in ``except SyntaxError``. When a path ends
+    in ``.py`` but is actually a directory, ``path.read_text()`` inside
+    ``analyse_file`` raises ``IsADirectoryError`` (a subclass of ``OSError``).
+    The current code lets that propagate as an uncaught traceback and exits 1,
+    colliding with the legitimate "violations found" exit code.
+
+    The fixed behaviour: catch OSError, print a skip message to stderr, continue
+    processing remaining files, and exit 0 when no violations are found.
+    """
+
+    def test_ac_ge107_directory_py_path_no_traceback_exits_zero(self) -> None:
+        # covers: GE-107
+        """AC GE-107: a .py-suffixed directory path must be skipped without traceback.
+
+        Invokes the hook DIRECTLY (not via _run_hook) with a temp directory whose
+        name ends in ``.py``. Asserts:
+          1. The process does NOT exit 1 with a Python traceback in stderr.
+          2. stderr does NOT contain "Traceback (most recent call last)".
+          3. The process exits 0 (skip-and-continue behaviour, no violations).
+        Currently exits 1 with an uncaught IsADirectoryError traceback — that is
+        the bug this test exposes and must fail RED against the unmodified code.
+        """
+        import tempfile
+        import os
+
+        # Create a real temp directory whose name ends in ".py"
+        tmp_parent = tempfile.mkdtemp()
+        dir_py_path = os.path.join(tmp_parent, "fake_module.py")
+        os.makedirs(dir_py_path, exist_ok=True)
+
+        try:
+            result = subprocess.run(
+                [sys.executable, str(_HOOK_SCRIPT), dir_py_path],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+            # Must NOT produce a Python traceback in stderr
+            self.assertNotIn(
+                "Traceback (most recent call last)",
+                result.stderr,
+                msg=(
+                    "Hook must not crash with an uncaught OSError traceback when "
+                    "given a .py-suffixed directory path.\n"
+                    f"stderr: {result.stderr!r}"
+                ),
+            )
+            # With no real violations (the path is skipped), must exit 0
+            self.assertEqual(
+                result.returncode,
+                0,
+                msg=(
+                    "Expected exit 0 when the only argument is a skipped unreadable "
+                    f"path, got {result.returncode}.\n"
+                    f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+                ),
+            )
+            # stderr should contain a skip/not-readable style message (post-fix)
+            # We do NOT assert this pre-fix, but document the expected post-fix shape:
+            # self.assertIn("not readable", result.stderr) — enforced after fix
+        finally:
+            # Clean up the fake .py directory
+            import shutil
+            shutil.rmtree(tmp_parent, ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main()

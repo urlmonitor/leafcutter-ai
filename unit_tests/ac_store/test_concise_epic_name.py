@@ -10,9 +10,8 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _SCRIPTS_DIR = _REPO_ROOT / "scripts"
@@ -53,7 +52,6 @@ class TestDeriveEpicNameShortTitle:
         # Build a title whose PascalCase is exactly 40: use a known 40-char result.
         # "CrossFieldConstraintAndRelationalRefsXy" would be 39.
         # Simplest: compose a string of known length.
-        import string
         # "ValidateAcInputsForCrossFieldRelRefs" = 36
         # "ValidateAcInputsForCrossFieldRelRefss" = 37
         # Use: "Cross Field Constraint And Relational" = 36 chars PascalCase

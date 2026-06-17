@@ -263,7 +263,6 @@ class TestMainIntegration(unittest.TestCase):
     """
 
     def setUp(self) -> None:
-        import shutil
 
         self.tmp = tempfile.mkdtemp()
         if not _HOOK_PATH.exists():

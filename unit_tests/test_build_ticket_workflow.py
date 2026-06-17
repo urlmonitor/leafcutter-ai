@@ -15,7 +15,6 @@ from __future__ import annotations
 import json
 import re
 import subprocess
-import sys
 from pathlib import Path
 
 import pytest
@@ -131,13 +130,6 @@ def test_agent_types_exist_in_registry():
     # Extract all agentType values from agent() calls
     # Pattern: agentType: "some-agent" or agentType: 'some-agent'
     agent_type_refs = re.findall(r'agentType\s*:\s*["\']([^"\']+)["\']', content)
-
-    # Also look for agent type variables like agentType: phaseName (dynamic)
-    # If the script uses dynamic dispatch, we check a phaseOrder array instead
-    phase_order_agents = re.findall(
-        r'["\']([a-z][a-z0-9-]+)["\']',
-        content
-    )
 
     registry_ids = {agent["id"] for agent in registry.get("agents", [])}
 

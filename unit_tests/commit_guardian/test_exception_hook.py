@@ -14,7 +14,6 @@ Hook contract:
 """
 from __future__ import annotations
 
-import importlib.util
 import json
 import subprocess
 import sys
@@ -22,7 +21,6 @@ import tempfile
 import textwrap
 import unittest
 from pathlib import Path
-from unittest.mock import patch
 
 
 # ---------------------------------------------------------------------------
@@ -203,7 +201,6 @@ class TestExceptionHookRuffNotFound(unittest.TestCase):
         # runs as a subprocess we cannot use unittest.mock.patch directly on
         # the hook module; instead we manipulate PATH to a sentinel empty dir
         # so that ruff is genuinely not found.
-        import os
 
         good_python = textwrap.dedent("""\
             def hello() -> str:

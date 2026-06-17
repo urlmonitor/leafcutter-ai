@@ -27,14 +27,13 @@ AC coverage:
 from __future__ import annotations
 
 import json
-import logging
 import os
 import stat
 import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 # ---------------------------------------------------------------------------
 # Path setup — make scripts/ importable regardless of working directory.
@@ -50,7 +49,6 @@ from commit_pattern_learner import (
     PROPOSAL_THRESHOLD,
     filter_history_by_shape,
     maybe_propose_rule,
-    record_unknown_shape,
 )
 
 

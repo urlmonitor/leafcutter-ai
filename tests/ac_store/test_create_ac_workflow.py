@@ -11,11 +11,8 @@ Source ACs: ACD-300, ACD-300a, ACD-300a-1..3, ACD-300b..d and sub-ACs, TKT-100g
 
 from __future__ import annotations
 
-import json
-import sys
-import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -250,7 +247,7 @@ class TestStrategicRouteDispatch:
         def mock_gate(stage: str, **kwargs: object) -> str:
             return "approve"
 
-        result = create_ac_workflow.run_authoring_pipeline(
+        create_ac_workflow.run_authoring_pipeline(
             triage_result=mock_triage_result,
             user_request="New analytics dashboard",
             component="analytics",
@@ -415,7 +412,6 @@ class TestFinalGateSetsApprovedAndPriority:
             "parent_l1_id": None,
             "rationale": "Technical constraint.",
         }
-        written_acs: list[dict] = []
 
         def mock_dispatch(agent_name: str, **kwargs: object) -> dict:
             if agent_name == "it-po":
@@ -435,7 +431,7 @@ class TestFinalGateSetsApprovedAndPriority:
 
         mock_write_fn = MagicMock()
 
-        result = create_ac_workflow.run_authoring_pipeline(
+        create_ac_workflow.run_authoring_pipeline(
             triage_result=mock_triage_result,
             user_request="Add rate limiting",
             component="inventory",
