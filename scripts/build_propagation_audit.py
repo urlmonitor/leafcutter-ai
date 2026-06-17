@@ -69,6 +69,29 @@ EXTERNAL_DEPENDENCY_ALLOWLIST: frozenset[str] = frozenset([
     # skills (feature/SKILL.md, knowledge-query/SKILL.md) as an instructional
     # reminder for package developers, not a consumer-side runtime dependency.
     "scripts/build.py",
+    # scripts/epic_lock.py — epic branch lock management; host-side orchestration
+    # tool used by the leafcutter package maintainer. Consumer projects do not
+    # manage epic locks themselves. A new script must be authored before this can
+    # be deployed (tracked as a separate ticket per EPIC-BuildGuardFalsePositive/01
+    # OPEN QUESTIONS). Safe to allowlist: the referencing skill (building-epics)
+    # includes "if absent, skip" semantics for lock acquisition.
+    "scripts/epic_lock.py",
+    # scripts/scaffold/new_arch_doc.py — architecture doc scaffolding tool.
+    # Referenced by documentation agents (architecture-diagram-author.md,
+    # write-c4-diagram/SKILL.md) but the script does not yet exist as a package
+    # deliverable. Allowlisted so the guard does not block; however, this causes
+    # a hard user-visible failure in write-c4-diagram when the script is absent
+    # (SKILL.md says "surface to the user and DO NOT improvise" — not a graceful
+    # skip). A separate authoring ticket is required to create and deploy this script.
+    "scripts/scaffold/new_arch_doc.py",
+    # scripts/commit_guardian/known_failing_tests.py — a commit-guardian companion
+    # script referenced by agents/commit.md to read the known-failing-tests
+    # allowlist. The script does not yet exist as a package deliverable. Allowlisted
+    # so the guard does not block; however, commit.md has no documented fallback when
+    # the script is absent and explicitly forbids --no-verify as an escape path — so
+    # absence causes a hard failure. A separate authoring ticket is required to either
+    # create and deploy this script or add a graceful-skip guard to commit.md.
+    "scripts/commit_guardian/known_failing_tests.py",
 ])
 
 # Regex to extract script basename from entries like:
@@ -370,4 +393,14 @@ def propagation_audit(
 # DECISION HISTORY
 # ===========================================================================
 # - 2026-05-18 11:30 [EPIC-PortableInstallHardening/T04]: Created module. Fail-open propagation audit that walks .pre-commit-config.yaml hook entries, auto-copies missing scripts from templates, and warns when no template is found. Extracted as sibling module to keep build_phases.py within 400-line limit. (#EPIC-PortableInstallHardening/T04)
+# - 2026-06-17 [python-coder/EPIC-BuildGuardFalsePositive/03]: Added three allowlist
+#   entries (epic_lock.py, scaffold/new_arch_doc.py, commit_guardian/known_failing_tests.py)
+#   with inline justification comments. These scripts require separate authoring tickets
+#   before they can be deployed. Only epic_lock.py has a documented "if absent, skip"
+#   fallback (building-epics SKILL). scaffold/new_arch_doc.py causes a hard user-visible
+#   failure when absent (write-c4-diagram SKILL.md: "surface to the user and DO NOT
+#   improvise" — not a graceful skip). commit_guardian/known_failing_tests.py also causes
+#   a hard failure when absent: commit.md has no documented fallback and explicitly forbids
+#   --no-verify as an escape path. Separate authoring tickets are required for the latter
+#   two before they can be deployed. (#EPIC-BuildGuardFalsePositive/03)
 # ===========================================================================

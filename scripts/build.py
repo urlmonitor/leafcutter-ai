@@ -49,6 +49,9 @@ from build_phases import (
     reset_uptodate_count,
     get_uptodate_count,
     clean_stale_artifacts,
+    build_workflow_tools,
+    build_knowledge_scripts,
+    build_template_standalone_scripts,
 )
 from registry_validator import validate_agent_registry
 from project_context_discovery import (  # noqa: F401 — re-exported for callers
@@ -391,16 +394,84 @@ def _manifest_feedback_scripts(package_root: Path) -> set[str]:
     return result
 
 
+def _manifest_workflow_tool_scripts(package_root: Path) -> set[str]:
+    """Return ``scripts/<name>`` entries for workflow-tool scripts deployed by build_workflow_tools.
+
+    Scans the package source for the four workflow-tool scripts and returns
+    manifest entries for those that exist.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.
+
+    Returns:
+        Set of ``scripts/<name>`` strings for deployable workflow-tool scripts.
+    """
+    result: set[str] = set()
+    scripts_src = package_root / "scripts"
+    for fname in (
+        "add_component.py",
+        "knowledge_query.py",
+        "set_ticket_status.py",
+        "ticket_prioritizer.py",
+    ):
+        if (scripts_src / fname).is_file():
+            result.add(f"scripts/{fname}")
+    return result
+
+
+def _manifest_knowledge_scripts(package_root: Path) -> set[str]:
+    """Return ``scripts/knowledge/<name>`` entries for knowledge scripts deployed by build_knowledge_scripts.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.
+
+    Returns:
+        Set of ``scripts/knowledge/<name>`` strings for deployable knowledge scripts.
+    """
+    result: set[str] = set()
+    knowledge_src = package_root / "scripts" / "knowledge"
+    for fname in ("harvest_learnings.py",):
+        if (knowledge_src / fname).is_file():
+            result.add(f"scripts/knowledge/{fname}")
+    return result
+
+
+def _manifest_template_standalone_scripts(package_root: Path) -> set[str]:
+    """Return ``scripts/<name>`` entries for standalone scripts from ``templates/scripts/``.
+
+    Scans the top-level ``templates/scripts/`` directory (non-recursive) for
+    ``.py`` files and returns manifest entries.  These are deployed by
+    ``build_template_standalone_scripts``.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.
+
+    Returns:
+        Set of ``scripts/<name>`` strings for deployable template-standalone scripts.
+    """
+    result: set[str] = set()
+    templates_scripts = package_root / "templates" / "scripts"
+    if templates_scripts.is_dir():
+        for f in templates_scripts.glob("*.py"):
+            if f.is_file():
+                result.add(f"scripts/{f.name}")
+    return result
+
+
 def _get_source_deployable_scripts(package_root: Path) -> set[str]:
     """Compute the set of script paths that build.py will deploy from package source.
 
-    Delegates to per-phase helper functions and unions their results.  Four
+    Delegates to per-phase helper functions and unions their results.  Seven
     deployment locations are covered:
 
     * ``scripts/ac_store/`` — from ``_manifest_ac_store_scripts``.
     * ``scripts/commit_guardian/`` — from ``_manifest_commit_guardian_scripts``.
     * ``scripts/feedback/`` — from ``_manifest_feedback_scripts``.
-    * ``scripts/<name>`` — two named standalone scripts from ``templates/scripts/``.
+    * ``scripts/<name>`` — workflow-tool scripts from ``_manifest_workflow_tool_scripts``.
+    * ``scripts/knowledge/`` — knowledge scripts from ``_manifest_knowledge_scripts``.
+    * ``scripts/<name>`` — standalone Python files from ``templates/scripts/``
+      (includes ``setup_ticket_worktree.py``).
+    * ``scripts/<name>`` — two named AC-pipeline scripts from ``templates/scripts/``.
 
     This function is intentionally source-only and never reads the target
     project directory: it is used as a preflight guard BEFORE any output is
@@ -419,9 +490,15 @@ def _get_source_deployable_scripts(package_root: Path) -> set[str]:
         _manifest_ac_store_scripts(package_root)
         | _manifest_commit_guardian_scripts(package_root)
         | _manifest_feedback_scripts(package_root)
+        | _manifest_workflow_tool_scripts(package_root)
+        | _manifest_knowledge_scripts(package_root)
+        | _manifest_template_standalone_scripts(package_root)
     )
 
     # Standalone scripts (build_standalone_scripts) — two named scripts only
+    # NOTE: goal_to_epic.py and build_ac_mode_detection.py may also appear in
+    # _manifest_template_standalone_scripts if they exist under templates/scripts/,
+    # so this check is a belt-and-suspenders guard for backward compatibility.
     templates_scripts = package_root / "templates" / "scripts"
     for fname in ("goal_to_epic.py", "build_ac_mode_detection.py"):
         if (templates_scripts / fname).is_file():
@@ -623,6 +700,9 @@ def _run_phases(
         ("Propagation audit", propagation_audit),
         ("Doc compliance", build_doc_compliance),
         ("Sync platforms", build_sync_platforms),
+        ("Workflow tools", build_workflow_tools),
+        ("Knowledge scripts", build_knowledge_scripts),
+        ("Template standalone scripts", build_template_standalone_scripts),
     ]
 
     # Phases that write user-curated scaffolds at target_root (write-if-absent)
@@ -1219,4 +1299,14 @@ if __name__ == "__main__":
 #   Added extract_script_path_refs_with_sources import from build_referential_integrity
 #   and build_broken_ref_report/emit_broken_ref_report_jsonl from build_propagation_audit.
 #   (#EPIC-BuildGuardFalsePositive/02)
+# - 2026-06-17 [python-coder/EPIC-BuildGuardFalsePositive/03]: Class B resolution.
+#   Extended _get_source_deployable_scripts() with four new per-phase manifest helpers:
+#   _manifest_workflow_tool_scripts (add_component, knowledge_query, set_ticket_status,
+#   ticket_prioritizer), _manifest_knowledge_scripts (harvest_learnings),
+#   _manifest_template_standalone_scripts (setup_ticket_worktree + others from
+#   templates/scripts/*.py). Imported and wired three new phases into internal_phases
+#   in _run_phases(): build_workflow_tools, build_knowledge_scripts,
+#   build_template_standalone_scripts. These close the Class B deploy gaps so the
+#   script reference guard passes after all legitimate scripts are deployed.
+#   (#EPIC-BuildGuardFalsePositive/03)
 # ====================================================================

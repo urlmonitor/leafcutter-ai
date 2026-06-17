@@ -1094,7 +1094,16 @@ def build_feedback(target_root: Path, config: dict[str, Any],
     output_dir = target_root / "scripts" / "feedback"
     written = 0
 
-    deploy_scripts = ["submit_feedback.py", "emit_hook_finding.py", "list_tags.py"]
+    deploy_scripts = [
+        "submit_feedback.py",
+        "emit_hook_finding.py",
+        "list_tags.py",
+        # Class B resolution: aggregate.py and resolve_feedback.py are referenced in
+        # templates (retrospective-agent.md, feedback-review/SKILL.md, ticket-wiring/SKILL.md)
+        # but were not deployed by this phase. Added to close the deploy gap.
+        "aggregate.py",
+        "resolve_feedback.py",
+    ]
     for script_name in deploy_scripts:
         src_file = feedback_src / script_name
         if not src_file.is_file():
@@ -1554,6 +1563,237 @@ def build_agent_cards(target_root: Path, config: dict[str, Any],
                            dry_run=dry_run, force=force)
 
 
+def build_workflow_tools(target_root: Path, config: dict[str, Any],
+                         dry_run: bool, force: bool) -> int:
+    """Deploy workflow tool scripts to ``<target_root>/scripts/``.
+
+    Copies the four workflow-tool Python scripts from the package source
+    (``scripts/<name>.py``) to the consumer project's ``scripts/`` directory.
+    These scripts are referenced by ticket-lifecycle agents and skills but were
+    not previously deployed by any build phase (Class B gap, EPIC-BuildGuardFalsePositive).
+
+    Scripts deployed:
+
+    - ``scripts/add_component.py`` — used by the add-component skill.
+    - ``scripts/knowledge_query.py`` — used by the knowledge-query skill.
+    - ``scripts/set_ticket_status.py`` — used by ticket-lifecycle agents and skills.
+    - ``scripts/ticket_prioritizer.py`` — used by the ticket-prioritizer skill.
+
+    Files are copied verbatim (no template compilation). The compare-before-write
+    guard prevents mtime churn on unchanged files.
+
+    Args:
+        target_root: Absolute path to the target project root directory.
+        config: Merged config dictionary (accepted for interface parity; not consumed).
+        dry_run: When True, logs intent but writes nothing.
+        force: When True, overwrites existing files.
+
+    Returns:
+        Count of files written (or that would be written in dry-run mode).
+
+    # DECISION HISTORY
+    # - 2026-06-17 [python-coder/EPIC-BuildGuardFalsePositive/03]:
+    #   Added build_workflow_tools() phase. Deploys add_component.py,
+    #   knowledge_query.py, set_ticket_status.py, ticket_prioritizer.py from
+    #   package source to scripts/. Closes the Class B deploy gap for these
+    #   four workflow-tool scripts. (#EPIC-BuildGuardFalsePositive/03)
+    """
+    scripts_src = PACKAGE_ROOT / "scripts"
+    deploy_scripts = [
+        "add_component.py",
+        "knowledge_query.py",
+        "set_ticket_status.py",
+        "ticket_prioritizer.py",
+    ]
+    output_dir = target_root / "scripts"
+    written = 0
+
+    for script_name in deploy_scripts:
+        src_file = scripts_src / script_name
+        if not src_file.is_file():
+            _log.warning(
+                "build_workflow_tools: source script not found, skipping: %s", src_file
+            )
+            continue
+
+        output_path = output_dir / script_name
+
+        if not _should_overwrite(output_path, force):
+            continue
+
+        if _files_content_identical(src_file, output_path):
+            global _uptodate_count  # noqa: PLW0603
+            _uptodate_count += 1
+            continue
+
+        if dry_run:
+            print(f"  [DRY-RUN] would copy scripts/{script_name}")
+            written += 1
+        else:
+            try:
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src_file, output_path)
+            except OSError as exc:
+                _log.warning(
+                    "build_workflow_tools: failed to copy %s → %s: %s",
+                    src_file,
+                    output_path,
+                    exc,
+                )
+                raise
+            print(f"  scripts/{script_name}")
+            written += 1
+
+    return written
+
+
+def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
+                             dry_run: bool, force: bool) -> int:
+    """Deploy knowledge scripts to ``<target_root>/scripts/knowledge/``.
+
+    Copies ``scripts/knowledge/harvest_learnings.py`` from the package source
+    to the consumer project. This script is referenced by the knowledge-harvester
+    agent but was not previously deployed by any build phase (Class B gap,
+    EPIC-BuildGuardFalsePositive/03).
+
+    Files are copied verbatim (no template compilation). The compare-before-write
+    guard prevents mtime churn on unchanged files.
+
+    Args:
+        target_root: Absolute path to the target project root directory.
+        config: Merged config dictionary (accepted for interface parity; not consumed).
+        dry_run: When True, logs intent but writes nothing.
+        force: When True, overwrites existing files.
+
+    Returns:
+        Count of files written (or that would be written in dry-run mode).
+
+    # DECISION HISTORY
+    # - 2026-06-17 [python-coder/EPIC-BuildGuardFalsePositive/03]:
+    #   Added build_knowledge_scripts() phase. Deploys harvest_learnings.py from
+    #   package source scripts/knowledge/ to consumer scripts/knowledge/. Closes
+    #   the Class B deploy gap for knowledge-harvester agent.
+    #   (#EPIC-BuildGuardFalsePositive/03)
+    """
+    knowledge_src = PACKAGE_ROOT / "scripts" / "knowledge"
+    deploy_scripts = ["harvest_learnings.py"]
+    output_dir = target_root / "scripts" / "knowledge"
+    written = 0
+
+    for script_name in deploy_scripts:
+        src_file = knowledge_src / script_name
+        if not src_file.is_file():
+            _log.warning(
+                "build_knowledge_scripts: source script not found, skipping: %s",
+                src_file,
+            )
+            continue
+
+        output_path = output_dir / script_name
+
+        if not _should_overwrite(output_path, force):
+            continue
+
+        if _files_content_identical(src_file, output_path):
+            global _uptodate_count  # noqa: PLW0603
+            _uptodate_count += 1
+            continue
+
+        if dry_run:
+            print(f"  [DRY-RUN] would copy scripts/knowledge/{script_name}")
+            written += 1
+        else:
+            try:
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src_file, output_path)
+            except OSError as exc:
+                _log.warning(
+                    "build_knowledge_scripts: failed to copy %s → %s: %s",
+                    src_file,
+                    output_path,
+                    exc,
+                )
+                raise
+            print(f"  scripts/knowledge/{script_name}")
+            written += 1
+
+    return written
+
+
+def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
+                                      dry_run: bool, force: bool) -> int:
+    """Deploy standalone Python scripts from ``templates/scripts/`` to ``<target_root>/scripts/``.
+
+    Copies Python files (``*.py``) from ``templates/scripts/`` (excluding
+    subdirectories) to the consumer project's ``scripts/`` directory.
+
+    Currently deploys:
+
+    - ``templates/scripts/setup_ticket_worktree.py`` → ``scripts/setup_ticket_worktree.py``
+      Referenced by worktree-agent.md and build-single-ticket/SKILL.md.
+
+    Files are copied verbatim (no template compilation). The compare-before-write
+    guard prevents mtime churn on unchanged files.
+
+    Args:
+        target_root: Absolute path to the target project root directory.
+        config: Merged config dictionary (accepted for interface parity; not consumed).
+        dry_run: When True, logs intent but writes nothing.
+        force: When True, overwrites existing files.
+
+    Returns:
+        Count of files written (or that would be written in dry-run mode).
+
+    # DECISION HISTORY
+    # - 2026-06-17 [python-coder/EPIC-BuildGuardFalsePositive/03]:
+    #   Added build_template_standalone_scripts() phase. Deploys .py files from
+    #   templates/scripts/ (shallow, non-recursive) to consumer scripts/.
+    #   Primary driver: setup_ticket_worktree.py template was present but no
+    #   phase copied it to consumer projects (Class B gap). (#EPIC-BuildGuardFalsePositive/03)
+    """
+    templates_scripts_src = TEMPLATES_DIR / "scripts"
+    if not templates_scripts_src.exists():
+        return 0
+
+    output_dir = target_root / "scripts"
+    written = 0
+
+    # Shallow scan — only top-level .py files; subdirectories have their own phases
+    for src_file in sorted(templates_scripts_src.glob("*.py")):
+        if not src_file.is_file():
+            continue
+
+        output_path = output_dir / src_file.name
+
+        if not _should_overwrite(output_path, force):
+            continue
+
+        if _files_content_identical(src_file, output_path):
+            global _uptodate_count  # noqa: PLW0603
+            _uptodate_count += 1
+            continue
+
+        if dry_run:
+            print(f"  [DRY-RUN] would copy scripts/{src_file.name}")
+            written += 1
+        else:
+            try:
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src_file, output_path)
+            except OSError as exc:
+                _log.warning(
+                    "build_template_standalone_scripts: failed to copy %s → %s: %s",
+                    src_file,
+                    output_path,
+                    exc,
+                )
+                raise
+            print(f"  scripts/{src_file.name}")
+            written += 1
+
+    return written
+
+
 # ---------------------------------------------------------------------------
 # Clean-mode: remove stale artifacts
 # ---------------------------------------------------------------------------
@@ -1718,4 +1958,14 @@ def clean_stale_artifacts(
 #   mark_ac_done.py, build_ac_mode_detection.py, goal_to_epic.py) to
 #   <target_root>/scripts/ac_store/, closing the portable-skill/missing-script
 #   gap for ac-scanner and build-ac per ADR-013. (#EPIC-AcPipelineDeployGaps/03)
+# - 2026-06-17 [python-coder/EPIC-BuildGuardFalsePositive/03]:
+#   Extended build_feedback() to deploy aggregate.py and resolve_feedback.py
+#   alongside the three previously-deployed feedback scripts. Added three new
+#   phases: build_workflow_tools() (deploys add_component.py, knowledge_query.py,
+#   set_ticket_status.py, ticket_prioritizer.py from scripts/ to consumer scripts/),
+#   build_knowledge_scripts() (deploys harvest_learnings.py to scripts/knowledge/),
+#   and build_template_standalone_scripts() (deploys .py files from templates/scripts/
+#   to scripts/, primarily setup_ticket_worktree.py). All new phases use the
+#   shutil.copy2 + compare-before-write pattern established by build_ac_store.
+#   (#EPIC-BuildGuardFalsePositive/03)
 # ====================================================================
