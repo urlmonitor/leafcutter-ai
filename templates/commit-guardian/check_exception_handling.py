@@ -41,6 +41,14 @@ DECISION HISTORY
     except OSError alongside except SyntaxError, with a skip message to
     stderr and continue, mirroring check_placeholder_defaults' OSError
     handling and satisfying Error Handling Policy Rule 1.
+- 2026-06-17 [GE-108a]: Subprocess calls added as mandatory I/O boundaries.
+  Per ADR-014 Decision 1, subprocess spawning is external I/O that must be
+  wrapped in try/except. Added six subprocess entry-point forms to
+  _IO_BOUNDARIES: subprocess.run, subprocess.Popen, subprocess.call,
+  subprocess.check_call, subprocess.check_output, subprocess.getoutput.
+  The commit_guardian.json io_boundary_calls list was updated in parity.
+  Self-hosting non-regression verified: leafcutter's own subprocess calls
+  are already wrapped in try/except and produce no IO-001 violations.
 ====================================================================
 """
 
@@ -95,6 +103,12 @@ _IO_BOUNDARIES: list[tuple[str | None, str]] = [
     ("cursor", "execute"),
     ("cursor", "executemany"),
     ("cursor", "callproc"),
+    ("subprocess", "run"),
+    ("subprocess", "Popen"),
+    ("subprocess", "call"),
+    ("subprocess", "check_call"),
+    ("subprocess", "check_output"),
+    ("subprocess", "getoutput"),
 ]
 
 # Recognised cursor receiver names for IO boundary detection.

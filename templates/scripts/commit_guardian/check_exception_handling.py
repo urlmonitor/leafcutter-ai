@@ -27,12 +27,35 @@ DECISION HISTORY
        in a try/except block.
   Exit code 1 on any violation; 0 on clean file.
   Self-contained: only stdlib imports (ast, sys, pathlib).
+- 2026-06-17 [GE-107]: Two robustness bug fixes.
+  Fix 1 — cursor false-positive: _call_matches_io_boundary previously matched
+    .execute()/.executemany()/.callproc() on ANY ast.Name receiver, causing
+    false IO-001 violations for unrelated objects (command.execute(),
+    workflow.executemany(), executor.callproc()). Narrowed to
+    _CURSOR_RECEIVER_NAMES frozenset (cursor, cur, crsr, db_cursor, _cursor,
+    dbcur) so only recognised cursor identifiers are flagged.
+  Fix 2 — uncaught OSError: main() caught only SyntaxError from analyse_file,
+    so path.read_text() raising IsADirectoryError/PermissionError on an
+    unreadable .py path produced an uncaught traceback and an exit 1 that
+    collided with the legitimate "violations found" exit code. Added
+    except OSError alongside except SyntaxError, with a skip message to
+    stderr and continue, mirroring check_placeholder_defaults' OSError
+    handling and satisfying Error Handling Policy Rule 1.
+- 2026-06-17 [GE-108a]: Subprocess calls added as mandatory I/O boundaries.
+  Per ADR-014 Decision 1, subprocess spawning is external I/O that must be
+  wrapped in try/except. Added six subprocess entry-point forms to
+  _IO_BOUNDARIES: subprocess.run, subprocess.Popen, subprocess.call,
+  subprocess.check_call, subprocess.check_output, subprocess.getoutput.
+  The commit_guardian.json io_boundary_calls list was updated in parity.
+  Self-hosting non-regression verified: leafcutter's own subprocess calls
+  are already wrapped in try/except and produce no IO-001 violations.
 ====================================================================
 """
 
 from __future__ import annotations
 
 import ast
+import json
 import sys
 from pathlib import Path
 from typing import NamedTuple
@@ -80,7 +103,27 @@ _IO_BOUNDARIES: list[tuple[str | None, str]] = [
     ("cursor", "execute"),
     ("cursor", "executemany"),
     ("cursor", "callproc"),
+    ("subprocess", "run"),
+    ("subprocess", "Popen"),
+    ("subprocess", "call"),
+    ("subprocess", "check_call"),
+    ("subprocess", "check_output"),
+    ("subprocess", "getoutput"),
 ]
+
+# Recognised cursor receiver names for IO boundary detection.
+# Only ast.Name receiver ids in this set trigger IO-001 for cursor methods
+# (execute, executemany, callproc). Names outside this set are not database
+# cursors and must not be flagged, avoiding false positives on objects such
+# as command.execute(), workflow.executemany(), executor.callproc().
+_CURSOR_RECEIVER_NAMES: frozenset[str] = frozenset({
+    "cursor",
+    "cur",
+    "crsr",
+    "db_cursor",
+    "_cursor",
+    "dbcur",
+})
 
 # Exception type names considered "blind" — too broad without reraise/log
 _BLIND_EXCEPTION_NAMES: frozenset[str] = frozenset({"Exception", "BaseException"})
@@ -198,8 +241,11 @@ def _call_matches_io_boundary(call: ast.Call) -> tuple[str, str] | None:
                 # Named module: requests.get, cursor.execute, etc.
                 if isinstance(value, ast.Name) and value.id == mod:
                     return (mod, attr)
-                # For cursor.execute: match any variable name whose attr is execute
-                if mod == "cursor" and isinstance(value, ast.Name):
+                # For cursor methods (execute, executemany, callproc): only match
+                # receiver names that are recognised cursor identifiers
+                # (_CURSOR_RECEIVER_NAMES). This prevents false positives on
+                # unrelated objects such as command.execute(), executor.callproc().
+                if mod == "cursor" and isinstance(value, ast.Name) and value.id in _CURSOR_RECEIVER_NAMES:
                     return (value.id, attr)
         return None
     if isinstance(func, ast.Name):
@@ -314,6 +360,49 @@ def analyse_file(path: Path) -> list[Violation]:
 
 
 # ---------------------------------------------------------------------------
+# Agent registry lookup (mirrors check_complexity.py pattern)
+# ---------------------------------------------------------------------------
+
+
+def _get_agent_for_extension(ext: str) -> str | None:
+    """Return the agent id whose owns_file_extensions contains the given extension.
+
+    Reads ``agent_registry.json`` relative to this script's project root.
+    Fails open: returns ``None`` when the registry is missing, unreadable,
+    or contains no matching entry.
+
+    Args:
+        ext: File extension with leading dot, e.g. ``".py"``.
+
+    Returns:
+        Agent id string (e.g. ``"python-coder"``) if a match is found,
+        else ``None``.
+    """
+    script_dir = Path(__file__).resolve().parent
+    # Search for the registry relative to the script location (handles both
+    # source layout scripts/commit_guardian/ and deployed layout).
+    for ancestor in [script_dir, *script_dir.parents]:
+        candidate = ancestor / "leafcutter" / "config" / "agent_registry.json"
+        if candidate.exists():
+            registry_path = candidate
+            break
+    else:
+        return None
+
+    try:
+        with open(registry_path, encoding="utf-8") as fh:
+            data = json.load(fh)
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    for entry in data.get("agents", []):
+        extensions = entry.get("owns_file_extensions") or []
+        if ext in extensions:
+            return entry.get("id")
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
@@ -356,6 +445,17 @@ def main() -> int:
                 file=sys.stderr,
             )
             continue
+        except OSError as exc:
+            # path.read_text() raises OSError (IsADirectoryError, PermissionError,
+            # etc.) when the path ends in .py but cannot be read as a text file.
+            # Catch and skip rather than letting the traceback propagate — mirrors
+            # check_placeholder_defaults' OSError handling and satisfies Error
+            # Handling Policy Rule 1 (external I/O must be wrapped).
+            print(
+                f"check_exception_handling: cannot read {file_path}: {exc}",
+                file=sys.stderr,
+            )
+            continue
 
         if not violations:
             continue
@@ -367,7 +467,16 @@ def main() -> int:
         for v in violations:
             print(f"  {file_path}:{v.line}:{v.col}: {v.code} {v.message}")
 
-    return 1 if found_any else 0
+    if found_any:
+        # Machine-readable autofix hint — parsed by the precommit-autofix skill
+        # to route directly to the correct coder. Looked up from agent_registry.json
+        # via owns_file_extensions; falls back to python-coder when the lookup
+        # returns None (exception-handling violations are always Python).
+        agent = _get_agent_for_extension(".py") or "python-coder"
+        print(f"AUTOFIX_AGENT: {agent}")
+        return 1
+
+    return 0
 
 
 if __name__ == "__main__":
