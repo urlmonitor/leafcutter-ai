@@ -1,7 +1,7 @@
 ---
 title: "EPIC: Pre-commit Safety Net"
 type: epic
-status: in_progress
+status: done
 components:
   - precommit_hooks
   - commit_guardian
@@ -113,3 +113,13 @@ Ticket 5 waits on ticket 2.
 - Template parity risk: both sides (deployed + template source) must be edited
   together for every file that has a template counterpart. Verified via
   build.py round-trip on each ticket.
+
+## Comments
+
+### 2026-06-17 — status-checker (status: ok)
+auto-closed: matched merge commit 386236a
+
+completion_manifest:
+  state_verified: true
+  git_history_checked: true
+  status_reported: true
