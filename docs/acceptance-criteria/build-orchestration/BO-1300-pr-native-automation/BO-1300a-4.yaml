@@ -1,0 +1,45 @@
+id: BO-1300a-4
+readiness: approved
+priority: high
+title: "A direct push to main by the automation is treated as a defect and blocked"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300a.yaml"
+criteria: |
+  Given the automation is delivering a unit of work
+  When the automation would otherwise push commits whose destination ref is main (bypassing a pull request)
+  Then that push is treated as a defect: the automation stops before the push completes
+  And it surfaces an operator-visible blocker stating that automated work must reach main through a pull request, not a direct push
+  And no commits are written to main as a result of that attempt
+depends_on: [BO-1300a, BO-1300a-3]
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300a.yaml"
+    relationship: "decomposes"
+    status: exists
+  - path: "docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md"
+    relationship: "describes"
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "CREATE NEW HOOK (pre-push stage): no commit_guardian hook is currently registered at the `pre-push` stage — every existing hook in templates/commit-guardian/commit_guardian.json is `pre-commit`. Author a new pre-push guard (e.g. templates/commit-guardian/check_no_direct_push_to_main.py) that reads the destination refs from the pre-push hook stdin protocol (`<local ref> <local sha> <remote ref> <remote sha>` lines) and exits non-zero with an operator-visible message when any remote ref resolves to the repository default branch (main/master)."
+  - "Register the new hook via the create-hook scaffold pattern (per IT-PO standing rule, assign python-coder rather than workflow-architect since the AC-build loop dispatches ticket-phase agents only): add the config key + a hooks_manifest entry with stages: [pre-push] + a doc-index row in templates/commit-guardian/hooks_docs.md."
+  - "Config/template parity (ADR-001): edit the packaged template under templates/commit-guardian/ AND ensure the build.py round-trip deploys it to scripts/commit_guardian/ + .pre-commit-config.yaml; verify parity — never edit one side only."
+  - "Default-branch detection must be dynamic (resolve the remote HEAD / configured default), not a hard-coded 'main', so 'master' repos are covered."
+  - "Fail-closed for the protected ref only: the hook must block a push to the default branch but must NOT block normal pushes to working/feature branches (that would break BO-1300a-1/a-2)."
+  - "Error handling per project policy (CLAUDE.md): wrap the subprocess/git default-branch lookup in a typed try/except, log at WARNING, and on inability to determine the default branch fail-closed with a clear message rather than silently allowing the push."
+delivers_to:
+  agent: python-coder
+  contract: "A pre-push commit_guardian hook (+ manifest entry, stages: [pre-push]) that rejects any push whose destination ref is the default branch, backstopping BO-1300a-3's PR-only delivery path"
+expects_from:
+  ac_id: BO-1300a-3
+  contract: "The PR-merge delivery path that this pre-push guard protects against bypass"
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

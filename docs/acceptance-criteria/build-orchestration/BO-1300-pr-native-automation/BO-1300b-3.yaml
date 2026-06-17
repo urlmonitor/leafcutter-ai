@@ -1,0 +1,40 @@
+id: BO-1300b-3
+readiness: approved
+priority: high
+title: "State diagram documents the wait-for-checks merge gate"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300b.yaml"
+criteria: |
+  Given the automation gates the merge on the pull request's required checks
+  When a reader opens the architecture documentation for the merge gate
+  Then a state diagram shows the states a pull request moves through: checks pending, all required checks green, and a required check failed
+  And the diagram shows the transition from pending to green and from green to merged
+  And the diagram shows that the failed state and the pending state both hold the merge (no transition to merged)
+depends_on: [BO-1300b, BO-1300b-2]
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300b.yaml"
+    relationship: "decomposes"
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: "describes"
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "Author a Mermaid stateDiagram-v2; it must pass the diagram guards (check-mermaid-drift, check-mermaid-complexity, check-diagram-naming, check-mermaid-parent-link) in commit_guardian.json."
+  - "States and transitions must match the BO-1300b-2 / b-2-i poller verdict semantics: pending (hold), green (-> merged), failed (terminal hold). Optionally depict the timeout transition from BO-1300c-1-i (pending -> blocked) since it shares the wait loop."
+  - "Place under docs/architecture/ for build-orchestration so the diagram path-integrity / parent-link guards resolve it."
+delivers_to: null
+expects_from:
+  ac_id: BO-1300b-2
+  contract: "The wait-pending / merge-on-green / hold-on-red behavior the diagram depicts"
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

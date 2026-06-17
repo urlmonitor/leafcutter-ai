@@ -1,0 +1,43 @@
+id: BO-1300d-1
+readiness: approved
+priority: high
+title: "A full automation run completes end-to-end via pull request with the branch rule enabled"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300d.yaml"
+criteria: |
+  Given the "require a pull request before merging" protection is enabled on main
+  And the PR-native delivery, the required-check merge gate, and the blocked-merge surfacing behaviors are all in place
+  When the automation runs a full unit of work whose required checks all pass
+  Then the work is committed to a working branch, a pull request is opened and updated, the required checks turn green, and the pull request is merged into main
+  And the run completes without any direct push to main
+  And the run completes without disabling or bypassing the branch rule
+depends_on: [BO-1300d, BO-1300a, BO-1300b, BO-1300c]
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300d.yaml"
+    relationship: "decomposes"
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: "describes"
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "This is an end-to-end verification that exercises the integrated PR-native path (commit -> push working branch -> open/update PR -> green-check gate -> PR merge) with branch protection enabled. The exercising surface is the finalize-feature.js / building-epics flow plus the BO-1300b-1/b-2 merge-gate helper — python-coder owns wiring the verification."
+  - "Must run with 'require a pull request before merging' actually enabled on the target branch (or a faithful test fixture / sandbox repo) — verifying behavior with protection OFF does not satisfy this AC."
+  - "Must assert the two negatives: zero direct pushes to the default branch occurred during the run, and the branch rule was never disabled/bypassed (no --admin, no protection toggle)."
+  - "Must depend on the prior families being in place (a/b/c); do not stub the gate. Reuse FIN-100's post-merge test gate rather than re-spec'ing it."
+  - "Prefer a repeatable harness over a one-off manual run so it can be re-verified (per the user convention that post-epic spot-checks run via agents)."
+delivers_to: null
+expects_from:
+  ac_id: BO-1300a-3
+  contract: "The PR-native delivery path exercised end-to-end with protection enabled"
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,50 @@
+id: BO-1300b-2
+readiness: approved
+priority: high
+title: "The automation waits on pending checks and merges only when all required checks report success"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300b.yaml"
+criteria: |
+  Given an open pull request whose required checks include "Lint (ruff)"
+  And at least one required check is still pending (neither success nor failure)
+  When the automation evaluates whether to merge
+  Then it does not merge while any required check is pending
+  And it waits, re-checking the required-check states, until every required check has reached a terminal state
+  When every required check reports success
+  Then the automation merges the pull request
+depends_on: [BO-1300b, BO-1300b-1, FIN-100]
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300b.yaml"
+    relationship: "decomposes"
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/FIN-100-pre-merge-safety-gate/FIN-100.yaml"
+    relationship: "relates-to"
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: "describes"
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Surface is the .js workflow + shared helper: implement the wait loop in the BO-1300b-1 helper (scripts/pr_merge_gate.py) and call it from finalize-feature.js Step 4 BEFORE `gh pr merge`. The verdict drives the merge: merge only when the verdict is GREEN (every required check == success)."
+  - "MODIFY existing: finalize-feature.js Step 4 currently calls `gh pr merge --merge --auto` unconditionally after the confirmation gate. Gate that call on the GREEN verdict from the poller; never merge while any required check is pending."
+  - "Poll with a bounded loop: configurable interval and a configurable maximum wait window (the timeout that BO-1300c-1-i surfaces). Put both tunables in a config home (e.g. a merge_gate section in an existing config or a new config/pr_merge_gate.yaml) — do NOT hard-code the interval/timeout."
+  - "Must be idempotent / re-entrant: re-running the gate re-reads live check states; a check that has already gone terminal is not re-waited."
+  - "Must not regress FIN-100: this check-green gate sits alongside FIN-100's post-merge test gate (finalize-feature.js Step 3 runs first). Depend on FIN-100; do not re-spec its regression triage."
+  - "Error handling per project policy: wrap gh polling in typed try/except, log at WARNING; transient gh errors should be retried within the wait window, not treated as a terminal failure."
+delivers_to:
+  agent: python-coder
+  contract: "GREEN verdict (all required checks success) that authorizes the BO-1300a-3 PR-merge step; a bounded wait loop whose timeout window is consumed by BO-1300c-1-i"
+expects_from:
+  ac_id: BO-1300b-1
+  contract: "The structured required-check set + per-check states to evaluate before merging"
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: [BO-1300b-2-i]
+implemented_by: []

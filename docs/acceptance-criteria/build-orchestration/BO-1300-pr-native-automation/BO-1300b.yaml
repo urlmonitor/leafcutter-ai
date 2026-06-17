@@ -1,0 +1,29 @@
+id: BO-1300b
+readiness: approved
+priority: high
+title: "A pull request only merges once its required checks are green"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300.yaml"
+criteria: |
+  The automation waits for every required status check to pass before it merges.
+
+  When a pull request is ready, the automation waits for the required checks
+  (for example the lint gate) to finish and turn green, and it never merges over
+  a check that is still running or has failed.
+depends_on: [BO-1300]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: [BO-1300b-1, BO-1300b-2, BO-1300b-3]
+implemented_by: []
+documentation_triggers: [state-diagram]

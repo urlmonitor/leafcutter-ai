@@ -1,0 +1,43 @@
+id: BO-1300b-2-i
+readiness: approved
+priority: high
+title: "The automation never merges over a failed required check"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300b.yaml"
+criteria: |
+  Given an open pull request whose required checks include "Lint (ruff)"
+  And the "Lint (ruff)" check has reported failure
+  When the automation evaluates whether to merge
+  Then it does not merge the pull request
+  And it does not wait indefinitely for the failed check to turn green
+  And the pull request remains unmerged with the failed required check recorded as the reason
+depends_on: [BO-1300b-2]
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300b.yaml"
+    relationship: "decomposes"
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: "describes"
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Surface is the shared helper (scripts/pr_merge_gate.py): a failure (conclusion == failure) on any required check is a terminal RED verdict — the wait loop must exit immediately on RED rather than continuing to poll, and must NOT call `gh pr merge`."
+  - "RED is terminal: do not treat a failed check as pending; do not wait for it to flip green. The recorded reason must name the failing required check (hand-off to BO-1300c-1 for operator-facing blocker text)."
+  - "Verdict must be a structured value (e.g. status: RED, failing_checks: list[str]) so BO-1300c-1 can name the check — not free text."
+delivers_to:
+  agent: llm-expert
+  contract: "RED verdict naming the failing required check(s), consumed by BO-1300c-1 to compose the operator blocker"
+expects_from:
+  ac_id: BO-1300b-1
+  contract: "The structured required-check set including per-check failure states"
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

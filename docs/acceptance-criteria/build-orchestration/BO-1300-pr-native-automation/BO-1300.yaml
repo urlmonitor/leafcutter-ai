@@ -1,0 +1,34 @@
+id: BO-1300
+readiness: approved
+priority: high
+title: "Every change the automation makes reaches main the same protected way a person's would"
+component: build-orchestration
+level: L0
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300.yaml"
+criteria: |
+  The automation goes through a pull request that must pass its checks -- never a direct push to main.
+
+  Today the automation pipeline commits and pushes work straight to main, which
+  means the operator cannot turn on the "require a pull request before merging"
+  protection without breaking the pipeline. After this goal is achieved, every
+  unit of work the automation produces flows through a pull request that passes
+  the same required checks a person's pull request must pass before it reaches
+  main. No unreviewed or unverified change lands directly. Main is always
+  protected by one consistent gate, whether the work came from a person or from
+  the automation, and the operator can enable branch protection with confidence
+  that the pipeline keeps working.
+depends_on: [FIN-100]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: [BO-1300a, BO-1300b, BO-1300c, BO-1300d]
+implemented_by: []

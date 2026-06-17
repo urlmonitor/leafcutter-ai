@@ -1,0 +1,41 @@
+id: BO-1300a-1
+readiness: approved
+priority: high
+title: "Automated work is committed onto a non-main branch, never onto main directly"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300a.yaml"
+criteria: |
+  Given the automation pipeline begins a unit of work on a repository whose default branch is "main"
+  When the commit phase of the automation creates the commit(s) for that unit of work
+  Then every commit is written onto a working branch whose name is not "main"
+  And the branch is one the automation created or checked out for this unit of work (for example an epic or feature branch)
+  And no commit for this unit of work is written with "main" as the checked-out branch
+depends_on: [BO-1300a]
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300a.yaml"
+    relationship: "decomposes"
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: "describes"
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Surface is agent/skill prose: the commit-phase behavior is governed by templates/agents/commit.md and the worktree/branch convention in templates/skills/building-epics/SKILL.md (worktree-agent creates the non-main working branch). State the branch-checkout invariant in those bodies; do NOT add Python."
+  - "MODIFY existing: templates/agents/commit.md and templates/skills/building-epics/SKILL.md must make explicit that the commit phase refuses to commit when the checked-out branch is the repository default (main/master), naming that as a defect rather than committing."
+  - "Default-branch name must be resolved dynamically (e.g. the repo's HEAD default), not hard-coded to the literal 'main' — repos may use 'master'."
+  - "Must align with the existing worktree-per-epic model (ADR-006): one working branch per unit of work; do not contradict the building-epics worktree lifecycle."
+delivers_to:
+  agent: llm-expert
+  contract: "A named non-main working branch (and its pushed remote ref) that BO-1300a-2's pull-request phase opens a PR from"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

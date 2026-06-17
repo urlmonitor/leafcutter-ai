@@ -1,0 +1,40 @@
+id: BO-1300c-3
+readiness: approved
+priority: high
+title: "Sequence diagram documents the blocked-merge escalation to the operator"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300c.yaml"
+criteria: |
+  Given the automation surfaces a clear blocker whenever a merge is blocked rather than forcing the change through
+  When a reader opens the architecture documentation for the blocked-merge path
+  Then a sequence diagram shows the actors of the failure path (the automation, the remote branch protection, and the operator)
+  And the diagram shows the interactions for a failing required check and for a branch-protection rejection both ending in a blocker raised to the operator
+  And the diagram shows that no interaction bypasses the rule or force-merges the change
+depends_on: [BO-1300c, BO-1300c-1, BO-1300c-2]
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300c.yaml"
+    relationship: "decomposes"
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: "describes"
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "Author a Mermaid sequenceDiagram; it must pass the diagram guards (check-mermaid-drift, check-mermaid-complexity, check-diagram-naming, check-mermaid-parent-link) in commit_guardian.json."
+  - "Depict both failure paths ending in a blocker to the operator: failing required check (BO-1300c-1) and branch-protection rejection (BO-1300c-2); show NO bypass / force-merge edge."
+  - "Place under docs/architecture/ for build-orchestration so the diagram path-integrity / parent-link guards resolve it."
+delivers_to: null
+expects_from:
+  ac_id: BO-1300c-1
+  contract: "The blocker-surfacing behavior the diagram depicts"
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

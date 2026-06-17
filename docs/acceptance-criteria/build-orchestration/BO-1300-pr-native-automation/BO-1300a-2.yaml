@@ -1,0 +1,44 @@
+id: BO-1300a-2
+readiness: approved
+priority: high
+title: "The automation opens or updates a pull request for the working branch"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300a.yaml"
+criteria: |
+  Given the automation has committed a unit of work onto a non-main working branch and pushed that branch to the remote
+  When the pull-request phase of the automation runs for that branch
+  Then if no open pull request exists from the working branch into main, the automation opens one targeting main
+  And if an open pull request from the working branch into main already exists, the automation updates that same pull request instead of opening a duplicate
+  And exactly one open pull request from the working branch into main exists after the phase completes
+depends_on: [BO-1300a, BO-1300a-1]
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300a.yaml"
+    relationship: "decomposes"
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: "describes"
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Surface is agent/skill prose: idempotent open-or-update logic lives in templates/agents/pull-request.md (gh pr list --head <branch> then gh pr create vs reuse) and is already partially present; harden it so an existing open PR is updated, never duplicated."
+  - "MODIFY existing workflow item: generalize the EMU 'open epic PR before drive' note in CLAUDE.md / templates/skills/building-epics/SKILL.md into a first-class up-front step — the /build-feature (build-feature.js) + ticket-supervisor flow opens (or detects) the epic PR before the first ticket, rather than relying on the manual pre-drive checklist. This is a workflow change to the build-feature entrypoint, NOT a new agent."
+  - "Must be idempotent across re-runs: detect an existing open PR via gh pr list --head <branch> --base main and reuse its number; running the phase twice must leave exactly one open PR."
+  - "Base branch must be the repo default resolved dynamically, not hard-coded; the head is the BO-1300a-1 working branch."
+  - "Respect the EMU constraint already documented: under an Enterprise Managed User account gh pr create is blocked — the up-front-PR step must detect a pre-existing PR and push to it rather than failing on create."
+delivers_to:
+  agent: python-coder
+  contract: "An open PR number + head/base refs for the working branch into main; consumed by BO-1300b-1's poller (which reads that PR's required checks) and by the BO-1300a-3 merge step"
+expects_from:
+  ac_id: BO-1300a-1
+  contract: "A named non-main working branch pushed to the remote"
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

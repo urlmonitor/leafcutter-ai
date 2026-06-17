@@ -1,0 +1,47 @@
+id: BO-1300a-3
+readiness: approved
+priority: high
+title: "Work reaches main only by merging the pull request, never by pushing commits to main"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300a.yaml"
+criteria: |
+  Given an open pull request exists from the working branch into main and the automation is ready to deliver the unit of work
+  When the automation makes the work reach main
+  Then it does so by merging the pull request
+  And it does not run any operation that pushes the unit-of-work commits directly to main (for example a push whose destination ref is main)
+  And after delivery the working-branch commits appear on main as the result of the pull request merge, not as a direct push
+depends_on: [BO-1300a, BO-1300a-2, FIN-100]
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300a.yaml"
+    relationship: "decomposes"
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/FIN-100-pre-merge-safety-gate/FIN-100.yaml"
+    relationship: "relates-to"
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: "describes"
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Surface is the .js workflow body: the delivery-to-main step lives in templates/workflows-js/finalize-feature.js Step 4 (currently `gh pr merge ... --merge`). MODIFY that step so the ONLY path to main is the PR merge; remove/forbid any direct `git push origin main` (or push whose destination ref resolves to the default branch) from the finalize and ticket lifecycle. Per the IT-PO surface rule, the .js workflow body + gh glue is python-coder work, not llm-expert."
+  - "MODIFY existing: the building-epics SKILL.md supervisor merge gate and templates/workflows-js/finalize-feature.js must converge on the PR-merge path; do not leave a second code path that pushes commits to main."
+  - "Must not regress FIN-100: the PR merge must remain gated behind FIN-100's pre-merge safety gate (post-merge tests + triage in finalize-feature.js Step 3 run BEFORE Step 4). Do not re-spec FIN-100 regression triage here — depend on it."
+  - "Default-branch destination must be resolved dynamically (HEAD default), not the literal string 'main'."
+  - "Must be idempotent / resumable: if the PR is already merged (gh pr view --json state == MERGED), the step is a no-op, consistent with finalize-feature.js's existing already-merged skip."
+delivers_to:
+  agent: python-coder
+  contract: "The single PR-merge delivery path (finalize-feature.js Step 4) that BO-1300b-2's merge gate calls only on a green verdict and that BO-1300c-2's rejection handling wraps"
+expects_from:
+  ac_id: BO-1300a-2
+  contract: "An open pull request from the working branch into main (PR number + refs)"
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

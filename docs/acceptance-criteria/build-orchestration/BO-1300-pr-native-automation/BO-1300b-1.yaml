@@ -1,0 +1,44 @@
+id: BO-1300b-1
+readiness: approved
+priority: high
+title: "The automation identifies the pull request's required status checks before merging"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300b.yaml"
+criteria: |
+  Given an open pull request from a working branch into main on a repository that defines required status checks for main
+  When the automation prepares to merge the pull request
+  Then it reads the set of status checks marked required for the pull request from the repository's branch protection
+  And it treats that set as the gate it must satisfy, rather than a hard-coded list
+  And when the required-check set includes the lint gate named "Lint (ruff)", that check is one of the checks it waits on
+depends_on: [BO-1300b]
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300b.yaml"
+    relationship: "decomposes"
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: "describes"
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "CREATE NEW SHARED HELPER (single source of truth): the wait-for-checks merge gate does not exist today. finalize-feature.js Step 4 merges with `gh pr merge --merge --auto` and the pull-request.md poll gate only inspects mergeable/mergeStateStatus, NOT required-check conclusions. Author ONE deterministic helper (e.g. scripts/pr_merge_gate.py) that, given a PR number + base, reads the repository's branch-protection required status checks (gh api repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks, or gh pr view --json + status-check rollup) and returns the required-check set. Per the IT-PO single-helper rule, both the .js workflow and any agent-prose caller must consume this one helper rather than re-deriving the set."
+  - "MUST read the required set dynamically from branch protection; MUST NOT hard-code 'Lint (ruff)' or any check list. 'Lint (ruff)' is only the canonical example to validate against."
+  - "Owner/repo and default branch must be resolved dynamically (gh repo view / git remote), not hard-coded."
+  - "Error handling per project policy: wrap the gh/git subprocess calls in typed try/except, log at WARNING; if branch protection cannot be read (e.g. token lacks scope), fail-safe by surfacing a blocker rather than assuming an empty required set (which would let a merge through unchecked)."
+  - "This helper is the producer for the verdict consumed by BO-1300b-2 / b-2-i / c-1-i; keep its output a structured, testable value (set of required check names + per-check state), not free text."
+delivers_to:
+  agent: python-coder
+  contract: "Structured required-check set for the PR: { required: list[str], states: dict[str, 'pending'|'success'|'failure'|'missing'] } consumed by BO-1300b-2 (wait/merge), BO-1300b-2-i (red), and BO-1300c-1 (blocker naming)"
+expects_from:
+  ac_id: BO-1300a-2
+  contract: "The open PR number + head/base refs whose branch-protection required checks are read"
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

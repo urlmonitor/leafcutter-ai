@@ -1,0 +1,43 @@
+id: BO-1300c-2-ii
+readiness: approved
+priority: high
+title: "A missing required approval is surfaced as a blocker, never bypassed"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300c.yaml"
+criteria: |
+  Given branch protection on main requires at least one approving review on a pull request
+  And the open pull request has no approving review
+  When the automation attempts to merge the pull request
+  Then branch protection rejects the merge for lack of a required approval
+  And the automation surfaces a blocker to the operator stating that a required approval is absent
+  And it does not approve its own pull request to satisfy the rule
+  And it does not bypass the approval requirement with an administrator override
+  And the pull request remains unmerged
+depends_on: [BO-1300c-2]
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300c.yaml"
+    relationship: "decomposes"
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: "describes"
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Surface is agent/skill prose: extend the BO-1300c-2 rejection-handling wording in templates/agents/pull-request.md + building-epics so a 'missing required approval' rejection is surfaced as a blocker. This is a constraint statement — llm-expert."
+  - "Forbid self-approval and admin override in prose: the automation must NOT run `gh pr review --approve` on its own PR and must NOT use `gh pr merge --admin` to bypass the approval rule."
+  - "The blocker must state a required approval is absent and leave the PR unmerged; reuse the building-epics blocker schema. The operator (a human) is the one who supplies the approval — the automation only surfaces the gap."
+delivers_to: null
+expects_from:
+  ac_id: BO-1300c-2
+  contract: "The branch-protection rejection handling path this approval case extends"
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

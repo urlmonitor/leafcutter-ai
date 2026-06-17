@@ -1,0 +1,41 @@
+id: BO-1300c-2-i
+readiness: approved
+priority: high
+title: "A merge conflict with main is surfaced as a blocker, never resolved by overwriting main"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300c.yaml"
+criteria: |
+  Given an open pull request from a working branch into main
+  And the working branch conflicts with main so the pull request cannot merge cleanly
+  When the automation attempts the merge
+  Then it surfaces a blocker to the operator stating that the pull request conflicts with main and cannot merge cleanly
+  And it does not force the working branch onto main in a way that discards main's commits
+  And the pull request remains unmerged
+depends_on: [BO-1300c-2]
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300c.yaml"
+    relationship: "decomposes"
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: "describes"
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Surface is agent/skill prose: the conflict path already exists in templates/agents/pull-request.md (Merge-State Poll Gate -> CONFLICTING -> conflict-resolver) and finalize-feature.js Step 2 (merge origin/main --no-commit, HALT on conflict). MODIFY the prose so a conflict that cannot be auto-resolved ends in an operator blocker, never a force-merge that discards main's commits."
+  - "Forbid main-overwriting resolution: no `git push --force` to the default branch, no `-X ours` strategy that drops main's commits; conflict-resolver may rebase/merge the working branch but must never rewrite main."
+  - "The blocker must state the PR conflicts with main and leave the PR unmerged; reuse the existing conflict-resolver escalation path and the building-epics blocker schema."
+delivers_to: null
+expects_from:
+  ac_id: BO-1300c-2
+  contract: "The branch-protection / merge-rejection handling path this conflict case extends"
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

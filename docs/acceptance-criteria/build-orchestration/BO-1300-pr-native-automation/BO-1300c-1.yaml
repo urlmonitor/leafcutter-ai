@@ -1,0 +1,44 @@
+id: BO-1300c-1
+readiness: approved
+priority: high
+title: "A failing required check produces an operator-visible blocker naming the failing check"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300c.yaml"
+criteria: |
+  Given an open pull request whose required check "Lint (ruff)" has reported failure
+  When the automation determines that it cannot merge
+  Then it surfaces a blocker to the operator
+  And the blocker names the failing check "Lint (ruff)" as the reason the merge is held
+  And the blocker identifies the pull request that is blocked
+  And the automation leaves the pull request unmerged rather than proceeding
+depends_on: [BO-1300c, BO-1300b-2-i]
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300c.yaml"
+    relationship: "decomposes"
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: "describes"
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Surface is agent/skill prose: the operator-facing blocker is the structured escalation payload the supervisor raises. MODIFY templates/skills/building-epics/SKILL.md (blocker escalation to the user, §3 failure adjudication / structured blocker payload) and the finalize-feature merge-gate path so a RED verdict is turned into a blocker, NOT a silent stop. This is prompt/skill-body wording — llm-expert, not python-coder."
+  - "The blocker text must consume the structured RED verdict from BO-1300b-2-i: name the failing required check(s) verbatim (e.g. 'Lint (ruff)') and identify the blocked PR (number/URL). Do not re-derive the failing check in prose."
+  - "Must align with the existing blocker/escalation schema in building-epics (status: blocked + reason) so the supervisor routes it like any other blocker; do not invent a new escalation channel."
+  - "Must leave the PR unmerged: the prose must forbid any fall-through to merge after a RED verdict."
+delivers_to:
+  agent: architecture-diagram-author
+  contract: "The operator-facing blocker-surfacing behavior (RED check -> named blocker, PR left unmerged) that BO-1300c-3's sequence diagram depicts"
+expects_from:
+  ac_id: BO-1300b-2-i
+  contract: "RED verdict naming the failing required check(s) and the PR identity"
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: [BO-1300c-1-i]
+implemented_by: []

@@ -1,0 +1,43 @@
+id: BO-1300c-2
+readiness: approved
+priority: high
+title: "A branch-protection rejection is surfaced, never retried with a bypass or force-merge"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300c.yaml"
+criteria: |
+  Given the automation attempts to merge a pull request and branch protection on main rejects the merge
+  When the automation handles that rejection
+  Then it surfaces a blocker to the operator stating that branch protection rejected the merge and why
+  And it does not retry the merge with verification disabled (no equivalent of "--no-verify")
+  And it does not retry the merge using an administrator bypass of branch protection
+  And it does not force the change onto main by any other route
+  And the pull request remains unmerged
+depends_on: [BO-1300c, BO-1300a-3]
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300c.yaml"
+    relationship: "decomposes"
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: "describes"
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Surface is agent/skill prose: the 'never bypass' constraints already live in templates/agents/commit.md (refuses --no-verify) and templates/agents/pull-request.md (no force-push to main). MODIFY those bodies + the building-epics merge-gate path so a branch-protection rejection on `gh pr merge` is surfaced as a blocker and explicitly forbids retry with `--admin`, verification-disabling flags, or any force route. This is prompt/skill-body wording — llm-expert."
+  - "Forbid specific bypass routes in prose: no `gh pr merge --admin`, no `--no-verify`-equivalent, no `git push --force` to the default branch, no direct push to main (backstopped by the BO-1300a-4 pre-push hook)."
+  - "The blocker must state branch protection rejected the merge AND why (carry the gh error reason through to the operator), and leave the PR unmerged."
+  - "Must reuse the existing structured blocker/escalation schema in building-epics; do not invent a new channel."
+delivers_to: null
+expects_from:
+  ac_id: BO-1300a-3
+  contract: "The PR-merge attempt whose branch-protection rejection is handled"
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: [BO-1300c-2-i, BO-1300c-2-ii]
+implemented_by: []

@@ -1,0 +1,30 @@
+id: BO-1300a
+readiness: approved
+priority: high
+title: "No automated change ever lands on main without a pull request"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300.yaml"
+criteria: |
+  Every unit of automated work arrives on main through a pull request, never a direct push.
+
+  When the automation finishes a unit of work, it opens (or updates) a pull
+  request and lets the merge happen through that pull request, so the "require a
+  pull request before merging" protection can be switched on without breaking
+  the pipeline.
+depends_on: [BO-1300]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: [BO-1300a-1, BO-1300a-2, BO-1300a-3, BO-1300a-4, BO-1300a-5]
+implemented_by: []
+documentation_triggers: [sequence-diagram]

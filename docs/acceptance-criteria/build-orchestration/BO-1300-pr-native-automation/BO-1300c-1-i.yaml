@@ -1,0 +1,44 @@
+id: BO-1300c-1-i
+readiness: approved
+priority: high
+title: "A required check that never completes is surfaced as a timeout blocker, not waited on forever"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300c.yaml"
+criteria: |
+  Given an open pull request whose required check "Lint (ruff)" stays pending and never reaches success or failure
+  When the automation has waited up to its configured maximum wait time for that check
+  Then it stops waiting
+  And it surfaces a blocker to the operator stating that the required check did not complete within the wait window, naming "Lint (ruff)"
+  And it does not merge the pull request
+  And it does not silently abandon the pull request without surfacing the blocker
+depends_on: [BO-1300c-1, BO-1300b-2]
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300c.yaml"
+    relationship: "decomposes"
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: "describes"
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Surface is the shared helper (scripts/pr_merge_gate.py): the bounded wait loop from BO-1300b-2 must exit with a TIMEOUT verdict when the configured maximum wait window elapses while any required check is still pending. The timeout is the SAME configurable tunable as BO-1300b-2's wait window (one config home, e.g. config/pr_merge_gate.yaml: max_wait_seconds + poll_interval_seconds)."
+  - "TIMEOUT must be distinct from RED: the verdict carries status: TIMEOUT + the still-pending check name(s) so the operator blocker (composed in the BO-1300c-1 prose layer) can say 'did not complete within the wait window' and name the check."
+  - "Must not merge on timeout and must not silently abandon: the helper returns a non-merge verdict and the caller (finalize-feature.js / supervisor) surfaces it as a blocker."
+  - "Error handling per project policy: a timeout is an expected control-flow outcome, not an exception; transient gh errors during polling are retried within the window, not counted as completion."
+delivers_to:
+  agent: llm-expert
+  contract: "TIMEOUT verdict (still-pending required check name + elapsed window) consumed by the BO-1300c-1 blocker-surfacing prose"
+expects_from:
+  ac_id: BO-1300b-2
+  contract: "The bounded wait loop whose configured maximum wait window bounds this timeout"
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

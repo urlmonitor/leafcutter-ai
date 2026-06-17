@@ -1,0 +1,29 @@
+id: BO-1300c
+readiness: approved
+priority: high
+title: "A blocked merge is surfaced as a clear blocker, never forced through"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300.yaml"
+criteria: |
+  When a merge is blocked, the operator gets a clear explanation instead of a forced change.
+
+  If a required check fails or branch protection blocks the merge, the
+  automation stops and surfaces the reason to the operator as a clear blocker,
+  rather than bypassing the rule or pushing the change through anyway.
+depends_on: [BO-1300]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: [BO-1300c-1, BO-1300c-2, BO-1300c-3]
+implemented_by: []
+documentation_triggers: [sequence-diagram]

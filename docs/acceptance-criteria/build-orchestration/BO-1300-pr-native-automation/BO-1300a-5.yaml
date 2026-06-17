@@ -1,0 +1,40 @@
+id: BO-1300a-5
+readiness: approved
+priority: high
+title: "Sequence diagram documents the commit to push to PR to merge delivery flow"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300a.yaml"
+criteria: |
+  Given the automation delivers every unit of work to main through a pull request
+  When a reader opens the architecture documentation for build-orchestration PR-native delivery
+  Then a sequence diagram shows the actors of the delivery flow (the supervisor, the commit phase, the pull-request phase, the remote, and main)
+  And the diagram shows the ordered interactions: commit onto a working branch, push the branch, open or update the pull request, merge the pull request into main
+  And the diagram shows that no interaction pushes unit-of-work commits directly to main
+depends_on: [BO-1300a, BO-1300a-3]
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300a.yaml"
+    relationship: "decomposes"
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: "describes"
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "Author a Mermaid sequenceDiagram; it must pass the existing diagram guards (check-mermaid-drift, check-mermaid-complexity, check-diagram-naming, check-mermaid-parent-link) in commit_guardian.json — keep node/edge count under the complexity threshold and follow the diagram naming + parent-link conventions."
+  - "Actors must match the real delivery topology after BO-1300a is implemented (ticket-supervisor / finalize-feature, commit phase, pull-request phase, remote, main) — do not depict a direct-push edge."
+  - "Place under docs/architecture/ for build-orchestration so check-agent-diagrams / paths-integrity resolve it."
+delivers_to: null
+expects_from:
+  ac_id: BO-1300a-3
+  contract: "The PR-merge delivery behavior the diagram depicts"
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

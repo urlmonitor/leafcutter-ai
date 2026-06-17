@@ -1,0 +1,42 @@
+id: BO-1300d-2
+readiness: approved
+priority: high
+title: "A how-to guide documents the procedure for enabling the branch rule on main"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300d.yaml"
+criteria: |
+  Given the automation is pull-request-native and the operator wants to turn on "require a pull request before merging" for main
+  When the operator opens the how-to documentation for enabling the branch rule
+  Then the guide states the prerequisite that PR-native delivery, the required-check merge gate, and blocked-merge surfacing are already satisfied
+  And the guide lists the ordered steps to enable the rule on main, including selecting the required status checks (for example "Lint (ruff)")
+  And the guide states how to verify the pipeline still completes a full run via pull request after the rule is on
+  And the guide states how to roll the rule back if a run is blocked unexpectedly
+depends_on: [BO-1300d, BO-1300d-1]
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-pr-native-automation/BO-1300d.yaml"
+    relationship: "decomposes"
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: "describes"
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Author a how-to under docs/how-to/ (the existing how-to surface, alongside docs/how-to/finalize-feature.md). It must satisfy doc-frontmatter / doc-length / doc-type guards in commit_guardian.json (correct type + required frontmatter fields)."
+  - "The guide must reference the concrete enable mechanism (GitHub branch protection 'Require a pull request before merging' + 'Require status checks to pass', selecting checks such as 'Lint (ruff)') and tie the prerequisite to the BO-1300a/b/c behaviors and the BO-1300d-1 verified run."
+  - "Include the documented EMU caveat (CLAUDE.md): under an Enterprise Managed User account gh pr create is blocked, so the up-front-PR step must be used; mention it as an operational prerequisite."
+  - "Include a rollback section: how to disable the rule if a run is unexpectedly blocked, so the operator can recover without bypassing the gate."
+delivers_to: null
+expects_from:
+  ac_id: BO-1300d-1
+  contract: "The verified end-to-end PR-native run that the procedure depends on"
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
