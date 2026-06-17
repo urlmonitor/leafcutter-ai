@@ -43,6 +43,8 @@ the glossary-automation system (`check_glossary_coverage.py` / `glossary-triage`
 | nSource | Mermaid \n-escape tokenization artifact, not a domain concept | 2026-06-05 |
 | nNo | Mermaid \n-escape tokenization artifact, not a domain concept | 2026-06-05 |
 | mark_ac_done | Internal script filename (scripts/ac_store/mark_ac_done.py), not a domain concept | 2026-06-05 |
+| build_ac_mode_detection | Internal script filename (scripts/ac_store/build_ac_mode_detection.py), not a standalone domain concept | 2026-06-17 |
+| goal_to_epic | Internal script filename (scripts/ac_store/goal_to_epic.py), not a standalone domain concept | 2026-06-17 |
 | validate_ac_schema | Internal script filename (scripts/ac_store/validate_ac_schema.py), not a domain concept | 2026-06-05 |
 | sequenceDiagram | Mermaid diagram-type keyword in a code block, not a domain concept | 2026-06-05 |
 | stateDiagram | Mermaid diagram-type keyword in a code block, not a domain concept | 2026-06-05 |

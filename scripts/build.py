@@ -7,7 +7,7 @@ BUSINESS CONTEXT: The leafcutter package materialises agent/skill
     and build-phase dispatch. Actual phase logic lives in build_phases.py;
     template compilation in template_compiler.py; config I/O in config_loader.py;
     manifest writing and supplementary helpers in build_helpers.py.
-ARCHITECTURE: Three-layer delegation. build.py -> build_phases.py (eight phase
+ARCHITECTURE: Three-layer delegation. build.py -> build_phases.py (nine phase
     functions) -> template_compiler.py (parse, strip, inject, compile). Config
     loading and validation are in config_loader.py. Overwrites existing files by
     default so that template edits always reach the target project; use
@@ -28,6 +28,7 @@ from config_loader import load_config, validate_config, _JSONSCHEMA_AVAILABLE  #
 from build_phases import (
     build_agents,
     build_workflow_scripts,
+    build_ac_store,
     build_skills,
     build_commands,
     build_workflows,
@@ -437,6 +438,7 @@ def _run_phases(
     artifact_phases: list[tuple[str, Any]] = [
         ("Agents", build_agents),
         ("Workflow scripts", build_workflow_scripts),
+        ("AC store scripts", build_ac_store),
         ("Skills", build_skills),
         ("Commands", build_commands),
         ("Claude settings", build_claude_settings),
@@ -1029,4 +1031,9 @@ if __name__ == "__main__":
 #   Writes LEAFCUTTER_VERSION file to target_root so deployed consumers can
 #   determine the package version without reading the source package directly.
 #   Fallback: "unknown" on any read error. (#EPIC-AcPipelineConsolidation/12)
+# - 2026-06-17 [python-coder/EPIC-AcPipelineDeployGaps/03]: Imported
+#   build_ac_store from build_phases and added ("AC store scripts",
+#   build_ac_store) entry to artifact_phases after ("Workflow scripts",
+#   build_workflow_scripts). Closes the portable-skill/missing-script gap
+#   for ac-scanner and build-ac per ADR-013. (#EPIC-AcPipelineDeployGaps/03)
 # ====================================================================
