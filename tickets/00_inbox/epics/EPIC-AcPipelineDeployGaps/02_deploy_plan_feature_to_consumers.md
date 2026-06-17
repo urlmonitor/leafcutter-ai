@@ -15,7 +15,7 @@ agents:
   test-writer: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 files_touched:
   - templates/workflows-js/plan-feature.js
   - scripts/workflows/plan-feature.js
@@ -108,7 +108,7 @@ Feature: plan-feature.js deployment to consumer installs
 - [x] test-writer — 2026-06-16 09:00
 - [x] pr-reviewer — 2026-06-16 21:30
 - [x] commit — 2026-06-17 06:05
-- [ ] pull-request
+- [x] pull-request — 2026-06-17 08:07
 
 ## Comments
 
@@ -184,6 +184,16 @@ completion_manifest:
   precommit_hooks_passed: true
   conventional_commit_format: true
 Committed 3 staged files on branch EPIC-AcPipelineDeployGaps: templates/workflows-js/plan-feature.js (new, 366 lines), tests/test_build_phases.py (new, 213 lines), and ticket sign-offs. Commit message: feat(deploy): add plan-feature.js to templates/workflows-js for consumer installs.
+
+### 2026-06-17 08:07 — pull-request (status: ok)
+feedback-id: fb_2026-06-17_pullrequest_02
+completion_manifest:
+  pr_exists: true
+  branch_pushed: true
+  pr_url: https://github.com/urlmonitor/leafcutter-ai/pull/88
+  pr_state: OPEN
+  commits_pushed: true
+PR #88 already existed (EPIC-AcPipelineDeployGaps: retire create-ticket.js and document canonical /plan-feature + /build-ac path). Pushed 2 new commits (2339197, 386fe42) to origin/EPIC-AcPipelineDeployGaps. Branch is now up to date with remote. No new PR was needed.
 
 ## Implementation Tasks
 
