@@ -4,7 +4,7 @@ description: "Field-by-field reference for AC YAML files, the hierarchical ID fo
 type: reference
 status: active
 created: 2026-06-04
-last_updated: 2026-06-16
+last_updated: 2026-06-10
 components:
   - build_pipeline
 related_docs:
@@ -38,10 +38,9 @@ Each AC file is a single YAML document with the following fields.
 | `amended_by` | list of strings | no | Ticket paths that subsequently amended this criterion. Default: `[]`. |
 | `covered_by` | list of strings | no | Test file paths (optionally with `::test_function`) that verify this criterion. Default: `[]`. |
 | `implemented_by` | list of strings | no | Source file paths (optionally with `#anchor`) that implement this criterion. Default: `[]`. |
-| `origin_agent` | string | no | Identity of the agent or workflow that created this AC file. Common values: `business-analyst`, `debug`, `human`, `ticket-wiring`. |
-| `pattern_slots` | list of strings or null | no | Named placeholder slots in curly-brace notation (e.g. `{columns}`, `{default_sort}`) that consuming ACs must fill. Present only on ACs that act as shared-behavior patterns. Absent or null means this AC is not a pattern. |
-| `implements_pattern` | string or null | no | AC ID of the pattern AC that this AC instantiates. Must reference an AC whose `pattern_slots` is non-empty. Set on consuming ACs; absent on pattern ACs. |
-| `pattern_bindings` | mapping (string → string or string[]) or null | no | Maps each slot name (without curly braces) to its concrete value for this consuming AC. Values may be strings or arrays of strings (e.g. a list of column names). Every slot in the referenced pattern's `pattern_slots` must appear as a key. Only valid when `implements_pattern` is set. |
+| `origin_agent` | string | no | Identity of the agent or workflow that created this AC file. Free-form provenance string — any non-empty value is valid. The field is **not** validated against the current agent registry. Historical agent names (including names of deleted, renamed, or decomissioned agents) remain valid and are never rewritten during schema upgrades. Example values: `business-analyst` (canonical name, also used historically as v1 and promoted from v3), `business-analyst-v2` (deleted agent), `business-analyst-v3` (legacy v3 name, now renamed to `business-analyst`), `create-ticket` (deleted agent), `refinement` (deleted agent), `BrainCandy` (human author), `ticket-wiring` (workflow). |
+| `implements_pattern` | string or null | no | ID of the reusable behavior pattern this AC inherits from (e.g. `PTN-001`). When set, the effective behavior is derived from the referenced pattern combined with any `pattern_bindings`. The `criteria` field may contain a plain-text placeholder rather than a full `Given`/`When`/`Then` scenario. |
+| `pattern_bindings` | object or null | no | Key-value bindings that instantiate the referenced pattern for this AC. Values may be strings, arrays, or objects. Only meaningful when `implements_pattern` is set. Example: `{entity_type: "users", columns: ["name", "email"]}`. |
 
 ### Full example
 
@@ -64,250 +63,83 @@ amended_by: []
 origin_agent: business-analyst
 ```
 
----
+### Pattern-inherited AC example (empty criteria)
 
-## Pattern ACs — Shared Behavior Reuse
-
-A **pattern AC** is an L2 AC whose `criteria` field contains named placeholders
-in curly-brace notation (e.g. `{columns}`, `{default_sort}`). It defines a
-single authoritative specification for a behavior that multiple pages, endpoints,
-or components share. Each placeholder marks a **slot** that consuming ACs fill
-with concrete values through `pattern_bindings`.
-
-### Three fields involved
-
-| Field | Set on | Value |
-|---|---|---|
-| `pattern_slots` | Pattern AC | List of slot strings, e.g. `["{columns}", "{default_sort}"]` |
-| `implements_pattern` | Consuming AC | AC ID of the pattern, e.g. `ACS-500a-1` |
-| `pattern_bindings` | Consuming AC | Mapping of slot name → concrete value (string or array of strings) |
-
-### Single source of truth invariant
-
-No two ACs in the store may contain an equivalent `criteria` body for the same
-shared behavior. If a behavior recurs across multiple pages or endpoints, the
-canonical definition lives in exactly one pattern AC. All consuming ACs reference
-it via `implements_pattern` and supply concrete values via `pattern_bindings`.
-
-### Pattern AC example
+When an AC inherits all of its behavior from a reusable pattern, the `criteria`
+field may contain a plain-text placeholder instead of a full `Given`/`When`/`Then`
+scenario. The schema validator accepts this form when `implements_pattern` is set.
 
 ```yaml
-id: ACS-500a-1
-title: "Sortable table shared behavior pattern"
-component: ac-store
-level: L2
+id: PAGE-005
+title: "Users list page — standard CRUD table (PTN-001)"
+component: users-ui
 status: active
-created_by: "tickets/00_inbox/epics/EPIC-PatternReuse/01_pattern_ac.md"
-criteria: |
-  Given a page contains a sortable table with columns {columns},
-  When the user loads the page,
-  Then the table is sorted by {default_sort} ascending by default,
-  And each column header is clickable to toggle sort direction.
-pattern_slots:
-  - "{columns}"
-  - "{default_sort}"
-covered_by: []
-implemented_by: []
-origin_agent: BrainCandy
-```
-
-### Consuming AC example
-
-```yaml
-id: ACS-500b-1
-title: "Invoice list page declares sortable-table pattern with page-specific bindings"
-component: ac-store
-level: L2
-status: active
-created_by: "tickets/00_inbox/epics/EPIC-Defineabehavioronce,reusethespec/06_TICKET-20260611-ACS-500b-1.md"
-criteria: |
-  Given the invoices page loads,
-  When the user clicks 'Export',
-  Then a CSV download begins.
-implements_pattern: ACS-500a-1
+created_by: "tickets/00_inbox/epics/EPIC-UsersUI/03_users_list.md"
+criteria: "No page-specific behavior — all behavior inherited from pattern."
+implements_pattern: "PTN-001"
 pattern_bindings:
-  entity_type: "invoices"
+  entity_type: "users"
   columns:
-    - "number"
-    - "date"
-    - "amount"
-    - "status"
-  default_sort: "date descending"
-covered_by: []
-implemented_by: []
-origin_agent: BrainCandy
+    - "name"
+    - "email"
+readiness: draft
+priority: medium
+origin_agent: business-analyst
 ```
 
-Pattern binding values may be plain strings (e.g. `default_sort: "date descending"`)
-or YAML arrays of strings (e.g. `columns: ["number", "date", "amount", "status"]`).
-Both forms are valid. The schema accepts either type for each binding value.
+**Key points:**
+- `criteria` must still be a non-empty string (the schema requires `minLength: 1`).
+- A plain-text placeholder like `"No page-specific behavior — all behavior inherited from pattern."` satisfies this requirement.
+- The effective behavior is entirely derived from the pattern referenced in `implements_pattern`, instantiated with the `pattern_bindings` values.
+- The schema validator does **not** enforce `Given`/`When`/`Then` format — any non-empty string is valid.
 
-The `criteria` field contains ONLY page-specific behavior (the CSV export scenario).
-Shared sortable-table behavior — column sorting, sort indicators, keyboard navigation —
-is inherited from `ACS-500a-1` via `implements_pattern` and is not restated here.
+### Pattern Deviations — separate ACs with explicit precedence
 
-### File placement convention for pattern ACs (AC ACS-500a-2)
+A **deviation** is a separate, standalone AC file that captures non-standard behavior
+for a specific page or endpoint that otherwise uses a shared pattern via
+`implements_pattern`. Deviations are NOT inline overrides; they are ordinary AC files
+in the same feature folder with their own `id`, full `Given`/`When`/`Then` `criteria`,
+and a `depends_on` referencing the consuming AC.
 
-Pattern ACs follow the **same file placement convention** as all other AC YAML files.
-No separate "pattern catalog" directory or registry file is created.
+**Precedence rule (ACS-500d-2):**
+Deviation ACs take precedence over the pattern behavior for the specific aspect they
+override. When a pattern AC is amended (e.g. a new behavior is added), every page AC
+that references the pattern via `implements_pattern` inherits the new behavior
+automatically — but any existing deviation ACs for those pages remain unchanged. The
+deviation still overrides only the specific behavior it was written for; no conflict
+occurs because deviations are independent files that the pattern resolution logic
+never touches.
 
-| Rule | Detail |
-|---|---|
-| **Path** | `docs/acceptance-criteria/<component>/<feature-folder>/<id>.yaml` — identical to any other AC file |
-| **Component** | The `component` field must match the consuming ACs that reference this pattern. Pattern and consumer live in the same component namespace. |
-| **Parent link** | The pattern AC appears in its parent AC's `covered_by` list just like any other child AC. |
-| **No catalog dir** | There is no `docs/acceptance-criteria/patterns/` directory or equivalent. Patterns are discoverable through `pattern_slots` field presence alone. |
+**Invariants:**
+- Deviation ACs do NOT contain an `implements_pattern` field.
+- Pattern resolution MUST NOT modify, overwrite, or delete any deviation AC when the
+  referenced pattern is updated.
+- A page can simultaneously inherit new pattern behaviors (by reference) and retain
+  existing deviations (by separate files) — the two mechanisms are orthogonal.
 
-**Example (component `ac-store`, feature folder `ACS-500-pattern-reuse`):**
-
-```
-docs/acceptance-criteria/ac-store/ACS-500-pattern-reuse/
-  ACS-500a-1.yaml   ← pattern AC (has pattern_slots)
-  ACS-500a-2.yaml   ← consuming AC (has implements_pattern: ACS-500a-1)
-```
-
-Both files share the same `component: ac-store` field. `ACS-500a-1` appears in
-the `covered_by` list of `ACS-500a` (the L1 parent) exactly as a non-pattern
-child AC would.
-
-### Authoring rules for pattern ACs
-
-1. **Pattern ACs are L2 only.** L0/L1 ACs are composites; L3 ACs are too
-   fine-grained. The pattern mechanism operates at the implementable-leaf level.
-2. **Slot names must be valid identifiers.** Each `pattern_slots` entry must
-   match `\{[a-zA-Z_][a-zA-Z0-9_]*\}`.
-3. **All slots must be bound.** A consuming AC's `pattern_bindings` must contain
-   a key for every slot declared in the pattern's `pattern_slots`. The schema
-   validator (`check_ac_schema.py`) enforces binding completeness at commit time:
-   a missing key produces an error naming both the consuming AC file and the
-   missing slot name, blocking the commit.
-4. **Pattern ACs remain standalone ACs.** A pattern AC satisfies its own
-   acceptance criterion (the general-case behavior). Consuming ACs satisfy
-   per-instance specializations. Both are independently reviewable and traceable.
-
-### Effective behavior propagation — amending a pattern AC (AC ACS-500d-1)
-
-When the `criteria` field of a pattern AC is amended (for example, changing
-"displays total count above the table" to "displays total count below the
-table"), every consuming AC that has `implements_pattern` pointing at that
-pattern **automatically inherits the updated behavior** — no modification to
-the consuming AC's own YAML file is required, and no migration ticket is created.
-
-**How resolution works at read time:**
-
-An agent or tool that needs to understand the effective behavior of a consuming
-AC follows this two-step lookup:
-
-1. Read the consuming AC's own `criteria` field (page-specific behavior, if any).
-2. Follow `implements_pattern` → read the referenced pattern AC's `criteria`
-   field (the shared behavior, including the current slot definitions).
-
-The **effective criteria** of a consuming AC is the union of its own `criteria`
-plus the pattern AC's current `criteria` with `pattern_bindings` substituted for
-each `{slot}`. The pattern AC is the single source of truth for the shared
-behavior; the consuming AC's `pattern_bindings` are the single source of truth
-for the slot values.
-
-**Why no consumer changes are required:**
-
-The consuming AC stores only the `implements_pattern` reference and its
-`pattern_bindings`. It does not cache or restate the pattern's `criteria`
-text. Because the reference is resolved at read time — every time an agent
-reads the consuming AC — the consuming AC always reflects the current state of
-the pattern, not a snapshot from when it was authored.
-
-**Concrete example:**
-
-```
-Pattern AC: PTN-001
-  criteria: |
-    Given a paginated collection page,
-    When the user loads the page,
-    Then the page displays total count above the table.   # ← original
-
-Three consuming ACs each have:
-  implements_pattern: PTN-001
-
-→ Amend PTN-001 criteria: change "above" to "below"
-
-Result: all three consuming ACs now resolve effective behavior as
-  "displays total count below the table" — their YAML files are untouched.
-```
-
-**No migration path exists** because none is needed. There is no "propagation
-step" that pushes the amendment to consumer files. The `implements_pattern`
-reference is the propagation mechanism: it is evaluated live, not at write time.
-
-**Amendment traceability:**
-
-When a pattern AC's `criteria` is amended, the amending ticket path is appended
-to the pattern AC's `amended_by` list. Consuming ACs do not need `amended_by`
-entries for pattern-inherited changes — only for changes to their own page-specific
-`criteria` field. An agent auditing which consuming ACs were affected by a pattern
-amendment reads the pattern AC's `amended_by` list, then queries the store for all
-ACs with `implements_pattern: <pattern-id>`.
-
-### Pattern deviations — separate files, not inline overrides (AC ACS-500b-2)
-
-When a page or component needs behavior that differs from a pattern in one
-specific respect (a **deviation**), that deviation is expressed as a **separate
-AC file** in the same feature folder. It is never expressed by modifying the
-consuming AC's `pattern_bindings` or by adding ad-hoc fields to the consuming
-AC.
-
-**Rule summary:**
-
-| What | How |
-|---|---|
-| Non-standard behavior on one axis of a pattern | Write a new deviation AC file in the same feature folder |
-| Original consuming AC | Leave unchanged — `pattern_bindings` must not be modified to encode the deviation |
-| Deviation AC | Has its own `id`, a full `criteria` block (Given/When/Then), and a `depends_on` referencing the consuming AC |
-| `implements_pattern` on deviation AC | Absent — a deviation AC does NOT reference the pattern |
-
-**Concrete example:**
-
-A page uses the `sortable-table` pattern (via `implements_pattern: ACS-500a-1`)
-with standard column-header sort behavior. The status column must sort by
-priority order rather than alphabetically. The correct approach:
-
-1. Leave the consuming AC (`ACS-500b-1.yaml`, with `implements_pattern` and
-   `pattern_bindings`) **unchanged**.
-2. Write a new deviation AC file — e.g. `ACS-500b-2.yaml` — in the same
-   feature folder:
+**Example — deviation AC for a page that uses PTN-001:**
 
 ```yaml
-id: ACS-500b-2
-title: "Invoice list page — status column sorts by priority order, not alphabetical"
-component: ac-store
-level: L2
+id: PAGE-005-DEV-001
+title: "Users list page — status column uses priority sort order"
+component: users-ui
 status: active
-created_by: "tickets/..."
+created_by: "tickets/00_inbox/epics/EPIC-UsersUI/05_users_list_priority_sort.md"
 criteria: |
-  Given the invoice list page displays a sortable table,
-  When the user sorts by the status column,
-  Then rows are ordered by business priority (Open > Pending > Closed),
-  And alphabetical sort order is NOT used for the status column.
+  Given the Users list page renders its status column,
+  When the user requests a sort on the status column,
+  Then rows are ordered by priority (critical > high > medium > low),
+  And alphabetical ordering is NOT used for the status column.
 depends_on:
-  - ACS-500b-1
+  - PAGE-005
+amended_by: []
 covered_by: []
-implemented_by: []
-origin_agent: BrainCandy
+origin_agent: business-analyst
 ```
 
-**Why no `implements_pattern` on the deviation AC:** A deviation is
-page-specific behavior that explicitly overrides one aspect of the shared
-pattern for a particular context. It is not an instantiation of the pattern —
-it describes what is _different_ from the pattern. Mixing these two concepts
-would make the deviation's scope ambiguous and would prevent tooling from
-distinguishing "this page uses the pattern" from "this page uses the pattern
-except for this one aspect."
-
-**Invariant enforced by authoring discipline (not the schema validator):**
-The original consuming AC's `pattern_bindings` field is the unchanging
-record of which pattern is instantiated and with what slot values. No inline
-override mechanism exists. If a deviation requires that the consuming AC's
-`pattern_bindings` change (e.g. a slot value is wrong), that is a correction
-to the consuming AC itself — not a deviation AC.
+Note: `PAGE-005` is the consuming AC that has `implements_pattern: "PTN-001"`. The
+deviation AC (`PAGE-005-DEV-001`) carries the full Gherkin scenario for the non-standard
+behavior and has no `implements_pattern` field of its own.
 
 ---
 
@@ -382,7 +214,7 @@ active ──── deprecated
 
 ## Pre-Commit Hooks
 
-Four hooks are installed by `build.py` to enforce the AC store at commit time.
+Three hooks are installed by `build.py` to enforce the AC store at commit time.
 
 ### `check_ac_schema.py` (blocking)
 
@@ -397,93 +229,7 @@ Validates every YAML file under `docs/acceptance-criteria/` against
 
 Validates: required fields present, `status` is one of the allowed enum
 values, `id` matches the `PREFIX-NNN` regex, `superseded_by` is non-null
-only when `status == superseded_by`. Also validates that `implements_pattern`
-does not reference a pattern AC whose `status` is `deprecated`. When a
-consuming AC references a deprecated pattern, the hook exits 1 with:
-
-```
-<consuming_ac_file>: implements_pattern references deprecated pattern <pattern_id>;
-use its successor (see <pattern_id> superseded_by field) or remove the reference
-```
-
-The error names both the consuming AC file path and the deprecated pattern ID.
-
-Also detects when a new standalone AC's `criteria` text structurally duplicates
-an existing pattern AC — i.e., the criteria body is the same as the pattern with
-concrete values substituted for `{slot}` placeholders (AC ACS-500c-3). When
-detected, the hook exits 1 with:
-
-```
-<candidate_ac_file>: criteria is a likely duplicate of pattern <pattern_id>; use
-implements_pattern: <pattern_id> with pattern_bindings instead of restating the
-behavior inline
-```
-
-This enforces the single-source-of-truth invariant: shared behavior definitions
-must live in exactly one pattern AC. Consuming ACs must instantiate the pattern
-via `implements_pattern` and supply concrete values via `pattern_bindings`.
-
-**Duplicate detection algorithm:**
-
-1. Only standalone ACs (those without `implements_pattern`) are checked.
-2. For each active pattern AC in the store, the hook normalizes the pattern's
-   `criteria` (collapses whitespace) and builds a structural regex by escaping
-   fixed text and replacing each `{slot_name}` with a `.+` wildcard.
-3. The candidate AC's `criteria` is normalized the same way.
-4. `re.fullmatch` is applied — a full match confirms structural equivalence.
-5. Fail-open: if a pattern's criteria produces an invalid regex, the check
-   is skipped for that pattern without blocking the commit.
-
-### `check_ac_pattern_refs.py` (blocking)
-
-Enforces referential integrity for the `implements_pattern` field in both
-directions: forward-reference validation when ACs are added or modified, and
-deletion protection when a pattern AC is staged for removal.
-
-| Attribute | Value |
-|---|---|
-| Exit code | `1` on violation; `0` when all checks pass. |
-| Mode | Always blocking. |
-| Invocation | `python check_ac_pattern_refs.py` |
-
-**Check 1 — Forward-reference validation (ACS-500a-3):**
-
-When a staged AC YAML file contains `implements_pattern: <id>`, the hook
-verifies that:
-
-1. An AC with that `id` exists in the store.
-2. The referenced AC has parameterized slots (non-empty `pattern_slots` list,
-   or `{word}` placeholders in its `criteria` field).
-
-If either check fails, the hook exits 1 with a diagnostic message naming the
-staged file and the referenced pattern ID.
-
-**Check 2 — Deletion protection (ACS-500d-1-i):**
-
-When a pattern AC YAML file is staged for deletion (`git rm`), the hook scans
-all remaining AC YAML files in the store for any that have `implements_pattern`
-pointing at the deleted file's `id`. If any consumers exist, the commit is
-blocked with:
-
-```
-Cannot delete PTN-001: still referenced by 3 consuming ACs.
-Referencing IDs: ACS-500b-1, ACS-500b-2, ACS-500b-3
-```
-
-The error names the pattern ID, the count of blocking consumers, and the
-specific consuming AC IDs. The pattern file remains in the store unchanged.
-
-**To safely delete a pattern AC:**
-
-1. For each consuming AC that has `implements_pattern: <pattern-id>`, remove
-   (or update) the `implements_pattern` and `pattern_bindings` fields.
-2. Stage the consuming AC changes.
-3. Stage the pattern AC deletion (`git rm`).
-4. Commit — the hook will pass because no consumers reference the deleted ID.
-
-**Fail-open design:** Unexpected exceptions (YAML parse errors, git unavailable,
-filesystem errors) exit 0 — the hook never blocks a commit due to its own
-malfunction.
+only when `status == superseded_by`.
 
 ### `check_test_ac_tags.py` (configurable)
 
@@ -524,8 +270,8 @@ Advisory only; never blocks a commit.
 
 ### Authoring agents — parent covered_by update (mandatory)
 
-Every requirement-authoring agent (`business-analyst-v3`, `product-owner-v3`,
-`it-po-v3`) that writes a new child AC file MUST, in the same write batch,
+Every requirement-authoring agent (`business-analyst`, `product-owner`,
+`it-po`) that writes a new child AC file MUST, in the same write batch,
 also update the parent AC file to record the new child. This is the canonical
 mechanic for building the parent-child link from the parent's direction.
 
@@ -582,64 +328,26 @@ files to `docs/acceptance-criteria/<component>/`.
 **Key behaviour:** the agent validates the file against `check_ac_schema.py`
 before finalising. If validation fails, the agent self-corrects the YAML.
 
-### business-analyst-v3
+### business-analyst
 
-The `business-analyst-v3` agent produces L2/L3 AC YAML files from L1 ACs.
+The `business-analyst` agent (promoted from the v3 pipeline) produces L2/L3 AC YAML files from L1 ACs.
 When writing a new L2 or L3 file, it applies the parent covered_by update
 protocol described above: the child's `depends_on` includes the parent ID,
 and the parent's `covered_by` list is updated in the same write batch.
 
-### product-owner-v3
+### product-owner
 
-The `product-owner-v3` agent produces L0 and L1 AC YAML files. When writing
+The `product-owner` agent (promoted from the v3 pipeline) produces L0 and L1 AC YAML files. When writing
 a new L1 file (child of an L0), it applies the parent covered_by update
 protocol: the L1's `depends_on` includes the L0 ID, and the L0's `covered_by`
 list is updated to include the new L1 ID.
 
-### it-po-v3
+### it-po
 
-The `it-po-v3` agent enriches existing L2/L3 AC files. When it creates new
+The `it-po` agent (promoted from the v3 pipeline) enriches existing L2/L3 AC files. When it creates new
 AC files (e.g. split ACs), it applies the parent covered_by update protocol
 for any newly created child AC, ensuring the parent's `covered_by` list is
 updated to include the new child.
-
-#### Pattern field preservation (mandatory — AC ACS-500c-2)
-
-When enriching a consuming AC that has `implements_pattern` and `pattern_bindings`
-set, the `it-po-v3` agent MUST preserve both fields exactly as the Business Analyst
-wrote them. Neither field may be cleared, merged, overwritten, or omitted from the
-enriched output.
-
-**Invariant:**
-
-```
-Given an L2 AC has implements_pattern: "ACS-500a-1" and
-  pattern_bindings: {entity_type: "invoices", columns: ["number", "date"]},
-When the it-po-v3 agent adds it_requirements and technical constraints to the AC,
-Then the implements_pattern and pattern_bindings fields remain unchanged,
-And the it_requirements do NOT restate behavioral rules already covered
-  by the referenced pattern (e.g. the agent does NOT add "must support
-  ascending and descending sort" when the pattern already defines this),
-And the it_requirements address only implementation concerns specific
-  to this page's bindings (e.g. "query must use the invoices_date_idx index").
-```
-
-**Why this matters:** The `implements_pattern` and `pattern_bindings` fields are
-the machine-readable link from a consuming AC back to its pattern. The pre-commit
-hook `check_ac_schema.py` uses these links to verify binding completeness — every
-slot declared in the pattern's `pattern_slots` must appear as a key in
-`pattern_bindings`. If the IT PO clears or corrupts these fields, the link is
-broken and the consuming AC loses its traceability to the shared behavior it
-instantiates, defeating the single-source-of-truth invariant for shared behaviors.
-
-**it_requirements scope rule for pattern-linked ACs:**
-
-When writing `it_requirements` for a consuming AC, the IT PO must restrict its
-content to implementation constraints specific to this instance's bindings
-(e.g. index choice for the entity_type's columns, caching budget, security policy
-for this endpoint). Behavioral rules already defined in the pattern AC criteria
-(e.g. sort direction toggle, default ascending sort) are inherited implicitly and
-must not be restated in `it_requirements`.
 
 ### test-writer
 

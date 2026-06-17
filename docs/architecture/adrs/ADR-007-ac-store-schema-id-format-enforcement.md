@@ -4,7 +4,7 @@ description: "Defines the AC YAML schema, hierarchical ID format with parent der
 type: "adr"
 status: "accepted"
 created: "2026-06-04"
-last_updated: "2026-06-16"
+last_updated: "2026-06-08"
 components:
   - build_pipeline
 ---
@@ -65,6 +65,51 @@ following fields:
 | `amended_by` | array of strings | Ticket paths that subsequently amended this AC |
 | `covered_by` | array of strings | Test file paths (and optionally `::test_func`) that verify this AC |
 | `implemented_by` | array of strings | Source file paths (and optionally `#anchor`) that implement this AC |
+| `implements_pattern` | string or null | ID of the reusable behavior pattern this AC inherits from (e.g. `PTN-001`). When set, the `criteria` field may be a plain-text placeholder rather than a full Gherkin scenario (see below). |
+| `pattern_bindings` | object or null | Key-value bindings that instantiate the referenced pattern. Only meaningful when `implements_pattern` is set. |
+
+**Pattern-inherited ACs and the `criteria` field:**
+
+When `implements_pattern` is set, the AC's effective behavior is entirely derived
+from the referenced pattern combined with `pattern_bindings`. In this case, the
+`criteria` field may contain a plain-text placeholder such as
+`"No page-specific behavior — all behavior inherited from pattern."` instead of a
+full `Given`/`When`/`Then` scenario. The schema validator accepts any non-empty
+string for `criteria` — it does not enforce Gherkin format. This is by design: the
+schema's role is structural integrity (field presence and type), not behavioral
+completeness (which is owned by the pattern registry). ACs that have no unique
+page-specific behavior are therefore valid with an empty-criteria placeholder as
+long as `implements_pattern` is set.
+
+**Pattern deviations and update isolation (ACS-500d-2):**
+
+A deviation is a separate, standalone AC file that captures non-standard behavior for
+a specific page or endpoint that otherwise inherits from a shared pattern. The key
+design invariants are:
+
+1. **Deviations are standard ACs.** A deviation AC has its own `id`, full
+   `Given`/`When`/`Then` `criteria`, and a `depends_on` referencing the consuming AC.
+   It does NOT have an `implements_pattern` field.
+
+2. **Deviations take precedence.** For the specific behavior the deviation AC
+   describes, that AC is authoritative. The shared pattern's definition of the same
+   behavior is overridden by the deviation for that page or endpoint only.
+
+3. **Pattern updates do not affect deviation ACs.** When a pattern AC is amended to
+   add a new behavior, every consuming AC inherits the new behavior via the
+   `implements_pattern` reference — but existing deviation ACs remain completely
+   unchanged. The pattern resolution logic MUST NOT modify, overwrite, or delete any
+   deviation AC when the referenced pattern is updated.
+
+4. **No conflict at the schema level.** Because deviations are independent files (not
+   inline overrides), there is no merge conflict between an updated pattern and an
+   existing deviation. The two mechanisms are orthogonal: the consuming AC inherits
+   new pattern behaviors by reference; the deviation continues to override only the
+   specific aspect it was written for.
+
+This design was adopted to keep the schema minimal (no special deviation fields) and
+to make the precedence rule declarative: if a separate AC exists in the same feature
+folder that addresses the same behavior, it takes precedence over the pattern.
 
 ### ID Format
 
@@ -159,272 +204,6 @@ blocks from ticket bodies to AC YAML files:
   with exit 1 on failure is applied.
 - No back-migration of existing tickets is required — ACs in ticket bodies
   remain valid; the AC store supplements rather than replaces them.
-
-### Schema Extension: Pattern AC Fields (added 2026-06-11)
-
-Three optional fields were added to `config/ac_store_schema.json` to support
-shared-behavior reuse across ACs (AC ACS-500a-1):
-
-| Field | Type | Purpose |
-|---|---|---|
-| `pattern_slots` | array of strings or null | Declares named curly-brace placeholders on a pattern AC (e.g. `["{columns}", "{default_sort}"]`). Absent or null on non-pattern ACs. |
-| `implements_pattern` | string or null | References the AC ID of the pattern this AC instantiates. Set on consuming ACs only. |
-| `pattern_bindings` | object (string → string or string[]) or null | Maps each slot name (without curly braces) to its concrete value. Values may be strings or arrays of strings (e.g. a list of column names). Required when `implements_pattern` is set. |
-
-These fields are all optional and default to null. Existing ACs without pattern
-semantics are unaffected — the schema extension is fully additive. The
-`additionalProperties: false` constraint in the schema was already allowing for
-named optional properties; the three new properties are registered there.
-
-The single-source-of-truth invariant — no two ACs in the store may define an
-equivalent behavior for the same shared pattern — is enforced by
-`check_ac_schema.py` at commit time (AC ACS-500c-3). See the section below for
-the duplicate detection algorithm.
-
-**Pattern binding values extended to arrays (added 2026-06-16, AC ACS-500b-1):**
-
-`pattern_bindings` values may now be either plain strings or arrays of strings.
-This allows a consuming AC to bind a slot such as `{columns}` to a structured
-list rather than a comma-separated string, improving readability and enabling
-machine-readable binding validation in future tooling. Example:
-
-```yaml
-pattern_bindings:
-  entity_type: "invoices"
-  columns:
-    - "number"
-    - "date"
-    - "amount"
-    - "status"
-  default_sort: "date descending"
-```
-
-The `additionalProperties` constraint on `pattern_bindings` in
-`config/ac_store_schema.json` now accepts `oneOf: [string, array of strings]`
-for each binding value. The binding completeness check (every slot declared in
-the pattern's `pattern_slots` must appear as a key) is unchanged — only the
-allowed value types are broadened. Existing string-valued bindings remain valid.
-
-**Pattern bindings completeness enforcement (added 2026-06-16, AC ACS-500a-3-i):**
-
-`check_ac_schema.py` now enforces that every consuming AC (one with
-`implements_pattern` set) supplies a `pattern_bindings` entry for every slot
-declared in the referenced pattern's `pattern_slots`. The check runs as part
-of the existing `check-ac-schema` pre-commit hook — no new hook is required.
-
-When a slot is missing, the hook exits 1 with the canonical error:
-
-```
-<consuming_ac_file>: pattern_bindings missing required key '<slot>' for pattern <pattern_id>
-```
-
-Both the consuming AC file path and the missing key name are included in the
-error message so the author can locate and fix the issue immediately.
-
-**Deprecated pattern reference enforcement (added 2026-06-16, AC ACS-500a-3-ii):**
-
-`check_ac_schema.py` now enforces that no consuming AC references a pattern AC
-that has `status: deprecated` via its `implements_pattern` field. The check runs
-as part of the same `check-ac-schema` pre-commit hook — no new hook is required.
-
-When a consuming AC references a deprecated pattern, the hook exits 1 with:
-
-```
-<consuming_ac_file>: implements_pattern references deprecated pattern <pattern_id>;
-use its successor (see <pattern_id> superseded_by field) or remove the reference
-```
-
-The error names the consuming AC file path so the author can locate and update the
-reference. The `superseded_by` field on the deprecated pattern AC identifies the
-correct replacement; if no successor exists, the `implements_pattern` field must be
-removed.
-
-### Pattern Deviation Convention — Separate Files Only (added 2026-06-16, AC ACS-500b-2)
-
-When a consuming page or component needs behavior that differs from a pattern
-on one specific axis, that deviation is written as a **separate AC file** in
-the same feature folder. Inline overrides — modifying `pattern_bindings` on the
-consuming AC, or introducing ad-hoc fields — are not permitted.
-
-**Decision:** A deviation AC is a standalone YAML file that:
-
-1. Has its own `id` (following the normal `PREFIX-NNNx-N` L2 format).
-2. Contains a full `criteria` block (Given/When/Then) describing only the
-   non-standard behavior.
-3. Sets `depends_on` to include the consuming AC that instantiates the pattern
-   (establishing the traceability link back to the pattern instantiation context).
-4. Does **not** set `implements_pattern` — a deviation AC is not a pattern
-   instantiation; it describes an explicit override for one component.
-5. The original consuming AC's `pattern_bindings` remain unchanged.
-
-**Rationale:**
-
-1. **Single-responsibility.** Each AC file describes one testable behavior.
-   Mixing a pattern instantiation record with a deviation in the same file
-   creates an ambiguous contract that is hard to review and test independently.
-2. **Stable traceability.** The consuming AC's `pattern_bindings` is a
-   snapshot of "which pattern with what slot values." If a deviation modified
-   the bindings, the bindings would no longer accurately represent the pattern
-   in use — they would partially describe a custom behavior instead.
-3. **No new schema fields needed.** A deviation AC uses the existing required
-   fields (`id`, `title`, `component`, `status`, `created_by`, `criteria`) and
-   the existing `depends_on` pointer. The schema extension is purely a
-   convention that authoring agents enforce; the JSON Schema validator requires
-   no changes.
-4. **Tooling simplicity.** A scanner that identifies all ACs with
-   `implements_pattern` gets a clean list of pattern instantiations. Deviation
-   ACs (no `implements_pattern`) are simply additional ACs in the feature
-   folder — the scanner does not need a special code path to handle them.
-
-This convention is described in detail in `docs/reference/ac-schema.md` under
-the subsection "Pattern deviations — separate files, not inline overrides."
-
-### Duplicate Criteria Detection (added 2026-06-16, AC ACS-500c-3)
-
-`check_ac_schema.py` now detects when a new standalone AC's `criteria` text
-restates the same behavior as an existing pattern AC by substituting concrete
-values for pattern slots. Such ACs must instead use `implements_pattern` +
-`pattern_bindings` to preserve the single-source-of-truth invariant.
-
-**Algorithm:**
-
-1. For every AC file being validated that does NOT have `implements_pattern` set:
-2. Collect all pattern ACs in the store (those with a non-empty `pattern_slots`
-   list, or whose `criteria` text contains at least one `{slot}` placeholder).
-   Skip deprecated patterns (no live pattern to reference).
-3. For each pattern AC, normalize its criteria: collapse whitespace runs to a
-   single space. Build a regex by escaping fixed text between slots and replacing
-   each `{slot_name}` with `.+` (one-or-more-character wildcard).
-4. Normalize the candidate AC's criteria the same way (whitespace collapse).
-5. Apply `re.fullmatch` against the normalized candidate criteria. A full match
-   means the candidate criteria is structurally identical to the pattern with
-   slots filled in.
-6. On a match, emit an error:
-   ```
-   <file>: criteria is a likely duplicate of pattern <id>; use
-   implements_pattern: <id> with pattern_bindings instead of restating
-   the behavior inline
-   ```
-   The commit is blocked (exit 1).
-
-**Design choices:**
-
-- **Whitespace normalization before matching.** Gherkin criteria often have
-  varying indentation (leading spaces on continuation lines). Normalizing to a
-  single flat string ensures matching works regardless of formatting style.
-- **`re.fullmatch` for structural equivalence.** Partial matches (substring
-  presence) would produce excessive false positives on criteria that share
-  common Gherkin phrases. A full match requires the entire criteria body to
-  follow the pattern structure.
-- **Greedy `.+` per slot (not `.*`).** Each slot must be filled with at least
-  one character. This prevents erroneous matches on boundary-adjacent patterns
-  and makes the match semantically accurate (a slot that bound to an empty
-  string would not be a valid binding).
-- **Fail-open on regex compilation errors.** If a pattern AC's criteria
-  produces an invalid regex (e.g., unmatched curly braces in non-slot
-  positions), the check is skipped for that pattern rather than blocking
-  all commits. The pattern author should fix the malformed criteria.
-- **No hook file added.** The check is integrated into the existing
-  `check-ac-schema` hook rather than introducing a new
-  `check_ac_pattern_uniqueness.py` hook. This keeps the hook surface minimal
-  and avoids requiring a separate hook registration entry.
-
-### Pattern Criteria Propagation — Effective Behavior at Read Time (added 2026-06-16, AC ACS-500d-1)
-
-When a pattern AC's `criteria` field is amended, every consuming AC that
-references it via `implements_pattern` automatically inherits the updated
-behavior. No change to consuming AC files is required, and no migration ticket
-is created.
-
-**Decision:** Pattern criteria propagation is a read-time resolution, not a
-write-time fan-out.
-
-A consuming AC stores only:
-- `implements_pattern: <pattern-id>` — the reference to the pattern.
-- `pattern_bindings: {...}` — the concrete values for each slot.
-
-The consuming AC's effective behavior is evaluated by any reader (agent, tool,
-or human) at the time the AC is read:
-
-1. Read the consuming AC's own `criteria` (page-specific behavior, if present).
-2. Follow `implements_pattern` → read the pattern AC's current `criteria`.
-3. Substitute `pattern_bindings` values for each `{slot}` placeholder in the
-   pattern criteria.
-4. The effective criteria is the union of steps 1 and 3.
-
-Because the reference is resolved at read time, amending the pattern AC's
-`criteria` is immediately reflected in all consumers' effective behavior without
-any additional writes.
-
-**Rationale:**
-
-1. **Zero-cost propagation.** A write-time fan-out would require the amending
-   agent to locate all consumers, update each one, and commit all changes
-   atomically. With N consumers this is an O(N) write operation that is error-
-   prone and produces noisy diffs. Read-time resolution makes propagation
-   O(0) writes and O(1) per read.
-
-2. **Consumer files are immutable records of instantiation.** A consuming AC's
-   YAML records "which pattern, with what bindings, for which component." That
-   record does not change when the pattern's behavior changes — the record
-   accurately describes the consuming AC's intent at all times. Rewriting the
-   consumer file on every pattern amendment would conflate amendment history with
-   instantiation records.
-
-3. **Consistent with the single-source-of-truth invariant.** The pattern AC is
-   the sole owner of the shared behavior definition. Propagating criteria to
-   consumer files would create N+1 copies of the definition — exactly the
-   redundancy the pattern mechanism was designed to eliminate.
-
-4. **No schema change required.** The `implements_pattern` reference field
-   already carries the information needed for read-time resolution. No new field
-   (e.g. `criteria_inherited_version`) is introduced.
-
-**Amendment traceability:** When a pattern AC's `criteria` is amended, the
-amending ticket path is appended to the pattern AC's `amended_by` list. Consumer
-ACs do not receive `amended_by` entries for pattern-inherited changes. An auditor
-who wants to know which consumers were affected by a pattern amendment reads the
-pattern AC's `amended_by` list and queries `implements_pattern: <pattern-id>`
-across the store.
-
-**Detailed specification:** see `docs/reference/ac-schema.md` under
-"Effective behavior propagation — amending a pattern AC."
-
-### Pattern AC Placement Convention (added 2026-06-11, AC ACS-500a-2)
-
-Pattern ACs follow the **same file placement convention** as every other AC in
-the store. No separate "pattern catalog" directory or registry file is created.
-
-**Decision:** A pattern AC is stored at:
-
-```
-docs/acceptance-criteria/<component>/<feature-folder>/<id>.yaml
-```
-
-This is identical to the path for any non-pattern AC. The presence of
-`pattern_slots` in the YAML body is the sole indicator that an AC is a pattern.
-
-**Rationale:**
-
-1. **No second root.** Introducing a `docs/acceptance-criteria/patterns/`
-   directory would bifurcate the store into two roots, requiring every
-   AC-scanning tool and hook to support two glob patterns. Keeping patterns
-   within the standard hierarchy means `docs/acceptance-criteria/**/*.yaml`
-   continues to be the complete scan expression.
-
-2. **Component coherence.** A pattern AC defines behavior for a specific
-   component. Placing it inside that component's folder (with the same
-   `component` field) makes ownership and co-location obvious. Consumers and
-   patterns are reviewable together in the same directory tree.
-
-3. **Parent traceability unchanged.** A pattern AC appears in its parent AC's
-   `covered_by` list exactly as any other child AC would. The
-   `check_ac_parent_covered_by.py` hook does not need a special code path for
-   patterns — they are just ACs.
-
-4. **ID format unchanged.** Pattern AC IDs follow the same
-   `PREFIX-NNNx-N` format as other L2 ACs. No special namespace, prefix, or
-   reserved range is assigned to patterns.
 
 ## Consequences
 
