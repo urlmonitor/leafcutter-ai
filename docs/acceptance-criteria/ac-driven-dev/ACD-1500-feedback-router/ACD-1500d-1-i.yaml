@@ -1,0 +1,40 @@
+id: ACD-1500d-1-i
+readiness: approved
+priority: medium
+title: "Missing roadmap fails safe — entry is parked, not assumed aligned"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given entry F1 is a feature-type item awaiting an alignment check,
+  And docs/roadmap.json is absent or cannot be read,
+  When the router attempts the roadmap alignment check for F1,
+  Then it does NOT assume F1 is aligned,
+  And F1 is parked for human /feedback-review with the reason "roadmap unavailable —
+    cannot confirm alignment",
+  And no feature artifact is auto-authored while the roadmap cannot be consulted,
+  And the run continues to process other entries that do not require an alignment check.
+depends_on: [ACD-1500d-1]
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "In feedback-router.js the roadmap-read failure path (roadmap_query.py errors, or docs/roadmap.json absent/unreadable) must default to PARK, never to assume-aligned — fail safe"
+  - "The catch must log the failure at warning and record the park reason 'roadmap unavailable — cannot confirm alignment' per the project error handling policy; it must not crash the run"
+  - "Other entries that do not require an alignment check (e.g. bug-fix entries) must continue to process in the same run"
+delivers_to: null
+expects_from:
+  ac_id: ACD-1500d-1
+  contract: "The alignment check whose failure path must default to park, not proceed"
+origin_agent: business-analyst-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

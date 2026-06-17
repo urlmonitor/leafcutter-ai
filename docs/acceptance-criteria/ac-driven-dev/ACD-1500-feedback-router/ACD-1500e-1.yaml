@@ -1,0 +1,47 @@
+id: ACD-1500e-1
+readiness: approved
+priority: medium
+title: "Thin feedback that blocks confident routing triggers the router's own process-feedback"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given entry F1 cannot be routed confidently because its data is too thin --
+    for example F1 is a bug-fix-shaped entry with no target_file, an empty or
+    vague note, and no tags,
+  When the router determines the low confidence is caused by missing feedback
+    data rather than genuine ambiguity in a well-formed entry,
+  Then in addition to parking F1, the router emits its OWN feedback entry via
+    submit_feedback.py,
+  And the emitted entry uses category process-finding,
+  And the emitted entry's source distinguishes it as router-generated process
+    feedback (not a fresh agent observation),
+  And F1 itself is still parked and remains unresolved.
+depends_on: [ACD-1500e]
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "CONFIG PREREQUISITE / BLOCKING: config/feedback_categories.yaml currently sets process-finding allowed_writers: [hook] ONLY. submit_feedback.py validates category+writer and will EXIT 1 (rejecting the write) if the router is not an allowed writer. Before this AC can be built, a config decision is required and must be applied: EITHER (a) add a new router writer id (e.g. feedback-router) to process-finding.allowed_writers, OR (b) have the router emit with the hook writer/source so it satisfies the existing [hook] rule. The category vocabulary is PR-gated (closed) — the change to feedback_categories.yaml must go through the documented PR-gate, not be edited silently"
+  - "feedback-router.js must call scripts/feedback/submit_feedback.py to emit the process-finding entry; it must NOT append to feedback.jsonl directly (submit_feedback.py is the single emission chokepoint)"
+  - "The emission must only fire when low confidence is attributable to MISSING feedback data, not to genuine ambiguity in a well-formed entry — the trigger condition must be explicit"
+  - "The emitted entry's source must mark it as router-generated (distinct from a fresh agent observation) so ACD-1500e-3-i can detect and refuse to recurse on it; F1 itself stays parked and unresolved"
+delivers_to:
+  agent: python-coder
+  contract: "A submit_feedback.py invocation producing a process-finding entry {category: process-finding, source: router-generated marker, note} when thin data blocks routing; consumed by the dedup check (ACD-1500e-1-i) and routable in a later run (ACD-1500e-3)"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: [ACD-1500e-1-i]
+implemented_by: []

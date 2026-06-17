@@ -1,0 +1,31 @@
+id: GE-104
+readiness: approved
+priority: high
+title: "New work never ships without the documentation it needs"
+component: guardrail-engine
+level: L0
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-104-enforced-page-docs/GE-104.yaml"
+criteria: |
+  Documentation becomes a guaranteed part of delivery, not an afterthought.
+
+  When someone adds a new frontend page, its reference doc is guaranteed to
+  exist and stay current — both at the moment the work is planned and the
+  moment it is committed. Page types and their documentation can never silently
+  drift apart, so anyone landing on a page type can trust there is an accurate,
+  up-to-date reference behind it. Documenting new work stops being discretionary
+  and becomes a built-in expectation of shipping it.
+depends_on: []
+doc_links:
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+origin_agent: BrainCandy
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-104a
+implemented_by: []

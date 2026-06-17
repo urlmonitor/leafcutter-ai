@@ -1,0 +1,42 @@
+id: GE-104a
+readiness: approved
+priority: high
+title: "A new frontend page can never ship undocumented"
+component: guardrail-engine
+level: L1
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-104-enforced-page-docs/GE-104.yaml"
+criteria: |
+  Documentation of a new frontend page is enforced, not optional — at both
+  planning time and commit time.
+
+  When a new frontend page enters the work, the matching reference doc is made
+  a required part of delivery rather than a discretionary choice: the
+  expectation is set up front when the work is planned, and it is verified at
+  the moment the change is committed. A new page type and its reference doc can
+  never fall out of sync — neither missing at first, nor going stale later.
+depends_on:
+  - GE-104
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-104-enforced-page-docs/GE-104.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+documentation_triggers:
+  - how-to
+  - sequence-diagram
+origin_agent: BrainCandy
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-104a-1
+  - GE-104a-2
+  - GE-104a-3
+  - GE-104a-4
+  - GE-104a-5
+implemented_by: []

@@ -1,0 +1,38 @@
+id: ACD-1500b-3-i
+readiness: approved
+priority: medium
+title: "High-confidence blocker is still parked — blocker rule wins"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given entry F1 has category: blocker and confidence 0.99,
+  And the confidence floor is 0.75 so F1 would otherwise easily clear the gate,
+  When the router evaluates F1,
+  Then F1 is parked for human /feedback-review,
+  And the recorded reason cites the blocker category, not the confidence value,
+  And the router never reaches a "proceed" decision for any blocker-category
+    entry even when its confidence is the maximum possible value.
+depends_on: [ACD-1500b-3]
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Reinforces the ordering constraint from ACD-1500b-3: in feedback-router.js the blocker park must short-circuit before the confidence comparison so a maximum confidence (0.99) can never produce a proceed decision for a blocker"
+  - "The recorded park reason must cite the blocker category, not the confidence value"
+delivers_to: null
+expects_from:
+  ac_id: ACD-1500b-3
+  contract: "A blocker-category decision record that must be parked ahead of the confidence gate"
+origin_agent: business-analyst-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

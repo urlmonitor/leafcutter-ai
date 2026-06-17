@@ -1,0 +1,33 @@
+id: ACD-1500c
+readiness: approved
+priority: medium
+title: "Acted-on feedback is marked done and traceable to the work it created"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  The loop closes -- resolved entries link to the work they produced and are never re-processed.
+
+  Once an entry has been turned into a concrete piece of work, the platform marks
+  it resolved and records a back-reference to that work. You can trace any shipped
+  improvement back to the feedback that prompted it, and the same entry is never
+  picked up and acted on twice.
+depends_on:
+  - ACD-1500
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1500c-1
+  - ACD-1500c-2
+  - ACD-1500c-3
+implemented_by: []
+documentation_triggers:
+  - sequence-diagram

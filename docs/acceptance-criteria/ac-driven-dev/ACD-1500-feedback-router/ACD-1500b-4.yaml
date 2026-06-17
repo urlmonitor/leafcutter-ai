@@ -1,0 +1,44 @@
+id: ACD-1500b-4
+readiness: approved
+priority: medium
+title: "Parked entries remain unresolved so feedback-review still surfaces them"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given entry F1 was parked by the router (either below the confidence floor or
+    as a blocker),
+  When the router completes its run,
+  Then F1 still has no resolved_at field in the feedback corpus,
+  And a subsequent /feedback-review still lists F1 among the unresolved entries
+    awaiting a human decision,
+  And the router did NOT call resolve_feedback.py for F1,
+  And parking an entry never removes it from or modifies its presence in the
+    unresolved set.
+depends_on: [ACD-1500b, ACD-1500b-2, ACD-1500b-3]
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Parking in feedback-router.js must be a no-op against the corpus: it must NOT call scripts/feedback/resolve_feedback.py and must NOT set resolved_at on the entry, so /feedback-review (aggregate.py --unresolved) still surfaces it"
+  - "Park bookkeeping (the reason, the parked-entry list) must be recorded in run output/logs only, never written back into feedback.jsonl as a resolution"
+  - "Must be idempotent: re-running the router re-parks the same entries without accumulating duplicate corpus writes"
+delivers_to: null
+expects_from:
+  ac_id: ACD-1500b-2
+  contract: "The set of parked entry ids that must remain unresolved after the run"
+origin_agent: business-analyst-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

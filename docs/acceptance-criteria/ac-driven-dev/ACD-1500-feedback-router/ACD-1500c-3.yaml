@@ -1,0 +1,42 @@
+id: ACD-1500c-3
+readiness: approved
+priority: medium
+title: "The back-reference is recoverable from feedback id to the artifact"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given entries F1 and F2 were each resolved with back-references to ACD-1600a
+    and ACD-1601a respectively,
+  When a person inspects the resolved feedback corpus,
+  Then for F1 the resolution record yields ACD-1600a and for F2 it yields ACD-1601a,
+  And the mapping is one feedback entry to the specific artifact that addressed it
+    (no ambiguity about which artifact resolved which entry),
+  And the reverse lookup is possible: given the artifact id ACD-1600a, the
+    originating feedback entry F1 is identifiable from the recorded link.
+depends_on: [ACD-1500c, ACD-1500c-1]
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The artifact id must be stored in a machine-recoverable resolution field (resolution_note naming the id, and/or resolution_ticket per the feedback.jsonl entry schema) so a forward lookup feedback_id -> artifact is unambiguous (one entry to one artifact)"
+  - "Reverse lookup artifact -> feedback_id must be possible from the recorded link; if resolution_note free-text is the only carrier, ensure the artifact id is written in a parseable, consistent token form so a grep/scan can recover the originating entry"
+delivers_to: null
+expects_from:
+  ac_id: ACD-1500c-1
+  contract: "A resolution record carrying the artifact back-reference (resolution_note / resolution_ticket) that must be queryable in both directions"
+origin_agent: business-analyst-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

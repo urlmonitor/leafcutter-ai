@@ -1,0 +1,36 @@
+id: ACD-1500a
+readiness: approved
+priority: medium
+title: "Your agents' feedback gets sorted and sent to the right place automatically"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Every unresolved entry is classified and routed to its best next step -- no manual sorting.
+
+  The platform reads the unresolved feedback and judges each entry by what it is
+  (a bug fix, a feature, an improvement) and how big it is (a quick single-file
+  change versus a larger effort). Small, well-targeted fixes go straight to the
+  fast fix path; larger or feature-shaped items go to the refinement path so they
+  become proper acceptance criteria. You no longer hand-sort the pile.
+depends_on:
+  - ACD-1500
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1500a-1
+  - ACD-1500a-2
+  - ACD-1500a-3
+  - ACD-1500a-4
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - sequence-diagram

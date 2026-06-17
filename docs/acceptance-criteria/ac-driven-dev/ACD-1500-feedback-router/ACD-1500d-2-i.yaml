@@ -1,0 +1,40 @@
+id: ACD-1500d-2-i
+readiness: approved
+priority: medium
+title: "Cap reached mid-run parks the remainder and ends the run cleanly"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the per-run artifact cap is 3,
+  And 5 entries (F1..F5) are eligible to produce artifacts,
+  When the router has created artifacts for F1, F2, and F3 (reaching the cap),
+  Then F4 and F5 are parked for the next run or human review rather than processed,
+  And the parked entries F4 and F5 remain unresolved,
+  And the run ends cleanly with a summary stating 3 artifacts created and 2
+    entries deferred due to the cap,
+  And the next run is able to pick up F4 and F5 because they were never resolved.
+depends_on: [ACD-1500d-2]
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "When the per_run_artifact_cap (config/feedback_router.yaml) is hit mid-run, remaining eligible entries must be parked (left unresolved, no resolve_feedback.py call) so the next run picks them up, NOT processed or dropped"
+  - "The run must end cleanly with a summary stating artifacts-created count and entries-deferred-due-to-cap count"
+  - "Deferral due to cap must be distinguishable in the summary from parking due to low confidence or blocker"
+delivers_to: null
+expects_from:
+  ac_id: ACD-1500d-2
+  contract: "The cap-enforcement counter/state that determines which entries are deferred when the limit is hit"
+origin_agent: business-analyst-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

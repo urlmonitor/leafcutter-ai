@@ -1,0 +1,45 @@
+id: ACD-1500e-3
+readiness: approved
+priority: medium
+title: "Emitted process-feedback is itself routable by a future run so the loop compounds"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the router emitted a process-finding entry P1 during run A and left it unresolved,
+  When the router runs again (run B) and builds its work queue,
+  Then P1 appears in run B's unresolved work queue like any other entry,
+  And the router classifies and routes P1 (for example, as an improvement to the
+    feedback-collection tooling routed to /create-ac),
+  And when P1 is acted on it is resolved with a back-reference to the artifact it
+    produced, exactly as for any other entry,
+  And the resulting artifact recommends concrete improvements to feedback emission:
+    making it faster for agents to fill in, more verbose, and more structured
+    (richer required fields up front).
+depends_on: [ACD-1500e, ACD-1500e-1]
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "No special-casing: a router-emitted process-finding entry must be a first-class unresolved entry that aggregate.py --unresolved returns, so it flows through the same queue-build -> classify -> route -> resolve pipeline as any other entry"
+  - "When acted on, P1 resolves with a back-reference via resolve_feedback.py exactly like any other entry (reuses the ACD-1500c-1 contract)"
+  - "The recursion guard from ACD-1500e-3-i must still apply: routing P1 must not itself emit a new process-finding about P1; the router-generated source marker is how the classifier/router recognizes its own output"
+delivers_to: null
+expects_from:
+  ac_id: ACD-1500e-1
+  contract: "The emitted process-finding entry (router-generated source marker) that must be a first-class member of a later work queue"
+origin_agent: business-analyst-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: [ACD-1500e-3-i]
+implemented_by: []

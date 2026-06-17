@@ -1,0 +1,65 @@
+id: GE-104a-3
+readiness: approved
+priority: high
+title: "A how-to guide ships with the page-documentation guardrail so operators can configure and respond to it"
+component: guardrail-engine
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-104-enforced-page-docs/GE-104a.yaml"
+criteria: |
+  Given the page-documentation guardrail capability is delivered (the commit-time
+    hook of GE-104a-1 and the planning-time trigger of GE-104a-2)
+  When an operator looks for guidance on how to use it
+  Then a how-to guide is available that explains how to enable and configure the
+    guardrail, including how to choose between "block" mode and "warn-only" mode
+  And the how-to explains the deterministic page-to-doc naming convention so the
+    operator can predict that a page at site/app/<route>/page.tsx requires a
+    reference doc at docs/reference/frontend/<name>.md
+  And the how-to explains how an author satisfies a block (create the named
+    reference doc) so a blocked commit can be resolved without guesswork
+
+  ---
+
+  Given the page-documentation guardrail enforces at two layers — a planning-time
+    documentation-expert trigger and a commit-time hook
+  When the operator reads the how-to guide
+  Then the guide states that the planning-time documentation-expert trigger exists
+    (it raises documentation as expected work when a new page is planned)
+  And the guide states that the commit-time hook is the authoritative backstop that
+    actually blocks an undocumented new page at commit time
+depends_on:
+  - GE-104a
+  - GE-104a-1
+  - GE-104a-2
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-104-enforced-page-docs/GE-104a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "scripts/commit_guardian/check_frontend_page_docs.py"
+    relationship: documents
+    status: planned
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Extend the existing how-to at docs/how-to/managing-pre-commit-hooks.md with a dedicated 'Page-documentation guardrail' section rather than creating a new file — the page-documentation guardrail is a pre-commit hook and belongs alongside the other hook guidance there; only create a separate how-to if the section grows beyond the natural scope of that guide."
+  - "Document the block-versus-warn configuration: the page_doc config section with mode: block|warn defined in GE-104a-1-iv (read from commit_guardian.json), including what each mode does — block exits non-zero on a missing doc, warn-only prints the same FIX message but allows the commit — and how an operator switches between them."
+  - "Document the deterministic page-to-doc naming convention defined by the shared derive_doc_path helper in scripts/commit_guardian/frontend_page_docs.py per GE-104a-1-i: a page at site/app/<route>/page.tsx maps to exactly one reference doc at docs/reference/frontend/<name>.md (hyphen-joined lowercased route segments, dynamic [param] segments normalized to p_param per GE-104a-1-ii), so an operator can predict the required doc path without reading code."
+  - "Document how an author satisfies a block: create the exact reference doc named in the FIX message at docs/reference/frontend/<name>.md, then re-stage and re-commit — give a concrete worked example so a blocked commit is resolvable without guesswork."
+  - "State that enforcement is two-layered: the planning-time documentation-expert trigger raises documentation as expected work when a new page is planned, and the commit-time hook is the authoritative backstop that actually blocks an undocumented new page; make clear the commit-time hook is the source of truth."
+  - "Must be consistent with the actual config keys, mode values, and derived-path rule shipped by GE-104a-1 / GE-104a-1-i / GE-104a-1-ii / GE-104a-1-iv — do not invent config names or path rules that diverge from the implemented behavior."
+delivers_to: null
+expects_from:
+  ac_id: GE-104a-1
+  contract: "The shipped commit-time hook scripts/commit_guardian/check_frontend_page_docs.py, its FIX-message text, the page_doc config section (mode: block|warn key from GE-104a-1-iv), and the deterministic derive_doc_path mapping (GE-104a-1-i / GE-104a-1-ii). The how-to documents these exactly as implemented."
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260617-GE-104a-3.md

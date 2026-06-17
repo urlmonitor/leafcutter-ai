@@ -1,0 +1,40 @@
+id: ACD-1500d-3
+readiness: approved
+priority: medium
+title: "The router never auto-commits on a protected branch"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the current git branch is main (a protected branch),
+  When the router would otherwise route an entry to a path that auto-commits,
+  Then it does NOT perform any commit on main,
+  And it parks the affected entry for human handling rather than committing,
+  And the same protection applies when the current branch is master,
+  And when the current branch is a non-protected working branch, the route is
+    allowed to proceed normally.
+depends_on: [ACD-1500d]
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "CONFIG PREREQUISITE: the protected-branch list must be read from config/feedback_router.yaml under the key protected_branches (a list, default [main, master]). Do NOT hard-code branch names in feedback-router.js"
+  - "Before any auto-committing route runs, feedback-router.js must check the current git branch (e.g. git rev-parse --abbrev-ref HEAD) against protected_branches; if it matches, park the entry and perform no commit"
+  - "On a non-protected working branch the route proceeds normally; the branch check must wrap the git call per the project error handling policy"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

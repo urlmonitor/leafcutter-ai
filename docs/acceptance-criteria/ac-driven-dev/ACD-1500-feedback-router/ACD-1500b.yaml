@@ -1,0 +1,35 @@
+id: ACD-1500b
+readiness: approved
+priority: medium
+title: "When in doubt, a human still decides"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Uncertain calls and blockers are parked for human review -- never auto-acted on.
+
+  The platform only acts on its own when it is confident. Anything below a
+  confidence floor, and anything flagged as a blocker, is set aside for a person
+  to handle through the normal feedback review. This is the safe escape hatch:
+  when the system is unsure, it defers to you instead of guessing, so automation
+  never makes a low-confidence change on its own.
+depends_on:
+  - ACD-1500
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1500b-1
+  - ACD-1500b-2
+  - ACD-1500b-3
+  - ACD-1500b-4
+implemented_by: []
+documentation_triggers:
+  - how-to

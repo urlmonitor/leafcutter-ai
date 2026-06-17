@@ -1,0 +1,66 @@
+id: GE-104a-4
+readiness: approved
+priority: high
+title: "A sequence diagram documents the two-layer enforcement flow for new-page documentation"
+component: guardrail-engine
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-104-enforced-page-docs/GE-104a.yaml"
+criteria: |
+  Given the page-documentation guardrail capability is delivered across two layers
+    (planning-time trigger of GE-104a-2 and commit-time hook of GE-104a-1)
+  When someone needs to understand how enforcement flows end-to-end
+  Then a sequence diagram is available that depicts the planning-time path: a
+    ticket's files_touched listing a new page drives agent selection, which flips
+    documentation-expert to "needed"
+  And the same diagram depicts the commit-time path: a git staged diff is read, the
+    page-to-doc path is derived, a doc-exists check runs, and the commit is blocked
+    or warned according to the configured mode
+
+  ---
+
+  Given both enforcement layers rely on the same page-to-doc derivation rule so they
+    cannot disagree about which doc a page maps to
+  When someone reads the sequence diagram
+  Then the diagram makes explicit that the planning-time path and the commit-time
+    path share one page-to-doc derivation step
+  And the diagram shows that this shared derivation is the single point that keeps
+    the two layers from drifting on the mapping rule
+depends_on:
+  - GE-104a
+  - GE-104a-1
+  - GE-104a-2
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-104-enforced-page-docs/GE-104a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/architecture/diagrams/c2-007-page-doc-enforcement-flow.md"
+    relationship: describes
+    status: planned
+  - path: "config/agent_registry.json"
+    relationship: describes
+    status: exists
+  - path: "scripts/commit_guardian/check_frontend_page_docs.py"
+    relationship: describes
+    status: planned
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "Produce a sequence (or C4-dynamic) diagram as a new architecture doc under docs/architecture/diagrams/, following the existing c2-NNN naming and authoring convention used by the sibling diagrams in that folder (c2-001 through c2-006)."
+  - "Depict the planning-time path: a ticket's files_touched listing a new site/app/<route>/page.tsx drives agent selection (the documentation-expert selection_criteria trigger in config/agent_registry.json), which resolves documentation-expert from its default_status not_needed to needed."
+  - "Depict the commit-time path: the hook check_frontend_page_docs.py reads the git staged diff, calls derive_doc_path to compute the expected docs/reference/frontend/<name>.md, runs a doc-exists check (staged OR on disk), and then blocks (exit non-zero) or warns (exit 0 with FIX message) according to the configured mode: block|warn."
+  - "Make the shared page-to-doc derivation explicit: show that both the planning-time path and the commit-time path call the SAME derivation step (derive_doc_path / the single shared helper from GE-104a-1-i), and annotate that this shared step is the single point preventing the two layers from drifting on the mapping rule."
+  - "Diagram content must match the enforcement behavior actually shipped by GE-104a-1 and GE-104a-2 — do not depict steps, config keys, or paths that diverge from the implemented hook and registry trigger."
+delivers_to: null
+expects_from:
+  ac_id: GE-104a-1
+  contract: "The shipped commit-time enforcement points to diagram: check_frontend_page_docs.py (staged-diff read -> derive_doc_path -> doc-exists check -> block/warn on mode: block|warn) and the shared derive_doc_path helper. Also the planning-time trigger from GE-104a-2 (the documentation-expert selection_criteria condition in config/agent_registry.json)."
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260617-GE-104a-4.md

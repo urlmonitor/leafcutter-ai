@@ -1,0 +1,57 @@
+id: GE-104a-1-i
+readiness: approved
+priority: high
+title: "Page-path to doc-path mapping is deterministic for a simple route segment"
+component: guardrail-engine
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-104-enforced-page-docs/GE-104.yaml"
+criteria: |
+  Given a newly added frontend page at site/app/parts/page.tsx
+  When the guardrail derives the expected reference doc path for that page
+  Then it produces exactly one deterministic path docs/reference/frontend/parts.md
+  And the route segment "parts" maps to the doc <name> "parts"
+
+  ---
+
+  Given a newly added frontend page at site/app/parts/page.tsx
+  And a different newly added page at site/app/settings/page.tsx in the same commit
+  When the guardrail derives the expected reference doc path for each page
+  Then it produces docs/reference/frontend/parts.md for the first page
+  And docs/reference/frontend/settings.md for the second page
+  And the two derivations are independent (one missing doc does not mask the other)
+depends_on:
+  - GE-104a-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-104-enforced-page-docs/GE-104a-1.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "scripts/commit_guardian/check_frontend_page_docs.py"
+    relationship: implements
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Implement the page-path-to-doc-path mapping as ONE shared pure helper function (no I/O) so both the commit-time hook (GE-104a-1) and the planning-time layer (GE-104a-2) call the identical derivation. Place it in a small dedicated module under scripts/commit_guardian/ (e.g. scripts/commit_guardian/frontend_page_docs.py) so it can be imported by the hook and round-tripped to the templates copies per ADR-001."
+  - "Derivation algorithm (canonical, resolves BA open question on derivation): (1) Match only paths of the form site/app/<route-segments>/page.tsx; anything not matching this exact shape is NOT a page and is ignored. (2) Strip the leading 'site/app/' prefix and the trailing '/page.tsx' suffix to obtain the ordered route segments. (3) The doc <name> is the route segments joined with a single hyphen '-' (segment separator), lowercased, producing exactly one name. (4) The expected doc path is 'docs/reference/frontend/' + <name> + '.md'. For a single simple segment 'parts' this yields docs/reference/frontend/parts.md."
+  - "The derivation must be a pure function of the page path: same input always yields the same single output path, with no dependence on filesystem state, git state, or commit ordering (deterministic and idempotent)."
+  - "Each page is derived independently; deriving or failing the doc check for one page must never affect the derivation or check result for another page in the same commit."
+  - "The function returns exactly ONE doc path per page (never a list, never ambiguous), so the hook's exists-check is unambiguous."
+delivers_to:
+  agent: python-coder
+  contract: "Shared pure helper derive_doc_path(page_path: str) -> str living in scripts/commit_guardian/frontend_page_docs.py. Input: a 'site/app/<route>/page.tsx' path string. Output: exactly one 'docs/reference/frontend/<name>.md' path string where <name> is the hyphen-joined lowercased route segments. Consumed by GE-104a-1 (hook) and referenced by GE-104a-2 (planning-time trigger) as the single mapping rule."
+expects_from:
+  ac_id: GE-104a-1
+  contract: "The commit-time hook that calls this derivation helper to compute the expected reference doc path for each newly-added page before checking existence."
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260617-GE-104a-1-i.md

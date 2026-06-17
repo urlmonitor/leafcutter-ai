@@ -1,0 +1,40 @@
+id: ACD-1500d-2
+readiness: approved
+priority: medium
+title: "A configurable per-run cap limits how many artifacts the router auto-creates"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the configurable per-run artifact cap is set to 3,
+  And the work queue contains 7 entries that would each otherwise produce an artifact,
+  When the router runs,
+  Then it creates at most 3 artifacts in that run,
+  And the cap value is read from configuration rather than hard-coded,
+  And once 3 artifacts have been created, the router stops creating more in that run,
+  And the count of artifacts created in the run is reported at the end.
+depends_on: [ACD-1500d]
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "CONFIG PREREQUISITE: the per-run artifact cap must be read from config/feedback_router.yaml under the key per_run_artifact_cap (an int, default 3). Do NOT hard-code the cap in feedback-router.js"
+  - "feedback-router.js must track a created-artifact counter and stop initiating new /quick-fix or /create-ac dispatches once the counter reaches per_run_artifact_cap"
+  - "Must report the count of artifacts created at the end of the run"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: [ACD-1500d-2-i]
+implemented_by: []
