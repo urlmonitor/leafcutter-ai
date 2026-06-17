@@ -1,0 +1,178 @@
+{
+  "_comment": "Precommit-autofix routing table. Edit this file to change which model/agent handles each pre-commit hook failure. See templates/skills/precommit-autofix/SKILL.md for full schema documentation.",
+  "defaults": {
+    "model": "haiku",
+    "subagent_type": "general-purpose"
+  },
+  "commit_review": {
+    "enabled": true,
+    "model": "sonnet",
+    "subagent_type": "commit-reviewer",
+    "description": "Pre-commit Sonnet review pass over staged diff. Checks for blocking issues: bugs, missing tests, convention drift. Skip nits."
+  },
+  "blocking_hook_ids": [
+    "check-complexity",
+    "check-docstrings",
+    "check-exception-handling",
+    "check-file-size",
+    "check-ac-schema",
+    "check-ac-limits",
+    "check-contract-shrinking"
+  ],
+  "rules": [
+    {
+      "hook_id": "check-complexity",
+      "category": "structural",
+      "model": "sonnet",
+      "subagent_type": "python-coder",
+      "description": "Cyclomatic complexity violation. Refactor the flagged function to reduce branching."
+    },
+    {
+      "hook_id": "check-docstrings",
+      "category": "structural",
+      "model": "sonnet",
+      "subagent_type": "python-coder",
+      "description": "Missing or malformed Google-style docstring. Add or correct docstrings for the flagged functions/modules."
+    },
+    {
+      "hook_id": "check-exception-handling",
+      "category": "structural",
+      "model": "sonnet",
+      "subagent_type": "python-coder",
+      "description": "Exception handling violation (bare except, swallowed exception, or unwrapped I/O). Fix per error-handling policy."
+    },
+    {
+      "hook_id": "check-file-size",
+      "category": "structural",
+      "model": "sonnet",
+      "subagent_type": "python-coder",
+      "description": "File exceeds line-count limit. Split into sub-modules following the build_phases/build_helpers precedent."
+    },
+    {
+      "hook_id": "check-ac-schema",
+      "category": "structural",
+      "model": "sonnet",
+      "subagent_type": "python-coder",
+      "description": "AC YAML file does not conform to schema. Correct required fields and types."
+    },
+    {
+      "hook_id": "check-ac-limits",
+      "category": "structural",
+      "model": "sonnet",
+      "subagent_type": "python-coder",
+      "description": "AC file violates per-file AC count limits. Split or archive excess ACs."
+    },
+    {
+      "hook_id": "check-contract-shrinking",
+      "category": "structural",
+      "model": "sonnet",
+      "subagent_type": "python-coder",
+      "description": "Contract-shrinking detected: a return shape, function signature, or dict structure was narrowed without explicit authorization. Restore or get allow_contract_shrinkage approval."
+    },
+    {
+      "hook_id": "check-doc-frontmatter",
+      "category": "mechanical",
+      "model": "haiku",
+      "subagent_type": "general-purpose",
+      "description": "Documentation frontmatter field missing or malformed. Add or correct required frontmatter fields."
+    },
+    {
+      "hook_id": "check-doc-length",
+      "category": "mechanical",
+      "model": "haiku",
+      "subagent_type": "general-purpose",
+      "description": "Documentation file exceeds maximum length. Trim or split the document."
+    },
+    {
+      "hook_id": "check-doc-links",
+      "category": "mechanical",
+      "model": "haiku",
+      "subagent_type": "general-purpose",
+      "description": "Dead link detected in documentation. Fix or remove the broken link."
+    },
+    {
+      "hook_id": "check-glossary-coverage",
+      "category": "mechanical",
+      "model": "haiku",
+      "subagent_type": "glossary-triage",
+      "description": "Novel jargon term detected. Triage via glossary-triage agent."
+    },
+    {
+      "hook_id": "check-ticket-signoff-parity",
+      "category": "mechanical",
+      "model": "haiku",
+      "subagent_type": "general-purpose",
+      "description": "Ticket frontmatter agents: map does not match ## Sign-offs section. Bring all three parity locations into sync."
+    },
+    {
+      "hook_id": "check-secrets",
+      "category": "mechanical",
+      "model": "haiku",
+      "subagent_type": "general-purpose",
+      "description": "Potential secret or credential detected in staged files. Remove or redact."
+    },
+    {
+      "hook_id": "check-feedback-id",
+      "category": "mechanical",
+      "model": "haiku",
+      "subagent_type": "general-purpose",
+      "description": "Agent comment is missing feedback-id: line. Add the feedback-id per signoff SKILL.md §2a."
+    },
+    {
+      "hook_id": "check-agent-registry",
+      "category": "mechanical",
+      "model": "haiku",
+      "subagent_type": "general-purpose",
+      "description": "Agent registry inconsistency detected. Ensure agent_registry.json and template files are bidirectionally consistent."
+    },
+    {
+      "hook_id": "check-build-drift",
+      "category": "mechanical",
+      "model": "haiku",
+      "subagent_type": "general-purpose",
+      "description": "Build output has drifted from template source. Re-run build.py to resync."
+    },
+    {
+      "hook_id": "check-placeholder-defaults",
+      "category": "mechanical",
+      "model": "haiku",
+      "subagent_type": "general-purpose",
+      "description": "Placeholder default value detected in deployed output. Replace with real configuration."
+    },
+    {
+      "hook_id": "check-roadmap-schema",
+      "category": "mechanical",
+      "model": "haiku",
+      "subagent_type": "general-purpose",
+      "description": "roadmap.json schema violation. Correct required fields and structure."
+    },
+    {
+      "hook_id": "check-sql-complexity",
+      "category": "structural",
+      "model": "sonnet",
+      "subagent_type": "sql-coder",
+      "description": "SQL complexity score exceeds threshold. Refactor the flagged SQL procedure/function."
+    },
+    {
+      "hook_id": "check-sql-dependencies",
+      "category": "structural",
+      "model": "sonnet",
+      "subagent_type": "sql-coder",
+      "description": "SQL dependency violation. Resolve the flagged dependency issue."
+    },
+    {
+      "hook_id": "check-pytest-style",
+      "category": "mechanical",
+      "model": "haiku",
+      "subagent_type": "general-purpose",
+      "description": "pytest style violation (e.g. bare assert without message). Fix per pytest style conventions."
+    },
+    {
+      "hook_id": "check-commit-scope",
+      "category": "mechanical",
+      "model": "haiku",
+      "subagent_type": "general-purpose",
+      "description": "Commit touches files outside declared scope. Unstage out-of-scope files or update ticket files_touched."
+    }
+  ]
+}

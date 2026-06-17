@@ -77,10 +77,11 @@ processes unconditionally (idle **or** active). These workers may hold file
 locks or open handles that cause `git commit` to hang or fail on Windows.
 
 ```bash
-# Unix (no-op if no matching processes)
-pkill -f "pytest" 2>/dev/null || true
-# Windows (no-op if no matching processes)
-taskkill /F /FI "IMAGENAME eq python.exe" /FI "WINDOWTITLE eq *pytest*" 2>nul || true
+pkill -f "pytest" 2>/dev/null
+```
+
+```bash
+taskkill /F /FI "IMAGENAME eq python.exe" /FI "WINDOWTITLE eq *pytest*" 2>nul
 ```
 
 This step is a no-op when no processes match. It must run **every** time —
@@ -166,12 +167,23 @@ Protocol from the base instructions applies.
 If the commit fails because of pre-commit hooks:
 
 1. Capture the hook's stderr output verbatim.
-2. Invoke the `precommit-autofix` skill. It reads `.claude/precommit-autofix.json`
-   and dispatches:
-   - Mechanical hooks (frontmatter dates, formatting, file extension) → Haiku
-     sub-agent.
-   - Structural hooks (`check_complexity.py`, `check_sql_complexity.py`,
-     missing-ADR detector) → Sonnet sub-agent (e.g. `complexity-reduction`).
+2. Invoke the `precommit-autofix` skill, passing:
+   - The full raw pre-commit failure output.
+   - `ticket_path` (from this agent's own input) — required so the skill can
+     locate the originating agent's `context_capsule` from the ticket sign-off
+     when routing judgment-tier gating hook failures.
+
+   The skill reads `.claude/precommit-autofix.json` and dispatches:
+   - **Judgment-tier gating hooks** (e.g. `check-exception-handling`): reads
+     the `AUTOFIX_AGENT:` line from hook output, reads the `context_capsule`
+     from the ticket sign-off at `ticket_path`, and re-dispatches the same
+     originating agent type at Sonnet tier.
+   - **Mechanical hooks** (frontmatter dates, formatting, file extension) →
+     Haiku sub-agent (generic route, no capsule read).
+   - **Structural hooks** (`check_complexity.py`, `check_sql_complexity.py`,
+     missing-ADR detector) → Sonnet sub-agent (e.g. `complexity-reduction`,
+     generic route, no capsule read).
+
 3. **Surface the autofix diff** to the user when the route was Sonnet —
    structural fixes can change semantics; mechanical fixes (single-line edits)
    can be applied silently.
@@ -180,6 +192,9 @@ If the commit fails because of pre-commit hooks:
 5. If the second commit also fails, **stop and return the hook output to the
    user**. Do not retry further. Do not bypass with `--no-verify`. The user
    decides next steps.
+6. If the autofix skill returns a `status: blocker` (judgment-tier hook required
+   cross-file information not present in the capsule), **do NOT retry the commit**.
+   Surface the blocker explanation to the user immediately.
 
 ## Step 6 — Report
 

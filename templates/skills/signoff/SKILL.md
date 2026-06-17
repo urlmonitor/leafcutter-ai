@@ -296,6 +296,72 @@ Ran migration successfully; one test is red due to a stale endpoint path — see
 
 ---
 
+## §2b.1 Context Capsule (optional — backward-compatible-absent)
+
+The `context_capsule:` block is an **optional** extension to the sign-off comment.
+It is written by coder agents (python-coder, sql-coder, frontend-coder) only when
+their own pre-completion checks emit a **warn-tier complexity or file-size signal**.
+When no warn-tier signal trips, the block is absent — the sign-off is still valid.
+
+### Placement in the comment body
+
+When present, the `context_capsule:` block is placed immediately after the
+`completion_manifest:` block, before the prose summary:
+
+```
+feedback-id: fb_2026-06-17_a1b2c3d4
+completion_manifest:
+  code_implemented: true
+  tests_passing: true
+context_capsule:
+  agent_id: python-coder
+  intent: "<one sentence>"
+  files_touched_rationale: |
+    <one line per file>
+  consumers_checked: |
+    <blast-radius findings, verbatim — not re-derived>
+  red_baseline: |
+    <test names or "none">
+  design_constraints: |
+    <split plan and design decisions>
+<prose summary>
+```
+
+### Required fields
+
+The capsule contains exactly five fields (plus the `agent_id` key):
+
+| Field | Content |
+|---|---|
+| `intent` | One sentence: what the change achieves and why |
+| `files_touched_rationale` | One line per touched file explaining the modification |
+| `consumers_checked` | Copied verbatim from blast-radius / research-agent findings |
+| `red_baseline` | Test names from test-writer red_baseline, or `"none"` |
+| `design_constraints` | File-split plan, error-handling decisions, and boundary choices |
+
+### Length cap and truncation (AC BO-210b-1-i)
+
+The combined character content of the capsule (all field values) must not exceed
+**2000 characters**. When truncation is required:
+
+1. Truncate `files_touched_rationale` first (lowest re-use value).
+2. Truncate `design_constraints` second.
+3. Truncate `red_baseline` third.
+4. Never truncate `intent` or `consumers_checked` — these are preserved in full.
+5. Append `# TRUNCATED` as the last line of the last truncated field.
+
+A truncated capsule MUST still be valid YAML with all five field keys present.
+
+### Backward compatibility (mirrors §2b legacy-compatibility rule)
+
+Tickets and sign-off entries that do **not** contain a `context_capsule:` block
+are fully valid. Supervisors, retrospective-agent, and precommit-autofix skill
+accept the absence gracefully — they emit a warning and proceed, never block.
+This mirrors the existing `completion_manifest:` legacy-compatibility behavior
+(see §2b above).
+
+---
+
 ## §2c AC Coverage Sign-Off (runs AFTER work, BEFORE phase sign-off checkbox)
 
 ### Overview
