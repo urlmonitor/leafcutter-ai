@@ -962,5 +962,202 @@ class TestMainBlockExceptionHandler(unittest.TestCase):
         )
 
 
+class TestMalformedIdRejectedAfterWidening(unittest.TestCase):
+    """Widened schema still rejects AC records with malformed ID formats.
+
+    After adding pattern_slots to the schema, the id field pattern must
+    remain unchanged — lowercase prefixes, underscore separators, and
+    trailing empty leaf segments must all be rejected.
+
+    covers: ACS-500f-3-i (AC1 — malformed id rejected after widening)
+    """
+
+    def _make_content_with_id(self, bad_id: str) -> str:
+        """Return an otherwise-valid AC YAML with the given id substituted.
+
+        Args:
+            bad_id: The malformed id string to inject.
+
+        Returns:
+            YAML content string suitable for writing to a temporary file.
+        """
+        return textwrap.dedent(f"""\
+            id: {bad_id}
+            title: "Malformed ID test"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+        """)
+
+    def test_lowercase_prefix_rejected(self) -> None:
+        # covers: ACS-500f-3-i
+        """id: acs-500 (lowercase prefix) is rejected after schema widening."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "bad-id.yaml", self._make_content_with_id("acs-500"))
+            result = _run_hook(root)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("id", result.stderr)
+
+    def test_underscore_separator_rejected(self) -> None:
+        # covers: ACS-500f-3-i
+        """id: ACS_500 (underscore separator) is rejected after schema widening."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "bad-id.yaml", self._make_content_with_id("ACS_500"))
+            result = _run_hook(root)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("id", result.stderr)
+
+    def test_trailing_empty_leaf_segment_rejected(self) -> None:
+        # covers: ACS-500f-3-i
+        """id: ACS-500a- (trailing empty leaf segment) is rejected after schema widening."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "bad-id.yaml", self._make_content_with_id("ACS-500a-"))
+            result = _run_hook(root)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("id", result.stderr)
+
+
+class TestUnknownFieldRejectedAfterWidening(unittest.TestCase):
+    """Widened schema still rejects AC records with unknown/misspelled fields.
+
+    Adding pattern_slots to the schema must NOT loosen additionalProperties:
+    false — unknown keys like 'critera' (misspelled) or 'foo_bar' (invented)
+    must still be rejected.
+
+    covers: ACS-500f-3-i (AC2 — unknown field rejected; widening does not loosen additionalProperties)
+    """
+
+    def test_misspelled_criteria_field_rejected(self) -> None:
+        # covers: ACS-500f-3-i
+        """AC with 'critera' (missing 'i') as an extra field is rejected after schema widening."""
+        content = textwrap.dedent("""\
+            id: FIN-001
+            title: "Misspelled field test"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+            critera: "misspelled field"
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-001.yaml", content)
+            result = _run_hook(root)
+        self.assertEqual(result.returncode, 1)
+
+    def test_invented_key_rejected(self) -> None:
+        # covers: ACS-500f-3-i
+        """AC with 'foo_bar' (invented key) is rejected after schema widening."""
+        content = textwrap.dedent("""\
+            id: FIN-001
+            title: "Invented key test"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+            foo_bar: "invented key"
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-001.yaml", content)
+            result = _run_hook(root)
+        self.assertEqual(result.returncode, 1)
+
+
+class TestPatternSlotsAcceptedAfterWidening(unittest.TestCase):
+    """Widened schema accepts pattern_slots while still rejecting other unknown fields.
+
+    This is the positive guard: pattern_slots is now a first-class schema field
+    and must be admitted. Any other unknown field (not pattern_slots) must still
+    be rejected — ensuring the widening is targeted, not open-ended.
+
+    covers: ACS-500f-3-i (positive guard — pattern_slots admitted; widening is not open-ended)
+    """
+
+    def test_pattern_slots_accepted(self) -> None:
+        # covers: ACS-500f-3-i
+        """AC with pattern_slots: ['{entity_type}', '{columns}'] exits 0 after schema widening."""
+        content = textwrap.dedent("""\
+            id: PTN-010
+            title: "Pattern AC with slots"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given a {entity_type} list
+              When the user views the {columns}
+              Then the data is displayed
+            priority: medium
+            readiness: draft
+            pattern_slots:
+              - "{entity_type}"
+              - "{columns}"
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "PTN-010.yaml", content)
+            result = _run_hook(root)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "pattern_slots is now a first-class schema field and must be accepted. "
+                f"Stderr: {result.stderr}"
+            ),
+        )
+
+
+class TestMissingRequiredFieldAfterWidening(unittest.TestCase):
+    """Widened schema still rejects AC records missing a required field.
+
+    After adding pattern_slots, the existing required fields (id, title,
+    component, status, created_by, criteria, readiness, priority) must all
+    still be enforced. This class duplicates the spirit of TestMissingRequiredField
+    with an explicit traceability marker for ACS-500f-3-i.
+
+    covers: ACS-500f-3-i (AC3 — missing required field still rejected after widening)
+    """
+
+    def test_missing_criteria_rejected_after_widening(self) -> None:
+        # covers: ACS-500f-3-i
+        """AC missing 'criteria' is still rejected even after the schema was widened to admit pattern_slots."""
+        content = textwrap.dedent("""\
+            id: FIN-001
+            title: "Missing criteria after widening"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            priority: medium
+            readiness: draft
+            pattern_slots:
+              - "{entity_type}"
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-001.yaml", content)
+            result = _run_hook(root)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("criteria", result.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()

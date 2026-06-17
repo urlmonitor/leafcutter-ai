@@ -20,6 +20,10 @@ DECISION HISTORY:
   - 2026-06-17 [python-coder/ACS-500f-1]: Created. Phase 1: schema +
     pattern_bindings completeness (cross-file checks in _ac_schema_validators.py).
     Phase 2: implements_pattern field-preservation via HEAD vs staged diff.
+  - 2026-06-18 [python-coder/ACS-500f-1-i]: Verified fail-open behavior: the
+    __main__ exception handler (added in ACS-500f-1) catches unexpected errors
+    and exits 0 with a stderr diagnostic. Unit tests added for all fail-open
+    and no-staged-relevant-files paths.
 """
 
 from __future__ import annotations
