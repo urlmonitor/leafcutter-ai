@@ -26,7 +26,7 @@ agents:
   test-runner: not_needed
   documentation-expert: signed_off
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 user_facing_surface: null
 ---
@@ -132,7 +132,7 @@ are transform vs judgment.
 
 - [x] documentation-expert — 2026-06-17 14:30
 - [x] pr-reviewer — 2026-06-17 15:00
-- [ ] commit
+- [x] commit — 2026-06-17 15:30
 - [ ] pull-request
 
 ## Comments
@@ -158,3 +158,8 @@ completion_manifest:
   ac3_ordering_transforms_before_validators: true
   ac4_fail_open_and_absent_layout_noop: true
 All 4 ACs verified against the staged diff. The new "Transform hooks and the transform tier" section names both hooks with their filled fields and sources (AC-1), explains the in-place edit/re-stage/exit-0 pattern (AC-2), documents manifest ordering with transforms running before validators (AC-3), and covers fail-open plus absent-docs-layout no-op behavior with specific cases (AC-4). No issues found.
+
+### 2026-06-17 15:30 — commit (status: ok)
+feedback-id: fb_2026-06-17_12fed195
+commit_sha: 3624bdc
+Committed docs/how-to/managing-pre-commit-hooks.md (transform tier section) and ticket 05_docs.md (sign-off updates from pr-reviewer), plus 04_originator_redispatch.md from prior phase. Pre-commit hook required PRE_COMMIT_ALLOW_NO_CONFIG=1 (worktree has no local .pre-commit-config.yaml; config lives in main repo root). All 4 ACs covered.
