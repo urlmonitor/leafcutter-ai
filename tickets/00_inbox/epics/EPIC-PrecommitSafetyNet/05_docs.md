@@ -27,7 +27,7 @@ agents:
   documentation-expert: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 user_facing_surface: null
 ---
 
@@ -133,7 +133,7 @@ are transform vs judgment.
 - [x] documentation-expert — 2026-06-17 14:30
 - [x] pr-reviewer — 2026-06-17 15:00
 - [x] commit — 2026-06-17 15:30
-- [ ] pull-request
+- [x] pull-request — 2026-06-17 17:00
 
 ## Comments
 
@@ -163,3 +163,12 @@ All 4 ACs verified against the staged diff. The new "Transform hooks and the tra
 feedback-id: fb_2026-06-17_12fed195
 commit_sha: 3624bdc
 Committed docs/how-to/managing-pre-commit-hooks.md (transform tier section) and ticket 05_docs.md (sign-off updates from pr-reviewer), plus 04_originator_redispatch.md from prior phase. Pre-commit hook required PRE_COMMIT_ALLOW_NO_CONFIG=1 (worktree has no local .pre-commit-config.yaml; config lives in main repo root). All 4 ACs covered.
+
+### 2026-06-17 17:00 — pull-request (status: ok)
+feedback-id: fb_2026-06-17_5600d391
+completion_manifest:
+  branch_verified_on_EPIC_PrecommitSafetyNet: true
+  commits_present: true
+  existing_pr_found: true
+  branch_pushed_to_origin: true
+PR #89 already exists for EPIC-PrecommitSafetyNet (feat: pre-commit safety net — coder templates emit context_capsule on warn-tier signal). Branch pushed successfully to origin. No new PR opened as one already exists.
