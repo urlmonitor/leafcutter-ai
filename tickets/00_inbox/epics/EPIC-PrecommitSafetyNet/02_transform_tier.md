@@ -40,7 +40,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 user_facing_surface: pre_commit_hook
 actuation_contract: "Staged docs file with missing frontmatter fields is corrected in-place and re-staged; commit exits 0. Exception-handling violating file prints AUTOFIX_AGENT line."
 ---
@@ -293,7 +293,7 @@ placeholder_signature: "TODO|PLACEHOLDER"
 - [x] test-runner — 2026-06-17 13:30
 - [x] pr-reviewer — 2026-06-17 14:30
 - [x] commit — 2026-06-17
-- [ ] pull-request
+- [x] pull-request — 2026-06-17 15:00
 
 ## Comments
 
@@ -362,6 +362,11 @@ completion_manifest:
   tests_confirmed_red: true
   test_file_location_correct: true
 Wrote 12 failing test stubs in unit_tests/commit_guardian/test_transform_hooks_and_autofix_emission.py covering all 7 ACs (AC-1 through AC-7). All 12 tests confirmed RED: 10 fail with FileNotFoundError (transform modules not yet implemented), 2 fail with exit code 2 (check_exception_handling.py not yet in scripts/commit_guardian/). Red baseline established — python-coder must implement transform_doc_frontmatter.py, transform_description_field.py, add tier fields to commit_guardian.json, add check_exception_handling.py to scripts/commit_guardian/, and add AUTOFIX_AGENT emission to make all tests green.
+
+### 2026-06-17 15:00 — pull-request (status: ok)
+feedback-id: fb_2026-06-17_ca016518
+pr_url: https://github.com/urlmonitor/leafcutter-ai/pull/89
+Pushed to origin; ticket-02 commits added to existing PR 89.
 
 ### 2026-06-17 13:30 — test-runner (status: ok)
 feedback-id: fb_2026-06-17_2039ff3c
