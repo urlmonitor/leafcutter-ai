@@ -131,10 +131,49 @@ Any discrepancy between the declared contract and the implementation is a
       AC: <AC-N text>
 ```
 
+### Cross-File Contract Tracing
+
+When one or more ACs in the ticket carry a `delivers_to` or `expects_from`
+field linking this ticket to a producer or consumer ticket, you MUST perform a
+cross-file contract trace — do not rely on within-ticket unit tests that mock
+the dependency.
+
+For each `delivers_to` entry (this ticket produces something a consumer
+depends on):
+
+1. Identify the consuming file(s) referenced by the contract.
+2. Open the consuming file (via `Read`, or delegate to `research-agent` if you
+   need a cross-repo lookup).
+3. Confirm that the data path, field name, or interface the consumer reads
+   actually exists in the producer's output as implemented in the current diff.
+4. If the producer's output does not expose what the consumer expects, this is a
+   **high-confidence finding** regardless of whether the producer's unit tests pass.
+
+For each `expects_from` entry (this ticket consumes something a producer
+delivers):
+
+1. Identify the producer file(s) referenced by the contract.
+2. Open the producer file and verify the field, interface, or data path this
+   ticket reads is actually present in the producer's implementation.
+3. A mismatch here is also a **high-confidence finding**.
+
+Format cross-file contract findings as:
+
+```
+[H-N] cross-file contract gap — <field or data path>
+      <consumer_file> reads '<path>' but producer '<producer_file>' does not populate it.
+      Contract: AC-N delivers_to / expects_from <linked ticket or agent>
+```
+
+A ticket whose unit tests pass but whose cross-file contract is unmet must be
+flagged as a high-confidence finding. Delegate the file read to `research-agent`
+when the consuming or producing file is outside the current diff.
+
 ### AC Coverage Table Fill (Validated column)
 
-After completing the contract validation pass, fill the **Validated** column of
-the `## AC Coverage` table for every AC you reviewed. Use the format:
+After completing the contract validation pass and the cross-file contract
+tracing, fill the **Validated** column of the `## AC Coverage` table for every
+AC you reviewed. Use the format:
 
 ```
 ok — YYYY-MM-DD
