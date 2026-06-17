@@ -4,7 +4,7 @@ description: "Field-by-field reference for AC YAML files, the hierarchical ID fo
 type: reference
 status: active
 created: 2026-06-04
-last_updated: 2026-06-17
+last_updated: 2026-06-18
 components:
   - build_pipeline
 related_docs:
@@ -42,6 +42,7 @@ Each AC file is a single YAML document with the following fields.
 | `origin_agent` | string | no | Identity of the agent or workflow that created this AC file. Free-form provenance string — any non-empty value is valid. The field is **not** validated against the current agent registry. Historical agent names (including names of deleted, renamed, or decomissioned agents) remain valid and are never rewritten during schema upgrades. Example values: `business-analyst` (canonical name, also used historically as v1 and promoted from v3), `business-analyst-v2` (deleted agent), `business-analyst-v3` (legacy v3 name, now renamed to `business-analyst`), `create-ticket` (deleted agent), `refinement` (deleted agent), `BrainCandy` (human author), `ticket-wiring` (workflow). |
 | `implements_pattern` | string or null | no | ID of the reusable behavior pattern this AC inherits from (e.g. `PTN-001`). When set, the effective behavior is derived from the referenced pattern combined with any `pattern_bindings`. The `criteria` field may contain a plain-text placeholder rather than a full `Given`/`When`/`Then` scenario. |
 | `pattern_bindings` | object or null | no | Key-value bindings that instantiate the referenced pattern for this AC. Values may be strings, arrays, or objects. Only meaningful when `implements_pattern` is set. Example: `{entity_type: "users", columns: ["name", "email"]}`. |
+| `pattern_slots` | list of strings or null | no | List of `{word}` placeholder strings that this pattern AC exposes as bindable slots. Only meaningful on pattern ACs — ACs that other ACs reference via `implements_pattern`. Each entry is a placeholder matching a named placeholder in the `criteria` field (e.g. `"{columns}"`, `"{default_sort}"`). Consuming ACs must supply a value for every slot via `pattern_bindings`. The `check_ac_schema.py` hook derives required slots from this list (falling back to scanning `criteria` for `{word}` placeholders when `pattern_slots` is absent). |
 
 ### Full example
 
@@ -62,6 +63,31 @@ implemented_by:
   - "scripts/finalize.py#merge_main"
 amended_by: []
 origin_agent: business-analyst
+```
+
+### Pattern AC example (with pattern_slots)
+
+A pattern AC declares the slots that consuming ACs must bind. The `pattern_slots`
+field lists each `{word}` placeholder from the `criteria` field explicitly.
+
+```yaml
+id: ACS-500a-1
+title: "A pattern AC defines shared behavior with parameterized slots"
+component: ac-store
+level: L2
+status: active
+created_by: "tickets/00_inbox/epics/EPIC-PatternReuse/01_define_pattern.md"
+criteria: |
+  Given an AC YAML file with level: L2,
+  When its criteria describes behavior with named slots
+    (e.g. "sortable table with columns {columns}, sorted by {default_sort}"),
+  Then that AC is the single authoritative definition of the shared behavior.
+pattern_slots:
+  - "{columns}"
+  - "{default_sort}"
+readiness: approved
+priority: high
+origin_agent: BrainCandy
 ```
 
 ### Pattern-inherited AC example (empty criteria)
@@ -98,21 +124,39 @@ origin_agent: business-analyst
 
 ## ID Format and Assignment
 
-AC IDs follow the pattern `PREFIX-NNN`:
+AC IDs follow the pattern `PREFIX-NNN`, where `NNN` may be followed by
+optional hierarchical suffix segments. Compound prefixes (two uppercase
+groups joined by a hyphen, e.g. `KM-DBF`) are also accepted.
 
 | Part | Rules |
 |---|---|
-| `PREFIX` | 2–6 uppercase ASCII letters. Derived from the component's `prefix` field in `docs/acceptance-criteria/index.yaml`. |
+| `PREFIX` | 2–6 uppercase ASCII letters. Derived from the component's `prefix` field in `docs/acceptance-criteria/index.yaml`. May itself contain a hyphen-separated uppercase sub-group for compound namespaces (e.g. `KM-DBF`, `KM-KQS`). |
 | `-` | Literal hyphen separator. |
-| `NNN` | Three-digit zero-padded sequential integer. The first AC in a namespace is `001`; each subsequent AC increments by one. |
+| `NNN` | One or more digits (historically three zero-padded digits, e.g. `001`; the schema accepts any positive integer). |
+| Hierarchical suffix | Optional. See the Hierarchical AC IDs table below. |
 
-**Examples:** `FIN-001`, `AUTH-007`, `BP-042`.
+**Examples:** `FIN-001`, `AUTH-007`, `BP-042`, `ACS-100`, `KM-DBF-001`.
 
 **Assignment:** IDs are assigned at creation time and never reused. If an
 AC is deprecated, its ID remains reserved so that historical references
 (e.g. in commit messages or tickets) remain resolvable.
 
-**Root-level regex:** `^[A-Z]{2,6}-[0-9]{3}$`
+**Full ID regex:** `^[A-Z]{2,6}(-[A-Z]{2,6})?-\d+([a-z]\d*(-\d+[a-z\d]*(-[a-z\d]+)?)?|-\d+[a-z\d]*(-[a-z\d]+)?)?$`
+
+This single regex covers all supported forms:
+
+| Form | Example | Matches |
+|---|---|---|
+| Root / base | `ACS-100`, `FIN-001` | `PREFIX-\d+` |
+| Compound-prefix root | `KM-DBF-001` | `PREFIX-SUB-\d+` |
+| L1 alpha | `ACS-100a`, `ACS-200d` | `PREFIX-\d+[a-z]` |
+| L1 alpha with digit suffix | `BP-800a2` | `PREFIX-\d+[a-z]\d+` |
+| L2 alpha-first | `ACS-500a-1` | `PREFIX-\d+[a-z]-\d+` |
+| L2 numeric-only (no alpha L1) | `BO-510-1`, `BO-610-3` | `PREFIX-\d+-\d+` |
+| L2 with trailing alpha | `ACS-300g-4a`, `PER-100d-2a` | `PREFIX-\d+[a-z]-\d+[a-z]` |
+| L3 alpha extension (alpha-first) | `ACS-500a-1-i`, `ACS-1100b-3-i` | `PREFIX-\d+[a-z]-\d+-[a-z]+` |
+| L3 alpha extension (numeric-only) | `BO-510-3-i`, `BO-610-4-i` | `PREFIX-\d+-\d+-[a-z]+` |
+| L3 numeric extension | `BO-300a-2-1`, `BP-900a-1-1` | `PREFIX-\d+[a-z]-\d+-\d+` |
 
 ### Hierarchical AC IDs and Parent Derivation
 

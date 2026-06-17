@@ -18,8 +18,8 @@
     "properties": {
         "id": {
             "type": "string",
-            "description": "Stable AC identifier in the format COMPONENT_PREFIX-NNN (e.g. FIN-001). Assigned at creation time; never changes.",
-            "pattern": "^[A-Z]{2,6}-[0-9]{3}$"
+            "description": "Stable AC identifier. Supports multiple formats: base form PREFIX-NNN (e.g. ACS-100, FIN-001), hierarchical L1 form PREFIX-NNNx (e.g. ACS-100a), L2 form PREFIX-NNNx-N (e.g. ACS-500a-1), L3 extension form PREFIX-NNNx-N-y (e.g. ACS-500a-1-i), numeric-only hierarchy (e.g. BO-510-1), and compound-prefix forms (e.g. KM-DBF-001). Assigned at creation time; never changes.",
+            "pattern": "^[A-Z]{2,6}(-[A-Z]{2,6})?-\\d+([a-z]\\d*(-\\d+[a-z\\d]*(-[a-z\\d]+)?)?|-\\d+[a-z\\d]*(-[a-z\\d]+)?)?$"
         },
         "title": {
             "type": "string",
@@ -54,8 +54,8 @@
             "oneOf": [
                 {
                     "type": "string",
-                    "pattern": "^[A-Z]{2,6}-[0-9]{3}$",
-                    "description": "AC ID of the replacement criterion (set when status is superseded_by)."
+                    "pattern": "^[A-Z]{2,6}(-[A-Z]{2,6})?-\\d+([a-z]\\d*(-\\d+[a-z\\d]*(-[a-z\\d]+)?)?|-\\d+[a-z\\d]*(-[a-z\\d]+)?)?$",
+                    "description": "AC ID of the replacement criterion (set when status is superseded_by). Must match the same hierarchical ID format as the id field."
                 },
                 {
                     "type": "null"
@@ -199,6 +199,22 @@
                     "type": "object",
                     "description": "Key-value bindings that instantiate the referenced pattern for this AC. Values may be strings, arrays, or objects. Only meaningful when implements_pattern is set.",
                     "additionalProperties": true
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "pattern_slots": {
+            "oneOf": [
+                {
+                    "type": "array",
+                    "description": "List of {word} placeholder strings that this pattern AC exposes as bindable slots. Only meaningful on pattern ACs (ACs that other ACs reference via implements_pattern). Each entry is a placeholder in the form '{slot_name}' matching a named placeholder in the criteria field. Consuming ACs must supply a value for every slot via pattern_bindings.",
+                    "items": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "uniqueItems": true
                 },
                 {
                     "type": "null"
