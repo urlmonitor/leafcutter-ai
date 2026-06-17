@@ -87,7 +87,7 @@ class TestBootstrapEnvSymlinkSkippedWhenMissing(unittest.TestCase):
         with (
             patch.object(
                 mod.os, "symlink", side_effect=FileNotFoundError("no such file")
-            ) as mock_symlink,
+            ),
             patch.object(mod.shutil, "copy") as mock_copy,
             patch.object(mod.subprocess, "run"),
         ):

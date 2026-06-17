@@ -1,0 +1,89 @@
+# Continuous-integration gate for leafcutter-ai.
+#
+# Runs on every push to main and every PR targeting main. Two jobs:
+#
+#   lint       — ruff check over scripts/, tests/, unit_tests/ (config: ruff.toml).
+#                BLOCKING. The templates/ source tree is excluded (see ruff.toml).
+#
+#   typecheck  — mypy over the .py files changed in a PR (non-strict,
+#                --ignore-missing-imports, since the codebase has no type config
+#                yet). INFORMATIONAL ONLY (continue-on-error): the codebase is
+#                untyped, so touching any file surfaces dozens of pre-existing
+#                type errors unrelated to the change. The job surfaces type
+#                findings on changed files without blocking the merge. Promote
+#                to blocking once the codebase is annotated. On direct pushes
+#                there is no diff base, so it is a no-op.
+#
+# NO test job (yet). The pytest suite cannot run green on a fresh clone: tests
+# under tests/commit_guardian/ and others import from scripts/commit_guardian/,
+# scripts/doc_compliance/, scripts/feedback/ — which are GITIGNORED build
+# outputs. A CI runner clones without them, and the current consolidated build
+# (build.py) writes those outputs into .leafcutter/ rather than the scripts/
+# paths the tests read, so ~36 tests fail at import on a clean checkout. Adding
+# a blocking test gate is tracked as a prerequisite ticket
+# (TICKET-20260617-CITestGateBuildOutputDependency.md). Until that is resolved,
+# CI enforces lint only.
+#
+# Dependencies are pinned in requirements-dev.txt.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Ruff check
+        run: ruff check scripts tests unit_tests
+
+  typecheck:
+    name: Type-check changed files (mypy, informational)
+    runs-on: ubuntu-latest
+    # Informational only — see header. Surfaces type findings without blocking.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Need the PR base commit to diff against.
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: mypy on changed Python files
+        # On push events github.base_ref is empty and this becomes a no-op.
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
+          CHANGED=$(git diff --name-only --diff-filter=ACM "origin/${{ github.base_ref }}"...HEAD -- 'scripts/**/*.py' 'tests/**/*.py' 'unit_tests/**/*.py')
+          if [ -z "$CHANGED" ]; then
+            echo "No changed Python files under scripts/, tests/, or unit_tests/ — skipping mypy."
+            exit 0
+          fi
+          echo "Type-checking changed files:"
+          echo "$CHANGED"
+          mypy --ignore-missing-imports --no-error-summary $CHANGED

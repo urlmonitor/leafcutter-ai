@@ -299,7 +299,6 @@ def _build_ticket_body(ac: AcRecord, ac_id: str) -> str:
     title = ac.get("title", f"Implement {ac_id}")
     criteria = ac.get("criteria", "(No criteria provided)")
     assigned_agent = ac.get("assigned_agent", "python-coder")
-    files_touched = _extract_local_paths(ac.get("doc_links") or [])
     agents = _build_agents_map(assigned_agent)
     signoffs = _build_signoffs_section(agents)
 

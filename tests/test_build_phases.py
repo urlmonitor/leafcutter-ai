@@ -166,7 +166,7 @@ class TestPlanFeatureDeployedInConsumerConfig(unittest.TestCase):
             }
 
             # Act — run full workflow script deployment phase
-            written = build_phases.build_workflow_scripts(
+            build_phases.build_workflow_scripts(
                 self._target, config, dry_run=False, force=True
             )
 

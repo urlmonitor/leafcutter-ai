@@ -16,7 +16,6 @@ ARCHITECTURE: Imported by roadmap_query.py. Depends on the _OPEN_STATUSES
 from __future__ import annotations
 
 import json
-import sys
 from typing import Any
 
 _OPEN_STATUSES = {"todo", "in_progress"}

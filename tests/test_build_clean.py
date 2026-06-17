@@ -241,7 +241,7 @@ class TestCleanDoesNotRemoveUnmanagedFiles(unittest.TestCase):
                 "hooks": set(),
             }
 
-            removed_count = clean_fn(target, source_manifests)
+            clean_fn(target, source_manifests)
 
             self.assertTrue(
                 user_file.exists(),

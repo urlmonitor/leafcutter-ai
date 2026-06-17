@@ -343,7 +343,6 @@ class TestProposalIsNonDestructive(unittest.TestCase):
         """Even at threshold, only the observation store is written — not the config."""
         import sys
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
-        import commit_pattern_learner
 
         with tempfile.TemporaryDirectory() as tmp:
             obs_path = Path(tmp) / "obs.jsonl"
