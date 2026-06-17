@@ -128,7 +128,11 @@ and auto-corrects missing `HH:MM` and tail-tags, so most agent commits will
 not hit the validator. However, writing correct format from the start avoids
 any pre-stage transformer output in the hook log.
 
-## Step 3 — Confirmation gate (mandatory)
+## Step 3 — Confirmation gate
+
+The gate branches on whether `ticket_path` was provided.
+
+### Interactive path (no `ticket_path` provided)
 
 **Always** show the user:
 1. The proposed commit subject + body.
@@ -139,6 +143,31 @@ Then ask explicitly: **"Commit this? (yes / edit / cancel)"**
 
 Proceed to Step 4 only on **yes** in the same turn. On **edit**, redraft. On
 **cancel** or any other response, stop without committing.
+
+### Supervised path (`ticket_path` provided)
+
+Do **NOT** issue an interactive confirmation prompt. Do **NOT** emit a
+`question` status for this gate — doing so would deadlock the ticket, since
+the `question` status is terminal-until-user-reply and no reply channel exists
+mid-drive. Authorization is already established by the `/build-feature`
+dispatch plus the upstream gates (pr-reviewer, ac-validator, ac-fulfillment-gate)
+and the commit-phase serialization lock held by ticket-supervisor.
+
+Instead, append a single audit entry to the ticket's `## Comments` section
+using the parser-strict heading schema from the `signoff` skill (§3):
+
+```
+### YYYY-MM-DD HH:MM — commit (status: ok)
+Auto-authorized commit gate: subject "<commit subject>"; staged files: <git diff --cached --name-only output>.
+```
+
+Then proceed directly to Step 4.
+
+**Scope of auto-authorization.** This auto-authorization applies **only** to
+the routine confirmation gate. It does NOT authorize `--no-verify`, signing-flag
+bypass, force-push, or staging sensitive files. All refusal cases in the
+## Refusal cases table and the ## Constraints section remain in effect
+regardless of path.
 
 ## Step 4 — Run git commit
 

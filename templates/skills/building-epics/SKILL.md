@@ -660,6 +660,25 @@ The supervisor maintains a small in-memory counter dictionary keyed by `(ticket_
 
 The commit and pull-request phases mutate the git index and `HEAD`; they cannot run concurrently across sibling tickets in the same worktree. We enforce mutual exclusion via a tiny lock file at the worktree root.
 
+### §5.0 Supervised commit auto-authorization
+
+When `ticket-supervisor` dispatches the `commit` agent with a `ticket_path`
+argument, the commit agent's routine confirmation gate (Step 3 in the commit
+template) is **auto-authorized** — no interactive "Commit this? (yes / edit /
+cancel)" prompt is issued and no `question` status is emitted. Authorization
+derives from the `/build-feature` dispatch itself plus the three upstream gates
+that have already vetted the diff: pr-reviewer, ac-validator, and
+ac-fulfillment-gate. The commit agent records an audit entry in the ticket's
+`## Comments` section instead of halting for a reply.
+
+**The `commit` agent MUST NOT emit `question` status for its routine
+confirmation gate when invoked with a `ticket_path`.** A `question` status is
+terminal-until-user-reply (§2.2 routing table), and no reply channel exists
+during a mid-drive supervisor run — the ticket would deadlock permanently.
+
+The interactive `/commit` confirmation gate (no `ticket_path`) is entirely
+unaffected by this rule.
+
 ### §5.1 Lock file
 
 - **Path**: `<worktree_root>/.epic-commit-lock`
