@@ -47,7 +47,7 @@
         },
         "criteria": {
             "type": "string",
-            "description": "Multi-line Gherkin scenario body (Given/When/Then/And).",
+            "description": "Multi-line Gherkin scenario body (Given/When/Then/And). When implements_pattern is set and the AC has no unique behavior beyond what the pattern provides, a plain-text placeholder is acceptable (e.g. 'No page-specific behavior — all behavior inherited from pattern.').",
             "minLength": 1
         },
         "superseded_by": {
@@ -91,7 +91,7 @@
         },
         "origin_agent": {
             "type": "string",
-            "description": "Identity of the agent or workflow that created this AC file. Enum: business-analyst | debug | human | ticket-wiring. Free-form string to allow future agents.",
+            "description": "Identity of the agent or workflow that created this AC file. Free-form provenance string — any non-empty value is valid. Historical agent names (e.g. business-analyst-v2, business-analyst-v3, create-ticket, refinement from now-deleted or renamed agents) remain valid and are never rewritten.",
             "minLength": 1
         },
         "readiness": {
@@ -165,14 +165,14 @@
                 }
             ]
         },
-        "pattern_slots": {
+        "depends_on": {
             "oneOf": [
                 {
                     "type": "array",
-                    "description": "Named placeholder slots (in curly-brace notation, e.g. '{columns}', '{default_sort}') that consuming ACs must fill via pattern_bindings. Present only on ACs that act as shared-behavior patterns. Empty array or absent means this AC is not a pattern.",
+                    "description": "List of AC IDs that this AC depends on. Used for parent-child hierarchy links (child AC lists its structural parent) and for pattern composition (composite pattern lists its atomic component pattern IDs). Must not form a cycle — the check_ac_circular_deps pre-commit hook enforces a directed-acyclic-graph (DAG) invariant on all depends_on edges.",
                     "items": {
                         "type": "string",
-                        "pattern": "^\\{[a-zA-Z_][a-zA-Z0-9_]*\\}$"
+                        "minLength": 1
                     },
                     "uniqueItems": true
                 },
@@ -185,8 +185,8 @@
             "oneOf": [
                 {
                     "type": "string",
-                    "description": "AC ID of the pattern AC that this AC instantiates. Must reference a valid AC in the store whose pattern_slots is non-empty. Consuming ACs set this field; pattern ACs leave it absent or null.",
-                    "pattern": "^[A-Z]{2,6}-[0-9]{3}([a-z]+(-[0-9]+(-[a-z0-9]+)*)?)?$"
+                    "description": "ID of the reusable behavior pattern this AC inherits from (e.g. 'PTN-001'). When set, the effective behavior is derived from the referenced pattern combined with any pattern_bindings. The criteria field may contain a plain-text placeholder rather than a full Given/When/Then scenario.",
+                    "minLength": 1
                 },
                 {
                     "type": "null"
@@ -197,21 +197,8 @@
             "oneOf": [
                 {
                     "type": "object",
-                    "description": "Mapping of slot names (without curly braces) to their concrete values for this consuming AC. Every slot declared in the referenced pattern's pattern_slots must be bound here. Only valid when implements_pattern is set. Values may be strings or arrays of strings (e.g. a list of column names).",
-                    "additionalProperties": {
-                        "oneOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "array",
-                                "items": {
-                                    "type": "string"
-                                },
-                                "minItems": 1
-                            }
-                        ]
-                    }
+                    "description": "Key-value bindings that instantiate the referenced pattern for this AC. Values may be strings, arrays, or objects. Only meaningful when implements_pattern is set.",
+                    "additionalProperties": true
                 },
                 {
                     "type": "null"

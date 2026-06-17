@@ -81,65 +81,6 @@ completeness (which is owned by the pattern registry). ACs that have no unique
 page-specific behavior are therefore valid with an empty-criteria placeholder as
 long as `implements_pattern` is set.
 
-**Composite pattern ACs (ACS-500e-1):**
-
-A composite pattern AC composes two or more atomic patterns by declaring them in a
-`depends_on` list. Its `criteria` describes ONLY the wiring behavior between the
-atomic patterns — not the atomic behaviors themselves (which are already fully
-specified by the referenced atomic pattern ACs).
-
-The optional `depends_on` field for composite pattern ACs is defined as follows:
-
-| Field | Type | Description |
-|---|---|---|
-| `depends_on` | array of strings | AC IDs this AC logically depends on. For composite patterns, lists the atomic pattern IDs being wired together (e.g. `[PTN-010, PTN-011, PTN-012]`). For deviation ACs, references the consuming AC the deviation overrides. Purely declarative — no runtime resolution required. |
-
-Design invariants for composite patterns:
-
-1. **Atomic patterns are independent.** Atomic pattern ACs define isolated behaviors
-   with no `depends_on` links between them.
-2. **Composite criteria describes only wiring.** The composite pattern's `criteria`
-   describes only inter-pattern wiring behavior (e.g. "filter changes reset pagination
-   to page 1", "sort changes preserve current filter state"). It MUST NOT duplicate
-   atomic behaviors already defined by the referenced patterns.
-3. **Composite patterns are themselves reusable.** Consuming page ACs reference a
-   composite pattern via `implements_pattern` exactly as they would reference an
-   atomic pattern. The consuming AC inherits all atomic behaviors and all wiring
-   behaviors through the single `implements_pattern` declaration.
-4. **`depends_on` is declarative.** The store validator may warn when a `depends_on`
-   target is absent but MUST NOT block commits. There is no runtime pattern resolution
-   engine — pattern composition is a documentation and design-time concern only.
-
-**Pattern deviations and update isolation (ACS-500d-2):**
-
-A deviation is a separate, standalone AC file that captures non-standard behavior for
-a specific page or endpoint that otherwise inherits from a shared pattern. The key
-design invariants are:
-
-1. **Deviations are standard ACs.** A deviation AC has its own `id`, full
-   `Given`/`When`/`Then` `criteria`, and a `depends_on` referencing the consuming AC.
-   It does NOT have an `implements_pattern` field.
-
-2. **Deviations take precedence.** For the specific behavior the deviation AC
-   describes, that AC is authoritative. The shared pattern's definition of the same
-   behavior is overridden by the deviation for that page or endpoint only.
-
-3. **Pattern updates do not affect deviation ACs.** When a pattern AC is amended to
-   add a new behavior, every consuming AC inherits the new behavior via the
-   `implements_pattern` reference — but existing deviation ACs remain completely
-   unchanged. The pattern resolution logic MUST NOT modify, overwrite, or delete any
-   deviation AC when the referenced pattern is updated.
-
-4. **No conflict at the schema level.** Because deviations are independent files (not
-   inline overrides), there is no merge conflict between an updated pattern and an
-   existing deviation. The two mechanisms are orthogonal: the consuming AC inherits
-   new pattern behaviors by reference; the deviation continues to override only the
-   specific aspect it was written for.
-
-This design was adopted to keep the schema minimal (no special deviation fields) and
-to make the precedence rule declarative: if a separate AC exists in the same feature
-folder that addresses the same behavior, it takes precedence over the pattern.
-
 ### ID Format
 
 `<COMPONENT_PREFIX>-<NNN>` where:
@@ -214,6 +155,43 @@ is installed as a commit-guardian hook. It runs on every commit that touches
 The hook is registered in `templates/commit-guardian/commit_guardian.json` with
 `pass_filenames: false` and a file-pattern filter to
 `docs/acceptance-criteria/**/*.yaml`.
+
+### Circular `depends_on` Dependency Enforcement (ACS-500e-1-i)
+
+A second enforcement hook `scripts/commit_guardian/check_ac_circular_deps.py`
+enforces a directed-acyclic-graph (DAG) invariant on the `depends_on` field.
+
+**Why `depends_on` must be a DAG:** The `depends_on` field is used for two
+purposes: (1) parent-child hierarchy links (child AC lists its structural parent)
+and (2) pattern composition (composite pattern AC lists the atomic patterns it
+wires together). Both uses assume the graph is acyclic — any tool that
+recursively resolves `depends_on` references (pattern resolution, hierarchy
+navigation, coverage aggregation) would loop infinitely if a cycle existed.
+
+**Enforcement algorithm:**
+
+1. When any `docs/acceptance-criteria/**/*.yaml` file is staged, the hook
+   builds a complete `depends_on` adjacency list by reading all on-disk AC
+   YAML files in the AC store.
+2. The staged files' parsed content is overlaid on the on-disk graph, so
+   the graph reflects the proposed commit state rather than HEAD.
+3. An iterative DFS is run from each staged AC id to detect cycles reachable
+   from that node.
+4. If a cycle is found that involves at least one staged AC id, the commit is
+   blocked with an error naming the full cycle path:
+   ```
+   [check-ac-circular-deps] BLOCKED — circular depends_on chain(s) detected:
+     [1] Circular dependency detected: PTN-010 -> PTN-020 -> PTN-010
+   ```
+
+**Fail-open guarantee:** Any unexpected exception (I/O error, YAML parse
+failure, missing AC store directory) causes the hook to exit `0` with a
+`WARNING` prefix on stderr. A script failure never hard-blocks a commit that
+is unrelated to the circular dependency concern.
+
+**Configuration:** The hook is registered in `commit_guardian.json` with id
+`check-ac-circular-deps`, file pattern `^docs/acceptance-criteria/.*\.yaml$`,
+and `pass_filenames: false`.
 
 **Why stdlib only:** External validator libraries (`jsonschema`) are not
 guaranteed to be installed in the commit hook environment of every adopter

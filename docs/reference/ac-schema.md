@@ -4,7 +4,7 @@ description: "Field-by-field reference for AC YAML files, the hierarchical ID fo
 type: reference
 status: active
 created: 2026-06-04
-last_updated: 2026-06-10
+last_updated: 2026-06-17
 components:
   - build_pipeline
 related_docs:
@@ -38,10 +38,10 @@ Each AC file is a single YAML document with the following fields.
 | `amended_by` | list of strings | no | Ticket paths that subsequently amended this criterion. Default: `[]`. |
 | `covered_by` | list of strings | no | Test file paths (optionally with `::test_function`) that verify this criterion. Default: `[]`. |
 | `implemented_by` | list of strings | no | Source file paths (optionally with `#anchor`) that implement this criterion. Default: `[]`. |
+| `depends_on` | list of strings or null | no | List of AC IDs that this AC depends on. Used for two purposes: (1) parent-child hierarchy links — a child AC lists its structural parent ID so the hierarchy is navigable from the child direction; (2) pattern composition — a composite pattern AC lists the atomic pattern AC IDs it wires together. **Must not form a cycle.** The `check_ac_circular_deps` pre-commit hook enforces a directed-acyclic-graph (DAG) invariant on all `depends_on` edges and blocks commits that would introduce a cycle. Default: `[]`. |
 | `origin_agent` | string | no | Identity of the agent or workflow that created this AC file. Free-form provenance string — any non-empty value is valid. The field is **not** validated against the current agent registry. Historical agent names (including names of deleted, renamed, or decomissioned agents) remain valid and are never rewritten during schema upgrades. Example values: `business-analyst` (canonical name, also used historically as v1 and promoted from v3), `business-analyst-v2` (deleted agent), `business-analyst-v3` (legacy v3 name, now renamed to `business-analyst`), `create-ticket` (deleted agent), `refinement` (deleted agent), `BrainCandy` (human author), `ticket-wiring` (workflow). |
 | `implements_pattern` | string or null | no | ID of the reusable behavior pattern this AC inherits from (e.g. `PTN-001`). When set, the effective behavior is derived from the referenced pattern combined with any `pattern_bindings`. The `criteria` field may contain a plain-text placeholder rather than a full `Given`/`When`/`Then` scenario. |
 | `pattern_bindings` | object or null | no | Key-value bindings that instantiate the referenced pattern for this AC. Values may be strings, arrays, or objects. Only meaningful when `implements_pattern` is set. Example: `{entity_type: "users", columns: ["name", "email"]}`. |
-| `depends_on` | list of strings | no | AC IDs that this AC logically depends on. Used in two contexts: (1) deviation ACs reference their parent consuming AC; (2) composite pattern ACs list the atomic pattern IDs they wire together (e.g. `[PTN-010, PTN-011, PTN-012]`). Purely declarative — no runtime resolution is required. The store validator may warn when a referenced ID is absent but MUST NOT block commits. |
 
 ### Full example
 
@@ -93,177 +93,6 @@ origin_agent: business-analyst
 - A plain-text placeholder like `"No page-specific behavior — all behavior inherited from pattern."` satisfies this requirement.
 - The effective behavior is entirely derived from the pattern referenced in `implements_pattern`, instantiated with the `pattern_bindings` values.
 - The schema validator does **not** enforce `Given`/`When`/`Then` format — any non-empty string is valid.
-
-### Pattern Deviations — separate ACs with explicit precedence
-
-A **deviation** is a separate, standalone AC file that captures non-standard behavior
-for a specific page or endpoint that otherwise uses a shared pattern via
-`implements_pattern`. Deviations are NOT inline overrides; they are ordinary AC files
-in the same feature folder with their own `id`, full `Given`/`When`/`Then` `criteria`,
-and a `depends_on` referencing the consuming AC.
-
-**Precedence rule (ACS-500d-2):**
-Deviation ACs take precedence over the pattern behavior for the specific aspect they
-override. When a pattern AC is amended (e.g. a new behavior is added), every page AC
-that references the pattern via `implements_pattern` inherits the new behavior
-automatically — but any existing deviation ACs for those pages remain unchanged. The
-deviation still overrides only the specific behavior it was written for; no conflict
-occurs because deviations are independent files that the pattern resolution logic
-never touches.
-
-**Invariants:**
-- Deviation ACs do NOT contain an `implements_pattern` field.
-- Pattern resolution MUST NOT modify, overwrite, or delete any deviation AC when the
-  referenced pattern is updated.
-- A page can simultaneously inherit new pattern behaviors (by reference) and retain
-  existing deviations (by separate files) — the two mechanisms are orthogonal.
-
-**Example — deviation AC for a page that uses PTN-001:**
-
-```yaml
-id: PAGE-005-DEV-001
-title: "Users list page — status column uses priority sort order"
-component: users-ui
-status: active
-created_by: "tickets/00_inbox/epics/EPIC-UsersUI/05_users_list_priority_sort.md"
-criteria: |
-  Given the Users list page renders its status column,
-  When the user requests a sort on the status column,
-  Then rows are ordered by priority (critical > high > medium > low),
-  And alphabetical ordering is NOT used for the status column.
-depends_on:
-  - PAGE-005
-amended_by: []
-covered_by: []
-origin_agent: business-analyst
-```
-
-Note: `PAGE-005` is the consuming AC that has `implements_pattern: "PTN-001"`. The
-deviation AC (`PAGE-005-DEV-001`) carries the full Gherkin scenario for the non-standard
-behavior and has no `implements_pattern` field of its own.
-
----
-
-### Composite Pattern ACs — composing atomic patterns (ACS-500e-1)
-
-A **composite pattern AC** wires two or more atomic pattern ACs together. It uses
-the `depends_on` field to declare which atomic patterns it composes, and its
-`criteria` describes ONLY the wiring behavior between those patterns (e.g. how
-filter state interacts with pagination state). The atomic behaviors are fully
-defined by the referenced atomic patterns and are NOT repeated in the composite.
-
-**Design invariants:**
-
-1. Atomic patterns are independent. They define isolated behaviors with no
-   `depends_on` links between them.
-2. The composite pattern's `criteria` describes only inter-pattern wiring. It
-   MUST NOT duplicate behavior already specified by the atomic patterns it
-   references.
-3. The composite pattern is itself a reusable pattern. Consuming page ACs may
-   reference it via `implements_pattern` exactly as they would reference an
-   atomic pattern.
-4. `depends_on` on a composite pattern AC is purely declarative. No runtime
-   resolution is required; a validator may warn on missing targets but must not
-   block commits.
-
-**Example — atomic patterns and a composite pattern:**
-
-```yaml
-# Atomic pattern — sortable table
-id: PTN-010
-title: "Sortable table — column sorting behavior"
-component: ac-store
-status: active
-pattern_slots:
-  - "{columns}"
-  - "{default_sort_column}"
-criteria: |
-  Given a page contains a table with sortable columns {columns},
-  When the user clicks a column header,
-  Then the table rows are sorted by that column,
-  And clicking the same header again toggles between ascending and descending order,
-  And the table is initially sorted by {default_sort_column} ascending.
-created_by: "tickets/00_inbox/epics/EPIC-Defineabehavioronce,reusethespec/15_TICKET-20260611-ACS-500e-1.md"
-
-# Atomic pattern — filter bar
-id: PTN-011
-title: "Filter bar — text and dropdown filter behavior"
-component: ac-store
-status: active
-pattern_slots:
-  - "{text_filter_field}"
-  - "{dropdown_filter_fields}"
-criteria: |
-  Given a page contains a filter bar with a text input for {text_filter_field}
-    and dropdown filters for {dropdown_filter_fields},
-  When the user enters text in the text input or selects a dropdown option,
-  Then the table rows are filtered to only show matching results,
-  And clearing the filter input restores all rows.
-created_by: "tickets/00_inbox/epics/EPIC-Defineabehavioronce,reusethespec/15_TICKET-20260611-ACS-500e-1.md"
-
-# Atomic pattern — paginated collection
-id: PTN-012
-title: "Paginated collection — page-size selection and navigation"
-component: ac-store
-status: active
-pattern_slots:
-  - "{default_page_size}"
-  - "{page_size_options}"
-criteria: |
-  Given a page displays a collection with page-size control offering {page_size_options},
-  When the page loads,
-  Then the collection shows at most {default_page_size} rows,
-  And the user can navigate forward and backward through pages,
-  And changing the page-size selector resets to page 1.
-created_by: "tickets/00_inbox/epics/EPIC-Defineabehavioronce,reusethespec/15_TICKET-20260611-ACS-500e-1.md"
-
-# Composite pattern — wires PTN-010, PTN-011, PTN-012 together
-id: PTN-020
-title: "CRUD list page — wiring between sort, filter, and pagination"
-component: ac-store
-status: active
-depends_on:
-  - PTN-010
-  - PTN-011
-  - PTN-012
-criteria: |
-  Given a page implements PTN-010 (sortable table), PTN-011 (filter bar),
-    and PTN-012 (paginated collection),
-  When the user changes a filter,
-  Then pagination resets to page 1,
-  And when the user changes the sort column,
-  Then the current filter state is preserved,
-  And when the user changes the page,
-  Then the current sort column and filter state are preserved.
-created_by: "tickets/00_inbox/epics/EPIC-Defineabehavioronce,reusethespec/15_TICKET-20260611-ACS-500e-1.md"
-```
-
-**Consuming page AC that references the composite pattern:**
-
-```yaml
-id: PAGE-010
-title: "Invoice list page uses crud-list-page composite pattern"
-component: users-ui
-status: active
-created_by: "tickets/00_inbox/epics/EPIC-InvoiceList/01_invoice_list.md"
-criteria: "No page-specific wiring behavior — all wiring inherited from composite pattern PTN-020."
-implements_pattern: "PTN-020"
-pattern_bindings:
-  columns: "invoice_number, date, amount, status"
-  default_sort_column: "date"
-  text_filter_field: "invoice_number"
-  dropdown_filter_fields: "status, date_range"
-  default_page_size: 25
-  page_size_options: [10, 25, 50, 100]
-```
-
-**Key points:**
-- `PTN-020` is declared as a reusable pattern (no `implements_pattern` of its own).
-- `PAGE-010` references `PTN-020` via `implements_pattern` — identical to how it
-  would reference an atomic pattern.
-- The consuming AC inherits both the atomic behaviors (sorting, filtering,
-  pagination) and the wiring behaviors (filter resets pagination, sort preserves
-  filter) through the single `implements_pattern: "PTN-020"` declaration.
 
 ---
 
@@ -387,6 +216,36 @@ Emits a warning for each active AC with no corresponding test tag.
 
 Checks project-level AC count limits configured in `commit_guardian.json`.
 Advisory only; never blocks a commit.
+
+### `check_ac_circular_deps.py` (blocking)
+
+Detects circular `depends_on` chains in staged AC YAML files.
+
+| Attribute | Value |
+|---|---|
+| Exit code | `1` when a cycle is detected in staged files; `0` when clean. |
+| Mode | Always blocking. |
+| Invocation | `python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_ac_circular_deps.py` |
+
+When a staged AC YAML file's `depends_on` field would create a cycle in the
+`depends_on` graph, the commit is blocked with an error message naming the
+full cycle path:
+
+```
+[check-ac-circular-deps] BLOCKED — circular depends_on chain(s) detected:
+  [1] Circular dependency detected: PTN-010 -> PTN-020 -> PTN-010
+```
+
+**Algorithm:** Builds a complete `depends_on` adjacency list from the entire
+AC store (loading all on-disk YAML files), then overlays the staged changes so
+the graph reflects the proposed commit state. Runs an iterative DFS from each
+staged AC id to detect any cycle involving that node. Only cycles that include
+at least one staged AC id are reported — pre-existing cycles in unmodified files
+are not blocked (they must be remediated separately).
+
+**Fail-open:** Any unexpected exception (I/O error, parse failure, missing AC
+store) causes the hook to exit `0` with a warning on stderr so a script error
+never hard-blocks an unrelated commit.
 
 ---
 
