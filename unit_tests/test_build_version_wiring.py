@@ -103,6 +103,7 @@ def test_version_printed_in_build_output(target_root: Path, capsys: pytest.Captu
         patch.object(_build, "_resolve_package_sha", lambda *a: "abc123"),
         patch.object(_build, "scan_for_placeholders", lambda *a: []),
         patch.object(_build, "check_referential_integrity", lambda *a, **k: []),
+        patch.object(_build, "_check_script_reference_guard", lambda *a, **k: 0),
     ):
         rc = _build.main(_make_argv(target_root))
 
@@ -133,6 +134,7 @@ def test_version_file_written(target_root: Path) -> None:
         patch.object(_build, "_resolve_package_sha", lambda *a: "abc123"),
         patch.object(_build, "scan_for_placeholders", lambda *a: []),
         patch.object(_build, "check_referential_integrity", lambda *a, **k: []),
+        patch.object(_build, "_check_script_reference_guard", lambda *a, **k: 0),
     ):
         rc = _build.main(_make_argv(target_root))
 
@@ -163,6 +165,7 @@ def test_dry_run_no_version_file(target_root: Path, capsys: pytest.CaptureFixtur
         patch.object(_build, "_resolve_package_sha", lambda *a: "abc123"),
         patch.object(_build, "scan_for_placeholders", lambda *a: []),
         patch.object(_build, "check_referential_integrity", lambda *a, **k: []),
+        patch.object(_build, "_check_script_reference_guard", lambda *a, **k: 0),
     ):
         rc = _build.main(_make_argv(target_root, extra=["--dry-run"]))
 
@@ -205,6 +208,7 @@ def test_validate_only_skips_version(target_root: Path, capsys: pytest.CaptureFi
         patch.object(_build, "_cleanup_stale_paths", _noop_cleanup),
         patch.object(_build, "write_lock_file", lambda *a, **k: None),
         patch.object(_build, "_resolve_package_sha", lambda *a: "abc123"),
+        patch.object(_build, "_check_script_reference_guard", lambda *a, **k: 0),
     ):
         rc = _build.main(_make_argv(target_root, extra=["--validate-only"]))
 

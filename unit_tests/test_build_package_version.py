@@ -121,6 +121,7 @@ def _build_patches(target_root: Path):
         patch.object(_build, "scan_for_placeholders", lambda *a: []),
         patch.object(_build, "check_referential_integrity", lambda *a, **k: []),
         patch.object(_build, "validate_agent_registry", _noop_validate_registry),
+        patch.object(_build, "_check_script_reference_guard", lambda *a, **k: 0),
     )
 
 
@@ -200,6 +201,7 @@ class TestPackageVersionInBuildOutput:
             patch.object(_build, "scan_for_placeholders", lambda *a: []),
             patch.object(_build, "check_referential_integrity", lambda *a, **k: []),
             patch.object(_build, "validate_agent_registry", _noop_validate_registry),
+            patch.object(_build, "_check_script_reference_guard", lambda *a, **k: 0),
         ):
             rc = _build.main(_make_argv(target_root))
 
@@ -225,6 +227,7 @@ class TestPackageVersionInBuildOutput:
             patch.object(_build, "scan_for_placeholders", lambda *a: []),
             patch.object(_build, "check_referential_integrity", lambda *a, **k: []),
             patch.object(_build, "validate_agent_registry", _noop_validate_registry),
+            patch.object(_build, "_check_script_reference_guard", lambda *a, **k: 0),
         ):
             rc = _build.main(_make_argv(target_root))
 
@@ -262,6 +265,7 @@ class TestPackageVersionInBuildOutput:
             patch.object(_build, "scan_for_placeholders", lambda *a: []),
             patch.object(_build, "check_referential_integrity", lambda *a, **k: []),
             patch.object(_build, "validate_agent_registry", _noop_validate_registry),
+            patch.object(_build, "_check_script_reference_guard", lambda *a, **k: 0),
         ):
             rc = _build.main(_make_argv(target_root))
 
@@ -287,6 +291,7 @@ class TestPackageVersionInBuildOutput:
             patch.object(_build, "scan_for_placeholders", lambda *a: []),
             patch.object(_build, "check_referential_integrity", lambda *a, **k: []),
             patch.object(_build, "validate_agent_registry", _noop_validate_registry),
+            patch.object(_build, "_check_script_reference_guard", lambda *a, **k: 0),
         ):
             rc = _build.main(_make_argv(target_root, extra=["--dry-run"]))
 
