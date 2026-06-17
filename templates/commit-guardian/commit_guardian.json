@@ -747,6 +747,18 @@
                 ],
                 "pass_filenames": false,
                 "_comment": "ACS-400: Blocks commits where an implementation agent (python-coder, test-writer, etc.) modifies protected fields (criteria, title, req_status, depends_on) in AC YAML files. Only authorized requirement authors (product-owner-v3, business-analyst-v3, it-po-v3) and human users may write protected fields. Also enforces origin_agent on new files (ACS-400c-1) and amended_by updates on criteria changes (ACS-400c-2). Fail-open: exits 0 on any unexpected error."
+            },
+            {
+                "id": "check-ac-pattern-refs",
+                "name": "Check AC implements_pattern References (ACS-500a-3 / ACS-500d-1-i)",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_ac_pattern_refs.py",
+                "language": "system",
+                "files": "^docs/acceptance-criteria/.*\\.yaml$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "ACS-500a-3 / ACS-500d-1-i: (1) Blocks commits where an AC YAML file's implements_pattern field references a non-existent AC ID or an AC without parameterized slots. (2) Blocks deletion of a pattern AC when any surviving AC in the store still references it via implements_pattern, with error 'Cannot delete <id>: still referenced by N consuming ACs'. Fail-open on parse errors."
             }
         ],
         "post_merge": [

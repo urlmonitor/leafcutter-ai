@@ -1,22 +1,30 @@
 """
 MODULE: check_ac_pattern_refs
 GOAL: Pre-commit hook that validates implements_pattern references in AC YAML
-    files point to existing ACs with parameterized slots in the store.
+    files point to existing ACs with parameterized slots in the store, and
+    blocks deletion of pattern ACs that are still referenced by consuming ACs.
 BUSINESS CONTEXT: Pattern reuse (ACS-500a) allows AC authors to declare a
     shared behavior once in a pattern AC and have consuming ACs instantiate it
     via implements_pattern + pattern_bindings. A dangling reference (pointing to
     a non-existent AC ID) or a reference to an AC without parameterized slots
     silently breaks the pattern-reuse contract, leading to orphaned bindings and
-    untestable specifications. This hook enforces the contract at commit time so
-    broken references never enter the repository.
+    untestable specifications. Deleting a pattern AC while consumers still
+    reference it creates the same dangling-reference failure. This hook enforces
+    both directions of the contract at commit time so broken references never
+    enter the repository.
 ARCHITECTURE: Reads staged .yaml files from docs/acceptance-criteria/ (via git
-    diff --cached or HOOK_TEST_FILES env var for testing). For each staged file,
-    loads the YAML and checks the implements_pattern field. If present, searches
-    the entire AC store tree for a YAML file whose `id` field matches the
-    referenced AC ID. Validates that the referenced AC has parameterized slots
-    (either via a non-empty pattern_slots field, or via {word} placeholders in
-    the criteria field). Emits a JSON block decision to stdout and diagnostic
-    detail to stderr on violations. Fail-open: unexpected exceptions exit 0.
+    diff --cached or HOOK_TEST_FILES env var for testing). Two checks run:
+    (1) For each added/modified file, loads the YAML and checks the
+    implements_pattern field. If present, searches the entire AC store tree for
+    a YAML file whose `id` field matches the referenced AC ID. Validates that
+    the referenced AC has parameterized slots (either via a non-empty
+    pattern_slots field, or via {word} placeholders in the criteria field).
+    (2) For each deleted file, reads its id from git HEAD content, then scans
+    the remaining AC store for any ACs with implements_pattern pointing at that
+    id (delegated to _ac_pattern_deletion_guard.py). Blocks with
+    "Cannot delete <id>: still referenced by N consuming ACs" if consumers
+    exist. Emits a JSON block decision to stdout and diagnostic detail to stderr
+    on violations. Fail-open: unexpected exceptions exit 0.
 
 Exit codes:
     0 - All staged AC YAML files pass pattern reference validation (or no AC
@@ -38,6 +46,12 @@ DECISION HISTORY:
     Two error paths: dangling reference (ID not found) and slot-less reference
     (referenced AC has no {word} patterns or pattern_slots). Fail-open on any
     unexpected exception (mirrors check_ac_governance.py pattern).
+  - 2026-06-16 [python-coder/ACS-500d-1-i]: Added deletion-guard check
+    (ACS-500d-1-i). Deletion logic is extracted into _ac_pattern_deletion_guard.py
+    to stay within the 400-line file limit. This module delegates to
+    _ac_pattern_deletion_guard.check_pattern_deletion() and
+    _ac_pattern_deletion_guard._get_deleted_ac_paths(). Injected YAML loader
+    functions keep the helper module decoupled from this module's internals.
 """
 
 from __future__ import annotations
@@ -48,6 +62,11 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+
+from _ac_pattern_deletion_guard import (
+    _get_deleted_ac_paths,
+    check_pattern_deletion,
+)
 
 _AC_STORE_DIR = "docs/acceptance-criteria"
 _HOOK_PREFIX = "[check-ac-pattern-refs]"
@@ -352,7 +371,9 @@ def _emit_block_decision(violations: list[str]) -> None:
         print(f"  {v}", file=sys.stderr)
     print(
         "\nEnsure the referenced AC ID exists in the store and its criteria "
-        "contains at least one {placeholder} slot (or pattern_slots is non-empty).",
+        "contains at least one {placeholder} slot (or pattern_slots is non-empty). "
+        "When deleting a pattern AC, first remove all implements_pattern references "
+        "to it from consuming ACs.",
         file=sys.stderr,
     )
 
@@ -363,7 +384,7 @@ def _emit_block_decision(violations: list[str]) -> None:
 
 
 def main() -> int:
-    """Run the AC pattern reference check.
+    """Run the AC pattern reference check (add/modify and deletion directions).
 
     Returns:
         0 when all staged AC YAML files pass validation (or no AC files staged),
@@ -382,50 +403,67 @@ def main() -> int:
     if not ac_store.is_dir():
         return 0
 
-    # Get staged AC YAML files
-    staged_paths = _get_staged_ac_paths()
-    if not staged_paths:
-        return 0
-
-    # Check if any staged file has implements_pattern (quick pre-scan to avoid
-    # building the full index when not needed)
-    files_with_pattern: list[str] = []
-    for staged_path in staged_paths:
-        abs_path = staged_path
-        if not Path(staged_path).is_absolute():
-            if project_root:
-                abs_path = str(project_root / staged_path)
-        data = _load_yaml_from_path(Path(abs_path))
-        if data and data.get("implements_pattern"):
-            files_with_pattern.append(abs_path)
-
-    if not files_with_pattern:
-        return 0
-
-    # Build the full AC store index once (for all files with implements_pattern)
-    ac_store_index = _build_ac_store_index(ac_store)
-
-    # Merge staged files into the index so that a staged AC can reference
-    # another AC that was also staged in the same commit (e.g. both pattern AC
-    # and consuming AC are new files committed together).
-    for staged_path in staged_paths:
-        abs_path = staged_path
-        if not Path(staged_path).is_absolute():
-            if project_root:
-                abs_path = str(project_root / staged_path)
-        p = Path(abs_path)
-        data = _load_yaml_from_path(p)
-        if data is None:
-            continue
-        ac_id = data.get("id")
-        if ac_id and isinstance(ac_id, str) and ac_id.strip() not in ac_store_index:
-            ac_store_index[ac_id.strip()] = p
-
-    # Check each file with implements_pattern
     all_violations: list[str] = []
-    for abs_path in files_with_pattern:
-        file_violations = _check_file(abs_path, ac_store_index)
-        all_violations.extend(file_violations)
+
+    # ------------------------------------------------------------------
+    # Check 1: deletion guard — block if a deleted pattern AC still has
+    # consumers with implements_pattern referencing it.
+    # ------------------------------------------------------------------
+    deleted_paths = _get_deleted_ac_paths()
+    if deleted_paths:
+        deletion_violations = check_pattern_deletion(
+            deleted_relative_paths=deleted_paths,
+            ac_store_root=ac_store,
+            project_root=project_root,
+            load_yaml_safe_fn=_load_yaml_safe,
+            load_yaml_from_path_fn=_load_yaml_from_path,
+        )
+        all_violations.extend(deletion_violations)
+
+    # ------------------------------------------------------------------
+    # Check 2: forward-reference guard — staged added/modified AC YAML
+    # files must not contain dangling implements_pattern references.
+    # ------------------------------------------------------------------
+    staged_paths = _get_staged_ac_paths()
+
+    if staged_paths:
+        # Quick pre-scan: only build the full index if needed
+        files_with_pattern: list[str] = []
+        for staged_path in staged_paths:
+            abs_path = staged_path
+            if not Path(staged_path).is_absolute():
+                if project_root:
+                    abs_path = str(project_root / staged_path)
+            data = _load_yaml_from_path(Path(abs_path))
+            if data and data.get("implements_pattern"):
+                files_with_pattern.append(abs_path)
+
+        if files_with_pattern:
+            # Build the full AC store index once
+            ac_store_index = _build_ac_store_index(ac_store)
+
+            # Merge staged files into the index so that a staged AC can
+            # reference another AC also staged in the same commit.
+            for staged_path in staged_paths:
+                abs_path = staged_path
+                if not Path(staged_path).is_absolute():
+                    if project_root:
+                        abs_path = str(project_root / staged_path)
+                p = Path(abs_path)
+                data = _load_yaml_from_path(p)
+                if data is None:
+                    continue
+                ac_id = data.get("id")
+                if (
+                    ac_id
+                    and isinstance(ac_id, str)
+                    and ac_id.strip() not in ac_store_index
+                ):
+                    ac_store_index[ac_id.strip()] = p
+
+            for abs_path in files_with_pattern:
+                file_violations = _check_file(abs_path, ac_store_index)
+                all_violations.extend(file_violations)
 
     if not all_violations:
         return 0

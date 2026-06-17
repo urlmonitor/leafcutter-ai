@@ -382,7 +382,7 @@ active ──── deprecated
 
 ## Pre-Commit Hooks
 
-Three hooks are installed by `build.py` to enforce the AC store at commit time.
+Four hooks are installed by `build.py` to enforce the AC store at commit time.
 
 ### `check_ac_schema.py` (blocking)
 
@@ -433,6 +433,57 @@ via `implements_pattern` and supply concrete values via `pattern_bindings`.
 4. `re.fullmatch` is applied — a full match confirms structural equivalence.
 5. Fail-open: if a pattern's criteria produces an invalid regex, the check
    is skipped for that pattern without blocking the commit.
+
+### `check_ac_pattern_refs.py` (blocking)
+
+Enforces referential integrity for the `implements_pattern` field in both
+directions: forward-reference validation when ACs are added or modified, and
+deletion protection when a pattern AC is staged for removal.
+
+| Attribute | Value |
+|---|---|
+| Exit code | `1` on violation; `0` when all checks pass. |
+| Mode | Always blocking. |
+| Invocation | `python check_ac_pattern_refs.py` |
+
+**Check 1 — Forward-reference validation (ACS-500a-3):**
+
+When a staged AC YAML file contains `implements_pattern: <id>`, the hook
+verifies that:
+
+1. An AC with that `id` exists in the store.
+2. The referenced AC has parameterized slots (non-empty `pattern_slots` list,
+   or `{word}` placeholders in its `criteria` field).
+
+If either check fails, the hook exits 1 with a diagnostic message naming the
+staged file and the referenced pattern ID.
+
+**Check 2 — Deletion protection (ACS-500d-1-i):**
+
+When a pattern AC YAML file is staged for deletion (`git rm`), the hook scans
+all remaining AC YAML files in the store for any that have `implements_pattern`
+pointing at the deleted file's `id`. If any consumers exist, the commit is
+blocked with:
+
+```
+Cannot delete PTN-001: still referenced by 3 consuming ACs.
+Referencing IDs: ACS-500b-1, ACS-500b-2, ACS-500b-3
+```
+
+The error names the pattern ID, the count of blocking consumers, and the
+specific consuming AC IDs. The pattern file remains in the store unchanged.
+
+**To safely delete a pattern AC:**
+
+1. For each consuming AC that has `implements_pattern: <pattern-id>`, remove
+   (or update) the `implements_pattern` and `pattern_bindings` fields.
+2. Stage the consuming AC changes.
+3. Stage the pattern AC deletion (`git rm`).
+4. Commit — the hook will pass because no consumers reference the deleted ID.
+
+**Fail-open design:** Unexpected exceptions (YAML parse errors, git unavailable,
+filesystem errors) exit 0 — the hook never blocks a commit due to its own
+malfunction.
 
 ### `check_test_ac_tags.py` (configurable)
 
