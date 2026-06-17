@@ -1,4 +1,4 @@
-id: GE-107
+id: GE-109
 readiness: approved
 priority: medium
 title: "Exception-handling guard enforces the error-handling policy on production code only"
@@ -6,8 +6,8 @@ component: guardrail-engine
 level: L1
 status: active
 req_status: active
-work_status: todo
-created_by: "docs/acceptance-criteria/guardrail-engine/GE-107-exception-guard-scope/GE-107.yaml"
+work_status: done
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-109-exception-guard-scope/GE-109.yaml"
 criteria: |
   The AST I/O-boundary guard (check_exception_handling.py) applies the
   error-handling policy — bare except (E722), blind except Exception (BLE001),
@@ -29,5 +29,5 @@ created: 2026-06-17
 amended_by: []
 superseded_by: null
 covered_by:
-  - GE-107a
+  - GE-109a
 implemented_by: []
