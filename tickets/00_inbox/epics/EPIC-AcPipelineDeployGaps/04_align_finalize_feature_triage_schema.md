@@ -1,6 +1,6 @@
 ---
 title: "Align finalize-feature.js triage schema between step-3 instructions and step-6a reader"
-status: in_progress
+status: done
 components:
   - supervisor_system
 created: 2026-06-16
