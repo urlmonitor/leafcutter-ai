@@ -18,7 +18,7 @@ agents:
   test-writer: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 04: Align finalize-feature.js Triage Schema
@@ -87,7 +87,7 @@ If the agent follows the step-3 instructions (which it does, trusting the orches
 - [x] test-writer — 2026-06-17 11:42
 - [x] pr-reviewer — 2026-06-17 14:45
 - [x] commit — 2026-06-17 15:10
-- [ ] pull-request — PR created and merged to main
+- [x] pull-request — 2026-06-17 15:25
 
 ## Test Requirements
 
@@ -218,6 +218,14 @@ completion_manifest:
   commit_created: true
   pre_commit_hooks_passed: true
 Committed 3 files (finalize-feature.js, test_finalize_feature_triage_integration.js, ticket) as SHA 7cb5c4f. All 6 integration tests passed (6/6 green, exit 0). Pre-commit hooks ran cleanly (worktree uses PRE_COMMIT_ALLOW_NO_CONFIG=1 per hook's own error message — no .pre-commit-config.yaml in this worktree). No --no-verify used.
+
+### 2026-06-17 15:25 — pull-request (status: ok)
+feedback-id: fb_2026-06-17_f46ed9df
+completion_manifest:
+  pr_exists: true
+  branch_pushed: true
+  pr_url_confirmed: true
+Pushed branch EPIC-AcPipelineDeployGaps to origin; existing PR #88 updated with latest commits (4212a07, 7cb5c4f). PR URL: https://github.com/urlmonitor/leafcutter-ai/pull/88. No new PR needed — the epic-level PR covers this ticket's changes.
 
 ## Summary
 
