@@ -1,6 +1,6 @@
 ---
 title: "Research & triage: per-script deploy decisions for all 12 Class B scripts"
-status: in_progress
+status: done
 components:
   - build_pipeline
   - bootstrap_installer
@@ -20,7 +20,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 01: Research & Triage — Class B Script Deploy Decisions
@@ -109,7 +109,7 @@ Scenario: triage output is machine-readable for ticket 03 (AC-3)
 - [x] python-coder — 2026-06-17 20:44
 - [x] pr-reviewer — 2026-06-17 21:05
 - [x] commit — 2026-06-17 21:10
-- [ ] pull-request
+- [x] pull-request — 2026-06-17 21:20
 
 ## Comments
 
@@ -209,3 +209,16 @@ completion_manifest:
   sign_offs_updated: true
 
 Read-only research ticket committed. The decision table covering all 22 Class B scripts (8 guard-normalize, 10 deploy, 2 allowlist, 2 open questions) is committed to the epic branch. No code changes in this ticket — only the ticket file with python-coder analysis and pr-reviewer sign-off. Commit auto-authorized per COMMIT_AGENT_MODE=1 (ticket-supervisor dispatch + pr-reviewer upstream gate).
+
+### 2026-06-17 21:20 — pull-request (status: ok)
+
+feedback-id: fb_2026-06-17_4440505f
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_url: https://github.com/urlmonitor/leafcutter-ai/pull/97
+  pr_number: 97
+  base_branch: main
+  head_branch: EPIC-BuildGuardFalsePositive
+
+Branch `EPIC-BuildGuardFalsePositive` pushed to origin and PR #97 opened against `main`. No pre-existing PR was found — the branch was new to the remote. The PR title is "fix(build-guard): triage and fix Class B script false positives" and the body summarises the root cause split (6 false positives, 2 guard-normalize, 2 allowlist, 5 deploy, 2 open-question scripts). All four phase sign-offs for this ticket are now complete: python-coder, pr-reviewer, commit, pull-request.
