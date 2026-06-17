@@ -165,6 +165,22 @@
                 }
             ]
         },
+        "depends_on": {
+            "oneOf": [
+                {
+                    "type": "array",
+                    "description": "List of AC IDs that this AC depends on. Used for parent-child hierarchy links (child AC lists its structural parent) and for pattern composition (composite pattern lists its atomic component pattern IDs). Must not form a cycle — the check_ac_circular_deps pre-commit hook enforces a directed-acyclic-graph (DAG) invariant on all depends_on edges.",
+                    "items": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "uniqueItems": true
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
         "implements_pattern": {
             "oneOf": [
                 {

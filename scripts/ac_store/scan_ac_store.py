@@ -25,6 +25,8 @@ Exit codes:
 AC-1: Leaf scanner identifies todo, unblocked L2/L3 ACs.
 AC-5: Scanner JSON output is machine-consumable.
 ACS-100i-1: derive_parent_id() derives the parent AC ID by stripping the last segment.
+ACS-500e-2: resolve_behavior_stack() makes composition depth visible through
+            implements_pattern (page→composite) and depends_on (composite→atomic).
 """
 
 from __future__ import annotations
@@ -518,6 +520,121 @@ def _dfs_collect_leaves(
 
 
 # ---------------------------------------------------------------------------
+# Behavior stack resolution (ACS-500e-2)
+# ---------------------------------------------------------------------------
+
+
+BehaviorLayer = dict[str, Any]
+
+
+def resolve_behavior_stack(
+    ac_id: str,
+    id_index: dict[str, AcRecord],
+) -> list[BehaviorLayer]:
+    """Resolve the full behavior stack for a page AC, returning layers in precedence order.
+
+    The behavior stack is the ordered list of AC layers that together define
+    the complete behavior for a page AC. The ordering is:
+
+    1. **Page-specific criteria** — the page AC itself (first; highest precedence).
+    2. **Composite wiring behavior** — the pattern AC referenced via
+       ``implements_pattern`` (second; if present).
+    3. **Atomic behaviors** — the ACs listed in the composite pattern's
+       ``depends_on`` field (third; in ``depends_on`` declaration order).
+
+    Composition depth is therefore visible through two standard AC fields alone:
+    ``implements_pattern`` (page → composite link) and ``depends_on``
+    (composite → atomic links). No additional hierarchy mechanism is required.
+
+    When ``ac_id`` is not found in *id_index*, an empty list is returned.
+    When the page AC has no ``implements_pattern``, only the page AC layer is
+    returned. When the composite pattern has no ``depends_on``, the stack
+    contains only the page layer and the composite layer.
+
+    The function does **not** recurse into ``depends_on`` chains beyond one hop
+    (i.e. it resolves only the direct atomic dependencies of the composite
+    pattern, not transitive dependencies of those atomics). Multi-hop resolution
+    is intentionally left to ``resolve_leaf_dependencies`` in
+    ``goal_to_epic.py``.
+
+    Args:
+        ac_id: The page AC id to resolve the behavior stack for.
+        id_index: Full id-to-record mapping built from the AC store (see
+            ``_build_id_index``).
+
+    Returns:
+        Ordered list of ``BehaviorLayer`` dicts, each with keys:
+        ``layer`` (``"page"``, ``"composite"``, or ``"atomic"``),
+        ``ac_id`` (string), ``criteria`` (string or None), and
+        ``source`` (``"self"``, ``"implements_pattern"``, or ``"depends_on"``).
+        Returns ``[]`` when *ac_id* is absent from *id_index*.
+
+    Example::
+
+        # Given:
+        #   PAGE-001 implements_pattern PTN-020
+        #   PTN-020 depends_on [PTN-010, PTN-011, PTN-012]
+        stack = resolve_behavior_stack("PAGE-001", id_index)
+        # Returns:
+        # [
+        #   {"layer": "page",      "ac_id": "PAGE-001", "source": "self", ...},
+        #   {"layer": "composite", "ac_id": "PTN-020",  "source": "implements_pattern", ...},
+        #   {"layer": "atomic",    "ac_id": "PTN-010",  "source": "depends_on", ...},
+        #   {"layer": "atomic",    "ac_id": "PTN-011",  "source": "depends_on", ...},
+        #   {"layer": "atomic",    "ac_id": "PTN-012",  "source": "depends_on", ...},
+        # ]
+    """
+    page_record = id_index.get(ac_id)
+    if page_record is None:
+        return []
+
+    stack: list[BehaviorLayer] = []
+
+    # Layer 1: page-specific criteria
+    stack.append(
+        {
+            "layer": "page",
+            "ac_id": ac_id,
+            "criteria": page_record.get("criteria"),
+            "source": "self",
+        }
+    )
+
+    # Layer 2: composite wiring behavior (via implements_pattern)
+    pattern_id: str | None = page_record.get("implements_pattern")
+    if not pattern_id:
+        return stack
+
+    composite_record = id_index.get(pattern_id)
+    if composite_record is None:
+        return stack
+
+    stack.append(
+        {
+            "layer": "composite",
+            "ac_id": pattern_id,
+            "criteria": composite_record.get("criteria"),
+            "source": "implements_pattern",
+        }
+    )
+
+    # Layer 3: atomic behaviors (via composite's depends_on)
+    atomic_ids: list[str] = composite_record.get("depends_on") or []
+    for atomic_id in atomic_ids:
+        atomic_record = id_index.get(atomic_id)
+        stack.append(
+            {
+                "layer": "atomic",
+                "ac_id": atomic_id,
+                "criteria": atomic_record.get("criteria") if atomic_record else None,
+                "source": "depends_on",
+            }
+        )
+
+    return stack
+
+
+# ---------------------------------------------------------------------------
 # Parent ID derivation (ACS-100i-1)
 # ---------------------------------------------------------------------------
 
@@ -747,5 +864,13 @@ DECISION HISTORY
   into covered_by children is preserved for all levels. Fixes the bug where
   an L2 with L3 edge-case children was silently skipped, and where L0/L1
   nodes with empty covered_by were incorrectly emitted as leaves.
+- 2026-06-17 [TICKET-20260611-ACS-500e-2]: Added resolve_behavior_stack().
+  Implements ACS-500e-2: given a page AC id and an id_index, resolves the
+  full behavior stack in layer order: (1) page-specific criteria from the
+  page AC itself, (2) composite wiring behavior from the pattern AC
+  referenced via implements_pattern, (3) atomic behaviors from the
+  composite's depends_on list. Returns a list of BehaviorLayer dicts with
+  keys: layer, ac_id, criteria, source. Composition depth is visible
+  through the two standard fields alone — no additional mechanism required.
 ====================================================================
 """

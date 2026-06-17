@@ -3,7 +3,7 @@ title: "ADR-010: AC Store as Authoritative Backlog — Source-of-Truth Inversion
 type: "adr"
 status: "accepted"
 created: "2026-06-05"
-last_updated: "2026-06-05"
+last_updated: "2026-06-16"
 deciders:
   - BrainCandy
 components:
@@ -215,6 +215,44 @@ Collapsing this structure into ticket frontmatter would sacrifice the
 hierarchical relationship between ACs (parent/child coverage) and the
 requirement-level audit trail. The store was introduced precisely because
 flat ticket frontmatter was insufficient (ADR-007b).
+
+## Pattern Propagation and the Authoritative Backlog (AC ACS-500d-1)
+
+When the AC store contains pattern ACs, amending a pattern AC's `criteria`
+propagates to all consuming ACs at read time — no migration tickets, no
+fan-out writes, and no `work_status` resets are required (AC ACS-500d-1,
+documented in detail in ADR-007-ac-store-schema-id-format-enforcement.md).
+
+**Impact on `scan_ac_store.py`:**
+
+`scan_ac_store.py` reads consuming ACs as-is. When a consuming AC has
+`implements_pattern` set, the scanner resolves its effective criteria by
+following the reference to the pattern AC. The scanner does not need to be
+re-run after a pattern amendment — the next scan automatically reads the
+updated pattern criteria and reports the current effective behavior for each
+consuming AC.
+
+**Impact on `generate_ticket_from_ac.py`:**
+
+When generating a ticket from a consuming AC, the generator resolves the
+effective criteria (own criteria + pattern criteria with slot substitution)
+and writes the full resolved Gherkin into the ticket's `## Acceptance Criteria`
+block. This means the generated ticket always contains the current pattern
+definition at generation time. If a pattern AC is amended after tickets have
+already been generated from its consumers, those existing generated tickets
+will contain the pre-amendment criteria text. The AC store itself (the YAML
+files) is still current — only the pre-generated ticket copies are stale.
+Authors should re-generate affected tickets after a significant pattern
+amendment.
+
+**No `work_status` reset on pattern amendment:**
+
+Amending a pattern AC's `criteria` does not automatically reset consuming ACs'
+`work_status` from `done` to `todo`. Whether a pattern amendment constitutes a
+"re-do" of already-implemented consuming ACs is a product decision, not a
+mechanical invariant. When a pattern amendment requires re-implementation,
+the appropriate action is to open a new AC or amend the specific consuming ACs
+and reset their `work_status` explicitly.
 
 ## References
 

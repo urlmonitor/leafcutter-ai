@@ -106,7 +106,7 @@ active ──── deprecated
 
 ## Pre-Commit Hooks
 
-Three hooks are installed by `build.py` to enforce the AC store at commit time.
+Four hooks are installed by `build.py` to enforce the AC store at commit time.
 
 ### `check_ac_schema.py` (blocking)
 
@@ -122,6 +122,36 @@ Validates every YAML file under `docs/acceptance-criteria/` against
 Validates: required fields present, `status` is one of the allowed enum
 values, `id` matches the `PREFIX-NNN` regex, `superseded_by` is non-null
 only when `status == superseded_by`.
+
+### `check_ac_pattern_refs.py` (blocking)
+
+Enforces referential integrity for the `implements_pattern` field in both
+directions: forward-reference validation when ACs are added or modified, and
+deletion protection when a pattern AC is staged for removal.
+
+| Attribute | Value |
+|---|---|
+| Exit code | `1` on violation; `0` when all checks pass. |
+| Mode | Always blocking. |
+| Invocation | `python check_ac_pattern_refs.py` |
+
+**Check 1 — Forward-reference validation (ACS-500a-3):**
+
+When a staged AC YAML file contains `implements_pattern: <id>`, the hook
+verifies that the referenced AC exists in the store and has parameterized slots.
+
+**Check 2 — Deletion protection (ACS-500d-1-i):**
+
+When a pattern AC YAML file is staged for deletion, the hook scans all remaining
+AC YAML files for any that have `implements_pattern` pointing at the deleted
+file's `id`. If any consumers exist, the commit is blocked with:
+
+```
+Cannot delete PTN-001: still referenced by 3 consuming ACs.
+Referencing IDs: ACS-500b-1, ACS-500b-2, ACS-500b-3
+```
+
+**Fail-open:** Unexpected exceptions exit 0 — the hook never blocks due to its own malfunction.
 
 ### `check_test_ac_tags.py` (configurable)
 

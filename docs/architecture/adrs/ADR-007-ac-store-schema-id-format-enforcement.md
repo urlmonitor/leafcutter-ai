@@ -4,7 +4,7 @@ description: "Defines the AC YAML schema, hierarchical ID format with parent der
 type: "adr"
 status: "accepted"
 created: "2026-06-04"
-last_updated: "2026-06-08"
+last_updated: "2026-06-17"
 components:
   - build_pipeline
 ---
@@ -156,11 +156,74 @@ The hook is registered in `templates/commit-guardian/commit_guardian.json` with
 `pass_filenames: false` and a file-pattern filter to
 `docs/acceptance-criteria/**/*.yaml`.
 
+### Circular `depends_on` Dependency Enforcement (ACS-500e-1-i)
+
+A second enforcement hook `scripts/commit_guardian/check_ac_circular_deps.py`
+enforces a directed-acyclic-graph (DAG) invariant on the `depends_on` field.
+
+**Why `depends_on` must be a DAG:** The `depends_on` field is used for two
+purposes: (1) parent-child hierarchy links (child AC lists its structural parent)
+and (2) pattern composition (composite pattern AC lists the atomic patterns it
+wires together). Both uses assume the graph is acyclic — any tool that
+recursively resolves `depends_on` references (pattern resolution, hierarchy
+navigation, coverage aggregation) would loop infinitely if a cycle existed.
+
+**Enforcement algorithm:**
+
+1. When any `docs/acceptance-criteria/**/*.yaml` file is staged, the hook
+   builds a complete `depends_on` adjacency list by reading all on-disk AC
+   YAML files in the AC store.
+2. The staged files' parsed content is overlaid on the on-disk graph, so
+   the graph reflects the proposed commit state rather than HEAD.
+3. An iterative DFS is run from each staged AC id to detect cycles reachable
+   from that node.
+4. If a cycle is found that involves at least one staged AC id, the commit is
+   blocked with an error naming the full cycle path:
+   ```
+   [check-ac-circular-deps] BLOCKED — circular depends_on chain(s) detected:
+     [1] Circular dependency detected: PTN-010 -> PTN-020 -> PTN-010
+   ```
+
+**Fail-open guarantee:** Any unexpected exception (I/O error, YAML parse
+failure, missing AC store directory) causes the hook to exit `0` with a
+`WARNING` prefix on stderr. A script failure never hard-blocks a commit that
+is unrelated to the circular dependency concern.
+
+**Configuration:** The hook is registered in `commit_guardian.json` with id
+`check-ac-circular-deps`, file pattern `^docs/acceptance-criteria/.*\.yaml$`,
+and `pass_filenames: false`.
+
 **Why stdlib only:** External validator libraries (`jsonschema`) are not
 guaranteed to be installed in the commit hook environment of every adopter
 project. A stdlib-only fallback ensures the hook runs without a separate
 `pip install` step. If `jsonschema` is available it is used for full draft-07
 validation; if absent the script performs equivalent manual checks.
+
+### Composition Depth Visibility (ACS-500e-2)
+
+Composition depth is visible through the AC parent-child hierarchy using
+only the two standard fields `implements_pattern` and `depends_on`. No
+additional hierarchy mechanism is needed.
+
+**Layer resolution algorithm:**
+
+1. Read the page AC — its `criteria` provides page-specific behavior.
+2. Follow `implements_pattern` to the composite pattern AC — its `criteria`
+   provides the composite wiring behavior.
+3. Follow the composite's `depends_on` list — each referenced AC provides
+   an atomic behavior.
+
+The function `resolve_behavior_stack(ac_id, id_index)` in
+`scripts/ac_store/scan_ac_store.py` implements this algorithm. It returns an
+ordered list of `BehaviorLayer` dicts with keys `layer`, `ac_id`, `criteria`,
+and `source`. The `layer` values are `"page"`, `"composite"`, and `"atomic"`;
+`source` values are `"self"`, `"implements_pattern"`, and `"depends_on"`.
+
+**Design invariant:** `depends_on` on a pattern AC is purely declarative
+(documents composition intent). A validator may warn when a target is absent
+but MUST NOT block commits — pattern references are non-blocking by design
+(see Circular `depends_on` Dependency Enforcement above for the contrast with
+the blocking DAG invariant on structural parent-child links).
 
 ### Migration Strategy for Existing Tests
 

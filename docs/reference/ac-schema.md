@@ -4,7 +4,7 @@ description: "Field-by-field reference for AC YAML files, the hierarchical ID fo
 type: reference
 status: active
 created: 2026-06-04
-last_updated: 2026-06-10
+last_updated: 2026-06-17
 components:
   - build_pipeline
 related_docs:
@@ -38,6 +38,7 @@ Each AC file is a single YAML document with the following fields.
 | `amended_by` | list of strings | no | Ticket paths that subsequently amended this criterion. Default: `[]`. |
 | `covered_by` | list of strings | no | Test file paths (optionally with `::test_function`) that verify this criterion. Default: `[]`. |
 | `implemented_by` | list of strings | no | Source file paths (optionally with `#anchor`) that implement this criterion. Default: `[]`. |
+| `depends_on` | list of strings or null | no | List of AC IDs that this AC depends on. Used for two purposes: (1) parent-child hierarchy links — a child AC lists its structural parent ID so the hierarchy is navigable from the child direction; (2) pattern composition — a composite pattern AC lists the atomic pattern AC IDs it wires together. **Must not form a cycle.** The `check_ac_circular_deps` pre-commit hook enforces a directed-acyclic-graph (DAG) invariant on all `depends_on` edges and blocks commits that would introduce a cycle. Default: `[]`. |
 | `origin_agent` | string | no | Identity of the agent or workflow that created this AC file. Free-form provenance string — any non-empty value is valid. The field is **not** validated against the current agent registry. Historical agent names (including names of deleted, renamed, or decomissioned agents) remain valid and are never rewritten during schema upgrades. Example values: `business-analyst` (canonical name, also used historically as v1 and promoted from v3), `business-analyst-v2` (deleted agent), `business-analyst-v3` (legacy v3 name, now renamed to `business-analyst`), `create-ticket` (deleted agent), `refinement` (deleted agent), `BrainCandy` (human author), `ticket-wiring` (workflow). |
 | `implements_pattern` | string or null | no | ID of the reusable behavior pattern this AC inherits from (e.g. `PTN-001`). When set, the effective behavior is derived from the referenced pattern combined with any `pattern_bindings`. The `criteria` field may contain a plain-text placeholder rather than a full `Given`/`When`/`Then` scenario. |
 | `pattern_bindings` | object or null | no | Key-value bindings that instantiate the referenced pattern for this AC. Values may be strings, arrays, or objects. Only meaningful when `implements_pattern` is set. Example: `{entity_type: "users", columns: ["name", "email"]}`. |
@@ -164,6 +165,102 @@ active ──── deprecated
 
 ---
 
+## Composition Depth and the Behavior Stack (ACS-500e-2)
+
+When an AC references a composite pattern, the **full behavior stack** for
+that AC spans multiple layers. Each layer is a distinct AC file with its own
+`id` and `criteria`. The layering is expressible using only the standard
+`depends_on` and `implements_pattern` fields — no additional hierarchy
+mechanism is required.
+
+### Layer ordering (highest to lowest precedence)
+
+| Layer | Source field | AC role | Description |
+|---|---|---|---|
+| 1. Page-specific | (the AC itself) | page / consumer AC | Criteria unique to this page or component. Overrides or supplements inherited behavior. |
+| 2. Composite wiring | `implements_pattern` | composite pattern AC | Wiring behavior that connects multiple atomic patterns (e.g. "filter changes reset pagination"). Defined once; reused by every consumer. |
+| 3. Atomic behaviors | composite's `depends_on` | atomic pattern ACs | Isolated, single-concern behaviors (e.g. column sorting, filter bar, pagination). Each atomic AC is an independent reusable unit. |
+
+### Traversal algorithm
+
+A reader can resolve the full behavior stack for any page AC by following two
+standard fields:
+
+1. **Read the page AC.** Its own `criteria` field provides the page-specific layer.
+2. **Follow `implements_pattern`.** If set, load the referenced composite pattern
+   AC. Its `criteria` field provides the composite wiring layer.
+3. **Follow the composite's `depends_on`.** For each listed AC id, load that AC.
+   Each provides an atomic behavior layer, in `depends_on` declaration order.
+
+```
+page AC
+  └─ implements_pattern ──→ composite pattern AC (PTN-020)
+                               └─ depends_on ──→ atomic AC (PTN-010)
+                               └─ depends_on ──→ atomic AC (PTN-011)
+                               └─ depends_on ──→ atomic AC (PTN-012)
+```
+
+The function `resolve_behavior_stack(ac_id, id_index)` in
+`scripts/ac_store/scan_ac_store.py` implements this algorithm and returns
+the stack as an ordered list of `BehaviorLayer` dicts.
+
+### Example: CRUD list page
+
+Given the following ACs:
+
+```yaml
+# Page AC (consumer)
+id: PAGE-001
+implements_pattern: PTN-020
+criteria: "No page-specific wiring — all behavior inherited from PTN-020."
+
+# Composite pattern AC
+id: PTN-020
+depends_on: [PTN-010, PTN-011, PTN-012]
+criteria: |
+  Given a page implements sort, filter, and pagination,
+  When the user changes a filter, Then pagination resets to page 1 ...
+
+# Atomic pattern ACs
+id: PTN-010
+criteria: |
+  Given a page contains a sortable table ...
+id: PTN-011
+criteria: |
+  Given a page contains a filter bar ...
+id: PTN-012
+criteria: |
+  Given a page displays a paginated collection ...
+```
+
+`resolve_behavior_stack("PAGE-001", id_index)` returns:
+
+```python
+[
+  {"layer": "page",      "ac_id": "PAGE-001", "source": "self", ...},
+  {"layer": "composite", "ac_id": "PTN-020",  "source": "implements_pattern", ...},
+  {"layer": "atomic",    "ac_id": "PTN-010",  "source": "depends_on", ...},
+  {"layer": "atomic",    "ac_id": "PTN-011",  "source": "depends_on", ...},
+  {"layer": "atomic",    "ac_id": "PTN-012",  "source": "depends_on", ...},
+]
+```
+
+### Design invariants
+
+- **Atomic patterns are independent.** Atomic pattern ACs have no `depends_on`
+  links to each other — they define isolated behaviors.
+- **The composite owns the wiring.** The composite pattern AC's `criteria`
+  describes ONLY inter-pattern coordination (e.g. "filter changes reset
+  pagination"), not the atomic behaviors that PTN-010, PTN-011, and PTN-012
+  already define.
+- **`depends_on` on pattern ACs is declarative.** It documents composition
+  intent. No runtime resolution is required; a validator may warn when a
+  `depends_on` target is absent but MUST NOT block commits for missing patterns.
+- **No additional field is needed.** The full behavior stack is resolvable
+  through `implements_pattern` and `depends_on` alone.
+
+---
+
 ## Pre-Commit Hooks
 
 Three hooks are installed by `build.py` to enforce the AC store at commit time.
@@ -215,6 +312,36 @@ Emits a warning for each active AC with no corresponding test tag.
 
 Checks project-level AC count limits configured in `commit_guardian.json`.
 Advisory only; never blocks a commit.
+
+### `check_ac_circular_deps.py` (blocking)
+
+Detects circular `depends_on` chains in staged AC YAML files.
+
+| Attribute | Value |
+|---|---|
+| Exit code | `1` when a cycle is detected in staged files; `0` when clean. |
+| Mode | Always blocking. |
+| Invocation | `python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_ac_circular_deps.py` |
+
+When a staged AC YAML file's `depends_on` field would create a cycle in the
+`depends_on` graph, the commit is blocked with an error message naming the
+full cycle path:
+
+```
+[check-ac-circular-deps] BLOCKED — circular depends_on chain(s) detected:
+  [1] Circular dependency detected: PTN-010 -> PTN-020 -> PTN-010
+```
+
+**Algorithm:** Builds a complete `depends_on` adjacency list from the entire
+AC store (loading all on-disk YAML files), then overlays the staged changes so
+the graph reflects the proposed commit state. Runs an iterative DFS from each
+staged AC id to detect any cycle involving that node. Only cycles that include
+at least one staged AC id are reported — pre-existing cycles in unmodified files
+are not blocked (they must be remediated separately).
+
+**Fail-open:** Any unexpected exception (I/O error, parse failure, missing AC
+store) causes the hook to exit `0` with a warning on stderr so a script error
+never hard-blocks an unrelated commit.
 
 ---
 
