@@ -1,6 +1,6 @@
 ---
 title: "Deploy plan-feature.js to consumer installs via templates/workflows-js"
-status: in_progress
+status: done
 components:
   - build_pipeline
   - workflow_deployment
