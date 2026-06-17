@@ -37,7 +37,7 @@ agents:
   llm-expert: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 user_facing_surface: null
 ---
@@ -219,6 +219,7 @@ invocation — no `&&`, `;`, `||`, or `cd`-prefixed chains.
 
 - [x] llm-expert — 2026-06-17 10:00
 - [x] pr-reviewer — 2026-06-17 11:30
+- [x] commit — 2026-06-17 12:00
 
 ## Comments
 
@@ -245,3 +246,9 @@ completion_manifest:
   ac7_ticket_path_threaded: true
 
 Reviewed the diff across `templates/skills/precommit-autofix/SKILL.md` (173 insertions, net +140 lines) and `templates/agents/commit.md` (35 insertions, net +24 lines) against all 7 ACs. AC-1: Steps 4a.1–4a.3 implement the full judgment-tier routing — AUTOFIX_AGENT parsing, capsule extraction, and originator dispatch with the required payload. AC-2: Step 4b preserves the generic light-model route for non-judgment hooks; Step 5 enforces exactly-one retry with clear stop-on-second-failure semantics. AC-3: Re-dispatch prompt instruction 4 explicitly forbids sub-agent spawning including research-agent; instruction 3 mandates reuse of capsule.consumers_checked. AC-4: Step 4a.2 emits a warning and continues with empty capsule — never blocks on absence. AC-5: The previously chained `|| true` lines in commit.md Step 0 are split into two separate single-command bash blocks; all new SKILL.md bash blocks are single commands; no `&&`, `;`, `||` chains or `cd` prefixes found in any bash block across touched files. AC-6: Re-dispatch prompt instruction 5 mandates `status: blocker`, explicitly forbids research-agent spawn and guessing; Step 4a.4 confirms no retry on blocker path. AC-7: commit.md Step 5 updated to pass `ticket_path` with a clear explanation of its role in locating the capsule. No high-confidence findings; no blockers.
+
+### 2026-06-17 12:00 — commit (status: ok)
+
+Committed: feat(precommit-autofix): add originator re-dispatch for judgment-tier hook failures
+SHA: 1be80a9
+3 files changed, 198 insertions(+), 41 deletions(-)
