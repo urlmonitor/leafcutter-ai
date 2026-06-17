@@ -1,3 +1,14 @@
+---
+title: "Pre-Commit Hooks"
+description: "Reference for all pre-commit hooks enforced by the leafcutter commit_guardian system, their execution order, configuration options, and how they relate to build-drift detection."
+type: reference
+status: active
+created: 2026-05-28
+last_updated: 2026-06-18
+components:
+  - guardrail-engine
+---
+
 # Pre-Commit Hooks
 
 This document describes the pre-commit hooks enforced on every commit and
@@ -20,6 +31,7 @@ flowchart TD
     PC --> H9[check-structural-change\narchitecture docs required\nfor structural changes]
     PC --> H10[build-drift-check\ntemplates match generated output]
     PC --> H11[check-mermaid-complexity\nmermaid diagrams under complexity limits]
+    PC --> H12[check-duplicate-code\ncopy-paste clone detection via jscpd\nwarn-only or blocking]
 
     H1 -->|pass| COMMIT[commit proceeds]
     H2 -->|pass| COMMIT
@@ -32,6 +44,7 @@ flowchart TD
     H9 -->|pass| COMMIT
     H10 -->|pass| COMMIT
     H11 -->|pass| COMMIT
+    H12 -->|pass| COMMIT
 
     H1 -->|fail| FIX[precommit-autofix\nskill routes to haiku/sonnet]
     H4 -->|fail| FIX
@@ -40,6 +53,7 @@ flowchart TD
     H8 -->|fail| FIX
     H10 -->|fail| FIX
     H11 -->|fail| FIX
+    H12 -->|fail| FIX
     FIX --> GC
 ```
 
@@ -62,3 +76,47 @@ flowchart LR
 All hooks are configured in `.pre-commit-config.yaml`. The commit guardian
 manages a subset via `scripts/commit_guardian/commit_guardian.json`.
 See `scripts/commit_guardian/INTEGRATION.md` for setup instructions.
+
+## Duplicate Code Detection (check-duplicate-code)
+
+The `check-duplicate-code` hook uses [jscpd](https://github.com/kucherenko/jscpd)
+to detect copy-paste clones in staged files.
+
+**Key behaviours:**
+
+- Ships **disabled by default** (`duplicate_code.enabled: false`).
+- **Fail-open**: exits 0 when the `jscpd` binary is not installed, emitting an
+  advisory message with install instructions.
+- **Version guard**: if jscpd v4.x is detected (incompatible CLI flags), the
+  hook skips scanning and exits 0 with a recommendation to install v3.x.
+- **Staged-only scope**: only clone pairs where at least one file is staged are
+  reported (non-staged-file pairs are silently discarded).
+- **WSL2 support**: when the project root lives on an NTFS mount (`/mnt/c/…`),
+  staged files are copied into a native Linux temp directory before jscpd runs.
+- **Human-readable output**: each detected clone pair is reported as:
+
+  ```
+  [check-duplicate-code] WARNING: Duplicate block detected
+    Source: path/to/file.py lines 10-20
+    Clone:  path/to/other.py lines 30-40
+  ```
+
+**Configuration** (in `duplicate_code` section of `commit_guardian.json`):
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `enabled` | `false` | Set to `true` to activate the hook. |
+| `strict` | `false` | `true` blocks the commit; `false` warns only (exits 0). |
+| `min_lines` | `5` | Minimum duplicate block size in lines. |
+| `min_tokens` | `50` | Minimum duplicate block size in tokens. |
+| `threshold_percent` | `5` | Percentage of total code that may be duplicated before triggering. |
+| `checked_extensions` | `[".py", ".ts", ".js", ".tsx", ".jsx", ".sql"]` | File types scanned. |
+
+To enable, edit `scripts/commit_guardian/commit_guardian.json`:
+
+```json
+"duplicate_code": {
+    "enabled": true,
+    "strict": false
+}
+```

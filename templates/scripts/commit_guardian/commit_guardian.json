@@ -730,6 +730,18 @@
                 ],
                 "pass_filenames": false,
                 "_comment": "ACS-500e-1-i: Blocks commits when a staged AC YAML file's depends_on field would create a circular dependency chain. Builds the full depends_on graph from the AC store (overlaying staged changes), runs DFS cycle detection, and reports the full cycle path (e.g. 'Circular dependency detected: PTN-010 -> PTN-020 -> PTN-010'). Fail-open on unexpected errors."
+            },
+            {
+                "id": "check-duplicate-code",
+                "tier": "judgment",
+                "name": "Check Duplicate Code (jscpd copy-paste clone detection)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_duplicate_code.py",
+                "language": "system",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "GE-100a/GE-100b: Scans staged source files for copy-paste clones using jscpd. Disabled by default (duplicate_code.enabled: false). Fails open when jscpd is not installed — emits advisory to stderr with install guidance and exits 0. Fails open on jscpd v4.x (incompatible CLI). Set strict: true to block commits on threshold violations."
             }
         ]
     },
@@ -763,5 +775,14 @@
         "max_states": 10,
         "max_classes": 10,
         "max_boundaries": 4
+    },
+    "duplicate_code": {
+        "_comment": "check_duplicate_code.py — Copy-paste clone detection using jscpd. Disabled by default. Fails open when jscpd is not installed or when jscpd v4.x is detected. Set strict: true to block commits on threshold violations. threshold_percent sets the percentage of duplicate code that triggers a warning/error. checked_extensions restricts scanning to the listed file types.",
+        "enabled": false,
+        "strict": false,
+        "min_lines": 5,
+        "min_tokens": 50,
+        "threshold_percent": 5,
+        "checked_extensions": [".py", ".ts", ".js", ".tsx", ".jsx", ".sql"]
     }
 }

@@ -1,4 +1,4 @@
-id: GE-100d
+id: GE-101a
 readiness: approved
 priority: high
 title: "diff-cover hook exits cleanly when the diff-cover tool or coverage artifact is absent"
@@ -32,7 +32,7 @@ criteria: |
 depends_on:
   - GE-101
 doc_links:
-  - path: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100.yaml"
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-101.yaml"
     relationship: parent
     status: exists
   - path: "docs/pre-commit-hooks.md"
@@ -49,8 +49,9 @@ origin_agent: BrainCandy
 created: 2026-06-11
 amended_by:
   - reason: "split: GE-100 -> GE-100 + GE-101, moved to GE-101 (intermediate Pattern C), 2026-06-16"
+  - reason: "rename: GE-100d -> GE-101a, structural parent corrected to GE-101, 2026-06-18"
 superseded_by: null
 covered_by:
-  - GE-100d-1
+  - GE-101a-1
 implemented_by:
 - tickets/00_inbox/TICKET-20260616-GE-100d.md

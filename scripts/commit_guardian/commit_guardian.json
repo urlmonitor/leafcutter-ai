@@ -878,12 +878,13 @@
         "max_boundaries": 4
     },
     "duplicate_code": {
-        "_comment": "check_duplicate_code.py \u2014 Copy-paste clone detection using jscpd. Disabled by default. Fails open when jscpd is not installed. Set strict: true to block commits on threshold violations.",
+        "_comment": "check_duplicate_code.py \u2014 Copy-paste clone detection using jscpd. Disabled by default. Fails open when jscpd is not installed. Set strict: true to block commits on threshold violations. threshold_percent sets the percentage of duplicate code that triggers a warning/error. checked_extensions restricts scanning to the listed file types.",
         "enabled": false,
         "strict": false,
         "min_lines": 5,
         "min_tokens": 50,
-        "threshold": 0
+        "threshold_percent": 5,
+        "checked_extensions": [".py", ".ts", ".js", ".tsx", ".jsx", ".sql"]
     },
     "post_merge": {
         "_comment": "Post-merge hook configuration. Hooks in this section fire after git merge completes.",

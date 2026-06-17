@@ -266,13 +266,22 @@ DUPLICATE_CODE_ENABLED: bool = _get("duplicate_code", "enabled", False)
 DUPLICATE_CODE_STRICT: bool = _get("duplicate_code", "strict", False)
 DUPLICATE_CODE_MIN_LINES: int = _get("duplicate_code", "min_lines", 5)
 DUPLICATE_CODE_MIN_TOKENS: int = _get("duplicate_code", "min_tokens", 50)
-DUPLICATE_CODE_THRESHOLD: int = _get("duplicate_code", "threshold", 0)
+DUPLICATE_CODE_THRESHOLD_PERCENT: int = _get("duplicate_code", "threshold_percent", 5)
+DUPLICATE_CODE_CHECKED_EXTENSIONS: list[str] = _get(
+    "duplicate_code",
+    "checked_extensions",
+    [".py", ".ts", ".js", ".tsx", ".jsx", ".sql"],
+)
 
 
 """
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-18 [python-coder/TICKET-20260616-GE-100b]: Added DUPLICATE_CODE_THRESHOLD_PERCENT
+  and DUPLICATE_CODE_CHECKED_EXTENSIONS constants (AC GE-100b). threshold_percent defaults
+  to 5; checked_extensions defaults to [.py, .ts, .js, .tsx, .jsx, .sql] matching the AC.
+  Removed the legacy DUPLICATE_CODE_THRESHOLD int (superseded by threshold_percent).
 - 2026-06-17 [python-coder/TICKET-20260616-GE-100a]: Added DUPLICATE_CODE_* constants for
   check_duplicate_code.py (AC GE-100a). enabled and strict both default to False;
   min_lines/min_tokens/threshold are tunable via duplicate_code section in commit_guardian.json.

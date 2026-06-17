@@ -1,9 +1,10 @@
 ---
 title: "How to manage pre-commit hooks in leafcutter"
+description: "Step-by-step guide for enabling, disabling, configuring, and opt-ing in to pre-commit hooks in the leafcutter commit_guardian system."
 type: how_to
 status: active
 created: 2026-05-28
-last_updated: 2026-05-28
+last_updated: 2026-06-18
 components:
   - build_pipeline
 related_docs:
@@ -454,6 +455,48 @@ pre-commit install
 ```
 
 Script-only changes (no entry change) take effect immediately on the next commit.
+
+---
+
+## Enabling the duplicate code detection hook
+
+The `check-duplicate-code` hook ships **disabled by default**. To opt in:
+
+1. Open `scripts/commit_guardian/commit_guardian.json` (or
+   `leafcutter/templates/scripts/commit_guardian/commit_guardian.json` in the
+   package source).
+
+2. Set `enabled: true` in the `duplicate_code` section:
+
+   ```json
+   "duplicate_code": {
+       "enabled": true,
+       "strict": false,
+       "min_lines": 5,
+       "min_tokens": 50,
+       "threshold_percent": 5,
+       "checked_extensions": [".py", ".ts", ".js", ".tsx", ".jsx", ".sql"]
+   }
+   ```
+
+3. Install jscpd v3.x if not already present:
+
+   ```bash
+   npm install -g jscpd@^3
+   ```
+
+**Mode options:**
+
+- `strict: false` (default) — the hook warns about detected clones but **does
+  not block** the commit (exits 0).
+- `strict: true` — the hook **blocks** the commit when clones exceed the
+  configured threshold and at least one side of the clone pair is a staged file.
+
+The hook is **fail-open**: if the `jscpd` binary is absent, or if jscpd v4.x
+is detected (incompatible CLI flags), the hook exits 0 with an advisory message
+and never blocks the commit.
+
+See `docs/pre-commit-hooks.md` for the full configuration reference table.
 
 ---
 
