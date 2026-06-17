@@ -1,0 +1,51 @@
+id: GE-106
+readiness: approved
+priority: high
+title: "AC tree-limit hook counts children by ID-derived parent, not depends_on membership"
+component: guardrail-engine
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-106.yaml"
+criteria: |
+  Given an AC store where an L2 AC declares its structural parent via its
+       hierarchical id (e.g. "INF-400e-1" has parent "INF-400e") AND also lists
+       a non-parent dependency to a sibling subtree's L1 in its depends_on
+       (e.g. depends_on includes "INF-400a")
+  When check_ac_limits builds its parent->children map during pre-commit
+  Then the L2 AC is counted as a child ONLY of its id-derived parent
+       ("INF-400e"), and is NOT counted as a child of the cross-linked sibling
+       ("INF-400a")
+
+  And given a parent L1 whose number of id-derived L2 children is within the
+      limit (<=5) but which is named in the depends_on of additional ACs that
+      live under other parents
+  When the hook computes that L1's child count
+  Then the count reflects only its true id-derived children, so no false
+       "exceeds max 5" block is raised
+
+  And the bug symptom ("Parent 'INF-400a' (L1): 9 L2 children exceeds max 5"
+      raised when INF-400a has only 4 id-derived children) must not occur
+depends_on: []
+doc_links:
+  - path: "templates/scripts/commit_guardian/check_ac_limits.py"
+    relationship: configures
+    status: exists
+  - path: "scripts/ac_store/ac_parent_id.py"
+    relationship: related
+    status: exists
+  - path: "docs/reference/ac-schema.md"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+it_requirements: "In check_ac_limits.py _build_children_map, attribute each node to exactly one parent: the parent derived from its hierarchical AC id via derive_parent_id() (scripts/ac_store/ac_parent_id.py), rather than appending the node to every same-tier entry in its depends_on. depends_on is documented (docs/reference/ac-schema.md) as multi-purpose (parent edge AND non-parent cross-links / pattern composition); the structural parent is defined by id derivation. The fix touches the canonical template copy; rebuild via build.py to sync the deployed/built copy at templates/commit-guardian/hooks/check_ac_limits.py. Add a regression test where a node carries both its id-derived parent and a sibling cross-link in depends_on and assert the sibling's child count is not inflated. Symptom fix scope only; the duplicate-hook-copy layout is pre-existing and out of scope."
+origin_agent: BrainCandy
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

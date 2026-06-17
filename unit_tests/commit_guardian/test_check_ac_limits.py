@@ -710,5 +710,169 @@ class TestHookRegisteredInCommitGuardian(unittest.TestCase):
         )
 
 
+# ---------------------------------------------------------------------------
+# Regression test for GE-106: cross-link depends_on entries inflate child count
+# ---------------------------------------------------------------------------
+
+
+class TestBuildChildrenMapCrossLinkBug(unittest.TestCase):
+    """Regression test for GE-106: _build_children_map must attribute each L2
+    node to its id-derived structural parent only, NOT to every same-tier
+    depends_on entry.
+
+    Bug symptom: an L2 node whose depends_on lists a sibling L1 as a cross-link
+    (in addition to its true structural parent) was incorrectly counted as a
+    child of that sibling L1, inflating its child count and causing false
+    "exceeds max 5" blocks.
+
+    Example: INF-400e-1 has depends_on=[INF-400e, INF-400a].  Its structural
+    parent is INF-400e (derived from its id).  The buggy code appended it to
+    INF-400a's children as well, because INF-400a also appears in depends_on
+    at the correct level (L1 → L2 mapping).
+    """
+
+    def _nodes(self, specs: list[tuple[str, str, list[str]]]) -> list:
+        """Build AcNode list from (id, level, depends_on) tuples."""
+        return [AcNode(ac_id=i, level=lv, depends_on=d) for i, lv, d in specs]
+
+    @_requires_import
+    def test_ac_ge106_cross_link_does_not_inflate_sibling_l1_child_count(self) -> None:
+        # covers: GE-106
+        """GE-106: L2 nodes that cross-link a sibling L1 in depends_on must NOT
+        be counted as children of that sibling L1.
+
+        Scenario:
+          INF-900  (L0)  — root
+          INF-900a (L1)  — parent under test; true id-derived children are
+                           INF-900a-1 and INF-900a-2 only  (count = 2)
+          INF-900b (L1)  — sibling L1; structural parent of INF-900b-{1,2,3}
+          INF-900a-1 (L2) — structural child of INF-900a; depends_on=[INF-900a]
+          INF-900a-2 (L2) — structural child of INF-900a; depends_on=[INF-900a]
+          INF-900b-1 (L2) — structural child of INF-900b; CROSS-LINKS INF-900a
+                            depends_on=[INF-900b, INF-900a]
+          INF-900b-2 (L2) — same; depends_on=[INF-900b, INF-900a]
+          INF-900b-3 (L2) — same; depends_on=[INF-900b, INF-900a]
+
+        The buggy _build_children_map iterates over ALL depends_on entries and
+        appends INF-900b-{1,2,3} to INF-900a's children (because INF-900a is L1
+        and those nodes are L2, so the level pair matches).  This produces a
+        spurious child count of 5 for INF-900a.
+
+        The CORRECT behaviour is: INF-900a has exactly 2 id-derived children.
+        This assertion FAILS against the current (unmodified) code, confirming
+        the red baseline for GE-106.
+        """
+        nodes = self._nodes([
+            # Root
+            ("INF-900",   "L0", []),
+            # L1 pair
+            ("INF-900a",  "L1", ["INF-900"]),
+            ("INF-900b",  "L1", ["INF-900"]),
+            # True id-derived children of INF-900a
+            ("INF-900a-1", "L2", ["INF-900a"]),
+            ("INF-900a-2", "L2", ["INF-900a"]),
+            # Children of INF-900b that ALSO cross-link INF-900a in depends_on
+            ("INF-900b-1", "L2", ["INF-900b", "INF-900a"]),
+            ("INF-900b-2", "L2", ["INF-900b", "INF-900a"]),
+            ("INF-900b-3", "L2", ["INF-900b", "INF-900a"]),
+        ])
+
+        cm = _build_children_map(nodes)
+
+        # INF-900a must have exactly 2 id-derived children.
+        # Against the CURRENT buggy code this assertion FAILS (count is 5).
+        self.assertEqual(
+            len(cm["INF-900a"]),
+            2,
+            msg=(
+                "GE-106 regression: INF-900a should have 2 id-derived children "
+                f"(INF-900a-1, INF-900a-2) but _build_children_map counted "
+                f"{len(cm['INF-900a'])} — cross-linked siblings are being "
+                "incorrectly attributed to INF-900a via depends_on membership."
+            ),
+        )
+
+    @_requires_import
+    def test_ac_ge106_sibling_l1_retains_its_own_children(self) -> None:
+        # covers: GE-106
+        """GE-106 companion: INF-900b must still have its own 3 structural children.
+
+        Even after the fix, the cross-linking nodes must remain attributed to
+        INF-900b (their id-derived parent) and not be lost.
+        Against the current buggy code this test PASSES because the buggy code
+        still appends cross-linking nodes to INF-900b as well (it appends to
+        BOTH parents).  This test documents the expected correct count for
+        INF-900b as 3 and serves as a guard against over-correction.
+        """
+        nodes = [AcNode(ac_id=i, level=lv, depends_on=d) for i, lv, d in [
+            ("INF-900",   "L0", []),
+            ("INF-900a",  "L1", ["INF-900"]),
+            ("INF-900b",  "L1", ["INF-900"]),
+            ("INF-900a-1", "L2", ["INF-900a"]),
+            ("INF-900a-2", "L2", ["INF-900a"]),
+            ("INF-900b-1", "L2", ["INF-900b", "INF-900a"]),
+            ("INF-900b-2", "L2", ["INF-900b", "INF-900a"]),
+            ("INF-900b-3", "L2", ["INF-900b", "INF-900a"]),
+        ]]
+        cm = _build_children_map(nodes)
+        self.assertEqual(
+            len(cm["INF-900b"]),
+            3,
+            msg=(
+                "INF-900b must have 3 id-derived children "
+                "(INF-900b-1, INF-900b-2, INF-900b-3)."
+            ),
+        )
+
+    @_requires_import
+    def test_ac_ge106_false_violation_not_raised_when_within_limit(self) -> None:
+        # covers: GE-106
+        """GE-106 end-to-end: a parent with 2 true children and 3 cross-linked
+        siblings must NOT trigger a 'exceeds max 5' hard violation even when
+        one of its true children is staged.
+
+        This mirrors the original bug symptom: INF-400a blocked commits because
+        cross-linked L2s inflated its count to 9, past the limit of 5.
+
+        Against the current buggy code, INF-900a's child count is 5 — exactly
+        at the limit, so no violation fires for this particular scenario.
+        A stronger variant (5 cross-linked siblings instead of 3) would fire.
+        We use 5 cross-linked siblings to guarantee the test is RED right now.
+        """
+        # Extend the cross-link set to 5 siblings so the buggy count (2+5=7)
+        # exceeds the limit of 5 and the violation fires under the buggy code.
+        specs = [
+            ("INF-900",   "L0", []),
+            ("INF-900a",  "L1", ["INF-900"]),
+            ("INF-900b",  "L1", ["INF-900"]),
+            # 2 genuine children of INF-900a
+            ("INF-900a-1", "L2", ["INF-900a"]),
+            ("INF-900a-2", "L2", ["INF-900a"]),
+            # 5 children of INF-900b that cross-link INF-900a
+            ("INF-900b-1", "L2", ["INF-900b", "INF-900a"]),
+            ("INF-900b-2", "L2", ["INF-900b", "INF-900a"]),
+            ("INF-900b-3", "L2", ["INF-900b", "INF-900a"]),
+            ("INF-900b-4", "L2", ["INF-900b", "INF-900a"]),
+            ("INF-900b-5", "L2", ["INF-900b", "INF-900a"]),
+        ]
+        nodes = [AcNode(ac_id=i, level=lv, depends_on=d) for i, lv, d in specs]
+        cm = _build_children_map(nodes)
+        # Stage one genuine child of INF-900a
+        staged_ids = {"INF-900a-1"}
+        violations, _ = _check_limits(nodes, cm, staged_ids)
+
+        violation_parents = [v.parent_id for v in violations]
+        self.assertNotIn(
+            "INF-900a",
+            violation_parents,
+            msg=(
+                "GE-106 regression: INF-900a has only 2 id-derived children and "
+                "must NOT appear in violations. Current buggy code counts "
+                "cross-linked siblings in depends_on and inflates the count to 7, "
+                f"triggering a false violation. violations={violations}"
+            ),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
