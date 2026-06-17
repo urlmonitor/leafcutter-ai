@@ -28,7 +28,7 @@ doc_links:
   - path: templates/agents/business-analyst.md
     relationship: describes
     status: exists
-  - path: templates/agents/it-po-v3.md
+  - path: templates/agents/it-po.md
     relationship: describes
     status: exists
   - path: templates/skills/ticket-authoring/SKILL.md

@@ -21,10 +21,10 @@ criteria: |
 depends_on:
   - INF-300a-1
 doc_links:
-  - path: templates/agents/product-owner-v3.md
+  - path: templates/agents/product-owner.md
     relationship: constrains
     status: exists
-  - path: templates/agents/business-analyst-v3.md
+  - path: templates/agents/business-analyst.md
     relationship: constrains
     status: exists
 assigned_agent: llm-expert
