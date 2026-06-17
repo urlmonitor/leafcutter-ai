@@ -21,7 +21,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -134,7 +134,7 @@ Scenario: guard exits 0 after all Class B scripts resolved (AC-4)
 - [x] python-coder — 2026-06-17 18:45
 - [x] test-runner — 2026-06-17 16:30
 - [x] pr-reviewer — 2026-06-17 19:15
-- [ ] commit
+- [x] commit — 2026-06-17 20:30
 - [ ] pull-request
 
 ## Comments
@@ -228,3 +228,11 @@ completion_manifest:
   ac4_guard_exits_zero_verified: true
 
 Pass 3 verification: the DECISION HISTORY block in `scripts/build_propagation_audit.py` (lines 396-405) no longer contains any "if absent, skip" or graceful-skip claim for `new_arch_doc.py` or `known_failing_tests.py`. Only `epic_lock.py` retains the "if absent, skip" language, which is accurate per building-epics SKILL. The inline allowlist comments for all three entries are factually correct and internally consistent with the DECISION HISTORY. All 4 ACs remain satisfied: real-gap detection is preserved (AC BP-900-Fix-3), all new allowlist entries carry accurate written justification (AC BP-900-Fix-5), deploy phases bring scripts to consumer installs (AC-3), and the clean build exits 0 (AC-4). No high-confidence or medium-confidence findings. Zero regressions introduced by the mechanical DECISION HISTORY correction.
+
+### 2026-06-17 20:30 — commit (status: ok)
+feedback-id: fb_2026-06-17_c9ee70c4
+Auto-authorized commit gate: subject "fix(build-guard): resolve Class B script references — deploy new phases + allowlist"; staged files: scripts/build.py, scripts/build_phases.py, scripts/build_propagation_audit.py, tickets/00_inbox/epics/EPIC-BuildGuardFalsePositive/03_resolve_class_b_scripts.md. Pre-commit hook check-feedback-id required adding feedback-id: none to the ticket-supervisor heading (line 142) before the commit succeeded. SHA: d9535eb4.
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
