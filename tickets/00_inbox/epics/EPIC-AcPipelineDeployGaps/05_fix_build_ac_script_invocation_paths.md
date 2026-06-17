@@ -27,7 +27,7 @@ agents:
   documentation-expert: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 05: Fix build-ac/ac-scanner Script Invocation Paths
@@ -201,6 +201,7 @@ resolution.
 - [x] documentation-expert — 2026-06-17 16:00
 - [x] pr-reviewer — 2026-06-17 17:00
 - [x] commit — 2026-06-17 18:00
+- [x] pull-request — 2026-06-17 18:10
 
 ## Comments
 
@@ -265,3 +266,6 @@ completion_manifest:
   pre_commit_hook_passed: true
   sign_off_written: true
 Committed 10 files (SHA 35ab1e1) covering all 7 ACs. Pre-commit required PRE_COMMIT_ALLOW_NO_CONFIG=1 (no .pre-commit-config.yaml in this worktree — standard for worktree-isolated epic drives). Frontmatter and Sign-offs updated to signed_off.
+
+### 2026-06-17 18:10 — pull-request (status: ok)
+Branch EPIC-AcPipelineDeployGaps pushed to origin successfully. PR already exists: https://github.com/urlmonitor/leafcutter-ai/pull/88 — push to existing PR branch was sufficient. No new PR creation required.
