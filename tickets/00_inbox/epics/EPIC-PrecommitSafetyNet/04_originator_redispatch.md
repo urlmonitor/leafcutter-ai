@@ -36,7 +36,7 @@ agents:
   test-runner: not_needed
   llm-expert: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 user_facing_surface: null
@@ -170,13 +170,13 @@ invocation — no `&&`, `;`, `||`, or `cd`-prefixed chains.
 
 | AC | AC ID | Test | Implementation | Validated |
 |----|-------|------|----------------|-----------|
-| AC-1 | BO-210c-1 | | Added Steps 4a.1–4a.3 in SKILL.md: parse AUTOFIX_AGENT, read capsule, dispatch originator with {ticket_path, context_capsule, failing_hook_ids, raw_hook_output} | |
-| AC-2 | BO-210c-2 | | Step 4b preserves generic light-model route for non-judgment hooks; Step 5 caps retry at exactly once, surfaces on second failure | |
-| AC-3 | BO-210c-1-i | | Re-dispatch prompt instruction 4 explicitly forbids sub-agent spawning, instruction 3 instructs reuse of capsule.consumers_checked | |
-| AC-4 | BO-210c-1-ii | | Step 4a.2 emits warning and continues with empty capsule when context_capsule absent — never blocks | |
-| AC-5 | BO-210c-1-iii | | All new Bash blocks are single-command; pre-existing `\|\| true` chains in commit.md Step 0 split into separate blocks | |
-| AC-6 | BO-210c-2-i | | Re-dispatch prompt instruction 5 instructs coder to return status: blocker, not spawn research-agent, not guess | |
-| AC-7 | BO-210c | | commit.md Step 5 updated to pass ticket_path to precommit-autofix skill with explanation of its use | |
+| AC-1 | BO-210c-1 | | Added Steps 4a.1–4a.3 in SKILL.md: parse AUTOFIX_AGENT, read capsule, dispatch originator with {ticket_path, context_capsule, failing_hook_ids, raw_hook_output} | ok — 2026-06-17 |
+| AC-2 | BO-210c-2 | | Step 4b preserves generic light-model route for non-judgment hooks; Step 5 caps retry at exactly once, surfaces on second failure | ok — 2026-06-17 |
+| AC-3 | BO-210c-1-i | | Re-dispatch prompt instruction 4 explicitly forbids sub-agent spawning, instruction 3 instructs reuse of capsule.consumers_checked | ok — 2026-06-17 |
+| AC-4 | BO-210c-1-ii | | Step 4a.2 emits warning and continues with empty capsule when context_capsule absent — never blocks | ok — 2026-06-17 |
+| AC-5 | BO-210c-1-iii | | All new Bash blocks are single-command; pre-existing `\|\| true` chains in commit.md Step 0 split into separate blocks | ok — 2026-06-17 |
+| AC-6 | BO-210c-2-i | | Re-dispatch prompt instruction 5 instructs coder to return status: blocker, not spawn research-agent, not guess | ok — 2026-06-17 |
+| AC-7 | BO-210c | | commit.md Step 5 updated to pass ticket_path to precommit-autofix skill with explanation of its use | ok — 2026-06-17 |
 
 ## Implementation Tasks
 
@@ -218,6 +218,7 @@ invocation — no `&&`, `;`, `||`, or `cd`-prefixed chains.
 ## Sign-offs
 
 - [x] llm-expert — 2026-06-17 10:00
+- [x] pr-reviewer — 2026-06-17 11:30
 
 ## Comments
 
@@ -230,3 +231,17 @@ completion_manifest:
   convention_violations_resolved: true
 
 Implemented originator re-dispatch routing in `templates/skills/precommit-autofix/SKILL.md` by adding Steps 4a (judgment-tier: parse AUTOFIX_AGENT, read context_capsule from ticket sign-off, dispatch originator with capsule, retry once) and 4b (non-judgment generic route preserved). Threaded `ticket_path` into the `precommit-autofix` skill invocation in `templates/agents/commit.md` Step 5 with an explanation of its role. Fixed pre-existing shell convention violations in commit.md Step 0 (split `|| true` chains into separate single-command blocks). All seven ACs satisfied; no outstanding convention violations.
+
+### 2026-06-17 11:30 — pr-reviewer (status: ok)
+
+feedback-id: fb_2026-06-17_9e975e6a
+completion_manifest:
+  ac1_judgment_tier_routing: true
+  ac2_mechanical_tier_generic_route: true
+  ac3_no_subagent_spawn: true
+  ac4_empty_capsule_warn_proceed: true
+  ac5_shell_convention_single_commands: true
+  ac6_blocker_not_research_agent: true
+  ac7_ticket_path_threaded: true
+
+Reviewed the diff across `templates/skills/precommit-autofix/SKILL.md` (173 insertions, net +140 lines) and `templates/agents/commit.md` (35 insertions, net +24 lines) against all 7 ACs. AC-1: Steps 4a.1–4a.3 implement the full judgment-tier routing — AUTOFIX_AGENT parsing, capsule extraction, and originator dispatch with the required payload. AC-2: Step 4b preserves the generic light-model route for non-judgment hooks; Step 5 enforces exactly-one retry with clear stop-on-second-failure semantics. AC-3: Re-dispatch prompt instruction 4 explicitly forbids sub-agent spawning including research-agent; instruction 3 mandates reuse of capsule.consumers_checked. AC-4: Step 4a.2 emits a warning and continues with empty capsule — never blocks on absence. AC-5: The previously chained `|| true` lines in commit.md Step 0 are split into two separate single-command bash blocks; all new SKILL.md bash blocks are single commands; no `&&`, `;`, `||` chains or `cd` prefixes found in any bash block across touched files. AC-6: Re-dispatch prompt instruction 5 mandates `status: blocker`, explicitly forbids research-agent spawn and guessing; Step 4a.4 confirms no retry on blocker path. AC-7: commit.md Step 5 updated to pass `ticket_path` with a clear explanation of its role in locating the capsule. No high-confidence findings; no blockers.
