@@ -1,6 +1,6 @@
 ---
 title: "New transform-tier hooks, manifest tier field, and AUTOFIX_AGENT emission"
-status: in_progress
+status: done
 components:
   - commit_guardian
   - precommit_hooks
