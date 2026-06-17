@@ -1,6 +1,6 @@
 ---
 title: "Track: missing check_exception_handling.py causes TDD red-baseline failures"
-status: in_progress
+status: done
 components:
   - commit_guardian
   - precommit_hooks
@@ -23,7 +23,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 ---
@@ -101,7 +101,7 @@ stubs. This ticket's done state requires all of them to pass GREEN with no new f
 - [x] test-runner — 2026-06-17 10:30
 - [x] pr-reviewer — 2026-06-17 11:00
 - [x] commit — 2026-06-17 12:00
-- [ ] pull-request
+- [x] pull-request — 2026-06-17 12:30
 
 ## Comments
 
@@ -150,6 +150,14 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Committed ticket phase sign-off updates (SHA 63fbe144). Staged and committed the ticket file with prior sign-offs from python-coder, test-runner, and pr-reviewer. The build output `scripts/commit_guardian/check_exception_handling.py` is .gitignored (build artifact); only the ticket file and its sign-off state are tracked changes in this commit. All 7 target tests GREEN; 11 pre-existing failures remain out-of-scope and tracked separately.
+
+### 2026-06-17 12:30 — pull-request (status: ok)
+feedback-id: fb_2026-06-17_c3baa654
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+PR #95 opened at https://github.com/urlmonitor/leafcutter-ai/pull/95. Branch `feature/trackmissingcheckexceptionhandling` pushed to origin and PR created with title "feat(commit-guardian): implement check_exception_handling.py AST hook". All 7 ACs satisfied; pull-request is the last needed agent — ticket status flipped to done.
 
 ## Implementation Tasks
 
