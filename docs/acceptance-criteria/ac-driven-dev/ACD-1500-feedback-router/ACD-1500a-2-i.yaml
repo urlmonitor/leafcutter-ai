@@ -1,0 +1,41 @@
+id: ACD-1500a-2-i
+readiness: approved
+priority: medium
+title: "Entry resolved between scan and route is dropped without action"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given entry F1 was in the unresolved work queue at scan time,
+  And before the router reaches the routing step for F1, a concurrent process
+    sets resolved_at on F1 in the feedback corpus,
+  When the router re-checks the live resolution state of F1 immediately before
+    acting on it,
+  Then it observes F1 is now resolved,
+  And it skips F1 without routing it to /quick-fix or /create-ac,
+  And it records that F1 was dropped because it was resolved after scan,
+  And no artifact is created for F1.
+depends_on: [ACD-1500a-2]
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Lives in feedback-router.js: before acting on any entry, re-read its live resolution state from the corpus (via aggregate.py or a targeted feedback.jsonl read) rather than trusting the scan-time snapshot"
+  - "Must record the drop reason (resolved-after-scan) for the skipped entry without invoking /quick-fix, /create-ac, or resolve_feedback.py"
+  - "The re-check must be a read-only operation that does not mutate F1 or the corpus"
+delivers_to: null
+expects_from:
+  ac_id: ACD-1500a-1
+  contract: "The work queue entry F1 whose live resolution state is re-checked before action"
+origin_agent: business-analyst-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

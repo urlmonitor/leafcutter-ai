@@ -1,0 +1,49 @@
+id: ACD-1500a-3
+readiness: approved
+priority: medium
+title: "Routing matrix sends each classified entry to its destination"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given three classified entries:
+    - F1: work type bug-fix, size S, with a target_file present in the entry
+    - F2: work type feature, size M, with no target_file
+    - F3: work type bug-fix, size S, with no target_file and no derivable location
+  When the router applies its routing decision matrix to each,
+  Then F1 is routed to the in-place fix path (/quick-fix),
+  And F2 is routed to the AC-authoring path (/create-ac),
+  And F3 is parked for human /feedback-review because a small bug-fix without a
+    target it can locate cannot be safely fixed in place,
+  And any entry classified as feature or improvement, or sized M or L, is routed
+    to /create-ac regardless of whether a target_file is present,
+  And the chosen destination for each entry is recorded alongside the entry id.
+depends_on: [ACD-1500a, ACD-1500a-2]
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The routing matrix lives in feedback-router.js as deterministic table-driven logic: (work_type, size, has_locatable_target) -> destination in {quick-fix, create-ac, park}. Only bug-fix + size S + locatable target routes to /quick-fix; feature/improvement OR size M/L always routes to /create-ac; bug-fix without a derivable location parks"
+  - "Dispatch of /quick-fix and /create-ac must be invoked as separate depth-0 workflow steps, NOT by spawning a build supervisor inline from the router (ADR-006 depth-1 limit) — the router hands off and does not chain supervisors"
+  - "Must record the chosen destination keyed by feedback_id so the loop-closing step (ACD-1500c-1) can attach the produced artifact back-reference"
+delivers_to:
+  agent: python-coder
+  contract: "A per-entry routing decision {feedback_id, destination in {quick-fix, create-ac, park}, reason} consumed by the confidence-floor gate (ACD-1500b-2) and the loop-closing step (ACD-1500c-1)"
+expects_from:
+  ac_id: ACD-1500a-2
+  contract: "A per-entry classification record {feedback_id, work_type, size, signals}"
+origin_agent: business-analyst-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

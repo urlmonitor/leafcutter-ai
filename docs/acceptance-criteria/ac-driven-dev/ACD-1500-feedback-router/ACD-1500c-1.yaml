@@ -1,0 +1,46 @@
+id: ACD-1500c-1
+readiness: approved
+priority: medium
+title: "After producing an artifact, the entry is resolved with a back-reference"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given entry F1 was routed to /create-ac,
+  And that route produced a concrete artifact identified as AC id ACD-1600a,
+  When the router closes the loop for F1,
+  Then it calls resolve_feedback.py with --feedback-id F1,
+  And it passes a back-reference to the produced artifact (the AC id ACD-1600a)
+    via the resolution ticket or resolution note,
+  And after the call F1 has resolved_at set and a resolution_note that names
+    ACD-1600a,
+  And the equivalent holds when the route was /quick-fix: the back-reference
+    names the produced commit or ticket instead of an AC id.
+depends_on: [ACD-1500c]
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The loop-closing step in feedback-router.js must invoke scripts/feedback/resolve_feedback.py --feedback-id <id> with the artifact back-reference passed via --note (and --ticket <path> when the route was /quick-fix and produced a ticket/commit)"
+  - "For the /create-ac route the back-reference is the produced AC id; for the /quick-fix route it is the produced commit hash or ticket path. The resolution_note must name the artifact so the link is human-readable"
+  - "resolve_feedback.py is the single resolution chokepoint — the router must not set resolved_at by writing feedback.jsonl directly"
+  - "The resolution must be conditional on confirmed artifact creation per the atomicity requirement in ACD-1500c-1-i"
+delivers_to:
+  agent: python-coder
+  contract: "A resolve_feedback.py invocation linking feedback_id F1 to the artifact id it produced (AC id, or commit/ticket for quick-fix), setting resolved_at + resolution_note in feedback.jsonl"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: [ACD-1500c-1-i]
+implemented_by: []

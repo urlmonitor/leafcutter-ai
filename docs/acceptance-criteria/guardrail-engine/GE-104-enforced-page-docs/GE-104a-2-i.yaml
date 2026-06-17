@@ -1,0 +1,70 @@
+id: GE-104a-2-i
+readiness: approved
+priority: high
+title: "DSL trigger expresses a new-page-without-matching-doc condition (negation feasibility open question)"
+component: guardrail-engine
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-104-enforced-page-docs/GE-104.yaml"
+criteria: |
+  Given the documentation-expert agent has a trigger condition intended to fire
+    when files_touched contains a new site/app/**/page.tsx WITHOUT a matching
+    docs/reference/frontend/<name>.md
+  And the existing trigger DSL grammar supports only positive "contains" terms
+    combined with AND / OR (for example "files_touched contains *.tsx")
+  When the trigger condition is evaluated against a ticket whose files_touched
+    has a new page and no matching reference doc
+  Then the documentation-expert status resolves to "needed"
+  And when evaluated against a ticket whose files_touched has the new page AND
+    its matching reference doc, the condition does NOT fire on that basis
+
+  ---
+
+  Given the existing DSL evaluator may not support a "without matching" / negation
+    relationship between a page path and its derived doc path
+  When the trigger condition for documentation-expert is authored
+  Then it is flagged as an OPEN QUESTION for the IT PO whether the existing DSL
+    evaluator can express this negated / derived-path condition as a dsl-type
+    expression, or whether it must instead be expressed as an llm-type condition
+    (per ADR-018) or the DSL grammar must be extended
+  And the chosen mechanism resolves the same observable outcomes: needed when a new
+    page lacks its doc, and not-fired when the page and its doc are both present
+depends_on:
+  - GE-104a-2
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-104-enforced-page-docs/GE-104a-2.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "scripts/selection_criteria_evaluator.py"
+    relationship: describes
+    status: exists
+  - path: "config/agent_registry.json"
+    relationship: implements
+    status: exists
+  - path: "docs/architecture/adrs/ADR-018-selection-criteria-dsl.md"
+    relationship: describes
+    status: planned
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "OPEN QUESTION RESOLVED -> option (b): express as an llm-type condition. Rationale: the DSL evaluator (scripts/selection_criteria_evaluator.py) parses only atoms of the form '<field> <op> <value>' where op in {contains, equals, matches} over {files_touched, title, description, components}, combined with AND/OR. It has NO negation operator and NO mechanism to correlate one files_touched entry (a page) with the absence of a DERIVED second entry (its doc). Therefore the negated/derived-path relationship is NOT expressible as a dsl-type expression today. Option (c) extend-the-grammar is rejected as disproportionate to a single trigger (it would add negation + a page->doc derivation primitive to a shared, version-pinned evaluator)."
+  - "Author the documentation-expert trigger as { type: 'llm', expression: <natural-language judgment> } in config/agent_registry.json. The expression must instruct the judge to fire iff files_touched adds a NEW site/app/**/page.tsx AND the page's derived docs/reference/frontend/<name>.md (per the shared derivation rule from GE-104a-1-i / GE-104a-1-ii) is NOT present in files_touched."
+  - "Behavioral equivalence requirement: regardless of mechanism, the observable outcomes must be: (1) new page + no derived doc in files_touched -> documentation-expert resolves to 'needed'; (2) new page + its derived doc both in files_touched -> this trigger does NOT fire; (3) no new page -> this trigger does NOT fire."
+  - "The llm-type condition relies on the LLM-judgment evaluation path. Per selection_criteria_evaluator.py, llm-type conditions currently raise LLMEvaluationRequired and the business-analyst caller falls back to default_status (not_needed) when the LLM path is unwired. Note this as a known limitation: until the LLM evaluation path is wired, the planning-time trigger degrades to not-firing (the commit-time hook GE-104a-1 remains the hard backstop). The commit-time enforcement is the authoritative guarantee; planning-time is advisory."
+  - "DEFERRED SPIKE (genuinely open): if the 'new-page-without-derived-doc' pattern recurs for other artifact types, evaluate adding a first-class DSL primitive (e.g. a 'derived_missing' operator or a NOT combinator) to selection_criteria_evaluator.py and documenting it in ADR-018. Out of scope for GE-104; do not extend the grammar as part of this work."
+delivers_to: null
+expects_from:
+  ac_id: GE-104a-2
+  contract: "The documentation-expert trigger_condition slot in agent_registry.json into which this llm-type condition is authored, and its requirement to reference the shared page->doc derivation rule."
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260617-GE-104a-2-i.md

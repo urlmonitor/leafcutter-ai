@@ -1,0 +1,42 @@
+id: ACD-1500e-1-i
+readiness: approved
+priority: medium
+title: "Process-feedback is deduplicated to prevent feedback storms"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the router already emitted an unresolved process-finding entry P1 about
+    "bug-fix entries missing target_file" in a prior run,
+  When a later run again encounters thin bug-fix entries missing target_file,
+  Then the router does NOT emit a second, near-identical process-finding entry,
+  And instead it either skips re-emission or aggregates the new occurrence into
+    the existing P1 (for example, raising an occurrence count),
+  And the unresolved corpus never accumulates many duplicate copies of the same
+    process complaint across runs,
+  And a genuinely different deficiency (a new missing field) is still allowed to
+    produce its own distinct process-finding entry.
+depends_on: [ACD-1500e-1]
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Before emitting via submit_feedback.py, feedback-router.js must scan the unresolved corpus (aggregate.py --unresolved) for an existing router-generated process-finding describing the SAME deficiency, keyed by a stable deficiency signature (e.g. work_type + missing-field set) rather than exact note string"
+  - "On a duplicate, skip re-emission or aggregate into the existing entry (e.g. increment an occurrence count) so the unresolved corpus never accumulates many copies of the same complaint"
+  - "A genuinely different deficiency (a different missing field) must still produce a distinct process-finding entry — the dedup key must discriminate deficiency types"
+delivers_to: null
+expects_from:
+  ac_id: ACD-1500e-1
+  contract: "The process-feedback emission step that must check for an existing equivalent (by deficiency signature) before writing"
+origin_agent: business-analyst-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,40 @@
+id: ACD-1500c-1-i
+readiness: approved
+priority: medium
+title: "Half-succeeded artifact creation must not mark the entry resolved (atomicity)"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given entry F1 was routed to /create-ac,
+  When the artifact creation does not complete successfully (no usable artifact
+    id is produced, or resolve_feedback.py itself fails),
+  Then the router does NOT set resolved_at on F1,
+  And F1 remains in the unresolved set so a future run or a human can address it,
+  And the router records the failure with enough detail to retry,
+  And there is never a state where F1 is marked resolved while pointing at an
+    artifact that was not actually created.
+depends_on: [ACD-1500c-1]
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "feedback-router.js must order the loop-close so resolve_feedback.py is called ONLY after a usable artifact id is confirmed produced; if artifact creation yields no id, or resolve_feedback.py exits non-zero, the entry must be left unresolved"
+  - "Must record the failure with enough detail to retry (entry id, route, failure reason) per the project error handling policy — log and do not silently swallow"
+  - "Must guarantee no partial state where resolved_at is set while pointing at an artifact that was not created (resolve is the last step, gated on success)"
+delivers_to: null
+expects_from:
+  ac_id: ACD-1500c-1
+  contract: "The resolve_feedback.py call whose success must be conditional on confirmed artifact creation"
+origin_agent: business-analyst-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

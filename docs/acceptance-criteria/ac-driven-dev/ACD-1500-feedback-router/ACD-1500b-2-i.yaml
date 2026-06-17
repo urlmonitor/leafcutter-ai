@@ -1,0 +1,39 @@
+id: ACD-1500b-2-i
+readiness: approved
+priority: medium
+title: "Confidence exactly at the floor is allowed to proceed"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the configurable confidence floor is set to 0.75,
+  And entry F1 was classified with confidence exactly 0.75,
+  When the router applies the confidence-floor gate,
+  Then F1 is treated as meeting the floor and is allowed to proceed to its
+    routing destination (the comparison is "confidence is at or above the floor",
+    not "strictly above"),
+  And an entry classified at 0.7499 is parked while an entry at 0.75 proceeds,
+  And the boundary behavior is identical on repeated runs with the same floor.
+depends_on: [ACD-1500b-2]
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The gate comparison in feedback-router.js must be inclusive (confidence >= confidence_floor), not strict greater-than, so an entry exactly at the floor proceeds"
+  - "Boundary behavior must be deterministic across runs given the same config/feedback_router.yaml confidence_floor value"
+delivers_to: null
+expects_from:
+  ac_id: ACD-1500b-1
+  contract: "A per-entry confidence score (float in [0.0,1.0]) compared against the floor at the boundary"
+origin_agent: business-analyst-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

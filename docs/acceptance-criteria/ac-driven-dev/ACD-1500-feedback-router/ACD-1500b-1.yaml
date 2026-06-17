@@ -1,0 +1,43 @@
+id: ACD-1500b-1
+readiness: approved
+priority: medium
+title: "Every classification carries a confidence score"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the router classifies an unresolved feedback entry F1,
+  When it produces the work type, size, and routing destination for F1,
+  Then it also produces a confidence score for F1 expressed on a 0.0-1.0 scale,
+  And the confidence score is attached to F1's decision record,
+  And no entry is allowed to reach a routing destination without a confidence
+    score present,
+  And the score reflects how well the entry's fields supported the classification
+    (a complete, unambiguous entry scores higher than a vague one).
+depends_on: [ACD-1500b]
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The confidence score is produced by the classifier agent template (templates/agents/feedback-classifier.md) as part of its structured output record, on a 0.0-1.0 scale"
+  - "The score must reflect how completely the entry's own fields supported the classification (complete unambiguous entry scores higher than a thin or vague one); it must be deterministic for identical input per ACD-1500a-4"
+  - "The output contract must guarantee a confidence field is always present so the router (python-coder) can enforce 'no entry reaches a destination without a confidence score' at the gate"
+delivers_to:
+  agent: python-coder
+  contract: "A per-entry decision record {feedback_id, work_type, size, signals, confidence: float in [0.0,1.0]} consumed by the confidence-floor gate (ACD-1500b-2) and blocker override (ACD-1500b-3)"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

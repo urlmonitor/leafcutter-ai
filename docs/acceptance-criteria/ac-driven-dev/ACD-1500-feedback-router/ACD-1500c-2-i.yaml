@@ -1,0 +1,40 @@
+id: ACD-1500c-2-i
+readiness: approved
+priority: medium
+title: "Re-running the router is idempotent for already-resolved entries"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given entry F1 was already resolved with a back-reference to ACD-1600a in run A,
+  When the router is run again (run B) over the same corpus,
+  Then F1 is skipped and no second artifact is produced for it,
+  And F1's existing resolved_at and resolution_note are not overwritten or
+    duplicated,
+  And running the router any number of additional times over an unchanged corpus
+    produces no new artifacts and no changes to already-resolved entries,
+  And this holds even if resolve_feedback.py is invoked again for F1 (the writer
+    is idempotent and the second call is a no-op).
+depends_on: [ACD-1500c-2]
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Whole-run idempotency: re-running feedback-router.js over an unchanged corpus must produce zero new artifacts and zero changes to already-resolved entries, because resolved entries are filtered at queue-build (ACD-1500c-2)"
+  - "Must rely on resolve_feedback.py's existing idempotency (a second resolve call for an already-resolved entry is a no-op and must not overwrite or duplicate resolved_at / resolution_note)"
+delivers_to: null
+expects_from:
+  ac_id: ACD-1500c-2
+  contract: "The resolved-entry filter (aggregate.py --unresolved) that guarantees skip-on-rerun behavior"
+origin_agent: business-analyst-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

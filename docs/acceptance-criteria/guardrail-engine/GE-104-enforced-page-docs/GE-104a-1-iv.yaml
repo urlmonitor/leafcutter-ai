@@ -1,0 +1,69 @@
+id: GE-104a-1-iv
+readiness: approved
+priority: high
+title: "Page-documentation hook is registered in commit_guardian.json with a hooks_manifest entry"
+component: guardrail-engine
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-104-enforced-page-docs/GE-104.yaml"
+criteria: |
+  Given the canonical commit_guardian.json is read after the page-documentation
+    hook is added
+  When a consumer inspects the hooks_manifest.hooks array
+  Then it contains an entry for the page-documentation hook with:
+    - a stable hook id identifying the new-page-documentation check
+    - a files pattern that matches frontend page files at site/app/**/page.tsx
+    - pass_filenames consistent with the existing component-integrity hook pattern
+    - stages: ["pre-commit"]
+
+  ---
+
+  Given the canonical commit_guardian.json is read after the page-documentation
+    hook is added
+  When a consumer inspects the top-level configuration section for the hook
+  Then it contains a configuration entry exposing the block-versus-warn mode for
+    the page-documentation check
+  And the mode value can be set to block or to warn-only
+  And the configured mode is the value the hook reads at pre-commit time to decide
+    whether to block or only warn
+depends_on:
+  - GE-104a-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-104-enforced-page-docs/GE-104a-1.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "scripts/commit_guardian/commit_guardian.json"
+    relationship: implements
+    status: exists
+  - path: "templates/commit-guardian/commit_guardian.json"
+    relationship: implements
+    status: exists
+  - path: "templates/scripts/commit_guardian/commit_guardian.json"
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Add a hooks_manifest.hooks entry to commit_guardian.json (resolves BA open question on hook id and config keys). Hook id: 'check-frontend-page-docs'. tier: 'judgment'. name: 'Check Frontend Page Documentation'. entry: 'python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_frontend_page_docs.py'. language: 'system'. files: '^site/app/.*page\\.tsx$' (matches frontend page files). stages: ['pre-commit']. pass_filenames: false (consistent with check-components-integrity, which lets the hook query git itself rather than receiving passed filenames)."
+  - "Add a top-level config section keyed 'page_doc' (resolves BA open question on config key name) with: a '_comment' describing the hook, a 'mode' key whose allowed values are 'block' and 'warn' (default 'block'), a 'doc_dir' key defaulting to 'docs/reference/frontend' (the destination root for derived docs), and a 'page_glob' key defaulting to 'site/app/**/page.tsx' (the page-detection pattern). The hook reads page_doc.mode at runtime to decide block vs warn."
+  - "The hook id used in the manifest entry MUST equal the id the hook itself reports and MUST be the key the block-vs-warn behavior keys off (page_doc.mode), so there is one stable identifier across manifest, config, and script."
+  - "Self-hosting parity (ADR-001): apply the identical manifest entry AND page_doc config section to all three commit_guardian.json copies — scripts/commit_guardian/commit_guardian.json, templates/commit-guardian/commit_guardian.json, and templates/scripts/commit_guardian/commit_guardian.json — and verify parity via the build.py round-trip. Never edit one copy only."
+  - "The entry must be valid JSON consistent with the existing hooks_manifest schema so build.py can emit it into .pre-commit-config.yaml without error."
+delivers_to:
+  agent: python-coder
+  contract: "commit_guardian.json hooks_manifest entry { id: 'check-frontend-page-docs', files: '^site/app/.*page\\\\.tsx$', stages: ['pre-commit'], pass_filenames: false, entry: run_hook.py wrapper } plus a top-level 'page_doc' config section { mode: 'block'|'warn' (default 'block'), doc_dir: 'docs/reference/frontend', page_glob: 'site/app/**/page.tsx' }. The hook script (GE-104a-1) reads page_doc.mode at runtime."
+expects_from:
+  ac_id: GE-104a-1
+  contract: "The hook script at scripts/commit_guardian/check_frontend_page_docs.py whose runtime block-vs-warn decision is driven by the page_doc.mode config key registered here."
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260617-GE-104a-1-iv.md

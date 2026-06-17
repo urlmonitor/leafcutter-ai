@@ -1,0 +1,67 @@
+id: GE-104a-1-iii
+readiness: approved
+priority: high
+title: "Deleting or renaming a page does not falsely block the commit"
+component: guardrail-engine
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-104-enforced-page-docs/GE-104.yaml"
+criteria: |
+  Given a commit deletes an existing frontend page at site/app/parts/page.tsx
+  And the commit does not add any new frontend page
+  When the page-documentation guardrail runs at pre-commit time
+  Then the guardrail does NOT block the commit
+  And it does NOT demand a reference doc for the deleted page
+
+  ---
+
+  Given a commit renames a frontend page from site/app/parts/page.tsx to
+    site/app/components/page.tsx
+  And the matching reference doc for the destination route already exists on disk
+    at docs/reference/frontend/components.md
+  When the page-documentation guardrail runs at pre-commit time
+  Then the guardrail treats the destination page as documented and allows the commit
+
+  ---
+
+  Given a commit renames a frontend page from site/app/parts/page.tsx to
+    site/app/components/page.tsx
+  And no reference doc exists for the destination route at
+    docs/reference/frontend/components.md — neither staged nor on disk
+  When the page-documentation guardrail runs at pre-commit time
+  Then the guardrail blocks the commit (when in block mode)
+  And it emits a FIX message naming docs/reference/frontend/components.md as the
+    expected doc for the renamed destination page
+depends_on:
+  - GE-104a-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-104-enforced-page-docs/GE-104a-1.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "scripts/commit_guardian/check_frontend_page_docs.py"
+    relationship: implements
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Detect new pages strictly by the set-difference of page paths present-now minus present-before (staged page paths not in the previous commit). A pure deletion produces no added page path, so the added set is empty and the hook must allow the commit and demand no doc."
+  - "A rename surfaces in the set-difference as a new destination page path (the destination did not exist before) and a removed source path; treat the DESTINATION as a newly-added page and run the standard derive-and-check against the destination route's derived doc path. The source path's deletion imposes no doc requirement."
+  - "Do not rely on git rename-detection heuristics (similarity scoring) for correctness; the set-difference of page paths is sufficient and deterministic regardless of whether git classifies the change as a rename or as add+delete."
+  - "When the destination page's derived doc is present (staged or on disk) the commit proceeds; when absent, the hook blocks in block mode (warns in warn-only mode) and the FIX message names the destination route's derived doc path."
+  - "Must not raise or block on the absence of a source-page doc; only destination/added pages are gated."
+delivers_to: null
+expects_from:
+  ac_id: GE-104a-1
+  contract: "The commit-time hook's added-page detection (present-now minus present-before set difference) and its block-vs-warn mode behavior, which this AC exercises for delete and rename cases."
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260617-GE-104a-1-iii.md

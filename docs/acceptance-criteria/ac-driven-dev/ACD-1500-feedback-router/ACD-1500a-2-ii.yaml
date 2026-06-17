@@ -1,0 +1,44 @@
+id: ACD-1500a-2-ii
+readiness: approved
+priority: medium
+title: "Non-problem categories take no fix action; success-pattern is offered for codification"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given three unresolved entries:
+    - F1 with category: complete
+    - F2 with category: success-pattern, note describing a reusable approach worth keeping
+    - F3 with category: success-pattern, note describing a one-off observation with no reusable content
+  When the router classifies each,
+  Then F1 (complete) is treated as a non-problem and routed to neither /quick-fix
+    nor /create-ac — it is resolved with a note that no fix work was required,
+  And F2 (codifiable success-pattern) is routed to /create-ac so the reusable
+    approach becomes a documented acceptance criterion,
+  And F3 (non-codifiable success-pattern) is resolved with a note that the
+    observation needs no follow-up artifact,
+  And in no case is a bug-fix or feature build dispatched for a complete-category entry.
+depends_on: [ACD-1500a-2]
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Implemented in the classifier agent template (templates/agents/feedback-classifier.md): the classification rules must recognize the closed category vocabulary in config/feedback_categories.yaml — complete and non-codifiable success-pattern map to a no-fix-action verdict; codifiable success-pattern maps to a create-ac verdict"
+  - "The classifier must emit a discriminating verdict (no-fix vs codify vs route) so the router (ACD-1500a-3) never dispatches a bug-fix or feature build for a complete-category entry"
+  - "The resolve-with-note action for no-fix entries reuses the resolve_feedback.py contract from ACD-1500c-1 (the router performs the call; the classifier only supplies the verdict)"
+delivers_to: null
+expects_from:
+  ac_id: ACD-1500a-2
+  contract: "A per-entry classification whose category field determines whether any fix action is warranted"
+origin_agent: business-analyst-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

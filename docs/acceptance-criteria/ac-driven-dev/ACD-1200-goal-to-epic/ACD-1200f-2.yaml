@@ -1,4 +1,4 @@
-id: ACD-1200a-9
+id: ACD-1200f-2
 readiness: approved
 priority: high
 title: "Level-based leaf detection: _dfs_collect_leaves uses level field, not covered_by emptiness"
@@ -26,7 +26,7 @@ criteria: |
   L0/L1 nodes are always composite pass-throughs regardless of covered_by.
   L2/L3 nodes are always emitted as leaves AND their children are recursed
   into (so L3 edge-case ACs beneath an L2 are also collected).
-depends_on: []
+depends_on: [ACD-1200f]
 doc_links:
   - path: scripts/ac_store/scan_ac_store.py
     relationship: implements
@@ -43,7 +43,8 @@ delivers_to:
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-08
-amended_by: []
+amended_by:
+  - reason: "split: re-parented ACD-1200a-9 -> ACD-1200f-2, 2026-06-17"
 superseded_by: null
-covered_by: []
+covered_by: [ACD-1200f-2-i]
 implemented_by: []
