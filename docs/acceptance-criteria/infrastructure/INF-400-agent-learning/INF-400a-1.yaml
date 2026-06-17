@@ -28,13 +28,13 @@ doc_links:
   - path: docs/architecture/agent_knowledge_system.md
     relationship: describes
     status: exists
-  - path: templates/agents/product-owner-v3.md
+  - path: templates/agents/product-owner.md
     relationship: constrains
     status: exists
-  - path: templates/agents/business-analyst-v3.md
+  - path: templates/agents/business-analyst.md
     relationship: constrains
     status: exists
-  - path: templates/agents/it-po-v3.md
+  - path: templates/agents/it-po.md
     relationship: constrains
     status: exists
 assigned_agent: llm-expert

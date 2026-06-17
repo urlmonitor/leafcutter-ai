@@ -32,7 +32,7 @@ criteria: |
     Use test_constraints to control testing strategy."
 depends_on: [BO-550-1, BO-560-3]
 doc_links:
-  - path: templates/agents/it-po-v3.md
+  - path: templates/agents/it-po.md
     relationship: describes
     status: exists
   - path: templates/agents/ticket-supervisor.md
