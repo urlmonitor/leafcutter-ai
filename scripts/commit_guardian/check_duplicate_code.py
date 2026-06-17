@@ -10,6 +10,12 @@ jscpd v4.x changed its CLI flags in an incompatible way. When v4.x is
 detected on the system, the hook skips scanning, emits a warning to stderr
 recommending jscpd v3.x, and exits 0 (fail-open).
 
+WSL2 path handling: when the working tree root starts with ``/mnt/c/`` (a WSL2
+mount of a Windows filesystem), jscpd is unreliable when invoked directly
+against that filesystem.  In that case the hook copies the staged files into a
+temporary Linux-native directory and runs jscpd there instead, preserving the
+same staged-only scope without the NTFS performance and reliability issues.
+
 Usage:
     python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_duplicate_code.py
 
@@ -25,6 +31,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 from _resolve_root import find_project_root  # type: ignore[import]
@@ -121,6 +128,62 @@ def get_staged_source_files() -> list[str]:
     return [f for f in lines if f and not f.endswith(".md")]
 
 
+def _is_wsl2_ntfs_mount(root: Path) -> bool:
+    """Return True when *root* is located on a WSL2 NTFS mount.
+
+    A path that starts with ``/mnt/c/`` (or any ``/mnt/<single-letter>/``
+    variant) is a WSL2 mount of a Windows drive letter.  jscpd is unreliable
+    when invoked from such a path because the NTFS filesystem presents
+    non-standard permission bits that confuse Node.js's ``fs.readdir``.
+
+    Args:
+        root: The absolute path to the working-tree root.
+
+    Returns:
+        bool: True when the root is under a WSL2 Windows drive mount.
+    """
+    parts = root.parts  # e.g. ('/', 'mnt', 'c', ...)
+    return len(parts) >= 3 and parts[0] == "/" and parts[1] == "mnt" and len(parts[2]) == 1
+
+
+def _copy_staged_files_to_tmpdir(
+    staged_files: list[str],
+    project_root: Path,
+    tmp_dir: str,
+) -> list[str]:
+    """Copy staged files from the project root into *tmp_dir*, preserving layout.
+
+    Each file in *staged_files* (relative to *project_root*) is copied to the
+    same relative path under *tmp_dir*.  Missing directories are created
+    automatically.  Files that cannot be read are silently skipped so that a
+    single unreadable file does not abort the entire scan.
+
+    Args:
+        staged_files: Relative file paths (from ``git diff --cached``).
+        project_root: Absolute path to the working-tree root.
+        tmp_dir: Absolute path to the temporary staging directory.
+
+    Returns:
+        list[str]: Absolute paths inside *tmp_dir* for the files that were
+        successfully copied.  Empty if no files could be copied.
+    """
+    tmp_path = Path(tmp_dir)
+    copied: list[str] = []
+    for rel in staged_files:
+        src = project_root / rel
+        dst = tmp_path / rel
+        try:
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(str(src), str(dst))
+            copied.append(str(dst))
+        except OSError as exc:
+            print(
+                f"[check-duplicate-code] Could not stage {rel} into tmp dir: {exc}",
+                file=sys.stderr,
+            )
+    return copied
+
+
 def main() -> int:
     """Run duplicate code detection on staged files.
 
@@ -149,6 +212,46 @@ def main() -> int:
     if not staged_files:
         return 0
 
+    # ------------------------------------------------------------------
+    # WSL2 path guard — AC GE-100a-2
+    # When the project root lives on an NTFS mount (/mnt/c/ …) we copy the
+    # staged files into a native Linux tmpfs before invoking jscpd so that
+    # jscpd never touches the slow/unreliable Windows filesystem.
+    # ------------------------------------------------------------------
+    use_tmpdir = _is_wsl2_ntfs_mount(project_root)
+
+    if use_tmpdir:
+        try:
+            tmp_dir_obj = tempfile.TemporaryDirectory(prefix="jscpd_staged_")
+        except OSError as exc:
+            print(
+                f"[check-duplicate-code] Could not create temp dir for WSL2 scan: {exc}\n"
+                "Skipping duplicate-code check (fail-open).",
+                file=sys.stderr,
+            )
+            return 0
+        with tmp_dir_obj:
+            scan_targets = _copy_staged_files_to_tmpdir(
+                staged_files, project_root, tmp_dir_obj.name
+            )
+            if not scan_targets:
+                return 0
+            return _run_jscpd(jscpd, scan_targets)
+    else:
+        return _run_jscpd(jscpd, staged_files)
+
+
+def _run_jscpd(jscpd: str, targets: list[str]) -> int:
+    """Invoke jscpd against *targets* and return an exit code.
+
+    Args:
+        jscpd: Absolute path to the jscpd binary.
+        targets: File paths to scan (either relative project paths or
+                 absolute paths inside a temp directory).
+
+    Returns:
+        int: 0 for pass (or fail-open), 1 to block the commit when strict.
+    """
     cmd = [
         jscpd,
         "--min-lines", str(DUPLICATE_CODE_MIN_LINES),
@@ -156,7 +259,7 @@ def main() -> int:
         "--threshold", str(DUPLICATE_CODE_THRESHOLD),
         "--reporters", "console",
         "--",
-    ] + staged_files
+    ] + targets
 
     try:
         result = subprocess.run(cmd, capture_output=True, text=True)
@@ -208,5 +311,14 @@ DECISION HISTORY
   without invoking jscpd for scanning. OSError during `jscpd --version` returns
   None (version unknown), which causes the hook to proceed with scanning rather
   than blocking — conservative fail-open choice.
+- 2026-06-18 [python-coder/TICKET-20260616-GE-100a-2]: Implements AC GE-100a-2
+  (force staged-only scan when working tree is under /mnt/c/ WSL2 mount). Added
+  _is_wsl2_ntfs_mount() to detect /mnt/<letter>/ paths, _copy_staged_files_to_tmpdir()
+  to mirror staged files into a native Linux temp directory, and _run_jscpd() to
+  hold the jscpd invocation logic (extracted from main() so both the normal and
+  WSL2 paths can share it). When WSL2 is detected, staged files are copied to
+  tempfile.TemporaryDirectory, jscpd is invoked there, and the temp dir is cleaned
+  up. No user-visible error about the WSL2 path is emitted. Fail-open on OSError
+  when creating the temp dir.
 ====================================================================
 """
