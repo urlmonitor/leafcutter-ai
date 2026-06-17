@@ -1,32 +1,24 @@
 ---
 title: "Align finalize-feature.js triage schema between step-3 instructions and step-6a reader"
-status: todo
+status: in_progress
 components:
   - supervisor_system
 created: 2026-06-16
 depends_on: []
 priority: medium
+requires_diagram: false
+requires_adr: false
 files_touched:
-  - leafcutter-ai/templates/workflows-js/finalize-feature.js
-  - leafcutter-ai/templates/agents/test-failure-triage.md
+  - templates/workflows-js/finalize-feature.js
+  - templates/agents/test-failure-triage.md
   - tests/test_finalize_feature_triage_integration.js
 estimated_complexity: simple
 agents:
-  llm-expert:
-    needed: true
-    task: "Update step-3 instructions to request correct schema (nested array-of-entries with .category fields)"
-  test-writer:
-    needed: true
-    task: "Write unit tests for step-6a loop with pre_existing/flaky entries and edge cases"
-  code-review-architect:
-    needed: true
-    task: "Review schema fix, verify no downstream breakage, audit triage_report contract"
-  commit:
-    needed: true
-    task: "Gate commit on all sign-offs"
-  pull-request:
-    needed: true
-    task: "Create PR with full change narrative"
+  llm-expert: signed_off
+  test-writer: signed_off
+  pr-reviewer: signed_off
+  commit: needed
+  pull-request: needed
 ---
 
 # 04: Align finalize-feature.js Triage Schema
@@ -91,9 +83,9 @@ If the agent follows the step-3 instructions (which it does, trusting the orches
 
 ## Sign-offs
 
-- [ ] llm-expert — schema fix instructions reviewed and approved
-- [ ] test-writer — all test cases written and passing (AC-1 through AC-5 covered)
-- [ ] code-review-architect — no downstream breakage detected; triage_report contract verified
+- [x] llm-expert — 2026-06-17 14:22
+- [x] test-writer — 2026-06-17 11:42
+- [x] pr-reviewer — 2026-06-17 14:45
 - [ ] commit — pre-commit hooks pass; all ACs verified
 - [ ] pull-request — PR created and merged to main
 
@@ -184,6 +176,39 @@ Unit and integration tests for the step-3 schema fix and step-6a pre-existing fa
 - Safe to deploy during any workflow cycle
 - No active finalize-feature runs are disrupted (new instructions only take effect on next invocation)
 - Immediately activates pre-existing failure tracking loop (previously dead code becomes live)
+
+## Comments
+
+### 2026-06-17 11:42 — test-writer (status: ok)
+feedback-id: fb_2026-06-17_f57b8f52
+completion_manifest:
+  test_file_written: true
+  all_6_tests_red: true
+  tests_cover_ac1_through_ac5: true
+  red_baseline_confirmed: true
+Wrote 6 RED failing test stubs at `tests/test_finalize_feature_triage_integration.js`. All 6 tests confirmed RED (exit code 1) against the current unfixed `finalize-feature.js`. Tests assert: (1) step-3 instructions literal no longer contains the old flat `regressions` schema and instead requests nested `triage_report` with per-entry `category`/`test_id` fields; (2) step-6a `pre_existing` and `flaky` filter logic executes correctly on nested schema; (3) empty and malformed (`null`, `undefined`) triage reports are handled gracefully. RED baseline: 0 passed, 6 failed — implementation by llm-expert will flip these green.
+
+### 2026-06-17 14:22 — llm-expert (status: ok)
+feedback-id: fb_2026-06-17_db979ac3
+completion_manifest:
+  ac1_step3_requests_nested_schema: true
+  ac2_step6a_iterates_triage_report: true
+  ac3_pre_existing_loop_executes: true
+  ac4_empty_triage_handled: true
+  ac5_null_undefined_guarded: true
+  all_6_tests_green: true
+Fixed the schema mismatch in `templates/workflows-js/finalize-feature.js` step-3 instructions: replaced the old flat schema (`regressions`, `pre_existing`, `summary` keys) with the authoritative nested `triage_report: [{category, test_id, ac_status, rationale, action, modified_by_branch}]` schema as specified in the test-failure-triage agent output contract. The step-6a `Array.isArray(triageReport.triage_report)` guard and forEach loop were already correct and required no changes. All 6 tests in `tests/test_finalize_feature_triage_integration.js` flipped from RED to GREEN (exit code 0).
+
+### 2026-06-17 14:45 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-17_ac20d2d7
+completion_manifest:
+  ac1_step3_requests_nested_schema: true
+  ac2_step6a_iterates_triage_report_entries: true
+  ac3_pre_existing_loop_live_code: true
+  ac4_empty_triage_handled: true
+  ac5_null_undefined_guarded_by_array_is_array: true
+  all_6_tests_green: true
+Reviewed the staged diff against all 5 ACs and ran the integration test suite (6/6 PASS, exit 0). Step-3 instructions in `templates/workflows-js/finalize-feature.js` now correctly request the nested `triage_report` array with per-entry `.category` fields, eliminating the old flat `regressions`/`pre_existing` schema. Step-6a reader (`Array.isArray(triageReport.triage_report)` guard + forEach loop) was already aligned and required no changes. All edge cases (empty array, null, undefined) are handled safely. No downstream breakage detected.
 
 ## Summary
 
