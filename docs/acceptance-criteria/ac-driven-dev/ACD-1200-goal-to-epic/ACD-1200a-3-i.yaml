@@ -16,7 +16,7 @@ criteria: |
     "No leaf-level ACs found beneath ACD-060. Decompose the L1s into L2/L3 ACs first."
   And no epic folder is created
   And no ticket files are generated.
-depends_on: [ACD-1200a-3, ACD-1200a-1]
+depends_on: [ACD-1200a-3, ACD-1200f-1]
 doc_links:
   - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
     relationship: describes
@@ -31,7 +31,8 @@ delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: "split: re-pointed traversal dependency edge ACD-1200a-1 -> ACD-1200f-1, 2026-06-17"
 superseded_by: null
 covered_by: []
 implemented_by: []
