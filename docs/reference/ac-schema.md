@@ -41,6 +41,7 @@ Each AC file is a single YAML document with the following fields.
 | `origin_agent` | string | no | Identity of the agent or workflow that created this AC file. Free-form provenance string — any non-empty value is valid. The field is **not** validated against the current agent registry. Historical agent names (including names of deleted, renamed, or decomissioned agents) remain valid and are never rewritten during schema upgrades. Example values: `business-analyst` (canonical name, also used historically as v1 and promoted from v3), `business-analyst-v2` (deleted agent), `business-analyst-v3` (legacy v3 name, now renamed to `business-analyst`), `create-ticket` (deleted agent), `refinement` (deleted agent), `BrainCandy` (human author), `ticket-wiring` (workflow). |
 | `implements_pattern` | string or null | no | ID of the reusable behavior pattern this AC inherits from (e.g. `PTN-001`). When set, the effective behavior is derived from the referenced pattern combined with any `pattern_bindings`. The `criteria` field may contain a plain-text placeholder rather than a full `Given`/`When`/`Then` scenario. |
 | `pattern_bindings` | object or null | no | Key-value bindings that instantiate the referenced pattern for this AC. Values may be strings, arrays, or objects. Only meaningful when `implements_pattern` is set. Example: `{entity_type: "users", columns: ["name", "email"]}`. |
+| `depends_on` | list of strings | no | AC IDs that this AC logically depends on. Used in two contexts: (1) deviation ACs reference their parent consuming AC; (2) composite pattern ACs list the atomic pattern IDs they wire together (e.g. `[PTN-010, PTN-011, PTN-012]`). Purely declarative — no runtime resolution is required. The store validator may warn when a referenced ID is absent but MUST NOT block commits. |
 
 ### Full example
 
@@ -140,6 +141,129 @@ origin_agent: business-analyst
 Note: `PAGE-005` is the consuming AC that has `implements_pattern: "PTN-001"`. The
 deviation AC (`PAGE-005-DEV-001`) carries the full Gherkin scenario for the non-standard
 behavior and has no `implements_pattern` field of its own.
+
+---
+
+### Composite Pattern ACs — composing atomic patterns (ACS-500e-1)
+
+A **composite pattern AC** wires two or more atomic pattern ACs together. It uses
+the `depends_on` field to declare which atomic patterns it composes, and its
+`criteria` describes ONLY the wiring behavior between those patterns (e.g. how
+filter state interacts with pagination state). The atomic behaviors are fully
+defined by the referenced atomic patterns and are NOT repeated in the composite.
+
+**Design invariants:**
+
+1. Atomic patterns are independent. They define isolated behaviors with no
+   `depends_on` links between them.
+2. The composite pattern's `criteria` describes only inter-pattern wiring. It
+   MUST NOT duplicate behavior already specified by the atomic patterns it
+   references.
+3. The composite pattern is itself a reusable pattern. Consuming page ACs may
+   reference it via `implements_pattern` exactly as they would reference an
+   atomic pattern.
+4. `depends_on` on a composite pattern AC is purely declarative. No runtime
+   resolution is required; a validator may warn on missing targets but must not
+   block commits.
+
+**Example — atomic patterns and a composite pattern:**
+
+```yaml
+# Atomic pattern — sortable table
+id: PTN-010
+title: "Sortable table — column sorting behavior"
+component: ac-store
+status: active
+pattern_slots:
+  - "{columns}"
+  - "{default_sort_column}"
+criteria: |
+  Given a page contains a table with sortable columns {columns},
+  When the user clicks a column header,
+  Then the table rows are sorted by that column,
+  And clicking the same header again toggles between ascending and descending order,
+  And the table is initially sorted by {default_sort_column} ascending.
+created_by: "tickets/00_inbox/epics/EPIC-Defineabehavioronce,reusethespec/15_TICKET-20260611-ACS-500e-1.md"
+
+# Atomic pattern — filter bar
+id: PTN-011
+title: "Filter bar — text and dropdown filter behavior"
+component: ac-store
+status: active
+pattern_slots:
+  - "{text_filter_field}"
+  - "{dropdown_filter_fields}"
+criteria: |
+  Given a page contains a filter bar with a text input for {text_filter_field}
+    and dropdown filters for {dropdown_filter_fields},
+  When the user enters text in the text input or selects a dropdown option,
+  Then the table rows are filtered to only show matching results,
+  And clearing the filter input restores all rows.
+created_by: "tickets/00_inbox/epics/EPIC-Defineabehavioronce,reusethespec/15_TICKET-20260611-ACS-500e-1.md"
+
+# Atomic pattern — paginated collection
+id: PTN-012
+title: "Paginated collection — page-size selection and navigation"
+component: ac-store
+status: active
+pattern_slots:
+  - "{default_page_size}"
+  - "{page_size_options}"
+criteria: |
+  Given a page displays a collection with page-size control offering {page_size_options},
+  When the page loads,
+  Then the collection shows at most {default_page_size} rows,
+  And the user can navigate forward and backward through pages,
+  And changing the page-size selector resets to page 1.
+created_by: "tickets/00_inbox/epics/EPIC-Defineabehavioronce,reusethespec/15_TICKET-20260611-ACS-500e-1.md"
+
+# Composite pattern — wires PTN-010, PTN-011, PTN-012 together
+id: PTN-020
+title: "CRUD list page — wiring between sort, filter, and pagination"
+component: ac-store
+status: active
+depends_on:
+  - PTN-010
+  - PTN-011
+  - PTN-012
+criteria: |
+  Given a page implements PTN-010 (sortable table), PTN-011 (filter bar),
+    and PTN-012 (paginated collection),
+  When the user changes a filter,
+  Then pagination resets to page 1,
+  And when the user changes the sort column,
+  Then the current filter state is preserved,
+  And when the user changes the page,
+  Then the current sort column and filter state are preserved.
+created_by: "tickets/00_inbox/epics/EPIC-Defineabehavioronce,reusethespec/15_TICKET-20260611-ACS-500e-1.md"
+```
+
+**Consuming page AC that references the composite pattern:**
+
+```yaml
+id: PAGE-010
+title: "Invoice list page uses crud-list-page composite pattern"
+component: users-ui
+status: active
+created_by: "tickets/00_inbox/epics/EPIC-InvoiceList/01_invoice_list.md"
+criteria: "No page-specific wiring behavior — all wiring inherited from composite pattern PTN-020."
+implements_pattern: "PTN-020"
+pattern_bindings:
+  columns: "invoice_number, date, amount, status"
+  default_sort_column: "date"
+  text_filter_field: "invoice_number"
+  dropdown_filter_fields: "status, date_range"
+  default_page_size: 25
+  page_size_options: [10, 25, 50, 100]
+```
+
+**Key points:**
+- `PTN-020` is declared as a reusable pattern (no `implements_pattern` of its own).
+- `PAGE-010` references `PTN-020` via `implements_pattern` — identical to how it
+  would reference an atomic pattern.
+- The consuming AC inherits both the atomic behaviors (sorting, filtering,
+  pagination) and the wiring behaviors (filter resets pagination, sort preserves
+  filter) through the single `implements_pattern: "PTN-020"` declaration.
 
 ---
 

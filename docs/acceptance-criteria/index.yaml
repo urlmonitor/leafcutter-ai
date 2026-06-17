@@ -51,6 +51,111 @@ components:
       - "scripts/ac_store/*.py"
       - "config/ac_store_schema.json"
 
+# Composite Pattern AC Example (AC ACS-500e-1)
+#
+# Atomic pattern ACs define a single reusable behavior. A composite pattern AC
+# wires multiple atomic patterns together using the depends_on field.
+#
+# Atomic pattern ACs (PTN-010, PTN-011, PTN-012 — stored in the pattern-owning component folder):
+#
+#   id: PTN-010
+#   title: "Sortable table — column sorting behavior"
+#   component: ac-store
+#   level: L2
+#   status: active
+#   pattern_slots:
+#     - "{columns}"
+#     - "{default_sort_column}"
+#   criteria: |
+#     Given a page contains a table with sortable columns {columns},
+#     When the user clicks a column header,
+#     Then the table rows are sorted by that column,
+#     And clicking the same header again toggles between ascending and descending order,
+#     And the table is initially sorted by {default_sort_column} ascending.
+#
+#   id: PTN-011
+#   title: "Filter bar — text and dropdown filter behavior"
+#   component: ac-store
+#   level: L2
+#   status: active
+#   pattern_slots:
+#     - "{text_filter_field}"
+#     - "{dropdown_filter_fields}"
+#   criteria: |
+#     Given a page contains a filter bar with a text input for {text_filter_field}
+#       and dropdown filters for {dropdown_filter_fields},
+#     When the user enters text in the text input or selects a dropdown option,
+#     Then the table rows are filtered to only show matching results,
+#     And clearing the filter input restores all rows.
+#
+#   id: PTN-012
+#   title: "Paginated collection — page-size selection and navigation"
+#   component: ac-store
+#   level: L2
+#   status: active
+#   pattern_slots:
+#     - "{default_page_size}"
+#     - "{page_size_options}"
+#   criteria: |
+#     Given a page displays a collection with page-size control offering {page_size_options},
+#     When the page loads,
+#     Then the collection shows at most {default_page_size} rows,
+#     And the user can navigate forward and backward through pages,
+#     And changing the page-size selector resets to page 1.
+#
+# Composite pattern AC (PTN-020 — depends on PTN-010, PTN-011, PTN-012):
+#
+#   id: PTN-020
+#   title: "CRUD list page — wiring between sort, filter, and pagination"
+#   component: ac-store
+#   level: L2
+#   status: active
+#   depends_on:
+#     - PTN-010
+#     - PTN-011
+#     - PTN-012
+#   criteria: |
+#     Given a page implements PTN-010 (sortable table), PTN-011 (filter bar),
+#       and PTN-012 (paginated collection),
+#     When the user changes a filter,
+#     Then pagination resets to page 1,
+#     And when the user changes the sort column,
+#     Then the current filter state is preserved,
+#     And when the user changes the page,
+#     Then the current sort column and filter state are preserved.
+#
+# A consuming page AC referencing the composite pattern:
+#
+#   id: ACS-500e-2
+#   title: "Invoice list page uses crud-list-page composite pattern"
+#   component: ac-store
+#   level: L2
+#   status: active
+#   implements_pattern: PTN-020
+#   pattern_bindings:
+#     columns: "invoice_number, date, amount, status"
+#     default_sort_column: "date"
+#     text_filter_field: "invoice_number"
+#     dropdown_filter_fields: "status, date_range"
+#     default_page_size: 25
+#     page_size_options: [10, 25, 50, 100]
+#   criteria: "No page-specific wiring behavior — all behavior inherited from composite pattern PTN-020."
+#
+# Key design invariants (ACS-500e-1):
+#
+#   1. Atomic patterns (PTN-010 through PTN-012) define isolated behaviors with
+#      no depends_on between them — they are independent reusable units.
+#   2. The composite pattern (PTN-020) uses depends_on to declare which atomic
+#      patterns it wires together. Its criteria describes ONLY the inter-pattern
+#      wiring behavior (e.g. "filter changes reset pagination") — not the atomic
+#      behaviors already defined by PTN-010, PTN-011, and PTN-012.
+#   3. PTN-020 is itself a reusable pattern: consuming page ACs reference it via
+#      implements_pattern: "PTN-020" exactly as they would reference an atomic pattern.
+#   4. depends_on on a pattern AC is purely declarative (documentation of
+#      composition intent). No runtime resolution is required for the AC store to
+#      remain valid — a validator may warn when a depends_on target is absent but
+#      MUST NOT block commits for missing patterns.
+
 # Pattern AC Placement Convention (AC ACS-500a-2)
 #
 # Pattern ACs follow the SAME file-placement convention as all other AC YAML files:

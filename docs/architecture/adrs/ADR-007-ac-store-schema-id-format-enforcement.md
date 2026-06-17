@@ -4,7 +4,7 @@ description: "Defines the AC YAML schema, hierarchical ID format with parent der
 type: "adr"
 status: "accepted"
 created: "2026-06-04"
-last_updated: "2026-06-08"
+last_updated: "2026-06-17"
 components:
   - build_pipeline
 ---
@@ -80,6 +80,35 @@ schema's role is structural integrity (field presence and type), not behavioral
 completeness (which is owned by the pattern registry). ACs that have no unique
 page-specific behavior are therefore valid with an empty-criteria placeholder as
 long as `implements_pattern` is set.
+
+**Composite pattern ACs (ACS-500e-1):**
+
+A composite pattern AC composes two or more atomic patterns by declaring them in a
+`depends_on` list. Its `criteria` describes ONLY the wiring behavior between the
+atomic patterns — not the atomic behaviors themselves (which are already fully
+specified by the referenced atomic pattern ACs).
+
+The optional `depends_on` field for composite pattern ACs is defined as follows:
+
+| Field | Type | Description |
+|---|---|---|
+| `depends_on` | array of strings | AC IDs this AC logically depends on. For composite patterns, lists the atomic pattern IDs being wired together (e.g. `[PTN-010, PTN-011, PTN-012]`). For deviation ACs, references the consuming AC the deviation overrides. Purely declarative — no runtime resolution required. |
+
+Design invariants for composite patterns:
+
+1. **Atomic patterns are independent.** Atomic pattern ACs define isolated behaviors
+   with no `depends_on` links between them.
+2. **Composite criteria describes only wiring.** The composite pattern's `criteria`
+   describes only inter-pattern wiring behavior (e.g. "filter changes reset pagination
+   to page 1", "sort changes preserve current filter state"). It MUST NOT duplicate
+   atomic behaviors already defined by the referenced patterns.
+3. **Composite patterns are themselves reusable.** Consuming page ACs reference a
+   composite pattern via `implements_pattern` exactly as they would reference an
+   atomic pattern. The consuming AC inherits all atomic behaviors and all wiring
+   behaviors through the single `implements_pattern` declaration.
+4. **`depends_on` is declarative.** The store validator may warn when a `depends_on`
+   target is absent but MUST NOT block commits. There is no runtime pattern resolution
+   engine — pattern composition is a documentation and design-time concern only.
 
 **Pattern deviations and update isolation (ACS-500d-2):**
 
