@@ -1,4 +1,4 @@
-id: ACD-1200a-1
+id: ACD-1200f-1
 readiness: reviewed
 priority: medium
 title: "Tree traversal collects only leaf-level ACs beneath the target goal"
@@ -19,7 +19,7 @@ criteria: |
   Then the system identifies 3 leaf ACs: ACD-050a-1, ACD-050a-2-i, ACD-050b-1
   And it does NOT include the composite ACs (ACD-050, ACD-050a, ACD-050a-2, ACD-050b)
   And the leaf set contains exactly those ACs that have no children (covered_by is empty or absent).
-depends_on: [ACD-1200a]
+depends_on: [ACD-1200f]
 doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
@@ -43,7 +43,8 @@ delivers_to:
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: "split: re-parented ACD-1200a-1 -> ACD-1200f-1, 2026-06-17"
 superseded_by: null
-covered_by: [ACD-1200a-1-i]
+covered_by: [ACD-1200f-1-i]
 implemented_by: []
