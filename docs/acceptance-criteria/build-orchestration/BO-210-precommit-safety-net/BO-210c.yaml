@@ -1,0 +1,37 @@
+id: BO-210c
+readiness: approved
+priority: high
+title: "Auto-fix re-dispatches the originating coder with its capsule instead of a context-free fixer"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200b-3.yaml"
+criteria: |
+  When a commit fails a gating hook whose tier requires judgment, the auto-fix path
+  reads the originating agent identity from the hook's own output, loads that agent's
+  latest context capsule from the ticket, and re-dispatches the SAME agent type to
+  fix only what the hook requires — honoring the capsule rationale, reusing the
+  consumers already checked, and never re-deriving the design. Mechanical-tier hooks
+  keep the existing generic light-model route. The commit is retried once. The
+  re-dispatched coder runs without spawning any sub-agents and degrades gracefully
+  when no capsule exists.
+depends_on: [BO-210, BO-210a, BO-210b]
+doc_links:
+  - path: "templates/skills/precommit-autofix/SKILL.md"
+    relationship: describes
+    status: exists
+  - path: "templates/agents/commit.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-16
+amended_by: []
+superseded_by: null
+covered_by: [BO-210c-1, BO-210c-2, BO-210c-1-i, BO-210c-1-ii, BO-210c-2-i]
+implemented_by: []

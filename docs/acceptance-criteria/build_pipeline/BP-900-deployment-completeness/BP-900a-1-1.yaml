@@ -1,0 +1,39 @@
+id: BP-900a-1-1
+title: "Build fails if a source ac_store script is missing from the templates directory"
+component: build_pipeline
+level: L3
+status: active
+req_status: approved
+readiness: approved
+priority: critical
+work_status: not_started
+criteria: |
+  Given the templates/scripts/ac_store/ directory is missing one of the 13 expected files
+  (e.g. ac_prioritizer.py has been deleted or renamed),
+  When build.py is invoked with --target-dir pointing to a consumer project,
+  Then the build exits non-zero before writing any partial output to the target
+  And the error message names the missing source file
+depends_on: [BP-900a-1]
+doc_links:
+  - path: scripts/build.py
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+  - "Must validate source file existence before writing any output to the target — no partial deployment"
+  - "Error message must name the specific missing file(s) to aid debugging"
+  - "Must handle errors gracefully per the project error handling policy"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-11
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260611-BP-900a-1-1.md

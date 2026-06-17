@@ -1,0 +1,44 @@
+id: BP-900a-3
+title: "Deployed ac_store scripts are importable via the paths agent templates use"
+component: build_pipeline
+level: L2
+status: active
+req_status: approved
+readiness: approved
+priority: critical
+work_status: not_started
+criteria: |
+  Given build.py has deployed the ac_store scripts to a consumer project,
+  When a process sets sys.path to include "{target}/scripts/ac_store"
+  And imports ac_prioritizer, generate_ticket_from_ac, and scan_ac_store,
+  Then all three imports succeed without ImportError
+  And the __init__.py file is present so the directory is a valid Python package
+depends_on: [BP-900a, BP-900a-1]
+doc_links:
+  - path: templates/agents/build-ac.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/ac-scanner/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must verify importability using the same sys.path mechanism that agent templates use at runtime"
+  - "Must confirm __init__.py is present and makes the directory a valid Python package"
+  - "Must not introduce any import-time side effects in __init__.py"
+delivers_to: null
+expects_from:
+  ac_id: BP-900a-1
+  contract: "13 ac_store files deployed to {target}/.leafcutter/scripts/ac_store/ including __init__.py, making the directory an importable Python package"
+origin_agent: business-analyst-v3
+created: 2026-06-11
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260611-BP-900a-3.md

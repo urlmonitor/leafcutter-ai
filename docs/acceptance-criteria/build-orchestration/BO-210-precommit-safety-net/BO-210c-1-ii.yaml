@@ -1,0 +1,44 @@
+id: BO-210c-1-ii
+readiness: approved
+priority: high
+title: "Judgment-tier failure with no capsule degrades gracefully to a warn-and-proceed fixer"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200b-3.yaml"
+criteria: |
+  Given a commit fails a judgment-tier gating hook,
+  And the ticket contains NO context_capsule for the originating agent (for example the
+    coder never tripped a warn-tier signal, or the ticket predates this feature),
+  When the auto-fix path attempts the originator re-dispatch,
+  Then it does not raise an error and does not block the commit path,
+  And it emits a warning that no capsule was found and proceeds,
+  And it still re-dispatches the originating agent type parsed from the hook output, passing
+    an empty capsule,
+  And the missing capsule is handled exactly like a missing completion_manifest — warn and proceed,
+    never block.
+depends_on: [BO-210c-1]
+doc_links:
+  - path: "templates/skills/precommit-autofix/SKILL.md"
+    relationship: describes
+    status: exists
+  - path: "templates/skills/signoff/SKILL.md"
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Absent capsule must never block; the skill instruction degrades to warn-and-proceed"
+  - "Re-dispatch still occurs with an empty capsule so the originator's identity benefit is preserved"
+delivers_to: null
+expects_from:
+  ac_id: BO-210c-1
+  contract: "The re-dispatch path whose capsule-read step this edge case makes optional"
+origin_agent: business-analyst
+created: 2026-06-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
