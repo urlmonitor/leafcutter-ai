@@ -164,6 +164,7 @@ Choose **Option (a)**. Add `build_ac_store()` to `scripts/build_phases.py` follo
 **ADR authored:** `docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md` establishes the canonical policy: a skill is `portable: true` iff its SKILL.md and all referenced scripts are deployed to consumer installs. This ADR is binding for all future skill authors.
 
 ### 2026-06-17 11:31 — ticket-supervisor (status: ok)
+feedback-id: (submit-failed)
 test_requirements empty — test-writer phase skipped (docs-only or config-only ticket)
 
 ### 2026-06-17 13:00 — documentation-expert (status: ok)

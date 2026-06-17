@@ -1,3 +1,9 @@
+---
+title: "Project Glossary"
+description: "Authoritative glossary of leafcutter-ai project jargon and terminology, seeded by /glossary-bootstrap and maintained by the check_glossary_coverage pre-commit hook."
+type: "reference"
+---
+
 <!--
 GLOSSARY AUTHORING GUIDE (invisible in rendered docs)
 

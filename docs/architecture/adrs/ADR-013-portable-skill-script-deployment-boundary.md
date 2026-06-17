@@ -1,5 +1,6 @@
 ---
 title: "ADR-013: Portable Skill Script Deployment Boundary — Consumer-Facing vs Package-Internal"
+description: "Establishes that a skill is portable: true iff its SKILL.md and all referenced scripts deploy to consumer installs, and adds build_ac_store() to deploy the AC-pipeline scripts accordingly."
 type: "adr"
 status: "accepted"
 created: "2026-06-17"

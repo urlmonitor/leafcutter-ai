@@ -1,5 +1,6 @@
 ---
 title: "How to create a ticket: /plan-feature + /build-ac"
+description: "Guide to the canonical ticket-creation workflow (/plan-feature then /build-ac) that replaced the retired create-ticket.js, with a migration note."
 type: how-to
 category: how-to
 status: active

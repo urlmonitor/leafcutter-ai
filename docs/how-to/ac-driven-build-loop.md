@@ -1,5 +1,6 @@
 ---
 title: "How to use the AC-driven build loop on a consumer install"
+description: "Step-by-step guide to running the AC-driven build loop (/build-ac and ac-scanner) on a consumer install, including the deployed ac_store scripts."
 type: how-to
 category: how-to
 status: active

@@ -1,5 +1,6 @@
 ---
 title: "ADR-012: Retire create-ticket.js — /plan-feature + /build-ac as Canonical Ticket-Creation Path"
+description: "Decision to retire the create-ticket.js workflow via a runtime guard and adopt /plan-feature + /build-ac as the canonical ticket-creation path."
 type: "adr"
 status: "accepted"
 created: "2026-06-16"

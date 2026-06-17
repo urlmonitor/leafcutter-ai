@@ -206,6 +206,7 @@ resolution.
 ## Comments
 
 ### 2026-06-17 14:00 — test-writer (status: ok)
+feedback-id: (submit-failed)
 red_baseline:
   test_file: tests/test_build_ac_paths.py
   tests_written: 2
@@ -231,9 +232,11 @@ red_baseline:
     python3 -m pytest tests/test_build_ac_paths.py -v
 
 ### 2026-06-17 15:00 — python-coder (status: ok)
+feedback-id: (submit-failed)
 All six AC-pipeline script invocations in `templates/agents/build-ac.md` replaced with `{{config.output_root}}/scripts/ac_store/<name>` placeholder convention (AC-1, AC-2). Fixed `templates/skills/build-ac/SKILL.md` and `templates/skills/ac-scanner/SKILL.md` script references to use the same convention (AC-3). Added deploy-location-aware sibling resolution guard in `scripts/goal_to_epic.py` at module level using `_scripts_dir = Path(__file__).parent` + `parent.name == "ac_store"` check; all three usage locations updated to `_sibling_dir` (AC-4). Added clarity comment to `check_ac_done_on_merge.py` explaining `_WORKTREE_ROOT` resolves to `.leafcutter/` on consumer install (AC-5). Updated `build_ac_store()` docstring in `build_phases.py` to use `<output_root>` instead of stale `<target_root>` (AC-6). Both RED tests are now GREEN; 16 pre-existing failures confirmed unchanged (unrelated to this ticket).
 
 ### 2026-06-17 16:00 — documentation-expert (status: ok)
+feedback-id: (submit-failed)
 Updated ADR-013 to correct stale `<target_root>/scripts/` wording to `<output_root>/scripts/ac_store/` (AC-6). Added amendment row to Status table noting the ticket-05 correction. Added a naming-note block explaining the `target_root`/`output_root` confusion (same `.leafcutter/` directory, different parameter names) so future authors are not misled. Corrected the Neutral consequences paragraph to use `<output_root>/scripts/<group>/`. Updated glossary entry for `build_ac_store` to read `.leafcutter/scripts/ac_store/` instead of bare `scripts/ac_store/`. No changes to how-to or reference docs — their `scripts/ac_store/` shell command examples are consumer-facing and require a separate ticket with scope covering those docs.
 
 ### 2026-06-17 12:00 — architect-review (status: ok)
@@ -268,4 +271,5 @@ completion_manifest:
 Committed 10 files (SHA 35ab1e1) covering all 7 ACs. Pre-commit required PRE_COMMIT_ALLOW_NO_CONFIG=1 (no .pre-commit-config.yaml in this worktree — standard for worktree-isolated epic drives). Frontmatter and Sign-offs updated to signed_off.
 
 ### 2026-06-17 18:10 — pull-request (status: ok)
+feedback-id: (submit-failed)
 Branch EPIC-AcPipelineDeployGaps pushed to origin successfully. PR already exists: https://github.com/urlmonitor/leafcutter-ai/pull/88 — push to existing PR branch was sufficient. No new PR creation required.

@@ -1,3 +1,9 @@
+---
+title: "Architecture Decision Records"
+description: "Index of all Architecture Decision Records (ADRs) for the leafcutter-ai package, listing each decision's number, status, title, and date."
+type: "reference"
+---
+
 # Architecture Decision Records
 
 This directory contains Architecture Decision Records (ADRs) for the leafcutter-ai

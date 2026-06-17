@@ -1,3 +1,9 @@
+---
+title: "Glossary Blacklist"
+description: "Terms excluded from the project glossary, managed automatically by the check_glossary_coverage hook and glossary-triage agent to suppress false-positive jargon candidates."
+type: "reference"
+---
+
 # Glossary Blacklist
 
 Terms in this table are excluded from the glossary. Managed automatically by
