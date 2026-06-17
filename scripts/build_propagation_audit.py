@@ -25,17 +25,22 @@ ARCHITECTURE: One public phase function ``propagation_audit``, one guard
     that reference the same missing script into a single ``BrokenRefEntry`` with
     a ``referencing_templates`` tuple, so the suggested action appears exactly
     once per missing path.
+    AC BP-900c-2: ``emit_broken_ref_report_jsonl`` serialises a list of
+    ``BrokenRefEntry`` instances to stderr as JSONL (one JSON object per line)
+    with keys ``"missing_path"``, ``"referencing_template"``, and
+    ``"suggested_action"``, ensuring error output is never written to stdout.
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 import shutil
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import IO, Any
 
 _log = logging.getLogger(__name__)
 
@@ -283,6 +288,45 @@ def build_broken_ref_report(
     return entries
 
 
+def emit_broken_ref_report_jsonl(
+    entries: list[BrokenRefEntry],
+    stream: IO[str] | None = None,
+) -> None:
+    """Emit a broken-reference report to *stream* in JSONL format (AC BP-900c-2).
+
+    Each ``BrokenRefEntry`` is serialised as one JSON object per line with
+    exactly three keys:
+
+    * ``"missing_path"`` — the ``scripts/<path>`` string that is absent from
+      the deployable script set.
+    * ``"referencing_template"`` — the referencing template path(s).  When
+      exactly one template references the missing path this is a string;
+      when multiple templates share the reference it is a JSON array of
+      strings, preserving the full ``referencing_templates`` tuple.
+    * ``"suggested_action"`` — the human-readable corrective action.
+
+    All output is written to *stream* (defaults to ``sys.stderr``) so that
+    the error report is never interleaved with normal stdout build output,
+    satisfying the "stdout contains no error output" requirement.
+
+    Args:
+        entries: List of ``BrokenRefEntry`` instances to serialise. May be
+            empty; in that case the function is a no-op.
+        stream: Writable text stream that receives the JSONL output.
+            Defaults to ``sys.stderr`` when ``None``.
+    """
+    out: IO[str] = sys.stderr if stream is None else stream
+    for entry in entries:
+        refs = entry.referencing_templates
+        ref_value: str | list[str] = refs[0] if len(refs) == 1 else list(refs)
+        record = {
+            "missing_path": entry.missing_path,
+            "referencing_template": ref_value,
+            "suggested_action": entry.suggested_action,
+        }
+        print(json.dumps(record, ensure_ascii=False), file=out)
+
+
 def propagation_audit(
     target_root: Path,
     config: dict[str, Any],
@@ -365,4 +409,5 @@ def propagation_audit(
 # - 2026-06-16 [BP-900b-1-1]: Added EXTERNAL_DEPENDENCY_ALLOWLIST constant and check_broken_references() guard function. Allowlisted refs are treated as resolved and do not appear in the broken-reference list, satisfying AC BP-900b-1-1.
 # - 2026-06-17 [BP-900c-1]: Added BrokenRefEntry dataclass, _suggest_action() helper, and build_broken_ref_report() factory. Each broken-reference entry now carries all three required fields: missing_path, referencing_template, and suggested_action. Satisfies AC BP-900c-1.
 # - 2026-06-17 [BP-900c-1-1]: Consolidated build_broken_ref_report() output: changed BrokenRefEntry.referencing_template (str) to referencing_templates (tuple[str, ...]) and updated the factory to emit one entry per unique missing_path grouping all referencing templates. Suggested action appears exactly once per missing path. Satisfies AC BP-900c-1-1.
+# - 2026-06-17 [BP-900c-2]: Added emit_broken_ref_report_jsonl() function. Serialises a list of BrokenRefEntry instances to stderr as JSONL (one JSON object per line) with keys "missing_path", "referencing_template", and "suggested_action". Error output is never written to stdout, satisfying AC BP-900c-2.
 # ===========================================================================

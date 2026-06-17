@@ -64,7 +64,12 @@ from build_helpers import (
     write_build_manifest,
 )
 from build_glossary import build_glossary
-from build_propagation_audit import propagation_audit, check_broken_references
+from build_propagation_audit import (
+    propagation_audit,
+    check_broken_references,
+    build_broken_ref_report,
+    emit_broken_ref_report_jsonl,
+)
 from build_claude_settings import build_claude_settings
 from build_roadmap_phase import build_roadmap
 from build_placeholder_detection import scan_for_placeholders, format_placeholder_report
@@ -72,6 +77,7 @@ from build_referential_integrity import (
     check_referential_integrity,
     format_integrity_report,
     extract_script_path_refs,
+    extract_script_path_refs_with_sources,
 )
 from build_config_scaffolds import build_config_scaffolds
 from build_ac_store_scaffold import build_ac_store_scaffold
@@ -451,6 +457,12 @@ def _check_script_reference_guard(package_root: Path) -> int:
     project directory, satisfying the AC BP-900b-3 requirement that no partial
     deployment is written to the target when broken references exist.
 
+    When broken references are found, the error report is emitted to stderr as
+    JSONL (one JSON object per line) with keys ``"missing_path"``,
+    ``"referencing_template"``, and ``"suggested_action"`` (AC BP-900c-2).
+    No error output is written to stdout so that piped build output is not
+    polluted.
+
     Args:
         package_root: Absolute path to the leafcutter package root. Used to
             locate ``templates/agents/``, ``templates/skills/``, and the
@@ -462,27 +474,21 @@ def _check_script_reference_guard(package_root: Path) -> int:
     """
     templates_dir = package_root / "templates"
 
-    # Extract script references from source templates (agents + skills).
-    refs = extract_script_path_refs(templates_dir)
+    # Extract script references with source-template provenance for JSONL reporting.
+    refs_to_sources = extract_script_path_refs_with_sources(templates_dir)
 
-    if not refs:
+    if not refs_to_sources:
         return 0
 
     deployable = _get_source_deployable_scripts(package_root)
-    broken = check_broken_references(refs, deployable)
+    entries = build_broken_ref_report(refs_to_sources, deployable)
 
-    if not broken:
+    if not entries:
         return 0
 
-    for ref in sorted(broken):
-        _error(
-            f"[SCRIPT-REF-GUARD] Broken reference: {ref!r} is referenced in a "
-            "template but will not be deployed to the target project."
-        )
-    _error(
-        f"[SCRIPT-REF-GUARD] {len(broken)} broken script reference(s) found. "
-        "Fix the missing script(s) or add them to the build pipeline before re-running."
-    )
+    # Emit structured JSONL to stderr (AC BP-900c-2): all error output on stderr,
+    # nothing on stdout, so piped build output is never polluted.
+    emit_broken_ref_report_jsonl(entries)
     return 1
 
 
@@ -1241,4 +1247,11 @@ if __name__ == "__main__":
 #   and before _run_phases() so no partial deployment is written when broken
 #   references exist. Imports check_broken_references from build_propagation_audit
 #   and extract_script_path_refs from build_referential_integrity. (BP-900b-3)
+# - 2026-06-17 [python-coder/TICKET-20260611-BP-900c-2]: Updated
+#   _check_script_reference_guard() to emit the broken-reference report to stderr
+#   as JSONL (one JSON object per line) using emit_broken_ref_report_jsonl() from
+#   build_propagation_audit. Switched from extract_script_path_refs (set) to
+#   extract_script_path_refs_with_sources (dict) and build_broken_ref_report()
+#   to carry source-template provenance into the JSONL output. No error output is
+#   written to stdout. (BP-900c-2)
 # ====================================================================
