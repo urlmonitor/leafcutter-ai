@@ -478,11 +478,17 @@ async function run({ userInput, agent, parallel, prompt }) {
         feature_branch: BRANCH,
         changed_files: changedFiles,
         instructions:
-          "Classify each failing test as 'regression' (caused by this branch) or " +
-          "'pre_existing' (already failing on main). " +
-          "Return a JSON object with at minimum: { \"blocks_finalization\": true|false, " +
-          "\"regressions\": [\"<test_id>\", ...], \"pre_existing\": [\"<test_id>\", ...], " +
-          "\"summary\": \"<one sentence>\" }",
+          "Classify each failing test into one of four categories: " +
+          "'regression' (caused by this branch), 'stale_test' (covers a deprecated/superseded AC), " +
+          "'pre_existing' (already failing on main before merge), or 'flaky' (intermittently failing). " +
+          "Return a JSON object matching this schema exactly: " +
+          "{ \"triage_report\": [ { \"test_id\": \"<fully-qualified test name>\", " +
+          "\"test_file\": \"<relative path>\", \"covers_tag\": \"<tag or null>\", " +
+          "\"category\": \"regression|stale_test|pre_existing|flaky\", " +
+          "\"ac_status\": \"<active|deprecated|superseded_by|not_found|null>\", " +
+          "\"rationale\": \"<reason>\", \"action\": \"fix_on_branch|update_test|create_tracking_ticket\", " +
+          "\"modified_by_branch\": true|false } ], " +
+          "\"blocks_finalization\": true|false }",
       },
     });
 

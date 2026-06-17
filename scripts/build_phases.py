@@ -11,11 +11,18 @@ BUSINESS CONTEXT: Templates for agents, skills, workflows, rules, hooks, and
     compile_agent_template(), enabling {{my_spawn_allowlist}},
     {{my_skills_used}}, and {{registry_phase_agents_table}} placeholder
     resolution at build time.
-ARCHITECTURE: Ten public phase functions, one per output category:
-    ``build_agents``, ``build_skills``, ``build_workflows``, ``build_hooks``,
+ARCHITECTURE: Eleven public phase functions, one per output category:
+    ``build_agents``, ``build_workflow_scripts``, ``build_ac_store``,
+    ``build_skills``, ``build_workflows``, ``build_hooks``,
     ``build_rules``, ``build_ticket_lifecycle``, ``build_commit_guardian``,
     ``build_precommit_config`` (imported from build_precommit.py),
     ``build_doc_compliance``, ``build_antigravity_instructions``.
+    ``build_ac_store`` deploys the six AC pipeline scripts
+    (scan_ac_store, generate_ticket_from_ac, ac_prioritizer, mark_ac_done,
+    build_ac_mode_detection, goal_to_epic) from their source locations into
+    ``templates/scripts/ac_store/`` and then to
+    ``<target_root>/scripts/ac_store/``, making ``portable: true`` AC-pipeline
+    skills functional on consumer installs (ADR-013).
     All functions share the same signature (target_root, config, dry_run, force)
     and return a file-written count. File-write helpers come from build.py's
     ``write_file`` and ``should_overwrite``. The ``force`` parameter defaults
@@ -350,7 +357,7 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
         print("Workflow scripts: 0 installed (templates/workflows-js/ absent)")
         return 0
 
-    output_dir = target_root / ".claude" / "workflows"
+    output_dir = target_root / "workflows"
     written = 0
     unchanged = 0
 
@@ -382,6 +389,112 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
 
     if not dry_run:
         print(f"Workflow scripts: {written} installed ({unchanged} unchanged)")
+
+    return written
+
+
+def build_ac_store(target_root: Path, config: dict[str, Any],
+                   dry_run: bool, force: bool) -> int:
+    """Deploy AC pipeline scripts to ``<output_root>/scripts/ac_store/``.
+
+    Copies the six AC-pipeline Python scripts from their source locations in
+    the package tree and deploys them to ``<output_root>/scripts/ac_store/``
+    (i.e. ``.leafcutter/scripts/ac_store/`` on a default consumer build).
+    This makes the ``portable: true`` skills ``ac-scanner`` and ``build-ac``
+    functional on consumer installs by ensuring their runtime dependencies are
+    present alongside the skill SKILL.md files deployed by ``build_skills``.
+
+    Note: ``target_root`` IS the output root (``.leafcutter/`` by default).
+    Scripts land at ``target_root / "scripts" / "ac_store" /`` which resolves
+    to ``.leafcutter/scripts/ac_store/``.  The ``{{config.output_root}}``
+    placeholder in agent/skill templates resolves to this same root, so
+    script paths like ``{{config.output_root}}/scripts/ac_store/<name>.py``
+    correctly reference the deployed scripts on consumer installs.
+
+    The six source → destination mappings are:
+
+    - ``scripts/ac_store/scan_ac_store.py``
+      → ``<output_root>/scripts/ac_store/scan_ac_store.py``
+    - ``scripts/ac_store/generate_ticket_from_ac.py``
+      → ``<output_root>/scripts/ac_store/generate_ticket_from_ac.py``
+    - ``scripts/ac_store/ac_prioritizer.py``
+      → ``<output_root>/scripts/ac_store/ac_prioritizer.py``
+    - ``scripts/ac_store/mark_ac_done.py``
+      → ``<output_root>/scripts/ac_store/mark_ac_done.py``
+    - ``scripts/build_ac_mode_detection.py``
+      → ``<output_root>/scripts/ac_store/build_ac_mode_detection.py``
+    - ``scripts/goal_to_epic.py``
+      → ``<output_root>/scripts/ac_store/goal_to_epic.py``
+
+    Files are copied verbatim (no template compilation).  The
+    compare-before-write guard prevents mtime churn on unchanged files.
+
+    Args:
+        target_root: Absolute path to the target project root directory.
+        config: Merged config dictionary (used for interface parity;
+            not consumed by this phase — scripts are copied verbatim).
+        dry_run: When True, logs intent but writes nothing.
+        force: When True, overwrites existing files.
+
+    Returns:
+        Count of files written (or that would be written in dry-run mode).
+
+    # DECISION HISTORY
+    # - 2026-06-17 [python-coder/EPIC-AcPipelineDeployGaps/03]:
+    #   Added build_ac_store() phase per ADR-013 (Option a). Closes the
+    #   portable-skill/missing-script gap for ac-scanner and build-ac.
+    #   (#EPIC-AcPipelineDeployGaps/03)
+    """
+    ac_store_src = PACKAGE_ROOT / "scripts" / "ac_store"
+    scripts_src = PACKAGE_ROOT / "scripts"
+
+    # The six files to deploy: (source_path, destination_filename)
+    deploy_map = [
+        (ac_store_src / "scan_ac_store.py",            "scan_ac_store.py"),
+        (ac_store_src / "generate_ticket_from_ac.py",  "generate_ticket_from_ac.py"),
+        (ac_store_src / "ac_prioritizer.py",            "ac_prioritizer.py"),
+        (ac_store_src / "mark_ac_done.py",              "mark_ac_done.py"),
+        (scripts_src / "build_ac_mode_detection.py",    "build_ac_mode_detection.py"),
+        (scripts_src / "goal_to_epic.py",               "goal_to_epic.py"),
+    ]
+
+    output_dir = target_root / "scripts" / "ac_store"
+    written = 0
+
+    for src_file, dest_name in deploy_map:
+        if not src_file.is_file():
+            _log.warning(
+                "build_ac_store: source script not found, skipping: %s", src_file
+            )
+            continue
+
+        output_path = output_dir / dest_name
+
+        if not _should_overwrite(output_path, force):
+            continue
+
+        if _files_content_identical(src_file, output_path):
+            global _uptodate_count  # noqa: PLW0603
+            _uptodate_count += 1
+            continue
+
+        if dry_run:
+            print(f"  [DRY-RUN] would copy scripts/ac_store/{dest_name}")
+            written += 1
+        else:
+            try:
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src_file, output_path)
+            except OSError as exc:
+                _log.warning(
+                    "build_ac_store: failed to copy %s → %s: %s",
+                    src_file,
+                    output_path,
+                    exc,
+                )
+                raise
+            print(f"  scripts/ac_store/{dest_name}")
+            written += 1
 
     return written
 
@@ -1599,4 +1712,10 @@ def clean_stale_artifacts(
 #   target_root/".claude"/"workflows" to match .claude/ layout convention and
 #   fix unit_tests/test_build_workflow_phase.py assertions.
 #   (#TICKET-20260604-FixFailingBuildPipelineTests)
+# - 2026-06-17 [python-coder/EPIC-AcPipelineDeployGaps/03]: Added
+#   build_ac_store() phase. Copies six AC pipeline scripts
+#   (scan_ac_store.py, generate_ticket_from_ac.py, ac_prioritizer.py,
+#   mark_ac_done.py, build_ac_mode_detection.py, goal_to_epic.py) to
+#   <target_root>/scripts/ac_store/, closing the portable-skill/missing-script
+#   gap for ac-scanner and build-ac per ADR-013. (#EPIC-AcPipelineDeployGaps/03)
 # ====================================================================

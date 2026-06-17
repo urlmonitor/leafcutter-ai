@@ -28,6 +28,13 @@ import yaml
 # ---------------------------------------------------------------------------
 
 _SCRIPT_DIR = Path(__file__).resolve().parent
+# _WORKTREE_ROOT resolution path:
+#   This hook lives at .leafcutter/scripts/commit_guardian/hooks/check_ac_done_on_merge.py
+#   on a consumer install (deployed by build.py into <project>/.leafcutter/).
+#   Three .parent steps: hooks/ → commit_guardian/ → scripts/ → .leafcutter/
+#   So _WORKTREE_ROOT resolves to the .leafcutter/ directory itself, and
+#   _MARK_AC_DONE resolves to .leafcutter/scripts/ac_store/mark_ac_done.py —
+#   which is exactly where build_ac_store() deploys the script (AC-5 clarity note).
 _WORKTREE_ROOT = _SCRIPT_DIR.parent.parent.parent
 _MARK_AC_DONE = _WORKTREE_ROOT / "scripts" / "ac_store" / "mark_ac_done.py"
 

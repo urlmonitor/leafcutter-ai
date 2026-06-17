@@ -84,7 +84,7 @@ GOAL_MESSAGE_TEMPLATE = "{id} is a goal — generating epic from all leaf ACs be
 After printing the message, the agent calls `goal_to_epic.py`:
 
 ```bash
-python3 scripts/goal_to_epic.py --ac <id> 2>/tmp/build_ac_goal_to_epic_err.txt
+python3 {{config.output_root}}/scripts/ac_store/goal_to_epic.py --ac <id> 2>/tmp/build_ac_goal_to_epic_err.txt
 ```
 
 The epic flow includes:

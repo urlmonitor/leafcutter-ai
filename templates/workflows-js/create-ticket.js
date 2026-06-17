@@ -1,6 +1,36 @@
 /**
  * create-ticket.js — Claude Code Workflow script
  *
+ * ╔══════════════════════════════════════════════════════════════════════════╗
+ * ║  RETIRED — see ADR-012-retire-create-ticket-js.md                       ║
+ * ║                                                                          ║
+ * ║  This workflow script is retired as of EPIC-AcPipelineDeployGaps        ║
+ * ║  (2026-06-16). It was written against the pre-v3 business-analyst       ║
+ * ║  contract and depends on fields that the v3 business-analyst no longer   ║
+ * ║  returns:                                                                ║
+ * ║    • routing_decision — never set (always undefined, gate never fires)   ║
+ * ║    • open_questions   — undefined; user-prompt gate never fires          ║
+ * ║    • requires_architect_review — undefined; defaults truthy every run    ║
+ * ║    • ticket_path      — undefined; no ticket file is ever written        ║
+ * ║                                                                          ║
+ * ║  ADR-010 (Accepted, 2026-06-05) inverted the source-of-truth to the     ║
+ * ║  AC store and named /build-ac as the authoritative ticket-creation path. ║
+ * ║  Patching this script to restore the stale contract would re-entrench    ║
+ * ║  a parallel path that ADR-010 explicitly superseded.                     ║
+ * ║                                                                          ║
+ * ║  CANONICAL REPLACEMENT:                                                  ║
+ * ║    1. /plan-feature  — run the PO → BA → IT PO authoring pipeline to    ║
+ * ║                         produce AC YAML in docs/acceptance-criteria/     ║
+ * ║    2. /build-ac      — scan the AC store, pick the next ready leaf AC,   ║
+ * ║                         generate a fully-wired ticket file, and hand     ║
+ * ║                         off to /build-feature for implementation.        ║
+ * ║                                                                          ║
+ * ║  See: docs/architecture/adrs/ADR-012-retire-create-ticket-js.md         ║
+ * ║       docs/how-to/ (search "ticket creation" for the canonical guide)   ║
+ * ╚══════════════════════════════════════════════════════════════════════════╝
+ *
+ * --- ORIGINAL HEADER (retained for archaeological reference) ---
+ *
  * Replaces the BA → architect-review agent chain (which violated the
  * depth-1 nesting limit) with a flat sequential/parallel dispatch pattern
  * where every agent call is at depth 1.
@@ -48,6 +78,32 @@ export const meta = {
  */
 async function run({ userInput, currentDepth = 1, agent, prompt }) {
   // -------------------------------------------------------------------------
+  // RETIREMENT GUARD — this script is retired; emit a clear error and exit.
+  //
+  // This file is retained on disk as a reference artefact (it documents the
+  // pre-v3 contract for archaeological purposes and is cited by ADR-012).
+  // Any invocation — direct or via dispatch — must fail loudly so there is no
+  // silent-failure mode.
+  //
+  // See docs/architecture/adrs/ADR-012-retire-create-ticket-js.md
+  // -------------------------------------------------------------------------
+  return {
+    status: "error",
+    exit_code: 1,
+    message:
+      "create-ticket.js is retired. Use /plan-feature + /build-ac instead.\n\n" +
+      "  /plan-feature  — author AC YAML (PO → BA → IT PO pipeline)\n" +
+      "  /build-ac      — generate a ticket from the AC store and build it\n\n" +
+      "See docs/architecture/adrs/ADR-012-retire-create-ticket-js.md for rationale.",
+  };
+
+  // -------------------------------------------------------------------------
+  // DEAD CODE — the implementation below is intentionally unreachable.
+  // Retained for archaeological reference; the pre-v3 field contract it
+  // consumed (routing_decision, open_questions, requires_architect_review,
+  // ticket_path) no longer exists in the v3 business-analyst return shape.
+  // -------------------------------------------------------------------------
+
   // Step 1 — Spawn business-analyst at depth 1
   // -------------------------------------------------------------------------
   const baResult = await agent({
