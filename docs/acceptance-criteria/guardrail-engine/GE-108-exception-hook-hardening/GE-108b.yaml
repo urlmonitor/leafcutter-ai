@@ -1,0 +1,85 @@
+id: GE-108b
+readiness: approved
+priority: medium
+title: "Blind-catch handler is cleared only by genuine WARNING-or-higher logging"
+component: guardrail-engine
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-108-exception-hook-hardening/GE-108.yaml"
+criteria: |
+  Scenario: A user-defined function that merely shares a logger-like name does not clear the handler
+    Given a production Python file with a blind `except Exception:` handler
+      whose body's only call is to a locally defined function named `error()`,
+      `info()`, or `debug()` that is not a project logger,
+    When the exception-handling guard analyses the file,
+    Then it emits a silent-handler (BLE001) violation for that handler,
+    Because a name coincidence is not genuine WARNING-or-higher logging.
+
+  Scenario Outline: Logging below the WARNING threshold does not clear the handler
+    Given a production Python file with a blind `except Exception:` handler
+      whose body's only logging call is `<below_threshold_call>` and which does
+      not re-raise,
+    When the exception-handling guard analyses the file,
+    Then it emits a silent-handler (BLE001) violation for that handler,
+    Because the Error Handling Policy requires logging at WARNING or higher.
+
+    Examples:
+      | below_threshold_call |
+      | logger.debug(...)    |
+      | logger.info(...)     |
+      | print(...)           |
+
+  Scenario Outline: Genuine WARNING-or-higher logging clears the handler
+    Given a production Python file with a blind `except Exception:` handler
+      whose body calls `<accepted_call>`,
+    When the exception-handling guard analyses the file,
+    Then no silent-handler (BLE001) violation is emitted for that handler.
+
+    Examples:
+      | accepted_call          |
+      | logger.warning(...)    |
+      | logger.error(...)      |
+      | logger.critical(...)   |
+      | logger.exception(...)  |
+
+  Scenario: Re-raising clears the handler regardless of logging level
+    Given a production Python file with a blind `except Exception:` handler
+      whose body re-raises the exception (bare `raise` or `raise NewError from
+      exc`) and performs no WARNING-or-higher logging,
+    When the exception-handling guard analyses the file,
+    Then no silent-handler (BLE001) violation is emitted for that handler.
+depends_on:
+  - GE-108
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-108-exception-hook-hardening/GE-108.yaml"
+    relationship: parent
+    status: exists
+  - path: "templates/commit-guardian/check_exception_handling.py"
+    relationship: specifies
+    status: exists
+  - path: "docs/architecture/adrs/ADR-014-exception-guard-enforcement-scope.md"
+    relationship: specifies
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "ADR-FIRST: An accepted ADR documenting the enforcement-scope change (requiring genuine WARNING-or-higher logging — not DEBUG/INFO/print and not a mere name coincidence — for a blind-catch handler to count as non-silent) and its false-positive tradeoffs MUST exist before implementation begins. The doc_link ADR-014-exception-guard-enforcement-scope.md is currently status: planned; authoring it is a blocking prerequisite for this leaf."
+  - "BUILD-CONVENTION: The committable source of truth is templates/commit-guardian/check_exception_handling.py. The scripts/commit_guardian/ copy is gitignored build output synced by `python leafcutter/scripts/build.py`. The fix MUST edit the template file and then rebuild; do NOT edit scripts/commit_guardian/ directly (ADR-001 self-hosting boundary)."
+  - "AST-ONLY: The logging-level / real-logger heuristic must remain purely AST-based — no regex fallback or text matching."
+  - "REAL-LOGGER RESOLUTION over name matching: the heuristic must distinguish a genuine logger call at WARNING-or-higher from a same-named user-defined function. Lexical name matching alone (the current _LOG_CALL_NAMES membership test) is insufficient to clear the handler."
+  - "THRESHOLD: Only WARNING, ERROR, CRITICAL, and exception-level logging clear the handler. DEBUG, INFO, and print() must NOT clear it. A bare or wrapped re-raise clears it regardless of logging level (consistent with CLAUDE.md Error Handling Policy Rule 3)."
+  - "SELF-HOSTING NON-REGRESSION: After the change, leafcutter's own production code must still commit cleanly — the stricter heuristic must not raise new BLE001 violations against handlers that already log at WARNING-or-higher or re-raise."
+  - "The heuristic must be deterministic and idempotent: repeated analysis of the same file yields the same BLE001 outcome."
+delivers_to: null
+expects_from:
+  ac_id: GE-108
+  contract: "The check_exception_handling guard's blind-handler clearance logic: _handler_reraises_or_logs() and the _LOG_CALL_NAMES set in check_exception_handling.py, which decide whether a blind except clears the BLE001 violation."
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-Exceptionhandlingguardenforcestheerror/02_TICKET-20260617-GE-108b.md

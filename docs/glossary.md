@@ -45,3 +45,6 @@ The end-to-end process for producing a ticket file from a feature request. The c
 
 ### build_ac_store
 A `build.py` deployment phase (`build_ac_store()` in `scripts/build_phases.py`) that copies the six AC pipeline scripts from the leafcutter-ai source tree into the consumer project's `.leafcutter/scripts/ac_store/` directory (the `output_root` path, not the project-root `scripts/` directory). Added in EPIC-AcPipelineDeployGaps to close the portability gap between the `ac-scanner` and `build-ac` skills (marked `portable: true` in `skill_registry.json`) and their dependency scripts. Without this phase running, the skills are deployed as SKILL.md files but their scripts are absent, causing runtime failures. See ADR-013 for the canonical definition of `portable: true`.
+
+### io_boundary_calls
+A configuration field in `commit_guardian.json` under `exception_handling` that specifies the set of external I/O function calls (e.g., `subprocess.run`, `requests.get`, `cursor.execute`, `open()`) that must be wrapped in typed `try/except` blocks in production code. The code table in `check_exception_handling.py` and this JSON spec must be kept in parity; see ADR-014 Decision 1.
