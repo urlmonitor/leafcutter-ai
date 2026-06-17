@@ -1070,7 +1070,7 @@ class TestFailOpenExceptionHandling(unittest.TestCase):
         """AC-20: main() wrapped in try/except Exception; unexpected error → exits 0."""
         # We verify the main() function has error handling by checking the hook
         # exits 0 even when given a corrupt environment
-        with tempfile.TemporaryDirectory() as tmpdir:
+        with tempfile.TemporaryDirectory():
             # Simulate an unexpected error by providing a nonsensical HOOK_ROOT
             result = subprocess.run(
                 [sys.executable, str(_HOOK_SCRIPT)],
@@ -1094,7 +1094,7 @@ class TestFailOpenExceptionHandling(unittest.TestCase):
     def test_ac20_exception_stderr_has_prefix(self):
         # covers: ACS-400e-1-i
         """AC-20: exception message printed to stderr with [check-ac-governance] prefix."""
-        with tempfile.TemporaryDirectory() as tmpdir:
+        with tempfile.TemporaryDirectory():
             result = subprocess.run(
                 [sys.executable, str(_HOOK_SCRIPT)],
                 env={

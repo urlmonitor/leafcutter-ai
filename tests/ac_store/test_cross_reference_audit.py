@@ -62,7 +62,6 @@ def _run_audit(
     if extra_args:
         cmd.extend(extra_args)
 
-    env_override: dict | None = None
     if logs_dir is not None:
         # We cannot pass logs_dir directly since the script hardcodes debugging/logs/
         # relative to worktree root. For test isolation we use a worktree that is
@@ -305,7 +304,6 @@ class TestReportWrittenToLogs:
         """After any run, a JSON report is written to debugging/logs/."""
         ac_dir = tmp_path / "acs"
         tickets_dir = tmp_path / "tickets"
-        logs_dir = tmp_path / "debugging" / "logs"
 
         # Minimal setup — no matches needed to verify report is created
         _write_ac(ac_dir, "ACS-500.yaml", {
@@ -365,8 +363,6 @@ class TestApplyIdempotent:
         """AC already has implemented_by → --apply does not duplicate the entry."""
         ac_dir = tmp_path / "acs"
         tickets_dir = tmp_path / "tickets"
-
-        existing_ticket_path = str(tmp_path / "tickets" / "99_done" / "TICKET-already-linked.md")
 
         idempotent_criteria = (
             "Given a YAML file with implemented_by already containing ticket T, "

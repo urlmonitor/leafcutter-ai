@@ -83,7 +83,7 @@ class TestGenerateTicketsForLeaves:
             return str(ticket)
 
         with patch("goal_to_epic._call_generate_ticket_from_ac", side_effect=_mock_generate) as mock_gen:
-            ticket_paths = generate_tickets_for_leaves(leaf_ids, ac_root, tickets_root)
+            generate_tickets_for_leaves(leaf_ids, ac_root, tickets_root)
 
         assert mock_gen.call_count == len(leaf_ids), (
             f"Expected exactly {len(leaf_ids)} calls, got {mock_gen.call_count}"

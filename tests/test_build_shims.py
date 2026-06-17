@@ -48,7 +48,7 @@ class TestInstallShimsSymlink(unittest.TestCase):
             (output_root / "skills" / "test.md").write_text("skill")
 
             config = {"shim_strategy": "symlink", "output_root": ".leafcutter"}
-            results = install_shims(target, output_root=output_root, config=config)
+            install_shims(target, output_root=output_root, config=config)
 
             agents_shim = target / ".claude" / "agents"
             self.assertTrue(agents_shim.is_symlink() or agents_shim.is_dir())

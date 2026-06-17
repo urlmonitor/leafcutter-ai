@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
 from pathlib import Path
 
@@ -64,7 +63,6 @@ def _insert_fields(fm_text: str, fields: dict) -> str:
     except yaml.YAMLError:
         fm = {}
 
-    lines = fm_text.rstrip().splitlines()
     appended: list[str] = []
     for key, value in fields.items():
         if key not in fm or fm[key] is None:

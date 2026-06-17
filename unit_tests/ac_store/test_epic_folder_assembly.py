@@ -145,7 +145,7 @@ class TestZeroLeafErrorGuard:
         inbox_dir = tmp_path / "tickets" / "00_inbox"
         inbox_dir.mkdir(parents=True, exist_ok=True)
 
-        with pytest.raises((ZeroLeafError, ValueError, SystemExit)) as exc_info:
+        with pytest.raises((ZeroLeafError, ValueError, SystemExit)):
             assemble_epic_folder([], "EmptyTree", inbox_dir)
 
     def test_ac3i_zero_leaves_creates_no_folder(self, tmp_path: Path) -> None:

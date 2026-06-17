@@ -20,7 +20,6 @@ Source ticket: EPIC-ACDrivenDevelopment/08_create_ac_workflow.md
 
 from __future__ import annotations
 
-import os
 from typing import Any, Callable
 
 
