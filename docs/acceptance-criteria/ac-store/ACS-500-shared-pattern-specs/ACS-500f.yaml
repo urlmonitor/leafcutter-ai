@@ -34,7 +34,7 @@ doc_links:
     status: exists
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-17
 readiness: draft
 priority: high

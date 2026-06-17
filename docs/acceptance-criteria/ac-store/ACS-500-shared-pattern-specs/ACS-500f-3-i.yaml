@@ -33,7 +33,7 @@ delivers_to: null
 expects_from:
   ac_id: ACS-500f-3
   contract: "The widened ac_store_schema.json whose tightened-but-still-strict boundaries this edge case exercises"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-17
 readiness: draft
 priority: medium

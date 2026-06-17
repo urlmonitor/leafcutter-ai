@@ -40,7 +40,7 @@ assigned_agent: python-coder
 estimated_complexity: M
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-17
 readiness: draft
 priority: high
@@ -51,7 +51,7 @@ notes: |
   preservation checks, but the deployed scripts/commit_guardian/commit_guardian.json
   hooks_manifest registers only check-ac-pattern-refs (check_ac_pattern_refs.py) —
   it does NOT register the schema hook. So the binding-completeness and
-  field-preservation guarantees that the business-analyst-v3 and it-po-v3 templates
+  field-preservation guarantees that the business-analyst and it-po templates
   tell agents to rely on are currently PROMPT-ENFORCED ONLY, not mechanically
   enforced at commit time. This is the integrity gap (priority high).
 amended_by: []

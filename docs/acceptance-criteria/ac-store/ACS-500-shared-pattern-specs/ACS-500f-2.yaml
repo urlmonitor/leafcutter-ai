@@ -31,7 +31,7 @@ criteria: |
     pattern_slots-only form).
 depends_on: [ACS-500f]
 doc_links:
-  - path: templates/agents/business-analyst-v3.md
+  - path: templates/agents/business-analyst.md
     relationship: describes
     status: exists
   - path: scripts/commit_guardian/check_ac_pattern_refs.py
@@ -41,12 +41,12 @@ assigned_agent: workflow-architect
 estimated_complexity: S
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-17
 readiness: draft
 priority: medium
 notes: |
-  ACS-500 post-implementation spot-check, GAP B. business-analyst-v3.md §1 Step 7
+  ACS-500 post-implementation spot-check, GAP B. business-analyst.md §1 Step 7
   detects an existing pattern AC by checking only that pattern_slots is present and
   non-null. The deployed hook check_ac_pattern_refs.py (_has_parameterized_slots)
   recognizes a pattern AC by EITHER non-empty pattern_slots OR a {word}-style
@@ -54,7 +54,7 @@ notes: |
   placeholders in criteria is silently skipped by the BA's pattern-first inventory,
   defeating the pattern-first reuse check for that pattern. The fix aligns the BA
   predicate with the hook's _has_parameterized_slots definition. Assigned to
-  workflow-architect because the change edits the business-analyst-v3 agent template.
+  workflow-architect because the change edits the business-analyst agent template.
 amended_by: []
 superseded_by: null
 covered_by: []
