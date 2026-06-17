@@ -1,6 +1,6 @@
 ---
 title: "Class B resolution: deploy or allowlist each undeployed-but-referenced script"
-status: in_progress
+status: done
 components:
   - build_pipeline
   - bootstrap_installer
@@ -22,7 +22,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 03: Class B Resolution — Deploy or Allowlist Each Undeployed-But-Referenced Script
@@ -135,7 +135,7 @@ Scenario: guard exits 0 after all Class B scripts resolved (AC-4)
 - [x] test-runner — 2026-06-17 16:30
 - [x] pr-reviewer — 2026-06-17 19:15
 - [x] commit — 2026-06-17 20:30
-- [ ] pull-request
+- [x] pull-request — 2026-06-17 20:45
 
 ## Comments
 
@@ -228,6 +228,14 @@ completion_manifest:
   ac4_guard_exits_zero_verified: true
 
 Pass 3 verification: the DECISION HISTORY block in `scripts/build_propagation_audit.py` (lines 396-405) no longer contains any "if absent, skip" or graceful-skip claim for `new_arch_doc.py` or `known_failing_tests.py`. Only `epic_lock.py` retains the "if absent, skip" language, which is accurate per building-epics SKILL. The inline allowlist comments for all three entries are factually correct and internally consistent with the DECISION HISTORY. All 4 ACs remain satisfied: real-gap detection is preserved (AC BP-900-Fix-3), all new allowlist entries carry accurate written justification (AC BP-900-Fix-5), deploy phases bring scripts to consumer installs (AC-3), and the clean build exits 0 (AC-4). No high-confidence or medium-confidence findings. Zero regressions introduced by the mechanical DECISION HISTORY correction.
+
+### 2026-06-17 20:45 — pull-request (status: ok)
+feedback-id: fb_2026-06-17_0aa17783
+completion_manifest:
+  branch_pushed: true
+  pr_created: false
+  pr_body_complete: false
+No new PR was created — ticket 03 is part of the existing epic PR #97 (one PR per epic policy). Commits d9535eb and 8beabb0 were pushed to origin/EPIC-BuildGuardFalsePositive, updating PR #97. PR URL: https://github.com/urlmonitor/leafcutter-ai/pull/97. This is the last needed agent; status flipped to done.
 
 ### 2026-06-17 20:30 — commit (status: ok)
 feedback-id: fb_2026-06-17_c9ee70c4
