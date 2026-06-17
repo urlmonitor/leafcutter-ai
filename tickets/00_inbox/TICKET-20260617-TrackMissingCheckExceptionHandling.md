@@ -160,6 +160,14 @@ completion_manifest:
   pr_body_complete: true
 PR #95 opened at https://github.com/urlmonitor/leafcutter-ai/pull/95. Branch `feature/trackmissingcheckexceptionhandling` pushed to origin and PR created with title "feat(commit-guardian): implement check_exception_handling.py AST hook". All 7 ACs satisfied; pull-request is the last needed agent — ticket status flipped to done.
 
+### 2026-06-17 19:30 — status-checker (status: ok)
+feedback-id: fb_2026-06-17_17db8f2d
+completion_manifest:
+  state_verified: true
+  git_history_checked: true
+  status_reported: true
+auto-closed: matched merge commit c0b93b9 (feat(commit-guardian): implement check_exception_handling.py AST hook (#95), merged 2026-06-17T19:18:08Z). All agents signed off or not_needed. Added merged_pr: 95 to frontmatter. Moving ticket to tickets/99_done/.
+
 ## Implementation Tasks
 
 - [x] Read `scripts/commit_guardian/commit_guardian.json` `exception_handling` section to extract the full spec.
