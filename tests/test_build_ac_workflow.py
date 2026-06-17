@@ -17,9 +17,8 @@ import json
 import subprocess
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
-import pytest
 
 # Paths used by the build-ac agent scripts
 SCRIPTS_ROOT = Path(__file__).parent.parent / "scripts" / "ac_store"

@@ -17,12 +17,10 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import logging
 import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 # ---------------------------------------------------------------------------
 # Bootstrap: resolve harvest_learnings module without relying on installed pkg

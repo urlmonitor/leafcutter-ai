@@ -199,7 +199,6 @@ class TestResolveRepoRootWorktreeSupport(unittest.TestCase):
                 with patch.object(_mod, '__file__', str(fake_script)):
                     # Reload the function with our patched __file__
                     # Direct test: call the function with __file__ pointing to fake_script
-                    import types
                     resolved_self = fake_script.resolve()
                     p2 = resolved_self.parents[2]
                     # Verify that p2/.git exists (it's a file) and is NOT a dir

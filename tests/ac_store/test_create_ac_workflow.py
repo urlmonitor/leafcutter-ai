@@ -11,11 +11,8 @@ Source ACs: ACD-300, ACD-300a, ACD-300a-1..3, ACD-300b..d and sub-ACs, TKT-100g
 
 from __future__ import annotations
 
-import json
-import sys
-import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock
 
 import pytest
 

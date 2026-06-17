@@ -32,7 +32,6 @@ ARCHITECTURE: Tests call the hook module's internal functions directly (not via
 from __future__ import annotations
 
 import importlib.util
-import io
 import json
 import os
 import subprocess

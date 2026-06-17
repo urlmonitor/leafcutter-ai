@@ -8,11 +8,9 @@ COVERS: ACD-1200a-1, ACD-1200a-1-i
 from __future__ import annotations
 
 import sys
-import tempfile
 import time
 from pathlib import Path
 
-import pytest
 import yaml
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent

@@ -15,10 +15,8 @@ from __future__ import annotations
 
 import subprocess
 import sys
-import textwrap
 from pathlib import Path
 
-import pytest
 import yaml
 
 WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -34,7 +32,7 @@ def _make_ac_yaml(ac_root: Path, ac_id: str, work_status: str = "todo") -> Path:
         "work_status": work_status,
         "title": f"Test AC {ac_id}",
         "description": "A test acceptance criterion",
-        "criteria": [f"Given ... When ... Then ..."],
+        "criteria": ["Given ... When ... Then ..."],
     }
     ac_file.write_text(yaml.dump(ac_data), encoding="utf-8")
     return ac_file
