@@ -39,7 +39,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 user_facing_surface: pre_commit_hook
 actuation_contract: "Staged docs file with missing frontmatter fields is corrected in-place and re-staged; commit exits 0. Exception-handling violating file prints AUTOFIX_AGENT line."
@@ -292,12 +292,17 @@ placeholder_signature: "TODO|PLACEHOLDER"
 - [x] python-coder — 2026-06-17 12:45
 - [x] test-runner — 2026-06-17 13:30
 - [x] pr-reviewer — 2026-06-17 14:30
-- [ ] commit
+- [x] commit — 2026-06-17
 - [ ] pull-request
 
 ## Comments
 
 _(Append-only log — leave blank when authoring.)_
+
+### 2026-06-17 — commit (status: ok)
+feedback-id: fb_2026-06-17_a4018e9f
+sha: 52ae53e
+Committed 7 files (3 new, 4 modified): transform_doc_frontmatter.py, transform_description_field.py, check_exception_handling.py, commit_guardian.json (scripts + templates), and unit test file. 1,557 insertions, 21 deletions. All 12 tests green, all 7 ACs covered.
 
 ### 2026-06-17 14:30 — pr-reviewer (status: ok)
 feedback-id: fb_2026-06-17_3fa76403
