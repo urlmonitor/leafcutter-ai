@@ -186,3 +186,112 @@ class TestTraverseAcTreeL1Scope:
         assert result == ["ACD-050a"], (
             f"A leaf L1 used as scope root should return only itself, got {result}"
         )
+
+
+# ---------------------------------------------------------------------------
+# ACD-1200a-9-i: deduplication — leaf reachable by multiple covered_by paths
+# ---------------------------------------------------------------------------
+
+
+def _write_ac_explicit(
+    ac_root: Path,
+    ac_id: str,
+    level: str,
+    covered_by: list[str],
+) -> None:
+    """Write a minimal AC YAML with an explicit *level* value (not inferred)."""
+    parts = ac_id.split("-")
+    subdir = ac_root / "-".join(parts[:2]) if len(parts) >= 2 else ac_root
+    subdir.mkdir(parents=True, exist_ok=True)
+    path = subdir / f"{ac_id}.yaml"
+    data: dict = {
+        "id": ac_id,
+        "title": f"Test AC {ac_id}",
+        "level": level,
+        "status": "active",
+        "work_status": "todo",
+        "covered_by": covered_by,
+    }
+    path.write_text(yaml.dump(data, allow_unicode=True), encoding="utf-8")
+
+
+class TestTraverseDeduplication:
+    """ACD-1200a-9-i: traverse_ac_tree must emit each leaf id exactly once
+    even when that leaf is reachable by multiple covered_by paths.
+
+    Bug symptom: _dfs_collect_leaves has no visited/seen guard, so a leaf
+    whose id appears in covered_by at multiple levels is appended to the
+    result list once per visit, producing duplicates.
+
+    Tree shape that triggers the bug (mirrors ACD-1200a-9-i criteria exactly):
+        ROOT-002         L0  covered_by: [ROOT-002a]
+        ROOT-002a        L1  covered_by: [ROOT-002a-1, ROOT-002a-1-i, ROOT-002a-2]
+                                          ^--- lists the grandchild directly too
+        ROOT-002a-1      L2  covered_by: [ROOT-002a-1-i]
+        ROOT-002a-1-i    L3  covered_by: []   <-- visited twice in buggy code
+        ROOT-002a-2      L2  covered_by: []
+    """
+
+    def _build_dedup_tree(self, ac_root: Path) -> None:
+        """Populate *ac_root* with the five-node test tree."""
+        _write_ac_explicit(ac_root, "ROOT-002", "L0", ["ROOT-002a"])
+        _write_ac_explicit(
+            ac_root,
+            "ROOT-002a",
+            "L1",
+            # L1 lists grandchild ROOT-002a-1-i directly in addition to its
+            # L2 children — this is the redundant path that causes the duplicate.
+            ["ROOT-002a-1", "ROOT-002a-1-i", "ROOT-002a-2"],
+        )
+        _write_ac_explicit(ac_root, "ROOT-002a-1", "L2", ["ROOT-002a-1-i"])
+        _write_ac_explicit(ac_root, "ROOT-002a-1-i", "L3", [])
+        _write_ac_explicit(ac_root, "ROOT-002a-2", "L2", [])
+
+    def test_ac_acd1200a9i_no_duplicate_leaves(self, tmp_path: Path) -> None:
+        # covers: ACD-1200a-9-i
+        """ACD-1200a-9-i: result list must contain no duplicate leaf ids.
+
+        The buggy _dfs_collect_leaves emits ROOT-002a-1-i twice because:
+          1. ROOT-002a's covered_by lists ROOT-002a-1-i directly (first visit).
+          2. ROOT-002a-1's covered_by also lists ROOT-002a-1-i (second visit via L2).
+        A visited/seen guard must prevent the second emission.
+        """
+        self._build_dedup_tree(tmp_path)
+        result = traverse_ac_tree("ROOT-002", tmp_path)
+
+        assert len(result) == len(set(result)), (
+            f"traverse_ac_tree returned duplicate leaf ids: {result}"
+        )
+
+    def test_ac_acd1200a9i_grandchild_appears_once(self, tmp_path: Path) -> None:
+        # covers: ACD-1200a-9-i
+        """ACD-1200a-9-i: ROOT-002a-1-i (reachable twice) must appear exactly once.
+
+        Without a dedup guard the buggy code returns count == 2 for this leaf.
+        """
+        self._build_dedup_tree(tmp_path)
+        result = traverse_ac_tree("ROOT-002", tmp_path)
+
+        count = result.count("ROOT-002a-1-i")
+        assert count == 1, (
+            f"ROOT-002a-1-i must appear exactly once in result, "
+            f"but count == {count}. Full result: {result}"
+        )
+
+    def test_ac_acd1200a9i_correct_leaf_set_and_count(self, tmp_path: Path) -> None:
+        # covers: ACD-1200a-9-i
+        """ACD-1200a-9-i: the leaf set must be exactly {ROOT-002a-1, ROOT-002a-1-i,
+        ROOT-002a-2} and the total count must be 3 (no duplicates).
+
+        Buggy code returns len == 4 because ROOT-002a-1-i is appended twice.
+        """
+        self._build_dedup_tree(tmp_path)
+        result = traverse_ac_tree("ROOT-002", tmp_path)
+
+        expected_leaves = {"ROOT-002a-1", "ROOT-002a-1-i", "ROOT-002a-2"}
+        assert set(result) == expected_leaves, (
+            f"Expected leaf set {expected_leaves}, got: {set(result)}"
+        )
+        assert len(result) == 3, (
+            f"Expected exactly 3 leaves (no duplicates), got {len(result)}: {result}"
+        )
