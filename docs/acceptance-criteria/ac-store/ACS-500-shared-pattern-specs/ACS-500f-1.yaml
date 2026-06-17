@@ -1,0 +1,60 @@
+id: ACS-500f-1
+title: "Binding-completeness and field-preservation checks fire at commit time"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the AC store schema hook (the hook that validates AC YAML files against
+    the store schema and performs the cross-file pattern_bindings-completeness
+    and implements_pattern field-preservation checks the agent templates rely on),
+  When the deployed commit-guardian hook registry is inspected,
+  Then that hook is registered as an active pre-commit hook scoped to staged
+    files under docs/acceptance-criteria/,
+  And it is enabled (not marked disabled).
+
+  Given a consuming AC YAML file is staged whose implements_pattern references a
+    pattern AC, and whose pattern_bindings is missing at least one slot declared
+    by that pattern,
+  When the commit is attempted,
+  Then the commit is blocked,
+  And the error message names the missing binding key and the referenced
+    pattern AC id.
+
+  Given a previously committed AC YAML file has implements_pattern set,
+  And a staged modification of that file removes the implements_pattern field
+    while leaving the AC otherwise inheriting its behavior from the pattern,
+  When the commit is attempted,
+  Then the commit is blocked,
+  And the error identifies the file and states that implements_pattern was dropped.
+depends_on: [ACS-500f]
+doc_links:
+  - path: scripts/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-17
+readiness: draft
+priority: high
+notes: |
+  ACS-500 post-implementation spot-check, GAP A. The schema/binding-completeness
+  hook exists in templates/scripts/commit_guardian/check_ac_schema.py and
+  implements _validate_pattern_bindings_completeness plus implements_pattern
+  preservation checks, but the deployed scripts/commit_guardian/commit_guardian.json
+  hooks_manifest registers only check-ac-pattern-refs (check_ac_pattern_refs.py) —
+  it does NOT register the schema hook. So the binding-completeness and
+  field-preservation guarantees that the business-analyst and it-po templates
+  tell agents to rely on are currently PROMPT-ENFORCED ONLY, not mechanically
+  enforced at commit time. This is the integrity gap (priority high).
+amended_by: []
+superseded_by: null
+covered_by: [ACS-500f-1-i]
+implemented_by: []

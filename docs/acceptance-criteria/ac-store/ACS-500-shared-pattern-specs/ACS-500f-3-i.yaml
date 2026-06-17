@@ -1,0 +1,49 @@
+id: ACS-500f-3-i
+title: "Widened schema still rejects malformed ids and unknown fields"
+component: ac-store
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an AC record whose id does not match any valid AC id form
+    (e.g. "acs-500" lowercase prefix, "ACS_500" underscore separator, or
+    "ACS-500a-" with a trailing empty leaf segment),
+  When it is validated against the widened schema,
+  Then the record is rejected with a validation error naming the id field.
+
+  Given an AC record that includes a field name that is not part of the AC
+    schema (e.g. a misspelled "critera" or an invented "foo_bar" key),
+  When it is validated against the widened schema,
+  Then the record is rejected,
+  And the widening to accept pattern_slots does NOT loosen the schema into
+    accepting arbitrary unknown fields.
+
+  Given an AC record missing a required field (e.g. no criteria),
+  When it is validated against the widened schema,
+  Then the record is still rejected for the missing required field.
+depends_on: [ACS-500f-3]
+doc_links:
+  - path: config/ac_store_schema.json
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACS-500f-3
+  contract: "The widened ac_store_schema.json whose tightened-but-still-strict boundaries this edge case exercises"
+origin_agent: business-analyst
+created: 2026-06-17
+readiness: draft
+priority: medium
+notes: |
+  ACS-500 post-implementation spot-check, GAP C edge case. Widening the id pattern
+  and adding pattern_slots must not over-correct into a permissive schema. The id
+  pattern must still reject genuinely malformed ids, and additionalProperties must
+  stay closed (false) so typos and invented fields are still caught — only the
+  known pattern_slots property is newly admitted.
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
