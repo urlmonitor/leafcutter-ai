@@ -64,11 +64,15 @@ from build_helpers import (
     write_build_manifest,
 )
 from build_glossary import build_glossary
-from build_propagation_audit import propagation_audit
+from build_propagation_audit import propagation_audit, check_broken_references
 from build_claude_settings import build_claude_settings
 from build_roadmap_phase import build_roadmap
 from build_placeholder_detection import scan_for_placeholders, format_placeholder_report
-from build_referential_integrity import check_referential_integrity, format_integrity_report
+from build_referential_integrity import (
+    check_referential_integrity,
+    format_integrity_report,
+    extract_script_path_refs,
+)
 from build_config_scaffolds import build_config_scaffolds
 from build_ac_store_scaffold import build_ac_store_scaffold
 from build_halt_guard import (
@@ -378,6 +382,108 @@ def _validate_ac_store_source(package_root: Path) -> int:
         return 1
 
     return 0
+
+
+def _get_source_deployable_scripts(package_root: Path) -> set[str]:
+    """Compute the set of script paths that build.py will deploy from package source.
+
+    Scans the package source directories to determine which ``scripts/<path>``
+    strings will be written to the target project during a real build run.
+    Three deployment locations are covered:
+
+    * ``scripts/ac_store/`` — deployed by ``build_ac_store_scripts`` from the
+      package's ``scripts/ac_store/`` source directory.
+    * ``scripts/feedback/`` — deployed by ``build_feedback`` from the package's
+      ``scripts/feedback/`` source directory (three named scripts only).
+    * ``scripts/<name>`` — deployed by ``build_standalone_scripts`` from
+      ``templates/scripts/`` (two named scripts only).
+
+    This function is intentionally source-only and never reads the target
+    project directory: it is used as a preflight guard BEFORE any output is
+    written, so the result reflects what *will* be deployed rather than what
+    *has* been deployed.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.
+
+    Returns:
+        Set of ``scripts/<path>`` strings (forward-slash separated) for all
+        scripts that will be deployed to the target project on the next build
+        run.  Returns an empty set when source directories are absent.
+    """
+    manifest: set[str] = set()
+
+    # AC store scripts (build_ac_store_scripts)
+    ac_store_src = package_root / "scripts" / "ac_store"
+    if ac_store_src.is_dir():
+        for f in ac_store_src.iterdir():
+            if f.is_file() and f.suffix != ".pyc":
+                manifest.add(f"scripts/ac_store/{f.name}")
+
+    # Feedback scripts (build_feedback) — three named scripts only
+    _FEEDBACK_SCRIPTS = ("submit_feedback.py", "emit_hook_finding.py", "list_tags.py")
+    feedback_src = package_root / "scripts" / "feedback"
+    for fname in _FEEDBACK_SCRIPTS:
+        if (feedback_src / fname).is_file():
+            manifest.add(f"scripts/feedback/{fname}")
+
+    # Standalone scripts (build_standalone_scripts) — two named scripts only
+    _STANDALONE_SCRIPTS = ("goal_to_epic.py", "build_ac_mode_detection.py")
+    templates_scripts = package_root / "templates" / "scripts"
+    for fname in _STANDALONE_SCRIPTS:
+        if (templates_scripts / fname).is_file():
+            manifest.add(f"scripts/{fname}")
+
+    return manifest
+
+
+def _check_script_reference_guard(package_root: Path) -> int:
+    """Preflight guard: exit non-zero when broken script references are detected.
+
+    Scans all source agent and skill templates for script path references
+    (patterns: ``python3 scripts/<path>``, ``python scripts/<path>``,
+    ``sys.path.insert(<N>, 'scripts/<path>')`` and the double-quoted variant).
+    Cross-checks the extracted references against the set of scripts that this
+    build run will deploy, using the external-dependency allowlist from
+    ``build_propagation_audit.EXTERNAL_DEPENDENCY_ALLOWLIST``.
+
+    This guard runs BEFORE ``_run_phases()`` writes any output to the target
+    project directory, satisfying the AC BP-900b-3 requirement that no partial
+    deployment is written to the target when broken references exist.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root. Used to
+            locate ``templates/agents/``, ``templates/skills/``, and the
+            source script directories.
+
+    Returns:
+        0 if all script references are resolved (build may continue).
+        1 if one or more broken references are found (build must abort).
+    """
+    templates_dir = package_root / "templates"
+
+    # Extract script references from source templates (agents + skills).
+    refs = extract_script_path_refs(templates_dir)
+
+    if not refs:
+        return 0
+
+    deployable = _get_source_deployable_scripts(package_root)
+    broken = check_broken_references(refs, deployable)
+
+    if not broken:
+        return 0
+
+    for ref in sorted(broken):
+        _error(
+            f"[SCRIPT-REF-GUARD] Broken reference: {ref!r} is referenced in a "
+            "template but will not be deployed to the target project."
+        )
+    _error(
+        f"[SCRIPT-REF-GUARD] {len(broken)} broken script reference(s) found. "
+        "Fix the missing script(s) or add them to the build pipeline before re-running."
+    )
+    return 1
 
 
 def _read_package_version(package_root: Path) -> str:
@@ -799,6 +905,11 @@ def main(argv: list[str] | None = None) -> int:
     if _validate_ac_store_source(package_root):
         return 1
 
+    # Script reference guard: exit non-zero and halt before writing any output
+    # when templates reference scripts that will not be deployed (BP-900b-3).
+    if _check_script_reference_guard(package_root):
+        return 1
+
     if args.validate_only:
         _success("Config validation complete (no files written).")
         return 0
@@ -1122,4 +1233,12 @@ if __name__ == "__main__":
 #   from templates/scripts/ to .leafcutter/scripts/ in consumer projects.
 #   Shims at {target}/scripts/ are created by install_shims() in build_helpers.py.
 #   (#TICKET-20260611-BP-900a-2)
+# - 2026-06-16 [python-coder/TICKET-20260611-BP-900b-3]: Added
+#   _get_source_deployable_scripts() and _check_script_reference_guard() preflight
+#   functions. The guard scans source agent/skill templates for script references,
+#   computes what will be deployed from package source, and exits non-zero when any
+#   reference cannot be resolved. Called in main() after _validate_ac_store_source()
+#   and before _run_phases() so no partial deployment is written when broken
+#   references exist. Imports check_broken_references from build_propagation_audit
+#   and extract_script_path_refs from build_referential_integrity. (BP-900b-3)
 # ====================================================================
