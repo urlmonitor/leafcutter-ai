@@ -1,6 +1,6 @@
 ---
 title: "Fix build-ac/ac-scanner script invocation paths for consumer-install reachability"
-status: todo
+status: in_progress
 components:
   - skills_system
   - build_pipeline
@@ -21,11 +21,11 @@ files_touched:
   - scripts/build_phases.py
   - docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md
 agents:
-  architect-review: needed
-  test-writer: needed
-  python-coder: needed
-  documentation-expert: needed
-  pr-reviewer: needed
+  architect-review: signed_off
+  test-writer: signed_off
+  python-coder: signed_off
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -192,3 +192,66 @@ resolution.
 2. `goal_to_epic.py` guard mis-detects its location → mitigation: AC-4 test runs both
    the source-layout and deployed-layout cases.
 3. commit_guardian hook path regressed → mitigation: AC-5 + existing hook tests.
+
+## Sign-offs
+
+- [x] architect-review — 2026-06-17 12:00
+- [x] test-writer — 2026-06-17 14:00
+- [x] python-coder — 2026-06-17 15:00
+- [x] documentation-expert — 2026-06-17 16:00
+- [x] pr-reviewer — 2026-06-17 17:00
+
+## Comments
+
+### 2026-06-17 14:00 — test-writer (status: ok)
+red_baseline:
+  test_file: tests/test_build_ac_paths.py
+  tests_written: 2
+  tests_red: 2
+  tests_green: 0
+  exit_code: 1
+  failures:
+    - test: test_build_ac_template_script_paths_match_deploy_layout
+      reason: >
+        Compiled build-ac.md still contains 9 bare ``scripts/<name>`` invocations
+        for the six AC-pipeline scripts (ac_prioritizer.py, goal_to_epic.py x3,
+        build_ac_mode_detection.py x2, generate_ticket_from_ac.py, mark_ac_done.py x2).
+        No ``{{config.output_root}}`` placeholder substitution has been applied.
+        Covers AC-1, AC-2, AC-7.
+    - test: test_goal_to_epic_sibling_resolution_when_deployed_in_ac_store
+      reason: >
+        goal_to_epic.py does NOT have a deploy-location-aware sibling resolution guard.
+        Current logic always uses ``Path(__file__).parent / "ac_store" / name`` which
+        produces the doubled path ``ac_store/ac_store/<name>`` when deployed inside
+        ac_store/. The correct path when deployed is ``ac_store/<name>`` (sibling).
+        Covers AC-4, AC-7.
+  red_command: >
+    python3 -m pytest tests/test_build_ac_paths.py -v
+
+### 2026-06-17 15:00 — python-coder (status: ok)
+All six AC-pipeline script invocations in `templates/agents/build-ac.md` replaced with `{{config.output_root}}/scripts/ac_store/<name>` placeholder convention (AC-1, AC-2). Fixed `templates/skills/build-ac/SKILL.md` and `templates/skills/ac-scanner/SKILL.md` script references to use the same convention (AC-3). Added deploy-location-aware sibling resolution guard in `scripts/goal_to_epic.py` at module level using `_scripts_dir = Path(__file__).parent` + `parent.name == "ac_store"` check; all three usage locations updated to `_sibling_dir` (AC-4). Added clarity comment to `check_ac_done_on_merge.py` explaining `_WORKTREE_ROOT` resolves to `.leafcutter/` on consumer install (AC-5). Updated `build_ac_store()` docstring in `build_phases.py` to use `<output_root>` instead of stale `<target_root>` (AC-6). Both RED tests are now GREEN; 16 pre-existing failures confirmed unchanged (unrelated to this ticket).
+
+### 2026-06-17 16:00 — documentation-expert (status: ok)
+Updated ADR-013 to correct stale `<target_root>/scripts/` wording to `<output_root>/scripts/ac_store/` (AC-6). Added amendment row to Status table noting the ticket-05 correction. Added a naming-note block explaining the `target_root`/`output_root` confusion (same `.leafcutter/` directory, different parameter names) so future authors are not misled. Corrected the Neutral consequences paragraph to use `<output_root>/scripts/<group>/`. Updated glossary entry for `build_ac_store` to read `.leafcutter/scripts/ac_store/` instead of bare `scripts/ac_store/`. No changes to how-to or reference docs — their `scripts/ac_store/` shell command examples are consumer-facing and require a separate ticket with scope covering those docs.
+
+### 2026-06-17 12:00 — architect-review (status: ok)
+feedback-id: fb_2026-06-17_2af00027
+completion_manifest:
+  placeholder_convention_valid: true
+  deploy_path_verified: true
+  sibling_resolution_bug_confirmed: true
+  blast_radius_bounded: true
+  option_a_sound: true
+Option A is architecturally sound. The `{{config.output_root}}` placeholder is proven (commit_guardian uses it in dozens of entry: lines) and resolves correctly through `inject_config` for both agent templates and SKILL.md files. The `build_ac_store()` deploy path (`target_root/scripts/ac_store/`) combined with `output_root=".leafcutter"` produces `.leafcutter/scripts/ac_store/` as the ticket states — confirmed from `build_phases.py` line 454. The `ac_store/ac_store/` sibling-doubling bug in `goal_to_epic.py` is real and exactly as diagnosed (three locations at ~361, ~1037, ~1526 each do `Path(__file__).parent / "ac_store" / ...`). The deploy-location-aware guard approach is the right fix. One minor clarification: the `check_ac_done_on_merge.py` `_WORKTREE_ROOT` resolution already reaches `.leafcutter/scripts/ac_store/mark_ac_done.py` on a consumer install because the hook lives at `hooks/check_ac_done_on_merge.py` (3 levels up = `.leafcutter/`), making AC-5 a docstring/clarity fix rather than a functional regression. Blast radius is correctly bounded — script source locations do not move, so all unit-test `sys.path.insert` calls remain valid. No blockers; implementation may proceed.
+
+### 2026-06-17 17:00 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-17_3970f9a0
+completion_manifest:
+  ac1_build_ac_md_placeholder_paths: true
+  ac2_sys_path_insert_placeholder: true
+  ac3_skill_md_paths_correct: true
+  ac4_goal_to_epic_sibling_guard: true
+  ac5_check_ac_done_clarity_comment: true
+  ac6_docstring_and_adr_corrected: true
+  ac7_tests_exist_and_green: true
+All 7 ACs verified against the staged diff. AC-1: all six AC-pipeline script invocations in `build-ac.md` replaced with `{{config.output_root}}/scripts/ac_store/<name>` — no bare `scripts/...` remain. AC-2: consolidated `sys.path.insert` now points at `{{config.output_root}}/scripts/ac_store`. AC-3: `templates/skills/build-ac/SKILL.md` and `templates/skills/ac-scanner/SKILL.md` both use the placeholder — `scan_ac_store.py` (×3), `generate_ticket_from_ac.py` (×3), `goal_to_epic.py` (×1). AC-4: module-level `_sibling_dir` guard using `parent.name == "ac_store"` in `goal_to_epic.py`; all three usage sites updated. AC-5: clarity comment block added to `check_ac_done_on_merge.py` documenting the three-parent resolution to `.leafcutter/`. AC-6: `build_ac_store()` docstring uses `<output_root>` throughout; ADR-013 amended with naming-note and corrected Neutral paragraph. AC-7: `tests/test_build_ac_paths.py` has both test cases covering path-consistency and sibling-resolution; both tests GREEN (2 passed, exit 0).

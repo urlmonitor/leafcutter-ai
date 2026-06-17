@@ -4,6 +4,7 @@ type: "adr"
 status: "accepted"
 created: "2026-06-17"
 last_updated: "2026-06-17"
+amended: "2026-06-17"
 deciders:
   - architect-review
 components:
@@ -29,6 +30,7 @@ related_docs:
 | Deciders | architect-review |
 | Author | architect-review |
 | Supersedes | — |
+| Amended | 2026-06-17 (ticket 05 — corrected stale `target_root`/`output_root` naming; updated deployment path descriptions to reflect actual `.leafcutter/scripts/ac_store/` layout) |
 
 ## Context
 
@@ -112,9 +114,23 @@ scripts).
 For every skill with `portable: true` whose SKILL.md references scripts:
 
 - If the scripts are in `scripts/ac_store/`, a `build_ac_store` phase MUST copy them
-  to `templates/scripts/ac_store/` and deploy them to `<target_root>/scripts/ac_store/`.
+  to `templates/scripts/ac_store/` and deploy them to
+  `<output_root>/scripts/ac_store/` (i.e. `.leafcutter/scripts/ac_store/` on a
+  default consumer build). The deployed paths are referenced in agent templates and
+  SKILL.md files via the `{{config.output_root}}/scripts/ac_store/<name>` placeholder,
+  which `template_compiler.py` substitutes at build time.
 - If the scripts are in `scripts/<other_group>/`, an equivalent `build_<group>` phase
   MUST exist or be created before the skill is published as `portable: true`.
+
+> **Naming note (ticket 05 — BP-811 family):** The `build_ac_store()` function
+> signature uses `target_root` as its parameter name, while `build.py` passes the
+> value via `output_root`. Both refer to the same `.leafcutter/` directory on a
+> default consumer build. Earlier revisions of this ADR and the `build_ac_store()`
+> docstring used `<target_root>/scripts/` to describe the deploy destination; this
+> was incorrect — the actual destination is `<output_root>/scripts/ac_store/` (i.e.
+> `.leafcutter/scripts/ac_store/`), not a project-root `scripts/` directory.
+> All stale `<target_root>` references in this ADR and the `build_phases.py`
+> docstring have been corrected in ticket 05 of EPIC-AcPipelineDeployGaps.
 
 This rule is mechanically enforceable by the `test_skill_portability_consistency` test
 required by EPIC-AcPipelineDeployGaps ticket 03 (AC-6).
@@ -148,8 +164,9 @@ required by EPIC-AcPipelineDeployGaps ticket 03 (AC-6).
 
 - The `build_ac_store` phase follows the identical pattern as `build_commit_guardian`,
   `build_feedback`, and `build_sync_platforms` — copy scripts verbatim from source to
-  `templates/scripts/<group>/` and deploy to `<target_root>/scripts/<group>/`. No new
-  infrastructure is required.
+  `templates/scripts/<group>/` and deploy to `<output_root>/scripts/<group>/` (i.e.
+  `.leafcutter/scripts/<group>/` on a default consumer build). No new infrastructure
+  is required.
 - Skills with `portable: false` are unaffected. This ADR does not retroactively change
   the semantics of existing package-internal skills.
 

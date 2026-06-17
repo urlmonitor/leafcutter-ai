@@ -395,29 +395,36 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
 
 def build_ac_store(target_root: Path, config: dict[str, Any],
                    dry_run: bool, force: bool) -> int:
-    """Deploy AC pipeline scripts to ``<target_root>/scripts/ac_store/``.
+    """Deploy AC pipeline scripts to ``<output_root>/scripts/ac_store/``.
 
     Copies the six AC-pipeline Python scripts from their source locations in
-    the package tree into ``templates/scripts/ac_store/`` and then deploys
-    them to ``<target_root>/scripts/ac_store/``.  This makes the
-    ``portable: true`` skills ``ac-scanner`` and ``build-ac`` functional on
-    consumer installs by ensuring their runtime dependencies are present
-    alongside the skill SKILL.md files deployed by ``build_skills``.
+    the package tree and deploys them to ``<output_root>/scripts/ac_store/``
+    (i.e. ``.leafcutter/scripts/ac_store/`` on a default consumer build).
+    This makes the ``portable: true`` skills ``ac-scanner`` and ``build-ac``
+    functional on consumer installs by ensuring their runtime dependencies are
+    present alongside the skill SKILL.md files deployed by ``build_skills``.
+
+    Note: ``target_root`` IS the output root (``.leafcutter/`` by default).
+    Scripts land at ``target_root / "scripts" / "ac_store" /`` which resolves
+    to ``.leafcutter/scripts/ac_store/``.  The ``{{config.output_root}}``
+    placeholder in agent/skill templates resolves to this same root, so
+    script paths like ``{{config.output_root}}/scripts/ac_store/<name>.py``
+    correctly reference the deployed scripts on consumer installs.
 
     The six source → destination mappings are:
 
     - ``scripts/ac_store/scan_ac_store.py``
-      → ``<target_root>/scripts/ac_store/scan_ac_store.py``
+      → ``<output_root>/scripts/ac_store/scan_ac_store.py``
     - ``scripts/ac_store/generate_ticket_from_ac.py``
-      → ``<target_root>/scripts/ac_store/generate_ticket_from_ac.py``
+      → ``<output_root>/scripts/ac_store/generate_ticket_from_ac.py``
     - ``scripts/ac_store/ac_prioritizer.py``
-      → ``<target_root>/scripts/ac_store/ac_prioritizer.py``
+      → ``<output_root>/scripts/ac_store/ac_prioritizer.py``
     - ``scripts/ac_store/mark_ac_done.py``
-      → ``<target_root>/scripts/ac_store/mark_ac_done.py``
+      → ``<output_root>/scripts/ac_store/mark_ac_done.py``
     - ``scripts/build_ac_mode_detection.py``
-      → ``<target_root>/scripts/ac_store/build_ac_mode_detection.py``
+      → ``<output_root>/scripts/ac_store/build_ac_mode_detection.py``
     - ``scripts/goal_to_epic.py``
-      → ``<target_root>/scripts/ac_store/goal_to_epic.py``
+      → ``<output_root>/scripts/ac_store/goal_to_epic.py``
 
     Files are copied verbatim (no template compilation).  The
     compare-before-write guard prevents mtime churn on unchanged files.

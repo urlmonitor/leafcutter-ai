@@ -58,6 +58,23 @@ import yaml
 _DEFAULT_STORE_ROOT = "docs/acceptance-criteria"
 _DEFAULT_INBOX_DIR = "tickets/00_inbox"
 
+# ---------------------------------------------------------------------------
+# Deploy-location-aware sibling resolution (AC-4 of EPIC-AcPipelineDeployGaps)
+# ---------------------------------------------------------------------------
+# When this file is deployed into .leafcutter/scripts/ac_store/ (consumer install),
+# its sibling scripts are in the SAME directory (no ac_store/ subdirectory needed).
+# When run from the source layout (scripts/goal_to_epic.py), siblings live under
+# scripts/ac_store/.  The guard below detects which case is active at runtime.
+#
+# If parent.name == "ac_store" → deployed layout: siblings are alongside this file
+# Otherwise                    → source layout:   siblings are in parent / "ac_store"
+_scripts_dir = Path(__file__).parent
+_sibling_dir = (
+    _scripts_dir                           # deployed: siblings are alongside this file
+    if Path(__file__).parent.name == "ac_store"
+    else Path(__file__).parent / "ac_store"  # source layout: siblings are in ac_store/
+)
+
 
 # ---------------------------------------------------------------------------
 # Exceptions
@@ -358,7 +375,7 @@ def _call_generate_ticket_from_ac(
         subprocess.CalledProcessError: When the script exits non-zero.
         RuntimeError: When the script exits 0 but emits no ``Written:`` line.
     """
-    script_path = Path(__file__).parent / "ac_store" / "generate_ticket_from_ac.py"
+    script_path = _sibling_dir / "generate_ticket_from_ac.py"
     result = subprocess.run(
         [
             sys.executable,
@@ -1034,7 +1051,7 @@ def dispatch_it_po_v3(unapproved_ids: list[str], store_root: Path) -> None:
         subprocess.CalledProcessError: If the IT PO v3 invocation fails.
         RuntimeError: If the IT PO v3 agent is not available.
     """
-    script_path = Path(__file__).parent / "ac_store" / "run_it_po_v3.py"
+    script_path = _sibling_dir / "run_it_po_v3.py"
     if not script_path.exists():
         raise RuntimeError(  # noqa: TRY003
             f"IT PO v3 runner not found at {script_path}. "
@@ -1523,9 +1540,10 @@ def run(
     # Import traverse_ac_tree here to keep the top-level import surface small
     # and to allow this module to be imported even if scan_ac_store is not on
     # sys.path at module load time (e.g. in tests that patch the function).
-    _scripts_dir = Path(__file__).parent / "ac_store"
-    if str(_scripts_dir) not in sys.path:
-        sys.path.insert(0, str(_scripts_dir))
+    # Use the module-level _sibling_dir so this works from both the source
+    # layout (scripts/) and the deployed layout (.../scripts/ac_store/).
+    if str(_sibling_dir) not in sys.path:
+        sys.path.insert(0, str(_sibling_dir))
 
     from scan_ac_store import traverse_ac_tree  # noqa: PLC0415
 

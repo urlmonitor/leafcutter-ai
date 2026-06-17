@@ -37,18 +37,18 @@ store. The generator exits non-zero if a ticket for the same AC already exists.
 
 ```bash
 # Human-readable output (READY and BLOCKED sections)
-python3 scripts/ac_store/scan_ac_store.py \
+python3 {{config.output_root}}/scripts/ac_store/scan_ac_store.py \
   --level leaf \
   --work-status todo
 
 # JSON output for machine consumers (build-ac agent)
-python3 scripts/ac_store/scan_ac_store.py \
+python3 {{config.output_root}}/scripts/ac_store/scan_ac_store.py \
   --level leaf \
   --work-status todo \
   --json
 
 # Override the AC store root (useful for testing)
-python3 scripts/ac_store/scan_ac_store.py \
+python3 {{config.output_root}}/scripts/ac_store/scan_ac_store.py \
   --level leaf \
   --work-status todo \
   --json \
@@ -68,16 +68,16 @@ python3 scripts/ac_store/scan_ac_store.py \
 
 ```bash
 # Generate a ticket from a specific AC id
-python3 scripts/ac_store/generate_ticket_from_ac.py \
+python3 {{config.output_root}}/scripts/ac_store/generate_ticket_from_ac.py \
   --ac ACS-100a-1
 
 # Dry-run: print ticket body without writing
-python3 scripts/ac_store/generate_ticket_from_ac.py \
+python3 {{config.output_root}}/scripts/ac_store/generate_ticket_from_ac.py \
   --ac ACS-100a-1 \
   --dry-run
 
 # Override roots (useful for testing or custom layouts)
-python3 scripts/ac_store/generate_ticket_from_ac.py \
+python3 {{config.output_root}}/scripts/ac_store/generate_ticket_from_ac.py \
   --ac ACS-100a-1 \
   --ac-root /path/to/ac-store/ \
   --tickets-root /path/to/tickets/
