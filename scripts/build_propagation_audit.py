@@ -21,6 +21,10 @@ ARCHITECTURE: One public phase function ``propagation_audit``, one guard
     never raises and always returns, even when warnings are emitted. The allowlist
     is a module-level frozenset constant that callers can extend by passing an
     explicit ``allowlist`` argument to ``check_broken_references``.
+    AC BP-900c-1-1: ``build_broken_ref_report`` consolidates multiple templates
+    that reference the same missing script into a single ``BrokenRefEntry`` with
+    a ``referencing_templates`` tuple, so the suggested action appears exactly
+    once per missing path.
 """
 
 from __future__ import annotations
@@ -193,23 +197,31 @@ class BrokenRefEntry:
     """A single broken-reference report entry with all three required fields.
 
     AC BP-900c-1 requires that each broken-reference entry names the missing
-    script path, the compiled template that references it, and a suggested
+    script path, the compiled templates that reference it, and a suggested
     corrective action.  This dataclass is the canonical carrier for that
     three-field payload.
 
+    AC BP-900c-1-1 requires consolidation: when multiple templates reference
+    the same missing script, a single ``BrokenRefEntry`` is emitted that lists
+    all referencing templates rather than one entry per template.  This ensures
+    the suggested action appears exactly once for each missing path.
+
     Attributes:
         missing_path: The ``scripts/<path>`` string that was referenced in
-            the template but is absent from the deployable script set
+            one or more templates but is absent from the deployable script set
             (e.g. ``"scripts/ac_store/ac_prioritizer.py"``).
-        referencing_template: The relative path of the compiled template file
-            in which the missing script was referenced
-            (e.g. ``"agents/build-ac.md"``).
+        referencing_templates: Tuple of relative paths of every compiled
+            template file that references the missing script, sorted
+            lexicographically (e.g.
+            ``("agents/build-ac.md", "skills/ac-scanner/SKILL.md")``).
+            Contains exactly one element when only one template references the
+            missing path.
         suggested_action: A human-readable corrective action.  Always one of
             ``ACTION_ADD_DEPLOY_PHASE`` or ``ACTION_ADD_TO_ALLOWLIST``.
     """
 
     missing_path: str
-    referencing_template: str
+    referencing_templates: tuple[str, ...]
     suggested_action: str
 
 
@@ -218,15 +230,26 @@ def build_broken_ref_report(
     deployed_scripts: set[str],
     allowlist: frozenset[str] | None = None,
 ) -> list[BrokenRefEntry]:
-    """Build a list of broken-reference report entries with three fields each.
+    """Build a consolidated list of broken-reference report entries.
 
     For every script path in ``refs_to_sources`` that is neither deployed nor
-    allowlisted, this function emits one ``BrokenRefEntry`` per unique
-    (missing_path, referencing_template) pair.  The third field — the suggested
-    action — is derived by ``_suggest_action``.
+    allowlisted, this function emits exactly **one** ``BrokenRefEntry`` that
+    collects all referencing templates into the ``referencing_templates`` tuple.
+    The third field — the suggested action — appears once per missing path,
+    satisfying AC BP-900c-1-1 (consolidation requirement).
+
+    When only one template references a missing path, ``referencing_templates``
+    is a one-element tuple.  When multiple templates reference the same missing
+    path, all are collected into a single entry so that the caller prints the
+    suggested action exactly once per missing script.
 
     This function satisfies AC BP-900c-1: no entry has an empty field, and every
-    entry names the missing path, the referencing template, and a suggested action.
+    entry names the missing path, the referencing templates, and a suggested
+    action.
+
+    This function satisfies AC BP-900c-1-1: multiple templates referencing the
+    same missing path are consolidated into a single entry, not emitted as
+    separate entries.
 
     Args:
         refs_to_sources: Mapping from ``scripts/<path>`` strings to the set of
@@ -239,9 +262,9 @@ def build_broken_ref_report(
             Defaults to ``EXTERNAL_DEPENDENCY_ALLOWLIST`` when ``None``.
 
     Returns:
-        List of ``BrokenRefEntry`` instances, one per broken (missing_path,
-        referencing_template) pair.  An empty list means all references are
-        accounted for.
+        List of ``BrokenRefEntry`` instances, one per unique missing script
+        path (not one per referencing-template pair).  An empty list means all
+        references are accounted for.
     """
     effective_allowlist = EXTERNAL_DEPENDENCY_ALLOWLIST if allowlist is None else allowlist
     resolved = deployed_scripts | effective_allowlist
@@ -250,14 +273,13 @@ def build_broken_ref_report(
         if script_path in resolved:
             continue
         action = _suggest_action(script_path, effective_allowlist)
-        for template_path in sorted(source_templates):
-            entries.append(
-                BrokenRefEntry(
-                    missing_path=script_path,
-                    referencing_template=template_path,
-                    suggested_action=action,
-                )
+        entries.append(
+            BrokenRefEntry(
+                missing_path=script_path,
+                referencing_templates=tuple(sorted(source_templates)),
+                suggested_action=action,
             )
+        )
     return entries
 
 
@@ -342,4 +364,5 @@ def propagation_audit(
 # - 2026-05-18 11:30 [EPIC-PortableInstallHardening/T04]: Created module. Fail-open propagation audit that walks .pre-commit-config.yaml hook entries, auto-copies missing scripts from templates, and warns when no template is found. Extracted as sibling module to keep build_phases.py within 400-line limit. (#EPIC-PortableInstallHardening/T04)
 # - 2026-06-16 [BP-900b-1-1]: Added EXTERNAL_DEPENDENCY_ALLOWLIST constant and check_broken_references() guard function. Allowlisted refs are treated as resolved and do not appear in the broken-reference list, satisfying AC BP-900b-1-1.
 # - 2026-06-17 [BP-900c-1]: Added BrokenRefEntry dataclass, _suggest_action() helper, and build_broken_ref_report() factory. Each broken-reference entry now carries all three required fields: missing_path, referencing_template, and suggested_action. Satisfies AC BP-900c-1.
+# - 2026-06-17 [BP-900c-1-1]: Consolidated build_broken_ref_report() output: changed BrokenRefEntry.referencing_template (str) to referencing_templates (tuple[str, ...]) and updated the factory to emit one entry per unique missing_path grouping all referencing templates. Suggested action appears exactly once per missing path. Satisfies AC BP-900c-1-1.
 # ===========================================================================

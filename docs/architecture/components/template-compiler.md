@@ -153,12 +153,18 @@ The function is a pure predicate (no I/O, no side effects) and never raises. An 
 When a broken reference is detected, the error report entry must carry three fields so that the developer knows exactly what is wrong and how to fix it:
 
 1. **Missing path** — the `scripts/<path>` string that was referenced but not deployed (e.g. `"scripts/ac_store/ac_prioritizer.py"`)
-2. **Referencing template** — the relative path of the compiled template that contains the reference (e.g. `"agents/build-ac.md"`)
+2. **Referencing templates** — the sorted tuple of relative paths of every compiled template that references the missing script (e.g. `("agents/build-ac.md", "skills/ac-scanner/SKILL.md")`)
 3. **Suggested action** — one of two canonical strings:
    - `"add a deploy phase in build_phases.py"` — for paths under leafcutter-owned directories (`scripts/ac_store/`, `scripts/feedback/`, `scripts/commit_guardian/`)
    - `"add to the external-dependency allowlist"` — for all other paths (externally-supplied scripts)
 
 No field may be empty or omitted.
+
+### Consolidation rule (BP-900c-1-1)
+
+When multiple templates reference the same missing script, `build_broken_ref_report` emits **one consolidated entry** — not one entry per referencing template. All referencing template paths are collected into the `referencing_templates` tuple, and the `suggested_action` appears exactly once for the shared missing path.
+
+This prevents duplicate error lines when e.g. both `agents/build-ac.md` and `skills/ac-scanner/SKILL.md` reference `scripts/ac_store/generate_ticket_from_ac.py`.
 
 ### Data types
 
@@ -168,9 +174,9 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class BrokenRefEntry:
-    missing_path: str           # e.g. "scripts/ac_store/ac_prioritizer.py"
-    referencing_template: str   # e.g. "agents/build-ac.md"
-    suggested_action: str       # ACTION_ADD_DEPLOY_PHASE or ACTION_ADD_TO_ALLOWLIST
+    missing_path: str                    # e.g. "scripts/ac_store/ac_prioritizer.py"
+    referencing_templates: tuple[str, ...]  # e.g. ("agents/build-ac.md", "skills/ac-scanner/SKILL.md")
+    suggested_action: str                # ACTION_ADD_DEPLOY_PHASE or ACTION_ADD_TO_ALLOWLIST
 ```
 
 ### Full-pipeline example
@@ -183,15 +189,20 @@ from pathlib import Path
 compiled_root = Path("/path/to/consumer/.claude")
 # Step 1 — extract refs WITH source template information
 refs_to_sources = extract_script_path_refs_with_sources(compiled_root)
-# e.g. {"scripts/ac_store/ac_prioritizer.py": {"agents/build-ac.md"}}
+# e.g. {
+#   "scripts/ac_store/generate_ticket_from_ac.py": {
+#     "agents/build-ac.md",
+#     "skills/ac-scanner/SKILL.md",
+#   }
+# }
 
-deployed = {"scripts/ac_store/generate_ticket_from_ac.py"}
-# Step 2 — build the three-field report
+deployed = {"scripts/ac_store/ac_prioritizer.py"}
+# Step 2 — build the consolidated report (one entry per missing path)
 report = build_broken_ref_report(refs_to_sources, deployed)
 for entry in report:
-    print(entry.missing_path)          # "scripts/ac_store/ac_prioritizer.py"
-    print(entry.referencing_template)  # "agents/build-ac.md"
-    print(entry.suggested_action)      # "add a deploy phase in build_phases.py"
+    print(entry.missing_path)             # "scripts/ac_store/generate_ticket_from_ac.py"
+    print(entry.referencing_templates)    # ("agents/build-ac.md", "skills/ac-scanner/SKILL.md")
+    print(entry.suggested_action)         # "add a deploy phase in build_phases.py"
 ```
 
 The `extract_script_path_refs_with_sources()` function is provided by `build_referential_integrity.py` alongside the existing `extract_script_path_refs()`. It returns a `dict[str, set[str]]` mapping each script path to the set of template paths that reference it, preserving the per-template provenance required by BP-900c-1.
