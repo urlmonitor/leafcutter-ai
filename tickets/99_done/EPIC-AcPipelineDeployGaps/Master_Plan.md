@@ -1,7 +1,7 @@
 ---
 title: "EPIC: AC Pipeline Deployment Gaps"
 type: epic
-status: todo
+status: done
 components:
   - infrastructure
 created: 2026-06-16
