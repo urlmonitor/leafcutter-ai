@@ -14,7 +14,7 @@ agents:
   python-coder: signed_off
   test-writer: signed_off
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 files_touched:
   - templates/workflows-js/plan-feature.js
@@ -107,7 +107,7 @@ Feature: plan-feature.js deployment to consumer installs
 - [x] python-coder — 2026-06-16 20:53
 - [x] test-writer — 2026-06-16 09:00
 - [x] pr-reviewer — 2026-06-16 21:30
-- [ ] commit
+- [x] commit — 2026-06-17 06:05
 - [ ] pull-request
 
 ## Comments
@@ -175,6 +175,15 @@ Reviewed staged diff (3 files, 638 insertions): templates/workflows-js/plan-feat
 
 Branch: none
 Reason: not escalated: zero medium findings (threshold > 3); all checklist items passed cleanly.
+
+### 2026-06-17 06:05 — commit (status: ok)
+feedback-id: fb_2026-06-17_commit_02
+completion_manifest:
+  staged_files_verified: true
+  commit_created: true
+  precommit_hooks_passed: true
+  conventional_commit_format: true
+Committed 3 staged files on branch EPIC-AcPipelineDeployGaps: templates/workflows-js/plan-feature.js (new, 366 lines), tests/test_build_phases.py (new, 213 lines), and ticket sign-offs. Commit message: feat(deploy): add plan-feature.js to templates/workflows-js for consumer installs.
 
 ## Implementation Tasks
 
