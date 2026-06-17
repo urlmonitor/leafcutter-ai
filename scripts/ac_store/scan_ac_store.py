@@ -446,12 +446,20 @@ def traverse_ac_tree(
 ) -> list[str]:
     """Return the ordered list of leaf AC ids beneath *root_id*.
 
-    A leaf is an AC whose ``covered_by`` field is empty or absent.
+    A leaf is an AC whose ``level`` is in ``_LEAF_LEVELS`` (``{"L2", "L3"}``),
+    NOT one whose ``covered_by`` field is empty (ACD-1200a-9). L2 and L3 nodes
+    are always emitted as leaves regardless of whether they have ``covered_by``
+    children — and the traversal still recurses into those children, so an L2
+    with L3 edge-case children is emitted AND its L3 descendants are collected.
+    L0/L1 nodes are always composite pass-throughs and are never emitted, even
+    when their ``covered_by`` is empty or absent.
+
     The traversal is **depth-first** with **alphabetical sibling ordering**
     at every level.
 
-    When *root_id* itself is a leaf (no ``covered_by`` children), the function
-    returns ``[root_id]``.
+    When *root_id* itself is a leaf (its ``level`` is L2 or L3), the function
+    returns ``[root_id]`` followed by any L2/L3 descendants. When *root_id* is
+    an L0/L1 with no L2/L3 descendants, the function returns ``[]``.
 
     When *root_id* cannot be found in *ac_store_root*, the function returns an
     empty list and emits a warning to stderr — it does NOT raise.
