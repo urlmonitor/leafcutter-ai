@@ -1,0 +1,49 @@
+id: ACS-500f
+title: "AC pattern enforcement is mechanically guaranteed, not prompt-only"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  The pattern-reuse guarantees that AC-authoring agents are told to rely on
+  are enforced by machinery at commit time and by a schema that matches the
+  real store — not by agent prompts alone.
+
+  The business-analyst and it-po agent templates instruct agents that the AC
+  store mechanically blocks incomplete pattern_bindings, blocks dropping
+  implements_pattern during enrichment, and validates every AC against the
+  store schema. For those promises to hold, three things must be true of the
+  deployed store: (1) the hook that performs binding-completeness and
+  field-preservation validation is actually registered and active at commit
+  time; (2) the agent's own pattern-detection scan recognizes the same set of
+  pattern ACs the hook recognizes, so no hook-enforced pattern is silently
+  skipped during the pattern-first inventory; and (3) the published AC store
+  schema accepts every valid record that already lives in the store, so the
+  documented schema could be enforced without rejecting legitimate ACs.
+depends_on: [ACS-500]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: scripts/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: exists
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-17
+readiness: draft
+priority: high
+notes: |
+  Authored from the ACS-500 post-implementation spot-check. The spot-check found
+  three enforcement-hardening gaps between what the BA/IT-PO agent templates
+  promise about pattern reuse and what the deployed store actually enforces.
+  This L1 groups the three behavioral fixes (ACS-500f-1, ACS-500f-2, ACS-500f-3).
+amended_by: []
+superseded_by: null
+covered_by: [ACS-500f-1, ACS-500f-1-i, ACS-500f-2, ACS-500f-3, ACS-500f-3-i]
+implemented_by: []

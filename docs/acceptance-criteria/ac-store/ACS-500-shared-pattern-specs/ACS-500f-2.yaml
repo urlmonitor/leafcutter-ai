@@ -1,0 +1,61 @@
+id: ACS-500f-2
+title: "Pattern-first inventory recognizes a pattern AC by the same definition the hook uses"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an AC store contains a pattern AC that declares its parameterized slots
+    ONLY via {word} placeholders in its criteria field, with no pattern_slots
+    field present (or pattern_slots empty),
+  And another AC could reuse that pattern's behavior,
+  When the business-analyst pattern-first inventory scan runs before authoring a
+    new L2 AC,
+  Then the scan includes that pattern AC in its pattern inventory,
+  And the new AC is offered the chance to reuse it via implements_pattern +
+    pattern_bindings rather than restating the behavior inline.
+
+  Given the pattern-detection predicate the business-analyst applies during the
+    inventory scan,
+  When it is compared to the predicate the deployed pattern-reference hook uses
+    to recognize a pattern AC,
+  Then the two predicates recognize the same set of pattern ACs,
+  And both treat an AC as a pattern when EITHER its pattern_slots field is
+    non-empty OR its criteria contains at least one {word} placeholder.
+
+  Given a pattern AC that declares a non-empty pattern_slots field and no
+    {word} placeholder in criteria,
+  When the inventory scan runs,
+  Then that pattern AC is still recognized (no regression for the
+    pattern_slots-only form).
+depends_on: [ACS-500f]
+doc_links:
+  - path: templates/agents/business-analyst-v3.md
+    relationship: describes
+    status: exists
+  - path: scripts/commit_guardian/check_ac_pattern_refs.py
+    relationship: describes
+    status: exists
+assigned_agent: workflow-architect
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-17
+readiness: draft
+priority: medium
+notes: |
+  ACS-500 post-implementation spot-check, GAP B. business-analyst-v3.md §1 Step 7
+  detects an existing pattern AC by checking only that pattern_slots is present and
+  non-null. The deployed hook check_ac_pattern_refs.py (_has_parameterized_slots)
+  recognizes a pattern AC by EITHER non-empty pattern_slots OR a {word}-style
+  placeholder in criteria. So a pattern AC that declares its slots only via {word}
+  placeholders in criteria is silently skipped by the BA's pattern-first inventory,
+  defeating the pattern-first reuse check for that pattern. The fix aligns the BA
+  predicate with the hook's _has_parameterized_slots definition. Assigned to
+  workflow-architect because the change edits the business-analyst-v3 agent template.
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
