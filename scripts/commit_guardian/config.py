@@ -45,8 +45,14 @@ def load_config(path: Path | None = None) -> dict[str, Any]:
             "  FIX: Ensure commit_guardian.json exists next to config.py."
         )
 
-    with open(config_file, encoding="utf-8") as f:
-        _config = json.load(f)
+    try:
+        with open(config_file, encoding="utf-8") as f:
+            _config = json.load(f)
+    except OSError as exc:
+        raise OSError(
+            f"Commit Guardian config could not be read: {config_file}\n"
+            f"  Cause: {exc}"
+        ) from exc
 
     return _config
 
@@ -253,11 +259,23 @@ MERMAID_COMPLEXITY_MAX_STATES: int = _get("mermaid_complexity", "max_states", 10
 MERMAID_COMPLEXITY_MAX_CLASSES: int = _get("mermaid_complexity", "max_classes", 10)
 MERMAID_COMPLEXITY_MAX_BOUNDARIES: int = _get("mermaid_complexity", "max_boundaries", 4)
 
+# ---------------------------------------------------------------------------
+# check_duplicate_code
+# ---------------------------------------------------------------------------
+DUPLICATE_CODE_ENABLED: bool = _get("duplicate_code", "enabled", False)
+DUPLICATE_CODE_STRICT: bool = _get("duplicate_code", "strict", False)
+DUPLICATE_CODE_MIN_LINES: int = _get("duplicate_code", "min_lines", 5)
+DUPLICATE_CODE_MIN_TOKENS: int = _get("duplicate_code", "min_tokens", 50)
+DUPLICATE_CODE_THRESHOLD: int = _get("duplicate_code", "threshold", 0)
+
 
 """
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-17 [python-coder/TICKET-20260616-GE-100a]: Added DUPLICATE_CODE_* constants for
+  check_duplicate_code.py (AC GE-100a). enabled and strict both default to False;
+  min_lines/min_tokens/threshold are tunable via duplicate_code section in commit_guardian.json.
 - 2026-05-15 12:00 [python-coder/T06]: Added AGENT_REGISTRY_PATH constant for check_ticket_signoff_parity
   check #6 (unchecked-tasks parity guard). Defaults to
   "leafcutter/config/agent_registry.json" relative to project root;

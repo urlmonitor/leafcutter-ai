@@ -823,6 +823,18 @@
                 ],
                 "pass_filenames": false,
                 "_comment": "ACS-500a-3 / ACS-500d-1-i: (1) Blocks commits where an AC YAML file's implements_pattern field references a non-existent AC ID or an AC without parameterized slots. (2) Blocks deletion of a pattern AC when any surviving AC in the store still references it via implements_pattern, with error 'Cannot delete <id>: still referenced by N consuming ACs'. Fail-open on parse errors. See docs/acceptance-criteria/ac-store/ACS-500-pattern-reuse/."
+            },
+            {
+                "id": "check-duplicate-code",
+                "tier": "judgment",
+                "name": "Check Duplicate Code (jscpd copy-paste clone detection)",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_duplicate_code.py",
+                "language": "system",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "GE-100a: Scans staged source files for copy-paste clones using jscpd. Disabled by default (duplicate_code.enabled: false). Fails open when jscpd is not installed — emits advisory to stderr with install guidance and exits 0. Set strict: true to block commits on threshold violations."
             }
         ]
     },
@@ -864,6 +876,14 @@
         "max_states": 10,
         "max_classes": 10,
         "max_boundaries": 4
+    },
+    "duplicate_code": {
+        "_comment": "check_duplicate_code.py \u2014 Copy-paste clone detection using jscpd. Disabled by default. Fails open when jscpd is not installed. Set strict: true to block commits on threshold violations.",
+        "enabled": false,
+        "strict": false,
+        "min_lines": 5,
+        "min_tokens": 50,
+        "threshold": 0
     },
     "post_merge": {
         "_comment": "Post-merge hook configuration. Hooks in this section fire after git merge completes.",
