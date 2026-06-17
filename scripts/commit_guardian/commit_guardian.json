@@ -265,7 +265,10 @@
             "sequence",
             "erd",
             "state",
+            "data_flow",
             "dataflow",
+            "user_flow",
+            "agent_flow",
             "none"
         ],
         "components_registry": "docs/components.json",
