@@ -1,0 +1,49 @@
+id: ACS-500c-2
+readiness: approved
+priority: high
+title: "IT PO agent preserves implements_pattern when enriching an AC"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an L2 AC has implements_pattern: "ACS-500a-1" and
+    pattern_bindings: {entity_type: "invoices", columns: ["number", "date"]},
+  When the it-po-v3 agent adds it_requirements and technical constraints
+    to the AC,
+  Then the implements_pattern and pattern_bindings fields remain unchanged,
+  And the it_requirements do NOT restate behavioral rules already covered
+    by the referenced pattern (e.g. the agent does NOT add "must support
+    ascending and descending sort" when the pattern already defines this),
+  And the it_requirements address only implementation concerns specific
+    to this page's bindings (e.g. "query must use the invoices_date_idx index").
+depends_on: [ACS-500c, ACS-500a-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Changes are limited to the IT PO v3 agent template at templates/agents/it-po-v3.md"
+  - "Must not modify any Python code -- this is a prompt/template change only"
+  - "Template must add a rule to the S2 Enrichment Protocol: never modify implements_pattern or pattern_bindings fields"
+  - "Template must add guidance to avoid restating pattern-defined behavior in it_requirements"
+  - "Must not break existing IT PO v3 behavior for ACs that do not use implements_pattern"
+delivers_to:
+  agent: llm-expert
+  contract: "Updated IT PO v3 agent template with instructions to preserve implements_pattern and pattern_bindings during enrichment"
+expects_from:
+  ac_id: ACS-500a-1
+  contract: "Schema fields implements_pattern and pattern_bindings are valid in AC YAML so the IT PO agent can encounter and preserve them"
+origin_agent: business-analyst-v3
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260611-ACS-500c-2.md

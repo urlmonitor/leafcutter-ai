@@ -1,0 +1,51 @@
+id: BP-900b-1
+title: "Guard extracts script path references from all compiled agent templates and skill files"
+component: build_pipeline
+level: L2
+status: active
+req_status: approved
+readiness: approved
+priority: critical
+work_status: not_started
+criteria: |
+  Given build.py has compiled agent templates and skill files to the output directory,
+  When the post-compile validation phase runs,
+  Then it scans every .md file in the compiled agents/ and skills/ directories
+  And it extracts paths matching these patterns:
+    - "python3 scripts/<path>" and "python scripts/<path>"
+    - "sys.path.insert(<N>, 'scripts/<path>')"
+    - "sys.path.insert(<N>, \"scripts/<path>\")"
+  And the extracted set includes at minimum "scripts/ac_store/ac_prioritizer.py",
+    "scripts/ac_store/generate_ticket_from_ac.py", "scripts/goal_to_epic.py"
+    when those references exist in the compiled output
+depends_on: [BP-900b]
+doc_links:
+  - path: scripts/build_propagation_audit.py
+    relationship: extends
+    status: exists
+  - path: scripts/build_referential_integrity.py
+    relationship: extends
+    status: exists
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must scan ALL compiled .md files in agents/ and skills/ directories — no partial scanning"
+  - "Must handle both single-quote and double-quote variants in sys.path.insert patterns"
+  - "Must complete validation in under 5 seconds for typical template sets (fewer than 100 files)"
+  - "Must not produce false positives for non-script-path strings that happen to match the regex pattern"
+  - "Must follow the existing post-build validation pattern used by build_propagation_audit.py and build_referential_integrity.py"
+delivers_to:
+  agent: python-coder
+  contract: "set[tuple[str, str]] — set of (template_path, referenced_script_path) tuples extracted from compiled .md files"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-11
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: [BP-900b-1-1]
+implemented_by:
+- tickets/00_inbox/TICKET-20260611-BP-900b-1.md

@@ -6,3 +6,8 @@ GENERIC_SECRET:scripts/commit_guardian/check_mermaid_drift.py:*
 GENERIC_SECRET:scripts/commit_guardian/check_paths_integrity.py:*
 ENTROPY_HIGH:templates/hooks/auto_commit_inbox_ticket.py:8
 ENTROPY_HIGH:docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400a-3.yaml:9
+ENTROPY_HIGH:docs/agents/README.md:429
+ENTROPY_HIGH:docs/agents/README.md:430
+ENTROPY_HIGH:docs/agents/README.md:431
+ENTROPY_HIGH:docs/agents/README.md:432
+ENTROPY_HIGH:docs/how-to/working-with-leafcutter.md:63

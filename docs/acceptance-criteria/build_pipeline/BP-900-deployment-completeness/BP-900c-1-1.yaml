@@ -1,0 +1,41 @@
+id: BP-900c-1-1
+title: "Multiple templates referencing the same missing script produce a consolidated entry"
+component: build_pipeline
+level: L3
+status: active
+req_status: approved
+readiness: approved
+priority: critical
+work_status: not_started
+criteria: |
+  Given "scripts/ac_store/generate_ticket_from_ac.py" is referenced in both
+  "agents/build-ac.md" and "skills/ac-scanner/SKILL.md"
+  And the script is not in the deployable set,
+  When the guard emits the error report,
+  Then one entry is emitted for the missing script with both referencing templates
+  listed (not two separate entries with the same missing path)
+  And the suggested action appears once for the shared missing path
+depends_on: [BP-900c-1]
+doc_links:
+  - path: scripts/build_propagation_audit.py
+    relationship: extends
+    status: exists
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+  - "Must group broken references by missing_path — not emit duplicate entries for the same missing script"
+  - "The referencing_template field must be a list when multiple templates reference the same missing script"
+  - "Consolidation must be deterministic — same input always produces the same grouped output"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-11
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260611-BP-900c-1-1.md

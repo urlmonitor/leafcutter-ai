@@ -232,6 +232,25 @@ produce duplicates.
 
 Record existing L2 IDs and their criteria summaries.
 
+### Step 7 — Scan the AC store for existing pattern ACs
+
+Before generating any new L2 AC, scan the entire AC store for pattern ACs
+(files that contain a non-null `pattern_slots` field). This is a read-only
+scan — do NOT write any file in this step.
+
+Use a single Bash call to list all AC YAML files store-wide:
+```
+find docs/acceptance-criteria -name "*.yaml"
+```
+
+For each file returned, read it and check whether the `pattern_slots` field is
+present and non-null. Collect these into a `pattern_ac_inventory` list with the
+pattern's `id`, `title`, `pattern_slots`, and the abstract behavior described
+in its `criteria`.
+
+Record the `pattern_ac_inventory`. You will consult it in §3a before writing
+any new L2 AC.
+
 ---
 
 ## §2 Elicitation Framework
@@ -366,6 +385,110 @@ Never assign multiple agents to one AC. Never leave `assigned_agent` empty.
 
 ---
 
+## §3a Pattern-First Check (mandatory before writing any new L2 AC)
+
+Before writing the `criteria` body for any new L2 AC, perform this check
+against the `pattern_ac_inventory` you compiled in §1 Step 7. The goal is
+to ensure that shared behaviors are never redefined — they are referenced.
+
+### Decision tree for each proposed L2 behavior
+
+For each behavior you intend to specify as an L2 AC:
+
+1. **Search the `pattern_ac_inventory` for a matching pattern.** A pattern
+   matches when its abstract `criteria` describes the same core behavior you
+   are about to specify (e.g. a "sortable table" pattern matches any page
+   requirement that mentions column sorting).
+
+2. **If a matching pattern is found** (one or more `pattern_slots` cover the
+   concrete values your L2 needs):
+   - Do NOT write a new standalone `criteria` body that restates the pattern's
+     behavior. Doing so violates the single-source-of-truth invariant (see
+     `docs/reference/ac-schema.md` § Pattern ACs).
+   - Instead, produce the L2 AC using:
+     - `implements_pattern: <pattern_AC_id>` — the `id` of the matching pattern AC.
+     - `pattern_bindings: <slot_name>: <concrete_value>` — one key per slot
+       declared in the pattern's `pattern_slots`, mapped to the page-specific
+       value for this AC. Values may be strings or arrays of strings.
+   - The `criteria` field on this consuming AC contains ONLY page-specific
+     behavior NOT already captured by the pattern (e.g. an additional export
+     interaction). If there is no page-specific behavior beyond the pattern,
+     write a minimal criteria that states the page satisfies the pattern for the
+     given bindings (do not leave `criteria` empty — the field is required).
+   - Log an assumption: `"Pattern ACS-NNNx-N matched; using implements_pattern
+     instead of restating criteria."`
+
+3. **If no matching pattern is found:**
+   - Write the L2 AC with a full standalone `criteria` body.
+   - Note in your assumptions log: `"No matching pattern found in inventory —
+     writing standalone criteria."`
+   - If you believe the behavior is broadly reusable (the same behavior would
+     appear on two or more pages), flag it to the user after producing your ACs:
+     `"Heads up: the <behavior description> behavior in <AC-ID> looks like a
+     reuse candidate. Consider promoting it to a pattern AC in a follow-up."`
+
+4. **If the behavior partially matches a pattern** (the pattern covers the core
+   behavior but your page needs one axis that differs):
+   - Produce the consuming AC with `implements_pattern` and `pattern_bindings`
+     for the matching axes.
+   - Produce a **separate deviation AC** in the same feature folder for the
+     non-standard axis. The deviation AC has its own `id`, a full `criteria`
+     block, and `depends_on` referencing the consuming AC. It does NOT set
+     `implements_pattern`. (See `docs/reference/ac-schema.md` §
+     "Pattern deviations — separate files, not inline overrides".)
+
+### Pattern binding completeness rule
+
+When you produce a consuming AC (one with `implements_pattern` set), you MUST
+supply a `pattern_bindings` key for EVERY slot listed in the referenced
+pattern's `pattern_slots`. A missing binding causes `check_ac_schema.py` to
+block the commit with an error naming the missing slot. Check completeness
+before writing the file.
+
+### Example — sortable-table pattern match
+
+Given:
+- Pattern AC `ACS-500a-1` defines "sortable-table" behavior with
+  `pattern_slots: ["{columns}", "{default_sort}"]`.
+- The L1 you are decomposing says: "the parts list page supports column sorting".
+
+Correct output:
+
+```yaml
+id: ACS-500c-1
+title: "Parts list page declares sortable-table pattern"
+component: ac-store
+level: L2
+status: active
+implements_pattern: ACS-500a-1
+pattern_bindings:
+  columns:
+    - "part_number"
+    - "description"
+    - "quantity"
+    - "unit_price"
+  default_sort: "part_number ascending"
+criteria: |
+  Given the parts list page loads,
+  When the user views the table,
+  Then the table is presented with the sortable-table behavior defined in ACS-500a-1,
+  with columns ["part_number", "description", "quantity", "unit_price"]
+  sorted by "part_number ascending" by default.
+```
+
+Incorrect output (restates behavior already in the pattern — do NOT do this):
+
+```yaml
+# WRONG — do not write this
+criteria: |
+  Given a parts list page contains a sortable table,
+  When the user clicks a column header,
+  Then the table sorts by that column,
+  And clicking again reverses the sort direction.
+```
+
+---
+
 ## §4 Self-Review Checklist (Chain-of-Thought)
 
 Before writing ANY output files, execute this checklist as internal reasoning.
@@ -403,6 +526,16 @@ This is your quality gate.
        no exit codes, no class names, no function names, no log levels).
        Criteria describe WHAT the system does, never HOW it is built.
        For each found: REWRITE using domain/behavioral language.
+[ ] 12. Pattern-first check applied (§3a): for every L2 AC I am about to write,
+       I consulted the pattern_ac_inventory from §1 Step 7.
+       For each match found:
+         - AC uses implements_pattern + pattern_bindings instead of
+           restating the pattern's criteria body.
+         - pattern_bindings supplies a key for EVERY slot in the pattern's
+           pattern_slots (completeness enforced by check_ac_schema.py).
+         - The criteria field contains only page-specific behavior, NOT
+           a restatement of the matched pattern.
+       For each non-match: standalone criteria body is used.
 ```
 
 Only after ALL checkboxes pass do you proceed to write output files.
@@ -714,16 +847,21 @@ emission step runs whether or not this agent was spawned with a `ticket_path`.
 ## Orchestration Sequence
 
 1. **§1 Knowledge Acquisition** — Read L1, L0, index.yaml, standing ACs,
-   component docs, project rules, existing L2s.
+   component docs, project rules, existing L2s. Then scan the AC store for
+   pattern ACs (Step 7) and build the `pattern_ac_inventory`.
 2. **§2 Elicitation** — Ask questions only if gaps remain after §1. Max 5.
    Log assumptions for questions not asked.
-3. **§4 Self-Review** — Execute the checklist as chain-of-thought. Fix any
-   violations before proceeding.
-4. **§3 Write Output** — Produce L2 YAML files (max 5 per batch). Then
+3. **§3a Pattern-First Check** — For each behavior you intend to specify,
+   consult the `pattern_ac_inventory`. If a matching pattern exists, produce
+   the AC with `implements_pattern` + `pattern_bindings` instead of a
+   standalone criteria body.
+4. **§4 Self-Review** — Execute the checklist as chain-of-thought. Fix any
+   violations before proceeding. Item 12 verifies the pattern-first check.
+5. **§3 Write Output** — Produce L2 YAML files (max 5 per batch). Then
    produce L3 files for non-obvious failure modes.
-5. **§5 Checkpoint** — If more than 5 behaviors remain, report and continue.
-6. **§6 Grouping** — Suggest parent components if shared patterns detected.
-7. **§8 Sign-Off** — The written files are your sign-off. Report the list of
+6. **§5 Checkpoint** — If more than 5 behaviors remain, report and continue.
+7. **§6 Grouping** — Suggest parent components if shared patterns detected.
+8. **§8 Sign-Off** — The written files are your sign-off. Report the list of
    file IDs produced.
 
 ---

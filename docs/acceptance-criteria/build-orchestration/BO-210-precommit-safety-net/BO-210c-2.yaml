@@ -1,0 +1,40 @@
+id: BO-210c-2
+readiness: approved
+priority: high
+title: "Mechanical-tier hooks keep the generic light-model route and the commit retries exactly once"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200b-3.yaml"
+criteria: |
+  Given a commit fails a gating hook whose tier is the mechanical tier (no judgment required),
+  When the auto-fix path selects a fixer,
+  Then it uses the existing generic light-model route rather than re-dispatching the originating coder,
+  And it does NOT read or require a context_capsule for that fixer,
+  And after any fixer (mechanical or originator re-dispatch) returns, the commit is retried
+    exactly once,
+  And if the retried commit still fails, the failure is surfaced rather than retried a second time.
+depends_on: [BO-210c, BO-210a-2, GE-102c]
+doc_links:
+  - path: "templates/skills/precommit-autofix/SKILL.md"
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Edits the precommit-autofix SKILL.md routing logic — an LLM-instruction surface, not a Python module"
+  - "The tier of a hook is read from the hooks_manifest tier field (GE-102c) for that hook id"
+  - "Mechanical-tier route selection keys off blocking_hook_ids (BO-210a-2) plus the manifest tier"
+  - "The single-retry budget is unchanged from current behavior"
+delivers_to: null
+expects_from:
+  ac_id: BO-210a-2
+  contract: "The blocking_hook_ids list used (with the per-hook manifest tier from GE-102c) to choose the mechanical vs originator route"
+origin_agent: business-analyst
+created: 2026-06-16
+amended_by: []
+superseded_by: null
+covered_by: [BO-210c-2-i]
+implemented_by: []

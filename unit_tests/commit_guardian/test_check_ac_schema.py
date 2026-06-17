@@ -280,6 +280,164 @@ class TestOriginAgentEmptyStringBlocked(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
 
 
+class TestDeprecatedPatternReferenceBlocked(unittest.TestCase):
+    """Consuming AC that implements_pattern referencing a deprecated pattern AC exits 1."""
+
+    def test_deprecated_pattern_reference_blocked(self) -> None:
+        """A consuming AC referencing a deprecated pattern exits 1 with the canonical error.
+
+        Writes two AC YAML files into a temporary directory: a pattern AC with
+        ``status: deprecated`` and a consuming AC with ``implements_pattern``
+        pointing to it. Runs the hook and asserts that the process exits 1 and
+        that stderr contains the canonical error string from ACS-500a-3-ii.
+        """
+        pattern_content = textwrap.dedent("""\
+            id: PTN-001
+            title: "Deprecated pattern"
+            component: finalize
+            status: deprecated
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+        """)
+        consuming_content = textwrap.dedent("""\
+            id: FIN-010
+            title: "Consuming AC referencing deprecated pattern"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+            implements_pattern: "PTN-001"
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "PTN-001.yaml", pattern_content)
+            consuming_path = _write_ac_file(root, "FIN-010.yaml", consuming_content)
+            result = _run_hook(root)
+        self.assertEqual(result.returncode, 1, msg=result.stderr)
+        self.assertIn(
+            "implements_pattern references deprecated pattern PTN-001",
+            result.stderr,
+        )
+        self.assertIn(
+            "use its successor (see PTN-001 superseded_by field) or remove the reference",
+            result.stderr,
+        )
+        self.assertIn(str(consuming_path.name), result.stderr)
+
+
+class TestActivePatternReferenceAllowed(unittest.TestCase):
+    """Consuming AC that implements_pattern referencing an active pattern AC exits 0."""
+
+    def test_active_pattern_reference_passes(self) -> None:
+        """A consuming AC referencing an active pattern exits 0 with no deprecated-pattern error.
+
+        Writes two AC YAML files: a pattern AC with ``status: active`` and a
+        consuming AC with ``implements_pattern`` pointing to it. Runs the hook
+        and asserts that the process exits 0 and that no deprecated-pattern
+        error appears in stderr.
+        """
+        pattern_content = textwrap.dedent("""\
+            id: PTN-002
+            title: "Active pattern"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+        """)
+        consuming_content = textwrap.dedent("""\
+            id: FIN-011
+            title: "Consuming AC referencing active pattern"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+            implements_pattern: "PTN-002"
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "PTN-002.yaml", pattern_content)
+            _write_ac_file(root, "FIN-011.yaml", consuming_content)
+            result = _run_hook(root)
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertNotIn("references deprecated pattern", result.stderr)
+
+
+class TestDeprecatedPatternReferenceNamesConsumingFilePath(unittest.TestCase):
+    """Error output for a deprecated-pattern reference includes the consuming file path."""
+
+    def test_deprecated_pattern_error_names_consuming_path(self) -> None:
+        """The error message for a deprecated-pattern reference names the consuming AC path.
+
+        Verifies the consuming file path (FIN-012.yaml) appears in the hook
+        stderr when the consuming AC's implements_pattern points to a deprecated
+        pattern AC (PTN-003).
+        """
+        pattern_content = textwrap.dedent("""\
+            id: PTN-003
+            title: "Another deprecated pattern"
+            component: finalize
+            status: deprecated
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+        """)
+        consuming_content = textwrap.dedent("""\
+            id: FIN-012
+            title: "Consuming AC for path-naming test"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+            implements_pattern: "PTN-003"
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "PTN-003.yaml", pattern_content)
+            consuming_path = _write_ac_file(root, "FIN-012.yaml", consuming_content)
+            result = _run_hook(root)
+        self.assertEqual(result.returncode, 1, msg=result.stderr)
+        # The error must name either the relative or absolute path of the consuming file.
+        # The main loop uses relative paths; the function embeds the absolute path.
+        # Either form satisfies the AC requirement.
+        self.assertTrue(
+            str(consuming_path.name) in result.stderr
+            or str(consuming_path) in result.stderr,
+            msg=(
+                f"Expected consuming file path ({consuming_path.name} or "
+                f"{consuming_path}) in stderr:\n{result.stderr}"
+            ),
+        )
+
+
 class TestOriginAgentHistoricalValuePasses(unittest.TestCase):
     """AC YAML with a historical origin_agent value (e.g. business-analyst-v2)
     should pass validation — origin_agent is a free-form provenance string and
@@ -494,6 +652,126 @@ class TestOriginAgentAllHistoricalValuePass(unittest.TestCase):
             msg=(
                 "check_ac_schema.py must not rewrite origin_agent values "
                 "during validation (no migration allowed)."
+            ),
+        )
+
+
+class TestImplementsPatternWithEmptyCriteria(unittest.TestCase):
+    """AC with implements_pattern and a plain-text criteria placeholder must pass.
+
+    When an AC inherits all behavior from a reusable pattern via implements_pattern,
+    the criteria field may contain a plain-text placeholder instead of a full
+    Given/When/Then scenario. The schema validator must accept this form.
+
+    See: ACS-500b-1-i, ADR-007 §Pattern-inherited ACs.
+    """
+
+    def test_implements_pattern_with_plain_text_criteria_passes(self) -> None:
+        # covers: ACS-500b-1-i
+        """An AC with implements_pattern set and plain-text criteria exits 0.
+
+        The schema validator must accept a non-Gherkin criteria string when
+        implements_pattern is present, because the effective behavior is
+        entirely derived from the referenced pattern.
+        """
+        content = textwrap.dedent("""\
+            id: PAG-001
+            title: "Users list page — standard CRUD table (PTN-001)"
+            component: users-ui
+            status: active
+            created_by: "tickets/test.md"
+            criteria: "No page-specific behavior — all behavior inherited from pattern."
+            implements_pattern: "PTN-001"
+            pattern_bindings:
+              entity_type: "users"
+              columns:
+                - "name"
+                - "email"
+            priority: medium
+            readiness: draft
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "PAG-001.yaml", content)
+            result = _run_hook(root)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "AC with implements_pattern and plain-text criteria placeholder "
+                f"must be accepted by the schema validator. Stderr: {result.stderr}"
+            ),
+        )
+
+    def test_implements_pattern_null_with_gherkin_criteria_passes(self) -> None:
+        # covers: ACS-500b-1-i
+        """An AC with implements_pattern: null and full Gherkin criteria exits 0.
+
+        The implements_pattern field is optional. When absent or null, the AC
+        must still pass if criteria contains valid Gherkin (standard case).
+        """
+        content = textwrap.dedent("""\
+            id: PAG-002
+            title: "Login page — standard Gherkin"
+            component: users-ui
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given the user is on the login page
+              When they submit valid credentials
+              Then they are redirected to the dashboard
+            implements_pattern: null
+            priority: medium
+            readiness: draft
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "PAG-002.yaml", content)
+            result = _run_hook(root)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "AC with implements_pattern: null and Gherkin criteria must pass. "
+                f"Stderr: {result.stderr}"
+            ),
+        )
+
+    def test_implements_pattern_with_pattern_bindings_passes(self) -> None:
+        # covers: ACS-500b-1-i
+        """An AC with implements_pattern and pattern_bindings exits 0.
+
+        The pattern_bindings object field must be accepted by the schema
+        validator as an optional object field with unrestricted keys.
+        """
+        content = textwrap.dedent("""\
+            id: PAG-003
+            title: "Products list page — inherits PTN-001"
+            component: products-ui
+            status: active
+            created_by: "tickets/test.md"
+            criteria: "No page-specific behavior — all behavior inherited from pattern."
+            implements_pattern: "PTN-001"
+            pattern_bindings:
+              entity_type: "products"
+              columns:
+                - "sku"
+                - "name"
+                - "price"
+              filters_enabled: true
+            priority: low
+            readiness: draft
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "PAG-003.yaml", content)
+            result = _run_hook(root)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "AC with implements_pattern, pattern_bindings, and plain-text "
+                f"criteria must pass schema validation. Stderr: {result.stderr}"
             ),
         )
 

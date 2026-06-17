@@ -1,0 +1,53 @@
+id: ACS-500e-1
+readiness: approved
+priority: high
+title: "Atomic pattern ACs compose into named composite pattern ACs"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the store contains atomic pattern ACs:
+    - "sortable-table" (PTN-010) defining column sorting behavior,
+    - "filter-bar" (PTN-011) defining text/dropdown filter behavior,
+    - "paginated-collection" (PTN-012) defining page-size and navigation,
+  When a composite pattern "crud-list-page" (PTN-020) is defined,
+  Then PTN-020's depends_on includes [PTN-010, PTN-011, PTN-012],
+  And PTN-020's criteria describes ONLY the wiring behavior between them
+    (e.g. "filter changes reset pagination to page 1",
+    "sort changes preserve current filter state"),
+  And PTN-020 is itself available as a reusable pattern that consuming
+    page ACs can reference via implements_pattern: "PTN-020".
+depends_on: [ACS-500e, ACS-500a-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/index.yaml
+    relationship: governs
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Uses existing depends_on field for composition -- no new schema fields required"
+  - "Composite patterns must pass the same schema validation as atomic patterns (valid AC YAML with parameterized criteria)"
+  - "Pattern resolution must handle composite patterns by recursively resolving depends_on references"
+  - "Recursion depth must be bounded to prevent infinite loops (max depth configurable, default 10)"
+  - "Must not regress any existing depends_on validation behavior"
+delivers_to:
+  agent: python-coder
+  contract: "Composite pattern ACs that use depends_on to reference atomic patterns and are themselves referenceable via implements_pattern"
+expects_from:
+  ac_id: ACS-500a-1
+  contract: "Atomic pattern AC files with parameterized criteria that composite patterns can reference via depends_on"
+origin_agent: business-analyst-v3
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: [ACS-500e-1-i]
+implemented_by:
+- tickets/00_inbox/TICKET-20260611-ACS-500e-1.md

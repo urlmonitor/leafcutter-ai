@@ -1,0 +1,41 @@
+id: BP-900b-1-1
+title: "Allowlisted external scripts do not trigger broken-reference failures"
+component: build_pipeline
+level: L3
+status: active
+req_status: approved
+readiness: approved
+priority: critical
+work_status: not_started
+criteria: |
+  Given an agent template references a script path "scripts/external_tool.py"
+  And that path is listed in the external-dependency allowlist
+  (a configuration file or constant that the guard reads),
+  When the guard cross-checks references against deployable scripts,
+  Then the allowlisted reference is treated as resolved
+  And it does NOT appear in the broken-reference list
+  And the build exits zero (assuming no other broken references exist)
+depends_on: [BP-900b-1]
+doc_links:
+  - path: scripts/build_propagation_audit.py
+    relationship: extends
+    status: exists
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+  - "Allowlist must be configurable — not hardcoded inline in the guard logic"
+  - "Allowlist location must be discoverable from the project configuration"
+  - "Must handle errors gracefully if the allowlist file is missing or malformed"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-11
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260611-BP-900b-1-1.md

@@ -1,0 +1,54 @@
+id: BO-210c-1
+readiness: approved
+priority: high
+title: "Judgment-tier hook failure re-dispatches the originating agent type with its capsule"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200b-3.yaml"
+criteria: |
+  Given a commit fails a gating hook that is listed in blocking_hook_ids and whose
+    tier is the judgment tier,
+  And the hook output includes a line naming the originating agent (e.g. an
+    "AUTOFIX_AGENT: python-coder" line emitted by the hook),
+  And the ticket contains a context_capsule for that agent,
+  When the auto-fix path runs between parsing the failing hook ids and dispatching a fixer,
+  Then it reads the originating agent id from the hook output (never a hard-coded role literal),
+  And it loads the latest context_capsule for that agent from the ticket,
+  And it dispatches the SAME agent type, passing the ticket path, the context_capsule,
+    the failing hook ids, and the raw hook output,
+  And the dispatched agent is instructed to fix only what satisfies the hooks, honor the
+    capsule rationale, and reuse the capsule's consumers_checked rather than looking them up again.
+depends_on: [BO-210c, BO-210a-2, BO-210b-1, GE-102c, GE-102d]
+doc_links:
+  - path: "templates/skills/precommit-autofix/SKILL.md"
+    relationship: describes
+    status: exists
+  - path: "templates/agents/commit.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md"
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: L
+it_requirements:
+  - "Edits the precommit-autofix SKILL.md re-dispatch logic and the commit agent template — both LLM-instruction surfaces; no Python module owns this routing"
+  - "The originating agent id must be parsed from the AUTOFIX_AGENT line in the hook output (delivered by GE-102d), not a static literal, for portability"
+  - "The ticket path is threaded from the commit phase into the re-dispatch logic"
+  - "Re-dispatch only fires for hooks present in blocking_hook_ids (BO-210a-2) whose manifest tier (GE-102c) is judgment"
+  - "Every documented shell command in the edited skill and agent templates must be a single simple command per the project shell convention"
+delivers_to:
+  agent: llm-expert
+  contract: "A re-dispatch invocation of the originating agent type passing {ticket_path, context_capsule, failing_hook_ids, raw_hook_output}"
+expects_from:
+  ac_id: BO-210b-1
+  contract: "A context_capsule keyed by originating agent id, present in the ticket sign-off"
+origin_agent: business-analyst
+created: 2026-06-16
+amended_by: []
+superseded_by: null
+covered_by: [BO-210c-1-i, BO-210c-1-ii, BO-210c-1-iii]
+implemented_by: []

@@ -1,0 +1,34 @@
+id: BO-210a
+readiness: approved
+priority: high
+title: "The auto-fix routing config is populated to the documented schema with a single gating list"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200b-3.yaml"
+criteria: |
+  The pre-commit auto-fix routing configuration is no longer a dead stub. It is
+  populated to the documented schema (defaults, commit_review, rules) and gains a
+  single blocking_hook_ids list that is the sole authority on which hooks gate a
+  commit. The configuration and its packaged template source stay in sync, so a
+  consumer install receives the same populated routing rules as the development repo.
+depends_on: [BO-210]
+doc_links:
+  - path: "templates/skills/precommit-autofix/SKILL.md"
+    relationship: describes
+    status: exists
+  - path: ".claude/precommit-autofix.json"
+    relationship: configures
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-16
+amended_by: []
+superseded_by: null
+covered_by: [BO-210a-1, BO-210a-2, BO-210a-1-i]
+implemented_by: []

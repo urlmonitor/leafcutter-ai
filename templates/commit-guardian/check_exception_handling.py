@@ -33,6 +33,7 @@ DECISION HISTORY
 from __future__ import annotations
 
 import ast
+import json
 import sys
 from pathlib import Path
 from typing import NamedTuple
@@ -314,6 +315,49 @@ def analyse_file(path: Path) -> list[Violation]:
 
 
 # ---------------------------------------------------------------------------
+# Agent registry lookup (mirrors check_complexity.py pattern)
+# ---------------------------------------------------------------------------
+
+
+def _get_agent_for_extension(ext: str) -> str | None:
+    """Return the agent id whose owns_file_extensions contains the given extension.
+
+    Reads ``agent_registry.json`` relative to this script's project root.
+    Fails open: returns ``None`` when the registry is missing, unreadable,
+    or contains no matching entry.
+
+    Args:
+        ext: File extension with leading dot, e.g. ``".py"``.
+
+    Returns:
+        Agent id string (e.g. ``"python-coder"``) if a match is found,
+        else ``None``.
+    """
+    script_dir = Path(__file__).resolve().parent
+    # Search for the registry relative to the script location (handles both
+    # source layout scripts/commit_guardian/ and deployed layout).
+    for ancestor in [script_dir, *script_dir.parents]:
+        candidate = ancestor / "leafcutter" / "config" / "agent_registry.json"
+        if candidate.exists():
+            registry_path = candidate
+            break
+    else:
+        return None
+
+    try:
+        with open(registry_path, encoding="utf-8") as fh:
+            data = json.load(fh)
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    for entry in data.get("agents", []):
+        extensions = entry.get("owns_file_extensions") or []
+        if ext in extensions:
+            return entry.get("id")
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
@@ -367,7 +411,16 @@ def main() -> int:
         for v in violations:
             print(f"  {file_path}:{v.line}:{v.col}: {v.code} {v.message}")
 
-    return 1 if found_any else 0
+    if found_any:
+        # Machine-readable autofix hint — parsed by the precommit-autofix skill
+        # to route directly to the correct coder. Looked up from agent_registry.json
+        # via owns_file_extensions; falls back to python-coder when the lookup
+        # returns None (exception-handling violations are always Python).
+        agent = _get_agent_for_extension(".py") or "python-coder"
+        print(f"AUTOFIX_AGENT: {agent}")
+        return 1
+
+    return 0
 
 
 if __name__ == "__main__":

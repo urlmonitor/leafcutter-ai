@@ -1,0 +1,42 @@
+id: BO-210c-1-iii
+readiness: approved
+priority: high
+title: "Every bash command in new or edited safety-net templates is a single simple command"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200b-3.yaml"
+criteria: |
+  Given the safety-net feature adds or edits agent and skill templates (for example the
+    auto-fix skill, the sign-off skill, and the commit agent template),
+  When a reviewer scans every bash command block in those new or edited templates,
+  Then no command chains with the and-and operator, the semicolon, the or-or operator, or a pipe
+    into another command,
+  And no command uses a directory-change as a prefix to another command,
+  And each documented command is a single simple invocation, so it matches the project's
+    auto-allow shell convention.
+depends_on: [BO-210c-1]
+doc_links:
+  - path: "templates/skills/precommit-autofix/SKILL.md"
+    relationship: describes
+    status: exists
+  - path: "templates/skills/signoff/SKILL.md"
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "No chained or cd-prefixed shell commands in any new or edited template touched by this feature"
+  - "Applies to every bash block touched by this feature (precommit-autofix skill, signoff skill, commit agent template, and the three coder templates), not only newly added ones"
+delivers_to: null
+expects_from:
+  ac_id: BO-210c-1
+  contract: "The edited skill and agent templates whose shell blocks this convention constrains"
+origin_agent: business-analyst
+created: 2026-06-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

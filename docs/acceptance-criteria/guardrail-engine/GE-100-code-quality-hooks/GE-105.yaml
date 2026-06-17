@@ -1,0 +1,47 @@
+id: GE-105
+readiness: approved
+priority: high
+title: "diagram_type enum accepts canonical values so valid arch docs are not rejected at commit"
+component: guardrail-engine
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-105.yaml"
+criteria: |
+  Given a docs/**/*.md file declaring a canonical diagram_type frontmatter
+       value (data_flow, user_flow, or agent_flow)
+  When check_doc_frontmatter runs validate_diagram_type during pre-commit
+  Then the value must be accepted (no error), because the effective enum source
+       (commit_guardian.json -> doc_frontmatter.diagram_type_values, used as the
+       runtime fallback when diagram_types.json is not deployed) lists it
+
+  And given the legacy alias "dataflow"
+  When the same validation runs
+  Then "dataflow" must still be accepted (backward compatibility)
+
+  And the bug symptom ("unknown diagram_type: agent_flow" / "unknown
+      diagram_type: data_flow" on a doc that uses a canonical value) must not
+      occur
+depends_on: []
+doc_links:
+  - path: "templates/scripts/commit_guardian/commit_guardian.json"
+    relationship: configures
+    status: exists
+  - path: "templates/scripts/commit_guardian/diagram_type_validators.py"
+    relationship: related
+    status: exists
+  - path: "leafcutter/config/diagram_types.json"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+it_requirements: "Update the diagram_type_values list in the deployed/effective enum source (commit_guardian.json -> doc_frontmatter) across the tracked source copies to match diagram_types.json: add data_flow, user_flow, agent_flow; retain dataflow as a deprecated alias plus context, container, component, sequence, erd, state, none. This is a symptom fix; the dead-SSOT architecture (diagram_types.json never deployed by build.py, and validator path resolution off by one segment in both diagram_type_validators.py and doc_type_validators.py) is tracked separately and out of scope here."
+origin_agent: BrainCandy
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

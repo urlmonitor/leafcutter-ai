@@ -1,0 +1,49 @@
+id: GE-100e-1
+readiness: approved
+priority: high
+title: "diff-cover hook blocks commit when strict mode is enabled and coverage is below threshold"
+component: guardrail-engine
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100.yaml"
+criteria: |
+  Given the commit guardian configuration has the diff_coverage section with:
+    enabled: true
+    strict: true
+    min_coverage_percent: 80
+    coverage_xml_path: "coverage.xml"
+    compare_branch: "origin/main"
+    max_age_seconds: 3600
+  And the diff-cover binary is installed
+  And coverage.xml exists and was generated 600 seconds ago (within freshness window)
+  And the developer has staged Python files whose diff coverage against
+    origin/main measures at 45% (below the 80% threshold)
+  When the diff-cover hook runs at pre-commit time
+  Then the hook exits with code 1 (blocking)
+  And it emits an error listing each under-covered file with its percentage
+  And the error states the overall diff coverage (45%) vs the threshold (80%)
+  And the commit is prevented
+depends_on:
+  - GE-100e
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100e.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-100e
+  contract: "The coverage evaluation function that compares diff coverage percentage against the configured threshold and respects the strict flag"
+origin_agent: BrainCandy
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260616-GE-100e-1.md

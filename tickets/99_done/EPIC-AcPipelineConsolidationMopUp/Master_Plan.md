@@ -1,7 +1,7 @@
 ---
 title: "EPIC: AcPipelineConsolidation Mop-Up"
 type: epic
-status: in_progress
+status: done
 components:
   - ticket_creation_pipeline
   - commit_guardian

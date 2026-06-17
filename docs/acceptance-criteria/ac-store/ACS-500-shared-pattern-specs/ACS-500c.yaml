@@ -1,0 +1,29 @@
+id: ACS-500c
+readiness: approved
+priority: high
+title: "Agents recognize shared behavior and reference the pattern instead of re-specifying it"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Authoring agents detect and link to existing patterns automatically.
+
+  When the BA, IT PO, or ac-triage agents encounter behavior that matches an
+  existing shared pattern, they reference the pattern definition rather than
+  writing a duplicate specification. The agents are pattern-aware during
+  authoring — they check for existing shared components before creating new
+  standalone ACs.
+depends_on: [ACS-500]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: [ACS-500c-1, ACS-500c-2, ACS-500c-3]
+implemented_by: []
+assigned_agent: null
+estimated_complexity: null

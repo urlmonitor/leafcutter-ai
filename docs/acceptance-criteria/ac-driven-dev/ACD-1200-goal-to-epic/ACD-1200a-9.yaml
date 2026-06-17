@@ -1,0 +1,49 @@
+id: ACD-1200a-9
+readiness: approved
+priority: high
+title: "Level-based leaf detection: _dfs_collect_leaves uses level field, not covered_by emptiness"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the AC store contains this tree:
+    - ROOT-001 (level: L0, covered_by: [ROOT-001a])
+    - ROOT-001a (level: L1, covered_by: [ROOT-001a-1, ROOT-001a-2])
+      - ROOT-001a-1 (level: L2, covered_by: [])
+      - ROOT-001a-2 (level: L2, covered_by: [ROOT-001a-2-i])
+        - ROOT-001a-2-i (level: L3, covered_by: [])
+  When traverse_ac_tree is called with root_id=ROOT-001,
+  Then the result includes ROOT-001a-1 (L2 with no children),
+  And the result includes ROOT-001a-2 (L2 WITH children — still a leaf by level),
+  And the result includes ROOT-001a-2-i (L3 child — also a leaf by level),
+  And the result does NOT include ROOT-001 (L0 — composite pass-through),
+  And the result does NOT include ROOT-001a (L1 — composite pass-through),
+  And the total leaf count is 3 (ROOT-001a-1, ROOT-001a-2, ROOT-001a-2-i).
+
+  The leaf signal must be level in {L2, L3}, not covered_by == [].
+  L0/L1 nodes are always composite pass-throughs regardless of covered_by.
+  L2/L3 nodes are always emitted as leaves AND their children are recursed
+  into (so L3 edge-case ACs beneath an L2 are also collected).
+depends_on: []
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must use _LEAF_LEVELS constant (already defined at line 46) for level check"
+  - "Must not break the existing main() CLI filter path which already uses _is_leaf() correctly"
+  - "L2 nodes with covered_by children must be emitted AND recursed into"
+delivers_to:
+  agent: python-coder
+  contract: "Fix _dfs_collect_leaves() to check level in _LEAF_LEVELS first. If L2/L3, append to result AND recurse. If L0/L1, recurse only."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

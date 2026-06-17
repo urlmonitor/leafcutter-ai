@@ -1,0 +1,44 @@
+id: BO-210b-2
+readiness: approved
+priority: high
+title: "Consumers tolerate an absent context_capsule exactly like an absent completion_manifest"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200b-3.yaml"
+criteria: |
+  Given a sign-off comment that contains no context_capsule block (for example a
+    sign-off authored before this feature, or one where no warn-tier signal tripped),
+  When a consumer that reads sign-offs (the supervisor or the auto-fix re-dispatch logic)
+    processes that comment,
+  Then it proceeds without error and without blocking,
+  And it treats the missing capsule identically to a missing completion_manifest:
+    it emits at most a warning and continues,
+  And the documented sign-off skill states that the capsule block is optional and
+    backward-compatible-absent.
+depends_on: [BO-210b, BO-210b-1]
+doc_links:
+  - path: "templates/skills/signoff/SKILL.md"
+    relationship: describes
+    status: exists
+  - path: "templates/skills/precommit-autofix/SKILL.md"
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Capsule absence must never raise an error or block the commit path — the consumer skill bodies (signoff and precommit-autofix) must document warn-and-proceed on absence"
+  - "Absence handling must mirror the existing completion_manifest legacy-compatibility behavior already documented in the signoff skill"
+  - "The signoff SKILL.md must explicitly state the capsule block is optional and backward-compatible-absent"
+delivers_to: null
+expects_from:
+  ac_id: BO-210b-1
+  contract: "The context_capsule block format that may or may not be present in a sign-off"
+origin_agent: business-analyst
+created: 2026-06-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

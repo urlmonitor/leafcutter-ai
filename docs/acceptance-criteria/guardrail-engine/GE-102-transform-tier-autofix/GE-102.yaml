@@ -1,0 +1,37 @@
+id: GE-102
+readiness: approved
+priority: high
+title: "Deterministic transform hooks auto-fix mechanical doc fields and hooks declare their fixer tier"
+component: guardrail-engine
+level: L1
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200b-3.yaml"
+criteria: |
+  A new transform tier of pure-Python pre-commit hooks deterministically fixes mechanical
+  documentation-field violations in place, stages the fix, and exits clean, failing open on
+  any parse uncertainty. Each hook in the manifest declares a tier (transform or judgment)
+  so the auto-fix path knows which failures are mechanically self-healed and which require the
+  originating coder. The transform hooks are ordered before their matching validator hooks so a
+  field is filled before it is validated. Judgment-required checks (complexity, file size,
+  docstrings, exception handling) stay out of the transform tier. The exception-handling check
+  additionally emits the originating-agent line so the safety net can re-dispatch it.
+depends_on: [BO-210]
+doc_links:
+  - path: "scripts/commit_guardian/commit_guardian.json"
+    relationship: configures
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-16
+amended_by: []
+superseded_by: null
+covered_by: [GE-102a, GE-102b, GE-102c, GE-102d, GE-102e]
+implemented_by: []

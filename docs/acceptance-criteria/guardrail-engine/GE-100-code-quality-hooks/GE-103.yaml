@@ -1,0 +1,48 @@
+id: GE-103
+readiness: approved
+priority: high
+title: "Every commit_guardian hook module imports cleanly so doc-frontmatter enforcement stays live"
+component: guardrail-engine
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-103.yaml"
+criteria: |
+  Given the commit_guardian package is deployed into a consumer project
+  When the pre-commit pipeline imports check_doc_frontmatter.py (which imports
+       frontmatter_validators, which imports diagram_type_validators)
+  Then the import must succeed without ModuleNotFoundError
+  And doc-frontmatter enforcement (required fields, type/status/flight_level
+      enums, components-exist-in-registry) must run rather than being silently
+      disabled by an import crash
+
+  And given any module file in commit_guardian/ matching check_*.py or *_validators.py
+  When a package import smoke test imports each one
+  Then every module imports cleanly, so a missing-module regression fails the
+      test suite instead of silently disabling a hook in every consumer repo
+
+  And the bug symptom ("ModuleNotFoundError: No module named 'diagram_type_validators'")
+      must not occur
+depends_on: []
+doc_links:
+  - path: "templates/scripts/commit_guardian/diagram_type_validators.py"
+    relationship: implements
+    status: exists
+  - path: "templates/scripts/commit_guardian/frontmatter_validators.py"
+    relationship: related
+    status: exists
+  - path: "leafcutter/config/diagram_types.json"
+    relationship: configures
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+it_requirements: "Recreate the diagram_type_validators module (lost in the empty-tree corruption merge 2c2aa22) in all three tracked source dirs (templates/scripts/commit_guardian/, scripts/commit_guardian/, templates/commit-guardian/). Module reads leafcutter/config/diagram_types.json as the canonical enum source and exposes validate_diagram_type(fm). Add a package import smoke test over commit_guardian check_*.py and *_validators.py modules. build.py deploys via rglob; no manifest edit required."
+origin_agent: BrainCandy
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

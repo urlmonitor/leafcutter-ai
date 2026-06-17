@@ -1,0 +1,49 @@
+id: BP-900a-1
+title: "build.py deploys all ac_store scripts to the consumer project"
+component: build_pipeline
+level: L2
+status: active
+req_status: approved
+readiness: approved
+priority: critical
+work_status: not_started
+criteria: |
+  Given build.py is invoked with --target-dir pointing to a consumer project,
+  When the build completes successfully,
+  Then the following 13 files exist under {target}/.leafcutter/scripts/ac_store/:
+    ac_prioritizer.py, generate_ticket_from_ac.py, scan_ac_store.py,
+    mark_ac_done.py, validate_ac_schema.py, ac_triage.py,
+    create_ac_workflow.py, cross_reference_audit.py, backfill_readiness.py,
+    ac_parent_id.py, scan_ac_orphans.py, fix_ac_orphans.py, __init__.py
+  And each deployed file is byte-identical to its source in templates/scripts/ac_store/
+depends_on: [BP-900a]
+doc_links:
+  - path: scripts/build.py
+    relationship: implements
+    status: exists
+  - path: scripts/build_phases.py
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must follow the existing build phase function pattern in build_phases.py (build_commit_guardian, build_doc_compliance, etc.)"
+  - "Deployed files must be byte-identical to sources — no transformation or interpolation"
+  - "Build must be idempotent — re-running with the same inputs produces the same output"
+  - "Must not break existing build phases or their outputs"
+  - "Must handle file I/O errors gracefully per the project error handling policy"
+delivers_to:
+  agent: python-coder
+  contract: "13 files deployed to {target}/.leafcutter/scripts/ac_store/ including __init__.py, making the directory an importable Python package"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-11
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: [BP-900a-1-1]
+implemented_by:
+- tickets/00_inbox/TICKET-20260611-BP-900a-1.md

@@ -1,0 +1,53 @@
+id: ACS-500a-3
+readiness: approved
+priority: high
+title: "Schema validates implements_pattern references point to existing ACs"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an AC YAML file contains the field implements_pattern: "ACS-500a-1",
+  When the schema validator runs at commit time,
+  Then it verifies that the referenced AC ID exists as a file in the AC store,
+  And the referenced AC has a criteria field containing at least one
+    parameterized slot (a named placeholder in curly braces),
+  And if the referenced AC ID does not exist, the commit is blocked
+    with an error naming the dangling reference and the file that contains it.
+depends_on: [ACS-500a, ACS-500a-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/index.yaml
+    relationship: governs
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must not regress any existing validation behavior in scripts/ac_store/validate_ac_schema.py"
+  - "Must complete validation in <200ms for AC stores with up to 500 files"
+  - "Schema enforcement must use stdlib-only approach consistent with ADR-007 (no external dependencies required)"
+  - "Error messages must include the file path containing the dangling reference and the missing AC ID"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must be idempotent -- repeated validation runs with the same input produce the same result"
+delivers_to:
+  agent: python-coder
+  contract: "Validation logic in scripts/ac_store/validate_ac_schema.py that verifies implements_pattern references resolve to existing AC files with parameterized criteria"
+expects_from:
+  ac_id: ACS-500a-1
+  contract: "Schema fields implements_pattern (string|null) and pattern_bindings (object|null) present in config/ac_store_schema.json"
+origin_agent: business-analyst-v3
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: [ACS-500a-3-i, ACS-500a-3-ii]
+implemented_by:
+- tickets/00_inbox/TICKET-20260611-ACS-500a-3.md

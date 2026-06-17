@@ -1,0 +1,34 @@
+id: BP-900c
+title: "Broken-reference errors name the file, the referencing template, and the fix"
+component: build_pipeline
+level: L1
+status: active
+req_status: approved
+readiness: approved
+priority: critical
+work_status: not_started
+criteria: |
+  Given the build-time guard (BP-900b) has detected one or more broken script
+  references,
+  When it prints the error report,
+  Then each entry includes:
+  (a) the missing script path,
+  (b) the template file(s) that reference it,
+  (c) a suggested action (e.g. "add a deploy phase in build_phases.py" or
+      "add to the external-dependency allowlist"),
+  And the report is printed to stderr with a non-zero exit code,
+  And the output is parseable by downstream tooling (one finding per line or
+  structured JSON).
+depends_on: [BP-900b]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-11
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: [BP-900c-1, BP-900c-2]
+implemented_by: []

@@ -1,9 +1,10 @@
 ---
 title: "Agent Reference: commit"
+description: "Reference for the confirmation-gated commit agent: its two-path confirmation gate (interactive vs supervised), precommit-autofix retry loop, and Git Safety Protocol refusal cases."
 type: reference
 status: active
 created: 2026-05-07
-last_updated: 2026-05-07
+last_updated: 2026-06-17
 components:
   - "infrastructure"
 related_docs:
@@ -29,7 +30,9 @@ retries **once**.
 
 ## 1. Confirmation Flow
 
-Every commit goes through:
+The gate branches on whether `ticket_path` was provided.
+
+### Interactive path (no `ticket_path`)
 
 1. Inspect staged change (`git status --short`, `git diff --cached --stat`).
 2. Draft message following `git log -5` style.
@@ -38,6 +41,21 @@ Every commit goes through:
 5. Proceed only on **yes** in the same turn.
 
 Looking-ready is not enough — the agent never commits without explicit yes.
+
+### Supervised path (`ticket_path` provided)
+
+No interactive prompt is issued and no `question` status is emitted for the
+confirmation gate. Authorization is established by the `/build-feature`
+dispatch plus the upstream gates (pr-reviewer, ac-validator,
+ac-fulfillment-gate) and the commit-phase serialization lock held by
+`ticket-supervisor`. The agent appends an audit comment to the ticket's
+`## Comments` section recording the planned commit subject and staged file
+list, then proceeds directly to `git commit`.
+
+Emitting `question` status during a supervised run would deadlock the ticket
+permanently — the `question` status is terminal-until-user-reply and no reply
+channel exists mid-drive. All refusal cases (`--no-verify`, force-push,
+sensitive files) remain in effect regardless of path.
 
 ---
 

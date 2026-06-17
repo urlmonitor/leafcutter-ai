@@ -1,0 +1,54 @@
+id: GE-100c
+readiness: approved
+priority: high
+title: "jscpd hook blocks commit when strict mode is enabled and duplicates exceed threshold"
+component: guardrail-engine
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100.yaml"
+criteria: |
+  Given the commit guardian configuration has the duplicate_code section with:
+    enabled: true
+    strict: true
+    min_lines: 5
+    min_tokens: 50
+    threshold_percent: 5
+    checked_extensions: [".py", ".ts", ".js", ".tsx", ".jsx", ".sql"]
+  And the jscpd binary is installed and reports version 3.x
+  And a developer has staged a TypeScript file containing a 12-line block that
+    is duplicated at 8% of total lines scanned (above the 5% threshold)
+  When the duplicate code hook runs at pre-commit time
+  Then the hook exits with code 1 (blocking)
+  And it emits an error message listing each duplicate clone with
+    file path and line range for both the source and the copy
+  And the error message states the measured duplication percentage (8%)
+    and the configured threshold (5%)
+depends_on:
+  - GE-100
+  - GE-100b
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: GE-100b
+  contract: "The jscpd invocation and JSON parsing function that produces structured clone results filtered to staged files"
+origin_agent: BrainCandy
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-100c-1
+implemented_by:
+- tickets/00_inbox/TICKET-20260616-GE-100c.md

@@ -1,0 +1,45 @@
+id: GE-100a
+readiness: approved
+priority: high
+title: "jscpd hook exits cleanly when the jscpd binary is not installed"
+component: guardrail-engine
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100.yaml"
+criteria: |
+  Given the commit guardian configuration has the duplicate_code section with:
+    enabled: true
+    strict: false
+  And the jscpd binary is not present on the system PATH
+  When the duplicate code hook runs at pre-commit time
+  Then the hook exits with code 0 (fail-open)
+  And it emits an advisory message to stderr stating that jscpd was not found
+  And the advisory message includes guidance on how to install jscpd
+  And no staged files are blocked from committing
+depends_on:
+  - GE-100
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-100a-1
+  - GE-100a-2
+implemented_by:
+- tickets/00_inbox/TICKET-20260616-GE-100a.md

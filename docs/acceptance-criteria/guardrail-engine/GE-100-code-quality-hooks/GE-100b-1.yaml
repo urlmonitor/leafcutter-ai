@@ -1,0 +1,47 @@
+id: GE-100b-1
+readiness: approved
+priority: high
+title: "jscpd hook filters results to only report clones involving staged files"
+component: guardrail-engine
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100.yaml"
+criteria: |
+  Given the commit guardian configuration has the duplicate_code section with:
+    enabled: true
+    strict: true
+    min_lines: 5
+    threshold_percent: 5
+  And the jscpd binary is installed (version 3.x)
+  And the working tree contains a duplicate code pair between:
+    - file_a.py (NOT staged) lines 10-25
+    - file_b.py (NOT staged) lines 30-45
+  And the developer has staged only file_c.py which contains no duplicates
+  When the duplicate code hook runs at pre-commit time
+  Then the hook does NOT report the file_a.py / file_b.py duplicate pair
+  And the hook exits with code 0
+  And no warnings are emitted about unstaged-file duplicates
+depends_on:
+  - GE-100b
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100b.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-100b
+  contract: "The post-filter function that intersects jscpd JSON output with the list of staged file paths"
+origin_agent: BrainCandy
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260616-GE-100b-1.md

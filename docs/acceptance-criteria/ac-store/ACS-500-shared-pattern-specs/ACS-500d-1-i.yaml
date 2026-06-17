@@ -1,0 +1,46 @@
+id: ACS-500d-1-i
+readiness: approved
+priority: high
+title: "Deleting a pattern AC is blocked when consumers still reference it"
+component: ac-store
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given three page-level ACs each have implements_pattern: "PTN-001",
+  When an agent or user attempts to delete the PTN-001 pattern AC file,
+  Then the commit is blocked with an error stating:
+    "Cannot delete PTN-001: still referenced by 3 consuming ACs"
+  And the error lists the IDs of all consuming ACs that reference PTN-001,
+  And the pattern file remains in the store unchanged.
+depends_on: [ACS-500d-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must run as a pre-commit hook check (blocking mode) when AC YAML files are deleted from the staging area"
+  - "Must scan all AC files in the store to find consumers referencing the deleted pattern via implements_pattern"
+  - "Must complete the consumer scan in <200ms for AC stores with up to 500 files"
+  - "Error message must list all consuming AC IDs and the count"
+  - "Must not block deletion of ACs that are not referenced by any implements_pattern field"
+delivers_to: null
+expects_from:
+  ac_id: ACS-500d-1
+  contract: "Pattern resolution logic that can reverse-lookup: given a pattern AC ID, find all ACs whose implements_pattern field references it"
+origin_agent: business-analyst-v3
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260611-ACS-500d-1-i.md
