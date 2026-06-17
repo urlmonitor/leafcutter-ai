@@ -1,6 +1,6 @@
 ---
 title: "Originator re-dispatch: precommit-autofix reads capsule and re-dispatches originating agent"
-status: todo
+status: in_progress
 components:
   - precommit_hooks
   - supervisor_system

@@ -1,6 +1,6 @@
 ---
 title: "Document transform hooks and silent auto-fix behavior in managing-pre-commit-hooks.md"
-status: todo
+status: in_progress
 components:
   - documentation_system
   - commit_guardian
@@ -24,8 +24,8 @@ agents:
   python-coder: not_needed
   sql-coder: not_needed
   test-runner: not_needed
-  documentation-expert: needed
-  pr-reviewer: needed
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 user_facing_surface: null
@@ -94,19 +94,19 @@ are transform vs judgment.
 
 | AC | AC ID | Test | Implementation | Validated |
 |----|-------|------|----------------|-----------|
-| AC-1 | GE-102e | | | |
-| AC-2 | GE-102e | | | |
-| AC-3 | GE-102e | | | |
-| AC-4 | GE-102e | | | |
+| AC-1 | GE-102e | | Named both hooks with field sources in new "Transform hooks" section | |
+| AC-2 | GE-102e | | Documented transform tier concept: in-place edit, re-stage, exit 0 | |
+| AC-3 | GE-102e | | Documented ordering: transforms precede validators in manifest ordering | |
+| AC-4 | GE-102e | | Documented fail-open and absent-docs-layout no-op behavior | |
 
 ## Implementation Tasks
 
-- [ ] Read `docs/how-to/managing-pre-commit-hooks.md` in full to understand
+- [x] Read `docs/how-to/managing-pre-commit-hooks.md` in full to understand
   the current structure and where to insert the new section(s).
-- [ ] Read the shipped `transform_doc_frontmatter.py` and
+- [x] Read the shipped `transform_doc_frontmatter.py` and
   `transform_description_field.py` (from ticket 02) to describe the actual
   behavior, not a plan.
-- [ ] Add a section or subsection covering the transform tier:
+- [x] Add a section or subsection covering the transform tier:
   - Define "transform tier" vs "judgment tier" (reference the `tier` field
     in the hooks_manifest).
   - List the two new hooks with names, what each fills, and from what source.
@@ -116,7 +116,7 @@ are transform vs judgment.
     validators check them.
   - Explain fail-open: parse uncertainty or absent docs layout → no-op,
     exit 0; commit is never blocked by a transform hook.
-- [ ] Ensure the how-to remains consistent with the `tier` field and ordering
+- [x] Ensure the how-to remains consistent with the `tier` field and ordering
   established in the hooks_manifest by ticket 02 (GE-102c).
 
 ## Risk & Safety
@@ -128,6 +128,33 @@ are transform vs judgment.
   ticket 02) before writing. Do not document the plan; document the
   implementation. This ticket must not start before ticket 02 is merged.
 
+## Sign-offs
+
+- [x] documentation-expert — 2026-06-17 14:30
+- [x] pr-reviewer — 2026-06-17 15:00
+- [ ] commit
+- [ ] pull-request
+
 ## Comments
 
 _(Append-only log — leave blank when authoring.)_
+
+### 2026-06-17 14:30 — documentation-expert (status: ok)
+feedback-id: fb_2026-06-17_faccb729
+completion_manifest:
+  read_existing_doc: true
+  read_transform_doc_frontmatter_source: true
+  read_transform_description_field_source: true
+  read_hooks_manifest_tier_field: true
+  added_transform_tier_section: true
+  all_four_acs_covered: true
+Added "Transform hooks and the transform tier" section to docs/how-to/managing-pre-commit-hooks.md (110 lines). Documents both new hooks by name and field source, the transform tier concept (in-place edit, re-stage, exit 0), manifest ordering (transforms before validators), and fail-open / absent-docs-layout no-op behavior. Behavior described matches the shipped source code read from ticket 02.
+
+### 2026-06-17 15:00 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-17_53780d0f
+completion_manifest:
+  ac1_both_hooks_named_with_field_sources: true
+  ac2_transform_tier_concept_documented: true
+  ac3_ordering_transforms_before_validators: true
+  ac4_fail_open_and_absent_layout_noop: true
+All 4 ACs verified against the staged diff. The new "Transform hooks and the transform tier" section names both hooks with their filled fields and sources (AC-1), explains the in-place edit/re-stage/exit-0 pattern (AC-2), documents manifest ordering with transforms running before validators (AC-3), and covers fail-open plus absent-docs-layout no-op behavior with specific cases (AC-4). No issues found.
