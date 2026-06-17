@@ -86,4 +86,6 @@ jobs:
           fi
           echo "Type-checking changed files:"
           echo "$CHANGED"
-          mypy --ignore-missing-imports --no-error-summary $CHANGED
+          # --explicit-package-bases avoids "source file found twice" errors from
+          # the flat sys.path-based layout (scripts/ is not an installed package).
+          mypy --ignore-missing-imports --explicit-package-bases --no-error-summary $CHANGED
