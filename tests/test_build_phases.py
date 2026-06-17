@@ -2,9 +2,10 @@
 MODULE: test_build_phases
 GOAL: TDD red-baseline tests for build_workflow_scripts() deploying plan-feature.js.
 BUSINESS CONTEXT: plan-feature.js must be deployed from templates/workflows-js/ to
-    .claude/workflows/ during consumer installs.  Currently plan-feature.js does NOT
-    exist in templates/workflows-js/ — these tests are RED stubs written before
-    python-coder copies the file there (TICKET-02, EPIC-AcPipelineDeployGaps).
+    the consolidated output root's workflows/ dir (output_root/workflows/), which
+    install_shims() then exposes at the consumer's .claude/workflows/ shim.
+    build_workflow_scripts() writes to <root>/workflows/ (see BP-811: the earlier
+    <root>/.claude/workflows/ write path broke the shim and was corrected).
 ARCHITECTURE: Pure unit / integration tests using unittest.TestCase + tempfile.
     No database.  No network.  All tests must complete in < 5 seconds.
 
@@ -12,8 +13,8 @@ Tests in this file:
   - test_build_workflow_scripts_includes_plan_feature (unit)
   - test_plan_feature_deployed_in_consumer_config (integration)
 
-Expected RED states before implementation:
-  - AssertionError: plan-feature.js is absent from templates/workflows-js/
+These deploy-path assertions track build_workflow_scripts()'s output dir
+(<root>/workflows/), which install_shims() exposes at .claude/workflows/ (BP-811).
 """
 
 from __future__ import annotations
@@ -86,13 +87,8 @@ class TestBuildWorkflowScriptsIncludesPlanFeature(unittest.TestCase):
     def test_build_workflow_scripts_includes_plan_feature(self) -> None:
         # covers: UNKNOWN
         """build_workflow_scripts() must copy plan-feature.js from templates/workflows-js/
-        to <target_root>/.claude/workflows/.
-
-        RED until python-coder copies plan-feature.js to templates/workflows-js/.
-
-        To make this test GREEN:
-          1. Copy scripts/workflows/plan-feature.js to templates/workflows-js/plan-feature.js.
-          2. Confirm build_phases.py:348 globs *.js from templates/workflows-js/.
+        to <output_root>/workflows/ (the location install_shims() maps to .claude/workflows;
+        see BP-811).
         """
         # Arrange — mock CLAUDE_CODE_VERSION so the version-gate passes
         os.environ["CLAUDE_CODE_VERSION"] = "2.1.154"
@@ -113,8 +109,10 @@ class TestBuildWorkflowScriptsIncludesPlanFeature(unittest.TestCase):
                 "plan-feature.js is likely absent from templates/workflows-js/.",
             )
 
-            # Assert 2 — plan-feature.js is present in the output directory
-            dest = self._target / ".claude" / "workflows" / "plan-feature.js"
+            # Assert 2 — plan-feature.js is present in the output directory.
+            # build_workflow_scripts() writes to <root>/workflows/ (BP-811);
+            # install_shims() exposes that dir at the consumer's .claude/workflows/.
+            dest = self._target / "workflows" / "plan-feature.js"
             self.assertTrue(
                 dest.exists(),
                 f"plan-feature.js was NOT deployed to {dest}. "
@@ -152,13 +150,8 @@ class TestPlanFeatureDeployedInConsumerConfig(unittest.TestCase):
     def test_plan_feature_deployed_in_consumer_config(self) -> None:
         # covers: UNKNOWN
         """Simulates a consumer install: build_workflow_scripts() with
-        workflows.enabled=true must produce plan-feature.js in .claude/workflows/.
-
-        RED until python-coder copies plan-feature.js to templates/workflows-js/.
-
-        To make this test GREEN:
-          1. Copy scripts/workflows/plan-feature.js to templates/workflows-js/plan-feature.js.
-          2. Set config = {"workflows": {"enabled": True}} (already done here).
+        workflows.enabled=true must produce plan-feature.js in <output_root>/workflows/
+        (the dir install_shims() maps to the consumer's .claude/workflows/; see BP-811).
         """
         # Arrange — set CLAUDE_CODE_VERSION to satisfy version gate
         os.environ["CLAUDE_CODE_VERSION"] = "2.1.200"
@@ -177,8 +170,9 @@ class TestPlanFeatureDeployedInConsumerConfig(unittest.TestCase):
                 self._target, config, dry_run=False, force=True
             )
 
-            # Assert 1 — deployment phase reports that plan-feature.js was written
-            dest = self._target / ".claude" / "workflows" / "plan-feature.js"
+            # Assert 1 — deployment phase reports that plan-feature.js was written.
+            # Written to <root>/workflows/ (BP-811); shimmed to .claude/workflows/.
+            dest = self._target / "workflows" / "plan-feature.js"
             self.assertTrue(
                 dest.exists(),
                 f"Consumer deployment: plan-feature.js absent from {dest}. "
