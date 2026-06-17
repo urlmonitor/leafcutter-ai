@@ -487,5 +487,360 @@ class TestOSErrorOnDirectoryPath(unittest.TestCase):
             shutil.rmtree(tmp_parent, ignore_errors=True)
 
 
+# ---------------------------------------------------------------------------
+# GE-109a tests — test-file exemption
+# ---------------------------------------------------------------------------
+# The hook must skip AST analysis for test files, emitting no E722, BLE001,
+# or IO-001 violations and returning exit 0. A test file is identified by:
+#   - A path component equal to "tests" or "unit_tests"
+#   - A basename matching test_*.py, *_test.py, or conftest.py
+# Production .py files with the same violations must still be flagged (exit 1).
+# ---------------------------------------------------------------------------
+
+
+def _run_hook_at_path(code: str, file_path: Path) -> subprocess.CompletedProcess:
+    """Write *code* to *file_path* and run the hook against it.
+
+    Unlike _run_hook, this helper lets the caller control the path so we can
+    test path-component and basename detection.
+
+    Args:
+        code: Python source code to write into the file.
+        file_path: The explicit path to write the code to.
+
+    Returns:
+        CompletedProcess with returncode, stdout, and stderr.
+    """
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    file_path.write_text(textwrap.dedent(code), encoding="utf-8")
+
+    try:
+        return subprocess.run(
+            [sys.executable, str(_HOOK_SCRIPT), str(file_path)],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+    finally:
+        file_path.unlink(missing_ok=True)
+        # Best-effort cleanup of any temp parent directories we created
+        try:
+            file_path.parent.rmdir()
+        except OSError:
+            pass
+
+
+# Snippet with ALL three violation classes so we can reuse it across tests.
+_VIOLATING_CODE = """\
+    def bad():
+        try:
+            pass
+        except:
+            pass
+
+    def also_bad():
+        try:
+            pass
+        except Exception:
+            pass
+
+    def io_bad():
+        f = open("x")
+        return f.read()
+"""
+
+
+class TestGE109aTestFileE722Exempt(unittest.TestCase):
+    """GE-109a: bare except in a test file must NOT be flagged (exit 0)."""
+
+    def test_ac_ge109a_test_file_bare_except_not_flagged(self) -> None:
+        # covers: GE-109a
+        """AC GE-109a: bare except: in a test file must produce exit 0 (E722 exempted).
+
+        The hook must detect that the file is a test file (basename test_*.py)
+        and skip AST analysis entirely. Currently exits 1 because test-file
+        detection is not yet implemented — this is the expected RED baseline.
+        """
+        import tempfile
+
+        tmp_dir = Path(tempfile.mkdtemp())
+        try:
+            result = _run_hook_at_path(
+                _VIOLATING_CODE,
+                tmp_dir / "test_example.py",
+            )
+            self.assertEqual(
+                result.returncode,
+                0,
+                msg=(
+                    "Expected exit 0 for bare except: in a test_*.py file (E722 exempt), "
+                    f"got {result.returncode}.\n"
+                    "GE-109a test-file exemption is not yet implemented.\n"
+                    f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+                ),
+            )
+        finally:
+            import shutil
+
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+class TestGE109aTestFileBLE001Exempt(unittest.TestCase):
+    """GE-109a: blind except Exception in a test file must NOT be flagged (exit 0)."""
+
+    def test_ac_ge109a_test_file_ble001_not_flagged(self) -> None:
+        # covers: GE-109a
+        """AC GE-109a: blind except Exception: in a test file must produce exit 0.
+
+        The hook must detect the test file and skip AST analysis so no BLE001
+        violation is emitted. Currently exits 1 — RED baseline.
+        """
+        import tempfile
+
+        tmp_dir = Path(tempfile.mkdtemp())
+        try:
+            result = _run_hook_at_path(
+                """\
+                def bad():
+                    try:
+                        pass
+                    except Exception:
+                        pass
+                """,
+                tmp_dir / "test_ble.py",
+            )
+            self.assertEqual(
+                result.returncode,
+                0,
+                msg=(
+                    "Expected exit 0 for blind except Exception: in test_*.py (BLE001 exempt), "
+                    f"got {result.returncode}.\n"
+                    f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+                ),
+            )
+        finally:
+            import shutil
+
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+class TestGE109aTestFileIO001Exempt(unittest.TestCase):
+    """GE-109a: unwrapped open() in a test file must NOT be flagged (exit 0)."""
+
+    def test_ac_ge109a_test_file_io001_not_flagged(self) -> None:
+        # covers: GE-109a
+        """AC GE-109a: unwrapped open() in a test file must produce exit 0 (IO-001 exempt).
+
+        The hook must detect the test file and skip AST analysis. Currently
+        exits 1 — RED baseline.
+        """
+        import tempfile
+
+        tmp_dir = Path(tempfile.mkdtemp())
+        try:
+            result = _run_hook_at_path(
+                """\
+                def read_file(path):
+                    f = open(path)
+                    return f.read()
+                """,
+                tmp_dir / "test_io.py",
+            )
+            self.assertEqual(
+                result.returncode,
+                0,
+                msg=(
+                    "Expected exit 0 for unwrapped open() in test_*.py (IO-001 exempt), "
+                    f"got {result.returncode}.\n"
+                    f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+                ),
+            )
+        finally:
+            import shutil
+
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+class TestGE109aProductionFileStillFlagged(unittest.TestCase):
+    """GE-109a: production file with same violations must still be blocked (exit 1)."""
+
+    def test_ac_ge109a_production_file_still_blocked(self) -> None:
+        # covers: GE-109a
+        """AC GE-109a: a non-test production .py file with violations must still exit 1.
+
+        The exemption must never widen to production code. A file named
+        my_module.py (no test_ prefix, no *_test suffix, not conftest.py,
+        not under tests/ or unit_tests/) must be fully checked and flagged.
+        This test should PASS even before the implementation (since the hook
+        currently flags everything), but we include it to guard against
+        regressions where the exemption is applied too broadly.
+        """
+        result = _run_hook(_VIOLATING_CODE)
+        self.assertEqual(
+            result.returncode,
+            1,
+            msg=(
+                "Expected exit 1 for production .py file with violations. "
+                "The GE-109a exemption must not widen to production code.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+
+class TestGE109aPathComponentTestsDir(unittest.TestCase):
+    """GE-109a: path containing 'tests' component must be exempt (exit 0)."""
+
+    def test_ac_ge109a_tests_path_component_exempt(self) -> None:
+        # covers: GE-109a
+        """AC GE-109a: a file under a 'tests' directory component must be skipped.
+
+        Path: <tmp>/tests/foo.py — the 'tests' directory component triggers
+        the exemption even though the basename 'foo.py' does not start with
+        'test_'. Currently exits 1 — RED baseline.
+        """
+        import tempfile
+
+        tmp_dir = Path(tempfile.mkdtemp())
+        try:
+            result = _run_hook_at_path(
+                _VIOLATING_CODE,
+                tmp_dir / "tests" / "foo.py",
+            )
+            self.assertEqual(
+                result.returncode,
+                0,
+                msg=(
+                    "Expected exit 0 for file under tests/ directory component, "
+                    f"got {result.returncode}.\n"
+                    "GE-109a path-component detection is not yet implemented.\n"
+                    f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+                ),
+            )
+        finally:
+            import shutil
+
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    def test_ac_ge109a_unit_tests_path_component_exempt(self) -> None:
+        # covers: GE-109a
+        """AC GE-109a: a file under a 'unit_tests' directory component must be skipped.
+
+        Path: <tmp>/unit_tests/foo.py — the 'unit_tests' component triggers
+        the exemption. Currently exits 1 — RED baseline.
+        """
+        import tempfile
+
+        tmp_dir = Path(tempfile.mkdtemp())
+        try:
+            result = _run_hook_at_path(
+                _VIOLATING_CODE,
+                tmp_dir / "unit_tests" / "foo.py",
+            )
+            self.assertEqual(
+                result.returncode,
+                0,
+                msg=(
+                    "Expected exit 0 for file under unit_tests/ directory component, "
+                    f"got {result.returncode}.\n"
+                    f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+                ),
+            )
+        finally:
+            import shutil
+
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+class TestGE109aBasenameDetection(unittest.TestCase):
+    """GE-109a: basename-based test-file detection."""
+
+    def test_ac_ge109a_test_prefix_basename_exempt(self) -> None:
+        # covers: GE-109a
+        """AC GE-109a: file with basename matching test_*.py must be skipped.
+
+        Path: <tmp>/test_mymodule.py — basename starts with 'test_'.
+        Currently exits 1 — RED baseline.
+        """
+        import tempfile
+
+        tmp_dir = Path(tempfile.mkdtemp())
+        try:
+            result = _run_hook_at_path(
+                _VIOLATING_CODE,
+                tmp_dir / "test_mymodule.py",
+            )
+            self.assertEqual(
+                result.returncode,
+                0,
+                msg=(
+                    "Expected exit 0 for test_*.py basename, "
+                    f"got {result.returncode}.\n"
+                    f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+                ),
+            )
+        finally:
+            import shutil
+
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    def test_ac_ge109a_test_suffix_basename_exempt(self) -> None:
+        # covers: GE-109a
+        """AC GE-109a: file with basename matching *_test.py must be skipped.
+
+        Path: <tmp>/mymodule_test.py — basename ends with '_test.py'.
+        Currently exits 1 — RED baseline.
+        """
+        import tempfile
+
+        tmp_dir = Path(tempfile.mkdtemp())
+        try:
+            result = _run_hook_at_path(
+                _VIOLATING_CODE,
+                tmp_dir / "mymodule_test.py",
+            )
+            self.assertEqual(
+                result.returncode,
+                0,
+                msg=(
+                    "Expected exit 0 for *_test.py basename, "
+                    f"got {result.returncode}.\n"
+                    f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+                ),
+            )
+        finally:
+            import shutil
+
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    def test_ac_ge109a_conftest_basename_exempt(self) -> None:
+        # covers: GE-109a
+        """AC GE-109a: file with basename conftest.py must be skipped.
+
+        Path: <tmp>/conftest.py — exact basename match 'conftest.py'.
+        Currently exits 1 — RED baseline.
+        """
+        import tempfile
+
+        tmp_dir = Path(tempfile.mkdtemp())
+        try:
+            result = _run_hook_at_path(
+                _VIOLATING_CODE,
+                tmp_dir / "conftest.py",
+            )
+            self.assertEqual(
+                result.returncode,
+                0,
+                msg=(
+                    "Expected exit 0 for conftest.py basename, "
+                    f"got {result.returncode}.\n"
+                    f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+                ),
+            )
+        finally:
+            import shutil
+
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main()
