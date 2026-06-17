@@ -1,0 +1,48 @@
+id: GE-108
+readiness: approved
+priority: medium
+title: "Exception-handling guard enforces the error-handling policy faithfully and accurately"
+component: guardrail-engine
+level: L1
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-108-exception-hook-hardening/GE-108.yaml"
+criteria: |
+  Trustworthy commit-time enforcement of the Error Handling Policy — no silent
+  gaps, no false confidence, no misleading messages.
+
+  The exception-handling guard (check_exception_handling.py) closes the
+  remaining differences between what the documented policy (CLAUDE.md Rules 1
+  and 3) says and what the guard actually catches:
+
+  - Subprocess calls are recognised as an external-I/O boundary that must be
+    wrapped, so an unwrapped subprocess call no longer slips through unflagged.
+  - The judgment of "handled, not silently swallowed" becomes precise: a real
+    WARNING-or-higher log is accepted, while a handler that only logs at a lower
+    level, or a function that merely shares a name with a logger, is not — so a
+    developer never gets false confidence that a violation was caught.
+  - Every violation message names the exact exception type that was caught,
+    including the full tuple for a multi-type except clause, so the explanation
+    a developer reads always matches the code the guard saw.
+
+  The three gaps above are decomposed into testable behaviours at L2 by the BA.
+depends_on: []
+doc_links:
+  - path: "templates/scripts/commit_guardian/check_exception_handling.py"
+    relationship: describes
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+documentation_triggers: []
+documentation_rationale: "Accuracy and robustness improvement to an already-documented pre-commit guard; the Error Handling Policy (CLAUDE.md) and the managing-pre-commit-hooks how-to already exist and no new user-facing command or workflow is introduced."
+origin_agent: BrainCandy
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-108a
+  - GE-108b
+  - GE-108c
+implemented_by: []
