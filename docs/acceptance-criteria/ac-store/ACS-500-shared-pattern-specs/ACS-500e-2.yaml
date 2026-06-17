@@ -1,0 +1,51 @@
+id: ACS-500e-2
+readiness: approved
+priority: high
+title: "Composition depth is visible through the AC parent-child hierarchy"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a page AC references composite pattern "crud-list-page" (PTN-020),
+  And PTN-020 depends_on atomic patterns [PTN-010, PTN-011, PTN-012],
+  When a reader traverses the dependency graph starting from the page AC,
+  Then they can resolve the full behavior stack in order:
+    1. Page-specific criteria (from the page AC itself),
+    2. Composite wiring behavior (from PTN-020),
+    3. Atomic behaviors (from PTN-010, PTN-011, PTN-012),
+  And each layer is a distinct AC file with its own id and criteria,
+  And the layering from atomic to composite to page-specific is
+    expressible using only the standard depends_on and implements_pattern
+    fields (no additional hierarchy mechanism is required).
+depends_on: [ACS-500e, ACS-500e-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Graph traversal must be bounded -- maximum recursion depth enforced (default 10 levels) to prevent infinite loops"
+  - "Must resolve the full behavior stack using only implements_pattern and depends_on fields -- no additional hierarchy mechanism"
+  - "Must handle missing intermediate nodes gracefully (log warning, include available layers)"
+  - "Must complete full-stack resolution in <200ms for typical composite patterns (3-5 atomic constituents)"
+  - "Resolution output must preserve layer ordering: page-specific first, then composite wiring, then atomic behaviors"
+delivers_to: null
+expects_from:
+  ac_id: ACS-500e-1
+  contract: "Composite pattern ACs with depends_on references forming a traversable directed acyclic graph"
+origin_agent: business-analyst-v3
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260611-ACS-500e-2.md

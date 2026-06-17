@@ -1,0 +1,48 @@
+id: ACS-500c-1
+readiness: approved
+priority: high
+title: "BA agent checks for existing pattern before writing new behavioral AC"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the business-analyst-v3 agent is decomposing an L1 AC into L2 behaviors,
+  And the store contains a pattern AC defining "sortable-table" behavior,
+  When the agent encounters a page requirement that includes sortable-table behavior
+    (e.g. "the parts list supports column sorting"),
+  Then the agent produces an L2 AC with:
+    implements_pattern referencing the existing sortable-table pattern AC ID,
+    pattern_bindings mapping the page-specific values to the pattern's slots,
+  And the agent does NOT write a new standalone criteria body
+    that restates the sorting behavior already defined in the pattern.
+depends_on: [ACS-500c, ACS-500a-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Changes are limited to the BA v3 agent template at templates/agents/business-analyst-v3.md"
+  - "Must not modify any Python code -- this is a prompt/template change only"
+  - "Template instructions must describe pattern lookup as a step in the S1 Knowledge Acquisition phase"
+  - "Must not break existing BA v3 behavior for components that have no patterns defined"
+  - "Agent must gracefully skip pattern matching when no pattern ACs exist in the target component"
+delivers_to:
+  agent: llm-expert
+  contract: "Updated BA v3 agent template with instructions to scan for existing pattern ACs and use implements_pattern + pattern_bindings when a match is found"
+expects_from:
+  ac_id: ACS-500a-1
+  contract: "Schema fields implements_pattern and pattern_bindings are valid in AC YAML (accepted by validator) so the BA agent can use them"
+origin_agent: business-analyst-v3
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260611-ACS-500c-1.md

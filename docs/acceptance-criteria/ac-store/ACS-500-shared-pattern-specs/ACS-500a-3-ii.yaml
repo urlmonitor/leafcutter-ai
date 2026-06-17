@@ -1,0 +1,46 @@
+id: ACS-500a-3-ii
+readiness: approved
+priority: high
+title: "implements_pattern referencing a deprecated pattern is rejected"
+component: ac-store
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a pattern AC (PTN-001) has status: deprecated,
+  And a new AC is authored with implements_pattern: "PTN-001",
+  When the schema validator runs at commit time,
+  Then the commit is blocked with an error stating:
+    "implements_pattern references deprecated pattern PTN-001;
+    use its successor (see PTN-001 superseded_by field) or remove the reference"
+  And the error names the consuming AC file path.
+depends_on: [ACS-500a-3]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must not regress any existing validation behavior in scripts/ac_store/validate_ac_schema.py"
+  - "Must complete validation within the same <200ms envelope as the parent validation AC"
+  - "Error message must include the consuming AC file path, the deprecated pattern ID, and guidance to check the superseded_by field"
+  - "Must check the referenced pattern's status field and reject if status is deprecated or superseded_by"
+delivers_to: null
+expects_from:
+  ac_id: ACS-500a-3
+  contract: "Validation logic that resolves implements_pattern references and can access the referenced pattern's status field"
+origin_agent: business-analyst-v3
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260611-ACS-500a-3-ii.md

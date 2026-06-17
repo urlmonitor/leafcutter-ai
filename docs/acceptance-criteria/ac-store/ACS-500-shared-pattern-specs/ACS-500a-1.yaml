@@ -1,0 +1,52 @@
+id: ACS-500a-1
+readiness: approved
+priority: high
+title: "A pattern AC defines shared behavior with parameterized slots"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given an AC YAML file under docs/acceptance-criteria/ with level: L2,
+  When its criteria field describes behavior that multiple pages or endpoints share
+    (e.g. "sortable table with columns {columns}, sorted by {default_sort}"),
+  And its id is referenced by other ACs via the implements_pattern field,
+  Then that AC is the single authoritative definition of the shared behavior,
+  And its criteria uses named placeholders in curly braces to mark the slots
+    that consuming ACs fill via pattern_bindings,
+  And no other AC in the store contains an equivalent criteria body
+    for the same behavior (single source of truth).
+depends_on: [ACS-500a]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/index.yaml
+    relationship: governs
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "New fields implements_pattern (string|null) and pattern_bindings (object|null) must be added to config/ac_store_schema.json as optional fields"
+  - "All existing AC YAML files must remain valid after schema changes -- new fields are optional additions with null defaults"
+  - "Must not regress any existing validation behavior in scripts/ac_store/validate_ac_schema.py"
+  - "Schema enforcement must use stdlib-only approach consistent with ADR-007 (no external dependencies required)"
+  - "Must complete validation in <200ms for AC stores with up to 500 files"
+delivers_to:
+  agent: python-coder
+  contract: "Schema fields implements_pattern (string|null) and pattern_bindings (object|null) added to config/ac_store_schema.json, validated by scripts/ac_store/validate_ac_schema.py"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260611-ACS-500a-1.md

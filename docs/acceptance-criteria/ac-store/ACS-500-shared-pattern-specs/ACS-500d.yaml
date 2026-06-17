@@ -1,0 +1,29 @@
+id: ACS-500d
+readiness: approved
+priority: high
+title: "Pattern updates propagate automatically through shared components"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  When a pattern evolves, all consumers inherit the change automatically.
+
+  Updating a shared pattern's definition means every page or endpoint that
+  references it immediately reflects the new behavior — no manual migration
+  across individual page ACs is required. If a page needs to deviate from the
+  updated pattern, that deviation is expressed as a conscious, explicit,
+  separate AC on the consuming page.
+depends_on: [ACS-500]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: [ACS-500d-1, ACS-500d-2]
+implemented_by: []
+assigned_agent: null
+estimated_complexity: null

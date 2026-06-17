@@ -1,0 +1,46 @@
+id: ACS-500b-1-i
+readiness: approved
+priority: high
+title: "AC with implements_pattern but empty criteria is valid"
+component: ac-store
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a page AC has implements_pattern: "PTN-001" and
+    pattern_bindings: {entity_type: "users", columns: ["name", "email"]},
+  And the page has NO unique behavior beyond what the pattern provides,
+  When the AC is authored with an empty criteria field
+    (criteria: "No page-specific behavior — all behavior inherited from pattern."),
+  Then the schema validator accepts the AC without error,
+  And the AC is valid despite having no Given/When/Then in its own criteria,
+  And the effective behavior is entirely derived from the referenced pattern.
+depends_on: [ACS-500b-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must relax the existing Gherkin-format validation for criteria when implements_pattern is present"
+  - "Must not regress validation for ACs that do NOT have implements_pattern -- criteria must still be non-empty for those"
+  - "The criteria field must still be a non-empty string (but need not contain Given/When/Then keywords when implements_pattern is set)"
+delivers_to: null
+expects_from:
+  ac_id: ACS-500b-1
+  contract: "Schema validation logic that recognizes implements_pattern as a valid alternative to Gherkin criteria"
+origin_agent: business-analyst-v3
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260611-ACS-500b-1-i.md
