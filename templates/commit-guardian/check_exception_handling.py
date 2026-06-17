@@ -58,6 +58,12 @@ DECISION HISTORY
   of name. Sub-WARNING methods (debug, info) and print() are explicitly excluded.
   Self-hosting non-regression verified: all production handlers in leafcutter
   already use WARNING-or-higher logging or re-raise.
+- 2026-06-18 [GE-108c]: BLE001 message now renders tuple exception types in full.
+  Previously, except (ValueError, Exception): collapsed to just "Exception" in
+  the violation message because the type_name branch only handled ast.Name.
+  Added an ast.Tuple branch that joins the element names with ", " and wraps
+  them in parentheses, producing e.g. "(ValueError, Exception)" in the message.
+  Detection logic (what is flagged and at which line/col) is unchanged.
 ====================================================================
 """
 
@@ -340,11 +346,15 @@ def analyse_file(path: Path) -> list[Violation]:
                     ),
                 ))
             elif _handler_is_blind(node) and not _handler_reraises_or_logs(node):
-                type_name = (
-                    node.type.id
-                    if isinstance(node.type, ast.Name)
-                    else "Exception"
-                )
+                if isinstance(node.type, ast.Name):
+                    type_name = node.type.id
+                elif isinstance(node.type, ast.Tuple):
+                    inner = ", ".join(
+                        elt.id for elt in node.type.elts if isinstance(elt, ast.Name)
+                    )
+                    type_name = f"({inner})"
+                else:
+                    type_name = "Exception"
                 violations.append(Violation(
                     line=node.lineno,
                     col=node.col_offset + 1,

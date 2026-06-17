@@ -745,5 +745,113 @@ class TestGE108bReraiseStillClearsHandler(unittest.TestCase):
         )
 
 
+# ---------------------------------------------------------------------------
+# GE-108c tests — tuple exception types rendered in full in BLE001 message
+# ---------------------------------------------------------------------------
+
+
+class TestGE108cTupleExceptionTypeRenderedInFull(unittest.TestCase):
+    """GE-108c: except (ValueError, Exception): must report the full tuple in the message.
+
+    When a handler catches a tuple of exception types and the tuple contains a
+    blind type (Exception/BaseException), the BLE001 violation message must
+    include the full parenthesised tuple string, e.g. "(ValueError, Exception)",
+    not just the last blind type or "Exception" alone.
+    """
+
+    def test_tuple_except_emits_ble001_exactly_once(self) -> None:
+        # covers: GE-108c
+        """except (ValueError, Exception): with no log/reraise must emit BLE001 once.
+
+        The hook prints a summary line "N violation(s)" — we assert that line says
+        exactly "1 violation" to confirm the handler is detected once, not twice.
+        """
+        result = _run_hook("""\
+            def bad():
+                try:
+                    pass
+                except (ValueError, Exception):
+                    pass
+        """)
+        self.assertEqual(
+            result.returncode,
+            1,
+            msg=(
+                "Expected exit 1 (BLE001) for except (ValueError, Exception): with "
+                f"no re-raise or log, got {result.returncode}.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+        combined = result.stdout + result.stderr
+        # The summary line "1 violation(s)" confirms exactly one violation is emitted
+        self.assertIn(
+            "1 violation(s)",
+            combined,
+            msg=(
+                "Expected '1 violation(s)' in output to confirm exactly one BLE001 "
+                "is emitted for the tuple handler.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+    def test_tuple_except_message_contains_full_tuple(self) -> None:
+        # covers: GE-108c
+        """BLE001 message must contain the full tuple '(ValueError, Exception)'."""
+        result = _run_hook("""\
+            def bad():
+                try:
+                    pass
+                except (ValueError, Exception):
+                    pass
+        """)
+        combined = result.stdout + result.stderr
+        self.assertIn(
+            "(ValueError, Exception)",
+            combined,
+            msg=(
+                "Expected '(ValueError, Exception)' in BLE001 message, but the "
+                "message does not contain the full tuple.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+    def test_tuple_except_message_not_abbreviated_to_exception_alone(self) -> None:
+        # covers: GE-108c
+        """BLE001 message must NOT abbreviate to just 'Exception' without tuple wrapper.
+
+        The message text must NOT match the pattern 'blind except Exception:'
+        (which would indicate the tuple was collapsed to its blind member only).
+        Instead it must match 'blind except (ValueError, Exception):'.
+        """
+        result = _run_hook("""\
+            def bad():
+                try:
+                    pass
+                except (ValueError, Exception):
+                    pass
+        """)
+        combined = result.stdout + result.stderr
+        # The full tuple must be present
+        self.assertIn(
+            "(ValueError, Exception)",
+            combined,
+            msg=(
+                "Expected full tuple '(ValueError, Exception)' in output.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+        # The message must NOT have 'blind except Exception:' without the tuple wrapper
+        # (i.e. the raw word 'Exception' must appear only inside the tuple context)
+        self.assertNotIn(
+            "blind except Exception:",
+            combined,
+            msg=(
+                "Message must not abbreviate to 'blind except Exception:' — "
+                "the full tuple must be used.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
