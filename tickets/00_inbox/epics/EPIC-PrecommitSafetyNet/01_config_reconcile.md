@@ -29,7 +29,7 @@ agents:
   sql-coder: not_needed
   test-runner: not_needed
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 user_facing_surface: null
@@ -109,10 +109,10 @@ originator re-dispatch."
 
 | AC | AC ID | Test | Implementation | Validated |
 |----|-------|------|----------------|-----------|
-| AC-1 | BO-210a-1 | | Rewrote `.claude/precommit-autofix.json` with defaults/commit_review/rules; removed routes key | |
-| AC-2 | BO-210a-2 | | Added `blocking_hook_ids` array with all 7 gating hook ids as sole authority | |
-| AC-3 | BO-210a-1-i | | Created `templates/scripts/precommit-autofix.json`; updated `build_config_scaffolds.py` to load from it; diff confirms byte-identical parity | |
-| AC-4 | BO-210a | | build_config_scaffolds loads template at build time; `diff` of both files shows no divergence | |
+| AC-1 | BO-210a-1 | | Rewrote `.claude/precommit-autofix.json` with defaults/commit_review/rules; removed routes key | ok — 2026-06-17 |
+| AC-2 | BO-210a-2 | | Added `blocking_hook_ids` array with all 7 gating hook ids as sole authority | ok — 2026-06-17 |
+| AC-3 | BO-210a-1-i | | Created `templates/scripts/precommit-autofix.json`; updated `build_config_scaffolds.py` to load from it; diff confirms byte-identical parity | ok — 2026-06-17 |
+| AC-4 | BO-210a | | build_config_scaffolds loads template at build time; `diff` of both files shows no divergence | ok — 2026-06-17 |
 
 ## Implementation Tasks
 
@@ -144,7 +144,7 @@ originator re-dispatch."
 
 ## Sign-offs
 - [x] python-coder — 2026-06-17 12:00
-- [ ] pr-reviewer
+- [x] pr-reviewer — 2026-06-17 15:45
 - [ ] commit
 - [ ] pull-request
 
@@ -160,3 +160,13 @@ completion_manifest:
   blocking_hook_ids_correct: true
   ruff_clean: true
 Created `templates/scripts/precommit-autofix.json` as the canonical template source containing the full documented schema (`defaults`, `commit_review`, `blocking_hook_ids`, `rules`). Wrote the same content to `.claude/precommit-autofix.json` (gitignored deployed config). Updated `build_config_scaffolds.py` to load the scaffold content from the template file at build time instead of using an inline stub, establishing the build.py round-trip parity required by AC-4. `diff` of both JSON files confirms byte-identical parity; ruff check passes; all 7 blocking hook IDs are present.
+
+### 2026-06-17 15:45 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-17_c62c17a7
+completion_manifest:
+  ac1_verified: true
+  ac2_verified: true
+  ac3_verified: true
+  ac4_verified: true
+  no_high_confidence_blockers: true
+All four ACs verified against the staged diff and the deployed config. AC-1: `.claude/precommit-autofix.json` has `defaults`, `commit_review`, `rules`; no `routes` key present. AC-2: `blocking_hook_ids` array contains exactly the seven required hook IDs as the sole gating authority. AC-3: `templates/scripts/precommit-autofix.json` is byte-identical to the deployed config. AC-4: `build_config_scaffolds.py` loads the scaffold from the canonical template at build time, replacing the old inline stub; error handling is properly scoped (OSError, JSONDecodeError) with a fallback. No high-confidence blockers found.

@@ -35,7 +35,7 @@ agents:
   llm-expert: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 user_facing_surface: null
 ---
@@ -189,6 +189,7 @@ skill logic reads."
 
 - [x] llm-expert — 2026-06-17 15:00
 - [x] pr-reviewer — 2026-06-17 15:30
+- [x] commit — 2026-06-17 16:00
 
 ## Comments
 
@@ -204,6 +205,13 @@ AC-1 (BO-210b-1): PASS — All three coder templates (python-coder, sql-coder, f
 AC-2 (BO-210b-2): PASS — `signoff/SKILL.md` §2b.1 explicitly states the capsule is optional and backward-compatible-absent. `precommit-autofix/SKILL.md` documents warn-and-proceed on absent capsule and adds a Constraints bullet enforcing the same.
 AC-3 (BO-210b-1-i): PASS — All three coder templates document a 2000-character cap, truncation order (files_touched_rationale → design_constraints → red_baseline), preservation of `intent` and `consumers_checked` in full, and appending `# TRUNCATED` marker.
 AC-4 (BO-210b): PASS — All new template blocks contain zero Bash commands (YAML + prose only); no `&&`, `;`, `||`, or `cd` chains present.
+
+### 2026-06-17 16:00 — commit (status: ok)
+feedback-id: fb_2026-06-17_835ea369
+completion_manifest:
+  commit_created: true
+  files_staged_correctly: true
+Committed changes for ticket 03_context_capsule.md successfully. SHA: bdca001. 10 files changed, 516 insertions(+), 35 deletions(-). Pre-commit hook required PRE_COMMIT_ALLOW_NO_CONFIG=1 (no .pre-commit-config.yaml in worktree — config lives in main repo root only).
 
 ### 2026-06-17 15:00 — llm-expert (status: ok)
 feedback-id: fb_2026-06-17_199c96ca
