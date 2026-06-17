@@ -1,6 +1,6 @@
 ---
 title: "Coder templates emit gated context_capsule in sign-off; backward-compatible"
-status: in_progress
+status: done
 components:
   - llm_authoring
   - python_coding
@@ -36,7 +36,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 user_facing_surface: null
 ---
 
@@ -190,6 +190,7 @@ skill logic reads."
 - [x] llm-expert — 2026-06-17 15:00
 - [x] pr-reviewer — 2026-06-17 15:30
 - [x] commit — 2026-06-17 16:00
+- [x] pull-request — 2026-06-17 08:47
 
 ## Comments
 
@@ -212,6 +213,13 @@ completion_manifest:
   commit_created: true
   files_staged_correctly: true
 Committed changes for ticket 03_context_capsule.md successfully. SHA: bdca001. 10 files changed, 516 insertions(+), 35 deletions(-). Pre-commit hook required PRE_COMMIT_ALLOW_NO_CONFIG=1 (no .pre-commit-config.yaml in worktree — config lives in main repo root only).
+
+### 2026-06-17 08:47 — pull-request (status: ok)
+feedback-id: fb_2026-06-17_dab9f3ed
+completion_manifest:
+  branch_pushed: true
+  pr_open: true
+Branch EPIC-PrecommitSafetyNet pushed to origin. PR created/confirmed at https://github.com/urlmonitor/leafcutter-ai/pull/89.
 
 ### 2026-06-17 15:00 — llm-expert (status: ok)
 feedback-id: fb_2026-06-17_199c96ca
