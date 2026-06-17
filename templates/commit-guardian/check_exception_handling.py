@@ -49,6 +49,15 @@ DECISION HISTORY
   The commit_guardian.json io_boundary_calls list was updated in parity.
   Self-hosting non-regression verified: leafcutter's own subprocess calls
   are already wrapped in try/except and produce no IO-001 violations.
+- 2026-06-18 [GE-108b]: Blind-catch handler cleared only by WARNING-or-higher
+  logging on a real logger object (ADR-014 Decision 2).
+  Replaced _LOG_CALL_NAMES (broad name-set) with _WARNING_LOG_METHODS
+  (warning, error, critical, exception only). _handler_reraises_or_logs now
+  requires calls to be in attribute form (ast.Attribute node), so a bare
+  function call like error() or debug() no longer clears the handler regardless
+  of name. Sub-WARNING methods (debug, info) and print() are explicitly excluded.
+  Self-hosting non-regression verified: all production handlers in leafcutter
+  already use WARNING-or-higher logging or re-raise.
 ====================================================================
 """
 
@@ -128,19 +137,15 @@ _CURSOR_RECEIVER_NAMES: frozenset[str] = frozenset({
 # Exception type names considered "blind" — too broad without reraise/log
 _BLIND_EXCEPTION_NAMES: frozenset[str] = frozenset({"Exception", "BaseException"})
 
-# Call attributes/names whose presence in an except body signals non-silent handling
-_LOG_CALL_NAMES: frozenset[str] = frozenset({
-    "log",
-    "logger",
-    "logging",
-    "warn",
+# WARNING-or-higher method names that clear a blind-catch handler when called as
+# an attribute on an object (e.g. ``logger.warning(...)``).  Only attribute-call
+# form is accepted — bare function calls like ``error()`` do NOT clear the handler
+# regardless of name (ADR-014 Decision 2 / GE-108b).
+_WARNING_LOG_METHODS: frozenset[str] = frozenset({
     "warning",
     "error",
     "critical",
     "exception",
-    "info",
-    "debug",
-    "print",
 })
 
 
@@ -192,29 +197,43 @@ def _handler_is_blind(handler: ast.ExceptHandler) -> bool:
 
 
 def _handler_reraises_or_logs(handler: ast.ExceptHandler) -> bool:
-    """Return True if the handler body contains a reraise or a log/print call.
+    """Return True if the handler body contains a reraise or WARNING-or-higher logging.
 
-    This signals that the exception is not silently swallowed even if the
-    handler catches a broad type.
+    A handler is non-silent when it:
+    - Re-raises the exception (bare ``raise`` or ``raise NewError from exc``), OR
+    - Calls a WARNING-or-higher log method as an **attribute** on an object, i.e.
+      ``<expr>.warning(...)``, ``<expr>.error(...)``, ``<expr>.critical(...)``,
+      or ``<expr>.exception(...)``.
+
+    What does NOT clear the handler (ADR-014 Decision 2 / GE-108b):
+    - A bare function call whose name coincidentally matches a log-level name,
+      e.g. ``error()`` — these are NOT attribute calls on a real logger object.
+    - Sub-WARNING log calls: ``logger.debug(...)``, ``logger.info(...)``.
+    - ``print(...)`` or any non-logger call.
+
+    The detection is purely AST-based: the receiver of the attribute call is NOT
+    resolved to a concrete type; it is sufficient that the call is in attribute
+    form (``ast.Attribute`` node) with a WARNING-or-higher method name, so that
+    a name-coincidence bare call (``ast.Name``) is always rejected.
 
     Args:
         handler: The ExceptHandler node to examine.
 
     Returns:
-        True if the handler body re-raises or logs the exception.
+        True if the handler body re-raises or contains genuine WARNING-or-higher
+        logging on a real (attribute-accessed) logger object.
     """
     for node in ast.walk(ast.Module(body=handler.body, type_ignores=[])):
         if isinstance(node, ast.Raise):
-            # Any raise (bare re-raise or raise SomeError) is non-silent
+            # Any raise (bare re-raise or raise SomeError from exc) is non-silent.
             return True
         if isinstance(node, ast.Call):
             func = node.func
-            if isinstance(func, ast.Name) and func.id.lower() in _LOG_CALL_NAMES:
-                return True
+            # ONLY accept attribute-call form: <obj>.warning(...) etc.
+            # A bare Name call (e.g. error()) is always rejected — name
+            # coincidence with a log level does not indicate a real logger.
             if isinstance(func, ast.Attribute):
-                if func.attr.lower() in _LOG_CALL_NAMES:
-                    return True
-                if isinstance(func.value, ast.Name) and func.value.id.lower() in _LOG_CALL_NAMES:
+                if func.attr in _WARNING_LOG_METHODS:
                     return True
     return False
 

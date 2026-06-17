@@ -6,7 +6,7 @@ component: guardrail-engine
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/guardrail-engine/GE-108-exception-hook-hardening/GE-108.yaml"
 criteria: |
   Scenario: A user-defined function that merely shares a logger-like name does not clear the handler
