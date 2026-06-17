@@ -165,6 +165,102 @@ active ──── deprecated
 
 ---
 
+## Composition Depth and the Behavior Stack (ACS-500e-2)
+
+When an AC references a composite pattern, the **full behavior stack** for
+that AC spans multiple layers. Each layer is a distinct AC file with its own
+`id` and `criteria`. The layering is expressible using only the standard
+`depends_on` and `implements_pattern` fields — no additional hierarchy
+mechanism is required.
+
+### Layer ordering (highest to lowest precedence)
+
+| Layer | Source field | AC role | Description |
+|---|---|---|---|
+| 1. Page-specific | (the AC itself) | page / consumer AC | Criteria unique to this page or component. Overrides or supplements inherited behavior. |
+| 2. Composite wiring | `implements_pattern` | composite pattern AC | Wiring behavior that connects multiple atomic patterns (e.g. "filter changes reset pagination"). Defined once; reused by every consumer. |
+| 3. Atomic behaviors | composite's `depends_on` | atomic pattern ACs | Isolated, single-concern behaviors (e.g. column sorting, filter bar, pagination). Each atomic AC is an independent reusable unit. |
+
+### Traversal algorithm
+
+A reader can resolve the full behavior stack for any page AC by following two
+standard fields:
+
+1. **Read the page AC.** Its own `criteria` field provides the page-specific layer.
+2. **Follow `implements_pattern`.** If set, load the referenced composite pattern
+   AC. Its `criteria` field provides the composite wiring layer.
+3. **Follow the composite's `depends_on`.** For each listed AC id, load that AC.
+   Each provides an atomic behavior layer, in `depends_on` declaration order.
+
+```
+page AC
+  └─ implements_pattern ──→ composite pattern AC (PTN-020)
+                               └─ depends_on ──→ atomic AC (PTN-010)
+                               └─ depends_on ──→ atomic AC (PTN-011)
+                               └─ depends_on ──→ atomic AC (PTN-012)
+```
+
+The function `resolve_behavior_stack(ac_id, id_index)` in
+`scripts/ac_store/scan_ac_store.py` implements this algorithm and returns
+the stack as an ordered list of `BehaviorLayer` dicts.
+
+### Example: CRUD list page
+
+Given the following ACs:
+
+```yaml
+# Page AC (consumer)
+id: PAGE-001
+implements_pattern: PTN-020
+criteria: "No page-specific wiring — all behavior inherited from PTN-020."
+
+# Composite pattern AC
+id: PTN-020
+depends_on: [PTN-010, PTN-011, PTN-012]
+criteria: |
+  Given a page implements sort, filter, and pagination,
+  When the user changes a filter, Then pagination resets to page 1 ...
+
+# Atomic pattern ACs
+id: PTN-010
+criteria: |
+  Given a page contains a sortable table ...
+id: PTN-011
+criteria: |
+  Given a page contains a filter bar ...
+id: PTN-012
+criteria: |
+  Given a page displays a paginated collection ...
+```
+
+`resolve_behavior_stack("PAGE-001", id_index)` returns:
+
+```python
+[
+  {"layer": "page",      "ac_id": "PAGE-001", "source": "self", ...},
+  {"layer": "composite", "ac_id": "PTN-020",  "source": "implements_pattern", ...},
+  {"layer": "atomic",    "ac_id": "PTN-010",  "source": "depends_on", ...},
+  {"layer": "atomic",    "ac_id": "PTN-011",  "source": "depends_on", ...},
+  {"layer": "atomic",    "ac_id": "PTN-012",  "source": "depends_on", ...},
+]
+```
+
+### Design invariants
+
+- **Atomic patterns are independent.** Atomic pattern ACs have no `depends_on`
+  links to each other — they define isolated behaviors.
+- **The composite owns the wiring.** The composite pattern AC's `criteria`
+  describes ONLY inter-pattern coordination (e.g. "filter changes reset
+  pagination"), not the atomic behaviors that PTN-010, PTN-011, and PTN-012
+  already define.
+- **`depends_on` on pattern ACs is declarative.** It documents composition
+  intent. No runtime resolution is required; a validator may warn when a
+  `depends_on` target is absent but MUST NOT block commits for missing patterns.
+- **No additional field is needed.** The full behavior stack is resolvable
+  through `implements_pattern` and `depends_on` alone.
+
+---
+
 ## Pre-Commit Hooks
 
 Three hooks are installed by `build.py` to enforce the AC store at commit time.

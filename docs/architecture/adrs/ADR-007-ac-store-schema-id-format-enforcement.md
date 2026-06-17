@@ -199,6 +199,32 @@ project. A stdlib-only fallback ensures the hook runs without a separate
 `pip install` step. If `jsonschema` is available it is used for full draft-07
 validation; if absent the script performs equivalent manual checks.
 
+### Composition Depth Visibility (ACS-500e-2)
+
+Composition depth is visible through the AC parent-child hierarchy using
+only the two standard fields `implements_pattern` and `depends_on`. No
+additional hierarchy mechanism is needed.
+
+**Layer resolution algorithm:**
+
+1. Read the page AC — its `criteria` provides page-specific behavior.
+2. Follow `implements_pattern` to the composite pattern AC — its `criteria`
+   provides the composite wiring behavior.
+3. Follow the composite's `depends_on` list — each referenced AC provides
+   an atomic behavior.
+
+The function `resolve_behavior_stack(ac_id, id_index)` in
+`scripts/ac_store/scan_ac_store.py` implements this algorithm. It returns an
+ordered list of `BehaviorLayer` dicts with keys `layer`, `ac_id`, `criteria`,
+and `source`. The `layer` values are `"page"`, `"composite"`, and `"atomic"`;
+`source` values are `"self"`, `"implements_pattern"`, and `"depends_on"`.
+
+**Design invariant:** `depends_on` on a pattern AC is purely declarative
+(documents composition intent). A validator may warn when a target is absent
+but MUST NOT block commits — pattern references are non-blocking by design
+(see Circular `depends_on` Dependency Enforcement above for the contrast with
+the blocking DAG invariant on structural parent-child links).
+
 ### Migration Strategy for Existing Tests
 
 No existing AC YAML files exist at the time this ADR is written — the store
