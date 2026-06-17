@@ -1,6 +1,6 @@
 ---
 title: "Fix build-ac/ac-scanner script invocation paths for consumer-install reachability"
-status: in_progress
+status: done
 components:
   - skills_system
   - build_pipeline
