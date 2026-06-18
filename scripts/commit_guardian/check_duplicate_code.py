@@ -24,6 +24,11 @@ Output format (GE-100b): duplicate pairs are emitted as human-readable lines:
 Only clones that involve at least one staged file are reported. Clones between
 two non-staged files are silently discarded (GE-100b-1).
 
+Timeout handling (GE-100c-1): when the jscpd subprocess takes longer than 30 seconds
+to complete, the hook terminates the subprocess, emits a warning to stderr, and exits
+with code 0 (fail-open despite strict mode). The commit proceeds without duplicate
+checking.
+
 Blocking message (GE-100c): when strict mode is enabled and duplicates exceed the
 configured threshold, the commit is blocked with a message that states both the
 measured duplication percentage and the configured threshold:
@@ -474,7 +479,14 @@ def _run_jscpd(
         ] + targets
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        except subprocess.TimeoutExpired:
+            print(
+                "[check-duplicate-code] Warning: jscpd timed out after 30 seconds.\n"
+                "Duplicate-code scanning was skipped (fail-open).",
+                file=sys.stderr,
+            )
+            return 0
         except OSError as exc:
             print(
                 f"[check-duplicate-code] Failed to invoke jscpd: {exc}\n"
@@ -543,6 +555,11 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-18 [python-coder/TICKET-20260616-GE-100c-1]: Implements AC GE-100c-1 (fail-open
+  on jscpd subprocess timeout). Added timeout=30 to subprocess.run() in _run_jscpd() and
+  added a subprocess.TimeoutExpired handler that emits a warning to stderr and exits 0
+  regardless of strict mode. The subprocess is terminated by Python's subprocess.run()
+  when the timeout fires. Module docstring updated with GE-100c-1 timeout behaviour block.
 - 2026-06-18 [python-coder/TICKET-20260616-GE-100c]: Implements AC GE-100c (strict-mode
   threshold blocking with measured vs configured percentage in the error message). Added
   _extract_percentage() which reads data["statistics"]["total"]["percentage"] from the

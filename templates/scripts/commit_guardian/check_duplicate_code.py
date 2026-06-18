@@ -16,6 +16,11 @@ against that filesystem.  In that case the hook copies the staged files into a
 temporary Linux-native directory and runs jscpd there instead, preserving the
 same staged-only scope without the NTFS performance and reliability issues.
 
+Timeout handling (GE-100c-1): when the jscpd subprocess takes longer than 30 seconds
+to complete, the hook terminates the subprocess, emits a warning to stderr, and exits
+with code 0 (fail-open despite strict mode). The commit proceeds without duplicate
+checking.
+
 Output format (GE-100b): duplicate pairs are emitted as human-readable lines:
     [check-duplicate-code] WARNING: Duplicate block detected
       Source: path/to/file.py lines 10-20
@@ -442,7 +447,14 @@ def _run_jscpd(
         ] + targets
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        except subprocess.TimeoutExpired:
+            print(
+                "[check-duplicate-code] Warning: jscpd timed out after 30 seconds.\n"
+                "Duplicate-code scanning was skipped (fail-open).",
+                file=sys.stderr,
+            )
+            return 0
         except OSError as exc:
             print(
                 f"[check-duplicate-code] Failed to invoke jscpd: {exc}\n"
@@ -503,6 +515,11 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-18 [python-coder/TICKET-20260616-GE-100c-1]: Implements AC GE-100c-1 (fail-open
+  on jscpd subprocess timeout). Added timeout=30 to subprocess.run() in _run_jscpd() and
+  added a subprocess.TimeoutExpired handler that emits a warning to stderr and exits 0
+  regardless of strict mode. The subprocess is terminated by Python's subprocess.run()
+  when the timeout fires.
 - 2026-06-18 [python-coder/TICKET-20260616-GE-100b]: Implements AC GE-100b (human-readable
   duplicate pair output) and GE-100b-1 (staged-only filter). Replaced --reporters console
   with --reporters json + --output to get structured jscpd output. Added _parse_clones()
