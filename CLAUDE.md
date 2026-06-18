@@ -225,6 +225,29 @@ so try the CLI first and fall back to `gh api` only on the EMU error.)
 create` under the EMU account will fail with "Unauthorized: As an Enterprise Managed
 User, you cannot access this content (createPullRequest)".
 
+**`gh pr merge` is EMU-blocked too — switch accounts before merging.** The same EMU
+restriction applies to merging, not just creating, PRs. When the active gh account is
+an EMU account (e.g. a corporate `*_roche` account), `gh pr merge` fails with
+"Unauthorized: As an Enterprise Managed User, you cannot access this content
+(mergePullRequest)". The fix is the same as for `gh pr create`: switch to the non-EMU
+account first.
+
+```bash
+# Check which account is active (the EMU account is often the default):
+gh auth status
+
+# Switch to the non-EMU account before merging:
+gh auth switch --user urlmonitor
+
+# Then merge:
+gh pr merge <N> --squash --delete-branch
+```
+
+(Observed in EPIC-Exceptionhandlingguardenforcestheerror finalize, 2026-06-18: the merge
+failed under the active `henzeh_roche` account and succeeded immediately after
+`gh auth switch --user urlmonitor`. The `gh api` REST fallback also works for merge:
+`gh api -X PUT repos/<org>/<repo>/pulls/<N>/merge -f merge_method=squash`.)
+
 ### Feedback sink reachable
 
 **What to check:** Verify that `debugging/logs/agent_telemetry.jsonl` (or the configured

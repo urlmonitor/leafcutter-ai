@@ -281,6 +281,29 @@ in `.sql`), **stop immediately**. Do not write or edit the SQL file. Tell the us
 You may still write Python that *calls* SQL procedures (e.g. `db.create_procedures()`
 invocations, SQLAlchemy ORM code) — the rule applies only to raw `.sql` file content.
 
+## Dual-Tree Template Parity (commit-guardian hooks)
+
+Some package source files exist in **two template trees** that must stay in sync.
+The clearest case is the commit-guardian hooks, which live in BOTH:
+
+- `templates/scripts/commit_guardian/<hook>.py` — the **canonical** tree that
+  `build.py` reads and deploys (see `scripts/build_phases.py`).
+- `templates/commit-guardian/<hook>.py` — a legacy/secondary copy.
+
+**When you edit a commit-guardian hook (e.g. `check_exception_handling.py`), you MUST
+apply the identical change to BOTH trees, and then verify parity before sign-off:**
+
+```bash
+diff templates/scripts/commit_guardian/<hook>.py templates/commit-guardian/<hook>.py
+```
+
+A non-empty diff (other than an intentional, documented divergence) means one tree is
+stale. If you fix only the legacy tree, `build.py` silently deploys the OLD canonical
+version and your change never reaches the running hook — this exact defect shipped twice
+(GE-108c and GE-109a, both fixed only in the legacy tree; caught only by post-merge
+spot-checks). Do NOT run `build.py` to "sync" them — edit both template files directly
+and diff to confirm.
+
 ## File-Size Limit (plan before writing)
 
 **File-size limit**: new `.py` files must not exceed `{{config.file_size_limit_py}}`
