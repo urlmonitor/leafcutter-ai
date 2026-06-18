@@ -1612,5 +1612,270 @@ class TestGE110CanonicalTreeTestFileExempt(unittest.TestCase):
         )
 
 
+# ---------------------------------------------------------------------------
+# GE-108b-regression / ADR-015 tests — inline noqa suppression
+# ---------------------------------------------------------------------------
+# The guard must honor "# noqa: BLE001" on the except line, per-line and
+# per-violation-code, matching Ruff's suppression semantics.  A bare "# noqa"
+# (no code list) must NOT suppress the violation (ADR-015 Decision 3).
+# A "# noqa: SOMEOTHER" that does not name BLE001 must also NOT suppress it.
+# ---------------------------------------------------------------------------
+
+
+class TestADR015NoqaBLE001Suppression(unittest.TestCase):
+    """ADR-015: # noqa: BLE001 on the except line must suppress the violation."""
+
+    def test_noqa_ble001_qualified_suppresses_violation(self) -> None:
+        # covers: ADR-015, GE-108b-regression
+        """A blind handler with '# noqa: BLE001' on the except line must NOT be flagged.
+
+        The guard must exit 0 when the except line carries a code-qualified
+        # noqa: BLE001 comment, aligning with Ruff's suppression semantics.
+        """
+        result = _run_hook("""\
+            def intentionally_blind():
+                try:
+                    pass
+                except Exception:  # noqa: BLE001
+                    pass
+        """)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "Expected exit 0 for blind handler with '# noqa: BLE001' on the "
+                f"except line, got {result.returncode}.\n"
+                "ADR-015: code-qualified noqa must suppress the BLE001 violation.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+    def test_noqa_multi_code_including_ble001_suppresses_violation(self) -> None:
+        # covers: ADR-015, GE-108b-regression
+        """A blind handler with '# noqa: E501, BLE001' must NOT be flagged for BLE001.
+
+        When BLE001 appears in a comma-separated noqa code list alongside other
+        codes, the suppression must still apply.
+        """
+        result = _run_hook("""\
+            def intentionally_blind():
+                try:
+                    pass
+                except Exception:  # noqa: E501, BLE001
+                    pass
+        """)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "Expected exit 0 for blind handler with '# noqa: E501, BLE001', "
+                f"got {result.returncode}.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+    def test_noqa_different_code_does_not_suppress_ble001(self) -> None:
+        # covers: ADR-015, GE-108b-regression
+        """A '# noqa: SOMEOTHER' comment that does NOT include BLE001 must NOT suppress.
+
+        Per ADR-015: suppression is per-violation-code. A noqa comment for a
+        different code must not incidentally suppress BLE001.
+        """
+        result = _run_hook("""\
+            def bad():
+                try:
+                    pass
+                except Exception:  # noqa: E501
+                    pass
+        """)
+        self.assertEqual(
+            result.returncode,
+            1,
+            msg=(
+                "Expected exit 1 for blind handler with '# noqa: E501' (not BLE001), "
+                f"got {result.returncode}.\n"
+                "A noqa comment for a different code must NOT suppress BLE001.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+        combined = result.stdout + result.stderr
+        self.assertTrue(
+            any(kw in combined for kw in ("BLE001", "blind", "except Exception")),
+            msg=f"Expected BLE001/blind keyword in output. Got: {combined!r}",
+        )
+
+    def test_no_noqa_no_logging_still_flagged(self) -> None:
+        # covers: ADR-015, GE-108b-regression
+        """Regression guard: a blind handler with no noqa and no log/reraise must still be flagged.
+
+        The noqa feature must not accidentally suppress genuinely non-compliant
+        handlers. A blind except with no comment must still exit 1.
+        """
+        result = _run_hook("""\
+            def bad():
+                try:
+                    pass
+                except Exception:
+                    pass
+        """)
+        self.assertEqual(
+            result.returncode,
+            1,
+            msg=(
+                "Expected exit 1 for blind handler with no noqa and no log/reraise, "
+                f"got {result.returncode}.\n"
+                "The noqa feature must not accidentally clear non-annotated handlers.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+        combined = result.stdout + result.stderr
+        self.assertTrue(
+            any(kw in combined for kw in ("BLE001", "blind", "except Exception")),
+            msg=f"Expected BLE001/blind keyword in output. Got: {combined!r}",
+        )
+
+    def test_proper_logging_still_clears_handler(self) -> None:
+        # covers: ADR-015, GE-108b-regression
+        """Positive case: a blind handler with WARNING-level logging is still cleared (exit 0).
+
+        Regression guard to confirm the pre-existing WARNING-or-higher clearing
+        path was not broken by the noqa feature addition.
+        """
+        result = _run_hook("""\
+            import logging
+            logger = logging.getLogger(__name__)
+
+            def ok():
+                try:
+                    pass
+                except Exception:
+                    logger.warning("expected occasional error, continuing")
+        """)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "Expected exit 0 for blind handler cleared by logger.warning(), "
+                f"got {result.returncode}.\n"
+                "WARNING-level logging must still clear the handler after ADR-015 changes.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+
+class TestADR015BareNoqaNotHonored(unittest.TestCase):
+    """ADR-015 Decision 3: bare '# noqa' (no code list) must NOT suppress BLE001."""
+
+    def test_bare_noqa_does_not_suppress_ble001(self) -> None:
+        # covers: ADR-015 Decision 3, GE-108b-regression
+        """A blind handler with bare '# noqa' (no code list) must still be flagged.
+
+        ADR-015 Decision 3 explicitly prohibits bare # noqa from suppressing
+        BLE001 to prevent wholesale guard suppression. The guard must still exit 1.
+        """
+        result = _run_hook("""\
+            def bad():
+                try:
+                    pass
+                except Exception:  # noqa
+                    pass
+        """)
+        self.assertEqual(
+            result.returncode,
+            1,
+            msg=(
+                "Expected exit 1 for blind handler with bare '# noqa' (no code list), "
+                f"got {result.returncode}.\n"
+                "ADR-015 Decision 3: bare # noqa must NOT suppress BLE001.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+        combined = result.stdout + result.stderr
+        self.assertTrue(
+            any(kw in combined for kw in ("BLE001", "blind", "except Exception")),
+            msg=f"Expected BLE001/blind keyword in output. Got: {combined!r}",
+        )
+
+
+class TestADR015NoqaScopePerLine(unittest.TestCase):
+    """ADR-015: noqa suppression is per-line — it must not suppress other lines."""
+
+    def test_noqa_on_one_handler_does_not_suppress_other_handler(self) -> None:
+        # covers: ADR-015, GE-108b-regression
+        """A noqa: BLE001 on one except line must only suppress that one handler.
+
+        A second blind handler without noqa on the SAME file must still be
+        flagged, confirming per-line scope.
+        """
+        result = _run_hook("""\
+            def intentional():
+                try:
+                    pass
+                except Exception:  # noqa: BLE001
+                    pass
+
+            def accidental():
+                try:
+                    pass
+                except Exception:
+                    pass
+        """)
+        self.assertEqual(
+            result.returncode,
+            1,
+            msg=(
+                "Expected exit 1 because the second handler (no noqa) must still be "
+                f"flagged, got {result.returncode}.\n"
+                "noqa suppression must be scoped to the single annotated line.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+        # Exactly one violation (from the second handler)
+        combined = result.stdout + result.stderr
+        self.assertIn(
+            "1 violation(s)",
+            combined,
+            msg=(
+                "Expected '1 violation(s)' — only the second handler must be flagged.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+    def test_noqa_ble001_does_not_suppress_io001(self) -> None:
+        # covers: ADR-015 (per-code scope), GE-108b-regression
+        """A '# noqa: BLE001' must NOT suppress an IO-001 violation on a different line.
+
+        The noqa suppression is per-violation-code: BLE001 suppression must not
+        bleed into IO-001 detection on other lines in the same file.
+        """
+        result = _run_hook("""\
+            def mixed():
+                try:
+                    pass
+                except Exception:  # noqa: BLE001
+                    pass
+
+            def io_bad():
+                f = open("x")
+                return f.read()
+        """)
+        self.assertEqual(
+            result.returncode,
+            1,
+            msg=(
+                "Expected exit 1 because open() without try/except must still be "
+                f"flagged by IO-001, got {result.returncode}.\n"
+                "noqa: BLE001 must not suppress IO-001 on a different line.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+        combined = result.stdout + result.stderr
+        self.assertIn(
+            "IO-001",
+            combined,
+            msg=f"Expected IO-001 in output. Got: {combined!r}",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
