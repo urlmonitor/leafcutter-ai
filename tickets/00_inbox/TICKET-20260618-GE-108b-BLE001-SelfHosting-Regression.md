@@ -24,7 +24,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
   architecture-diagram-author: not_needed
 ---
@@ -129,7 +129,7 @@ Scenario: Genuinely non-compliant handlers are still flagged
 - [x] python-coder — 2026-06-18 15:45
 - [x] test-runner — 2026-06-18 16:05
 - [x] pr-reviewer — 2026-06-18 17:00
-- [ ] commit
+- [x] commit — 2026-06-18 17:10
 - [ ] pull-request
 
 ## Comments
@@ -177,7 +177,11 @@ Reviewed the 607-line diff across 5 files. All three ACs are met: `# noqa: BLE00
 
 ### 2026-06-18 17:10 — commit (status: ok)
 feedback-id: fb_2026-06-18_e5ccbcc8
-Auto-authorized commit gate: subject "fix(commit-guardian): honor # noqa: BLE001 inline suppression in check_exception_handling.py"; staged files: docs/architecture/adrs/ADR-015-guard-honors-noqa-ble001.md templates/commit-guardian/check_exception_handling.py templates/scripts/commit_guardian/check_exception_handling.py tickets/00_inbox/TICKET-20260618-GE-108b-BLE001-SelfHosting-Regression.md unit_tests/commit_guardian/test_check_exception_handling.py.
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Committed SHA 2856f39 — 5 files changed (625 insertions, 10 deletions). Pre-commit check-feedback-id hook blocked the first attempt due to two missing feedback-id lines (the pre-existing ticket-supervisor entry at 14:32 and the new commit audit entry); corrected both and retried successfully. All other hooks passed.
 
 ## Out of Scope
 
