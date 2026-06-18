@@ -1,0 +1,31 @@
+id: BO-1300d
+readiness: approved
+priority: high
+title: "Every finished feature is reviewed automatically before it counts as done"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  The same independent review runs automatically at the end of every build.
+
+  When a feature finishes building, the review happens on its own as the closing
+  step -- so issues that should be resolved first are surfaced before the feature
+  is declared done, with no one having to remember to ask for it.
+depends_on:
+  - BO-1300
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1300d-1
+  - BO-1300d-2
+implemented_by: []
+documentation_triggers:
+  - sequence-diagram

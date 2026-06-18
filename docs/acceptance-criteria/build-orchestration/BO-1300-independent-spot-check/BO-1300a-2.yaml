@@ -1,0 +1,51 @@
+id: BO-1300a-2
+readiness: approved
+priority: high
+title: "On-demand command dispatches exactly three spot-check reviewers in parallel"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-independent-spot-check/BO-1300a.yaml"
+criteria: |
+  Given the standalone spot-check command has resolved a review scope for a finished feature
+  When the command starts the review
+  Then it dispatches exactly three spot-check reviewer agents, no more and no fewer
+  And the three reviewers are all dispatched against the same resolved review scope
+  And the three reviewers run concurrently rather than one after another
+  And the three reviewers are dispatched a single level below the command (the command does
+    not spawn a build supervisor or any further nested dispatch chain)
+depends_on:
+  - BO-1300a
+  - BO-1300a-1
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-independent-spot-check/BO-1300a.yaml"
+    relationship: parent
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/supervisor-spawn-topology.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Dispatch must respect the ADR-006 depth-1 nesting limit: the command spawns the three reviewers at depth 1 and the reviewers themselves must NOT invoke the Agent tool (no further nesting). Aggregation and ticketing run in the command (depth 0), not inside a reviewer."
+  - "The three reviewers must be issued in a single concurrent batch (one Agent-tool turn with three dispatches) so they run in parallel, not sequentially."
+  - "All three reviewers receive the identical resolved-scope object from BO-1300a-1 so they probe the same feature."
+  - "The reviewer count is fixed at exactly three and tied to the three angles defined in BO-1300b-1 — it is a constant of the pass, not a user-tunable parameter."
+  - "This dispatch is the single shared spot-check pass reused by the automatic end-of-build surface (BO-1300d-1); it must be authored once and invoked from both surfaces, not duplicated."
+delivers_to:
+  agent: llm-expert
+  contract: "Three concurrently-dispatched reviewer agents (depth 1) each seeded per BO-1300b-1, whose completed per-angle finding sets are collected by the aggregation step (BO-1300b-2)."
+expects_from:
+  ac_id: BO-1300a-1
+  contract: "Resolved review scope object { feature_id|epic_folder, changed_files, behavior_summary } to dispatch the three reviewers against."
+origin_agent: BrainCandy
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

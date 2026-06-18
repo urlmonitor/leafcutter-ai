@@ -1,0 +1,44 @@
+id: BO-1300d-1-i
+readiness: approved
+priority: high
+title: "Blocking spot-check findings are surfaced in the build's completion output"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-independent-spot-check/BO-1300d.yaml"
+criteria: |
+  Given the automatic end-of-build spot-check pass has run and at least one reviewer
+    reported a blocking issue
+  When /build-feature produces its completion output for the feature
+  Then the completion output explicitly surfaces the blocking spot-check findings rather
+    than declaring the feature cleanly done
+  And the completion output states how many blocking findings were raised and by which
+    reviewer angle
+  And the completion output points to where the findings were recorded as tracked work
+depends_on:
+  - BO-1300d-1
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-independent-spot-check/BO-1300d.yaml"
+    relationship: parent
+    status: exists
+  - path: docs/architecture/components/build-ticket-workflow-dispatch.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Completion output must read the consolidated result's blocking findings (BO-1300b-2 shape) and render: a non-clean status, the count of blocking findings, the angle that raised each, and the inbox ticket location(s) where they were recorded."
+  - "When blocking findings exist the output must not present the feature as cleanly done; the distinction between clean-done and done-with-blocking-findings must be unambiguous to the user."
+  - "The ticket references in the output must match the actual inbox ticket paths written by BO-1300e-1 so the user can navigate to the tracked work."
+delivers_to: null
+expects_from:
+  ac_id: BO-1300d-1
+  contract: "The automatic end-of-build spot-check consolidated result (with per-finding blocking flag and angle) whose blocking findings this completion output surfaces."
+origin_agent: BrainCandy
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

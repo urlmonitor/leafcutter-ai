@@ -1,0 +1,44 @@
+id: BO-1300a-1-i
+readiness: approved
+priority: high
+title: "Spot-check command with no resolvable target is rejected before dispatch"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-independent-spot-check/BO-1300a.yaml"
+criteria: |
+  Given the user invokes the standalone spot-check command without naming any target,
+    or names a target that does not resolve to a finished feature (for example an epic
+    folder that does not exist, or a branch with no merged changes)
+  When the command attempts to resolve the review scope
+  Then the command stops before dispatching any reviewer agent
+  And it reports that the target could not be resolved and names what it expected
+    (a finished feature, epic folder, branch, or changed-file set)
+  And no spot-check reviewer agents are dispatched
+depends_on:
+  - BO-1300a-1
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-independent-spot-check/BO-1300a.yaml"
+    relationship: parent
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Resolution failure must be fail-closed: the command exits the review path before any Agent-tool dispatch, leaving zero reviewer agents spawned."
+  - "The rejection message must name the expected target forms (finished feature / epic folder / branch / changed-file set) so the user can correct the invocation."
+  - "Must distinguish the no-target case from the unresolvable-target case in the message it returns."
+delivers_to: null
+expects_from:
+  ac_id: BO-1300a-1
+  contract: "The scope-resolution step (BO-1300a-1) that emits a resolved-scope object on success; this edge case is the path where resolution yields no valid scope and must short-circuit before dispatch."
+origin_agent: BrainCandy
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

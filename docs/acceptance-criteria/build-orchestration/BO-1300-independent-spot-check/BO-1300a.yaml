@@ -1,0 +1,34 @@
+id: BO-1300a
+readiness: approved
+priority: high
+title: "Ask for an independent review of any finished feature on demand"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Put any newly-built feature through a fresh review whenever you want.
+
+  You can point this review at a feature you just built and get an independent
+  assessment back, without waiting for a full build cycle or writing any new
+  tests yourself.
+depends_on:
+  - BO-1300
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1300a-1
+  - BO-1300a-2
+  - BO-1300a-3
+  - BO-1300a-4
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - sequence-diagram
