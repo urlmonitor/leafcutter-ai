@@ -167,10 +167,6 @@
                 {
                     "skill_id": "signoff",
                     "mode": "conditional"
-                },
-                {
-                    "skill_id": "frontend-design",
-                    "mode": "always"
                 }
             ],
             "knowledge_channels": [
@@ -2754,10 +2750,6 @@
             "skills_invoked": [
                 {
                     "skill_id": "webapp-testing",
-                    "mode": "conditional"
-                },
-                {
-                    "skill_id": "frontend-design",
                     "mode": "conditional"
                 }
             ],
