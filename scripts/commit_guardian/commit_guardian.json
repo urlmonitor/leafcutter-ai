@@ -830,10 +830,12 @@
                 "name": "Check Duplicate Code (jscpd copy-paste clone detection)",
                 "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_duplicate_code.py",
                 "language": "system",
+                "files": "\\.(py|ts|js|tsx|jsx|sql)$",
                 "stages": [
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "enabled": false,
                 "_comment": "GE-100a: Scans staged source files for copy-paste clones using jscpd. Disabled by default (duplicate_code.enabled: false). Fails open when jscpd is not installed — emits advisory to stderr with install guidance and exits 0. Set strict: true to block commits on threshold violations."
             },
             {
@@ -898,7 +900,8 @@
         "min_lines": 5,
         "min_tokens": 50,
         "threshold_percent": 5,
-        "checked_extensions": [".py", ".ts", ".js", ".tsx", ".jsx", ".sql"]
+        "checked_extensions": [".py", ".ts", ".js", ".tsx", ".jsx", ".sql"],
+        "excluded_dirs": ["node_modules", ".venv", "__pycache__"]
     },
     "diff_coverage": {
         "_comment": "check_diff_coverage.py \u2014 Diff-based coverage gating using diff-cover. Disabled by default. Fails open when diff-cover is not installed or coverage.xml is absent. Set strict: true to block commits when coverage falls below min_coverage_percent. max_age_seconds guards against stale coverage artifacts.",
