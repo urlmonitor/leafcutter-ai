@@ -92,13 +92,24 @@ function parseArgs(raw) {
  * Stages each file path individually via `git add`, then creates a commit
  * with a conventional commit message that identifies the stage and file count.
  * The commit is confirmed to have succeeded (exit code 0) before this function
- * returns. If staging or committing fails, the function returns a failure
- * result — the caller must not dispatch the next agent in that case.
+ * returns. If staging or committing fails, the function returns a structured
+ * failure result — the caller must not dispatch the next agent in that case.
+ *
+ * On pre-commit hook failure the result includes:
+ *   hook_name    {string|null} — name of the failing hook (parsed from git output)
+ *   failing_files {string[]}  — file paths that failed validation
+ *   is_conflict  {boolean}    — true when failure is an index conflict
  *
  * @param {Function} agent       - Runtime-provided agent dispatch function.
  * @param {string[]} written     - Array of AC IDs (e.g. ["ACD-100a-1"]) written by the stage.
  * @param {string}   stageName   - Human-readable stage label (e.g. "po", "ba", "it-po").
- * @returns {Promise<{status: "ok"|"error", message: string}>}
+ * @returns {Promise<{
+ *   status: "ok"|"error",
+ *   message: string,
+ *   hook_name?: string|null,
+ *   failing_files?: string[],
+ *   is_conflict?: boolean
+ * }>}
  */
 async function commitStageOutput(agent, written, stageName) {
   const fileCount = written.length;
@@ -118,7 +129,7 @@ async function commitStageOutput(agent, written, stageName) {
           "  Run: git add docs/acceptance-criteria/\n" +
           "  Capture the exit code.\n" +
           "  If exit code is non-zero:\n" +
-          "    Return: { \"status\": \"error\", \"message\": \"git add failed\" }\n" +
+          "    Return: { \"status\": \"error\", \"message\": \"git add failed\", \"hook_name\": null, \"failing_files\": [], \"is_conflict\": false }\n" +
           "\n" +
           "Step 2 — Check whether there is anything to commit:\n" +
           "  Run: git diff --cached --name-only\n" +
@@ -126,18 +137,62 @@ async function commitStageOutput(agent, written, stageName) {
           "    Return: { \"status\": \"ok\", \"message\": \"no new AC files to commit — skipped\" }\n" +
           "\n" +
           `Step 3 — Commit the staged files:\n` +
-          `  Run: git commit -m "${commitMessage}"\n` +
-          "  Capture the exit code.\n" +
+          `  Run: git commit -m "${commitMessage}" 2>&1\n` +
+          "  Capture ALL output (stdout + stderr combined) and the exit code.\n" +
           "  If exit code is 0:\n" +
           "    Return: { \"status\": \"ok\", \"message\": \"committed successfully\" }\n" +
           "  If exit code is non-zero:\n" +
-          "    Return: { \"status\": \"error\", \"message\": \"git commit failed\" }",
+          "    Analyse the combined output to build a structured error:\n" +
+          "\n" +
+          "    a) Conflict detection:\n" +
+          "       If the output contains the word 'conflict' (case-insensitive),\n" +
+          "       extract any file paths mentioned (lines matching docs/ or .yaml/.yml\n" +
+          "       patterns, or lines after 'CONFLICT (' markers).\n" +
+          "       Return: {\n" +
+          "         \"status\": \"error\",\n" +
+          "         \"message\": \"index conflict detected\",\n" +
+          "         \"hook_name\": null,\n" +
+          "         \"failing_files\": [<extracted conflict file paths>],\n" +
+          "         \"is_conflict\": true\n" +
+          "       }\n" +
+          "\n" +
+          "    b) Pre-commit hook failure:\n" +
+          "       Look for lines containing 'hook' (e.g. 'hook: ...' or '- hook-name').\n" +
+          "       The hook name is typically on a line like:\n" +
+          "         '- hook-name...Failed'\n" +
+          "         'Running: hook-name'\n" +
+          "         '[ERROR] hook-name:'\n" +
+          "       Extract the first hook name you can identify, or null if none found.\n" +
+          "       Collect file paths from the output: any token matching\n" +
+          "         docs/acceptance-criteria/**.yaml or similar path patterns.\n" +
+          "       Return: {\n" +
+          "         \"status\": \"error\",\n" +
+          "         \"message\": \"pre-commit hook rejected staged files\",\n" +
+          "         \"hook_name\": \"<hook name or null>\",\n" +
+          "         \"failing_files\": [<file paths from error output>],\n" +
+          "         \"is_conflict\": false\n" +
+          "       }\n" +
+          "\n" +
+          "    c) Generic failure (no hook or conflict pattern found):\n" +
+          "       Return: {\n" +
+          "         \"status\": \"error\",\n" +
+          "         \"message\": \"git commit failed\",\n" +
+          "         \"hook_name\": null,\n" +
+          "         \"failing_files\": [],\n" +
+          "         \"is_conflict\": false\n" +
+          "       }\n" +
+          "\n" +
+          "  IMPORTANT: Do NOT retry the commit. Do NOT run git commit --no-verify.\n" +
+          "  Do NOT run git add again. Leave all AC files as uncommitted changes on disk.",
       },
     });
   } catch (err) {
     return {
       status: "error",
       message: `commitStageOutput: agent dispatch failed: ${err.message}`,
+      hook_name: null,
+      failing_files: [],
+      is_conflict: false,
     };
   }
 
@@ -152,6 +207,54 @@ async function commitStageOutput(agent, written, stageName) {
   }
 
   return result || { status: "ok", message: "no result returned by agent" };
+}
+
+/**
+ * Format a structured commit failure from commitStageOutput() into an
+ * actionable user-facing error message.
+ *
+ * Handles two cases:
+ *   - index conflict: reports conflicting paths, advises manual resolution
+ *   - pre-commit hook failure: names the hook, lists failing files, advises fix + re-run
+ *
+ * @param {string}      agentLabel   - Human-readable label for the stage agent (e.g. "product-owner").
+ * @param {string}      stageName    - Stage label used in the commit message (e.g. "po-v3").
+ * @param {{
+ *   message: string,
+ *   hook_name?: string|null,
+ *   failing_files?: string[],
+ *   is_conflict?: boolean
+ * }} commitOutcome  - The error result returned by commitStageOutput().
+ * @param {string[]}    allAcsWritten - All AC IDs written so far in the pipeline run.
+ * @returns {string}   Actionable error message for the user.
+ */
+function formatCommitError(agentLabel, stageName, commitOutcome, allAcsWritten) {
+  const failingFiles = Array.isArray(commitOutcome.failing_files) ? commitOutcome.failing_files : [];
+  const fileList = failingFiles.length > 0
+    ? "\n  Conflicting/failing files:\n" + failingFiles.map(f => `    - ${f}`).join("\n")
+    : "";
+
+  if (commitOutcome.is_conflict) {
+    return (
+      `Commit of ${agentLabel} AC output failed due to an index conflict.` +
+      fileList + "\n" +
+      "The conflict was caused by concurrent modifications to the same files. " +
+      "Resolve the conflict manually (do NOT force-overwrite) then re-run /plan-feature. " +
+      "All AC files from this stage remain on disk as uncommitted changes."
+    );
+  }
+
+  const hookLabel = commitOutcome.hook_name
+    ? `Hook "${commitOutcome.hook_name}"`
+    : "A pre-commit hook";
+
+  return (
+    `Commit of ${agentLabel} AC output failed. ` +
+    `${hookLabel} rejected the staged files.` +
+    fileList + "\n" +
+    "Fix the validation errors listed above, then re-run /plan-feature. " +
+    "All AC files from this stage remain on disk as uncommitted changes so you can inspect and correct them."
+  );
 }
 
 /**
@@ -352,10 +455,7 @@ async function run({ userInput, agent }) {
           if (commitOutcome.status === "error") {
             return {
               status: "error",
-              message:
-                `Commit of ${step.agent} AC output failed: ${commitOutcome.message}. ` +
-                "Pipeline aborted to avoid committing incomplete state. " +
-                "Resolve the git issue and re-run.",
+              message: formatCommitError(step.agent, `${step.stage}-v3`, commitOutcome, allAcsWritten),
               acs_as_drafts: allAcsWritten,
             };
           }
@@ -420,10 +520,7 @@ async function run({ userInput, agent }) {
           if (finalCommitOutcome.status === "error") {
             return {
               status: "error",
-              message:
-                `Final commit of IT PO v3 AC output failed: ${finalCommitOutcome.message}. ` +
-                "AC YAML files have been updated to readiness: approved but the commit did not succeed. " +
-                "Run `git add docs/acceptance-criteria/ && git commit` manually to complete.",
+              message: formatCommitError("it-po", "it-po", finalCommitOutcome, allAcsWritten),
               acs_updated: allAcsWritten,
               priority,
               route: effectiveRoute,
