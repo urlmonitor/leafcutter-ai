@@ -6,7 +6,7 @@ component: guardrail-engine
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100.yaml"
 criteria: |
   Given a fresh consumer project has run build.py with the default
@@ -50,4 +50,4 @@ amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by:
-- tickets/00_inbox/TICKET-20260616-GE-100h-1.md
+- tickets/00_inbox/epics/EPIC-CodeQualityHooks/17_TICKET-20260616-GE-100h-1.md
