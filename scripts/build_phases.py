@@ -424,19 +424,30 @@ def build_skills(target_root: Path, config: dict[str, Any],
 
     written = 0
     internal_skills: list[str] = []
+    deprecated_skills: list[str] = []
 
     for skill_dir in sorted(skills_template_dir.iterdir()):
         if not skill_dir.is_dir():
             continue
 
-        # Detect internal skills by reading the SKILL.md frontmatter.
+        # Detect internal and deprecated skills by reading the SKILL.md frontmatter.
         skill_md = skill_dir / "SKILL.md"
         is_internal = False
+        is_deprecated = False
         if skill_md.is_file():
             fm, _ = parse_frontmatter(skill_md.read_text(encoding="utf-8"))
             is_internal = bool(fm.get("internal", False))
+            is_deprecated = bool(fm.get("deprecated", False))
             if is_internal:
                 internal_skills.append(skill_dir.name)
+            if is_deprecated:
+                deprecated_skills.append(skill_dir.name)
+
+        # Skip deprecated skills entirely — their principles have been migrated
+        # elsewhere (e.g. embedded in agent templates). Deploying them would
+        # violate fresh-install guarantees (AC BP-700d-1-i).
+        if is_deprecated:
+            continue
 
         for template_file in sorted(skill_dir.rglob("*")):
             if not template_file.is_file():
@@ -481,6 +492,11 @@ def build_skills(target_root: Path, config: dict[str, Any],
         _log.info(
             "Internal skills (excluded from user-facing listings): %s",
             ", ".join(internal_skills),
+        )
+    if deprecated_skills and not dry_run:
+        _log.info(
+            "Deprecated skills (not deployed — principles migrated to agent templates): %s",
+            ", ".join(deprecated_skills),
         )
 
     return written
@@ -1599,4 +1615,13 @@ def clean_stale_artifacts(
 #   target_root/".claude"/"workflows" to match .claude/ layout convention and
 #   fix unit_tests/test_build_workflow_phase.py assertions.
 #   (#TICKET-20260604-FixFailingBuildPipelineTests)
+# - 2026-06-18 [python-coder/EPIC-Oneagenthandlesboththelookandthecodefor/14]:
+#   Added deprecated skill exclusion in build_skills(). Skills with
+#   deprecated: true in their SKILL.md frontmatter are skipped entirely —
+#   not deployed to .claude/skills/ on fresh installs or upgrades.
+#   The frontend-design skill is the first user: its design principles are now
+#   embedded in templates/agents/frontend-coder.md. Adding deprecated: true
+#   to frontend-design/SKILL.md prevents it from being deployed, satisfying
+#   AC BP-700d-1-i (fresh install must not create .claude/skills/frontend-design/).
+#   (#EPIC-Oneagenthandlesboththelookandthecodefor/14)
 # ====================================================================
