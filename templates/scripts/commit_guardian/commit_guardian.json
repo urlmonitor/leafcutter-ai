@@ -742,6 +742,20 @@
                 ],
                 "pass_filenames": false,
                 "_comment": "GE-100a/GE-100b: Scans staged source files for copy-paste clones using jscpd. Disabled by default (duplicate_code.enabled: false). Fails open when jscpd is not installed — emits advisory to stderr with install guidance and exits 0. Fails open on jscpd v4.x (incompatible CLI). Set strict: true to block commits on threshold violations."
+            },
+            {
+                "id": "check-diff-coverage",
+                "tier": "judgment",
+                "name": "Check Diff Coverage (diff-cover coverage gating)",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_diff_coverage.py",
+                "language": "system",
+                "files": "\\.(py|sql)$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "enabled": false,
+                "_comment": "GE-101a: Verifies changed lines in staged files have adequate test coverage using diff-cover. Disabled by default (diff_coverage.enabled: false). Fails open when diff-cover is not installed or coverage.xml is absent — emits advisory to stderr and exits 0. Set strict: true to block commits below min_coverage_percent threshold."
             }
         ]
     },
@@ -784,5 +798,14 @@
         "min_tokens": 50,
         "threshold_percent": 5,
         "checked_extensions": [".py", ".ts", ".js", ".tsx", ".jsx", ".sql"]
+    },
+    "diff_coverage": {
+        "_comment": "check_diff_coverage.py — Diff-based coverage gating using diff-cover. Disabled by default. Fails open when diff-cover is not installed or coverage.xml is absent. Set strict: true to block commits when coverage falls below min_coverage_percent. max_age_seconds guards against stale coverage artifacts.",
+        "enabled": false,
+        "strict": false,
+        "min_coverage_percent": 80,
+        "coverage_xml_path": "coverage.xml",
+        "compare_branch": "origin/main",
+        "max_age_seconds": 3600
     }
 }

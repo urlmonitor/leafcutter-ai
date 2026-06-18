@@ -281,10 +281,26 @@ DUPLICATE_CODE_CHECKED_EXTENSIONS: list[str] = _get(
 )
 
 
+# ---------------------------------------------------------------------------
+# check_diff_coverage
+# ---------------------------------------------------------------------------
+DIFF_COVERAGE_ENABLED: bool = _get("diff_coverage", "enabled", False)
+DIFF_COVERAGE_STRICT: bool = _get("diff_coverage", "strict", False)
+DIFF_COVERAGE_MIN_COVERAGE_PERCENT: int = _get("diff_coverage", "min_coverage_percent", 80)
+DIFF_COVERAGE_XML_PATH: str = _get("diff_coverage", "coverage_xml_path", "coverage.xml")
+DIFF_COVERAGE_COMPARE_BRANCH: str = _get("diff_coverage", "compare_branch", "origin/main")
+DIFF_COVERAGE_MAX_AGE_SECONDS: int = _get("diff_coverage", "max_age_seconds", 3600)
+
+
 """
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-18 [python-coder/TICKET-20260616-GE-100d]: Added DIFF_COVERAGE_* constants for
+  check_diff_coverage.py (AC GE-101a / originally GE-100d). enabled and strict both
+  default to False; min_coverage_percent=80; coverage_xml_path='coverage.xml';
+  compare_branch='origin/main'; max_age_seconds=3600. All tunable via diff_coverage
+  section in commit_guardian.json.
 - 2026-06-18 [python-coder/TICKET-20260616-GE-100b]: Added DUPLICATE_CODE_THRESHOLD_PERCENT
   and DUPLICATE_CODE_CHECKED_EXTENSIONS constants (AC GE-100b). threshold_percent defaults
   to 5; checked_extensions defaults to [.py, .ts, .js, .tsx, .jsx, .sql] matching the AC.
