@@ -375,22 +375,29 @@ def _call_generate_ticket_from_ac(
         RuntimeError: When the script exits 0 but emits no ``Written:`` line.
     """
     script_path = _sibling_dir / "generate_ticket_from_ac.py"
-    result = subprocess.run(
-        [
-            sys.executable,
-            str(script_path),
-            "--ac",
-            ac_id,
-            "--ac-root",
-            str(ac_root),
-            "--tickets-root",
-            str(tickets_root),
-        ],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        check=True,
-    )
+    try:
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(script_path),
+                "--ac",
+                ac_id,
+                "--ac-root",
+                str(ac_root),
+                "--tickets-root",
+                str(tickets_root),
+            ],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            check=True,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        import logging  # noqa: PLC0415
+        logging.getLogger(__name__).warning(
+            "generate_ticket_from_ac.py failed for AC %s: %s", ac_id, exc
+        )
+        raise
     for line in result.stdout.splitlines():
         if line.startswith("Written:"):
             return line[len("Written:"):].strip()

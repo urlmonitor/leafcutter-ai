@@ -41,6 +41,34 @@ DECISION HISTORY
     except OSError alongside except SyntaxError, with a skip message to
     stderr and continue, mirroring check_placeholder_defaults' OSError
     handling and satisfying Error Handling Policy Rule 1.
+- 2026-06-17 [GE-108a]: Subprocess calls added as mandatory I/O boundaries.
+  Per ADR-014 Decision 1, subprocess spawning is external I/O that must be
+  wrapped in try/except. Added six subprocess entry-point forms to
+  _IO_BOUNDARIES: subprocess.run, subprocess.Popen, subprocess.call,
+  subprocess.check_call, subprocess.check_output, subprocess.getoutput.
+  The commit_guardian.json io_boundary_calls list was updated in parity.
+  Self-hosting remediation (corrected 2026-06-18): the original sign-off
+  claimed leafcutter's own subprocess calls were already wrapped — that was
+  inaccurate. A post-drive spot-check found 11 unwrapped subprocess calls in
+  6 production scripts (goal_to_epic, ac_prioritizer, setup_ticket_worktree,
+  build_helpers, compute_next_version, feedback/emit_hook_finding). All 11
+  were subsequently wrapped in try/except so the widened guard produces no
+  IO-001 subprocess violations on leafcutter's own code.
+- 2026-06-18 [GE-108b]: Blind-catch handler cleared only by WARNING-or-higher
+  logging on a real logger object (ADR-014 Decision 2).
+  Replaced _LOG_CALL_NAMES (broad name-set) with _WARNING_LOG_METHODS
+  (warning, error, critical, exception only). _handler_reraises_or_logs now
+  requires calls to be in attribute form (ast.Attribute node), so a bare
+  function call like error() or debug() no longer clears the handler regardless
+  of name. Sub-WARNING methods (debug, info) and print() are explicitly excluded.
+  Self-hosting non-regression verified: all production handlers in leafcutter
+  already use WARNING-or-higher logging or re-raise.
+- 2026-06-18 [GE-108c]: BLE001 message now renders tuple exception types in full.
+  Previously, except (ValueError, Exception): collapsed to just "Exception" in
+  the violation message because the type_name branch only handled ast.Name.
+  Added an ast.Tuple branch that joins the element names with ", " and wraps
+  them in parentheses, producing e.g. "(ValueError, Exception)" in the message.
+  Detection logic (what is flagged and at which line/col) is unchanged.
 - 2026-06-18 [GE-109a]: Test-file exemption.
   Added is_test_file(path) pure helper and a short-circuit in main() that
   skips AST analysis for test files before analyse_file() is called.
@@ -101,6 +129,12 @@ _IO_BOUNDARIES: list[tuple[str | None, str]] = [
     ("cursor", "execute"),
     ("cursor", "executemany"),
     ("cursor", "callproc"),
+    ("subprocess", "run"),
+    ("subprocess", "Popen"),
+    ("subprocess", "call"),
+    ("subprocess", "check_call"),
+    ("subprocess", "check_output"),
+    ("subprocess", "getoutput"),
 ]
 
 # Recognised cursor receiver names for IO boundary detection.
@@ -120,19 +154,15 @@ _CURSOR_RECEIVER_NAMES: frozenset[str] = frozenset({
 # Exception type names considered "blind" — too broad without reraise/log
 _BLIND_EXCEPTION_NAMES: frozenset[str] = frozenset({"Exception", "BaseException"})
 
-# Call attributes/names whose presence in an except body signals non-silent handling
-_LOG_CALL_NAMES: frozenset[str] = frozenset({
-    "log",
-    "logger",
-    "logging",
-    "warn",
+# WARNING-or-higher method names that clear a blind-catch handler when called as
+# an attribute on an object (e.g. ``logger.warning(...)``).  Only attribute-call
+# form is accepted — bare function calls like ``error()`` do NOT clear the handler
+# regardless of name (ADR-014 Decision 2 / GE-108b).
+_WARNING_LOG_METHODS: frozenset[str] = frozenset({
     "warning",
     "error",
     "critical",
     "exception",
-    "info",
-    "debug",
-    "print",
 })
 
 
@@ -184,29 +214,43 @@ def _handler_is_blind(handler: ast.ExceptHandler) -> bool:
 
 
 def _handler_reraises_or_logs(handler: ast.ExceptHandler) -> bool:
-    """Return True if the handler body contains a reraise or a log/print call.
+    """Return True if the handler body contains a reraise or WARNING-or-higher logging.
 
-    This signals that the exception is not silently swallowed even if the
-    handler catches a broad type.
+    A handler is non-silent when it:
+    - Re-raises the exception (bare ``raise`` or ``raise NewError from exc``), OR
+    - Calls a WARNING-or-higher log method as an **attribute** on an object, i.e.
+      ``<expr>.warning(...)``, ``<expr>.error(...)``, ``<expr>.critical(...)``,
+      or ``<expr>.exception(...)``.
+
+    What does NOT clear the handler (ADR-014 Decision 2 / GE-108b):
+    - A bare function call whose name coincidentally matches a log-level name,
+      e.g. ``error()`` — these are NOT attribute calls on a real logger object.
+    - Sub-WARNING log calls: ``logger.debug(...)``, ``logger.info(...)``.
+    - ``print(...)`` or any non-logger call.
+
+    The detection is purely AST-based: the receiver of the attribute call is NOT
+    resolved to a concrete type; it is sufficient that the call is in attribute
+    form (``ast.Attribute`` node) with a WARNING-or-higher method name, so that
+    a name-coincidence bare call (``ast.Name``) is always rejected.
 
     Args:
         handler: The ExceptHandler node to examine.
 
     Returns:
-        True if the handler body re-raises or logs the exception.
+        True if the handler body re-raises or contains genuine WARNING-or-higher
+        logging on a real (attribute-accessed) logger object.
     """
     for node in ast.walk(ast.Module(body=handler.body, type_ignores=[])):
         if isinstance(node, ast.Raise):
-            # Any raise (bare re-raise or raise SomeError) is non-silent
+            # Any raise (bare re-raise or raise SomeError from exc) is non-silent.
             return True
         if isinstance(node, ast.Call):
             func = node.func
-            if isinstance(func, ast.Name) and func.id.lower() in _LOG_CALL_NAMES:
-                return True
+            # ONLY accept attribute-call form: <obj>.warning(...) etc.
+            # A bare Name call (e.g. error()) is always rejected — name
+            # coincidence with a log level does not indicate a real logger.
             if isinstance(func, ast.Attribute):
-                if func.attr.lower() in _LOG_CALL_NAMES:
-                    return True
-                if isinstance(func.value, ast.Name) and func.value.id.lower() in _LOG_CALL_NAMES:
+                if func.attr in _WARNING_LOG_METHODS:
                     return True
     return False
 
@@ -357,11 +401,15 @@ def analyse_file(path: Path) -> list[Violation]:
                     ),
                 ))
             elif _handler_is_blind(node) and not _handler_reraises_or_logs(node):
-                type_name = (
-                    node.type.id
-                    if isinstance(node.type, ast.Name)
-                    else "Exception"
-                )
+                if isinstance(node.type, ast.Name):
+                    type_name = node.type.id
+                elif isinstance(node.type, ast.Tuple):
+                    inner = ", ".join(
+                        elt.id for elt in node.type.elts if isinstance(elt, ast.Name)
+                    )
+                    type_name = f"({inner})"
+                else:
+                    type_name = "Exception"
                 violations.append(Violation(
                     line=node.lineno,
                     col=node.col_offset + 1,

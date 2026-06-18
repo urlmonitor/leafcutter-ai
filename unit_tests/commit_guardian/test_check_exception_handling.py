@@ -487,6 +487,376 @@ class TestOSErrorOnDirectoryPath(unittest.TestCase):
             shutil.rmtree(tmp_parent, ignore_errors=True)
 
 
+
+
+# ---------------------------------------------------------------------------
+# GE-108b tests — WARNING-or-higher threshold for clearing blind-catch handlers
+# ---------------------------------------------------------------------------
+
+
+class TestGE108bBareNameCallDoesNotClearHandler(unittest.TestCase):
+    """GE-108b Scenario 1: bare Name call like error() must NOT clear the handler.
+
+    A locally-defined function named error() / info() / debug() that is not
+    a project logger must not clear a blind except Exception: handler.
+    """
+
+    def test_bare_name_error_call_emits_ble001(self) -> None:
+        # covers: GE-108b
+        """error() bare Name call (not an attribute on a logger) must emit BLE001."""
+        result = _run_hook("""\
+            def error(msg):
+                print(msg)
+
+            def bad():
+                try:
+                    pass
+                except Exception:
+                    error("something failed")
+        """)
+        self.assertEqual(
+            result.returncode,
+            1,
+            msg=(
+                "Expected exit 1 (BLE001) when only a bare error() Name call is in "
+                f"the handler, got {result.returncode}.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+        combined = result.stdout + result.stderr
+        self.assertTrue(
+            any(kw in combined for kw in ("BLE001", "blind", "except Exception")),
+            msg=f"Expected BLE001/blind keyword in output. Got: {combined!r}",
+        )
+
+
+class TestGE108bSubWarningLoggingDoesNotClearHandler(unittest.TestCase):
+    """GE-108b Scenario 2: sub-WARNING log calls must NOT clear the handler.
+
+    logger.debug() and logger.info() are below the WARNING threshold and must
+    not satisfy the handler requirement.
+    """
+
+    def test_logger_debug_emits_ble001(self) -> None:
+        # covers: GE-108b
+        """logger.debug(...) in handler body must still emit BLE001."""
+        result = _run_hook("""\
+            import logging
+            logger = logging.getLogger(__name__)
+
+            def bad():
+                try:
+                    pass
+                except Exception:
+                    logger.debug("low-level noise")
+        """)
+        self.assertEqual(
+            result.returncode,
+            1,
+            msg=(
+                "Expected exit 1 (BLE001) when handler only calls logger.debug(), "
+                f"got {result.returncode}.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+        combined = result.stdout + result.stderr
+        self.assertTrue(
+            any(kw in combined for kw in ("BLE001", "blind", "except Exception")),
+            msg=f"Expected BLE001/blind keyword in output. Got: {combined!r}",
+        )
+
+    def test_logger_info_emits_ble001(self) -> None:
+        # covers: GE-108b
+        """logger.info(...) in handler body must still emit BLE001."""
+        result = _run_hook("""\
+            import logging
+            logger = logging.getLogger(__name__)
+
+            def bad():
+                try:
+                    pass
+                except Exception:
+                    logger.info("informational message")
+        """)
+        self.assertEqual(
+            result.returncode,
+            1,
+            msg=(
+                "Expected exit 1 (BLE001) when handler only calls logger.info(), "
+                f"got {result.returncode}.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+        combined = result.stdout + result.stderr
+        self.assertTrue(
+            any(kw in combined for kw in ("BLE001", "blind", "except Exception")),
+            msg=f"Expected BLE001/blind keyword in output. Got: {combined!r}",
+        )
+
+    def test_print_emits_ble001(self) -> None:
+        # covers: GE-108b
+        """print(...) in handler body must still emit BLE001."""
+        result = _run_hook("""\
+            def bad():
+                try:
+                    pass
+                except Exception:
+                    print("something went wrong")
+        """)
+        self.assertEqual(
+            result.returncode,
+            1,
+            msg=(
+                "Expected exit 1 (BLE001) when handler only calls print(), "
+                f"got {result.returncode}.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+        combined = result.stdout + result.stderr
+        self.assertTrue(
+            any(kw in combined for kw in ("BLE001", "blind", "except Exception")),
+            msg=f"Expected BLE001/blind keyword in output. Got: {combined!r}",
+        )
+
+
+class TestGE108bWarningOrHigherClearsHandler(unittest.TestCase):
+    """GE-108b Scenario 3: WARNING-or-higher attribute calls MUST clear the handler.
+
+    logger.warning(), logger.error(), logger.critical(), logger.exception()
+    are all at or above the WARNING threshold and must suppress BLE001.
+    """
+
+    def test_logger_warning_clears_handler(self) -> None:
+        # covers: GE-108b
+        """logger.warning(...) in handler body must NOT emit BLE001."""
+        result = _run_hook("""\
+            import logging
+            logger = logging.getLogger(__name__)
+
+            def ok():
+                try:
+                    pass
+                except Exception:
+                    logger.warning("something failed")
+        """)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "Expected exit 0 (no BLE001) when handler calls logger.warning(), "
+                f"got {result.returncode}.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+    def test_logger_error_clears_handler(self) -> None:
+        # covers: GE-108b
+        """logger.error(...) in handler body must NOT emit BLE001."""
+        result = _run_hook("""\
+            import logging
+            logger = logging.getLogger(__name__)
+
+            def ok():
+                try:
+                    pass
+                except Exception:
+                    logger.error("operation failed")
+        """)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "Expected exit 0 (no BLE001) when handler calls logger.error(), "
+                f"got {result.returncode}.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+    def test_logger_critical_clears_handler(self) -> None:
+        # covers: GE-108b
+        """logger.critical(...) in handler body must NOT emit BLE001."""
+        result = _run_hook("""\
+            import logging
+            logger = logging.getLogger(__name__)
+
+            def ok():
+                try:
+                    pass
+                except Exception:
+                    logger.critical("critical failure")
+        """)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "Expected exit 0 (no BLE001) when handler calls logger.critical(), "
+                f"got {result.returncode}.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+    def test_logger_exception_clears_handler(self) -> None:
+        # covers: GE-108b
+        """logger.exception(...) in handler body must NOT emit BLE001."""
+        result = _run_hook("""\
+            import logging
+            logger = logging.getLogger(__name__)
+
+            def ok():
+                try:
+                    pass
+                except Exception:
+                    logger.exception("unexpected exception")
+        """)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "Expected exit 0 (no BLE001) when handler calls logger.exception(), "
+                f"got {result.returncode}.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+
+class TestGE108bReraiseStillClearsHandler(unittest.TestCase):
+    """GE-108b Scenario 4: bare raise must still clear the handler.
+
+    Re-raising clears the handler regardless of logging level — this was
+    already tested in prior versions, but regression-guard it explicitly here.
+    """
+
+    def test_bare_raise_clears_handler(self) -> None:
+        # covers: GE-108b
+        """bare raise in handler body must NOT emit BLE001."""
+        result = _run_hook("""\
+            def ok():
+                try:
+                    pass
+                except Exception:
+                    raise
+        """)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "Expected exit 0 (no BLE001) when handler uses bare raise, "
+                f"got {result.returncode}.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+
+# ---------------------------------------------------------------------------
+# GE-108c tests — tuple exception types rendered in full in BLE001 message
+# ---------------------------------------------------------------------------
+
+
+class TestGE108cTupleExceptionTypeRenderedInFull(unittest.TestCase):
+    """GE-108c: except (ValueError, Exception): must report the full tuple in the message.
+
+    When a handler catches a tuple of exception types and the tuple contains a
+    blind type (Exception/BaseException), the BLE001 violation message must
+    include the full parenthesised tuple string, e.g. "(ValueError, Exception)",
+    not just the last blind type or "Exception" alone.
+    """
+
+    def test_tuple_except_emits_ble001_exactly_once(self) -> None:
+        # covers: GE-108c
+        """except (ValueError, Exception): with no log/reraise must emit BLE001 once.
+
+        The hook prints a summary line "N violation(s)" — we assert that line says
+        exactly "1 violation" to confirm the handler is detected once, not twice.
+        """
+        result = _run_hook("""\
+            def bad():
+                try:
+                    pass
+                except (ValueError, Exception):
+                    pass
+        """)
+        self.assertEqual(
+            result.returncode,
+            1,
+            msg=(
+                "Expected exit 1 (BLE001) for except (ValueError, Exception): with "
+                f"no re-raise or log, got {result.returncode}.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+        combined = result.stdout + result.stderr
+        # The summary line "1 violation(s)" confirms exactly one violation is emitted
+        self.assertIn(
+            "1 violation(s)",
+            combined,
+            msg=(
+                "Expected '1 violation(s)' in output to confirm exactly one BLE001 "
+                "is emitted for the tuple handler.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+    def test_tuple_except_message_contains_full_tuple(self) -> None:
+        # covers: GE-108c
+        """BLE001 message must contain the full tuple '(ValueError, Exception)'."""
+        result = _run_hook("""\
+            def bad():
+                try:
+                    pass
+                except (ValueError, Exception):
+                    pass
+        """)
+        combined = result.stdout + result.stderr
+        self.assertIn(
+            "(ValueError, Exception)",
+            combined,
+            msg=(
+                "Expected '(ValueError, Exception)' in BLE001 message, but the "
+                "message does not contain the full tuple.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+    def test_tuple_except_message_not_abbreviated_to_exception_alone(self) -> None:
+        # covers: GE-108c
+        """BLE001 message must NOT abbreviate to just 'Exception' without tuple wrapper.
+
+        The message text must NOT match the pattern 'blind except Exception:'
+        (which would indicate the tuple was collapsed to its blind member only).
+        Instead it must match 'blind except (ValueError, Exception):'.
+        """
+        result = _run_hook("""\
+            def bad():
+                try:
+                    pass
+                except (ValueError, Exception):
+                    pass
+        """)
+        combined = result.stdout + result.stderr
+        # The full tuple must be present
+        self.assertIn(
+            "(ValueError, Exception)",
+            combined,
+            msg=(
+                "Expected full tuple '(ValueError, Exception)' in output.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+        # The message must NOT have 'blind except Exception:' without the tuple wrapper
+        # (i.e. the raw word 'Exception' must appear only inside the tuple context)
+        self.assertNotIn(
+            "blind except Exception:",
+            combined,
+            msg=(
+                "Message must not abbreviate to 'blind except Exception:' — "
+                "the full tuple must be used.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+
+
+
 # ---------------------------------------------------------------------------
 # GE-109a tests — test-file exemption
 # ---------------------------------------------------------------------------
