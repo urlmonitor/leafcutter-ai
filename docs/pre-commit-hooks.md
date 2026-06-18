@@ -121,6 +121,15 @@ To enable, edit `scripts/commit_guardian/commit_guardian.json`:
 }
 ```
 
+**Onboarding wizard:** The `/onboard` wizard (Step 11b) detects `jscpd` on
+PATH and offers an interactive yes/no prompt to set `enabled: true` automatically.
+If `jscpd` is not installed at onboard time, the wizard adds it to the
+post-onboard checklist. After installing, run:
+
+```bash
+python scripts/onboard_hook_opt_in.py
+```
+
 ## Diff Coverage Check (check-diff-coverage)
 
 The `check-diff-coverage` hook uses [diff-cover](https://github.com/Bachmann1234/diff_cover)
@@ -178,4 +187,13 @@ To enable, edit `scripts/commit_guardian/commit_guardian.json`:
     "strict": false,
     "min_coverage_percent": 80
 }
+```
+
+**Onboarding wizard:** The `/onboard` wizard (Step 11b) detects `diff-cover` on
+PATH and offers an interactive yes/no prompt to set `enabled: true` automatically.
+If `diff-cover` is not installed at onboard time, the wizard adds it to the
+post-onboard checklist. After installing, run:
+
+```bash
+python scripts/onboard_hook_opt_in.py
 ```

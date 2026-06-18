@@ -458,9 +458,31 @@ Script-only changes (no entry change) take effect immediately on the next commit
 
 ---
 
-## Enabling the duplicate code detection hook
+## Enabling optional hooks via the onboarding wizard
 
-The `check-duplicate-code` hook ships **disabled by default**. To opt in:
+The `check-duplicate-code` (jscpd) and `check-diff-coverage` (diff-cover) hooks
+ship **disabled by default** because they depend on external binaries. The
+onboarding wizard handles opt-in automatically: during Step 11b it detects each
+binary on PATH and, when found, offers an interactive yes/no prompt.
+
+**If you ran `/onboard` before installing the binaries**, you can enable the
+hooks afterwards without re-running the full wizard:
+
+```bash
+# Install the binary first, then:
+python scripts/onboard_hook_opt_in.py
+```
+
+This script detects `jscpd` and `diff-cover` on PATH and prompts you for each
+one that is found. Enabled tools have their `*.enabled` flag set to `true` in
+`scripts/commit_guardian/commit_guardian.json` automatically.
+
+---
+
+## Enabling the duplicate code detection hook (manual)
+
+The `check-duplicate-code` hook ships **disabled by default**. To opt in
+manually (without the wizard):
 
 1. Open `scripts/commit_guardian/commit_guardian.json` (or
    `leafcutter/templates/scripts/commit_guardian/commit_guardian.json` in the
