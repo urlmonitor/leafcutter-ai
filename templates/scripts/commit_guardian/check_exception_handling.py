@@ -69,6 +69,13 @@ DECISION HISTORY
   Added an ast.Tuple branch that joins the element names with ", " and wraps
   them in parentheses, producing e.g. "(ValueError, Exception)" in the message.
   Detection logic (what is flagged and at which line/col) is unchanged.
+- 2026-06-18 [GE-109a]: Test-file exemption added to canonical tree.
+  The short-circuit that skips AST analysis for test files was previously only
+  present in the deprecated tree (templates/commit-guardian/). Ported
+  is_test_file() and the main() short-circuit to the canonical tree so that
+  the build.py-deployed hook honours the exemption. Detection: path component
+  equals "tests" or "unit_tests", OR basename matches test_*.py, *_test.py,
+  or conftest.py. The helper is pure (no I/O) per Error Handling Policy Rule 4.
 ====================================================================
 """
 
@@ -158,6 +165,50 @@ _WARNING_LOG_METHODS: frozenset[str] = frozenset({
     "critical",
     "exception",
 })
+
+
+# ---------------------------------------------------------------------------
+# Test-file detection (GE-109a)
+# ---------------------------------------------------------------------------
+
+#: Directory path components that mark a file as belonging to a test tree.
+_TEST_DIRECTORY_NAMES: frozenset[str] = frozenset({"tests", "unit_tests"})
+
+
+def is_test_file(path: str) -> bool:
+    """Return True if *path* identifies a test file that should be skipped.
+
+    Detection is purely path-based — no filesystem access is performed.
+    A file is considered a test file when ANY of the following hold:
+
+    1. At least one path component (directory name) equals ``tests`` or
+       ``unit_tests``.
+    2. The basename matches ``test_*.py``, ``*_test.py``, or is exactly
+       ``conftest.py``.
+
+    This function is pure (no I/O, no external calls) and therefore does
+    NOT use try/except per Error Handling Policy Rule 4.
+
+    Args:
+        path: File-system path string to inspect (absolute or relative).
+
+    Returns:
+        True if the file should be treated as a test file and skipped.
+    """
+    p = Path(path)
+    # Check every directory component (exclude the basename itself)
+    for part in p.parts[:-1]:
+        if part in _TEST_DIRECTORY_NAMES:
+            return True
+    # Check basename patterns
+    name = p.name
+    if name == "conftest.py":
+        return True
+    if name.startswith("test_") and name.endswith(".py"):
+        return True
+    if name.endswith("_test.py"):
+        return True
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -468,6 +519,14 @@ def main() -> int:
 
         if file_path.suffix != ".py":
             # Non-Python files are silently skipped
+            continue
+
+        # GE-109a: skip test files entirely before AST analysis so that
+        # test-authoring patterns (bare except:, broad Exception, unwrapped
+        # open()) never contribute violations.  Detection is path-based and
+        # performed here — before analyse_file() — so test files never reach
+        # the AST visitor.
+        if is_test_file(str(file_path)):
             continue
 
         try:

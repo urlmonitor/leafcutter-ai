@@ -23,7 +23,8 @@ delivers_to: null
 expects_from: null
 origin_agent: product-owner-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+  - reason: "split: TKT-500d -> TKT-500d + TKT-500f, 2026-06-18 (new sibling L1 TKT-500f added to covered_by)"
 superseded_by: null
-covered_by: [TKT-500a, TKT-500b, TKT-500c, TKT-500d, TKT-500e]
+covered_by: [TKT-500a, TKT-500b, TKT-500c, TKT-500d, TKT-500e, TKT-500f]
 implemented_by: []
