@@ -61,7 +61,7 @@ doc_links:
     status: exists
   - path: "docs/architecture/adrs/ADR-014-exception-guard-enforcement-scope.md"
     relationship: specifies
-    status: planned
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
