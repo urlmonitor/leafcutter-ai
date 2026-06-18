@@ -135,7 +135,32 @@ Root cause: `ValueError` raised at `scripts/visualise_knowledge_graph.py:265`.
 
 ## Comments
 
-_(Append-only log — leave blank when authoring.)_
+### 2026-06-18 — finalize-feature (EPIC-Acpatternenforcementismechanically)
+
+The EPIC-Acpatternenforcementismechanically finalize drive captured a fresh
+pre-merge baseline at `origin/main` (`19002fd`) and found **34** failing tests —
+the 24 inventoried above (Clusters 1–3) **plus 10 more in two clusters not yet
+tracked here**. Post-merge run was identical (34 = baseline exactly, 0 regressions
+from the epic). Adding the two new clusters so the tracker is complete:
+
+#### Cluster 4 — `tests/commit_guardian/test_diagram_type_enum.py` (5 failures)
+- `test_bogus_diagram_type_rejected`
+- `test_canonical_diagram_type_accepted[agent_flow]`
+- `test_canonical_diagram_type_accepted[data_flow]`
+- `test_canonical_diagram_type_accepted[user_flow]`
+- `test_legacy_alias_still_accepted`
+
+#### Cluster 5 — `tests/commit_guardian/test_commit_guardian_imports.py` (4 failures) + `tests/test_install_hooks.py` (1)
+- `test_diagram_type_validators_present_and_callable`
+- `test_module_imports_cleanly[check_doc_frontmatter]`
+- `test_module_imports_cleanly[check_secrets]`
+- `test_module_imports_cleanly[frontmatter_validators]`
+- `test_install_hooks.py::TestInstallHooksPrecommitFailureIsNonfatal::test_install_hooks_precommit_failure_is_nonfatal`
+
+Clusters 4–5 likely share a root cause with Cluster 2 (missing/relocated
+commit-guardian scripts + diagram-type validator wiring). The title count (24)
+is now understated — the true standing baseline is **34**. Re-verify all five
+clusters on a fresh `main` before fixing.
 
 ## Implementation Tasks
 
