@@ -6,7 +6,7 @@ component: guardrail-engine
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100.yaml"
 criteria: |
   Given the commit guardian configuration has the diff_coverage section with:
@@ -48,6 +48,8 @@ created: 2026-06-11
 amended_by:
   - reason: "rename: GE-100d-1 -> GE-101a-1, structural parent corrected to GE-101a, 2026-06-18"
 superseded_by: null
-covered_by: []
+covered_by:
+  - unit_tests/commit_guardian/test_check_diff_coverage.py
 implemented_by:
 - tickets/00_inbox/TICKET-20260616-GE-100d-1.md
+- tickets/00_inbox/epics/EPIC-CodeQualityHooks/09_TICKET-20260616-GE-100d-1.md

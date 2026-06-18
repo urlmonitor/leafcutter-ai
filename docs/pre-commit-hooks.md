@@ -120,3 +120,51 @@ To enable, edit `scripts/commit_guardian/commit_guardian.json`:
     "strict": false
 }
 ```
+
+## Diff Coverage Check (check-diff-coverage)
+
+The `check-diff-coverage` hook uses [diff-cover](https://github.com/Bachmann1234/diff_cover)
+to gate commits on coverage of the lines that actually changed.
+
+**Key behaviours:**
+
+- Ships **disabled by default** (`diff_coverage.enabled: false`).
+- **Fail-open**: exits 0 when the `diff-cover` binary is not installed, when
+  `coverage.xml` does not exist, or when `coverage.xml` is stale (older than
+  `max_age_seconds`). An advisory message is emitted to stderr in each case.
+- **Compare-branch fallback chain** (AC GE-101a-1): the hook resolves the
+  comparison base in this priority order:
+  1. The configured branch (e.g. `origin/main`) — tried first via
+     `git rev-parse --verify`.
+  2. The bare local branch with the same name (e.g. `main`) — used when the
+     remote tracking ref is absent (remote unreachable or uses a different
+     default branch name).
+  3. `HEAD~1` — used when neither the configured ref nor a local branch of
+     that name exists.
+
+  An advisory is printed to stderr whenever the hook falls back to a lower
+  priority option.
+- **Strict mode**: set `diff_coverage.strict: true` to block the commit when
+  coverage of changed lines falls below `min_coverage_percent`.  In non-strict
+  mode (the default) the hook warns but exits 0.
+
+**Configuration** (in `diff_coverage` section of `commit_guardian.json`):
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `enabled` | `false` | Set to `true` to activate the hook. |
+| `strict` | `false` | `true` blocks the commit on low coverage; `false` warns only. |
+| `min_coverage_percent` | `80` | Minimum required coverage for changed lines (0–100). |
+| `coverage_xml_path` | `"coverage.xml"` | Path to the coverage XML artifact (relative to project root or absolute). |
+| `compare_branch` | `"origin/main"` | Primary comparison branch; fallback chain applies when unreachable. |
+| `max_age_seconds` | `3600` | Maximum age of `coverage.xml` before the hook skips (0 disables). |
+
+To enable, edit `scripts/commit_guardian/commit_guardian.json`:
+
+```json
+"diff_coverage": {
+    "enabled": true,
+    "strict": false,
+    "min_coverage_percent": 80
+}
+```
