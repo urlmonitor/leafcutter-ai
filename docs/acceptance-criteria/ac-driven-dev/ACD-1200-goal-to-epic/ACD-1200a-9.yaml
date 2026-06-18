@@ -1,0 +1,52 @@
+id: ACD-1200a-9
+readiness: approved
+priority: high
+title: "Each epic ticket is written only inside the epic folder, with its back-reference pointing at the epic-folder path"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500d.yaml"
+criteria: |
+  Given goal ACD-050 (title: "Validate API inputs") has 3 leaf ACs beneath it,
+  And the epic folder EPIC-ValidateApiInputs has been chosen as the assembly target,
+  When the system generates the ticket files for those leaf ACs,
+  Then each of the 3 ticket files exists only at one location, inside the epic
+    folder under the tickets inbox (tickets/00_inbox/epics/EPIC-ValidateApiInputs/),
+  And no copy of any of those 3 ticket files exists at the tickets inbox root
+    (tickets/00_inbox/) outside the epic folder,
+  And for each leaf AC, the implemented_by back-reference recorded in that AC's
+    YAML names the ticket's path inside the epic folder
+    (tickets/00_inbox/epics/EPIC-ValidateApiInputs/NN_*.md),
+  And no implemented_by back-reference names an inbox-root path
+    (tickets/00_inbox/NN_*.md) for any of those tickets.
+depends_on: [ACD-1200a-3, ACD-1200a-2]
+doc_links:
+  - path: scripts/goal_to_epic.py
+    relationship: modifies
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Each leaf AC's ticket must be written to exactly one path under the chosen epic folder (tickets/00_inbox/epics/<EPIC>/); the generator must not also emit or leave a copy at the tickets inbox root. If a prior code path wrote a second copy, remove that write so only the epic-folder write remains."
+  - "The implemented_by back-reference written into each leaf AC's YAML must name the same epic-folder path the ticket was written to (single source of truth) — never an inbox-root path."
+  - "The ticket-file write and the implemented_by back-reference write must stay consistent: an AC must not end a run pointing at a path where no ticket file exists. Wrap the file/YAML I/O per the project error handling policy."
+  - "The behavior must be idempotent on re-runs: re-generating the same goal into the same epic folder must not multiply ticket files across locations (collision handling for an existing basename is specified by ACD-1200a-9-i)."
+delivers_to: null
+expects_from:
+  ac_id: ACD-1200a-3
+  contract: "str — absolute path to the created EPIC- folder under tickets/00_inbox/epics/; this AC constrains that the ticket files AND their implemented_by back-references are written only relative to that folder, never to the inbox root"
+origin_agent: business-analyst
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1200a-9-i
+implemented_by: []

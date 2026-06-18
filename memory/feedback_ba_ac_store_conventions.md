@@ -105,3 +105,78 @@ and the perspective definitions; the /build-feature end-of-run wiring and the
 ticket-emission glue is workflow-script/python-coder. The three reviewer agents
 are dispatched at depth 1 per ADR-006 — the spot-check pass must NOT chain a
 build supervisor inline.
+
+## BO-1400 trustworthy pre-PR review: framing note for the BA (2026-06-18, PO)
+
+BO-1400 ("Trust that a passing review means the change really works on the real
+thing") is a NEW L0 in build-orchestration, slug folder
+BO-1400-trustworthy-pre-pr-review/, ONE L1 child BO-1400a, origin_agent:
+product-owner, readiness: draft (user sets priority at the final gate). It is
+DISTINCT from BO-1300 (post-build independent panel hunting for gaps tests never
+covered). BO-1400 is about the PRE-PR self-review (pr-reviewer) catching ONE
+specific defect class, motivated by two real misses:
+  1. a schema change passed review claiming "all records validate" while it
+     actually rejected 98.6% of the live store (claim verified only against a
+     sample / by proxy, not the real data);
+  2. new enforcement hooks passed review while committed only to a gitignored
+     build-output tree -> undeployable on a fresh install (artifact "delivered"
+     but unreachable by a clean install).
+
+BO-1400a is deliberately ONE L1 covering BOTH facets (quantitative/bulk
+data-claim verification against the REAL store, AND deployable-artifact
+placement verification). Decompose into sibling L2 behaviors under BO-1400a --
+do NOT re-cut into two L1s. Suggested L2 split for the BA:
+  - L2: identify when an AC makes a bulk/quantitative claim about real data
+    ("all/every/none/N% of records ...") and require the reviewer to confirm it
+    against the real store, reporting the actual pass/reject counts — not a
+    sample. Likely needs a negative AC: a green review is impossible if the
+    real-data check was skipped or only a sample was used.
+  - L2: identify when a change delivers an artifact to consumers and require the
+    reviewer to confirm the artifact lands where a FRESH INSTALL picks it up
+    (not a gitignored / build-output-only path). Negative AC: review fails if the
+    only copy is under an ignored build-output tree.
+The shared spine is "claims verified by proxy must be re-verified against
+reality before the review can go green." documentation_triggers on BO-1400a is
+[sequence-diagram] (review-flow interaction; no new user-facing slash command,
+so no how-to — this is pr-reviewer behavior, not a new command surface).
+
+IT-PO surface hint: the implementation surface is the pr-reviewer agent template
+(templates/agents/pr-reviewer.md) -> llm-expert for the review-checklist /
+judgment instructions; any helper that runs the bulk real-data check or the
+fresh-install reachability probe is python-coder. Self-hosting/ADR-001 parity
+note: gitignored-build-output detection must reason about the consumer's clean
+install, not the dev workspace's build outputs.
+
+### BO-1400a decomposition COMPLETE (2026-06-18, BA) — IT-PO assignment pattern
+
+BO-1400a is now fully decomposed (do not re-decompose; enrich the existing
+files). Children, all readiness: draft, priority: medium (inherited; user sets
+final priority at the gate):
+  - BO-1400a-1 (L2) — real-data re-verification of bulk/quantitative AC claims;
+    reviewer runs the asserted validation over ALL real records, reports observed
+    pass/fail counts, blocks on contradiction, cannot go green on a sample/self-
+    reported basis.
+  - BO-1400a-1-i (L3) — validation means unavailable => report INCONCLUSIVE, not
+    PASS; three-outcome model (PASS / BLOCKER / INCONCLUSIVE).
+  - BO-1400a-2 (L2) — deployable-artifact placement; reviewer confirms a consumer-
+    facing artifact lives in the package source (templates/...) a fresh install
+    copies from, blocks when the only copy is build-output-only (scripts/... /
+    gitignored).
+  - BO-1400a-2-i (L3) — build-output-only-by-design artifact must NOT be falsely
+    flagged; classify deliverable vs build-output-only before applying the rule.
+  - BO-1400a-3 (L2) — sequence-diagram documentation AC (satisfies the L1's
+    documentation_triggers: [sequence-diagram]).
+
+Agent-assignment pattern I used (the IT-PO scanning *it-po* files should expect
+this and may keep or refine it): every behavioral verification AC is a review-
+JUDGMENT concern => `assigned_agent: llm-expert` on the pr-reviewer template,
+with a `delivers_to: {agent: python-coder}` contract for the deterministic
+helper (the all-records validation runner / the fresh-install reachability
+probe). I did NOT split each L2 into a separate llm-expert AC + python-coder AC
+— I kept one llm-expert AC per behavior and expressed the helper as a
+delivers_to contract, because the load-bearing behavior is the reviewer's
+judgment+report, and the helper is a supporting detail the IT-PO can break out
+if it prefers. The doc AC (BO-1400a-3) is `architecture-diagram-author`.
+If the IT-PO wants the python-coder helper as its own implementable AC, that is
+a legitimate split at enrichment time — the delivers_to contract already names
+the boundary.

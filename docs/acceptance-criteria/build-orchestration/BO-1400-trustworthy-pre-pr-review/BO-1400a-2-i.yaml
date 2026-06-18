@@ -1,0 +1,45 @@
+id: BO-1400a-2-i
+readiness: approved
+priority: high
+title: "A build-output-only artifact that is not consumer-shipped by design is not falsely flagged"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1400-trustworthy-pre-pr-review/BO-1400a.yaml"
+criteria: |
+  Given a ticket under pre-PR review whose diff adds or modifies an artifact that, by
+    design, lives only in the build-output tree and is never meant to ship to consumers
+    (for example a generated file or a development-workspace-only build output, not a
+    deliverable a fresh install must receive)
+  When the pre-PR self-review applies the deployable-placement check to that diff
+  Then the review does not raise a placement blocker for that artifact
+  And the review distinguishes a build-output-only artifact (not consumer-shipped) from
+    a consumer-facing deliverable, applying the deployable-source requirement only to
+    the deliverables
+depends_on:
+  - BO-1400a-2
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1400-trustworthy-pre-pr-review/BO-1400a.yaml"
+    relationship: parent
+    status: exists
+  - path: templates/agents/pr-reviewer.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The placement check must classify a changed artifact as either consumer-deliverable or build-output-only before deciding whether the deployable-source requirement applies, so generated/workspace-only outputs do not produce false placement blockers."
+  - "Classification should lean on the package's own delivery boundary (what build.py copies into a target project per ADR-001): artifacts that build.py never delivers to consumers are build-output-only and exempt from the deployable-source requirement."
+  - "Ambiguous cases resolve toward surfacing a finding for human judgment rather than silently exempting an artifact, consistent with the pr-reviewer's classify-ambiguity-as-not-low convention."
+delivers_to: null
+expects_from:
+  ac_id: BO-1400a-2
+  contract: "The deployable-placement check (BO-1400a-2) that flags consumer-facing artifacts missing from the package source; this edge case is the path where the artifact is build-output-only by design and must not be flagged."
+origin_agent: business-analyst
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

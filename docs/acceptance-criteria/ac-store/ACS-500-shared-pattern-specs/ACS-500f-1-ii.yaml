@@ -1,0 +1,81 @@
+id: ACS-500f-1-ii
+title: "Phase 2 field-preservation binds its git diff to the project root, not process cwd"
+component: ac-store
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the AC store schema hook runs its Phase 2 implements_pattern
+    field-preservation check,
+  And the process working directory is NOT the repository root (for example the
+    hook is invoked from a subdirectory or a worktree path that differs from cwd),
+  When the hook determines which staged AC YAML files were modified,
+  Then it queries the staged modifications against the project root explicitly
+    (the project root resolved the same way Phase 1 / the HEAD-version loader
+    resolves it), rather than relying on the process working directory,
+  And a staged modification that drops a previously-present implements_pattern
+    field is still detected,
+  And that commit is blocked with the message identifying the file and stating
+    that implements_pattern was dropped.
+
+  Given the schema hook runs under the normal pre-commit framework where the
+    process working directory already IS the repository root,
+  When Phase 2 determines which staged AC YAML files were modified,
+  Then it detects the same set of modified files it detected before this change,
+  And no previously-passing or previously-blocking outcome changes (no regression).
+
+  Given the project-root resolution that Phase 2 relies on fails (the repository
+    root cannot be determined),
+  When the hook handles that failure,
+  Then the hook exits with code 0 (fail-open per the project convention),
+  And the commit is NOT blocked by this hook,
+  And a diagnostic message identifying the hook and the failure is written to stderr,
+  Consistent with the fail-open guarantee specified in ACS-500f-1-i.
+depends_on: [ACS-500f-1]
+doc_links:
+  - path: scripts/commit_guardian/check_ac_schema.py
+    relationship: implements
+    status: exists
+  - path: templates/scripts/commit_guardian/check_ac_schema.py
+    relationship: implements
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The staged-file discovery must resolve the project root the same way the Phase 1 HEAD-version loader resolves it (the existing _load_head_yaml project-root resolution), then bind the staged-diff invocation to that root (e.g. git -C <project_root> diff --cached) rather than relying on process cwd."
+  - "Self-hosting parity (ADR-001): the deployed hook scripts/commit_guardian/check_ac_schema.py AND the packaged template templates/scripts/commit_guardian/check_ac_schema.py must be changed together and verified in parity via the build.py round-trip — never edit one side only."
+  - "When project-root resolution fails, the hook must fail open (exit 0, commit not blocked) and emit a diagnostic naming the hook and the failure to stderr, consistent with ACS-500f-1-i — do not let the hardening introduce a fail-closed regression."
+  - "No regression on the normal cwd-at-root pre-commit path: the modified-file set detected after the change must equal the set detected before for that path."
+  - "Wrap the git subprocess invocation per the project error handling policy (typed exception, log or re-raise); do not swallow a git failure silently."
+delivers_to: null
+expects_from:
+  ac_id: ACS-500f-1
+  contract: "The Phase 2 implements_pattern field-preservation check whose git invocation this edge case hardens"
+origin_agent: business-analyst
+created: 2026-06-18
+readiness: approved
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  ACS-500 post-implementation hardening, GAP A follow-up. ACS-500f-1 Phase 2
+  loads the HEAD version of each modified AC via a project-root-resolved
+  reference but discovers WHICH files were modified via a bare `git diff --cached`
+  that relies on process cwd. When cwd is not the repository root (subdirectory
+  or worktree invocation), the bare diff queries the wrong repository (or fails),
+  so a staged removal of implements_pattern can go undetected and slip through.
+  This sibling leaf requires the modified-file discovery to bind to the project
+  root the same way the HEAD-version loader does (e.g. `git -C <project_root>
+  diff --cached`), with no regression under the normal cwd-at-root pre-commit
+  path, and preserving the fail-open convention from ACS-500f-1-i when the
+  project-root resolution itself fails. priority intentionally left unset — the
+  user sets priority at the final approval gate.
+priority: high

@@ -204,6 +204,23 @@ git push -u origin EPIC-<name>
 Once the PR exists, the `pull-request` phase on each ticket should detect it via
 `gh pr list --head EPIC-<name>` and push to the existing branch without re-opening.
 
+**REST API fallback (when `gh pr create` is EMU-blocked):** the GraphQL
+`createPullRequest` mutation that `gh pr create` uses can be blocked for EMU accounts,
+but the REST endpoint is not. When `gh pr create` fails with the EMU error, create the
+PR via the REST API instead:
+
+```bash
+gh api -X POST repos/<org>/<repo>/pulls \
+  -f title="feat(...): <title>" \
+  -f head="EPIC-<name>" \
+  -f base="main" \
+  -f body="<body>"
+```
+
+(Confirmed working in EPIC-AcPatternEnforcementIsMechanically PR #100/#102, 2026-06-18 —
+`gh pr create` itself also succeeded under the `urlmonitor` account in the same session,
+so try the CLI first and fall back to `gh api` only on the EMU error.)
+
 **If you skip this:** The pull-request phase on the first ticket that tries `gh pr
 create` under the EMU account will fail with "Unauthorized: As an Enterprise Managed
 User, you cannot access this content (createPullRequest)".
@@ -259,20 +276,44 @@ required a dedicated fix commit after merge. If you cannot establish the config,
 package hooks manually against the branch diff before merge.
 (Permanent fix tracked in TICKET-20260617-Worktree_Precommit_Bootstrap.md)
 
-### Push scaffold commit before creating the epic worktree
+**Latent hazard — `.security-allowlist` resolves via the symlink target, not the worktree
+root.** The `check-secrets` hook computes its project root from `__file__` of the *resolved*
+`.leafcutter` symlink target (under the workspace parent, e.g.
+`/home/henzeh/projects/leafcutter/.leafcutter/`), so it reads the allowlist from the
+**workspace-root** `.security-allowlist`, not the worktree's own copy. When you add a
+suppression for a worktree-local false positive, add it to the workspace-root
+`.security-allowlist` (or duplicate it to both) — a suppression placed only in the
+worktree's `.security-allowlist` is silently ignored when the hook runs via the symlink path.
+(Observed in EPIC-AcPatternEnforcementIsMechanically, 2026-06-18.)
+
+### Land the scaffold commit on origin/main before creating the epic worktree
 
 After running `/create-epic`, confirm the scaffold commit (Master_Plan.md + sub-ticket
-stubs) is already on `origin/main` before calling `worktree-agent` to create the epic
+stubs) is reachable from `origin/main` before calling `worktree-agent` to create the epic
 worktree.
 
 ```bash
-# The scaffold files must be reachable from origin/main (empty output = nothing unpushed):
+# The scaffold files must be reachable from origin/main (empty output = nothing missing):
 git -C <repo> log --oneline origin/main..main
 ```
 
-If that lists the scaffold commit (i.e. it is unpushed), push first:
+**`main` is PR-only (ruff branch-protection gate).** A direct `git push origin main` is
+rejected with `GH013: ... Required status check "Lint (ruff)" is expected`. The scaffold
+must go through its own PR:
+
 ```bash
-git -C <repo> push origin main
+# 1. Push the scaffold commit to a short-lived branch:
+git -C <repo> push origin HEAD:scaffold/EPIC-<name>
+
+# 2. Open a PR targeting main and merge it once the ruff check is green
+#    (scaffold is tickets-only, so ruff passes trivially):
+gh pr create --repo <org>/<repo> --base main --head scaffold/EPIC-<name> \
+  --title "chore: scaffold EPIC-<name>" --body "..."
+gh pr merge <N> --squash --delete-branch
+
+# 3. Verify the scaffold is on origin/main before creating the epic worktree:
+git -C <repo> fetch origin
+git -C <repo> ls-tree -r origin/main --name-only tickets/00_inbox/epics/EPIC-<name>/
 ```
 
 **If you skip this:** the epic worktree (created from `origin/main`) diverges at a stale
@@ -280,4 +321,5 @@ point — the scaffold files are unreachable inside it and ticket agents cannot 
 until the scaffold commit is cherry-picked onto the epic branch. Worse, when the scaffold
 later reaches `origin/main` independently, the epic PR hits an add/add merge conflict on
 those files at finalize (resolve in favor of the branch — the `status: done` versions win).
-(Source: EPIC-AcPipelineDeployGaps retrospective, 2026-06-17, Findings #1 + #5)
+(Source: EPIC-AcPipelineDeployGaps retrospective, 2026-06-17, Findings #1 + #5;
+scaffold-via-PR confirmed in EPIC-AcPatternEnforcementIsMechanically, 2026-06-18.)
