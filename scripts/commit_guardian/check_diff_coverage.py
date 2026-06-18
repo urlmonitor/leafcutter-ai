@@ -71,6 +71,14 @@ _COMPARE_BRANCH_FALLBACK_ADVISORY = """\
 [check-diff-coverage] Advisory: compare branch '{configured}' is unreachable.
 Falling back to '{resolved}' as the comparison base."""
 
+_WARN_ONLY_ADVISORY = """\
+
+[check-diff-coverage] WARNING: Diff coverage is below the required {threshold}%.
+See the diff-cover output above for files with insufficient coverage and their
+individual percentages.
+strict is false — this is a warning only. The commit will proceed.
+To block commits on low coverage, set diff_coverage.strict: true in commit_guardian.json."""
+
 
 # ---------------------------------------------------------------------------
 # Binary detection
@@ -112,13 +120,14 @@ def _branch_exists_locally(branch_name: str) -> bool:
             text=True,
             timeout=10,
         )
-        return result.returncode == 0
     except (OSError, subprocess.TimeoutExpired) as exc:
         print(
             f"[check-diff-coverage] WARNING: could not probe local branch '{branch_name}': {exc}",
             file=sys.stderr,
         )
         return False
+    else:
+        return result.returncode == 0
 
 
 def _remote_branch_is_reachable(ref: str) -> bool:
@@ -140,13 +149,14 @@ def _remote_branch_is_reachable(ref: str) -> bool:
             text=True,
             timeout=10,
         )
-        return result.returncode == 0
     except (OSError, subprocess.TimeoutExpired) as exc:
         print(
             f"[check-diff-coverage] WARNING: could not probe ref '{ref}': {exc}",
             file=sys.stderr,
         )
         return False
+    else:
+        return result.returncode == 0
 
 
 def _resolve_compare_branch(configured_branch: str) -> str:
@@ -365,14 +375,20 @@ def main() -> int:
     if output:
         print(output, file=sys.stderr)
 
-    if returncode != 0 and DIFF_COVERAGE_STRICT:
+    if returncode != 0:
+        if DIFF_COVERAGE_STRICT:
+            print(
+                f"\n[check-diff-coverage] Commit blocked. "
+                f"Diff coverage is below the required {DIFF_COVERAGE_MIN_COVERAGE_PERCENT}%.\n"
+                "Increase test coverage for changed lines or set diff_coverage.strict to false to warn only.",
+                file=sys.stderr,
+            )
+            return 1
+        # AC GE-101b — warn-only when strict is false and coverage is below threshold
         print(
-            f"\n[check-diff-coverage] Commit blocked. "
-            f"Diff coverage is below the required {DIFF_COVERAGE_MIN_COVERAGE_PERCENT}%.\n"
-            "Increase test coverage for changed lines or set diff_coverage.strict to false to warn only.",
+            _WARN_ONLY_ADVISORY.format(threshold=DIFF_COVERAGE_MIN_COVERAGE_PERCENT),
             file=sys.stderr,
         )
-        return 1
 
     return 0
 
@@ -385,6 +401,14 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-18 [python-coder/TICKET-20260616-GE-100e]: Added warn-only advisory
+  (AC GE-101b). When strict is false and diff-cover exits non-zero (coverage
+  below threshold), main() now emits _WARN_ONLY_ADVISORY to stderr listing that
+  coverage is below the threshold and that the commit will proceed. The
+  diff-cover output (per-file percentages and overall coverage) is already
+  printed above this advisory. Also fixed TRY300 violations in
+  _branch_exists_locally() and _remote_branch_is_reachable() by moving the
+  success return into an else block.
 - 2026-06-18 [python-coder/TICKET-20260616-GE-100d-1]: Added compare-branch
   fallback chain (AC GE-101a-1). _resolve_compare_branch() probes the
   configured branch via git rev-parse --verify; if absent, falls back to the
