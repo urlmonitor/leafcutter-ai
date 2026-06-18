@@ -87,13 +87,21 @@ function parseArgs(raw) {
 }
 
 /**
- * Commit all AC YAML files produced by a completed pipeline stage.
+ * Commit AC YAML files produced by a completed pipeline stage.
  *
- * Stages each file path individually via `git add`, then creates a commit
- * with a conventional commit message that identifies the stage and file count.
- * The commit is confirmed to have succeeded (exit code 0) before this function
- * returns. If staging or committing fails, the function returns a structured
- * failure result — the caller must not dispatch the next agent in that case.
+ * Stages ONLY the files that correspond to AC IDs in the `written` array,
+ * using `git add <explicit-path>` for each file individually. This guarantees
+ * that:
+ *   - No files outside docs/acceptance-criteria/ are staged.
+ *   - No AC files from a previous stage (already committed) are re-staged.
+ *   - Unrelated uncommitted working-tree changes remain unstaged.
+ *
+ * The staging strategy:
+ *   1. Run `git status --porcelain -- docs/acceptance-criteria/` to find all
+ *      modified or new (untracked) AC YAML files in the store.
+ *   2. Filter the results to those whose filename stem (without .yaml) matches
+ *      an AC ID in the `written` array — these are the current stage's files.
+ *   3. Stage each matching file with an individual `git add <path>` call.
  *
  * On pre-commit hook failure the result includes:
  *   hook_name    {string|null} — name of the failing hook (parsed from git output)
@@ -116,27 +124,51 @@ async function commitStageOutput(agent, written, stageName) {
   const commitMessage =
     `feat(plan-feature): commit ${stageName} AC output (${fileCount} file${fileCount === 1 ? "" : "s"})`;
 
+  // Build a JSON-safe representation of the AC IDs so the agent can filter on them.
+  const writtenJson = JSON.stringify(written);
+
   let commitResult;
   try {
     commitResult = await agent({
       agentType: "status-checker",
       input: {
         instructions:
-          `Commit all AC YAML files produced by the ${stageName} stage.\n` +
+          `Commit the AC YAML files produced by the ${stageName} stage.\n` +
           "\n" +
-          "Step 1 — Stage all AC YAML files in docs/acceptance-criteria/ that have\n" +
-          "         been added or modified (but not previously committed):\n" +
-          "  Run: git add docs/acceptance-criteria/\n" +
-          "  Capture the exit code.\n" +
-          "  If exit code is non-zero:\n" +
-          "    Return: { \"status\": \"error\", \"message\": \"git add failed\", \"hook_name\": null, \"failing_files\": [], \"is_conflict\": false }\n" +
+          `The AC IDs written by this stage are: ${writtenJson}\n` +
           "\n" +
-          "Step 2 — Check whether there is anything to commit:\n" +
+          "IMPORTANT STAGING RULE: You MUST stage ONLY the files that correspond to the\n" +
+          "AC IDs listed above. Never run 'git add docs/acceptance-criteria/' or\n" +
+          "'git add .' — those commands would include files from previous stages or\n" +
+          "unrelated working-tree changes, which is a correctness violation.\n" +
+          "\n" +
+          "Step 1 — Discover which AC files from this stage exist on disk:\n" +
+          "  Run: git status --porcelain -- docs/acceptance-criteria/\n" +
+          "  Parse the output. Each line has the format: XY <path>\n" +
+          "  where XY is a two-character status code. Collect ALL lines where the\n" +
+          "  path ends in '.yaml' and the status is not '  ' (i.e. it is modified or\n" +
+          "  untracked — status codes: M, A, ??, etc.).\n" +
+          "  From those paths, keep only the ones whose filename stem (the portion\n" +
+          "  after the last '/' and before '.yaml') matches one of the AC IDs above.\n" +
+          "  These are the stage-specific files to stage.\n" +
+          "\n" +
+          "Step 2 — If no matching files are found:\n" +
+          "  Return: { \"status\": \"ok\", \"message\": \"no new AC files to commit — skipped\" }\n" +
+          "\n" +
+          "Step 3 — Stage each matching file individually:\n" +
+          "  For each file path found in Step 1, run:\n" +
+          "    git add <path>\n" +
+          "  Run one 'git add' command per file. Do NOT use 'git add .' or\n" +
+          "  'git add docs/acceptance-criteria/' — only individual explicit paths.\n" +
+          "  If any 'git add <path>' exits non-zero:\n" +
+          "    Return: { \"status\": \"error\", \"message\": \"git add failed for <path>\", \"hook_name\": null, \"failing_files\": [\"<path>\"], \"is_conflict\": false }\n" +
+          "\n" +
+          "Step 4 — Verify only the expected files are staged:\n" +
           "  Run: git diff --cached --name-only\n" +
-          "  If the output is empty (nothing staged), no new files were written.\n" +
+          "  If the output is empty (nothing staged despite Step 3 succeeding):\n" +
           "    Return: { \"status\": \"ok\", \"message\": \"no new AC files to commit — skipped\" }\n" +
           "\n" +
-          `Step 3 — Commit the staged files:\n` +
+          `Step 5 — Commit the staged files:\n` +
           `  Run: git commit -m "${commitMessage}" 2>&1\n` +
           "  Capture ALL output (stdout + stderr combined) and the exit code.\n" +
           "  If exit code is 0:\n" +
