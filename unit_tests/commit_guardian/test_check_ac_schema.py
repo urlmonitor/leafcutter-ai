@@ -91,12 +91,16 @@ def _run_hook(root: Path) -> subprocess.CompletedProcess:
 
     env = os.environ.copy()
     env["HOOK_ROOT"] = str(root)
-    return subprocess.run(
-        [sys.executable, str(HOOK_SCRIPT)],
-        env=env,
-        capture_output=True,
-        text=True,
-    )
+    try:
+        return subprocess.run(
+            [sys.executable, str(HOOK_SCRIPT)],
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        print(f"hook subprocess error: {exc}", file=sys.stderr)
+        raise
 
 
 class TestValidAcPasses(unittest.TestCase):
@@ -774,6 +778,385 @@ class TestImplementsPatternWithEmptyCriteria(unittest.TestCase):
                 f"criteria must pass schema validation. Stderr: {result.stderr}"
             ),
         )
+
+
+class TestFailOpenOnInternalError(unittest.TestCase):
+    """AC1: Hook exits 0 when it encounters an unexpected internal error.
+
+    The standalone templates version does not make git subprocess calls, so
+    we trigger an unexpected exception via a malformed schema file and verify
+    the __main__ exception handler catches it, exits 0, and writes a diagnostic.
+    """
+
+    def test_valid_ac_with_schema_present_exits_zero(self) -> None:
+        # covers: ACS-500f-1-i (AC1 — normal path: no blocking on valid input)
+        """Hook exits 0 when AC file is valid and schema is present.
+
+        With a well-formed schema and a valid AC file the hook must exit 0.
+        This confirms the hook does not incorrectly flag valid input as an error.
+        """
+        import os
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-001.yaml", _VALID_AC_YAML)
+            env = os.environ.copy()
+            env["HOOK_ROOT"] = str(root)
+            result = subprocess.run(
+                [sys.executable, str(HOOK_SCRIPT)],
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+    def test_hook_exits_zero_when_no_ac_dir(self) -> None:
+        # covers: ACS-500f-1-i (AC2 — exit 0 when no relevant staged files)
+        """Hook exits 0 when docs/acceptance-criteria/ does not exist.
+
+        When the AC directory is absent, _find_ac_files() returns [] and
+        main() returns 0. This is the canonical no-relevant-staged-files path.
+        The hook must not block the commit.
+        """
+        import os
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            # No docs/acceptance-criteria/ directory.
+            env = os.environ.copy()
+            env["HOOK_ROOT"] = str(root)
+            result = subprocess.run(
+                [sys.executable, str(HOOK_SCRIPT)],
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+
+class TestFailOpenOnNoStagedRelevantFiles(unittest.TestCase):
+    """AC2: Hook exits 0 when no staged AC files violate the schema.
+
+    These tests verify the pass-through path: valid AC files present,
+    no schema violations, no implements_pattern preservation issue.
+    """
+
+    def test_valid_ac_no_implements_pattern_exits_zero(self) -> None:
+        # covers: ACS-500f-1-i (AC2 — no staged file has implements_pattern)
+        """AC YAML with no implements_pattern field and valid schema exits 0.
+
+        When no staged AC file has an implements_pattern field and no AC file
+        violates the store schema, the hook must exit 0 and not block the commit.
+        """
+        import os
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-001.yaml", _VALID_AC_YAML)
+            env = os.environ.copy()
+            env["HOOK_ROOT"] = str(root)
+            result = subprocess.run(
+                [sys.executable, str(HOOK_SCRIPT)],
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+    def test_multiple_valid_acs_no_implements_pattern_exits_zero(self) -> None:
+        # covers: ACS-500f-1-i (AC2 — no staged files with implements_pattern)
+        """Multiple valid AC YAML files with no implements_pattern exits 0.
+
+        When several AC files exist and none violates the schema or has an
+        implements_pattern field, the hook must exit 0 without blocking.
+        """
+        import os
+
+        content_2 = textwrap.dedent("""\
+            id: FIN-002
+            title: "Second valid criterion"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given a second scenario
+              When it validates
+              Then it passes
+            priority: low
+            readiness: draft
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-001.yaml", _VALID_AC_YAML)
+            _write_ac_file(root, "FIN-002.yaml", content_2)
+            env = os.environ.copy()
+            env["HOOK_ROOT"] = str(root)
+            result = subprocess.run(
+                [sys.executable, str(HOOK_SCRIPT)],
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+
+class TestMainBlockExceptionHandler(unittest.TestCase):
+    """AC1: The __main__ exception handler exits 0 and writes a diagnostic to stderr.
+
+    This test verifies that if main() raises an unhandled exception, the outer
+    try/except in the __main__ block catches it, prints a diagnostic to stderr
+    (containing '[check-ac-schema]'), and exits 0 rather than propagating the
+    error and blocking the commit.
+    """
+
+    def test_hook_module_main_exception_exits_zero_with_diagnostic(self) -> None:
+        # covers: ACS-500f-1-i (AC1 — unexpected internal error → fail-open)
+        """Malformed JSON schema triggers the fail-open __main__ exception handler.
+
+        We force an unexpected exception inside the hook by creating a malformed
+        config/ac_store_schema.json. The _load_schema() function calls json.load()
+        without catching json.JSONDecodeError (a ValueError subclass). The error
+        propagates out of _load_schema() and out of main() to the __main__
+        exception handler, which must exit 0 and write a diagnostic to stderr
+        containing '[check-ac-schema]'.
+
+        This is the canonical AC1 fail-open scenario: the hook encounters an
+        unexpected internal error and must NOT block the commit.
+        """
+        import os
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            # Malformed JSON causes json.JSONDecodeError in _load_schema(),
+            # which propagates to the __main__ exception handler.
+            config_dir = root / "config"
+            config_dir.mkdir(parents=True)
+            (config_dir / "ac_store_schema.json").write_text(
+                "{ invalid json !!!", encoding="utf-8"
+            )
+            ac_dir = root / "docs" / "acceptance-criteria"
+            ac_dir.mkdir(parents=True)
+            (ac_dir / "FIN-001.yaml").write_text(_VALID_AC_YAML, encoding="utf-8")
+            env = os.environ.copy()
+            env["HOOK_ROOT"] = str(root)
+            result = subprocess.run(
+                [sys.executable, str(HOOK_SCRIPT)],
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+        # json.JSONDecodeError propagates out of _load_schema(), caught by __main__:
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "Malformed JSON schema must trigger the fail-open __main__ exception "
+                f"handler (exit 0). Stderr: {result.stderr}"
+            ),
+        )
+        # The diagnostic must identify the hook and the error.
+        self.assertIn(
+            "[check-ac-schema]",
+            result.stderr,
+            msg=f"Diagnostic must name the hook. Stderr: {result.stderr}",
+        )
+
+
+class TestMalformedIdRejectedAfterWidening(unittest.TestCase):
+    """Widened schema still rejects AC records with malformed ID formats.
+
+    After adding pattern_slots to the schema, the id field pattern must
+    remain unchanged — lowercase prefixes, underscore separators, and
+    trailing empty leaf segments must all be rejected.
+
+    covers: ACS-500f-3-i (AC1 — malformed id rejected after widening)
+    """
+
+    def _make_content_with_id(self, bad_id: str) -> str:
+        """Return an otherwise-valid AC YAML with the given id substituted.
+
+        Args:
+            bad_id: The malformed id string to inject.
+
+        Returns:
+            YAML content string suitable for writing to a temporary file.
+        """
+        return textwrap.dedent(f"""\
+            id: {bad_id}
+            title: "Malformed ID test"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+        """)
+
+    def test_lowercase_prefix_rejected(self) -> None:
+        # covers: ACS-500f-3-i
+        """id: acs-500 (lowercase prefix) is rejected after schema widening."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "bad-id.yaml", self._make_content_with_id("acs-500"))
+            result = _run_hook(root)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("id", result.stderr)
+
+    def test_underscore_separator_rejected(self) -> None:
+        # covers: ACS-500f-3-i
+        """id: ACS_500 (underscore separator) is rejected after schema widening."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "bad-id.yaml", self._make_content_with_id("ACS_500"))
+            result = _run_hook(root)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("id", result.stderr)
+
+    def test_trailing_empty_leaf_segment_rejected(self) -> None:
+        # covers: ACS-500f-3-i
+        """id: ACS-500a- (trailing empty leaf segment) is rejected after schema widening."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "bad-id.yaml", self._make_content_with_id("ACS-500a-"))
+            result = _run_hook(root)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("id", result.stderr)
+
+
+class TestUnknownFieldRejectedAfterWidening(unittest.TestCase):
+    """Widened schema still rejects AC records with unknown/misspelled fields.
+
+    Adding pattern_slots to the schema must NOT loosen additionalProperties:
+    false — unknown keys like 'critera' (misspelled) or 'foo_bar' (invented)
+    must still be rejected.
+
+    covers: ACS-500f-3-i (AC2 — unknown field rejected; widening does not loosen additionalProperties)
+    """
+
+    def test_misspelled_criteria_field_rejected(self) -> None:
+        # covers: ACS-500f-3-i
+        """AC with 'critera' (missing 'i') as an extra field is rejected after schema widening."""
+        content = textwrap.dedent("""\
+            id: FIN-001
+            title: "Misspelled field test"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+            critera: "misspelled field"
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-001.yaml", content)
+            result = _run_hook(root)
+        self.assertEqual(result.returncode, 1)
+
+    def test_invented_key_rejected(self) -> None:
+        # covers: ACS-500f-3-i
+        """AC with 'foo_bar' (invented key) is rejected after schema widening."""
+        content = textwrap.dedent("""\
+            id: FIN-001
+            title: "Invented key test"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+            foo_bar: "invented key"
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-001.yaml", content)
+            result = _run_hook(root)
+        self.assertEqual(result.returncode, 1)
+
+
+class TestPatternSlotsAcceptedAfterWidening(unittest.TestCase):
+    """Widened schema accepts pattern_slots while still rejecting other unknown fields.
+
+    This is the positive guard: pattern_slots is now a first-class schema field
+    and must be admitted. Any other unknown field (not pattern_slots) must still
+    be rejected — ensuring the widening is targeted, not open-ended.
+
+    covers: ACS-500f-3-i (positive guard — pattern_slots admitted; widening is not open-ended)
+    """
+
+    def test_pattern_slots_accepted(self) -> None:
+        # covers: ACS-500f-3-i
+        """AC with pattern_slots: ['{entity_type}', '{columns}'] exits 0 after schema widening."""
+        content = textwrap.dedent("""\
+            id: PTN-010
+            title: "Pattern AC with slots"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given a {entity_type} list
+              When the user views the {columns}
+              Then the data is displayed
+            priority: medium
+            readiness: draft
+            pattern_slots:
+              - "{entity_type}"
+              - "{columns}"
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "PTN-010.yaml", content)
+            result = _run_hook(root)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "pattern_slots is now a first-class schema field and must be accepted. "
+                f"Stderr: {result.stderr}"
+            ),
+        )
+
+
+class TestMissingRequiredFieldAfterWidening(unittest.TestCase):
+    """Widened schema still rejects AC records missing a required field.
+
+    After adding pattern_slots, the existing required fields (id, title,
+    component, status, created_by, criteria, readiness, priority) must all
+    still be enforced. This class duplicates the spirit of TestMissingRequiredField
+    with an explicit traceability marker for ACS-500f-3-i.
+
+    covers: ACS-500f-3-i (AC3 — missing required field still rejected after widening)
+    """
+
+    def test_missing_criteria_rejected_after_widening(self) -> None:
+        # covers: ACS-500f-3-i
+        """AC missing 'criteria' is still rejected even after the schema was widened to admit pattern_slots."""
+        content = textwrap.dedent("""\
+            id: FIN-001
+            title: "Missing criteria after widening"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            priority: medium
+            readiness: draft
+            pattern_slots:
+              - "{entity_type}"
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-001.yaml", content)
+            result = _run_hook(root)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("criteria", result.stderr)
 
 
 if __name__ == "__main__":

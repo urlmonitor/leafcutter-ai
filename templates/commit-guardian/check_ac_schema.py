@@ -20,6 +20,13 @@ ARCHITECTURE: Discovers all AC YAML files under docs/acceptance-criteria/,
     such ACs should use implements_pattern + pattern_bindings instead
     (ACS-500c-3). Exits 0 when all files pass; exits 1 with per-file error
     messages. Standalone stdlib script — no leafcutter imports.
+
+DECISION HISTORY:
+  - 2026-06-18 [python-coder/ACS-500f-1-i]: Added fail-open __main__ exception handler.
+    Unexpected exceptions (e.g. json.JSONDecodeError from malformed schema file) are
+    now caught, a diagnostic is written to stderr, and the hook exits 0 instead of
+    propagating. This satisfies AC ACS-500f-1-i: hook MUST NOT block a commit due
+    to its own internal errors.
 """
 
 from __future__ import annotations
@@ -65,8 +72,12 @@ def _load_yaml(path: Path) -> Any:  # noqa: ANN401
     """
     import yaml  # type: ignore[import]  # ImportError propagates to caller
 
-    with open(path, encoding="utf-8") as fh:
-        return yaml.safe_load(fh)
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return yaml.safe_load(fh)
+    except OSError as exc:
+        print(f"[check-ac-schema] cannot read {path}: {exc}", file=sys.stderr)
+        raise
 
 
 def _load_yaml_manual(path: Path) -> dict[str, Any]:
@@ -83,14 +94,18 @@ def _load_yaml_manual(path: Path) -> dict[str, Any]:
         Dict of parsed top-level key-value pairs (values as strings).
     """
     result: dict[str, Any] = {}
-    with open(path, encoding="utf-8") as fh:
-        for line in fh:
-            stripped = line.rstrip()
-            if stripped.startswith("#") or not stripped:
-                continue
-            if ":" in stripped and not stripped[0].isspace():
-                key, _, value = stripped.partition(":")
-                result[key.strip()] = value.strip()
+    try:
+        with open(path, encoding="utf-8") as fh:
+            for line in fh:
+                stripped = line.rstrip()
+                if stripped.startswith("#") or not stripped:
+                    continue
+                if ":" in stripped and not stripped[0].isspace():
+                    key, _, value = stripped.partition(":")
+                    result[key.strip()] = value.strip()
+    except OSError as exc:
+        print(f"[check-ac-schema] cannot read {path}: {exc}", file=sys.stderr)
+        raise
     return result
 
 
@@ -475,8 +490,15 @@ def _load_schema(root: Path) -> dict[str, Any] | None:
     schema_path = root / SCHEMA_PATH
     if not schema_path.is_file():
         return None
-    with open(schema_path, encoding="utf-8") as fh:
-        return json.load(fh)  # type: ignore[return-value]
+    try:
+        with open(schema_path, encoding="utf-8") as fh:
+            return json.load(fh)  # type: ignore[return-value]
+    except OSError as exc:
+        print(
+            f"[check-ac-schema] WARNING: cannot read schema {schema_path}: {exc}",
+            file=sys.stderr,
+        )
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -516,6 +538,7 @@ def _validate_file(
     except ImportError:
         yaml_available = False
     except Exception as exc:  # noqa: BLE001
+        print(f"[check-ac-schema] YAML parse error in {path}: {exc}", file=sys.stderr)
         errors.append(f"YAML parse error: {exc}")
         return errors
 
@@ -523,6 +546,10 @@ def _validate_file(
         try:
             data = _load_yaml_manual(path)
         except Exception as exc:  # noqa: BLE001
+            print(
+                f"[check-ac-schema] manual YAML parse error in {path}: {exc}",
+                file=sys.stderr,
+            )
             errors.append(f"manual YAML parse error: {exc}")
             return errors
 
@@ -590,7 +617,11 @@ def _build_ac_index(files: list[Path]) -> dict[str, dict[str, Any]]:
         except (ImportError, Exception):  # noqa: BLE001
             try:
                 data = _load_yaml_manual(path)
-            except Exception:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001
+                print(
+                    f"[check-ac-schema] skipping {path} (parse error): {exc}",
+                    file=sys.stderr,
+                )
                 continue
         if isinstance(data, dict) and data.get("id"):
             index[str(data["id"])] = data
@@ -643,4 +674,11 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except Exception as exc:  # noqa: BLE001
+        print(
+            f"[check-ac-schema] unexpected error (fail-open): {type(exc).__name__}: {exc}",
+            file=sys.stderr,
+        )
+        sys.exit(0)

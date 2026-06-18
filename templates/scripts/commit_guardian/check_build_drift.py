@@ -17,12 +17,12 @@ ARCHITECTURE: Reads .build_manifest.json written by
     If the manifest is absent (e.g. fresh clone before first build), the hook
     exits 0 with a warning — no false-blocks on first-time setup.
 
-    SCOPE NOTE: This hook intentionally covers only templates/agents/. Other
-    template directories (commit-guardian/, doc-compliance/, pre-commit-hooks/,
-    rules/, skills/, ticket-lifecycle/, workflows/) are excluded from this
-    ticket's scope. A follow-up ticket should extend scan to
-    leafcutter/templates/** once per-directory build phase hashing
-    is verified to be reliable.
+    SCOPE: Covers two template trees:
+    (1) templates/agents/ — .md files that build.py compiles into .claude/agents/.
+    (2) templates/scripts/commit_guardian/ — .py hook scripts that build.py
+        deploys into scripts/commit_guardian/. Added to close the blind spot
+        where hook script edits in the deployed tree were not caught by drift
+        detection (ACS-500f post-epic gap closure, 2026-06-18).
 """
 
 from __future__ import annotations
@@ -47,6 +47,10 @@ _MANIFEST_PATH = _REPO_ROOT / "leafcutter" / ".build_manifest.json"
 
 _TEMPLATES_DIR = (
     _REPO_ROOT / "leafcutter" / "templates" / "agents"
+)
+
+_COMMIT_GUARDIAN_TEMPLATES_DIR = (
+    _REPO_ROOT / "leafcutter" / "templates" / "scripts" / "commit_guardian"
 )
 
 
@@ -105,6 +109,26 @@ def _collect_template_files(templates_dir: Path) -> list[Path]:
     return sorted(templates_dir.rglob("*.md"))
 
 
+def _collect_py_template_files(templates_dir: Path) -> list[Path]:
+    """Return all .py files under the given templates directory (sorted).
+
+    Used for the commit-guardian template tree, which contains Python scripts
+    rather than Markdown agent templates.
+
+    Args:
+        templates_dir: Absolute path to the directory to scan.
+
+    Returns:
+        Sorted list of absolute Path objects for every .py file found.
+    """
+    if not templates_dir.is_dir():
+        return []
+    return sorted(
+        f for f in templates_dir.rglob("*.py")
+        if "__pycache__" not in f.parts
+    )
+
+
 def _make_manifest_key(template_path: Path, repo_root: Path) -> str:
     """Return the manifest key for a template file.
 
@@ -130,24 +154,34 @@ def check_drift(
     templates_dir: Path,
     manifest_path: Path,
     repo_root: Path,
+    file_collector=None,
 ) -> int:
     """Compare template hashes against the build manifest.
 
-    For each .md template under ``templates_dir``, looks up its hash in
-    ``manifest`` and reports a drift violation if the current content hash
-    does not match. Templates absent from the manifest (new templates not yet
-    built) are treated as a warning, not a blocking violation, so that adding
-    a template and committing before building does not produce a false-block.
+    For each template file under ``templates_dir`` (collected by
+    ``file_collector``), looks up its hash in ``manifest`` and reports a drift
+    violation if the current content hash does not match. Templates absent from
+    the manifest (new templates not yet built) are treated as a warning, not a
+    blocking violation, so that adding a template and committing before building
+    does not produce a false-block.
 
     Args:
         templates_dir: Directory tree containing source-of-truth templates.
         manifest_path: Path to .build_manifest.json written by build.py.
         repo_root: Repository root used to form relative manifest keys.
+        file_collector: Optional callable that takes ``templates_dir`` and
+            returns the list of files to check. Defaults to
+            ``_collect_template_files`` (scans for ``.md`` files). Pass
+            ``_collect_py_template_files`` to scan for ``.py`` files instead
+            (used for the commit-guardian template tree).
 
     Returns:
         0 if no drift violations are detected; 1 if one or more violations
         are detected.
     """
+    if file_collector is None:
+        file_collector = _collect_template_files
+
     manifest = _load_manifest(manifest_path)
     if manifest is None:
         print(
@@ -157,7 +191,7 @@ def check_drift(
         )
         return 0
 
-    template_files = _collect_template_files(templates_dir)
+    template_files = file_collector(templates_dir)
     if not template_files:
         return 0
 
@@ -199,14 +233,33 @@ def check_drift(
 def main() -> int:
     """Entry point for the pre-commit hook.
 
+    Runs two drift passes:
+    1. Agent templates (``templates/agents/``) — checks ``.md`` files.
+    2. Commit-guardian templates (``templates/scripts/commit_guardian/``) —
+       checks ``.py`` files. This pass catches the class of drift where a
+       Python hook script is edited in the deployed tree
+       (``scripts/commit_guardian/``) without being propagated back to the
+       template source of truth.
+
     Returns:
-        0 if no drift is detected (or manifest is absent); 1 on drift.
+        0 if no drift is detected (or manifest is absent) in either pass;
+        1 if drift is detected in either pass.
     """
-    return check_drift(
+    agents_result = check_drift(
         templates_dir=_TEMPLATES_DIR,
         manifest_path=_MANIFEST_PATH,
         repo_root=_REPO_ROOT,
+        file_collector=_collect_template_files,
     )
+
+    cg_result = check_drift(
+        templates_dir=_COMMIT_GUARDIAN_TEMPLATES_DIR,
+        manifest_path=_MANIFEST_PATH,
+        repo_root=_REPO_ROOT,
+        file_collector=_collect_py_template_files,
+    )
+
+    return 1 if (agents_result or cg_result) else 0
 
 
 # ---------------------------------------------------------------------------
@@ -227,4 +280,15 @@ if __name__ == "__main__":
 #   is the ground truth; this hook reads it and compares.
 #   Scope intentionally limited to templates/agents/ per ticket-37 scope
 #   decision; other template dirs added via follow-up ticket.
+# - 2026-06-18 [workflow-architect/EPIC-Acpatternenforcementismechanically]:
+#   Extended to cover templates/scripts/commit_guardian/ (.py files).
+#   Added _COMMIT_GUARDIAN_TEMPLATES_DIR constant and
+#   _collect_py_template_files() collector. main() now runs two drift
+#   passes: agents (.md) and commit-guardian (.py). The file_collector
+#   parameter on check_drift() allows per-tree extension without
+#   duplicating the hash-comparison logic.
+#   Rationale: the ACS-500f post-epic spot-check found that hook script
+#   edits in the deployed scripts/commit_guardian/ tree went undetected
+#   because check_build_drift only hashed templates/agents/. Adding
+#   commit-guardian closes this drift blind spot.
 # ====================================================================

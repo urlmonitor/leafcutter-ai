@@ -1,9 +1,10 @@
 ---
 title: "Reference: Claude Code Hooks"
+description: "Reference guide for Claude Code PreToolUse and PostToolUse hooks — hook types, registration format, exit-code contract, and the fail-open convention."
 type: reference
 status: active
 created: 2026-05-28
-last_updated: 2026-05-28
+last_updated: 2026-06-18
 components:
   - "build_pipeline"
 related_docs:
@@ -235,6 +236,14 @@ except Exception as exc:
     print(f"[hook_name] unexpected error (fail-open): {exc}", file=sys.stderr)
     sys.exit(0)
 ```
+
+> **Pre-commit hooks follow the same convention.** Pre-commit hooks registered
+> in `commit_guardian.json` (e.g. `check-ac-schema`) apply this same fail-open
+> pattern: an `if __name__ == "__main__":` block wraps `main()` in a
+> `try/except Exception` and exits 0 on unexpected errors, writing a diagnostic
+> prefixed with the hook name (e.g. `[check-ac-schema]`) to stderr. See
+> `templates/commit-guardian/check_ac_schema.py` and
+> `scripts/commit_guardian/hooks_docs.md` for the pre-commit hook reference.
 
 ---
 
