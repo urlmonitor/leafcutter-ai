@@ -1,6 +1,12 @@
 ---
 name: frontend-design
 allowed-tools: Read
+deprecated: true
+deprecation_reason: |
+  Design principles have been embedded directly in templates/agents/frontend-coder.md
+  (EPIC-Oneagenthandlesboththelookandthecodefor, tickets 01-13). The unified agent
+  no longer loads this skill. This file is retained for reference only and is NOT
+  deployed by build.py on fresh installs or upgrades.
 description: |
   Optional skill for frontend-coder. Provides design principles that counteract
   generic AI aesthetics — strong typographic hierarchy, intentional negative space,

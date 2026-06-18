@@ -537,19 +537,30 @@ def build_skills(target_root: Path, config: dict[str, Any],
 
     written = 0
     internal_skills: list[str] = []
+    deprecated_skills: list[str] = []
 
     for skill_dir in sorted(skills_template_dir.iterdir()):
         if not skill_dir.is_dir():
             continue
 
-        # Detect internal skills by reading the SKILL.md frontmatter.
+        # Detect internal and deprecated skills by reading the SKILL.md frontmatter.
         skill_md = skill_dir / "SKILL.md"
         is_internal = False
+        is_deprecated = False
         if skill_md.is_file():
             fm, _ = parse_frontmatter(skill_md.read_text(encoding="utf-8"))
             is_internal = bool(fm.get("internal", False))
+            is_deprecated = bool(fm.get("deprecated", False))
             if is_internal:
                 internal_skills.append(skill_dir.name)
+            if is_deprecated:
+                deprecated_skills.append(skill_dir.name)
+
+        # Skip deprecated skills entirely — their principles have been migrated
+        # elsewhere (e.g. embedded in agent templates). Deploying them would
+        # violate fresh-install guarantees (AC BP-700d-1-i).
+        if is_deprecated:
+            continue
 
         for template_file in sorted(skill_dir.rglob("*")):
             if not template_file.is_file():
@@ -594,6 +605,11 @@ def build_skills(target_root: Path, config: dict[str, Any],
         _log.info(
             "Internal skills (excluded from user-facing listings): %s",
             ", ".join(internal_skills),
+        )
+    if deprecated_skills and not dry_run:
+        _log.info(
+            "Deprecated skills (not deployed — principles migrated to agent templates): %s",
+            ", ".join(deprecated_skills),
         )
 
     return written
@@ -1952,12 +1968,15 @@ def clean_stale_artifacts(
 #   target_root/".claude"/"workflows" to match .claude/ layout convention and
 #   fix unit_tests/test_build_workflow_phase.py assertions.
 #   (#TICKET-20260604-FixFailingBuildPipelineTests)
-# - 2026-06-17 [python-coder/EPIC-AcPipelineDeployGaps/03]: Added
-#   build_ac_store() phase. Copies six AC pipeline scripts
-#   (scan_ac_store.py, generate_ticket_from_ac.py, ac_prioritizer.py,
-#   mark_ac_done.py, build_ac_mode_detection.py, goal_to_epic.py) to
-#   <target_root>/scripts/ac_store/, closing the portable-skill/missing-script
-#   gap for ac-scanner and build-ac per ADR-013. (#EPIC-AcPipelineDeployGaps/03)
+# - 2026-06-18 [python-coder/EPIC-Oneagenthandlesboththelookandthecodefor/14]:
+#   Added deprecated skill exclusion in build_skills(). Skills with
+#   deprecated: true in their SKILL.md frontmatter are skipped entirely —
+#   not deployed to .claude/skills/ on fresh installs or upgrades.
+#   The frontend-design skill is the first user: its design principles are now
+#   embedded in templates/agents/frontend-coder.md. Adding deprecated: true
+#   to frontend-design/SKILL.md prevents it from being deployed, satisfying
+#   AC BP-700d-1-i (fresh install must not create .claude/skills/frontend-design/).
+#   (#EPIC-Oneagenthandlesboththelookandthecodefor/14)
 # - 2026-06-17 [python-coder/EPIC-BuildGuardFalsePositive/03]:
 #   Extended build_feedback() to deploy aggregate.py and resolve_feedback.py
 #   alongside the three previously-deployed feedback scripts. Added three new
@@ -1968,4 +1987,10 @@ def clean_stale_artifacts(
 #   to scripts/, primarily setup_ticket_worktree.py). All new phases use the
 #   shutil.copy2 + compare-before-write pattern established by build_ac_store.
 #   (#EPIC-BuildGuardFalsePositive/03)
+# - 2026-06-17 [python-coder/EPIC-AcPipelineDeployGaps/03]: Added
+#   build_ac_store() phase. Copies six AC pipeline scripts
+#   (scan_ac_store.py, generate_ticket_from_ac.py, ac_prioritizer.py,
+#   mark_ac_done.py, build_ac_mode_detection.py, goal_to_epic.py) to
+#   <target_root>/scripts/ac_store/, closing the portable-skill/missing-script
+#   gap for ac-scanner and build-ac per ADR-013. (#EPIC-AcPipelineDeployGaps/03)
 # ====================================================================

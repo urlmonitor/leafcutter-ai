@@ -167,10 +167,6 @@
                 {
                     "skill_id": "signoff",
                     "mode": "conditional"
-                },
-                {
-                    "skill_id": "frontend-design",
-                    "mode": "always"
                 }
             ],
             "knowledge_channels": [
@@ -1468,8 +1464,7 @@
             "model": "sonnet",
             "skills_used": [
                 "signoff",
-                "webapp-testing",
-                "frontend-design"
+                "webapp-testing"
             ],
             "priority": 8,
             "priority_rationale": "Frontend implementation; runs after sql-coder (7) so database schema changes are complete before UI is built, and before test-runner (9) so tests can verify the rendered output",
@@ -1486,10 +1481,6 @@
             ],
             "category": "implementation",
             "skills_invoked": [
-                {
-                    "skill_id": "frontend-design",
-                    "mode": "conditional"
-                },
                 {
                     "skill_id": "webapp-testing",
                     "mode": "conditional"
@@ -2468,10 +2459,6 @@
             "skills_invoked": [
                 {
                     "skill_id": "webapp-testing",
-                    "mode": "conditional"
-                },
-                {
-                    "skill_id": "frontend-design",
                     "mode": "conditional"
                 }
             ],

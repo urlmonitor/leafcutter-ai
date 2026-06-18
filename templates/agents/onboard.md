@@ -48,7 +48,7 @@ behavioral_patterns:
 - behavior: 'set `optional_skills: []`'
   name: Conditional Behavior
   related_agent: null
-  trigger: the user skipped both skills
+  trigger: the user skipped the skill
 
 ---
 
@@ -74,7 +74,7 @@ silently on failure — halt and surface the error.
 3.  Scan folder structure: docs/, tests/, src/, sql/, packages           [ ]
 4.  Read discovery whitelist (README.md, pyproject.toml, etc.)           [ ]
 5.  Fan out onboard-config-section sub-agents (parallel, Haiku tier)     [ ]
-5b. Frontend optional skills: webapp-testing and frontend-design         [ ]
+5b. Frontend optional skills: webapp-testing                             [ ]
 6.  Collect sub-agent config fragments; merge into proposed config       [ ]
 7.  Present diff — ask for sign-off                                      [ ]
 8.  On approval: write .claude/skills_config.json                        [ ]
@@ -245,14 +245,11 @@ Wait for all 5 to return config fragments.
 
 If `ANTIGRAVITY` is set (non-empty), print:
 > "webapp-testing skipped — Antigravity provides its own browser."
-Then skip the webapp-testing prompt and jump directly to the frontend-design prompt
-(step 5b-iv below). `frontend-design` is platform-agnostic and is still offered in
-Antigravity sessions.
+Then skip the webapp-testing prompt and proceed to step 5b-ii.
 
-**Idempotency:** Before asking the user, check whether each skill file already exists.
+**Idempotency:** Before asking the user, check whether the skill file already exists.
 If `.claude/skills/webapp-testing/SKILL.md` already exists, skip the webapp-testing
-prompt silently. If `.claude/skills/frontend-design/SKILL.md` already exists, skip
-the frontend-design prompt silently. This makes step 5b safe to run on re-onboard.
+prompt silently. This makes step 5b safe to run on re-onboard.
 
 Run these sub-steps in sequence:
 
@@ -276,29 +273,9 @@ On `yes`:
 
 On `skip`: proceed silently to step 5b-ii.
 
-**ii. frontend-design** (skip if skill file already exists)
+**ii. Record choices in config fragment**
 
-Ask:
-> "Would you like to install the frontend-design skill (distinctive design guidance to
-> prevent generic AI aesthetics)? (yes / skip)"
-
-On `yes`:
-1. Create the target directory if it does not exist:
-   ```bash
-   mkdir -p .claude/skills/frontend-design
-   ```
-2. Copy the skill file:
-   ```bash
-   cp leafcutter/templates/skills/frontend-design/SKILL.md .claude/skills/frontend-design/SKILL.md
-   ```
-3. Record `"frontend-design"` in the local `optional_skills` list for step 5b-vi.
-4. Print: "frontend-design installed at .claude/skills/frontend-design/SKILL.md"
-
-On `skip`: proceed silently to step 5b-vi.
-
-**iii. Record choices in config fragment**
-
-After both prompts complete, build a config fragment:
+After the prompt completes, build a config fragment:
 
 ```json
 {
@@ -308,7 +285,7 @@ After both prompts complete, build a config fragment:
 }
 ```
 
-If the user skipped both skills, set `optional_skills: []`.
+If the user skipped the skill, set `optional_skills: []`.
 Store this fragment in memory as `frontend_fragment` — it will be merged in Step 6.
 
 **Antigravity detection note for adopters:**
