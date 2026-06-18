@@ -6,7 +6,7 @@ component: guardrail-engine
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100.yaml"
 criteria: |
   Given the onboarding wizard is running its hook configuration step
@@ -46,6 +46,7 @@ origin_agent: BrainCandy
 created: 2026-06-11
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - scripts/onboard_hook_opt_in.py
 implemented_by:
 - tickets/00_inbox/TICKET-20260616-GE-100g-1.md
