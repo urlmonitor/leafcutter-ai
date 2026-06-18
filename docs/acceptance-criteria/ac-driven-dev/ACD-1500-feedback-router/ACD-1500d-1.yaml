@@ -1,0 +1,45 @@
+id: ACD-1500d-1
+readiness: approved
+priority: medium
+title: "Feature-type items are checked for roadmap alignment before auto-authoring"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given entry F1 was classified as work type feature and cleared the confidence floor,
+  And the current roadmap phase is phase_1,
+  When the router decides whether to auto-author an AC for F1,
+  Then it consults the roadmap (roadmap_query) to test whether F1's described work
+    advances the current phase outcome,
+  And if F1 aligns with the current phase, it proceeds to /create-ac,
+  And if F1 is off-roadmap, it is parked for human /feedback-review and NOT
+    auto-authored,
+  And the alignment decision and its basis (which phase, aligned or not) are
+    recorded on F1.
+depends_on: [ACD-1500d]
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The alignment check in feedback-router.js must consult the roadmap via scripts/roadmap_query.py (e.g. --current-outcome) reading docs/roadmap.json — never reimplement roadmap parsing"
+  - "Only feature-type entries that cleared the confidence floor reach this check; bug-fix entries bypass roadmap alignment"
+  - "An off-roadmap feature entry must be parked for /feedback-review (not auto-authored) and the alignment basis (current phase, aligned/off-roadmap) recorded; failure to read the roadmap must fail safe to park per ACD-1500d-1-i"
+delivers_to:
+  agent: python-coder
+  contract: "A per-feature-entry alignment verdict {feedback_id, verdict in {aligned, off-roadmap}, basis} gating whether /create-ac is dispatched"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: [ACD-1500d-1-i]
+implemented_by: []

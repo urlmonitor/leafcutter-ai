@@ -13,7 +13,6 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
 
 # Add commit_guardian to path for imports
 _COMMIT_GUARDIAN_DIR = Path(__file__).resolve().parent.parent.parent / "scripts" / "commit_guardian"
@@ -90,12 +89,6 @@ class TestDoneFolderMoveBlocked(unittest.TestCase):
         done_path = self.tmp_dir / "EPIC-Foo" / "done" / "03_ticket.md"
         done_path.parent.mkdir(parents=True, exist_ok=True)
         done_path.write_text(_DONE_TICKET_CONTENT, encoding="utf-8")
-
-        # Import the validation function (will fail if not yet implemented)
-        try:
-            from check_ticket_signoff_parity import _validate_ticket_content
-        except ImportError as exc:
-            self.fail(f"Cannot import _validate_ticket_content: {exc}")
 
         # A ticket moved to done/ should trigger the done-folder-move prohibition
         # This requires the new check to be implemented in _validate_ticket_content

@@ -1,0 +1,36 @@
+id: TKT-100k
+readiness: reviewed
+priority: medium
+title: "New requirements never duplicate or conflict with what already exists"
+component: ticket-creation
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Overlap detection prevents redundant or contradictory specifications.
+  Every new behavior is checked against existing requirements and classified
+  as genuinely new, extending an existing spec, or already covered. You never
+  end up with two specifications describing the same thing differently.
+depends_on: [TKT-100, TKT-100e, TKT-100h, ACS-300g, ACS-300h]
+doc_links: []
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to:
+  agent: diagram-classifier
+  contract: "Classification output: {genuinely_new | amends_existing | covered_by_existing}"
+expects_from:
+  ac_id: TKT-100h
+  contract: "existing_acs list loaded from the AC store"
+origin_agent: BrainCandy
+created: 2026-06-08
+amended_by:
+  - reason: "split: TKT-100f -> TKT-100j + TKT-100k, 2026-06-08"
+superseded_by: null
+covered_by:
+  - TKT-100f-5
+  - TKT-100f-6
+  - TKT-100f-7
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Split of existing L1 — no new user-facing behavior introduced."

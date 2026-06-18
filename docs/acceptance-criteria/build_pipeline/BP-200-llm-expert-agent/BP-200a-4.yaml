@@ -38,6 +38,6 @@ created: 2026-06-05
 created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/01_agent_template.md"
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by: [BP-200a-4-i]
 implemented_by:
   - "templates/agents/llm-expert.md"

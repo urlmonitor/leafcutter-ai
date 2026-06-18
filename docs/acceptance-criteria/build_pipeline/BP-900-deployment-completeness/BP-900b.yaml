@@ -1,0 +1,34 @@
+id: BP-900b
+title: "Build catches broken script references before they reach consumer projects"
+component: build_pipeline
+level: L1
+status: active
+req_status: approved
+readiness: approved
+priority: critical
+work_status: not_started
+criteria: |
+  Given build.py has finished compiling all agent templates and skill files,
+  When a post-compile validation phase scans the compiled output for script path
+  references (patterns like "python3 scripts/...", "python scripts/...",
+  "sys.path.insert(..., 'scripts/...')"),
+  Then every referenced script path is verified to exist in either:
+  (a) the set of scripts that build.py will deploy to the consumer project, or
+  (b) a known external-dependency allowlist,
+  And if any referenced script is NOT deployable, the build exits non-zero
+  with the list of broken references.
+depends_on: [BP-900]
+doc_links:
+  - scripts/build_propagation_audit.py
+  - scripts/build_referential_integrity.py
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-11
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: [BP-900b-1, BP-900b-2, BP-900b-3]
+implemented_by: []

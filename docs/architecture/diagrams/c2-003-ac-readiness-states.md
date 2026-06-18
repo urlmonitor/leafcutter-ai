@@ -25,13 +25,13 @@ govern when the scanner may pick an AC up for ticket generation.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> draft : product-owner-v3 or\nbusiness-analyst-v3 writes AC
+    [*] --> draft : product-owner or\nbusiness-analyst writes AC
 
-    draft --> reviewed : it-po-v3 enriches with technical\nfields and documentation gate passes
+    draft --> reviewed : it-po enriches with technical\nfields and documentation gate passes
 
     reviewed --> approved : User promotes via /build-ac prompt\nor manual YAML edit
 
-    reviewed --> draft : it-po-v3 sends back for revision\n(documentation gap or schema error)
+    reviewed --> draft : it-po sends back for revision\n(documentation gap or schema error)
 
     approved --> done : mark_ac_done.py called after\nbuild-feature ticket merges
 
@@ -48,8 +48,8 @@ stateDiagram-v2
 
 | State | Field written | Scanner behaviour | Owning actor |
 |---|---|---|---|
-| `draft` | `readiness: draft` | Excluded — not visible to scanner | `product-owner-v3`, `business-analyst-v3` |
-| `reviewed` | `readiness: reviewed` | Excluded — awaiting user approval | `it-po-v3` |
+| `draft` | `readiness: draft` | Excluded — not visible to scanner | `product-owner`, `business-analyst` |
+| `reviewed` | `readiness: reviewed` | Excluded — awaiting user approval | `it-po` |
 | `approved` | `readiness: approved` | **Eligible for ticket generation** | User |
 | `done` | `work_status: done` | Excluded — implementation merged | `mark_ac_done.py` |
 | `deferred` | `work_status: deferred` | Excluded — explicitly skipped | `build-ac` agent |
@@ -69,7 +69,7 @@ An AC is eligible for ticket generation iff:
 
 ### draft → reviewed
 
-`it-po-v3` may only promote to `reviewed` when:
+`it-po` may only promote to `reviewed` when:
 
 1. Technical fields are populated: `assigned_agent`, `estimated_complexity`,
    `delivers_to` / `expects_from`.

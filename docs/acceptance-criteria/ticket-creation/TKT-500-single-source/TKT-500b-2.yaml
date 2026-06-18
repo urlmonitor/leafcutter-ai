@@ -23,7 +23,7 @@ origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by: [TKT-500b-2-i]
 implemented_by: []
 it_requirements:
   - "Blocking gate reads signoffs field from AC YAML, not from ticket"

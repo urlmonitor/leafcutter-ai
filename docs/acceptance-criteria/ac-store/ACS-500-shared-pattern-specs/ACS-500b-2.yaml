@@ -1,0 +1,45 @@
+id: ACS-500b-2
+readiness: approved
+priority: high
+title: "Pattern deviations are separate page-specific ACs, not inline overrides"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a page uses the "sortable-table" pattern via implements_pattern,
+  And the page needs non-standard sorting behavior on one column
+    (e.g. "status column sorts by priority order, not alphabetical"),
+  When the deviation is specified,
+  Then it is written as a separate AC file in the same feature folder,
+  And that deviation AC has its own id, criteria with Given/When/Then,
+    and depends_on referencing the consuming AC,
+  And the deviation AC does NOT contain an implements_pattern field,
+  And the original consuming AC's pattern_bindings remain unchanged
+    (the pattern itself is never partially overridden inline).
+depends_on: [ACS-500b, ACS-500b-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Convention only -- no new validation code required for deviation ACs (they are standard ACs without implements_pattern)"
+  - "Document the deviation convention in docs/reference/ac-schema.md"
+  - "Deviation ACs use the standard schema -- no special fields needed"
+delivers_to: null
+expects_from:
+  ac_id: ACS-500b-1
+  contract: "Consuming ACs with implements_pattern that deviation ACs extend via depends_on"
+origin_agent: business-analyst-v3
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260611-ACS-500b-2.md

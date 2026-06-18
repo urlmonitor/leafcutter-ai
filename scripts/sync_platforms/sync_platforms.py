@@ -21,13 +21,11 @@ ARCHITECTURE:
     ```
 """
 
-import os
-import sys
 import json
 import shutil
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import List, Optional
 
 # Set up standard logging
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -62,9 +60,9 @@ def find_skills_config(project_root: Path) -> Optional[Path]:
         for path in project_root.rglob("skills_config.json"):
             if path.is_file():
                 return path
-    except Exception:
-        pass
-    
+    except OSError as exc:
+        logger.warning("Recursive search for skills_config.json failed: %s", exc)
+
     return None
 
 def get_active_platforms(config_path: Path) -> List[str]:

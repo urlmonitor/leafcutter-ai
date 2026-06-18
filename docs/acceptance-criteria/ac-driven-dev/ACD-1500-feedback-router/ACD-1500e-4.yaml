@@ -1,0 +1,44 @@
+id: ACD-1500e-4
+readiness: approved
+priority: medium
+title: "Process-feedback recommends faster, more verbose, more structured emission"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the router is emitting a process-finding entry about thin feedback,
+  When it composes the recommendation portion of that entry,
+  Then the recommendation explicitly asks for emission to be made faster for
+    agents to complete,
+  And asks for emission to capture more verbose detail,
+  And asks for emission to be more structured by requiring richer fields up front
+    (for example, requiring a target_file for bug-fix-category entries and a
+    non-empty root cause),
+  And the recommendation ties each requested change back to the deficiency that
+    prompted it, so the improvement directly addresses the gap observed.
+depends_on: [ACD-1500e, ACD-1500e-2]
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The recommendation text composed in feedback-router.js (and emitted via submit_feedback.py) must explicitly request three improvements to feedback emission: faster for agents to complete, more verbose detail, and more structured (richer required fields up front — e.g. target_file required for bug-fix entries, non-empty root cause)"
+  - "Each requested change must be tied back to the specific deficiency that prompted it (from the ACD-1500e-2 deficiency description), so the recommendation is traceable, not generic boilerplate"
+delivers_to: null
+expects_from:
+  ac_id: ACD-1500e-2
+  contract: "The deficiency description that the recommendation must map each requested change onto"
+origin_agent: business-analyst-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

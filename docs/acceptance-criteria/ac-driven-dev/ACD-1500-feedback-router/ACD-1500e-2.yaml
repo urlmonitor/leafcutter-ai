@@ -1,0 +1,44 @@
+id: ACD-1500e-2
+readiness: approved
+priority: medium
+title: "Emitted process-feedback names the specific deficiency so it is actionable"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the router is emitting process-feedback because entry F1 was too thin to route,
+  And the specific deficiency was that F1 (a bug-fix) had no target_file and an empty note,
+  When the router composes the process-feedback note,
+  Then the note names the exact missing or thin fields ("bug-fix entry F1 lacked
+    target_file and had an empty note"),
+  And the note references the originating feedback entry id (F1) so a reader can
+    inspect the offending entry,
+  And the note states which routing decision was blocked as a result,
+  And the note is specific enough that a future run or human can act on it without
+    re-deriving what went wrong.
+depends_on: [ACD-1500e, ACD-1500e-1]
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The process-finding note composed in feedback-router.js must name the exact missing/thin fields, reference the originating feedback_id, and state which routing decision was blocked — passed as the --note value to submit_feedback.py"
+  - "The note must be specific enough to act on without re-deriving the problem; the deficiency-field set named here must align with the dedup signature in ACD-1500e-1-i"
+delivers_to: null
+expects_from:
+  ac_id: ACD-1500e-1
+  contract: "The trigger to emit process-feedback, carrying the identity of the deficient fields (work_type + missing-field set + originating feedback_id)"
+origin_agent: business-analyst-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

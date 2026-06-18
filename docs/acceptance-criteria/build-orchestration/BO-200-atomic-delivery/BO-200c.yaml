@@ -23,5 +23,9 @@ origin_agent: BrainCandy
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - BO-200c-1
+  - BO-200c-2
+  - BO-200c-3
+  - BO-200c-4
 implemented_by: []

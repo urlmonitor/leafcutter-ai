@@ -25,6 +25,8 @@ Exit codes:
 AC-1: Leaf scanner identifies todo, unblocked L2/L3 ACs.
 AC-5: Scanner JSON output is machine-consumable.
 ACS-100i-1: derive_parent_id() derives the parent AC ID by stripping the last segment.
+ACS-500e-2: resolve_behavior_stack() makes composition depth visible through
+            implements_pattern (page→composite) and depends_on (composite→atomic).
 """
 
 from __future__ import annotations
@@ -444,12 +446,20 @@ def traverse_ac_tree(
 ) -> list[str]:
     """Return the ordered list of leaf AC ids beneath *root_id*.
 
-    A leaf is an AC whose ``covered_by`` field is empty or absent.
+    A leaf is an AC whose ``level`` is in ``_LEAF_LEVELS`` (``{"L2", "L3"}``),
+    NOT one whose ``covered_by`` field is empty (ACD-1200a-9). L2 and L3 nodes
+    are always emitted as leaves regardless of whether they have ``covered_by``
+    children — and the traversal still recurses into those children, so an L2
+    with L3 edge-case children is emitted AND its L3 descendants are collected.
+    L0/L1 nodes are always composite pass-throughs and are never emitted, even
+    when their ``covered_by`` is empty or absent.
+
     The traversal is **depth-first** with **alphabetical sibling ordering**
     at every level.
 
-    When *root_id* itself is a leaf (no ``covered_by`` children), the function
-    returns ``[root_id]``.
+    When *root_id* itself is a leaf (its ``level`` is L2 or L3), the function
+    returns ``[root_id]`` followed by any L2/L3 descendants. When *root_id* is
+    an L0/L1 with no L2/L3 descendants, the function returns ``[]``.
 
     When *root_id* cannot be found in *ac_store_root*, the function returns an
     empty list and emits a warning to stderr — it does NOT raise.
@@ -482,7 +492,8 @@ def traverse_ac_tree(
         return []
 
     leaves: list[str] = []
-    _dfs_collect_leaves(root_id, id_index, leaves)
+    seen: set[str] = set()
+    _dfs_collect_leaves(root_id, id_index, leaves, seen)
     return leaves
 
 
@@ -490,29 +501,156 @@ def _dfs_collect_leaves(
     node_id: str,
     id_index: dict[str, AcRecord],
     result: list[str],
+    seen: set[str],
 ) -> None:
     """Recursive DFS helper that appends leaf ids to *result*.
 
     Visits children in alphabetical order (depth-first, alphabetical siblings).
+    Each node is processed at most once — if *node_id* is already in *seen*,
+    the function returns immediately.  This prevents duplicate emissions when a
+    node is reachable by more than one covered_by path (ACD-1200a-9-i).
 
     Args:
         node_id: Current AC id being visited.
         id_index: Full id-to-record mapping built from the AC store.
         result: Accumulator list — leaf ids are appended here in traversal order.
+        seen: Set of already-visited node ids; mutated in place to guard against
+            re-traversal.  First-visit order wins.
     """
+    if node_id in seen:
+        return
+    seen.add(node_id)
+
     record = id_index.get(node_id)
     if record is None:
         return
 
+    level: str = record.get("level", "")
     children: list[str] = record.get("covered_by") or []
-    if not children:
-        # Leaf — no covered_by children (empty list or absent field)
-        result.append(node_id)
-        return
 
-    # Visit children in alphabetical order for deterministic depth-first output
+    # L2 and L3 are always leaves — emit them regardless of covered_by.
+    # L0/L1 nodes are composites and must never be emitted as leaves.
+    if level in _LEAF_LEVELS:
+        result.append(node_id)
+
+    # Recurse into covered_by children for any level that has them.
     for child_id in sorted(children):
-        _dfs_collect_leaves(child_id, id_index, result)
+        _dfs_collect_leaves(child_id, id_index, result, seen)
+
+
+# ---------------------------------------------------------------------------
+# Behavior stack resolution (ACS-500e-2)
+# ---------------------------------------------------------------------------
+
+
+BehaviorLayer = dict[str, Any]
+
+
+def resolve_behavior_stack(
+    ac_id: str,
+    id_index: dict[str, AcRecord],
+) -> list[BehaviorLayer]:
+    """Resolve the full behavior stack for a page AC, returning layers in precedence order.
+
+    The behavior stack is the ordered list of AC layers that together define
+    the complete behavior for a page AC. The ordering is:
+
+    1. **Page-specific criteria** — the page AC itself (first; highest precedence).
+    2. **Composite wiring behavior** — the pattern AC referenced via
+       ``implements_pattern`` (second; if present).
+    3. **Atomic behaviors** — the ACs listed in the composite pattern's
+       ``depends_on`` field (third; in ``depends_on`` declaration order).
+
+    Composition depth is therefore visible through two standard AC fields alone:
+    ``implements_pattern`` (page → composite link) and ``depends_on``
+    (composite → atomic links). No additional hierarchy mechanism is required.
+
+    When ``ac_id`` is not found in *id_index*, an empty list is returned.
+    When the page AC has no ``implements_pattern``, only the page AC layer is
+    returned. When the composite pattern has no ``depends_on``, the stack
+    contains only the page layer and the composite layer.
+
+    The function does **not** recurse into ``depends_on`` chains beyond one hop
+    (i.e. it resolves only the direct atomic dependencies of the composite
+    pattern, not transitive dependencies of those atomics). Multi-hop resolution
+    is intentionally left to ``resolve_leaf_dependencies`` in
+    ``goal_to_epic.py``.
+
+    Args:
+        ac_id: The page AC id to resolve the behavior stack for.
+        id_index: Full id-to-record mapping built from the AC store (see
+            ``_build_id_index``).
+
+    Returns:
+        Ordered list of ``BehaviorLayer`` dicts, each with keys:
+        ``layer`` (``"page"``, ``"composite"``, or ``"atomic"``),
+        ``ac_id`` (string), ``criteria`` (string or None), and
+        ``source`` (``"self"``, ``"implements_pattern"``, or ``"depends_on"``).
+        Returns ``[]`` when *ac_id* is absent from *id_index*.
+
+    Example::
+
+        # Given:
+        #   PAGE-001 implements_pattern PTN-020
+        #   PTN-020 depends_on [PTN-010, PTN-011, PTN-012]
+        stack = resolve_behavior_stack("PAGE-001", id_index)
+        # Returns:
+        # [
+        #   {"layer": "page",      "ac_id": "PAGE-001", "source": "self", ...},
+        #   {"layer": "composite", "ac_id": "PTN-020",  "source": "implements_pattern", ...},
+        #   {"layer": "atomic",    "ac_id": "PTN-010",  "source": "depends_on", ...},
+        #   {"layer": "atomic",    "ac_id": "PTN-011",  "source": "depends_on", ...},
+        #   {"layer": "atomic",    "ac_id": "PTN-012",  "source": "depends_on", ...},
+        # ]
+    """
+    page_record = id_index.get(ac_id)
+    if page_record is None:
+        return []
+
+    stack: list[BehaviorLayer] = []
+
+    # Layer 1: page-specific criteria
+    stack.append(
+        {
+            "layer": "page",
+            "ac_id": ac_id,
+            "criteria": page_record.get("criteria"),
+            "source": "self",
+        }
+    )
+
+    # Layer 2: composite wiring behavior (via implements_pattern)
+    pattern_id: str | None = page_record.get("implements_pattern")
+    if not pattern_id:
+        return stack
+
+    composite_record = id_index.get(pattern_id)
+    if composite_record is None:
+        return stack
+
+    stack.append(
+        {
+            "layer": "composite",
+            "ac_id": pattern_id,
+            "criteria": composite_record.get("criteria"),
+            "source": "implements_pattern",
+        }
+    )
+
+    # Layer 3: atomic behaviors (via composite's depends_on)
+    atomic_ids: list[str] = composite_record.get("depends_on") or []
+    for atomic_id in atomic_ids:
+        atomic_record = id_index.get(atomic_id)
+        stack.append(
+            {
+                "layer": "atomic",
+                "ac_id": atomic_id,
+                "criteria": atomic_record.get("criteria") if atomic_record else None,
+                "source": "depends_on",
+            }
+        )
+
+    return stack
 
 
 # ---------------------------------------------------------------------------
@@ -736,5 +874,22 @@ DECISION HISTORY
   derive the parent ID. Root IDs (PREFIX-NNN) return None. Level-1 IDs
   (PREFIX-NNNx) return PREFIX-NNN. Deeper IDs strip the last hyphen-
   delimited segment. Uses two compiled regexes plus rsplit for O(1).
+- 2026-06-08 [TICKET-20260608-ACD-1200a-9]: Fixed _dfs_collect_leaves().
+  Replaced `if not children: result.append(node_id)` (covered_by-based
+  leaf detection) with `if level in _LEAF_LEVELS: result.append(node_id)`
+  (level-based leaf detection). L2/L3 nodes are now always emitted as
+  leaves regardless of whether they have covered_by children. L0/L1 nodes
+  are now correctly treated as pure composites and never emitted. Recursion
+  into covered_by children is preserved for all levels. Fixes the bug where
+  an L2 with L3 edge-case children was silently skipped, and where L0/L1
+  nodes with empty covered_by were incorrectly emitted as leaves.
+- 2026-06-17 [TICKET-20260611-ACS-500e-2]: Added resolve_behavior_stack().
+  Implements ACS-500e-2: given a page AC id and an id_index, resolves the
+  full behavior stack in layer order: (1) page-specific criteria from the
+  page AC itself, (2) composite wiring behavior from the pattern AC
+  referenced via implements_pattern, (3) atomic behaviors from the
+  composite's depends_on list. Returns a list of BehaviorLayer dicts with
+  keys: layer, ac_id, criteria, source. Composition depth is visible
+  through the two standard fields alone — no additional mechanism required.
 ====================================================================
 """

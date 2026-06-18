@@ -59,7 +59,8 @@ def _import_submit_feedback():
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         return mod
-    except Exception:
+    except Exception as exc:  # noqa: BLE001 — import fallback is intentional
+        print(f"[emit_hook_finding] submit_feedback import failed (will use subprocess fallback): {exc}", file=sys.stderr)
         return None
 
 
@@ -245,7 +246,11 @@ def _call_submit_feedback_subprocess(
         hook_name, outcome, note, category, tags,
         branch, staged_files_count, jsonl_path, config_path,
     )
-    result = subprocess.run(argv, capture_output=True)
+    try:
+        result = subprocess.run(argv, capture_output=True)
+    except (subprocess.SubprocessError, OSError) as exc:
+        print(f"emit_hook_finding: subprocess fallback failed: {exc}", file=sys.stderr)
+        return False
     return result.returncode == 0
 
 

@@ -317,5 +317,900 @@ class TestRuffE722Integration(unittest.TestCase):
             Path(tmp_path).unlink(missing_ok=True)
 
 
+# ---------------------------------------------------------------------------
+# GE-107 tests — robustness bug fixes
+# ---------------------------------------------------------------------------
+
+
+class TestCursorFalsePositiveNonCursorReceiver(unittest.TestCase):
+    """GE-107 Bug 1 — IO-001 over-broad receiver match.
+
+    Calls to .execute() / .executemany() / .callproc() on receivers that are
+    plainly NOT database cursors (e.g. ``command``, ``workflow``) must NOT be
+    flagged as IO-001 violations. The current implementation fires on any
+    ast.Name receiver, blocking legitimate commits.
+    """
+
+    def test_ac_ge107_non_cursor_execute_exits_zero(self) -> None:
+        # covers: GE-107
+        """AC GE-107: .execute() on a non-cursor receiver must NOT trigger IO-001.
+
+        The hook should exit 0 (no violation) when the receiver name is not a
+        recognised cursor identifier (cursor / cur / crsr / db_cursor).
+        Currently exits 1 with an IO-001 message — that is the bug this test
+        exposes and must fail RED against the unmodified code.
+        """
+        result = _run_hook("""\
+            def dispatch(command, workflow, items):
+                command.execute()
+                workflow.executemany(items)
+        """)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "Expected exit 0 for .execute() / .executemany() on non-cursor "
+                f"receivers, got {result.returncode}.\n"
+                "This is the GE-107 false-positive bug.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+    def test_ac_ge107_non_cursor_callproc_exits_zero(self) -> None:
+        # covers: GE-107
+        """AC GE-107: .callproc() on a non-cursor receiver must NOT trigger IO-001.
+
+        Same false-positive bug path as test_ac_ge107_non_cursor_execute_exits_zero
+        but exercises .callproc() specifically.
+        """
+        result = _run_hook("""\
+            def run(executor, args):
+                executor.callproc(args)
+        """)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "Expected exit 0 for .callproc() on non-cursor receiver 'executor', "
+                f"got {result.returncode}.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+
+class TestCursorTruePositiveGuard(unittest.TestCase):
+    """GE-107 Bug 1 — regression guard: genuine cursor.execute() must still be flagged.
+
+    This test MUST stay green both before AND after the fix. A receiver literally
+    named ``cursor`` (the canonical cursor identifier) calling .execute() outside
+    try/except must still exit 1 with an IO-001 message.
+    """
+
+    def test_ac_ge107_genuine_cursor_execute_still_flagged(self) -> None:
+        # covers: GE-107
+        """Regression guard: cursor.execute() without try/except must exit 1 (IO-001).
+
+        True-positive path — a receiver named ``cursor`` calling .execute() outside
+        any try/except block must be flagged. This test verifies the fix does not
+        break genuine cursor detection.
+        """
+        result = _run_hook("""\
+            def query(cursor):
+                cursor.execute("SELECT 1")
+        """)
+        self.assertEqual(
+            result.returncode,
+            1,
+            msg=(
+                "Expected exit 1 for unwrapped cursor.execute(), "
+                f"got {result.returncode}.\n"
+                "Genuine cursor calls must remain flagged after the GE-107 fix.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+        combined = result.stdout + result.stderr
+        self.assertTrue(
+            any(kw in combined for kw in ("IO-001", "cursor", "execute")),
+            msg=(
+                "Expected IO-001 / cursor / execute keyword in output. "
+                f"Got: {combined!r}"
+            ),
+        )
+
+
+class TestOSErrorOnDirectoryPath(unittest.TestCase):
+    """GE-107 Bug 2 — uncaught OSError when a .py-suffixed path is a directory.
+
+    main() wraps analyse_file only in ``except SyntaxError``. When a path ends
+    in ``.py`` but is actually a directory, ``path.read_text()`` inside
+    ``analyse_file`` raises ``IsADirectoryError`` (a subclass of ``OSError``).
+    The current code lets that propagate as an uncaught traceback and exits 1,
+    colliding with the legitimate "violations found" exit code.
+
+    The fixed behaviour: catch OSError, print a skip message to stderr, continue
+    processing remaining files, and exit 0 when no violations are found.
+    """
+
+    def test_ac_ge107_directory_py_path_no_traceback_exits_zero(self) -> None:
+        # covers: GE-107
+        """AC GE-107: a .py-suffixed directory path must be skipped without traceback.
+
+        Invokes the hook DIRECTLY (not via _run_hook) with a temp directory whose
+        name ends in ``.py``. Asserts:
+          1. The process does NOT exit 1 with a Python traceback in stderr.
+          2. stderr does NOT contain "Traceback (most recent call last)".
+          3. The process exits 0 (skip-and-continue behaviour, no violations).
+        Currently exits 1 with an uncaught IsADirectoryError traceback — that is
+        the bug this test exposes and must fail RED against the unmodified code.
+        """
+        import tempfile
+        import os
+
+        # Create a real temp directory whose name ends in ".py"
+        tmp_parent = tempfile.mkdtemp()
+        dir_py_path = os.path.join(tmp_parent, "fake_module.py")
+        os.makedirs(dir_py_path, exist_ok=True)
+
+        try:
+            result = subprocess.run(
+                [sys.executable, str(_HOOK_SCRIPT), dir_py_path],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+            # Must NOT produce a Python traceback in stderr
+            self.assertNotIn(
+                "Traceback (most recent call last)",
+                result.stderr,
+                msg=(
+                    "Hook must not crash with an uncaught OSError traceback when "
+                    "given a .py-suffixed directory path.\n"
+                    f"stderr: {result.stderr!r}"
+                ),
+            )
+            # With no real violations (the path is skipped), must exit 0
+            self.assertEqual(
+                result.returncode,
+                0,
+                msg=(
+                    "Expected exit 0 when the only argument is a skipped unreadable "
+                    f"path, got {result.returncode}.\n"
+                    f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+                ),
+            )
+            # stderr should contain a skip/not-readable style message (post-fix)
+            # We do NOT assert this pre-fix, but document the expected post-fix shape:
+            # self.assertIn("not readable", result.stderr) — enforced after fix
+        finally:
+            # Clean up the fake .py directory
+            import shutil
+            shutil.rmtree(tmp_parent, ignore_errors=True)
+
+
+
+
+# ---------------------------------------------------------------------------
+# GE-108b tests — WARNING-or-higher threshold for clearing blind-catch handlers
+# ---------------------------------------------------------------------------
+
+
+class TestGE108bBareNameCallDoesNotClearHandler(unittest.TestCase):
+    """GE-108b Scenario 1: bare Name call like error() must NOT clear the handler.
+
+    A locally-defined function named error() / info() / debug() that is not
+    a project logger must not clear a blind except Exception: handler.
+    """
+
+    def test_bare_name_error_call_emits_ble001(self) -> None:
+        # covers: GE-108b
+        """error() bare Name call (not an attribute on a logger) must emit BLE001."""
+        result = _run_hook("""\
+            def error(msg):
+                print(msg)
+
+            def bad():
+                try:
+                    pass
+                except Exception:
+                    error("something failed")
+        """)
+        self.assertEqual(
+            result.returncode,
+            1,
+            msg=(
+                "Expected exit 1 (BLE001) when only a bare error() Name call is in "
+                f"the handler, got {result.returncode}.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+        combined = result.stdout + result.stderr
+        self.assertTrue(
+            any(kw in combined for kw in ("BLE001", "blind", "except Exception")),
+            msg=f"Expected BLE001/blind keyword in output. Got: {combined!r}",
+        )
+
+
+class TestGE108bSubWarningLoggingDoesNotClearHandler(unittest.TestCase):
+    """GE-108b Scenario 2: sub-WARNING log calls must NOT clear the handler.
+
+    logger.debug() and logger.info() are below the WARNING threshold and must
+    not satisfy the handler requirement.
+    """
+
+    def test_logger_debug_emits_ble001(self) -> None:
+        # covers: GE-108b
+        """logger.debug(...) in handler body must still emit BLE001."""
+        result = _run_hook("""\
+            import logging
+            logger = logging.getLogger(__name__)
+
+            def bad():
+                try:
+                    pass
+                except Exception:
+                    logger.debug("low-level noise")
+        """)
+        self.assertEqual(
+            result.returncode,
+            1,
+            msg=(
+                "Expected exit 1 (BLE001) when handler only calls logger.debug(), "
+                f"got {result.returncode}.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+        combined = result.stdout + result.stderr
+        self.assertTrue(
+            any(kw in combined for kw in ("BLE001", "blind", "except Exception")),
+            msg=f"Expected BLE001/blind keyword in output. Got: {combined!r}",
+        )
+
+    def test_logger_info_emits_ble001(self) -> None:
+        # covers: GE-108b
+        """logger.info(...) in handler body must still emit BLE001."""
+        result = _run_hook("""\
+            import logging
+            logger = logging.getLogger(__name__)
+
+            def bad():
+                try:
+                    pass
+                except Exception:
+                    logger.info("informational message")
+        """)
+        self.assertEqual(
+            result.returncode,
+            1,
+            msg=(
+                "Expected exit 1 (BLE001) when handler only calls logger.info(), "
+                f"got {result.returncode}.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+        combined = result.stdout + result.stderr
+        self.assertTrue(
+            any(kw in combined for kw in ("BLE001", "blind", "except Exception")),
+            msg=f"Expected BLE001/blind keyword in output. Got: {combined!r}",
+        )
+
+    def test_print_emits_ble001(self) -> None:
+        # covers: GE-108b
+        """print(...) in handler body must still emit BLE001."""
+        result = _run_hook("""\
+            def bad():
+                try:
+                    pass
+                except Exception:
+                    print("something went wrong")
+        """)
+        self.assertEqual(
+            result.returncode,
+            1,
+            msg=(
+                "Expected exit 1 (BLE001) when handler only calls print(), "
+                f"got {result.returncode}.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+        combined = result.stdout + result.stderr
+        self.assertTrue(
+            any(kw in combined for kw in ("BLE001", "blind", "except Exception")),
+            msg=f"Expected BLE001/blind keyword in output. Got: {combined!r}",
+        )
+
+
+class TestGE108bWarningOrHigherClearsHandler(unittest.TestCase):
+    """GE-108b Scenario 3: WARNING-or-higher attribute calls MUST clear the handler.
+
+    logger.warning(), logger.error(), logger.critical(), logger.exception()
+    are all at or above the WARNING threshold and must suppress BLE001.
+    """
+
+    def test_logger_warning_clears_handler(self) -> None:
+        # covers: GE-108b
+        """logger.warning(...) in handler body must NOT emit BLE001."""
+        result = _run_hook("""\
+            import logging
+            logger = logging.getLogger(__name__)
+
+            def ok():
+                try:
+                    pass
+                except Exception:
+                    logger.warning("something failed")
+        """)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "Expected exit 0 (no BLE001) when handler calls logger.warning(), "
+                f"got {result.returncode}.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+    def test_logger_error_clears_handler(self) -> None:
+        # covers: GE-108b
+        """logger.error(...) in handler body must NOT emit BLE001."""
+        result = _run_hook("""\
+            import logging
+            logger = logging.getLogger(__name__)
+
+            def ok():
+                try:
+                    pass
+                except Exception:
+                    logger.error("operation failed")
+        """)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "Expected exit 0 (no BLE001) when handler calls logger.error(), "
+                f"got {result.returncode}.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+    def test_logger_critical_clears_handler(self) -> None:
+        # covers: GE-108b
+        """logger.critical(...) in handler body must NOT emit BLE001."""
+        result = _run_hook("""\
+            import logging
+            logger = logging.getLogger(__name__)
+
+            def ok():
+                try:
+                    pass
+                except Exception:
+                    logger.critical("critical failure")
+        """)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "Expected exit 0 (no BLE001) when handler calls logger.critical(), "
+                f"got {result.returncode}.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+    def test_logger_exception_clears_handler(self) -> None:
+        # covers: GE-108b
+        """logger.exception(...) in handler body must NOT emit BLE001."""
+        result = _run_hook("""\
+            import logging
+            logger = logging.getLogger(__name__)
+
+            def ok():
+                try:
+                    pass
+                except Exception:
+                    logger.exception("unexpected exception")
+        """)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "Expected exit 0 (no BLE001) when handler calls logger.exception(), "
+                f"got {result.returncode}.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+
+class TestGE108bReraiseStillClearsHandler(unittest.TestCase):
+    """GE-108b Scenario 4: bare raise must still clear the handler.
+
+    Re-raising clears the handler regardless of logging level — this was
+    already tested in prior versions, but regression-guard it explicitly here.
+    """
+
+    def test_bare_raise_clears_handler(self) -> None:
+        # covers: GE-108b
+        """bare raise in handler body must NOT emit BLE001."""
+        result = _run_hook("""\
+            def ok():
+                try:
+                    pass
+                except Exception:
+                    raise
+        """)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "Expected exit 0 (no BLE001) when handler uses bare raise, "
+                f"got {result.returncode}.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+
+# ---------------------------------------------------------------------------
+# GE-108c tests — tuple exception types rendered in full in BLE001 message
+# ---------------------------------------------------------------------------
+
+
+class TestGE108cTupleExceptionTypeRenderedInFull(unittest.TestCase):
+    """GE-108c: except (ValueError, Exception): must report the full tuple in the message.
+
+    When a handler catches a tuple of exception types and the tuple contains a
+    blind type (Exception/BaseException), the BLE001 violation message must
+    include the full parenthesised tuple string, e.g. "(ValueError, Exception)",
+    not just the last blind type or "Exception" alone.
+    """
+
+    def test_tuple_except_emits_ble001_exactly_once(self) -> None:
+        # covers: GE-108c
+        """except (ValueError, Exception): with no log/reraise must emit BLE001 once.
+
+        The hook prints a summary line "N violation(s)" — we assert that line says
+        exactly "1 violation" to confirm the handler is detected once, not twice.
+        """
+        result = _run_hook("""\
+            def bad():
+                try:
+                    pass
+                except (ValueError, Exception):
+                    pass
+        """)
+        self.assertEqual(
+            result.returncode,
+            1,
+            msg=(
+                "Expected exit 1 (BLE001) for except (ValueError, Exception): with "
+                f"no re-raise or log, got {result.returncode}.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+        combined = result.stdout + result.stderr
+        # The summary line "1 violation(s)" confirms exactly one violation is emitted
+        self.assertIn(
+            "1 violation(s)",
+            combined,
+            msg=(
+                "Expected '1 violation(s)' in output to confirm exactly one BLE001 "
+                "is emitted for the tuple handler.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+    def test_tuple_except_message_contains_full_tuple(self) -> None:
+        # covers: GE-108c
+        """BLE001 message must contain the full tuple '(ValueError, Exception)'."""
+        result = _run_hook("""\
+            def bad():
+                try:
+                    pass
+                except (ValueError, Exception):
+                    pass
+        """)
+        combined = result.stdout + result.stderr
+        self.assertIn(
+            "(ValueError, Exception)",
+            combined,
+            msg=(
+                "Expected '(ValueError, Exception)' in BLE001 message, but the "
+                "message does not contain the full tuple.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+    def test_tuple_except_message_not_abbreviated_to_exception_alone(self) -> None:
+        # covers: GE-108c
+        """BLE001 message must NOT abbreviate to just 'Exception' without tuple wrapper.
+
+        The message text must NOT match the pattern 'blind except Exception:'
+        (which would indicate the tuple was collapsed to its blind member only).
+        Instead it must match 'blind except (ValueError, Exception):'.
+        """
+        result = _run_hook("""\
+            def bad():
+                try:
+                    pass
+                except (ValueError, Exception):
+                    pass
+        """)
+        combined = result.stdout + result.stderr
+        # The full tuple must be present
+        self.assertIn(
+            "(ValueError, Exception)",
+            combined,
+            msg=(
+                "Expected full tuple '(ValueError, Exception)' in output.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+        # The message must NOT have 'blind except Exception:' without the tuple wrapper
+        # (i.e. the raw word 'Exception' must appear only inside the tuple context)
+        self.assertNotIn(
+            "blind except Exception:",
+            combined,
+            msg=(
+                "Message must not abbreviate to 'blind except Exception:' — "
+                "the full tuple must be used.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+
+
+
+# ---------------------------------------------------------------------------
+# GE-109a tests — test-file exemption
+# ---------------------------------------------------------------------------
+# The hook must skip AST analysis for test files, emitting no E722, BLE001,
+# or IO-001 violations and returning exit 0. A test file is identified by:
+#   - A path component equal to "tests" or "unit_tests"
+#   - A basename matching test_*.py, *_test.py, or conftest.py
+# Production .py files with the same violations must still be flagged (exit 1).
+# ---------------------------------------------------------------------------
+
+
+def _run_hook_at_path(code: str, file_path: Path) -> subprocess.CompletedProcess:
+    """Write *code* to *file_path* and run the hook against it.
+
+    Unlike _run_hook, this helper lets the caller control the path so we can
+    test path-component and basename detection.
+
+    Args:
+        code: Python source code to write into the file.
+        file_path: The explicit path to write the code to.
+
+    Returns:
+        CompletedProcess with returncode, stdout, and stderr.
+    """
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    file_path.write_text(textwrap.dedent(code), encoding="utf-8")
+
+    try:
+        return subprocess.run(
+            [sys.executable, str(_HOOK_SCRIPT), str(file_path)],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+    finally:
+        file_path.unlink(missing_ok=True)
+        # Best-effort cleanup of any temp parent directories we created
+        try:
+            file_path.parent.rmdir()
+        except OSError:
+            pass
+
+
+# Snippet with ALL three violation classes so we can reuse it across tests.
+_VIOLATING_CODE = """\
+    def bad():
+        try:
+            pass
+        except:
+            pass
+
+    def also_bad():
+        try:
+            pass
+        except Exception:
+            pass
+
+    def io_bad():
+        f = open("x")
+        return f.read()
+"""
+
+
+class TestGE109aTestFileE722Exempt(unittest.TestCase):
+    """GE-109a: bare except in a test file must NOT be flagged (exit 0)."""
+
+    def test_ac_ge109a_test_file_bare_except_not_flagged(self) -> None:
+        # covers: GE-109a
+        """AC GE-109a: bare except: in a test file must produce exit 0 (E722 exempted).
+
+        The hook must detect that the file is a test file (basename test_*.py)
+        and skip AST analysis entirely. Currently exits 1 because test-file
+        detection is not yet implemented — this is the expected RED baseline.
+        """
+        import tempfile
+
+        tmp_dir = Path(tempfile.mkdtemp())
+        try:
+            result = _run_hook_at_path(
+                _VIOLATING_CODE,
+                tmp_dir / "test_example.py",
+            )
+            self.assertEqual(
+                result.returncode,
+                0,
+                msg=(
+                    "Expected exit 0 for bare except: in a test_*.py file (E722 exempt), "
+                    f"got {result.returncode}.\n"
+                    "GE-109a test-file exemption is not yet implemented.\n"
+                    f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+                ),
+            )
+        finally:
+            import shutil
+
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+class TestGE109aTestFileBLE001Exempt(unittest.TestCase):
+    """GE-109a: blind except Exception in a test file must NOT be flagged (exit 0)."""
+
+    def test_ac_ge109a_test_file_ble001_not_flagged(self) -> None:
+        # covers: GE-109a
+        """AC GE-109a: blind except Exception: in a test file must produce exit 0.
+
+        The hook must detect the test file and skip AST analysis so no BLE001
+        violation is emitted. Currently exits 1 — RED baseline.
+        """
+        import tempfile
+
+        tmp_dir = Path(tempfile.mkdtemp())
+        try:
+            result = _run_hook_at_path(
+                """\
+                def bad():
+                    try:
+                        pass
+                    except Exception:
+                        pass
+                """,
+                tmp_dir / "test_ble.py",
+            )
+            self.assertEqual(
+                result.returncode,
+                0,
+                msg=(
+                    "Expected exit 0 for blind except Exception: in test_*.py (BLE001 exempt), "
+                    f"got {result.returncode}.\n"
+                    f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+                ),
+            )
+        finally:
+            import shutil
+
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+class TestGE109aTestFileIO001Exempt(unittest.TestCase):
+    """GE-109a: unwrapped open() in a test file must NOT be flagged (exit 0)."""
+
+    def test_ac_ge109a_test_file_io001_not_flagged(self) -> None:
+        # covers: GE-109a
+        """AC GE-109a: unwrapped open() in a test file must produce exit 0 (IO-001 exempt).
+
+        The hook must detect the test file and skip AST analysis. Currently
+        exits 1 — RED baseline.
+        """
+        import tempfile
+
+        tmp_dir = Path(tempfile.mkdtemp())
+        try:
+            result = _run_hook_at_path(
+                """\
+                def read_file(path):
+                    f = open(path)
+                    return f.read()
+                """,
+                tmp_dir / "test_io.py",
+            )
+            self.assertEqual(
+                result.returncode,
+                0,
+                msg=(
+                    "Expected exit 0 for unwrapped open() in test_*.py (IO-001 exempt), "
+                    f"got {result.returncode}.\n"
+                    f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+                ),
+            )
+        finally:
+            import shutil
+
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+class TestGE109aProductionFileStillFlagged(unittest.TestCase):
+    """GE-109a: production file with same violations must still be blocked (exit 1)."""
+
+    def test_ac_ge109a_production_file_still_blocked(self) -> None:
+        # covers: GE-109a
+        """AC GE-109a: a non-test production .py file with violations must still exit 1.
+
+        The exemption must never widen to production code. A file named
+        my_module.py (no test_ prefix, no *_test suffix, not conftest.py,
+        not under tests/ or unit_tests/) must be fully checked and flagged.
+        This test should PASS even before the implementation (since the hook
+        currently flags everything), but we include it to guard against
+        regressions where the exemption is applied too broadly.
+        """
+        result = _run_hook(_VIOLATING_CODE)
+        self.assertEqual(
+            result.returncode,
+            1,
+            msg=(
+                "Expected exit 1 for production .py file with violations. "
+                "The GE-109a exemption must not widen to production code.\n"
+                f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+            ),
+        )
+
+
+class TestGE109aPathComponentTestsDir(unittest.TestCase):
+    """GE-109a: path containing 'tests' component must be exempt (exit 0)."""
+
+    def test_ac_ge109a_tests_path_component_exempt(self) -> None:
+        # covers: GE-109a
+        """AC GE-109a: a file under a 'tests' directory component must be skipped.
+
+        Path: <tmp>/tests/foo.py — the 'tests' directory component triggers
+        the exemption even though the basename 'foo.py' does not start with
+        'test_'. Currently exits 1 — RED baseline.
+        """
+        import tempfile
+
+        tmp_dir = Path(tempfile.mkdtemp())
+        try:
+            result = _run_hook_at_path(
+                _VIOLATING_CODE,
+                tmp_dir / "tests" / "foo.py",
+            )
+            self.assertEqual(
+                result.returncode,
+                0,
+                msg=(
+                    "Expected exit 0 for file under tests/ directory component, "
+                    f"got {result.returncode}.\n"
+                    "GE-109a path-component detection is not yet implemented.\n"
+                    f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+                ),
+            )
+        finally:
+            import shutil
+
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    def test_ac_ge109a_unit_tests_path_component_exempt(self) -> None:
+        # covers: GE-109a
+        """AC GE-109a: a file under a 'unit_tests' directory component must be skipped.
+
+        Path: <tmp>/unit_tests/foo.py — the 'unit_tests' component triggers
+        the exemption. Currently exits 1 — RED baseline.
+        """
+        import tempfile
+
+        tmp_dir = Path(tempfile.mkdtemp())
+        try:
+            result = _run_hook_at_path(
+                _VIOLATING_CODE,
+                tmp_dir / "unit_tests" / "foo.py",
+            )
+            self.assertEqual(
+                result.returncode,
+                0,
+                msg=(
+                    "Expected exit 0 for file under unit_tests/ directory component, "
+                    f"got {result.returncode}.\n"
+                    f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+                ),
+            )
+        finally:
+            import shutil
+
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+class TestGE109aBasenameDetection(unittest.TestCase):
+    """GE-109a: basename-based test-file detection."""
+
+    def test_ac_ge109a_test_prefix_basename_exempt(self) -> None:
+        # covers: GE-109a
+        """AC GE-109a: file with basename matching test_*.py must be skipped.
+
+        Path: <tmp>/test_mymodule.py — basename starts with 'test_'.
+        Currently exits 1 — RED baseline.
+        """
+        import tempfile
+
+        tmp_dir = Path(tempfile.mkdtemp())
+        try:
+            result = _run_hook_at_path(
+                _VIOLATING_CODE,
+                tmp_dir / "test_mymodule.py",
+            )
+            self.assertEqual(
+                result.returncode,
+                0,
+                msg=(
+                    "Expected exit 0 for test_*.py basename, "
+                    f"got {result.returncode}.\n"
+                    f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+                ),
+            )
+        finally:
+            import shutil
+
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    def test_ac_ge109a_test_suffix_basename_exempt(self) -> None:
+        # covers: GE-109a
+        """AC GE-109a: file with basename matching *_test.py must be skipped.
+
+        Path: <tmp>/mymodule_test.py — basename ends with '_test.py'.
+        Currently exits 1 — RED baseline.
+        """
+        import tempfile
+
+        tmp_dir = Path(tempfile.mkdtemp())
+        try:
+            result = _run_hook_at_path(
+                _VIOLATING_CODE,
+                tmp_dir / "mymodule_test.py",
+            )
+            self.assertEqual(
+                result.returncode,
+                0,
+                msg=(
+                    "Expected exit 0 for *_test.py basename, "
+                    f"got {result.returncode}.\n"
+                    f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+                ),
+            )
+        finally:
+            import shutil
+
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    def test_ac_ge109a_conftest_basename_exempt(self) -> None:
+        # covers: GE-109a
+        """AC GE-109a: file with basename conftest.py must be skipped.
+
+        Path: <tmp>/conftest.py — exact basename match 'conftest.py'.
+        Currently exits 1 — RED baseline.
+        """
+        import tempfile
+
+        tmp_dir = Path(tempfile.mkdtemp())
+        try:
+            result = _run_hook_at_path(
+                _VIOLATING_CODE,
+                tmp_dir / "conftest.py",
+            )
+            self.assertEqual(
+                result.returncode,
+                0,
+                msg=(
+                    "Expected exit 0 for conftest.py basename, "
+                    f"got {result.returncode}.\n"
+                    f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+                ),
+            )
+        finally:
+            import shutil
+
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main()

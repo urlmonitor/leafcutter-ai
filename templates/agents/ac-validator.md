@@ -157,6 +157,47 @@ commit proceeds.
 If the script file is absent (pre-store install or older worktrees), skip this
 sub-step silently and continue.
 
+### 2d. Cross-file contract tracing
+
+When one or more ACs carry a `delivers_to` or `expects_from` field linking this
+ticket to a producer or consumer ticket, you MUST trace the contract across the
+file boundary — do not treat passing unit tests that mock the dependency as
+sufficient evidence.
+
+For each `delivers_to` entry in the AC (this ticket produces data or an
+interface that a consumer ticket depends on):
+
+1. Identify the consuming file referenced by the contract (from the AC field or
+   the ticket's `## Agent Contracts` section).
+2. Read that file using the `Read` tool.
+3. Confirm that every data path or field the consumer reads actually exists in
+   the producer's output as implemented in the current diff.
+4. If the producer's output does not expose what the consumer expects, record
+   this as a **contract gap** for the AC in question.
+
+For each `expects_from` entry (this ticket reads data or an interface from a
+producer ticket):
+
+1. Identify the producer file referenced by the contract.
+2. Read that file using the `Read` tool.
+3. Confirm the field, data path, or interface this ticket reads is present in
+   the producer's implementation.
+4. If absent, record a **contract gap** for the AC in question.
+
+A contract gap is treated as a **blocker** finding in Step 5, equivalent to a
+missing AC — a ticket whose unit tests pass but whose cross-file contract is
+unmet must not be allowed to proceed to commit.
+
+Record each contract gap as:
+```
+{ac_id: <AC-N>, type: cross_file_contract_gap,
+ detail: "<consumer_file> reads '<path>' but producer '<producer_file>' does not populate it"}
+```
+
+If the consuming or producing file does not exist yet (the linked ticket has not
+shipped), record it as a contract gap and surface it as a blocker with the note
+"producer not yet implemented".
+
 ---
 
 ## Step 3 — Classify Coverage

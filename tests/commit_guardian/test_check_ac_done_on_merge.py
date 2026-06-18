@@ -16,11 +16,8 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
-import textwrap
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
-import pytest
 import yaml
 
 WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -46,7 +43,7 @@ def _make_ac_yaml(ac_root: Path, ac_id: str, work_status: str = "todo") -> Path:
 def _make_ticket_md(ticket_path: Path, source_ac: str | None, status: str = "done") -> None:
     """Create a minimal ticket markdown file for testing."""
     ticket_path.parent.mkdir(parents=True, exist_ok=True)
-    frontmatter_lines = ["---", f'title: "Test Ticket"', f"status: {status}"]
+    frontmatter_lines = ["---", 'title: "Test Ticket"', f"status: {status}"]
     if source_ac is not None:
         frontmatter_lines.append(f"source_ac: {source_ac}")
     frontmatter_lines.extend(["---", "", "# Test Ticket"])

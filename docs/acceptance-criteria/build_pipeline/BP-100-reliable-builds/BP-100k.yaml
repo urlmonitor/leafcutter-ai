@@ -1,0 +1,28 @@
+id: BP-100k
+readiness: reviewed
+priority: medium
+title: "Unauthorized changes to compiled workflows are caught automatically"
+component: build-pipeline
+level: L1
+status: active
+criteria: |
+  Drift detection, parity testing, and pre-commit hooks guard compiled outputs.
+
+  If a compiled workflow file is manually edited, the drift detection hook
+  catches it before commit. A parity test cross-validates all four
+  infrastructure layers so that no category can fall out of sync silently.
+depends_on:
+  - BP-100
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-06-08
+amended_by:
+  - "split: BP-100b -> BP-100j + BP-100k + BP-100l, 2026-06-08"
+superseded_by: null
+covered_by:
+  - BP-100b-5
+  - BP-100b-6
+  - BP-100b-7
+implemented_by:
+  - templates/scripts/commit_guardian/check_output_drift.py
+  - templates/commit-guardian/commit_guardian.json

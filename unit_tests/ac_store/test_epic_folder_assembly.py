@@ -10,11 +10,9 @@ COVERS: ACD-1200a-3, ACD-1200a-3-i
 from __future__ import annotations
 
 import sys
-import re
 from pathlib import Path
 
 import pytest
-import yaml
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _SCRIPTS_DIR = _REPO_ROOT / "scripts"
@@ -147,7 +145,7 @@ class TestZeroLeafErrorGuard:
         inbox_dir = tmp_path / "tickets" / "00_inbox"
         inbox_dir.mkdir(parents=True, exist_ok=True)
 
-        with pytest.raises((ZeroLeafError, ValueError, SystemExit)) as exc_info:
+        with pytest.raises((ZeroLeafError, ValueError, SystemExit)):
             assemble_epic_folder([], "EmptyTree", inbox_dir)
 
     def test_ac3i_zero_leaves_creates_no_folder(self, tmp_path: Path) -> None:

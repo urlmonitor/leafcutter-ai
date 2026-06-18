@@ -9,17 +9,14 @@
         "title",
         "component",
         "status",
-        "created_by",
-        "criteria",
-        "readiness",
-        "priority"
+        "criteria"
     ],
     "additionalProperties": false,
     "properties": {
         "id": {
             "type": "string",
-            "description": "Stable AC identifier in the format COMPONENT_PREFIX-NNN (e.g. FIN-001). Assigned at creation time; never changes.",
-            "pattern": "^[A-Z]{2,6}-[0-9]{3}$"
+            "description": "Stable AC identifier. Supports multiple formats: base form PREFIX-NNN (e.g. ACS-100, FIN-001), hierarchical L1 form PREFIX-NNNx (e.g. ACS-100a), L2 form PREFIX-NNNx-N (e.g. ACS-500a-1), L3 extension form PREFIX-NNNx-N-y (e.g. ACS-500a-1-i), numeric-only hierarchy (e.g. BO-510-1), and compound-prefix forms (e.g. KM-DBF-001). Assigned at creation time; never changes.",
+            "pattern": "^[A-Z]{2,6}(-[A-Z]{2,6})?-\\d+([a-z]\\d*(-\\d+[a-z\\d]*(-[a-z\\d]+)?)?|-\\d+[a-z\\d]*(-[a-z\\d]+)?)?$"
         },
         "title": {
             "type": "string",
@@ -28,56 +25,87 @@
         },
         "component": {
             "type": "string",
-            "description": "Component name matching a key in docs/components.json.",
+            "description": "Component name matching a key in docs/acceptance-criteria/index.yaml.",
             "minLength": 1
         },
         "status": {
             "type": "string",
-            "description": "Lifecycle status of the criterion.",
+            "description": "Lifecycle status of the criterion. 'superseded' (without _by) is an alternate form used by some older records; 'superseded_by' is the canonical form for new records.",
             "enum": [
                 "active",
                 "deprecated",
-                "superseded_by"
+                "superseded_by",
+                "superseded"
             ]
-        },
-        "created_by": {
-            "type": "string",
-            "description": "Path to the ticket (relative to repo root) that first introduced this criterion.",
-            "minLength": 1
         },
         "criteria": {
             "type": "string",
-            "description": "Multi-line Gherkin scenario body (Given/When/Then/And).",
+            "description": "Multi-line Gherkin scenario body (Given/When/Then/And). When implements_pattern is set and the AC has no unique behavior beyond what the pattern provides, a plain-text placeholder is acceptable (e.g. 'No page-specific behavior — all behavior inherited from pattern.').",
             "minLength": 1
         },
-        "superseded_by": {
+        "created_by": {
+            "type": "string",
+            "description": "Path to the ticket (relative to repo root) that first introduced this criterion. Used by some authoring flows (newer records use 'created' for the date and 'created_by_ticket' for the ticket path).",
+            "minLength": 1
+        },
+        "created": {
+            "description": "Date this AC was created. Stored as a YAML date (YYYY-MM-DD). YAML parsers deserialise bare YYYY-MM-DD values as native date objects; the schema intentionally accepts any non-null scalar (string or date) to accommodate both quoted and unquoted YAML date syntax."
+        },
+        "created_by_ticket": {
+            "description": "Path to the ticket (relative to repo root) that introduced this criterion. Used by newer authoring flows alongside 'created'.",
             "oneOf": [
                 {
                     "type": "string",
-                    "pattern": "^[A-Z]{2,6}-[0-9]{3}$",
-                    "description": "AC ID of the replacement criterion (set when status is superseded_by)."
+                    "minLength": 1
                 },
                 {
                     "type": "null"
                 }
             ]
         },
+        "superseded_by": {
+            "description": "AC ID (or list of AC IDs when split into multiple successors) of the replacement criterion. Set when status is superseded_by. Null when not superseded. A list form occurs when an AC is split into two or more successor ACs.",
+            "oneOf": [
+                {
+                    "type": "string",
+                    "pattern": "^[A-Z]{2,6}(-[A-Z]{2,6})?-\\d+([a-z]\\d*(-\\d+[a-z\\d]*(-[a-z\\d]+)?)?|-\\d+[a-z\\d]*(-[a-z\\d]+)?)?$"
+                },
+                {
+                    "type": "null"
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "minItems": 1
+                }
+            ]
+        },
         "amended_by": {
             "type": "array",
-            "description": "Ticket paths that subsequently amended this criterion.",
+            "description": "Ticket paths, free-form amendment notes, or structured amendment records that subsequently amended this criterion. Items may be plain strings (ticket paths or freeform notes) or objects with a 'reason' key (structured amendment records produced by agent workflows).",
             "items": {
-                "type": "string"
+                "oneOf": [
+                    {
+                        "type": "string"
+                    },
+                    {
+                        "type": "object",
+                        "additionalProperties": true
+                    }
+                ]
             },
-            "uniqueItems": true,
             "default": []
         },
         "covered_by": {
             "type": "array",
-            "description": "Test file paths (optionally with ::test_function) that verify this criterion.",
+            "description": "Test file paths (optionally with ::test_function), child AC IDs, or other references that verify or cover this criterion.",
             "items": {
                 "type": "string"
             },
-            "uniqueItems": true,
+            "uniqueItems": false,
             "default": []
         },
         "implemented_by": {
@@ -86,12 +114,12 @@
             "items": {
                 "type": "string"
             },
-            "uniqueItems": true,
+            "uniqueItems": false,
             "default": []
         },
         "origin_agent": {
             "type": "string",
-            "description": "Identity of the agent or workflow that created this AC file. Enum: business-analyst | debug | human | ticket-wiring. Free-form string to allow future agents.",
+            "description": "Identity of the agent or workflow that created this AC file. Free-form provenance string — any non-empty value is valid. Historical agent names (e.g. business-analyst-v2, business-analyst-v3, create-ticket, refinement from now-deleted or renamed agents) remain valid and are never rewritten.",
             "minLength": 1
         },
         "readiness": {
@@ -136,8 +164,9 @@
             "oneOf": [
                 {
                     "type": "string",
-                    "description": "Implementation lifecycle status for this AC. todo = not yet implemented; in_progress = implementation underway; done = implemented and verified.",
+                    "description": "Implementation lifecycle status for this AC. not_started/todo = not yet implemented; in_progress = implementation underway; done = implemented and verified. 'not_started' is an alternate form of 'todo' used by some older records.",
                     "enum": [
+                        "not_started",
                         "todo",
                         "in_progress",
                         "done"
@@ -164,6 +193,214 @@
                     "type": "null"
                 }
             ]
+        },
+        "depends_on": {
+            "oneOf": [
+                {
+                    "type": "array",
+                    "description": "List of AC IDs that this AC depends on. Used for parent-child hierarchy links (child AC lists its structural parent) and for pattern composition (composite pattern lists its atomic component pattern IDs). Must not form a cycle — the check_ac_circular_deps pre-commit hook enforces a directed-acyclic-graph (DAG) invariant on all depends_on edges.",
+                    "items": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "uniqueItems": true
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "implements_pattern": {
+            "oneOf": [
+                {
+                    "type": "string",
+                    "description": "ID of the reusable behavior pattern this AC inherits from (e.g. 'PTN-001'). When set, the effective behavior is derived from the referenced pattern combined with any pattern_bindings. The criteria field may contain a plain-text placeholder rather than a full Given/When/Then scenario.",
+                    "minLength": 1
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "pattern_bindings": {
+            "oneOf": [
+                {
+                    "type": "object",
+                    "description": "Key-value bindings that instantiate the referenced pattern for this AC. Values may be strings, arrays, or objects. Only meaningful when implements_pattern is set.",
+                    "additionalProperties": true
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "pattern_slots": {
+            "oneOf": [
+                {
+                    "type": "array",
+                    "description": "List of {word} placeholder strings that this pattern AC exposes as bindable slots. Only meaningful on pattern ACs (ACs that other ACs reference via implements_pattern). Each entry is a placeholder in the form '{slot_name}' matching a named placeholder in the criteria field. Consuming ACs must supply a value for every slot via pattern_bindings.",
+                    "items": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "uniqueItems": true
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "assigned_agent": {
+            "description": "Name of the implementation agent (e.g. 'python-coder', 'sql-coder') assigned to implement this AC. Null when unassigned.",
+            "oneOf": [
+                {
+                    "type": "string",
+                    "minLength": 1
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "estimated_complexity": {
+            "description": "T-shirt size complexity estimate for implementing this AC. Set by it-po during technical enrichment. Valid values: XS, S, M, L, XL.",
+            "oneOf": [
+                {
+                    "type": "string",
+                    "enum": ["XS", "S", "M", "L", "XL"]
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "delivers_to": {
+            "description": "Contract describing what this AC's implementation delivers to a downstream agent or consumer. May be null (no downstream contract), a free-form string agent name, a structured object {agent, contract}, or a list of such objects.",
+            "oneOf": [
+                {
+                    "type": "null"
+                },
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                {
+                    "type": "array",
+                    "items": {}
+                }
+            ]
+        },
+        "expects_from": {
+            "description": "Contract describing what this AC expects to receive from an upstream agent or dependency. May be null (no upstream contract), a free-form string AC ID, a structured object {agent, contract}, or a list of such objects.",
+            "oneOf": [
+                {
+                    "type": "null"
+                },
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                {
+                    "type": "array",
+                    "items": {}
+                }
+            ]
+        },
+        "it_requirements": {
+            "description": "Technical requirements for implementing this AC. May be a multi-line string or a list of requirement strings. Set by it-po during technical enrichment.",
+            "oneOf": [
+                {
+                    "type": "string",
+                    "minLength": 1
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "doc_links": {
+            "type": "array",
+            "description": "Documentation links related to this AC. Each item is either a plain file-path string or an object with path, relationship, status, and optional relevance fields.",
+            "items": {
+                "oneOf": [
+                    {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Plain file path reference."
+                    },
+                    {
+                        "type": "object",
+                        "required": ["path"],
+                        "additionalProperties": true,
+                        "properties": {
+                            "path": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "Relative path to the linked document."
+                            },
+                            "relationship": {
+                                "type": "string",
+                                "description": "How this document relates to the AC (e.g. 'describes', 'specifies', 'implements')."
+                            },
+                            "status": {
+                                "type": "string",
+                                "description": "Existence status of the linked document.",
+                                "enum": ["exists", "planned"]
+                            },
+                            "relevance": {
+                                "type": "string",
+                                "description": "Optional free-form note on why this document is relevant."
+                            }
+                        }
+                    }
+                ]
+            },
+            "default": []
+        },
+        "req_status": {
+            "type": "string",
+            "description": "Requirement lifecycle status. Tracks whether the requirement is still active from a product perspective (independent of implementation work_status).",
+            "enum": ["active", "draft", "approved", "superseded"]
+        },
+        "roadmap_phase": {
+            "type": "string",
+            "description": "Roadmap phase this AC belongs to (e.g. 'phase_1'). Matches a phase key in docs/roadmap.json.",
+            "minLength": 1
+        },
+        "notes": {
+            "type": "string",
+            "description": "Free-form contextual notes about this AC — authorship context, post-implementation findings, or rationale that does not belong in criteria.",
+            "minLength": 1
+        },
+        "parent": {
+            "type": "string",
+            "description": "Explicit parent AC ID. Used when the structural parent cannot be mechanically derived from the ID format (e.g. non-standard ID hierarchies). Prefer the id-based derivation algorithm where possible.",
+            "minLength": 1
+        },
+        "components": {
+            "description": "Additional component names this AC spans beyond the primary 'component' field. Rarely used; only when an AC genuinely belongs to multiple components.",
+            "type": "array",
+            "items": {
+                "type": "string",
+                "minLength": 1
+            }
+        },
+        "scope": {
+            "type": "string",
+            "description": "Scope qualifier for this AC (e.g. 'standing' for standing/permanent requirements that persist across sprints).",
+            "minLength": 1
         }
     }
 }

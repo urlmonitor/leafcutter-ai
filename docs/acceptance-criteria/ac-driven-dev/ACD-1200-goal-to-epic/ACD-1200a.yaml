@@ -21,9 +21,14 @@ delivers_to: null
 expects_from: null
 origin_agent: product-owner-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: "split: ACD-1200a -> ACD-1200a + ACD-1200f + ACD-1200g, 2026-06-17 (moved traversal children -1/-9 to ACD-1200f, doc children -4/-5 to ACD-1200g)"
 superseded_by: null
-covered_by: []
+covered_by:
+  - ACD-1200a-2
+  - ACD-1200a-3
+  - ACD-1200a-8
+  - ACD-1200a-9
 implemented_by: []
 documentation_triggers:
   - how-to

@@ -1,0 +1,64 @@
+id: ACS-500f-3
+title: "AC store schema accepts the real hierarchical id format and the pattern_slots field"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the AC store schema is validated against an AC record whose id uses a
+    hierarchical form with a lowercase L1 segment and a numeric leaf suffix
+    (e.g. "ACS-500a-1"),
+  When that record is validated against the schema,
+  Then the record is accepted (the id format does not cause a validation failure).
+
+  Given an AC record whose id uses an L3 extension form (e.g. "ACS-500a-1-i"),
+  When it is validated against the schema,
+  Then the record is accepted.
+
+  Given a pattern AC record that includes a pattern_slots field holding a list
+    of {word} placeholder strings,
+  When it is validated against the schema,
+  Then the record is accepted, and the pattern_slots field does not cause a
+    validation failure.
+
+  Given the set of AC YAML records that already exist in the store under
+    docs/acceptance-criteria/,
+  When every one of those records is validated against the schema,
+  Then no currently-valid stored record is rejected by the schema.
+
+  Given a root-level AC id of the documented base form (e.g. "ACS-100"),
+  When it is validated against the schema,
+  Then it is still accepted (no regression for the base id form).
+depends_on: [ACS-500f]
+doc_links:
+  - path: config/ac_store_schema.json
+    relationship: specifies
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-17
+readiness: approved
+priority: medium
+notes: |
+  ACS-500 post-implementation spot-check, GAP C. config/ac_store_schema.json's id
+  pattern (^[A-Z]{2,6}-[0-9]{3}$) and additionalProperties:false reject the actual
+  store's real id format (e.g. ACS-500a-1 — lowercase L1 segment plus trailing -N)
+  and reject the pattern_slots field entirely (it is not a declared property). Real
+  records pass commit today only because nothing enforces the JSON schema at commit
+  time (see GAP A / ACS-500f-1). The schema is stricter than reality and out of sync.
+  This AC brings the schema into line with the real, valid store contents so the
+  documented schema matches what the store contains and could be enforced without
+  rejecting valid records. The superseded_by id pattern (also ^[A-Z]{2,6}-[0-9]{3}$)
+  may need the same widening if hierarchical ids can appear there.
+amended_by: []
+superseded_by: null
+covered_by: [ACS-500f-3-i]
+implemented_by:
+- tickets/00_inbox/epics/EPIC-Acpatternenforcementismechanically/04_TICKET-20260617-ACS-500f-3.md

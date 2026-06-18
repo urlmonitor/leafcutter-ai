@@ -12,9 +12,8 @@ from __future__ import annotations
 import sys
 import time
 from pathlib import Path
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import patch
 
-import pytest
 import yaml
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -84,7 +83,7 @@ class TestGenerateTicketsForLeaves:
             return str(ticket)
 
         with patch("goal_to_epic._call_generate_ticket_from_ac", side_effect=_mock_generate) as mock_gen:
-            ticket_paths = generate_tickets_for_leaves(leaf_ids, ac_root, tickets_root)
+            generate_tickets_for_leaves(leaf_ids, ac_root, tickets_root)
 
         assert mock_gen.call_count == len(leaf_ids), (
             f"Expected exactly {len(leaf_ids)} calls, got {mock_gen.call_count}"

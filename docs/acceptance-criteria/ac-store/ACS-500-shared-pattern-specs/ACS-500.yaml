@@ -1,0 +1,30 @@
+id: ACS-500
+readiness: approved
+priority: high
+title: "Define a behavior once, reuse the spec everywhere it appears"
+component: ac-store
+level: L0
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Write a behavior pattern once, reference it everywhere — no duplication.
+
+  When a UI or API behavior appears on multiple pages or endpoints, its
+  specification exists in exactly one place. Every page that shares that
+  behavior references the canonical definition instead of restating it with
+  different nouns. Deviations from the pattern are conscious and explicit —
+  captured in separate, page-specific ACs rather than buried as inline
+  overrides. When the shared pattern evolves, every consumer inherits the
+  change automatically. The result is a specification store where common
+  behaviors are defined once, composed freely, and maintained centrally.
+depends_on: [ACS-100]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: [ACS-500a, ACS-500b, ACS-500c, ACS-500d, ACS-500e, ACS-500f]
+implemented_by: []

@@ -1,0 +1,43 @@
+id: ACS-500a-2
+readiness: approved
+priority: high
+title: "Pattern definitions live in the existing component registry hierarchy"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a shared behavior pattern needs to be defined (e.g. "paginated-collection"),
+  When the pattern AC is created,
+  Then it is stored as a standard AC YAML file within
+    docs/acceptance-criteria/<component>/<feature-folder>/,
+  And it uses the same component field as the consuming ACs that reference it,
+  And it appears in the parent AC's covered_by list like any other child,
+  And no separate "pattern catalog" directory or registry file is created.
+depends_on: [ACS-500a]
+doc_links:
+  - path: docs/acceptance-criteria/index.yaml
+    relationship: governs
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Convention only -- implementation is documentation in docs/reference/ac-schema.md. No validation code required beyond ACS-500a-3"
+  - "Must not introduce any new directory structure, catalog files, or registry files for patterns"
+  - "Pattern ACs must conform to the existing AC YAML schema and ID format per ADR-007"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260611-ACS-500a-2.md

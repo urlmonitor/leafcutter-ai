@@ -7,7 +7,7 @@ BUSINESS CONTEXT: The leafcutter package materialises agent/skill
     and build-phase dispatch. Actual phase logic lives in build_phases.py;
     template compilation in template_compiler.py; config I/O in config_loader.py;
     manifest writing and supplementary helpers in build_helpers.py.
-ARCHITECTURE: Three-layer delegation. build.py -> build_phases.py (eight phase
+ARCHITECTURE: Three-layer delegation. build.py -> build_phases.py (nine phase
     functions) -> template_compiler.py (parse, strip, inject, compile). Config
     loading and validation are in config_loader.py. Overwrites existing files by
     default so that template edits always reach the target project; use
@@ -28,6 +28,7 @@ from config_loader import load_config, validate_config, _JSONSCHEMA_AVAILABLE  #
 from build_phases import (
     build_agents,
     build_workflow_scripts,
+    build_ac_store,
     build_skills,
     build_commands,
     build_workflows,
@@ -48,6 +49,9 @@ from build_phases import (
     reset_uptodate_count,
     get_uptodate_count,
     clean_stale_artifacts,
+    build_workflow_tools,
+    build_knowledge_scripts,
+    build_template_standalone_scripts,
 )
 from registry_validator import validate_agent_registry
 from project_context_discovery import (  # noqa: F401 — re-exported for callers
@@ -62,11 +66,19 @@ from build_helpers import (
     write_build_manifest,
 )
 from build_glossary import build_glossary
-from build_propagation_audit import propagation_audit
+from build_propagation_audit import (
+    propagation_audit,
+    build_broken_ref_report,
+    emit_broken_ref_report_jsonl,
+)
 from build_claude_settings import build_claude_settings
 from build_roadmap_phase import build_roadmap
 from build_placeholder_detection import scan_for_placeholders, format_placeholder_report
-from build_referential_integrity import check_referential_integrity, format_integrity_report
+from build_referential_integrity import (
+    check_referential_integrity,
+    format_integrity_report,
+    extract_script_path_refs_with_sources,
+)
 from build_config_scaffolds import build_config_scaffolds
 from build_ac_store_scaffold import build_ac_store_scaffold
 from build_halt_guard import (
@@ -311,6 +323,260 @@ def _validate_all(config: dict, package_root: Path, validate_only: bool, dry_run
     return 0
 
 
+def _manifest_ac_store_scripts(package_root: Path) -> set[str]:
+    """Return ``scripts/ac_store/<name>`` entries for all non-.pyc source files.
+
+    Scans ``package_root/scripts/ac_store/`` and returns one manifest entry per
+    file, matching what ``build_ac_store`` deploys to the target project.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.
+
+    Returns:
+        Set of ``scripts/ac_store/<name>`` strings, or empty set when absent.
+    """
+    result: set[str] = set()
+    src = package_root / "scripts" / "ac_store"
+    if src.is_dir():
+        for f in src.iterdir():
+            if f.is_file() and f.suffix != ".pyc":
+                result.add(f"scripts/ac_store/{f.name}")
+    return result
+
+
+def _manifest_commit_guardian_scripts(package_root: Path) -> set[str]:
+    """Return ``scripts/commit_guardian/<rel>`` entries for all template .py files.
+
+    Scans both ``templates/scripts/commit_guardian/`` (canonical) and
+    ``templates/commit-guardian/`` (legacy) and unions their ``.py`` files.
+    Scanning both paths prevents false positives for scripts that reside only in
+    the legacy location (e.g. ``check_v2_ac_store_alignment.py``).
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.
+
+    Returns:
+        Set of ``scripts/commit_guardian/<rel>`` strings, or empty set when
+        both source directories are absent.
+    """
+    result: set[str] = set()
+    for src in (
+        package_root / "templates" / "scripts" / "commit_guardian",
+        package_root / "templates" / "commit-guardian",
+    ):
+        if src.is_dir():
+            for f in src.rglob("*"):
+                if f.is_file() and f.suffix == ".py":
+                    result.add(f"scripts/commit_guardian/{f.relative_to(src).as_posix()}")
+    return result
+
+
+def _manifest_feedback_scripts(package_root: Path) -> set[str]:
+    """Return ``scripts/feedback/<name>`` entries for all source .py files.
+
+    Scans ``package_root/scripts/feedback/`` dynamically, eliminating the
+    previous hardcoded three-name list that caused Class A false positives for
+    ``aggregate.py`` and ``resolve_feedback.py``.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.
+
+    Returns:
+        Set of ``scripts/feedback/<name>`` strings, or empty set when absent.
+    """
+    result: set[str] = set()
+    src = package_root / "scripts" / "feedback"
+    if src.is_dir():
+        for f in src.iterdir():
+            if f.is_file() and f.suffix == ".py":
+                result.add(f"scripts/feedback/{f.name}")
+    return result
+
+
+def _manifest_workflow_tool_scripts(package_root: Path) -> set[str]:
+    """Return ``scripts/<name>`` entries for workflow-tool scripts deployed by build_workflow_tools.
+
+    Scans the package source for the four workflow-tool scripts and returns
+    manifest entries for those that exist.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.
+
+    Returns:
+        Set of ``scripts/<name>`` strings for deployable workflow-tool scripts.
+    """
+    result: set[str] = set()
+    scripts_src = package_root / "scripts"
+    for fname in (
+        "add_component.py",
+        "knowledge_query.py",
+        "set_ticket_status.py",
+        "ticket_prioritizer.py",
+    ):
+        if (scripts_src / fname).is_file():
+            result.add(f"scripts/{fname}")
+    return result
+
+
+def _manifest_knowledge_scripts(package_root: Path) -> set[str]:
+    """Return ``scripts/knowledge/<name>`` entries for knowledge scripts deployed by build_knowledge_scripts.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.
+
+    Returns:
+        Set of ``scripts/knowledge/<name>`` strings for deployable knowledge scripts.
+    """
+    result: set[str] = set()
+    knowledge_src = package_root / "scripts" / "knowledge"
+    for fname in ("harvest_learnings.py",):
+        if (knowledge_src / fname).is_file():
+            result.add(f"scripts/knowledge/{fname}")
+    return result
+
+
+def _manifest_template_standalone_scripts(package_root: Path) -> set[str]:
+    """Return ``scripts/<name>`` entries for standalone scripts from ``templates/scripts/``.
+
+    Scans the top-level ``templates/scripts/`` directory (non-recursive) for
+    ``.py`` files and returns manifest entries.  These are deployed by
+    ``build_template_standalone_scripts``.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.
+
+    Returns:
+        Set of ``scripts/<name>`` strings for deployable template-standalone scripts.
+    """
+    result: set[str] = set()
+    templates_scripts = package_root / "templates" / "scripts"
+    if templates_scripts.is_dir():
+        for f in templates_scripts.glob("*.py"):
+            if f.is_file():
+                result.add(f"scripts/{f.name}")
+    return result
+
+
+def _get_source_deployable_scripts(package_root: Path) -> set[str]:
+    """Compute the set of script paths that build.py will deploy from package source.
+
+    Delegates to per-phase helper functions and unions their results.  Seven
+    deployment locations are covered:
+
+    * ``scripts/ac_store/`` — from ``_manifest_ac_store_scripts``.
+    * ``scripts/commit_guardian/`` — from ``_manifest_commit_guardian_scripts``.
+    * ``scripts/feedback/`` — from ``_manifest_feedback_scripts``.
+    * ``scripts/<name>`` — workflow-tool scripts from ``_manifest_workflow_tool_scripts``.
+    * ``scripts/knowledge/`` — knowledge scripts from ``_manifest_knowledge_scripts``.
+    * ``scripts/<name>`` — standalone Python files from ``templates/scripts/``
+      (includes ``setup_ticket_worktree.py``).
+    * ``scripts/<name>`` — two named AC-pipeline scripts from ``templates/scripts/``.
+
+    This function is intentionally source-only and never reads the target
+    project directory: it is used as a preflight guard BEFORE any output is
+    written, so the result reflects what *will* be deployed rather than what
+    *has* been deployed.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.
+
+    Returns:
+        Set of ``scripts/<path>`` strings (forward-slash separated) for all
+        scripts that will be deployed to the target project on the next build
+        run.  Returns an empty set when all source directories are absent.
+    """
+    manifest = (
+        _manifest_ac_store_scripts(package_root)
+        | _manifest_commit_guardian_scripts(package_root)
+        | _manifest_feedback_scripts(package_root)
+        | _manifest_workflow_tool_scripts(package_root)
+        | _manifest_knowledge_scripts(package_root)
+        | _manifest_template_standalone_scripts(package_root)
+    )
+
+    # Standalone scripts (build_standalone_scripts) — two named scripts only
+    # NOTE: goal_to_epic.py and build_ac_mode_detection.py may also appear in
+    # _manifest_template_standalone_scripts if they exist under templates/scripts/,
+    # so this check is a belt-and-suspenders guard for backward compatibility.
+    templates_scripts = package_root / "templates" / "scripts"
+    for fname in ("goal_to_epic.py", "build_ac_mode_detection.py"):
+        if (templates_scripts / fname).is_file():
+            manifest.add(f"scripts/{fname}")
+
+    return manifest
+
+
+def _check_script_reference_guard(package_root: Path) -> int:
+    """Preflight guard: exit non-zero when broken script references are detected.
+
+    Scans all source agent and skill templates for script path references
+    (patterns: ``python3 scripts/<path>``, ``python scripts/<path>``,
+    ``sys.path.insert(<N>, 'scripts/<path>')`` and the double-quoted variant).
+    Cross-checks the extracted references against the set of scripts that this
+    build run will deploy, using the external-dependency allowlist from
+    ``build_propagation_audit.EXTERNAL_DEPENDENCY_ALLOWLIST``.
+
+    When broken references are found, the error report is emitted to stderr as
+    JSONL (one JSON object per line) with keys ``"missing_path"``,
+    ``"referencing_template"``, and ``"suggested_action"`` (AC BP-900c-2).
+    No error output is written to stdout so that piped build output is not
+    polluted.
+
+    This guard runs BEFORE ``_run_phases()`` writes any output to the target
+    project directory, so no partial deployment is written when broken
+    references exist.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root. Used to
+            locate ``templates/agents/``, ``templates/skills/``, and the
+            source script directories.
+
+    Returns:
+        0 if all script references are resolved (build may continue).
+        1 if one or more broken references are found (build must abort).
+    """
+    templates_dir = package_root / "templates"
+
+    # Extract script references with source-template provenance for JSONL reporting.
+    refs_to_sources = extract_script_path_refs_with_sources(templates_dir)
+
+    if not refs_to_sources:
+        return 0
+
+    deployable = _get_source_deployable_scripts(package_root)
+    entries = build_broken_ref_report(refs_to_sources, deployable)
+
+    if not entries:
+        return 0
+
+    # Emit structured JSONL to stderr (AC BP-900c-2): all error output on stderr,
+    # nothing on stdout, so piped build output is never polluted.
+    emit_broken_ref_report_jsonl(entries)
+    return 1
+
+
+def _read_package_version(package_root: Path) -> str:
+    """Read the package version from config/version.json.
+
+    Returns the ``version`` string from ``config/version.json`` relative to
+    *package_root*.  Falls back to ``"unknown"`` when the file is absent or
+    malformed so the build never hard-fails on a missing version marker.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.  The file
+            ``config/version.json`` must live directly under this directory.
+
+    Returns:
+        Version string (e.g. ``"2.0.0"``), or ``"unknown"`` on any read error.
+    """
+    version_path = package_root / "config" / "version.json"
+    try:
+        with version_path.open(encoding="utf-8") as fh:
+            data = json.load(fh)
+        return str(data["version"])
+    except (OSError, json.JSONDecodeError, KeyError, TypeError):
+        return "unknown"
+
 
 def _compute_version_str(package_root: Path) -> str:
     """Derive the next SemVer version by scanning changelog entries.
@@ -414,6 +680,7 @@ def _run_phases(
     artifact_phases: list[tuple[str, Any]] = [
         ("Agents", build_agents),
         ("Workflow scripts", build_workflow_scripts),
+        ("AC store scripts", build_ac_store),
         ("Skills", build_skills),
         ("Commands", build_commands),
         ("Claude settings", build_claude_settings),
@@ -432,6 +699,9 @@ def _run_phases(
         ("Propagation audit", propagation_audit),
         ("Doc compliance", build_doc_compliance),
         ("Sync platforms", build_sync_platforms),
+        ("Workflow tools", build_workflow_tools),
+        ("Knowledge scripts", build_knowledge_scripts),
+        ("Template standalone scripts", build_template_standalone_scripts),
     ]
 
     # Phases that write user-curated scaffolds at target_root (write-if-absent)
@@ -698,7 +968,7 @@ def _run_migration_report(target_root: Path, output_root: Path) -> int:
         kind = "directory" if full.is_dir() else "file"
         print(f"  STALE: {p} ({kind})")
 
-    print(f"\nTo remove stale files, run:")
+    print("\nTo remove stale files, run:")
     for p in stale:
         full = target_root / p
         if full.is_dir():
@@ -792,6 +1062,14 @@ def main(argv: list[str] | None = None) -> int:
     if _validate_all(config, package_root, args.validate_only, args.dry_run):
         return 1
 
+    # Script reference guard: exit non-zero and halt before writing any output
+    # when templates reference scripts that will not be deployed (BP-900b-3).
+    # Skip under --validate-only since the guard is a deployment preflight, not
+    # a config correctness check.
+    if not args.validate_only:
+        if _check_script_reference_guard(package_root):
+            return 1
+
     if args.validate_only:
         _success("Config validation complete (no files written).")
         return 0
@@ -800,6 +1078,11 @@ def main(argv: list[str] | None = None) -> int:
     # Skipped under --validate-only (exits above); respected under --dry-run
     # (prints the version but does not write the VERSION file).
     computed_version = _compute_version_str(package_root)
+
+    # Read the declared package version from config/version.json (ACD-1100e-2).
+    # This is the stable marketing version (e.g. "2.0.0") that consumers see;
+    # computed_version is the granular SemVer derived from changelog entries.
+    package_version = _read_package_version(package_root)
 
     if args.migrate:
         output_root_name = config.get("output_root", ".leafcutter")
@@ -900,6 +1183,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Up-to-date: {uptodate} files (unchanged)")
 
     print(f"Build version: {GREEN}{computed_version}{RESET}")
+    print(f"Package version: {GREEN}{package_version}{RESET}")
 
     # Write the VERSION file to target_root so downstream tooling can read the
     # computed version without re-running compute_next_version.py.
@@ -907,8 +1191,13 @@ def main(argv: list[str] | None = None) -> int:
     if not args.dry_run:
         version_file = target_root / "VERSION"
         version_file.write_text(computed_version + "\n", encoding="utf-8")
+        # Write LEAFCUTTER_VERSION file so deployed consumers can determine the
+        # package version without reading the source package directly (ACD-1100e-2).
+        lv_file = target_root / "LEAFCUTTER_VERSION"
+        lv_file.write_text(package_version + "\n", encoding="utf-8")
     else:
         _dry_run_msg(f"would write {target_root / 'VERSION'}")
+        _dry_run_msg(f"would write {target_root / 'LEAFCUTTER_VERSION'}")
 
     print()
     _heading("Build manifest")
@@ -1092,4 +1381,34 @@ if __name__ == "__main__":
 #   first, then .claude/.gemini/.cursor/.github/.cline). Skips silently when
 #   file is absent or frontend-design was not listed. Idempotent.
 #   (#EPIC-Oneagenthandlesboththelookandthecodefor/17)
+# - 2026-06-17 [python-coder/EPIC-BuildGuardFalsePositive/03]: Class B resolution.
+#   Extended _get_source_deployable_scripts() with four new per-phase manifest helpers:
+#   _manifest_workflow_tool_scripts (add_component, knowledge_query, set_ticket_status,
+#   ticket_prioritizer), _manifest_knowledge_scripts (harvest_learnings),
+#   _manifest_template_standalone_scripts (setup_ticket_worktree + others from
+#   templates/scripts/*.py). Imported and wired three new phases into internal_phases
+#   in _run_phases(): build_workflow_tools, build_knowledge_scripts,
+#   build_template_standalone_scripts. These close the Class B deploy gaps so the
+#   script reference guard passes after all legitimate scripts are deployed.
+#   (#EPIC-BuildGuardFalsePositive/03)
+# - 2026-06-17 [python-coder/EPIC-BuildGuardFalsePositive/02]: Added
+#   _get_source_deployable_scripts() and _check_script_reference_guard() preflight
+#   functions. The manifest function now scans commit_guardian and feedback source
+#   directories dynamically — eliminating the hardcoded name lists that caused 10
+#   Class A false positives (8 commit_guardian + 2 feedback). The guard emits
+#   broken-ref JSONL to stderr and exits 1 before _run_phases() writes any output.
+#   Added extract_script_path_refs_with_sources import from build_referential_integrity
+#   and build_broken_ref_report/emit_broken_ref_report_jsonl from build_propagation_audit.
+#   (#EPIC-BuildGuardFalsePositive/02)
+# - 2026-06-17 [python-coder/EPIC-AcPipelineDeployGaps/03]: Imported
+#   build_ac_store from build_phases and added ("AC store scripts",
+#   build_ac_store) entry to artifact_phases after ("Workflow scripts",
+#   build_workflow_scripts). Closes the portable-skill/missing-script gap
+#   for ac-scanner and build-ac per ADR-013. (#EPIC-AcPipelineDeployGaps/03)
+# - 2026-06-10 [python-coder/EPIC-AcPipelineConsolidation/12]: Added
+#   _read_package_version() to read config/version.json. Called in main() after
+#   _compute_version_str(). Prints "Package version: X.Y.Z" in build summary.
+#   Writes LEAFCUTTER_VERSION file to target_root so deployed consumers can
+#   determine the package version without reading the source package directly.
+#   Fallback: "unknown" on any read error. (#EPIC-AcPipelineConsolidation/12)
 # ====================================================================

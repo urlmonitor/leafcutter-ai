@@ -1,0 +1,12 @@
+id: ACD-1402
+status: active
+component: ac-driven-dev
+title: "Command-map diagram references /plan-feature not /create-ac"
+criteria: |
+  Given the C1 command-map diagram (docs/architecture/diagrams/c1-001-command-map.md)
+  documents all user-facing slash commands,
+  When a reader consults the diagram,
+  Then every reference to the AC authoring command uses "/plan-feature"
+  And the string "/create-ac" does not appear as a current command name
+  And the bug symptom "diagram shows removed /create-ac command" must not occur
+notes: "Authored by /quick-fix. Root cause: diagram was not updated when the create-ac skill/command was renamed to plan-feature."

@@ -4,7 +4,7 @@ description: "Field-by-field reference for AC YAML files, the hierarchical ID fo
 type: reference
 status: active
 created: 2026-06-04
-last_updated: 2026-06-08
+last_updated: 2026-06-18
 components:
   - build_pipeline
 related_docs:
@@ -31,14 +31,38 @@ Each AC file is a single YAML document with the following fields.
 | `id` | string | **yes** | Stable AC identifier. Format: `PREFIX-NNN` (see ID Format below). Never changes after creation. |
 | `title` | string | **yes** | One-line human-readable description of the criterion. |
 | `component` | string | **yes** | Component name matching an `id` key in `docs/acceptance-criteria/index.yaml`. |
-| `status` | enum | **yes** | Lifecycle state: `active`, `deprecated`, or `superseded_by`. |
-| `created_by` | string | **yes** | Path to the ticket (relative to repo root) that first introduced this criterion. |
+| `status` | enum | **yes** | Lifecycle state: `active`, `deprecated`, `superseded_by`, or `superseded`. (`superseded_by` is canonical; `superseded` is accepted for older records.) |
 | `criteria` | string | **yes** | Multi-line Gherkin scenario body (`Given`/`When`/`Then`/`And`). |
-| `superseded_by` | string or null | no | AC ID of the replacement criterion. Must be set when `status` is `superseded_by`; null otherwise. |
-| `amended_by` | list of strings | no | Ticket paths that subsequently amended this criterion. Default: `[]`. |
-| `covered_by` | list of strings | no | Test file paths (optionally with `::test_function`) that verify this criterion. Default: `[]`. |
+| `created` | date or string | no | Date this AC was created (`YYYY-MM-DD`). Most records use this field (92 %). YAML bare dates are parsed as native date objects; both forms are accepted. |
+| `created_by` | string | no | Path to the ticket that introduced this criterion. Used by some older authoring flows (14 % of records). Newer records use `created` + `created_by_ticket` instead. |
+| `created_by_ticket` | string or null | no | Path to the ticket that introduced this criterion. Used by newer authoring flows (10 % of records) alongside `created`. |
+| `superseded_by` | string, list of strings, or null | no | AC ID of the replacement criterion. Null when not superseded. A list form (`[ID-1, ID-2]`) is accepted when an AC is split into multiple successors. Must be set when `status` is `superseded_by`; null otherwise. |
+| `amended_by` | list | no | Amendment history. Items may be plain strings (ticket paths or free-form notes) or objects with a `reason` key (structured records produced by agent workflows). Default: `[]`. |
+| `covered_by` | list of strings | no | Test file paths (optionally with `::test_function`) or child AC IDs that verify or cover this criterion. Default: `[]`. |
 | `implemented_by` | list of strings | no | Source file paths (optionally with `#anchor`) that implement this criterion. Default: `[]`. |
-| `origin_agent` | string | no | Identity of the agent or workflow that created this AC file. Common values: `business-analyst`, `debug`, `human`, `ticket-wiring`. |
+| `depends_on` | list of strings or null | no | List of AC IDs that this AC depends on. Used for two purposes: (1) parent-child hierarchy links — a child AC lists its structural parent ID so the hierarchy is navigable from the child direction; (2) pattern composition — a composite pattern AC lists the atomic pattern AC IDs it wires together. **Must not form a cycle.** The `check_ac_circular_deps` pre-commit hook enforces a directed-acyclic-graph (DAG) invariant on all `depends_on` edges and blocks commits that would introduce a cycle. Default: `[]`. |
+| `origin_agent` | string | no | Identity of the agent or workflow that created this AC file. Free-form provenance string — any non-empty value is valid. The field is **not** validated against the current agent registry. Historical agent names (including names of deleted, renamed, or decomissioned agents) remain valid and are never rewritten during schema upgrades. Example values: `business-analyst` (canonical name, also used historically as v1 and promoted from v3), `business-analyst-v2` (deleted agent), `business-analyst-v3` (legacy v3 name, now renamed to `business-analyst`), `create-ticket` (deleted agent), `refinement` (deleted agent), `BrainCandy` (human author), `ticket-wiring` (workflow). |
+| `readiness` | enum or null | no | Lifecycle readiness state: `draft`, `reviewed`, or `approved`. Present on ~69 % of records. |
+| `priority` | enum or null | no | Implementation priority: `critical`, `high`, `medium`, or `low`. Present on ~69 % of records. |
+| `level` | enum or null | no | Hierarchy level: `L0` (portfolio), `L1` (feature), `L2` (story/task), `L3` (sub-task). |
+| `work_status` | enum or null | no | Implementation lifecycle: `not_started` / `todo` (aliases), `in_progress`, `done`. |
+| `req_status` | enum | no | Requirement lifecycle status from a product perspective: `active`, `draft`, `approved`, or `superseded`. Independent of `work_status`. |
+| `assigned_agent` | string or null | no | Implementation agent assigned to this AC (e.g. `python-coder`). Set by it-po during technical enrichment. |
+| `estimated_complexity` | enum or null | no | T-shirt size estimate: `XS`, `S`, `M`, `L`, or `XL`. Set by it-po. |
+| `delivers_to` | null, string, object, or list | no | Downstream contract: what this AC's implementation delivers. May be null, a free-form agent name string, a structured `{agent, contract}` object, or a list of such objects. |
+| `expects_from` | null, string, object, or list | no | Upstream contract: what this AC expects to receive. Same type space as `delivers_to`. |
+| `it_requirements` | string, list of strings, or null | no | Technical requirements for implementation. May be a multi-line string or a list of requirement strings. Set by it-po. |
+| `doc_links` | list | no | Documentation links. Items are either plain path strings or objects with `path`, `relationship`, `status` (`exists`/`planned`), and optional `relevance` fields. Default: `[]`. |
+| `roadmap_phase` | string | no | Roadmap phase this AC belongs to (e.g. `phase_1`). Matches a phase key in `docs/roadmap.json`. |
+| `notes` | string | no | Free-form contextual notes — authorship context, post-implementation findings, or rationale that does not belong in `criteria`. |
+| `parent` | string | no | Explicit parent AC ID. Used when the structural parent cannot be mechanically derived from the ID format. Prefer the id-based derivation algorithm where possible. |
+| `components` | list of strings | no | Additional component names this AC spans beyond the primary `component` field. Rarely used. |
+| `scope` | string | no | Scope qualifier (e.g. `standing` for standing/permanent requirements that persist across sprints). |
+| `implements_pattern` | string or null | no | ID of the reusable behavior pattern this AC inherits from (e.g. `PTN-001`). When set, the effective behavior is derived from the referenced pattern combined with any `pattern_bindings`. The `criteria` field may contain a plain-text placeholder rather than a full `Given`/`When`/`Then` scenario. |
+| `pattern_bindings` | object or null | no | Key-value bindings that instantiate the referenced pattern for this AC. Values may be strings, arrays, or objects. Only meaningful when `implements_pattern` is set. Example: `{entity_type: "users", columns: ["name", "email"]}`. |
+| `pattern_slots` | list of strings or null | no | List of `{word}` placeholder strings that this pattern AC exposes as bindable slots. Only meaningful on pattern ACs — ACs that other ACs reference via `implements_pattern`. Each entry is a placeholder matching a named placeholder in the `criteria` field (e.g. `"{columns}"`, `"{default_sort}"`). Consuming ACs must supply a value for every slot via `pattern_bindings`. The `check_ac_schema.py` hook derives required slots from this list (falling back to scanning `criteria` for `{word}` placeholders when `pattern_slots` is absent). |
+| `documentation_triggers` | list of enums or null | no | Documentation types required for this feature. Valid on L1 ACs only. Values: `how-to`, `sequence-diagram`, `state-diagram`, `component-diagram`, `reference-doc`. Empty array = no docs needed (provide `documentation_rationale`). |
+| `documentation_rationale` | string or null | no | Explains why no documentation is needed when `documentation_triggers` is empty on an L1 AC. |
 
 ### Full example
 
@@ -47,7 +71,7 @@ id: FIN-001
 title: "Merge main before running tests"
 component: finalize
 status: active
-created_by: "tickets/00_inbox/epics/EPIC-FinalizeFeatureHardening/01_merge_main.md"
+created: 2026-06-04
 criteria: |
   Given a worktree branched from an older commit of main
   When the finalize-feature workflow begins
@@ -61,25 +85,98 @@ amended_by: []
 origin_agent: business-analyst
 ```
 
+### Pattern AC example (with pattern_slots)
+
+A pattern AC declares the slots that consuming ACs must bind. The `pattern_slots`
+field lists each `{word}` placeholder from the `criteria` field explicitly.
+
+```yaml
+id: ACS-500a-1
+title: "A pattern AC defines shared behavior with parameterized slots"
+component: ac-store
+level: L2
+status: active
+created_by: "tickets/00_inbox/epics/EPIC-PatternReuse/01_define_pattern.md"
+criteria: |
+  Given an AC YAML file with level: L2,
+  When its criteria describes behavior with named slots
+    (e.g. "sortable table with columns {columns}, sorted by {default_sort}"),
+  Then that AC is the single authoritative definition of the shared behavior.
+pattern_slots:
+  - "{columns}"
+  - "{default_sort}"
+readiness: approved
+priority: high
+origin_agent: BrainCandy
+```
+
+### Pattern-inherited AC example (empty criteria)
+
+When an AC inherits all of its behavior from a reusable pattern, the `criteria`
+field may contain a plain-text placeholder instead of a full `Given`/`When`/`Then`
+scenario. The schema validator accepts this form when `implements_pattern` is set.
+
+```yaml
+id: PAGE-005
+title: "Users list page — standard CRUD table (PTN-001)"
+component: users-ui
+status: active
+created_by: "tickets/00_inbox/epics/EPIC-UsersUI/03_users_list.md"
+criteria: "No page-specific behavior — all behavior inherited from pattern."
+implements_pattern: "PTN-001"
+pattern_bindings:
+  entity_type: "users"
+  columns:
+    - "name"
+    - "email"
+readiness: draft
+priority: medium
+origin_agent: business-analyst
+```
+
+**Key points:**
+- `criteria` must still be a non-empty string (the schema requires `minLength: 1`).
+- A plain-text placeholder like `"No page-specific behavior — all behavior inherited from pattern."` satisfies this requirement.
+- The effective behavior is entirely derived from the pattern referenced in `implements_pattern`, instantiated with the `pattern_bindings` values.
+- The schema validator does **not** enforce `Given`/`When`/`Then` format — any non-empty string is valid.
+
 ---
 
 ## ID Format and Assignment
 
-AC IDs follow the pattern `PREFIX-NNN`:
+AC IDs follow the pattern `PREFIX-NNN`, where `NNN` may be followed by
+optional hierarchical suffix segments. Compound prefixes (two uppercase
+groups joined by a hyphen, e.g. `KM-DBF`) are also accepted.
 
 | Part | Rules |
 |---|---|
-| `PREFIX` | 2–6 uppercase ASCII letters. Derived from the component's `prefix` field in `docs/acceptance-criteria/index.yaml`. |
+| `PREFIX` | 2–6 uppercase ASCII letters. Derived from the component's `prefix` field in `docs/acceptance-criteria/index.yaml`. May itself contain a hyphen-separated uppercase sub-group for compound namespaces (e.g. `KM-DBF`, `KM-KQS`). |
 | `-` | Literal hyphen separator. |
-| `NNN` | Three-digit zero-padded sequential integer. The first AC in a namespace is `001`; each subsequent AC increments by one. |
+| `NNN` | One or more digits (historically three zero-padded digits, e.g. `001`; the schema accepts any positive integer). |
+| Hierarchical suffix | Optional. See the Hierarchical AC IDs table below. |
 
-**Examples:** `FIN-001`, `AUTH-007`, `BP-042`.
+**Examples:** `FIN-001`, `AUTH-007`, `BP-042`, `ACS-100`, `KM-DBF-001`.
 
 **Assignment:** IDs are assigned at creation time and never reused. If an
 AC is deprecated, its ID remains reserved so that historical references
 (e.g. in commit messages or tickets) remain resolvable.
 
-**Root-level regex:** `^[A-Z]{2,6}-[0-9]{3}$`
+**Full ID regex:** `^[A-Z]{2,6}(-[A-Z]{2,6})?-\d+([a-z]\d*(-\d+[a-z\d]*(-[a-z\d]+)?)?|-\d+[a-z\d]*(-[a-z\d]+)?)?$`
+
+This single regex covers all supported forms:
+
+| Form | Example | Matches |
+|---|---|---|
+| Root / base | `ACS-100`, `FIN-001` | `PREFIX-\d+` |
+| Compound-prefix root | `KM-DBF-001` | `PREFIX-SUB-\d+` |
+| L1 alpha | `ACS-100a`, `ACS-200d` | `PREFIX-\d+[a-z]` |
+| L1 alpha with digit suffix | `BP-800a2` | `PREFIX-\d+[a-z]\d+` |
+| L2 alpha-first | `ACS-500a-1` | `PREFIX-\d+[a-z]-\d+` |
+| L2 numeric-only (no alpha L1) | `BO-510-1`, `BO-610-3` | `PREFIX-\d+-\d+` |
+| L2 with trailing alpha | `ACS-300g-4a`, `PER-100d-2a` | `PREFIX-\d+[a-z]-\d+[a-z]` |
+| L3 alpha extension (alpha-first) | `ACS-500a-1-i`, `ACS-1100b-3-i` | `PREFIX-\d+[a-z]-\d+-[a-z]+` |
+| L3 alpha extension (numeric-only) | `BO-510-3-i`, `BO-610-4-i` | `PREFIX-\d+-\d+-[a-z]+` |
+| L3 numeric extension | `BO-300a-2-1`, `BP-900a-1-1` | `PREFIX-\d+[a-z]-\d+-\d+` |
 
 ### Hierarchical AC IDs and Parent Derivation
 
@@ -116,19 +213,118 @@ re-implementing this logic inline.
 active ──── deprecated
   │
   └──────── superseded_by ──── (points to new active AC)
+  │
+  └──────── superseded ──────── (alternate form; equivalent to superseded_by)
 ```
 
 | Status | Meaning | Effect on hooks |
 |---|---|---|
 | `active` | Criterion is currently enforced. | `check_ac_coverage.py` requires at least one `covered_by` entry. |
 | `deprecated` | Criterion is retired; retained for audit. | `check_ac_coverage.py` skips this AC. `check_test_ac_tags.py` emits a warning if any test still tags this AC. |
-| `superseded_by` | Criterion was replaced by another AC. `superseded_by` field identifies the replacement. | Same as `deprecated` — excluded from active enforcement. |
+| `superseded_by` | Criterion was replaced by another AC. `superseded_by` field identifies the replacement. Canonical form for new records. | Same as `deprecated` — excluded from active enforcement. |
+| `superseded` | Alternate form of `superseded_by` accepted by the schema for older records. Functionally equivalent. | Same as `deprecated` — excluded from active enforcement. |
 
 **Transition rules:**
 
 - `active` → `deprecated`: set `status: deprecated`. No other changes required.
-- `active` → `superseded_by`: set `status: superseded_by` and `superseded_by: <new-ID>`.
+- `active` → `superseded_by`: set `status: superseded_by` and `superseded_by: <new-ID>` (canonical) or `superseded_by: [ID-1, ID-2]` when split into multiple successors.
 - `deprecated` or `superseded_by` → re-activation is not supported. Create a new AC instead.
+
+---
+
+## Composition Depth and the Behavior Stack (ACS-500e-2)
+
+When an AC references a composite pattern, the **full behavior stack** for
+that AC spans multiple layers. Each layer is a distinct AC file with its own
+`id` and `criteria`. The layering is expressible using only the standard
+`depends_on` and `implements_pattern` fields — no additional hierarchy
+mechanism is required.
+
+### Layer ordering (highest to lowest precedence)
+
+| Layer | Source field | AC role | Description |
+|---|---|---|---|
+| 1. Page-specific | (the AC itself) | page / consumer AC | Criteria unique to this page or component. Overrides or supplements inherited behavior. |
+| 2. Composite wiring | `implements_pattern` | composite pattern AC | Wiring behavior that connects multiple atomic patterns (e.g. "filter changes reset pagination"). Defined once; reused by every consumer. |
+| 3. Atomic behaviors | composite's `depends_on` | atomic pattern ACs | Isolated, single-concern behaviors (e.g. column sorting, filter bar, pagination). Each atomic AC is an independent reusable unit. |
+
+### Traversal algorithm
+
+A reader can resolve the full behavior stack for any page AC by following two
+standard fields:
+
+1. **Read the page AC.** Its own `criteria` field provides the page-specific layer.
+2. **Follow `implements_pattern`.** If set, load the referenced composite pattern
+   AC. Its `criteria` field provides the composite wiring layer.
+3. **Follow the composite's `depends_on`.** For each listed AC id, load that AC.
+   Each provides an atomic behavior layer, in `depends_on` declaration order.
+
+```
+page AC
+  └─ implements_pattern ──→ composite pattern AC (PTN-020)
+                               └─ depends_on ──→ atomic AC (PTN-010)
+                               └─ depends_on ──→ atomic AC (PTN-011)
+                               └─ depends_on ──→ atomic AC (PTN-012)
+```
+
+The function `resolve_behavior_stack(ac_id, id_index)` in
+`scripts/ac_store/scan_ac_store.py` implements this algorithm and returns
+the stack as an ordered list of `BehaviorLayer` dicts.
+
+### Example: CRUD list page
+
+Given the following ACs:
+
+```yaml
+# Page AC (consumer)
+id: PAGE-001
+implements_pattern: PTN-020
+criteria: "No page-specific wiring — all behavior inherited from PTN-020."
+
+# Composite pattern AC
+id: PTN-020
+depends_on: [PTN-010, PTN-011, PTN-012]
+criteria: |
+  Given a page implements sort, filter, and pagination,
+  When the user changes a filter, Then pagination resets to page 1 ...
+
+# Atomic pattern ACs
+id: PTN-010
+criteria: |
+  Given a page contains a sortable table ...
+id: PTN-011
+criteria: |
+  Given a page contains a filter bar ...
+id: PTN-012
+criteria: |
+  Given a page displays a paginated collection ...
+```
+
+`resolve_behavior_stack("PAGE-001", id_index)` returns:
+
+```python
+[
+  {"layer": "page",      "ac_id": "PAGE-001", "source": "self", ...},
+  {"layer": "composite", "ac_id": "PTN-020",  "source": "implements_pattern", ...},
+  {"layer": "atomic",    "ac_id": "PTN-010",  "source": "depends_on", ...},
+  {"layer": "atomic",    "ac_id": "PTN-011",  "source": "depends_on", ...},
+  {"layer": "atomic",    "ac_id": "PTN-012",  "source": "depends_on", ...},
+]
+```
+
+### Design invariants
+
+- **Atomic patterns are independent.** Atomic pattern ACs have no `depends_on`
+  links to each other — they define isolated behaviors.
+- **The composite owns the wiring.** The composite pattern AC's `criteria`
+  describes ONLY inter-pattern coordination (e.g. "filter changes reset
+  pagination"), not the atomic behaviors that PTN-010, PTN-011, and PTN-012
+  already define.
+- **`depends_on` on pattern ACs is declarative.** It documents composition
+  intent. No runtime resolution is required; a validator may warn when a
+  `depends_on` target is absent but MUST NOT block commits for missing patterns.
+- **No additional field is needed.** The full behavior stack is resolvable
+  through `implements_pattern` and `depends_on` alone.
 
 ---
 
@@ -138,18 +334,79 @@ Three hooks are installed by `build.py` to enforce the AC store at commit time.
 
 ### `check_ac_schema.py` (blocking)
 
-Validates every YAML file under `docs/acceptance-criteria/` against
-`config/ac_store_schema.json` (JSON Schema draft-07).
+Validates every staged YAML file under `docs/acceptance-criteria/` against
+`config/ac_store_schema.json` (JSON Schema draft-07). Runs two phases:
+Phase 1 (schema + cross-file checks) and Phase 2 (field-preservation).
 
 | Attribute | Value |
 |---|---|
-| Exit code | `1` on schema violation; `0` when all files pass. |
+| Hook ID | `check-ac-schema` |
+| Exit code | `1` on any violation; `0` when all files pass. |
 | Mode | Always blocking (`error` mode). |
-| Invocation | `python check_ac_schema.py [file ...]` |
+| Invocation | `python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_ac_schema.py` |
+| Scoped to | `docs/acceptance-criteria/` staged files |
+| Registered in | `commit_guardian.json` → `hooks_manifest.hooks` |
 
-Validates: required fields present, `status` is one of the allowed enum
+#### Phase 1 — Schema and cross-file checks
+
+Validates required fields present, `status` is one of the allowed enum
 values, `id` matches the `PREFIX-NNN` regex, `superseded_by` is non-null
 only when `status == superseded_by`.
+
+Additionally performs three cross-file checks against the full AC store index:
+
+**Pattern bindings completeness (ACS-500f-1):**
+When a staged AC has `implements_pattern` set, the hook loads the referenced
+pattern AC and derives its required slots from `pattern_slots` (or by scanning
+for `{slot_name}` placeholders in `criteria`). Every slot must appear as a key
+in the consuming AC's `pattern_bindings`. If any slot is missing the commit is
+blocked with an error that names the missing key and the pattern AC id:
+
+```
+<file>: pattern_bindings missing required key '<slot>' for pattern <pattern-id>
+```
+
+**Deprecated pattern reference (ACS-500a-3-ii):**
+When `implements_pattern` references a pattern AC whose `status` is
+`deprecated`, the commit is blocked with:
+
+```
+<file>: implements_pattern references deprecated pattern <id>;
+        use its successor (see <id> superseded_by field) or remove the reference
+```
+
+**Duplicate criteria detection (ACS-500c-3):**
+When a standalone AC (no `implements_pattern`) has `criteria` text
+structurally equivalent to a live pattern AC (same Gherkin steps with
+concrete values in place of `{slot}` placeholders), the commit is blocked:
+
+```
+<file>: criteria is a likely duplicate of pattern <id>;
+        use implements_pattern: <id> with pattern_bindings instead
+```
+
+#### Phase 2 — implements_pattern field-preservation (ACS-500f-1)
+
+For each staged *modified* AC YAML file (diff-filter M — files that already
+existed in HEAD), the hook loads both the HEAD version (via `git show HEAD:`)
+and the staged (disk) version. If `implements_pattern` was present and
+non-empty in HEAD but is absent or empty in the staged version, the commit is
+blocked:
+
+```
+<file>: implements_pattern was dropped — this field must not be removed
+        from an AC that previously declared it (was: '<old-value>')
+```
+
+**Rationale:** Silently removing `implements_pattern` while leaving the AC
+otherwise in place breaks the pattern-reuse contract without triggering
+`check_ac_pattern_refs.py` (which only fires on referenced-but-nonexistent
+patterns). The field-preservation check catches this category of unintentional
+or unauthorized removal at commit time.
+
+**Fail-open behaviour:** Any unexpected exception (I/O error, git subprocess
+failure, parse error) causes the hook to exit `0` with a warning on stderr
+so a script error never hard-blocks an unrelated commit.
 
 ### `check_test_ac_tags.py` (configurable)
 
@@ -184,14 +441,44 @@ Emits a warning for each active AC with no corresponding test tag.
 Checks project-level AC count limits configured in `commit_guardian.json`.
 Advisory only; never blocks a commit.
 
+### `check_ac_circular_deps.py` (blocking)
+
+Detects circular `depends_on` chains in staged AC YAML files.
+
+| Attribute | Value |
+|---|---|
+| Exit code | `1` when a cycle is detected in staged files; `0` when clean. |
+| Mode | Always blocking. |
+| Invocation | `python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_ac_circular_deps.py` |
+
+When a staged AC YAML file's `depends_on` field would create a cycle in the
+`depends_on` graph, the commit is blocked with an error message naming the
+full cycle path:
+
+```
+[check-ac-circular-deps] BLOCKED — circular depends_on chain(s) detected:
+  [1] Circular dependency detected: PTN-010 -> PTN-020 -> PTN-010
+```
+
+**Algorithm:** Builds a complete `depends_on` adjacency list from the entire
+AC store (loading all on-disk YAML files), then overlays the staged changes so
+the graph reflects the proposed commit state. Runs an iterative DFS from each
+staged AC id to detect any cycle involving that node. Only cycles that include
+at least one staged AC id are reported — pre-existing cycles in unmodified files
+are not blocked (they must be remediated separately).
+
+**Fail-open:** Any unexpected exception (I/O error, parse failure, missing AC
+store) causes the hook to exit `0` with a warning on stderr so a script error
+never hard-blocks an unrelated commit.
+
 ---
 
 ## Agent Integration Points
 
 ### Authoring agents — parent covered_by update (mandatory)
 
-Every requirement-authoring agent (`business-analyst-v3`, `product-owner-v3`,
-`it-po-v3`) that writes a new child AC file MUST, in the same write batch,
+Every requirement-authoring agent (`business-analyst`, `product-owner`,
+`it-po`) that writes a new child AC file MUST, in the same write batch,
 also update the parent AC file to record the new child. This is the canonical
 mechanic for building the parent-child link from the parent's direction.
 
@@ -248,23 +535,23 @@ files to `docs/acceptance-criteria/<component>/`.
 **Key behaviour:** the agent validates the file against `check_ac_schema.py`
 before finalising. If validation fails, the agent self-corrects the YAML.
 
-### business-analyst-v3
+### business-analyst
 
-The `business-analyst-v3` agent produces L2/L3 AC YAML files from L1 ACs.
+The `business-analyst` agent (promoted from the v3 pipeline) produces L2/L3 AC YAML files from L1 ACs.
 When writing a new L2 or L3 file, it applies the parent covered_by update
 protocol described above: the child's `depends_on` includes the parent ID,
 and the parent's `covered_by` list is updated in the same write batch.
 
-### product-owner-v3
+### product-owner
 
-The `product-owner-v3` agent produces L0 and L1 AC YAML files. When writing
+The `product-owner` agent (promoted from the v3 pipeline) produces L0 and L1 AC YAML files. When writing
 a new L1 file (child of an L0), it applies the parent covered_by update
 protocol: the L1's `depends_on` includes the L0 ID, and the L0's `covered_by`
 list is updated to include the new L1 ID.
 
-### it-po-v3
+### it-po
 
-The `it-po-v3` agent enriches existing L2/L3 AC files. When it creates new
+The `it-po` agent (promoted from the v3 pipeline) enriches existing L2/L3 AC files. When it creates new
 AC files (e.g. split ACs), it applies the parent covered_by update protocol
 for any newly created child AC, ensuring the parent's `covered_by` list is
 updated to include the new child.
@@ -275,6 +562,57 @@ The `test-writer` agent reads `covered_by` lists from AC YAML files to
 discover which tests already exist for an AC. It adds `# covers: XX-NNN`
 tags to every new test function it writes, and appends the new test path to
 the `covered_by` list in the corresponding AC YAML file.
+
+#### `/quick-fix` workflow — test-writer dispatch (AC BP-600c-1)
+
+When the `test-writer` is invoked by the `/quick-fix` workflow (as opposed to a
+standard `build-feature` epic), it receives the AC YAML file created during the
+AC creation phase as an additional structured input. The dispatch contract is:
+
+| Input field | Type | Description |
+|---|---|---|
+| `ac_path` | file_path | Absolute path to the newly created quick-fix AC YAML file |
+| `target_file` | file_path | Absolute path to the buggy source file |
+| `location_hint` | string or null | Line number or function name from the diagnosis |
+| `symptom` | string | Observable incorrect behaviour from the diagnosis |
+
+**`# covers: <AC-ID>` tag requirement (quick-fix context):**
+
+Every test function written for a quick-fix MUST include a `# covers: <AC-ID>` tag
+referencing the newly created AC. The tag may appear:
+
+- On the line immediately above `def test_*`
+- As the first statement inside the function body
+- In the function's docstring
+
+The tag format must match the `check_test_ac_tags.py` hook pattern exactly:
+`# covers: XX-NNN` (e.g. `# covers: BP-601`). The `XX-NNN` value is the `id`
+field from the AC YAML file passed in `ac_path`.
+
+**Ordering invariant (BP-600c-1):**
+
+The test file write and the `covered_by` update to the AC YAML file MUST both
+complete before the fix-implementation phase (`python-coder` or `sql-coder`) is
+dispatched. This red-phase-first ordering is enforced by the sequential phase chain
+in `quick-fix.js` and mirrors the TDD discipline of the standard `build-feature` workflow.
+
+**`covered_by` update (same write batch):**
+
+After writing the test file, the test-writer MUST append the new test path to the
+`covered_by` list in the AC YAML file at `ac_path`. Both writes — the test file
+creation and the `covered_by` update — occur in the same agent turn so they are
+committed atomically.
+
+```yaml
+# Example: after test-writer runs for a quick-fix on build-pipeline
+covered_by:
+  - "unit_tests/test_build_pipeline_BP-601.py::test_executability_probe_not_skipped"
+```
+
+The parent AC's `covered_by` update protocol (see §Authoring agents above) also
+applies here: if the quick-fix AC is a child AC, the parent's `covered_by` list
+is updated to include the child AC ID (this was already done by `build-ac` during
+AC creation). The test-writer only updates the child AC's `covered_by` field.
 
 ### triage agent (glossary-triage, debug)
 
@@ -293,6 +631,110 @@ created by the ticket-wiring workflow (e.g. from a ticket's Gherkin block).
 The `ticket-wiring` skill reads existing ACs and skips creation when an
 equivalent AC already exists in the store.
 
+### /quick-fix workflow — ID assignment (AC BP-600b-2)
+
+The `/quick-fix` workflow creates a new AC YAML file as part of its AC creation
+phase (AC BP-600b-1). When assigning the AC ID, the workflow MUST follow the
+algorithm below to ensure the correct component prefix and a strictly sequential,
+non-reusing numeric suffix.
+
+#### Step 1 — Resolve the component prefix
+
+Read `docs/acceptance-criteria/index.yaml`. Locate the entry whose `id` matches
+the target component (e.g. `build-pipeline`). Use its `prefix` field as the
+ID prefix (e.g. `BP`).
+
+If no matching entry exists in `index.yaml`, halt the AC creation phase and
+surface a structured error to the user:
+
+```
+Error: component '<id>' not found in docs/acceptance-criteria/index.yaml.
+Add the component entry before running /quick-fix.
+```
+
+#### Step 2 — Scan existing AC files for the highest numeric suffix
+
+Scan all YAML files directly under `docs/acceptance-criteria/<component-id>/`
+(non-recursively — only root-level L0 and L1 files; subdirectories are skipped).
+Parse each filename matching the pattern `PREFIX-NNN*.yaml`. Extract the numeric
+part `NNN` (zero-padded, three digits) and track the highest value found.
+
+If no existing files match the prefix, start at `001`.
+
+**Retired/deprecated AC IDs are reserved and MUST NOT be reused.** The scan
+reads the `status` field of each matched file. Whether `active`, `deprecated`,
+or `superseded_by`, the numeric slot is permanently occupied. The next
+available integer is `max(occupied_slots) + 1`.
+
+#### Step 3 — Assign the new ID
+
+Assign `ID = PREFIX + "-" + zero_pad(max_seen + 1, width=3)`.
+
+**Example:** if `build-pipeline` already contains `BP-001.yaml` through
+`BP-006.yaml` (including any deprecated files), the next ID is `BP-007`.
+
+#### Step 4 — Atomicity constraint
+
+ID allocation MUST be atomic with respect to concurrent `/quick-fix` invocations.
+Implement atomicity using a file-based lock at
+`docs/acceptance-criteria/<component-id>/.quick-fix-lock` before the scan
+(step 2) and release it after the file is written. Use `O_CREAT | O_EXCL` for
+lock acquisition. Release the lock unconditionally in all exit paths (success
+and error).
+
+If the lock cannot be acquired within 5 seconds, surface an error to the user:
+
+```
+Error: AC store for '<component-id>' is locked by another process.
+Retry after the concurrent quick-fix completes, or manually remove
+docs/acceptance-criteria/<component-id>/.quick-fix-lock if the process
+is no longer running.
+```
+
+### AC persistence guarantee after ticket lifecycle close (AC BP-600b-3)
+
+When the quick-fix workflow completes end-to-end — fix committed and the
+workflow's internal ticket closed — the AC YAML file created during the AC
+creation phase MUST remain untouched in the store.
+
+**Invariant:**
+
+```
+Given the quick-fix workflow has completed end-to-end (fix committed
+  and ticket closed),
+When the user lists AC files under docs/acceptance-criteria/,
+Then the AC YAML file created by the quick-fix workflow still exists,
+And its status field is "active",
+And it is not deleted or moved by the ticket lifecycle close step.
+```
+
+**Implementation constraint for the ticket lifecycle close step:**
+
+The step that marks the quick-fix workflow's internal ticket as `done` (e.g.
+flipping `status: in_progress → done` via `set_ticket_status.py`) MUST NOT
+touch or reference any AC YAML file. Specifically:
+
+- The close step operates only on the ticket markdown file (`*.md`) and the
+  git index for that file.
+- It MUST NOT delete, rename, move, or overwrite any file under
+  `docs/acceptance-criteria/`.
+- It MUST NOT set the AC's `status` field to `deprecated` or `superseded_by`
+  as a side-effect of the ticket closing.
+
+The AC lifecycle (active → deprecated → superseded_by) is governed exclusively
+by human or agent intent expressed in separate commits. A ticket closing is not
+a trigger for AC lifecycle transitions.
+
+**Why this guarantee is necessary:**
+
+The quick-fix workflow creates an AC YAML file as a permanent traceability
+artefact. The AC documents what bug was fixed and what criterion the fix must
+satisfy going forward. If the ticket lifecycle close step were to delete or
+deactivate the AC, the traceability record would be destroyed, the pre-commit
+`check_ac_coverage.py` hook would lose its anchor, and any test tagged
+`# covers: <id>` would reference a ghost criterion. The persistence guarantee
+ensures the AC outlives the workflow that created it.
+
 ---
 
 ## Component Registry (`index.yaml`)
@@ -306,6 +748,7 @@ component IDs to their prefix and description.
 | `prefix` | string | **yes** | 2–6 ALL-CAPS letters used in AC file names. |
 | `description` | string | **yes** | Human-readable description of the component. |
 | `owner` | string or null | no | Team or agent identifier responsible for this namespace. |
+| `directory_patterns` | list of strings | no | Glob patterns for source file paths that belong to this component. Used by `/quick-fix` to infer the component from a diagnosed file path when no explicit component is provided (AC BP-600b-2-i). Example: `["scripts/build_*.py", "scripts/build_phases.py"]`. If absent or empty, component inference falls back to user prompt. |
 
 ---
 

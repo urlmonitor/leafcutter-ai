@@ -57,7 +57,7 @@ provided AC id. Do NOT call `ac_prioritizer.py`.
 **Otherwise:** call `ac_prioritizer.py` to find the top-ranked ready AC.
 
 ```bash
-python3 scripts/ac_store/ac_prioritizer.py --json 2>/tmp/build_ac_prioritizer_err.txt
+python3 {{config.output_root}}/scripts/ac_store/ac_prioritizer.py --json 2>/tmp/build_ac_prioritizer_err.txt
 ```
 
 Parse the JSON output. The schema is:
@@ -94,7 +94,7 @@ After collecting the leaf AC IDs via tree traversal, call `goal_to_epic.py`
 in classify-only mode to get the readiness classification:
 
 ```bash
-python3 scripts/goal_to_epic.py --ac <TOP_AC.id> --dry-run 2>/tmp/readiness_dry_run_err.txt
+python3 {{config.output_root}}/scripts/ac_store/goal_to_epic.py --ac <TOP_AC.id> --dry-run 2>/tmp/readiness_dry_run_err.txt
 ```
 
 Then call `classify_readiness` directly to get the gate dict:
@@ -102,11 +102,10 @@ Then call `classify_readiness` directly to get the gate dict:
 ```bash
 python3 -c "
 import sys
-sys.path.insert(0, 'scripts')
+sys.path.insert(0, '{{config.output_root}}/scripts/ac_store')
 from goal_to_epic import classify_readiness
 from pathlib import Path
 from scan_ac_store import traverse_ac_tree
-sys.path.insert(0, 'scripts/ac_store')
 leaf_ids = traverse_ac_tree('$TOP_AC_ID', Path('docs/acceptance-criteria'))
 result = classify_readiness(leaf_ids, Path('docs/acceptance-criteria'))
 import json
@@ -201,7 +200,7 @@ Before generating anything, read the AC YAML to detect the routing mode.
 Invoke the mode-detection helper:
 
 ```bash
-python3 scripts/build_ac_mode_detection.py 2>/tmp/build_ac_mode_err.txt
+python3 {{config.output_root}}/scripts/ac_store/build_ac_mode_detection.py 2>/tmp/build_ac_mode_err.txt
 ```
 
 Or call it inline:
@@ -209,7 +208,7 @@ Or call it inline:
 ```bash
 python3 -c "
 import sys, json
-sys.path.insert(0, 'scripts')
+sys.path.insert(0, '{{config.output_root}}/scripts/ac_store')
 from build_ac_mode_detection import detect_ac_mode
 import yaml, pathlib
 
@@ -274,7 +273,7 @@ Do NOT generate any ticket. Do NOT create any epic folder. Exit cleanly.
 Call `generate_ticket_from_ac.py` with the selected AC id:
 
 ```bash
-python3 scripts/ac_store/generate_ticket_from_ac.py --ac <TOP_AC.id> 2>/tmp/build_ac_generate_err.txt
+python3 {{config.output_root}}/scripts/ac_store/generate_ticket_from_ac.py --ac <TOP_AC.id> 2>/tmp/build_ac_generate_err.txt
 ```
 
 Capture stdout — the generated ticket file path is printed on the last
@@ -304,7 +303,7 @@ Goal-level ACs generate a full epic, not a single ticket.
 Call `goal_to_epic.py` with the goal AC id:
 
 ```bash
-python3 scripts/goal_to_epic.py --ac <TOP_AC.id> 2>/tmp/build_ac_goal_to_epic_err.txt
+python3 {{config.output_root}}/scripts/ac_store/goal_to_epic.py --ac <TOP_AC.id> 2>/tmp/build_ac_goal_to_epic_err.txt
 ```
 
 Capture stdout — the script prints the epic folder path on its last line.
@@ -351,7 +350,7 @@ Ticket ready. Run this command to build it:
 
 After the build completes and the PR is merged, mark the AC done by running:
 
-  python3 scripts/ac_store/mark_ac_done.py --ticket <TICKET_PATH>
+  python3 {{config.output_root}}/scripts/ac_store/mark_ac_done.py --ticket <TICKET_PATH>
 ```
 
 Exit. The user proceeds at their own pace.
@@ -405,7 +404,7 @@ and exit.
 The user runs this separately after `/build-feature` completes:
 
 ```bash
-python3 scripts/ac_store/mark_ac_done.py --ticket <TICKET_PATH>
+python3 {{config.output_root}}/scripts/ac_store/mark_ac_done.py --ticket <TICKET_PATH>
 ```
 
 This is documented in the Step 3 yes-path output. The `build-ac` agent itself
@@ -452,4 +451,4 @@ DECISION HISTORY
 ================================================================================
 - 2026-06-05 14:10 [llm-expert]: Authored build-ac agent template; encoded depth-cap design decision (no inline /build-feature call), skip uses session-local note not work_status mutation, --dry-run flag added per workflow spec. (#EPIC-ACDrivenDevelopment/04)
 - 2026-06-05 [llm-expert]: Added Step 1b — Readiness Gate for goal-level ACs (ACD-1200b-2). Implements three-choice routing (yes / review-all / cancel) with all-approved fast-path, IT PO v3 dispatch via dispatch_it_po_v3, re-read from disk after review-all, single re-presentation if IT PO v3 does not promote all ACs. Cancel path guarantees zero writes. (#EPIC-GoalToEpic/02)
-- 2026-06-05 12:30 [llm-expert]: Extended Step 2 with three-way mode detection branch (leaf → single-ticket, goal → epic-generation, L1-no-children → error). Wires scripts/build_ac_mode_detection.py and scripts/goal_to_epic.py into the agent template. Preserves full backward compatibility with the leaf path (ACD-1200e-1). (#EPIC-GoalToEpic/05)
+- 2026-06-05 12:30 [llm-expert]: Extended Step 2 with three-way mode detection branch (leaf → single-ticket, goal → epic-generation, L1-no-children → error). Wires build_ac_mode_detection.py and goal_to_epic.py into the agent template. Preserves full backward compatibility with the leaf path (ACD-1200e-1). (#EPIC-GoalToEpic/05)

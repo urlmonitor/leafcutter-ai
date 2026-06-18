@@ -1,0 +1,52 @@
+id: BO-1300e-1
+readiness: approved
+priority: high
+title: "Each spot-check finding is written as a ticket into the inbox for the fix flow"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-independent-spot-check/BO-1300e.yaml"
+criteria: |
+  Given the consolidated spot-check result contains a distinct finding describing a problem
+    with the feature
+  When the spot-check pass records that finding
+  Then it writes the finding as its own ticket into tickets/00_inbox/
+  And the ticket carries valid ticket frontmatter following the project's ticket-authoring
+    conventions, so the normal fix flow can pick it up
+  And the ticket body describes the finding: what was probed, the reviewer angle that found it,
+    and the observed problem
+  And the finding is recorded as a tracked ticket rather than left only inside a review report
+depends_on:
+  - BO-1300e
+  - BO-1300b-2
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-independent-spot-check/BO-1300e.yaml"
+    relationship: parent
+    status: exists
+  - path: docs/architecture/components/ticket-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Emitted ticket frontmatter must satisfy the ticket-authoring conventions enforced by the ticket_frontmatter_guard pre-commit hook (required fields including status: todo, description, and any guarded fields) so the ticket is not rejected and the fix flow can pick it up; reuse the existing ticket-creation helper rather than hand-rolling frontmatter."
+  - "Tickets are written to tickets/00_inbox/ with status: todo so the standard prioritizer/fix flow picks them up; never write a finding to a done/ folder or with a terminal status."
+  - "The ticket body must record provenance: what was probed, the reviewer angle that surfaced it, and the observed problem, traceable back to the consolidated result."
+  - "Ticket emission must be idempotent / safe on re-run of the same pass so a repeated spot-check does not create duplicate tickets for an already-recorded finding."
+delivers_to:
+  agent: python-coder
+  contract: "One inbox ticket per distinct finding under tickets/00_inbox/ with guard-valid frontmatter (status: todo) and a body recording probe + angle + observed problem; consumed by the standard fix flow."
+expects_from:
+  ac_id: BO-1300b-2
+  contract: "Consolidated spot-check result { findings: [{ id, angle, summary, detail, blocking }], clean } whose distinct findings become inbox tickets."
+origin_agent: BrainCandy
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1300e-1-i
+  - BO-1300e-1-ii
+implemented_by:
+- tickets/00_inbox/epics/EPIC-IndependentSpotCheck/13_TICKET-20260618-BO-1300e-1.md

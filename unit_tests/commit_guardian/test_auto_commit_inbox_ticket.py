@@ -19,10 +19,9 @@ import json
 import os
 import subprocess
 import sys
-import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 
 # Path to the hook script under test
@@ -267,7 +266,7 @@ class TestHookPushFailureIsNonfatal(unittest.TestCase):
 
         with patch.object(
             mod, "_run_commit_and_push", return_value="push_failed: permission denied"
-        ) as mock_push:
+        ):
             result_str = mod._run_commit_and_push(file_path, repo_root)
             self.assertIn("push_failed", result_str)
 

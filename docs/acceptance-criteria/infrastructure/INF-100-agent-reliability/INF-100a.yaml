@@ -19,5 +19,9 @@ origin_agent: BrainCandy
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - INF-100a-1
+  - INF-100a-2
+  - INF-100a-3
+  - INF-100a-4
 implemented_by: []

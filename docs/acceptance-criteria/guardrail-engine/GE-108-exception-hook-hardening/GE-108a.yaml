@@ -1,0 +1,97 @@
+id: GE-108a
+readiness: approved
+priority: medium
+title: "Exception-handling guard treats subprocess calls as a mandatory I/O boundary"
+component: guardrail-engine
+level: L2
+status: active
+req_status: active
+work_status: done
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-108-exception-hook-hardening/GE-108.yaml"
+criteria: |
+  Scenario: Unwrapped subprocess.run is reported as an I/O-boundary violation
+    Given a production Python file containing `subprocess.run(["ls"])` at module
+      or function scope that is NOT enclosed in a try/except block,
+    When the exception-handling guard analyses the file,
+    Then it emits an io-boundary (IO-001) violation for that call,
+    And the violation names the call site by line and column,
+    And the guard exit status reports the file as having violations.
+
+  Scenario Outline: Every subprocess entry-point form is detected when unwrapped
+    Given a production Python file containing an unwrapped `<call_form>` at
+      module or function scope,
+    When the exception-handling guard analyses the file,
+    Then it emits an io-boundary (IO-001) violation for that call.
+
+    Examples:
+      | call_form                     |
+      | subprocess.run(...)           |
+      | subprocess.Popen(...)         |
+      | subprocess.call(...)          |
+      | subprocess.check_call(...)    |
+      | subprocess.check_output(...)  |
+      | subprocess.getoutput(...)     |
+
+  Scenario: A wrapped subprocess call produces no violation
+    Given a production Python file in which each of `subprocess.run`,
+      `subprocess.Popen`, `subprocess.call`, `subprocess.check_call`,
+      `subprocess.check_output`, and `subprocess.getoutput` appears inside the
+      body of a try block with a matching except clause,
+    When the exception-handling guard analyses the file,
+    Then no io-boundary (IO-001) violation is emitted for any of those calls.
+
+  Scenario: Configuration and detection are in parity for subprocess forms
+    Given the commit-guardian configuration's declared list of I/O-boundary call
+      forms,
+    When that list is compared against the call forms the guard actually
+      detects,
+    Then the configuration lists every subprocess form the guard detects —
+      `subprocess.run`, `subprocess.Popen`, `subprocess.call`,
+      `subprocess.check_call`, `subprocess.check_output`, and
+      `subprocess.getoutput` —
+    And no subprocess form is detected by the guard without being declared in
+      the configuration, and none is declared without being detected.
+
+  Scenario: Self-hosting code stays clean under the widened detection
+    Given the guard analyses leafcutter's own production Python files whose
+      subprocess usage is already wrapped in a try/except (or is exempted by an
+      accepted architecture decision),
+    When the widened subprocess detection runs across those files,
+    Then no io-boundary (IO-001) violation is emitted for that legitimately
+      wrapped or exempted subprocess usage,
+    And the guard exit status reports those files as clean.
+depends_on:
+  - GE-108
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-108-exception-hook-hardening/GE-108.yaml"
+    relationship: parent
+    status: exists
+  - path: "templates/commit-guardian/check_exception_handling.py"
+    relationship: specifies
+    status: exists
+  - path: "templates/commit-guardian/commit_guardian.json"
+    relationship: specifies
+    status: exists
+  - path: "docs/architecture/adrs/ADR-014-exception-guard-enforcement-scope.md"
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "ADR-FIRST: An accepted ADR documenting the enforcement-scope change (widening the I/O-boundary set to include subprocess.{run,Popen,call,check_call,check_output,getoutput}) and its false-positive tradeoffs MUST exist before implementation begins. The doc_link ADR-014-exception-guard-enforcement-scope.md is currently status: planned; authoring it is a blocking prerequisite for this leaf."
+  - "BUILD-CONVENTION: The committable source of truth is templates/commit-guardian/check_exception_handling.py and templates/commit-guardian/commit_guardian.json. The scripts/commit_guardian/ copies are gitignored build output synced by `python leafcutter/scripts/build.py`. The fix MUST edit the template files and then rebuild; do NOT edit scripts/commit_guardian/ directly (ADR-001 self-hosting boundary)."
+  - "PARITY: The guard's detected subprocess forms and the commit_guardian.json exception_handling.io_boundary_calls declared list must be kept in lockstep — every detected subprocess form is declared, and every declared form is detected. Verify the parity round-trips cleanly through build.py."
+  - "AST-ONLY: Subprocess detection must remain purely AST-based — no regex fallback or text matching."
+  - "SELF-HOSTING NON-REGRESSION: After the change, leafcutter's own production code must still commit cleanly — the widened detection must not flag legitimately try/except-wrapped or ADR-exempted subprocess usage in the codebase."
+  - "The widened detection must be deterministic and idempotent: repeated analysis of the same file yields the same violations in the same line/col order."
+delivers_to: null
+expects_from:
+  ac_id: GE-108
+  contract: "The check_exception_handling guard's I/O-boundary detection surface: the _IO_BOUNDARIES table and _call_matches_io_boundary() in check_exception_handling.py, plus the exception_handling.io_boundary_calls list in commit_guardian.json."
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-Exceptionhandlingguardenforcestheerror/01_TICKET-20260617-GE-108a.md

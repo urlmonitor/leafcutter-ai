@@ -1,0 +1,66 @@
+id: ACD-300g-1
+readiness: approved
+priority: medium
+title: "Approved stage output is committed before the next agent is dispatched"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the /create-ac workflow has completed a stage (PO v3, BA v3, or IT PO v3)
+    and the authoring agent has written AC YAML files to the AC store,
+  And the user has approved the stage's output at the confirmation gate,
+  When the workflow prepares to dispatch the next authoring agent,
+  Then a git commit containing all AC files from the approved stage is created
+    before the next agent begins,
+  And the commit is confirmed to have succeeded (exit code 0) before dispatch,
+  And the committed files are present in the repository history.
+
+  Given the /create-ac workflow follows the strategic route
+    (PO v3 -> gate -> BA v3 -> gate -> IT PO v3 -> final gate),
+  When the user approves gate 1 (after PO v3),
+  Then the L0 and L1 AC YAML files produced by PO v3 are committed,
+  And BA v3 is not dispatched until the commit succeeds.
+
+  Given the user approves gate 2 (after BA v3),
+  When the workflow transitions to IT PO v3,
+  Then the L2 and L3 AC YAML files produced by BA v3 are committed,
+  And the parent AC updates (covered_by additions) are included in the same commit,
+  And IT PO v3 is not dispatched until the commit succeeds.
+
+  Given the user approves gate 3 (final gate after IT PO v3),
+  When the workflow completes,
+  Then the enriched AC YAML files modified by IT PO v3 are committed,
+  And the workflow reports success only after the final commit succeeds.
+depends_on: [ACD-300g]
+doc_links:
+  - path: templates/skills/create-ac/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must not dispatch the next authoring agent until the commit operation returns exit code 0"
+  - "Must handle errors from the git commit operation gracefully per the project error handling policy"
+  - "Must be idempotent -- re-running the workflow after a successful commit must not re-commit already-committed files"
+  - "Must log each commit operation to the telemetry sink per the existing workflow telemetry convention"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-300g-1-i
+implemented_by:
+- tickets/00_inbox/epics/EPIC-CommitAcOutputPerStage/01_TICKET-20260618-ACD-300g-1.md

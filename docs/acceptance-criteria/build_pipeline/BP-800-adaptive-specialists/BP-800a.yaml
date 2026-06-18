@@ -26,6 +26,9 @@ covered_by:
   - BP-800a-1
   - BP-800a-2
   - BP-800a-3
+  - BP-800a-4
+  - BP-800a-5
+  - BP-800a-6
 implemented_by: []
 documentation_triggers:
   - how-to

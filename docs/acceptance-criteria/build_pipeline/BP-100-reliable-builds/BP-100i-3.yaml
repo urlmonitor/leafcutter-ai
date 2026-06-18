@@ -1,5 +1,5 @@
 id: BP-100i-3
-readiness: reviewed
+readiness: approved
 priority: high
 title: "Deployed output parity: every hook in the canonical template also appears in the build output directory"
 component: build-pipeline
@@ -60,5 +60,5 @@ created: 2026-06-05
 amended_by:
   - it-po-v3
 superseded_by: null
-covered_by: []
+covered_by: [BP-100i-3-i]
 implemented_by: []

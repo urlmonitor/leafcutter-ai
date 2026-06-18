@@ -4,9 +4,9 @@ priority: medium
 title: "Unknown agent is still rejected with a clear error"
 component: infrastructure
 level: L3
-status: draft
+status: active
 req_status: active
-work_status: not_started
+work_status: todo
 criteria: |
   Given an agent name that is not listed in any allowed_writers list,
   When that agent attempts to submit feedback,
@@ -34,4 +34,5 @@ amended_by:
   - it-po-v3
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260608-INF-100c-3-i.md

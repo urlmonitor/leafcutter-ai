@@ -20,7 +20,6 @@ AC coverage:
 """
 
 import unittest
-from unittest.mock import patch, MagicMock
 
 # This import will fail until llm-expert writes the implementation.
 # That is the intended red state for this test stub.

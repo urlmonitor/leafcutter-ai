@@ -1,7 +1,6 @@
 import pytest
 import sys
 from pathlib import Path
-from unittest.mock import patch
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _SCRIPTS_DIR = _REPO_ROOT / "leafcutter" / "scripts"

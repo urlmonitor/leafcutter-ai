@@ -1,0 +1,42 @@
+id: BP-900c-2
+title: "Error report is emitted to stderr in a structured, parseable format with non-zero exit"
+component: build_pipeline
+level: L2
+status: active
+req_status: approved
+readiness: approved
+priority: critical
+work_status: not_started
+criteria: |
+  Given the build-time guard has detected 3 broken script references,
+  When the guard emits the error report,
+  Then all error output is written to stderr (not stdout)
+  And the output is structured as one JSON object per line (JSONL format)
+  with keys "missing_path", "referencing_template", and "suggested_action"
+  And the process exits with a non-zero exit code
+  And stdout contains no error output (so piped build output is not polluted)
+depends_on: [BP-900c, BP-900c-1]
+doc_links:
+  - path: scripts/build_propagation_audit.py
+    relationship: extends
+    status: exists
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "All error output must go to stderr only — stdout must remain clean for piped build output"
+  - "JSONL format must be machine-parseable — one valid JSON object per line"
+  - "Each JSON object must contain exactly the keys: missing_path, referencing_template, suggested_action"
+  - "Must integrate with the existing build.py exit code conventions"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-11
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260611-BP-900c-2.md

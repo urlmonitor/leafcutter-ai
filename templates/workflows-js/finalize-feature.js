@@ -478,11 +478,17 @@ async function run({ userInput, agent, parallel, prompt }) {
         feature_branch: BRANCH,
         changed_files: changedFiles,
         instructions:
-          "Classify each failing test as 'regression' (caused by this branch) or " +
-          "'pre_existing' (already failing on main). " +
-          "Return a JSON object with at minimum: { \"blocks_finalization\": true|false, " +
-          "\"regressions\": [\"<test_id>\", ...], \"pre_existing\": [\"<test_id>\", ...], " +
-          "\"summary\": \"<one sentence>\" }",
+          "Classify each failing test into one of four categories: " +
+          "'regression' (caused by this branch), 'stale_test' (covers a deprecated/superseded AC), " +
+          "'pre_existing' (already failing on main before merge), or 'flaky' (intermittently failing). " +
+          "Return a JSON object matching this schema exactly: " +
+          "{ \"triage_report\": [ { \"test_id\": \"<fully-qualified test name>\", " +
+          "\"test_file\": \"<relative path>\", \"covers_tag\": \"<tag or null>\", " +
+          "\"category\": \"regression|stale_test|pre_existing|flaky\", " +
+          "\"ac_status\": \"<active|deprecated|superseded_by|not_found|null>\", " +
+          "\"rationale\": \"<reason>\", \"action\": \"fix_on_branch|update_test|create_tracking_ticket\", " +
+          "\"modified_by_branch\": true|false } ], " +
+          "\"blocks_finalization\": true|false }",
       },
     });
 
@@ -685,47 +691,18 @@ async function run({ userInput, agent, parallel, prompt }) {
           " Needs investigation to determine root cause before adding a known-flaky marker.";
       }
 
-      try {
-        const createTicketResult = await agent({
-          agentType: "create-ticket",
-          input: {
-            request: requestText,
-          },
-        });
-
-        let ticketInfo;
-        try {
-          ticketInfo =
-            typeof createTicketResult === "string"
-              ? JSON.parse(createTicketResult)
-              : createTicketResult;
-        } catch (_parseErr) {
-          ticketInfo = { ticket_path: null };
-        }
-
-        const ticketPath =
-          ticketInfo &&
-          (ticketInfo.ticket_path || ticketInfo.path || ticketInfo.filename);
-
-        if (ticketPath) {
-          createdTrackingTickets.push(ticketPath);
-          console.log(
-            `[finalize-feature] step 6a: created tracking ticket for ${testId}: ${ticketPath}`
-          );
-        } else {
-          // create-ticket succeeded but did not return a path — push null as sentinel.
-          createdTrackingTickets.push(null);
-          console.warn(
-            `[finalize-feature] step 6a: create-ticket for ${testId} returned no ticket_path`
-          );
-        }
-      } catch (createErr) {
-        // Non-fatal: log warning and continue.
-        console.warn(
-          `[finalize-feature] step 6a: create-ticket dispatch failed for ${testId}: ${createErr && createErr.message}`
-        );
-        createdTrackingTickets.push(null);
-      }
+      // create-ticket is a workflow (slash command), not a registered agent,
+      // and was removed from the agent registry in EPIC-AcPipelineConsolidation
+      // v2.0.0. Dispatching it via agent() fails at runtime.
+      // Log the request so the user can create the ticket manually via
+      // /create-ticket.
+      console.warn(
+        `[finalize-feature] step 6a: automatic ticket creation skipped — ` +
+        `create-ticket is a workflow, not an agent. ` +
+        `To track this failure, run /create-ticket manually with the following request:\n` +
+        requestText
+      );
+      createdTrackingTickets.push(null);
     }
 
     if (preExistingEntries.length === 0) {

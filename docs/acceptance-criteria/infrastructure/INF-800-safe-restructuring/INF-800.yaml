@@ -22,5 +22,11 @@ origin_agent: product-owner-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - INF-800a
+  - INF-800b
+  - INF-800c
+  - INF-800d
+  - INF-800e
+  - INF-800f
 implemented_by: []

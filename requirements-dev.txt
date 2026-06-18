@@ -1,0 +1,18 @@
+# Development and CI dependencies for leafcutter-ai.
+#
+# These are the only third-party packages the package's own scripts and test
+# suites import at runtime (pyyaml, jsonschema) plus the test/lint/type tools.
+# The repo has no production install target — it is a template package compiled
+# into consumer projects by build.py — so there is no separate requirements.txt.
+#
+# Pins are kept loose (>=) with the versions current as of the CI introduction;
+# tighten to == if reproducibility becomes a concern.
+
+# Runtime imports used by scripts/ and the test suites
+pyyaml>=6.0
+jsonschema>=4.0
+
+# Test, lint, and type-check tooling (used by .github/workflows/ci.yml)
+pytest>=8.0
+ruff==0.15.15
+mypy>=1.8

@@ -1,3 +1,9 @@
+---
+title: "Architecture Decision Records"
+description: "Index of all Architecture Decision Records (ADRs) for the leafcutter-ai package, listing each decision's number, status, title, and date."
+type: "reference"
+---
+
 # Architecture Decision Records
 
 This directory contains Architecture Decision Records (ADRs) for the leafcutter-ai
@@ -22,3 +28,4 @@ are the way they are.
 | [ADR-009](ADR-009-itpo-no-source-code-access.md) | Accepted | IT Product Owner v3 — Source Code Access Restriction | 2026-06-05 |
 | [ADR-010](ADR-010-ac-store-as-authoritative-backlog.md) | Accepted | AC Store as Authoritative Backlog — Source-of-Truth Inversion | 2026-06-05 |
 | [ADR-011](ADR-011-learning-emission-sink.md) | Active | Learning Emission Sink — Separate knowledge_emissions.jsonl vs Reuse agent_telemetry.jsonl | 2026-06-05 |
+| [ADR-012](ADR-012-retire-create-ticket-js.md) | Accepted | Retire create-ticket.js — /plan-feature + /build-ac as Canonical Ticket-Creation Path | 2026-06-16 |

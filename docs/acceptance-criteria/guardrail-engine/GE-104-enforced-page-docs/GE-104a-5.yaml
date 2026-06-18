@@ -1,0 +1,81 @@
+id: GE-104a-5
+readiness: approved
+priority: high
+title: "The planning-time trigger genuinely enforces a new page's documentation rather than silently falling back to not_needed"
+component: guardrail-engine
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-104-enforced-page-docs/GE-104a.yaml"
+criteria: |
+  Given a ticket whose files_touched contains a newly added frontend page at
+    site/app/<route>/page.tsx
+  And files_touched does NOT contain the matching reference doc at
+    docs/reference/frontend/<name>.md
+  When agent selection runs during ticket creation (the real ticket-creation path
+    that reads the agent registry to resolve each agent's status)
+  Then the documentation-expert agent actually resolves to "needed"
+  And the trigger condition genuinely evaluates to a firing result — it does not
+    silently fall back to its default_status of "not_needed"
+
+  ---
+
+  Given a ticket whose files_touched contains BOTH a newly added frontend page at
+    site/app/<route>/page.tsx AND its matching reference doc at
+    docs/reference/frontend/<name>.md
+  When agent selection runs during ticket creation
+  Then this trigger does NOT fire on that basis
+  And the documentation-expert agent is not forced to "needed" by this trigger
+    (no false positive when the doc is already part of the planned work)
+
+  ---
+
+  Note: This AC is an enablement/spike. It defines the OUTCOME — the planning-time
+  trigger must genuinely evaluate and fire — but leaves the MECHANISM to the IT PO.
+  The two candidate mechanisms are: (a) wire the LLM-evaluation path so the existing
+  llm-type trigger condition (authored in GE-104a-2 / GE-104a-2-i) actually evaluates
+  instead of raising and falling back to not_needed; or (b) extend the
+  selection-criteria DSL grammar with a derived-missing / negation primitive so the
+  condition can be a dsl-type expression that evaluates deterministically. Either
+  mechanism must produce the observable outcomes above. The commit-time hook
+  (GE-104a-1) remains the authoritative backstop regardless of which mechanism is
+  chosen.
+depends_on:
+  - GE-104a
+  - GE-104a-2
+  - GE-104a-2-i
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-104-enforced-page-docs/GE-104a.yaml"
+    relationship: parent
+    status: exists
+  - path: "scripts/selection_criteria_evaluator.py"
+    relationship: implements
+    status: exists
+  - path: "docs/architecture/adrs/ADR-018-selection-criteria-dsl.md"
+    relationship: describes
+    status: planned
+  - path: "config/agent_registry.json"
+    relationship: describes
+    status: exists
+it_requirements:
+  - "MECHANISM RECOMMENDATION (IT PO): adopt mechanism (a) — wire the LLM-evaluation path — NOT mechanism (b) DSL-grammar extension. Justification: (1) GE-104a-2-i already concluded the v1 DSL grammar in scripts/selection_criteria_evaluator.py (contains/equals/matches over files_touched/title/description/components, AND/OR only) has no negation and no derived-path correlation, so it structurally cannot express 'new page present without its derived doc'; adding those primitives is a grammar change touching the parser, precedence handling, and ADR-018 — high blast radius for one trigger. (2) The two-tier ADR-018 model already routes type: llm conditions to a (currently stubbed) LLM-judgment path, and the documentation-expert registry entry already carries llm-type conditions, so mechanism (a) is the path the existing design and the GE-104a-2 condition are already authored for. (3) Mechanism (a) is additive and localized to the evaluator's LLM branch plus its caller, leaving the deterministic DSL path untouched. Treat (b) as explicitly rejected, not a deferred 50/50."
+  - "Root cause to fix: in scripts/selection_criteria_evaluator.py, evaluate() raises LLMEvaluationRequired for type: llm conditions, and evaluate_all() with the default llm_fallback=False SILENTLY SKIPS llm conditions (continue) and therefore returns False — which causes agent selection to fall back to documentation-expert's default_status of not_needed. The new-page-without-doc trigger is an llm-type condition, so today it can never fire. The implementation must close this silent-skip gap so an llm-type trigger can genuinely resolve to a firing result."
+  - "Wire the LLM-judgment path so the agent-selection step used during ticket creation evaluates the documentation-expert llm-type trigger conditions and returns a real fire / not-fire verdict, instead of skipping them or unconditionally falling back to default_status. The selection path that reads config/agent_registry.json to resolve each agent's status must actually consult the result of this evaluation when deciding needed versus not_needed."
+  - "The judgment must reflect the page-to-doc correlation: it fires only when files_touched adds a NEW site/app/**/page.tsx AND the page's derived docs/reference/frontend/<name>.md (per the single shared derivation from GE-104a-1-i / GE-104a-1-ii) is absent from files_touched; it must NOT fire when both the page and its derived doc are present, and must NOT fire when no new page is present."
+  - "default_status for documentation-expert must remain not_needed; the agent is forced to needed only when this (or another) condition genuinely fires — there must be no blanket needed and no silent fall-through that hides a genuine fire."
+  - "Preserve existing behavior of the deterministic DSL path: dsl-type conditions must continue to evaluate exactly as today. Wiring the llm path must not change DSL evaluation semantics or break the existing evaluate / evaluate_all contract for dsl conditions."
+  - "Keep changes consistent with ADR-018's two-tier model; if behavior diverges from what ADR-018 documents, the ADR must be updated in the same change so the design record stays accurate."
+  - "Self-hosting parity (ADR-001): scripts/selection_criteria_evaluator.py and any packaged template copy are round-tripped by build.py into the deployed config; the script edit and its template copy must be kept in parity and verified via the build.py round-trip — never edit one side only."
+  - "Handle evaluation/IO errors gracefully per the project error handling policy; a genuine evaluation failure must be surfaced (logged at WARNING or higher, or raised) rather than silently degrading to not_needed in a way indistinguishable from a real not-fire verdict."
+delivers_to: null
+expects_from:
+  ac_id: GE-104a-2
+  contract: "The new llm-type trigger_condition added to the documentation-expert entry in config/agent_registry.json (the 'new page added in files_touched without its derived docs/reference/frontend/<name>.md' expression), plus the GE-104a-2-i analysis concluding the v1 DSL grammar cannot express this condition. GE-104a-5 wires the evaluation path so that authored llm-type condition genuinely fires instead of being silently skipped."
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260617-GE-104a-5.md

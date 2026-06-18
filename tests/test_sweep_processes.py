@@ -12,6 +12,7 @@ ARCHITECTURE: pytest-based unit tests using tmp_path and monkeypatch.  No
 
 from __future__ import annotations
 
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -27,7 +28,7 @@ if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
 try:
-    import psutil
+    import psutil  # noqa: F401  # availability probe — gates _PSUTIL_REQUIRED skipif
     _PSUTIL_AVAILABLE = True
 except ImportError:
     _PSUTIL_AVAILABLE = False
@@ -44,7 +45,7 @@ _PSUTIL_REQUIRED = pytest.mark.skipif(
 # ---------------------------------------------------------------------------
 # Import the module under test (after path fixup above).
 # ---------------------------------------------------------------------------
-from worktree.sweep_processes import SweepResult, sweep, sweep_log_files  # noqa: E402
+from worktree.sweep_processes import sweep, sweep_log_files  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -61,7 +62,6 @@ def _spawn_sleeping_child(tmp_path: Path, seconds: int = 60) -> "subprocess.Pope
     Returns:
         The ``subprocess.Popen`` handle.
     """
-    import subprocess
     proc = subprocess.Popen(
         [sys.executable, "-c", f"import time; time.sleep({seconds})"],
         cwd=str(tmp_path),
@@ -148,7 +148,6 @@ def test_sweep_processes_kills_worker_in_worktree(tmp_path: Path) -> None:
     Covers: ``test_sweep_processes_kills_worker_in_worktree`` from the Test
     Requirements table.
     """
-    import subprocess
 
     child = _spawn_sleeping_child(tmp_path)
     pid = child.pid
@@ -184,7 +183,6 @@ def test_sweep_processes_skips_protected_path(tmp_path: Path) -> None:
     # Use a distinctive marker in the command line that we can protect.
     protected_marker = "__pdw_protected_test_marker__"
 
-    import subprocess
     child = subprocess.Popen(
         [sys.executable, "-c",
          f"import time; _ = '{protected_marker}'; time.sleep(60)"],
@@ -232,7 +230,6 @@ def test_sweep_processes_permission_denied(tmp_path: Path, monkeypatch: pytest.M
     Requirements table.  Uses monkeypatch to simulate PermissionError without
     requiring a real privileged process.
     """
-    import psutil as _psutil
     from worktree import sweep_processes as _mod
 
     # Patch _terminate_process to always return a PermissionError string.

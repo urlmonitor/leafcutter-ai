@@ -527,7 +527,8 @@ def install_hooks(target_root, dry_run=False):
 
     Returns:
         One of "installed", "dry-run", "failed",
-        "skipped (pre-commit not found)", or "skipped (custom hooksPath)".
+        "skipped (pre-commit not found)", "skipped (custom hooksPath)",
+        or "skipped (not a git repo)".
     """
     # 1. Resolve pre-commit binary (PATH lookup, then Python module fallback).
     precommit_cmd = _resolve_precommit_cmd()
@@ -547,12 +548,17 @@ def install_hooks(target_root, dry_run=False):
         return "dry-run"
 
     # 3. Check core.hooksPath git config.
-    hooks_path_result = subprocess.run(
-        ["git", "-C", str(target_root), "config", "--get", "core.hooksPath"],
-        capture_output=True,
-        text=True,
-    )
-    if hooks_path_result.returncode == 0:
+    try:
+        hooks_path_result = subprocess.run(
+            ["git", "-C", str(target_root), "config", "--get", "core.hooksPath"],
+            capture_output=True,
+            text=True,
+        )
+    except OSError as exc:
+        # git binary not found — degrade safely rather than hard-failing.
+        _warn(f"hooks: could not read core.hooksPath (git not found): {exc}")
+        hooks_path_result = None
+    if hooks_path_result is not None and hooks_path_result.returncode == 0:
         hooks_path_value = hooks_path_result.stdout.strip()
         default_hooks = Path(target_root) / ".git" / "hooks"
         is_default = (
@@ -560,17 +566,38 @@ def install_hooks(target_root, dry_run=False):
             or Path(hooks_path_value).resolve() == default_hooks.resolve()
         )
         if is_default:
-            subprocess.run(
-                ["git", "-C", str(target_root), "config", "--unset", "core.hooksPath"],
-                capture_output=True,
-            )
-            _info("hooks: cleared redundant core.hooksPath (.git/hooks)")
+            try:
+                subprocess.run(
+                    ["git", "-C", str(target_root), "config", "--unset", "core.hooksPath"],
+                    capture_output=True,
+                )
+            except OSError as exc:
+                _warn(f"hooks: could not unset core.hooksPath (git not found): {exc}")
+            else:
+                _info("hooks: cleared redundant core.hooksPath (.git/hooks)")
         elif hooks_path_value:
             _warn(
                 f"core.hooksPath is set to '{hooks_path_value}' "
                 "(non-default); skipping pre-commit install"
             )
             return "skipped (custom hooksPath)"
+
+    # 3.5. Guard: verify target_root is inside a git working tree.
+    # Using `git rev-parse --git-dir` is more robust than checking for a .git
+    # directory directly: it also handles worktrees and nested repos correctly.
+    try:
+        git_check = subprocess.run(
+            ["git", "-C", str(target_root), "rev-parse", "--git-dir"],
+            capture_output=True,
+        )
+    except OSError as exc:
+        # git binary not found — degrade safely rather than hard-failing.
+        _warn(f"hooks: could not verify git repo (git not found): {exc}")
+        git_check = None
+
+    if git_check is not None and git_check.returncode != 0:
+        _info("hooks: skipping pre-commit install (target is not a git repo)")
+        return "skipped (not a git repo)"
 
     # 4. Run pre-commit install.
     try:
@@ -629,4 +656,17 @@ def install_hooks(target_root, dry_run=False):
 #   succeeds before tier 3 runs). Added BLE001 noqa on unavoidable broad-except
 #   blocks in seed_docs() and update_diagrams(). Refactored try/except in
 #   _create_shim() and _create_file_shim() to use else clause (Ruff compliance).
+# - 2026-06-17 [python-coder/quick-fix]: Added step 3.5 git-repo guard to (#BP-007)
+#   install_hooks(). Before this change, calling install_hooks() against a
+#   target_root that has no reachable .git caused `pre-commit install` to run
+#   unconditionally, exit non-zero (no git repo), and surface a misleading
+#   [ERROR] with empty stderr while returning "failed". The fix inserts a
+#   `git -C <target_root> rev-parse --git-dir` probe between step 3 (custom
+#   hooksPath guard) and step 4 (`pre-commit install`). Non-zero return code
+#   triggers a graceful _info() message and returns "skipped (not a git repo)"
+#   instead of reaching pre-commit. The subprocess call is wrapped in
+#   try/except OSError so that a missing git binary degrades safely. When
+#   target_root IS a real git repo the probe succeeds and execution falls
+#   through to step 4 unchanged, preserving the loud-failure path for genuine
+#   install errors. Docstring Returns: section updated to list the new status.
 # ====================================================================

@@ -1,0 +1,29 @@
+id: ACS-500a
+readiness: approved
+priority: high
+title: "Recognized patterns are defined in one place"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Single authoritative definition for every shared behavior pattern.
+
+  Each recognized pattern — whether an atomic component like a sortable table
+  or a composite like a CRUD list page wired to a paginated collection — has
+  exactly one AC that defines its behavior. All consuming pages reference this
+  single definition. The pattern definition lives in the existing component
+  registry; no separate catalog is needed.
+depends_on: [ACS-500]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: [ACS-500a-1, ACS-500a-2, ACS-500a-3]
+implemented_by: []
+assigned_agent: null
+estimated_complexity: null

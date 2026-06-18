@@ -1,0 +1,30 @@
+id: ACS-500e
+readiness: approved
+priority: high
+title: "Component composition is captured in the AC hierarchy"
+component: ac-store
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Atomic components compose into named composites, all reflected in the store.
+
+  The AC hierarchy captures how atomic components (a sortable table, a filter
+  bar, a detail card) wire together into composite patterns when connected to
+  a specific data shape. Composites are themselves reusable components —
+  available for further composition or direct reference by consuming pages.
+  The layering from atomic to composite to page-specific is visible in the
+  AC parent-child structure.
+depends_on: [ACS-500]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: [ACS-500e-1, ACS-500e-2]
+implemented_by: []
+assigned_agent: null
+estimated_complexity: null

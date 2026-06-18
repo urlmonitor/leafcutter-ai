@@ -143,14 +143,14 @@ decomposed children are stored under a different ID.
 
 ### Remediation
 
-**Option A — Decompose via business-analyst-v3:**
+**Option A — Decompose via business-analyst:**
 
 ```
-/business-analyst-v3
+/business-analyst
 ```
 
-Pass the L1 AC file path. `business-analyst-v3` produces L2/L3 behavioural
-ACs and writes them to the store. After decomposition, re-run `it-po-v3`
+Pass the L1 AC file path. `business-analyst` produces L2/L3 behavioural
+ACs and writes them to the store. After decomposition, re-run `it-po`
 to enrich the new ACs, then approve them and re-invoke `/build-ac`.
 
 **Option B — Manual decomposition:**

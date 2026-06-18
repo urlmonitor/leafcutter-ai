@@ -1,0 +1,107 @@
+id: GE-104a-1
+readiness: approved
+priority: high
+title: "Commit-time guardrail blocks a new frontend page that ships without its reference doc"
+component: guardrail-engine
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-104-enforced-page-docs/GE-104.yaml"
+criteria: |
+  Given a commit stages a frontend page file at site/app/<route>/page.tsx that
+    did NOT exist in the previous commit (a newly added page)
+  And a reference doc at the deterministic path docs/reference/frontend/<name>.md
+    that corresponds to that page is also staged in the same commit
+  When the page-documentation guardrail runs at pre-commit time
+  Then the guardrail treats the page as documented and allows the commit to proceed
+
+  ---
+
+  Given a commit stages a frontend page file at site/app/<route>/page.tsx that
+    did NOT exist in the previous commit (a newly added page)
+  And the matching reference doc already exists on disk at the deterministic
+    path docs/reference/frontend/<name>.md (added in an earlier commit)
+  When the page-documentation guardrail runs at pre-commit time
+  Then the guardrail treats the page as documented and allows the commit to proceed
+
+  ---
+
+  Given a commit stages a frontend page file at site/app/<route>/page.tsx that
+    did NOT exist in the previous commit (a newly added page)
+  And no reference doc exists at the deterministic path
+    docs/reference/frontend/<name>.md — neither staged in this commit nor present on disk
+  When the page-documentation guardrail runs at pre-commit time
+  Then the guardrail blocks the commit
+  And it emits a FIX message that names the exact expected reference doc path
+    docs/reference/frontend/<name>.md the author must create
+
+  ---
+
+  Given a commit stages changes to a frontend page file at
+    site/app/<route>/page.tsx that already existed in the previous commit
+    (a pre-existing / legacy page being edited)
+  When the page-documentation guardrail runs at pre-commit time
+  Then the guardrail does NOT require a reference doc for that page
+  And it allows the commit to proceed regardless of whether a matching doc exists
+
+  ---
+
+  Given two consumer projects, one with the page-documentation guardrail
+    configured in "block" mode and one configured in "warn-only" mode
+  And both stage a newly added frontend page with no matching reference doc
+  When the guardrail runs at pre-commit time in each project
+  Then in "block" mode the commit is blocked with a non-zero result and the FIX message
+  And in "warn-only" mode the commit is allowed to proceed while the same
+    FIX message is surfaced as a warning
+depends_on:
+  - GE-104a
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-104-enforced-page-docs/GE-104a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "scripts/commit_guardian/check_components_integrity.py"
+    relationship: describes
+    status: exists
+  - path: "scripts/commit_guardian/check_frontend_page_docs.py"
+    relationship: implements
+    status: planned
+  - path: "templates/commit-guardian/check_frontend_page_docs.py"
+    relationship: implements
+    status: planned
+  - path: "templates/scripts/commit_guardian/check_frontend_page_docs.py"
+    relationship: implements
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Implement as a new pre-commit hook script at scripts/commit_guardian/check_frontend_page_docs.py, mirroring the structure of scripts/commit_guardian/check_components_integrity.py: read the previous-commit and staged versions of the tree via git, compute added = staged - before, check the derived doc path exists either staged or on disk, emit an actionable FIX message, and return exit 0/1."
+  - "Detect newly-added pages by comparing the set of site/app/**/page.tsx paths present in the previous commit (git show HEAD:<path> / git ls-tree) against the staged index, so only pages absent before and present now are treated as new (mirrors the added-key diff pattern in check_components_integrity)."
+  - "An edit to a pre-existing page.tsx (present in the previous commit) must NOT trigger a doc requirement — only newly-added pages are gated."
+  - "Resolve the expected reference doc path using the single shared page-path-to-doc-path derivation helper defined for GE-104a-1-i / GE-104a-1-ii; this hook MUST NOT inline its own derivation logic so the commit-time and planning-time layers cannot drift on the mapping rule."
+  - "Treat the doc as present if it is EITHER staged in the same commit OR already exists on disk; either is sufficient to allow the commit."
+  - "The FIX message must name the exact expected reference doc path (docs/reference/frontend/<name>.md) the author must create, in the actionable FIX-line style used by check_components_integrity.py."
+  - "Read the block-versus-warn mode from commit_guardian.json (key defined in GE-104a-1-iv): in block mode a missing doc exits non-zero; in warn-only mode the same FIX message is printed but the hook exits 0."
+  - "Self-hosting parity (ADR-001): the deployed hook script and BOTH packaged template copies (templates/commit-guardian/check_frontend_page_docs.py and templates/scripts/commit_guardian/check_frontend_page_docs.py) must be created together and verified in parity via the build.py round-trip — never edit one side only."
+  - "Handle git/IO errors gracefully per the project error handling policy; fail-open is acceptable for unexpected internal errors (exit 0) consistent with the judgment-hook convention, but a confirmed missing doc in block mode must block."
+  - "Must complete in well under one second for a typical staged change set so it does not noticeably slow commits."
+delivers_to:
+  agent: python-coder
+  contract: "A reusable page-path-to-doc-path derivation helper (shared with the planning-time trigger layer GE-104a-2): given a frontend page path 'site/app/<route-segments>/page.tsx', returns exactly one deterministic reference-doc path 'docs/reference/frontend/<name>.md'. This is the single source of truth for the page->doc mapping rule across commit-time and planning-time enforcement."
+expects_from:
+  ac_id: GE-104a
+  contract: "The L1 invariant that a newly added frontend page must have its matching docs/reference/frontend/<name>.md reference doc, enforced at commit time. Page location convention: site/app/<route>/page.tsx; doc location convention: docs/reference/frontend/<name>.md."
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-104a-1-i
+  - GE-104a-1-ii
+  - GE-104a-1-iii
+  - GE-104a-1-iv
+implemented_by:
+- tickets/00_inbox/TICKET-20260617-GE-104a-1.md

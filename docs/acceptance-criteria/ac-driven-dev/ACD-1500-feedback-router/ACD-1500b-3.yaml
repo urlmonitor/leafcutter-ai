@@ -1,0 +1,43 @@
+id: ACD-1500b-3
+readiness: approved
+priority: medium
+title: "Blocker-category entries are always parked regardless of confidence"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given entry F1 has category: blocker,
+  And F1 was classified with confidence 0.95 (well above the floor),
+  When the router decides what to do with F1,
+  Then F1 is parked for human /feedback-review,
+  And F1 is NOT dispatched to /quick-fix or /create-ac despite its high confidence,
+  And the parked record states the reason "blocker category always requires human handling",
+  And the blocker rule is applied before the confidence-floor gate so a high
+    confidence score can never override it.
+depends_on: [ACD-1500b, ACD-1500b-1]
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The blocker check lives in feedback-router.js and must execute BEFORE the confidence-floor gate (ACD-1500b-2) so confidence can never override a blocker park; ordering is load-bearing"
+  - "Blocker detection keys off the entry's category field equalling 'blocker' from the closed vocabulary in config/feedback_categories.yaml"
+  - "A blocker-parked entry records a category-based reason and must NOT call resolve_feedback.py (stays unresolved per ACD-1500b-4)"
+delivers_to: null
+expects_from:
+  ac_id: ACD-1500b-1
+  contract: "A per-entry decision record whose category field is inspected for the blocker override"
+origin_agent: business-analyst-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: [ACD-1500b-3-i]
+implemented_by: []

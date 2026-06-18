@@ -1,0 +1,59 @@
+id: GE-108c
+readiness: approved
+priority: medium
+title: "Tuple exception types are rendered in full in the violation message"
+component: guardrail-engine
+level: L2
+status: active
+req_status: active
+work_status: done
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-108-exception-hook-hardening/GE-108.yaml"
+criteria: |
+  Scenario: A multi-type except clause reports the full tuple in the message
+    Given a production Python file with a blind handler written as
+      `except (ValueError, Exception):` that neither re-raises nor logs at
+      WARNING or higher,
+    When the exception-handling guard analyses the file,
+    Then it emits a silent-handler (BLE001) violation for that handler,
+    And the violation message text contains the full caught tuple
+      `(ValueError, Exception)`,
+    And the message does not abbreviate the caught type to just `Exception`.
+
+  Scenario: Detection outcome and location are unchanged by the message fix
+    Given a production Python file containing the blind handler
+      `except (ValueError, Exception):`,
+    When the exception-handling guard analyses the file,
+    Then the same single silent-handler (BLE001) violation is emitted that the
+      guard emitted before the message-rendering change,
+    And the reported line and column of the violation match the position of the
+      `except` clause exactly,
+    Because this behaviour changes only the human-readable message, not what is
+      detected or where.
+depends_on:
+  - GE-108
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-108-exception-hook-hardening/GE-108.yaml"
+    relationship: parent
+    status: exists
+  - path: "templates/commit-guardian/check_exception_handling.py"
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "BUILD-CONVENTION: The committable source of truth is templates/commit-guardian/check_exception_handling.py. The scripts/commit_guardian/ copy is gitignored build output synced by `python leafcutter/scripts/build.py`. The fix MUST edit the template file and then rebuild; do NOT edit scripts/commit_guardian/ directly (ADR-001 self-hosting boundary)."
+  - "NO ADR REQUIRED: This is a message-only cosmetic fix to the BLE001 violation text — it does not change the enforcement scope, so no ADR is needed (unlike GE-108a and GE-108b)."
+  - "DETECTION INVARIANCE: The change must touch only the human-readable BLE001 message string construction (the type-label rendering). The set of violations emitted, their codes, and their reported line/col must be byte-for-byte unchanged from before the fix."
+  - "AST-ONLY: The tuple-rendering must read the caught types from the AST except-clause node — no regex over source text."
+  - "The rendered tuple must preserve the order in which the caught types appear in the source `except` clause."
+delivers_to: null
+expects_from:
+  ac_id: GE-108
+  contract: "The check_exception_handling guard's BLE001 message construction: the type_name rendering branch in analyse_file() that currently collapses a tuple except clause to the literal 'Exception'."
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-Exceptionhandlingguardenforcestheerror/03_TICKET-20260617-GE-108c.md

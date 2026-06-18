@@ -92,7 +92,6 @@ graph TD
         brainstorm_lead["Brainstorm Lead"]
         brainstorm_worker["Brainstorm Worker"]
         research_agent["Research Agent"]
-        test_planner["Test Planner"]
         conflict_resolver["Conflict Resolver"]
         worktree_agent["Worktree Agent"]
         changelog_agent["Changelog Agent"]
@@ -141,13 +140,11 @@ graph TD
     create_epic --> business_analyst
     create_epic --> create_ticket
     business_analyst --> research_agent
-    business_analyst --> test_planner
     brainstorm_lead --> brainstorm_worker
     architect_review --> research_agent
     architect_review --> architect_review_deep
     python_coder --> research_agent
     python_coder --> test_runner
-    test_planner --> research_agent
     test_writer --> research_agent
     test_writer --> test_runner
     documentation_expert --> research_agent
@@ -187,7 +184,6 @@ graph TD
     style research_agent fill:#888,color:#fff
     style architect_review fill:#45b37a,color:#fff
     style python_coder fill:#45b37a,color:#fff
-    style test_planner fill:#888,color:#fff
     style test_writer fill:#45b37a,color:#fff
     style test_runner fill:#45b37a,color:#fff
     style documentation_expert fill:#45b37a,color:#fff
@@ -342,7 +338,6 @@ graph TD
     create_epic --> create_ticket
     business_analyst["business-analyst"]
     business_analyst --> research_agent
-    business_analyst --> test_planner
     brainstorm_lead["brainstorm-lead"]
     brainstorm_lead --> brainstorm_worker
     brainstorm_worker["brainstorm-worker"]
@@ -353,8 +348,6 @@ graph TD
     python_coder["python-coder"]
     python_coder --> research_agent
     python_coder --> test_runner
-    test_planner["test-planner"]
-    test_planner --> research_agent
     test_writer["test-writer"]
     test_writer --> research_agent
     test_writer --> test_runner
@@ -509,9 +502,8 @@ Agents are grouped by family and sorted alphabetically within each group. Each e
 | [sql-query](coding/sql-query.md) | Sonnet | User-facing | `/sql-query` | Ad-hoc SELECT query authoring; invokes `sql-query-past-queries` skill to surface reusable prior queries; never executes autonomously. Portable. [EPIC-PortableSQLAgents ticket 05] |
 | [sql-test-writer](coding/sql-test-writer.md) | Sonnet | Internal | — | Dispatched by `sql-coder`; authors SQL test files using transaction-rollback isolation (`unittest.TestCase`); reads PROJECT_CONTEXT for test_folder, framework, slow_test_marker. Portable. [EPIC-PortableSQLAgents ticket 06] |
 | [status-checker](coding/status-checker.md) | Sonnet | User-facing | `/status` | Investigates ticket state via git + prod-puller; closes confirmed-done tickets on explicit user request. [EPIC-CodingAgents ticket 08] |
-| [test-planner](coding/test-planner.md) | Sonnet | Internal | — | Spawned by `business-analyst` during ticket creation; reads `testing_context` config; returns a `test_requirements` JSON block specifying which tests to write, their type, target directory, and what they cover. Never writes code. [EPIC-PortableDevWorkflow ticket 36] |
 | [test-runner](coding/test-runner.md) | Sonnet | User-facing | `/test` | Picks right suite from diff; structured failure report; auto-trigger for `python-coder`/`sql-coder` inner loops. Now runs after `test-writer` in the phase sequence. [EPIC-CodingAgents ticket 26] |
-| [test-writer](coding/test-writer.md) | Sonnet | Internal | — | Phase agent dispatched by `ticket-supervisor` when a ticket has a non-empty `test_requirements.tests` array; writes test files per the `test-planner` spec using the correct framework and setUp/tearDown pattern; runs after `python-coder`, before `test-runner`. [EPIC-PortableDevWorkflow ticket 36] |
+| [test-writer](coding/test-writer.md) | Sonnet | Internal | — | Phase agent dispatched by `ticket-supervisor` when a ticket has a non-empty `test_requirements.tests` array; writes test files using the correct framework and setUp/tearDown pattern; runs after `python-coder`, before `test-runner`. [EPIC-PortableDevWorkflow ticket 36] |
 | [ticket-supervisor](coding/ticket-supervisor.md) | Sonnet | Internal | — | Drives a single ticket through its phase agents (read `agents:` map → spawn next `needed` → parse comment → route ok/handoff/blocker/question); runs failure-adjudication ladder; holds the commit-phase lock. Invoked only by `epic-supervisor`. [EPIC-AgentSupervisor ticket 08] |
 | [worktree-agent](coding/worktree-agent.md) | Haiku | Confirmation-gated | `/worktree` | Wraps `feature` skill (create, non-destructive) and `close-worktree` workflow (remove, confirmation-gated). [EPIC-CodingAgents ticket 14] |
 

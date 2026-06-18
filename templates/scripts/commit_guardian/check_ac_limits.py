@@ -11,7 +11,8 @@ BUSINESS CONTEXT: Overcrowded AC trees are hard to navigate, review, and
     AC may be misclassified) without blocking the commit.
 ARCHITECTURE: Discovers all .yaml files staged in docs/acceptance-criteria/,
     loads them with PyYAML (stdlib fallback when absent), builds a parent->children
-    map using the 'level' and 'depends_on' fields, then checks:
+    map using id-derived structural parent attribution (not depends_on membership,
+    which is multi-purpose and includes non-parent cross-links), then checks:
       - L0 nodes: count of L1 children > 7 → hard block (ACS-100c-1).
       - L1 nodes: count of L2 children > 5 → hard block (ACS-100c-1).
       - Any parent with 1 or 2 children → advisory warning (ACS-100c-2).
@@ -42,6 +43,7 @@ DECISION HISTORY:
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -284,32 +286,63 @@ def _get_staged_ac_paths() -> list[str]:
 # Tree analysis
 # ---------------------------------------------------------------------------
 
+# Inline id-derivation helpers (mirrors scripts/ac_store/ac_parent_id.py).
+# A direct import is avoided because the hook is a standalone file that runs
+# via run_hook.py with a sys.path that does not guarantee the scripts/ package
+# is importable at hook runtime.  Replicating the two patterns keeps the hook
+# self-contained without any fragile path manipulation.
+_ID_ROOT_PATTERN = re.compile(r"^([A-Z]{2,6})-([0-9]{3})$")
+_ID_ALPHA_SUBLEVEL_PATTERN = re.compile(r"^([A-Z]{2,6}-[0-9]{3})([a-z]+)$")
+
+
+def _derive_parent_id(ac_id: str) -> str | None:
+    """Derive the structural parent AC ID from a child AC ID.
+
+    Rules (mirrors ac_parent_id.derive_parent_id):
+      1. ``PREFIX-NNN`` (root) → None.
+      2. ``PREFIX-NNNx`` (alpha sub-level) → strip trailing alpha chars.
+      3. Otherwise strip the last hyphen-delimited segment.
+
+    Args:
+        ac_id: The child AC identifier string.
+
+    Returns:
+        The derived parent AC ID, or None when ac_id is a root AC.
+    """
+    if _ID_ROOT_PATTERN.match(ac_id):
+        return None
+    m = _ID_ALPHA_SUBLEVEL_PATTERN.match(ac_id)
+    if m:
+        return m.group(1)
+    last_hyphen = ac_id.rfind("-")
+    if last_hyphen == -1:
+        return None
+    return ac_id[:last_hyphen]
+
 
 def _build_children_map(nodes: list[AcNode]) -> dict[str, list[AcNode]]:
-    """Build a mapping from each AC id to its direct children.
+    """Build a mapping from each AC id to its direct structural children.
 
-    A child is identified by having its parent's ID in its 'depends_on' list
-    and having the child level expected for that parent (L0->L1, L1->L2).
+    A child is attributed to its parent exclusively via id derivation:
+    ``_derive_parent_id(node.ac_id)`` returns the single structural parent id.
+    The ``depends_on`` field is intentionally NOT used for parent attribution
+    because it is multi-purpose (structural parent edge AND non-parent
+    cross-links / pattern composition references) — using it would cause
+    cross-linked siblings to inflate each other's child counts (GE-106).
 
     Args:
         nodes: Full list of AcNode objects from the AC store.
 
     Returns:
-        Dict mapping parent_id -> list of child AcNode objects.
+        Dict mapping parent_id -> list of direct child AcNode objects.
     """
-    id_to_node: dict[str, AcNode] = {n.ac_id: n for n in nodes}
+    known_ids: set[str] = {n.ac_id for n in nodes}
     children_map: dict[str, list[AcNode]] = {n.ac_id: [] for n in nodes}
 
     for node in nodes:
-        expected_child_level = None
-        for parent_level, child_level in _PARENT_CHILD.items():
-            if node.level == child_level:
-                # Find which depends_on entries are parents at parent_level
-                for dep_id in node.depends_on:
-                    parent_node = id_to_node.get(dep_id)
-                    if parent_node and parent_node.level == parent_level:
-                        children_map[dep_id].append(node)
-                break
+        parent_id = _derive_parent_id(node.ac_id)
+        if parent_id is not None and parent_id in known_ids:
+            children_map[parent_id].append(node)
 
     return children_map
 

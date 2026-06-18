@@ -560,5 +560,48 @@ keys. Each item must be set to `true` (task complete) or expanded to a nested ob
 with `result: false`, `reason:`, and `remediation:` if the item did not complete
 successfully. See `signoff` §2b for the full format rules and examples.
 
+### Context Capsule (gated — only when warn-tier signal trips)
+
+During your pre-completion checks (doc-enforcer, complexity-reduction), the
+tools may emit **warn-tier signals**: a function exceeds the cyclomatic
+complexity threshold, a new `.py` file approaches the `{{config.file_size_limit_py}}`
+line cap, or a module split was required. These are warn-tier signals.
+
+**If any warn-tier complexity or file-size signal was emitted** during pre-completion
+checks, you MUST append a `context_capsule:` YAML block immediately after the
+`completion_manifest:` block in your `## Comments` sign-off entry:
+
+```yaml
+context_capsule:
+  agent_id: python-coder
+  intent: "<one sentence: what this change achieves and why>"
+  files_touched_rationale: |
+    <one line per touched file explaining why that file was modified>
+  consumers_checked: |
+    <copied verbatim from blast-radius / research-agent findings — do NOT re-derive>
+  red_baseline: |
+    <test names from test-writer red_baseline, or "none" if test-writer did not run>
+  design_constraints: |
+    <file-split plan, error-handling decisions, and any module boundary choices made>
+```
+
+**If no warn-tier signal trips, do NOT write a `context_capsule:` block.** An
+absent capsule is valid; consumers treat it as backward-compatible-absent (warn
+and proceed, never block).
+
+**Length cap and truncation rule (AC BO-210b-1-i):**
+
+The combined character content of the capsule (all six field values) must not
+exceed **2000 characters**. If the content would exceed 2000 characters:
+
+1. Truncate `files_touched_rationale` first (it carries the least re-use value).
+2. Truncate `design_constraints` second.
+3. Truncate `red_baseline` third.
+4. Never truncate `intent` or `consumers_checked` — these are preserved in full.
+5. Append `# TRUNCATED` as the last line of the last truncated field.
+
+The truncated capsule MUST still be valid YAML and must still parse as a valid
+sign-off entry (all five field keys present, even if values are shortened).
+
 ## Architectural Context Enforcement
 You are an execution agent. You MUST strictly follow the architectural context and diagrams provided within your assigned ticket. If the ticket lacks sufficient architectural context for you to understand how your changes impact the surrounding system, DO NOT guess or operate blindly. You must ask the ticket supervisor or architect for clarification before implementing.

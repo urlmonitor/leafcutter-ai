@@ -27,12 +27,55 @@ DECISION HISTORY
        in a try/except block.
   Exit code 1 on any violation; 0 on clean file.
   Self-contained: only stdlib imports (ast, sys, pathlib).
+- 2026-06-17 [GE-107]: Two robustness bug fixes.
+  Fix 1 — cursor false-positive: _call_matches_io_boundary previously matched
+    .execute()/.executemany()/.callproc() on ANY ast.Name receiver, causing
+    false IO-001 violations for unrelated objects (command.execute(),
+    workflow.executemany(), executor.callproc()). Narrowed to
+    _CURSOR_RECEIVER_NAMES frozenset (cursor, cur, crsr, db_cursor, _cursor,
+    dbcur) so only recognised cursor identifiers are flagged.
+  Fix 2 — uncaught OSError: main() caught only SyntaxError from analyse_file,
+    so path.read_text() raising IsADirectoryError/PermissionError on an
+    unreadable .py path produced an uncaught traceback and an exit 1 that
+    collided with the legitimate "violations found" exit code. Added
+    except OSError alongside except SyntaxError, with a skip message to
+    stderr and continue, mirroring check_placeholder_defaults' OSError
+    handling and satisfying Error Handling Policy Rule 1.
+- 2026-06-17 [GE-108a]: Subprocess calls added as mandatory I/O boundaries.
+  Per ADR-014 Decision 1, subprocess spawning is external I/O that must be
+  wrapped in try/except. Added six subprocess entry-point forms to
+  _IO_BOUNDARIES: subprocess.run, subprocess.Popen, subprocess.call,
+  subprocess.check_call, subprocess.check_output, subprocess.getoutput.
+  The commit_guardian.json io_boundary_calls list was updated in parity.
+  Self-hosting remediation (corrected 2026-06-18): the original sign-off
+  claimed leafcutter's own subprocess calls were already wrapped — that was
+  inaccurate. A post-drive spot-check found 11 unwrapped subprocess calls in
+  6 production scripts (goal_to_epic, ac_prioritizer, setup_ticket_worktree,
+  build_helpers, compute_next_version, feedback/emit_hook_finding). All 11
+  were subsequently wrapped in try/except so the widened guard produces no
+  IO-001 subprocess violations on leafcutter's own code.
+- 2026-06-18 [GE-108b]: Blind-catch handler cleared only by WARNING-or-higher
+  logging on a real logger object (ADR-014 Decision 2).
+  Replaced _LOG_CALL_NAMES (broad name-set) with _WARNING_LOG_METHODS
+  (warning, error, critical, exception only). _handler_reraises_or_logs now
+  requires calls to be in attribute form (ast.Attribute node), so a bare
+  function call like error() or debug() no longer clears the handler regardless
+  of name. Sub-WARNING methods (debug, info) and print() are explicitly excluded.
+  Self-hosting non-regression verified: all production handlers in leafcutter
+  already use WARNING-or-higher logging or re-raise.
+- 2026-06-18 [GE-108c]: BLE001 message now renders tuple exception types in full.
+  Previously, except (ValueError, Exception): collapsed to just "Exception" in
+  the violation message because the type_name branch only handled ast.Name.
+  Added an ast.Tuple branch that joins the element names with ", " and wraps
+  them in parentheses, producing e.g. "(ValueError, Exception)" in the message.
+  Detection logic (what is flagged and at which line/col) is unchanged.
 ====================================================================
 """
 
 from __future__ import annotations
 
 import ast
+import json
 import sys
 from pathlib import Path
 from typing import NamedTuple
@@ -80,24 +123,40 @@ _IO_BOUNDARIES: list[tuple[str | None, str]] = [
     ("cursor", "execute"),
     ("cursor", "executemany"),
     ("cursor", "callproc"),
+    ("subprocess", "run"),
+    ("subprocess", "Popen"),
+    ("subprocess", "call"),
+    ("subprocess", "check_call"),
+    ("subprocess", "check_output"),
+    ("subprocess", "getoutput"),
 ]
+
+# Recognised cursor receiver names for IO boundary detection.
+# Only ast.Name receiver ids in this set trigger IO-001 for cursor methods
+# (execute, executemany, callproc). Names outside this set are not database
+# cursors and must not be flagged, avoiding false positives on objects such
+# as command.execute(), workflow.executemany(), executor.callproc().
+_CURSOR_RECEIVER_NAMES: frozenset[str] = frozenset({
+    "cursor",
+    "cur",
+    "crsr",
+    "db_cursor",
+    "_cursor",
+    "dbcur",
+})
 
 # Exception type names considered "blind" — too broad without reraise/log
 _BLIND_EXCEPTION_NAMES: frozenset[str] = frozenset({"Exception", "BaseException"})
 
-# Call attributes/names whose presence in an except body signals non-silent handling
-_LOG_CALL_NAMES: frozenset[str] = frozenset({
-    "log",
-    "logger",
-    "logging",
-    "warn",
+# WARNING-or-higher method names that clear a blind-catch handler when called as
+# an attribute on an object (e.g. ``logger.warning(...)``).  Only attribute-call
+# form is accepted — bare function calls like ``error()`` do NOT clear the handler
+# regardless of name (ADR-014 Decision 2 / GE-108b).
+_WARNING_LOG_METHODS: frozenset[str] = frozenset({
     "warning",
     "error",
     "critical",
     "exception",
-    "info",
-    "debug",
-    "print",
 })
 
 
@@ -149,29 +208,43 @@ def _handler_is_blind(handler: ast.ExceptHandler) -> bool:
 
 
 def _handler_reraises_or_logs(handler: ast.ExceptHandler) -> bool:
-    """Return True if the handler body contains a reraise or a log/print call.
+    """Return True if the handler body contains a reraise or WARNING-or-higher logging.
 
-    This signals that the exception is not silently swallowed even if the
-    handler catches a broad type.
+    A handler is non-silent when it:
+    - Re-raises the exception (bare ``raise`` or ``raise NewError from exc``), OR
+    - Calls a WARNING-or-higher log method as an **attribute** on an object, i.e.
+      ``<expr>.warning(...)``, ``<expr>.error(...)``, ``<expr>.critical(...)``,
+      or ``<expr>.exception(...)``.
+
+    What does NOT clear the handler (ADR-014 Decision 2 / GE-108b):
+    - A bare function call whose name coincidentally matches a log-level name,
+      e.g. ``error()`` — these are NOT attribute calls on a real logger object.
+    - Sub-WARNING log calls: ``logger.debug(...)``, ``logger.info(...)``.
+    - ``print(...)`` or any non-logger call.
+
+    The detection is purely AST-based: the receiver of the attribute call is NOT
+    resolved to a concrete type; it is sufficient that the call is in attribute
+    form (``ast.Attribute`` node) with a WARNING-or-higher method name, so that
+    a name-coincidence bare call (``ast.Name``) is always rejected.
 
     Args:
         handler: The ExceptHandler node to examine.
 
     Returns:
-        True if the handler body re-raises or logs the exception.
+        True if the handler body re-raises or contains genuine WARNING-or-higher
+        logging on a real (attribute-accessed) logger object.
     """
     for node in ast.walk(ast.Module(body=handler.body, type_ignores=[])):
         if isinstance(node, ast.Raise):
-            # Any raise (bare re-raise or raise SomeError) is non-silent
+            # Any raise (bare re-raise or raise SomeError from exc) is non-silent.
             return True
         if isinstance(node, ast.Call):
             func = node.func
-            if isinstance(func, ast.Name) and func.id.lower() in _LOG_CALL_NAMES:
-                return True
+            # ONLY accept attribute-call form: <obj>.warning(...) etc.
+            # A bare Name call (e.g. error()) is always rejected — name
+            # coincidence with a log level does not indicate a real logger.
             if isinstance(func, ast.Attribute):
-                if func.attr.lower() in _LOG_CALL_NAMES:
-                    return True
-                if isinstance(func.value, ast.Name) and func.value.id.lower() in _LOG_CALL_NAMES:
+                if func.attr in _WARNING_LOG_METHODS:
                     return True
     return False
 
@@ -198,8 +271,11 @@ def _call_matches_io_boundary(call: ast.Call) -> tuple[str, str] | None:
                 # Named module: requests.get, cursor.execute, etc.
                 if isinstance(value, ast.Name) and value.id == mod:
                     return (mod, attr)
-                # For cursor.execute: match any variable name whose attr is execute
-                if mod == "cursor" and isinstance(value, ast.Name):
+                # For cursor methods (execute, executemany, callproc): only match
+                # receiver names that are recognised cursor identifiers
+                # (_CURSOR_RECEIVER_NAMES). This prevents false positives on
+                # unrelated objects such as command.execute(), executor.callproc().
+                if mod == "cursor" and isinstance(value, ast.Name) and value.id in _CURSOR_RECEIVER_NAMES:
                     return (value.id, attr)
         return None
     if isinstance(func, ast.Name):
@@ -275,11 +351,15 @@ def analyse_file(path: Path) -> list[Violation]:
                     ),
                 ))
             elif _handler_is_blind(node) and not _handler_reraises_or_logs(node):
-                type_name = (
-                    node.type.id
-                    if isinstance(node.type, ast.Name)
-                    else "Exception"
-                )
+                if isinstance(node.type, ast.Name):
+                    type_name = node.type.id
+                elif isinstance(node.type, ast.Tuple):
+                    inner = ", ".join(
+                        elt.id for elt in node.type.elts if isinstance(elt, ast.Name)
+                    )
+                    type_name = f"({inner})"
+                else:
+                    type_name = "Exception"
                 violations.append(Violation(
                     line=node.lineno,
                     col=node.col_offset + 1,
@@ -311,6 +391,49 @@ def analyse_file(path: Path) -> list[Violation]:
     # Sort by line number for deterministic output
     violations.sort(key=lambda v: (v.line, v.col))
     return violations
+
+
+# ---------------------------------------------------------------------------
+# Agent registry lookup (mirrors check_complexity.py pattern)
+# ---------------------------------------------------------------------------
+
+
+def _get_agent_for_extension(ext: str) -> str | None:
+    """Return the agent id whose owns_file_extensions contains the given extension.
+
+    Reads ``agent_registry.json`` relative to this script's project root.
+    Fails open: returns ``None`` when the registry is missing, unreadable,
+    or contains no matching entry.
+
+    Args:
+        ext: File extension with leading dot, e.g. ``".py"``.
+
+    Returns:
+        Agent id string (e.g. ``"python-coder"``) if a match is found,
+        else ``None``.
+    """
+    script_dir = Path(__file__).resolve().parent
+    # Search for the registry relative to the script location (handles both
+    # source layout scripts/commit_guardian/ and deployed layout).
+    for ancestor in [script_dir, *script_dir.parents]:
+        candidate = ancestor / "leafcutter" / "config" / "agent_registry.json"
+        if candidate.exists():
+            registry_path = candidate
+            break
+    else:
+        return None
+
+    try:
+        with open(registry_path, encoding="utf-8") as fh:
+            data = json.load(fh)
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    for entry in data.get("agents", []):
+        extensions = entry.get("owns_file_extensions") or []
+        if ext in extensions:
+            return entry.get("id")
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -356,6 +479,17 @@ def main() -> int:
                 file=sys.stderr,
             )
             continue
+        except OSError as exc:
+            # path.read_text() raises OSError (IsADirectoryError, PermissionError,
+            # etc.) when the path ends in .py but cannot be read as a text file.
+            # Catch and skip rather than letting the traceback propagate — mirrors
+            # check_placeholder_defaults' OSError handling and satisfies Error
+            # Handling Policy Rule 1 (external I/O must be wrapped).
+            print(
+                f"check_exception_handling: cannot read {file_path}: {exc}",
+                file=sys.stderr,
+            )
+            continue
 
         if not violations:
             continue
@@ -367,7 +501,16 @@ def main() -> int:
         for v in violations:
             print(f"  {file_path}:{v.line}:{v.col}: {v.code} {v.message}")
 
-    return 1 if found_any else 0
+    if found_any:
+        # Machine-readable autofix hint — parsed by the precommit-autofix skill
+        # to route directly to the correct coder. Looked up from agent_registry.json
+        # via owns_file_extensions; falls back to python-coder when the lookup
+        # returns None (exception-handling violations are always Python).
+        agent = _get_agent_for_extension(".py") or "python-coder"
+        print(f"AUTOFIX_AGENT: {agent}")
+        return 1
+
+    return 0
 
 
 if __name__ == "__main__":

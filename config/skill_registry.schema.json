@@ -63,6 +63,14 @@
         "description": {
           "type": "string",
           "description": "Optional human-readable description of the skill's purpose. Used in summaries and documentation."
+        },
+        "invocation_surface": {
+          "type": "string",
+          "description": "Optional slash-command or surface identifier used to invoke this skill (e.g. '/plan-feature'). Present only for skills that expose a user-facing command entry point."
+        },
+        "workflow_script": {
+          "type": "string",
+          "description": "Optional relative path (from repo root) to the workflow JS script that drives this skill's slash command (e.g. 'scripts/workflows/plan-feature.js'). Present only when the skill has a workflow_script entry point."
         }
       },
       "additionalProperties": false

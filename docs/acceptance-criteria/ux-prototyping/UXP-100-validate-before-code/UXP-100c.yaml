@@ -28,5 +28,8 @@ covered_by:
   - UXP-100c-1
   - UXP-100c-2
   - UXP-100c-3
+  - UXP-100c-4
+  - UXP-100c-5
+  - UXP-100c-6
 implemented_by: []
 documentation_triggers: [how-to, sequence-diagram]

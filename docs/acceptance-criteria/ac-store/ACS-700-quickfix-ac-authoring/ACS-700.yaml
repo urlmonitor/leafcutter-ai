@@ -1,0 +1,18 @@
+id: ACS-700
+status: active
+component: ac-store
+level: L2
+title: "AC files authored by /quick-fix include origin_agent so they pass check-ac-governance"
+origin_agent: BrainCandy
+criteria: |
+  Given the /quick-fix skill template Phase 1 Step 1.3 defines the AC YAML
+    scaffold that /quick-fix writes for every new acceptance criterion
+  When /quick-fix authors a new AC file from that scaffold and the commit is
+    checked by the check-ac-governance pre-commit hook
+  Then the scaffold includes an origin_agent field identifying the criteria
+    author, satisfying the new-AC-file requirement ACS-400c-1
+  And the commit is not blocked for a missing origin_agent
+  And the bug symptom ("AC files authored by /quick-fix omit origin_agent, so
+    check-ac-governance hard-blocks the commit and the commit agent must patch
+    the field in mid-commit") must not occur
+notes: "Authored by /quick-fix. Root cause: the /quick-fix Phase 1 Step 1.3 AC scaffold (templates/skills/quick-fix/SKILL.md) omits the origin_agent field that check-ac-governance (ACS-400c-1) requires on every new AC file. Surfaced during the BP-007 quick-fix, where the commit agent had to inject origin_agent to get past the governance hook."

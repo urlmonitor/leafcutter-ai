@@ -221,7 +221,7 @@ class TestSkillRegistryBidirectional(unittest.TestCase):
         self.assertEqual(
             errors,
             [],
-            msg=f"Registry entry schema violations found:\n" + "\n".join(errors),
+            msg="Registry entry schema violations found:\n" + "\n".join(errors),
         )
 
 

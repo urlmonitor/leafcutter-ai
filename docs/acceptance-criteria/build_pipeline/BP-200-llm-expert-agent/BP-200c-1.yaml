@@ -44,6 +44,6 @@ created: 2026-06-05
 created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/03_registry_and_docs.md"
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by: [BP-200c-1-i]
 implemented_by:
   - "config/agent_registry.json"

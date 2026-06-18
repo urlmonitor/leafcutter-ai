@@ -1,0 +1,47 @@
+id: ACS-500a-3-i
+readiness: approved
+priority: high
+title: "pattern_bindings with missing keys are rejected at commit time"
+component: ac-store
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a pattern AC (PTN-001) has criteria containing three parameterized
+    slots: {entity_type}, {columns}, and {default_sort},
+  And a consuming AC has implements_pattern: "PTN-001" with pattern_bindings
+    containing only two keys: {entity_type: "orders", columns: ["id", "date"]},
+  When the schema validator runs at commit time,
+  Then the commit is blocked with an error stating:
+    "pattern_bindings missing required key 'default_sort' for pattern PTN-001"
+  And the error names both the consuming AC file and the missing key.
+depends_on: [ACS-500a-3]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must not regress any existing validation behavior in scripts/ac_store/validate_ac_schema.py"
+  - "Must complete validation within the same <200ms envelope as the parent validation AC"
+  - "Error messages must name the consuming AC file path, the pattern AC ID, and each missing binding key"
+  - "Must extract slot names from pattern criteria using curly-brace parsing consistent with ACS-500a-1 convention"
+delivers_to: null
+expects_from:
+  ac_id: ACS-500a-3
+  contract: "Validation logic that resolves implements_pattern references and can access the referenced pattern's criteria to extract slot names"
+origin_agent: business-analyst-v3
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260611-ACS-500a-3-i.md

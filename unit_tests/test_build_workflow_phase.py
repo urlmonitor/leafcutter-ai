@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-import tempfile
 
 import pytest
 
@@ -67,7 +66,7 @@ def test_workflow_scripts_skipped_when_not_enabled(
     )
     captured = capsys.readouterr()
     assert written == 0
-    assert not (target_root / ".claude" / "workflows").exists()
+    assert not (target_root / "workflows").exists()
     assert "skipped (not enabled" in captured.out
 
     # Case B: workflows.enabled explicitly false.
@@ -77,7 +76,7 @@ def test_workflow_scripts_skipped_when_not_enabled(
     )
     captured = capsys.readouterr()
     assert written == 0
-    assert not (target_root / ".claude" / "workflows").exists()
+    assert not (target_root / "workflows").exists()
     assert "skipped (not enabled" in captured.out
 
 
@@ -98,8 +97,9 @@ def test_workflow_scripts_installed_when_enabled_and_version_ok(
     captured = capsys.readouterr()
 
     assert written == 2
-    assert (target_root / ".claude" / "workflows" / "build-feature.js").exists()
-    assert (target_root / ".claude" / "workflows" / "finalize-feature.js").exists()
+    # BP-811: build_workflow_scripts writes to <root>/workflows/ (shimmed to .claude/workflows/).
+    assert (target_root / "workflows" / "build-feature.js").exists()
+    assert (target_root / "workflows" / "finalize-feature.js").exists()
     assert "Workflow scripts:" in captured.out
     assert "installed" in captured.out
 
@@ -121,7 +121,7 @@ def test_workflow_scripts_skipped_when_version_below_minimum(
     captured = capsys.readouterr()
 
     assert written == 0
-    workflows_dir = target_root / ".claude" / "workflows"
+    workflows_dir = target_root / "workflows"
     assert not workflows_dir.exists() or list(workflows_dir.glob("*.js")) == []
     assert "Claude Code >= 2.1.154 required" in captured.out
 
@@ -153,7 +153,8 @@ def test_workflow_scripts_installed_when_version_unknown(
 
     # Files should be installed (fail-open).
     assert written == 2
-    assert (target_root / ".claude" / "workflows" / "build-feature.js").exists()
+    # BP-811: written to <root>/workflows/ (shimmed to .claude/workflows/).
+    assert (target_root / "workflows" / "build-feature.js").exists()
     # Warning must be present.
     assert "version unknown" in captured.out.lower() or "unknown" in captured.out.lower()
 

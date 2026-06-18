@@ -1,0 +1,46 @@
+id: BP-900c-1
+title: "Each broken-reference entry names the missing script, the referencing template, and a suggested action"
+component: build_pipeline
+level: L2
+status: active
+req_status: approved
+readiness: approved
+priority: critical
+work_status: not_started
+criteria: |
+  Given the build-time guard has detected that "scripts/ac_store/ac_prioritizer.py"
+  is referenced in the compiled template "agents/build-ac.md"
+  but is not in the deployable script set,
+  When the guard emits the error report,
+  Then the report entry for this reference contains all three fields:
+    (a) the missing path: "scripts/ac_store/ac_prioritizer.py"
+    (b) the referencing template: "agents/build-ac.md"
+    (c) a suggested action: one of "add a deploy phase in build_phases.py"
+        or "add to the external-dependency allowlist"
+  And no field is empty or omitted
+depends_on: [BP-900c]
+doc_links:
+  - path: scripts/build_propagation_audit.py
+    relationship: extends
+    status: exists
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Each error entry must contain all three fields (missing_path, referencing_template, suggested_action) — no field may be empty or omitted"
+  - "Suggested action must be one of a finite set of known remediation options"
+  - "Error formatting must be consistent across all entries in a single report"
+delivers_to: null
+expects_from:
+  ac_id: BP-900b-2
+  contract: "list[dict] — list of broken references with 'missing_path' and 'referencing_template' keys; this AC adds the 'suggested_action' field to each entry"
+origin_agent: business-analyst-v3
+created: 2026-06-11
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: [BP-900c-1-1]
+implemented_by:
+- tickets/00_inbox/TICKET-20260611-BP-900c-1.md

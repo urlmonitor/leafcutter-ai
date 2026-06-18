@@ -1,5 +1,5 @@
 id: BP-100i-2-i
-readiness: reviewed
+readiness: approved
 priority: high
 title: "Disabled hooks in the legacy manifest still require canonical presence"
 component: build-pipeline

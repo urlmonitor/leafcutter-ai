@@ -12,7 +12,6 @@ ARCHITECTURE: Pure unit tests using unittest.TestCase with tempfile for
 from __future__ import annotations
 
 import importlib.util
-import os
 import subprocess
 import tempfile
 import unittest

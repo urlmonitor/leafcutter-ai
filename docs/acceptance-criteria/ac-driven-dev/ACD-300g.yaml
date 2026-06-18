@@ -1,0 +1,38 @@
+id: ACD-300g
+readiness: approved
+priority: medium
+title: "Each stage's AC output is committed to git before the workflow advances to the next stage"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the /create-ac workflow dispatches authoring agents in stages
+    (PO v3, BA v3, IT PO v3) with user confirmation gates between them,
+  When the user approves a stage's output at a confirmation gate,
+  Then all AC YAML files created or modified during that stage are committed
+    to git before the next agent is dispatched,
+  And each commit includes only the AC files from the completed stage,
+  And each commit message identifies the workflow run and stage,
+  And if the commit fails, the workflow does not advance to the next stage,
+  And if the user cancels at a gate, no commit is made for that stage's output.
+depends_on: [ACD-300, ACD-300b, ACD-300c]
+doc_links:
+  - path: templates/skills/create-ac/SKILL.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-300g-1
+  - ACD-300g-2
+  - ACD-300g-3
+  - ACD-300g-4
+implemented_by: []

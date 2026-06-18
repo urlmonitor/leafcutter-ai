@@ -123,6 +123,6 @@ Rerun command:
 ## 8. Cross-Links
 
 - [docs/agents/coding/test-writer.md](test-writer.md) — writes the test files that test-runner runs.
-- [docs/agents/coding/test-planner.md](test-planner.md) — produces the test spec consumed by test-writer.
+- [docs/agents/coding/test-writer.md](test-writer.md) — writes the failing test stubs that test-runner verifies.
 - [docs/testing/README.md](../../testing/README.md) — portable testing conventions.
 - [leafcutter/templates/agents/test-runner.md](../../../templates/agents/test-runner.md) — the agent template itself.

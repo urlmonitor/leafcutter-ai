@@ -1,0 +1,58 @@
+id: ACD-300g-2-i
+readiness: approved
+priority: medium
+title: "Partial-run recovery: uncommitted AC files from a prior crashed session are detected"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a prior /create-ac session wrote AC YAML files to disk but the session
+    ended before the stage commit occurred (e.g. the user's terminal closed,
+    the agent timed out, or a network interruption killed the process),
+  And the uncommitted AC files remain in the working tree with
+    origin_agent set to one of the AC-authoring agents (product-owner-v3,
+    business-analyst-v3, or it-po-v3) and readiness: draft,
+  When the user invokes /create-ac again,
+  Then the workflow detects the uncommitted AC files in the working tree
+    by scanning the AC store directory for files with unstaged or staged
+    but uncommitted changes,
+  And it warns the user: "Found N uncommitted AC files from a prior session:
+    [list of AC IDs]. Commit them before starting new work? (yes/no/discard)",
+  And if the user chooses "yes", the workflow commits the orphaned files
+    before beginning the new triage,
+  And if the user chooses "discard", the workflow reverts the uncommitted files
+    and proceeds with a clean working tree,
+  And if the user chooses "no", the workflow aborts with a message explaining
+    that uncommitted AC files must be resolved before a new run can begin.
+depends_on: [ACD-300g-2]
+doc_links:
+  - path: templates/skills/create-ac/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Must detect orphaned AC files by scanning the AC store directory for uncommitted changes, not by relying on workflow state files"
+  - "Must present the three-way choice (yes/no/discard) before any destructive or constructive action"
+  - "Must complete the orphan scan within 2 seconds for AC stores with up to 500 files"
+  - "Must handle errors from the git status operation gracefully per the project error handling policy"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-CommitAcOutputPerStage/04_TICKET-20260618-ACD-300g-2-i.md

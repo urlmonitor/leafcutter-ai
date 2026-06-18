@@ -1,0 +1,53 @@
+id: GE-100h-1
+readiness: approved
+priority: high
+title: "Both hooks ship disabled by default and are not emitted to .pre-commit-config.yaml until enabled"
+component: guardrail-engine
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100.yaml"
+criteria: |
+  Given a fresh consumer project has run build.py with the default
+    commit_guardian.json (both hooks have enabled: false)
+  When the generated .pre-commit-config.yaml is inspected
+  Then it does NOT contain an entry for "check-duplicate-code"
+  And it does NOT contain an entry for "check-diff-coverage"
+  And no pre-commit hook fires for duplicate detection or coverage gating
+
+  ---
+
+  Given a consumer project has modified commit_guardian.json to set:
+    duplicate_code.enabled: true
+  And diff_coverage.enabled remains false
+  When build.py regenerates .pre-commit-config.yaml
+  Then it contains an entry for "check-duplicate-code" in the hooks section
+  And it does NOT contain an entry for "check-diff-coverage"
+  And the duplicate code hook fires on the next commit that stages
+    a file matching the configured extensions pattern
+depends_on:
+  - GE-100h
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100h.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-100h
+  contract: "The commit_guardian.json structure with enabled: false flags that build.py reads to decide whether to emit hook entries"
+origin_agent: BrainCandy
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260616-GE-100h-1.md

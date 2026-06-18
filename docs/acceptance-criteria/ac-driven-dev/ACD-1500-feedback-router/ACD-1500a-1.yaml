@@ -1,0 +1,48 @@
+id: ACD-1500a-1
+readiness: approved
+priority: medium
+title: "Router reads only the unresolved feedback set as its work queue"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given debugging/logs/feedback.jsonl contains 5 entries:
+    - F1 with no resolved_at field (unresolved)
+    - F2 with no resolved_at field (unresolved)
+    - F3 with resolved_at set to a past timestamp (already resolved)
+    - F4 with no resolved_at field (unresolved)
+    - F5 with resolved_at set to a past timestamp (already resolved)
+  When the router builds its work queue at the start of a run,
+  Then it queries the feedback corpus for the unresolved set only
+    (aggregate.py --unresolved --format json),
+  And the work queue contains exactly F1, F2, and F4,
+  And F3 and F5 are excluded from the queue without being read into processing,
+  And the count of queued entries (3) is reported before any classification begins.
+depends_on: [ACD-1500a]
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The router is a NEW depth-0 workflow (templates/workflows-js/feedback-router.js); the queue-build step must shell out to scripts/feedback/aggregate.py --unresolved --format json rather than re-parsing feedback.jsonl directly, so 'unresolved' has one source of truth"
+  - "Must treat absence of resolved_at as the sole unresolved predicate; entries carrying resolved_at must never be read into the processing path"
+  - "Must report the queued-entry count before any classification begins"
+  - "Must handle a missing or empty feedback.jsonl as an empty queue (zero entries), not an error, per the project error handling policy"
+delivers_to:
+  agent: llm-expert
+  contract: "An ordered list of unresolved feedback entries (the work queue), each entry a dict with feedback_id, category, note, tags, severity, source; consumed one-at-a-time by the classifier sub-agent (ACD-1500a-2)"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

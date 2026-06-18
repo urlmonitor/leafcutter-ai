@@ -23,7 +23,7 @@ criteria: |
   When /build-ac is invoked with --ac ACD-050a,
   Then the system also switches to epic-generation mode
   And scopes the epic to only the leaves beneath ACD-050a.
-depends_on: [ACD-1200e, ACD-1200a-1]
+depends_on: [ACD-1200e, ACD-1200f-1]
 doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
@@ -36,12 +36,13 @@ estimated_complexity: S
 it_requirements:
   - "Must detect goal vs leaf by checking both the level field and the covered_by field (a composite AC has non-empty covered_by)"
   - "Must clearly communicate the mode switch to the user before beginning the epic flow"
-  - "Must use the same tree traversal function as ACD-1200a-1 (no separate traversal implementation)"
+  - "Must use the same tree traversal function as ACD-1200f-1 (no separate traversal implementation)"
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: "split: re-pointed traversal dependency edge ACD-1200a-1 -> ACD-1200f-1, 2026-06-17"
 superseded_by: null
-covered_by: []
+covered_by: [ACD-1200e-2-i]
 implemented_by: []

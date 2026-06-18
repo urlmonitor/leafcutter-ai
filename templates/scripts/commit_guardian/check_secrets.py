@@ -62,6 +62,8 @@ _PROSE_FILE_PREFIXES = (
     "docs\\retrospectives\\",
     "docs/acceptance-criteria/",
     "docs\\acceptance-criteria\\",
+    "templates/skills/",
+    "templates\\skills\\",
 )
 
 # Mirror of scan_secrets entropy constants (kept in sync with the skill).

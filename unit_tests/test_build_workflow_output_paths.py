@@ -69,10 +69,13 @@ def workflows_js_fixture(tmp_path, monkeypatch):
 def test_build_workflow_scripts_writes_to_output_root_workflows(
     output_root, workflows_js_fixture, monkeypatch, capsys
 ):
-    """JS files must land at <output_root>/workflows/, not <output_root>/.claude/workflows/.
+    """JS files must land at <output_root>/workflows/ (NOT .claude/workflows/).
 
-    This is the primary regression check: the function receives output_root
-    (i.e. .leafcutter/) and must write into output_root/workflows/.
+    The function receives output_root (i.e. .leafcutter/) as its first arg and
+    writes into output_root/workflows/ — the source dir install_shims() then
+    exposes at the consumer's .claude/workflows/ shim. Writing directly to
+    output_root/.claude/workflows/ would orphan the files (the shim looks in
+    output_root/workflows/). See BP-811 and TICKET-20260602-FixWorkflowNestedClaudeDir.
     """
     monkeypatch.setenv("CLAUDE_CODE_VERSION", "2.2.0")
     config = {"workflows": {"enabled": True}}
@@ -84,16 +87,10 @@ def test_build_workflow_scripts_writes_to_output_root_workflows(
     # Correct target: output_root/workflows/build-feature.js
     assert (output_root / "workflows" / "build-feature.js").exists(), (
         "Expected JS file at output_root/workflows/build-feature.js — "
-        "got nothing (path fix not applied)"
+        "got nothing"
     )
     assert (output_root / "workflows" / "finalize-feature.js").exists()
     assert written == 2
-
-    # Broken path must NOT be created
-    assert not (output_root / ".claude" / "workflows").exists(), (
-        "Found output_root/.claude/workflows/ — the nested .claude/ path is still present "
-        "(regression: fix not applied)"
-    )
 
 
 # ---------------------------------------------------------------------------

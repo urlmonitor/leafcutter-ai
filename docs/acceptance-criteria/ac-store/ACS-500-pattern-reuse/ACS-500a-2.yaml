@@ -1,0 +1,24 @@
+id: ACS-500a-2
+title: "Invoice list page satisfies the sortable table pattern"
+component: ac-store
+level: L2
+status: active
+created_by: "tickets/00_inbox/epics/EPIC-Defineabehavioronce,reusethespec/01_TICKET-20260611-ACS-500a-1.md"
+criteria: |
+  Given the Invoice List page is open,
+  When the user loads the page,
+  Then the table is sorted by date ascending by default,
+  And each column header (invoice_number, date, amount, status) is clickable
+    to toggle sort direction.
+implements_pattern: ACS-500a-1
+pattern_bindings:
+  columns: "invoice_number, date, amount, status"
+  default_sort: "date"
+work_status: todo
+readiness: draft
+priority: medium
+origin_agent: BrainCandy
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,81 @@
+id: GE-104a-2
+readiness: approved
+priority: high
+title: "Planning-time trigger flips documentation-expert to needed when a ticket adds a new page without its reference doc"
+component: guardrail-engine
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-104-enforced-page-docs/GE-104.yaml"
+criteria: |
+  Given a ticket whose files_touched list contains a new frontend page at
+    site/app/<route>/page.tsx
+  And files_touched does NOT contain a matching reference doc at
+    docs/reference/frontend/<name>.md
+  When agent selection resolves the status of the documentation-expert agent
+    against the ticket
+  Then the documentation-expert agent status resolves to "needed"
+    even though its default_status is "not_needed"
+
+  ---
+
+  Given a ticket whose files_touched list contains a new frontend page at
+    site/app/<route>/page.tsx
+  And files_touched ALSO contains the matching reference doc at
+    docs/reference/frontend/<name>.md
+  When agent selection resolves the status of the documentation-expert agent
+    against the ticket
+  Then this new-page-without-doc trigger does NOT fire on that basis
+  And the documentation-expert agent is not forced to "needed" by this trigger
+    (no false-positive nag when the doc is already part of the planned work)
+
+  ---
+
+  Given a ticket whose files_touched list contains no new frontend page at
+    site/app/**/page.tsx
+  When agent selection resolves the status of the documentation-expert agent
+    against the ticket
+  Then this new-page-without-doc trigger does NOT fire
+  And the documentation-expert agent remains at its default_status of "not_needed"
+    unless some other condition independently requires it
+depends_on:
+  - GE-104a
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-104-enforced-page-docs/GE-104a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "config/agent_registry.json"
+    relationship: implements
+    status: exists
+  - path: "scripts/selection_criteria_evaluator.py"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-018-selection-criteria-dsl.md"
+    relationship: describes
+    status: planned
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Add a new trigger_condition to the documentation-expert entry's selection_criteria.trigger_conditions array in config/agent_registry.json. The condition expresses: 'files_touched adds a new site/app/**/page.tsx whose derived docs/reference/frontend/<name>.md is NOT also in files_touched'."
+  - "DSL feasibility resolution (resolves BA open question, see GE-104a-2-i): the existing DSL grammar (selection_criteria_evaluator.py: contains/equals/matches over files_touched/title/description/components, combined with AND/OR) has NO negation operator and NO derived-path correlation, so it CANNOT express 'page present without its derived doc'. Per ADR-018's two-tier model, author this as a type: 'llm' condition (the documentation-expert entry already carries llm-type conditions; the evaluator routes llm conditions to the LLM-judgment path and falls back to default_status until wired). Do NOT extend the DSL grammar for this single trigger."
+  - "The llm condition expression must be phrased so the judgment is unambiguous: it fires only when a NEW page is added in files_touched AND the page's derived reference doc path is absent from files_touched; it does NOT fire when both the page and its derived doc are present, and does NOT fire when no new page is present."
+  - "The page-to-doc derivation rule referenced in the expression must match the SINGLE shared derivation defined in GE-104a-1-i / GE-104a-1-ii (hyphen-joined lowercased route segments, dynamic [param] -> p_param), so the planning-time judgment and the commit-time hook never disagree about which doc a page maps to. Reference that rule explicitly in the expression text."
+  - "default_status for documentation-expert must remain 'not_needed' so the agent is only forced to needed when this (or another) condition fires."
+  - "Self-hosting parity (ADR-001): config/agent_registry.json is round-tripped by build.py into the deployed .claude config; the registry edit and any packaged template copy of the registry must be kept in parity and verified via the build.py round-trip."
+  - "Edit must keep agent_registry.json valid against config/agent_registry.schema.json and pass the check-agent-registry / check-doc-types-agents pre-commit guards."
+delivers_to: null
+expects_from:
+  ac_id: GE-104a-1-i
+  contract: "The single shared page-path-to-doc-path derivation rule (hyphen-joined route segments -> docs/reference/frontend/<name>.md, with dynamic-segment normalization from GE-104a-1-ii). The planning-time trigger expression must reference this same rule so commit-time and planning-time enforcement cannot drift on the mapping."
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-104a-2-i
+implemented_by:
+- tickets/00_inbox/TICKET-20260617-GE-104a-2.md

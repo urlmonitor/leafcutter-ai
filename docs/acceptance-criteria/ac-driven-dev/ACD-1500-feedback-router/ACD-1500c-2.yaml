@@ -1,0 +1,41 @@
+id: ACD-1500c-2
+readiness: approved
+priority: medium
+title: "Resolved entries are excluded from the next scan"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the router resolved entry F1 during run A by setting its resolved_at field,
+  When the router builds its work queue at the start of run B,
+  Then F1 does not appear in run B's work queue,
+  And F1 is not re-classified, re-routed, or used to produce a second artifact,
+  And only entries still lacking resolved_at are carried into run B,
+  And an entry that was parked (not resolved) in run A DOES reappear in run B's
+    queue, distinguishing parked from resolved.
+depends_on: [ACD-1500c, ACD-1500c-1]
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Exclusion is automatic because the queue-build step (ACD-1500a-1) uses aggregate.py --unresolved, which filters out any entry carrying resolved_at; no separate dedup list is needed for resolved entries"
+  - "The distinction between parked (no resolved_at) and resolved (resolved_at set) must hold: parked entries reappear in the next scan, resolved entries do not. This is the load-bearing reason parking never calls resolve_feedback.py (ACD-1500b-4)"
+delivers_to: null
+expects_from:
+  ac_id: ACD-1500c-1
+  contract: "A resolved-entry marker (resolved_at set in feedback.jsonl) that the next aggregate.py --unresolved scan filters out"
+origin_agent: business-analyst-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: [ACD-1500c-2-i]
+implemented_by: []

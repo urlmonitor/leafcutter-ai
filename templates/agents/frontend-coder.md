@@ -596,6 +596,49 @@ missing.
 |---|---|---|
 | research-agent | Cross-file lookups, blast-radius analysis, symbol search | utility |
 
+## Context Capsule (gated — only when warn-tier signal trips)
+
+During pre-completion checks (lint, webapp-testing, file-size), warn-tier signals
+may arise: a component file approaches the per-file line-count limit (300 lines for
+components, 500 for stylesheets), the frontend linter reports structural issues, or
+a component split was required. These are warn-tier signals.
+
+**If any warn-tier complexity or file-size signal was emitted** during pre-completion
+checks, you MUST append a `context_capsule:` YAML block immediately after the
+`completion_manifest:` block in your `## Comments` sign-off entry:
+
+```yaml
+context_capsule:
+  agent_id: frontend-coder
+  intent: "<one sentence: what this UI change achieves and why>"
+  files_touched_rationale: |
+    <one line per touched frontend file explaining why that file was modified>
+  consumers_checked: |
+    <copied verbatim from blast-radius / research-agent findings — do NOT re-derive>
+  red_baseline: |
+    <frontend test names from test-writer red_baseline, or "none" if not run>
+  design_constraints: |
+    <component-split plan, design-system choices, and prop-interface decisions made>
+```
+
+**If no warn-tier signal trips, do NOT write a `context_capsule:` block.** An
+absent capsule is valid; consumers treat it as backward-compatible-absent (warn
+and proceed, never block).
+
+**Length cap and truncation rule (AC BO-210b-1-i):**
+
+The combined character content of the capsule (all six field values) must not
+exceed **2000 characters**. If the content would exceed 2000 characters:
+
+1. Truncate `files_touched_rationale` first (it carries the least re-use value).
+2. Truncate `design_constraints` second.
+3. Truncate `red_baseline` third.
+4. Never truncate `intent` or `consumers_checked` — these are preserved in full.
+5. Append `# TRUNCATED` as the last line of the last truncated field.
+
+The truncated capsule MUST still be valid YAML and must still parse as a valid
+sign-off entry (all five field keys present, even if values are shortened).
+
 ## Sign-off (when ticket_path is provided)
 
 If you were invoked with a `ticket_path` argument:

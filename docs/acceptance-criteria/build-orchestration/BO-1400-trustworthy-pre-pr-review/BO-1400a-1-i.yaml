@@ -1,0 +1,46 @@
+id: BO-1400a-1-i
+readiness: approved
+priority: high
+title: "Real-data verification reports INCONCLUSIVE (not PASS) when the validation tool is unavailable"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1400-trustworthy-pre-pr-review/BO-1400a.yaml"
+criteria: |
+  Given a ticket under pre-PR review carries a bulk/quantitative data claim that the
+    review must verify against the real data store
+  And the means of running that validation is unavailable (for example the validation
+    library is not installed, or the real data store cannot be reached)
+  When the pre-PR self-review attempts the real-data verification of that claim
+  Then the review reports the verification as INCONCLUSIVE for that claim and names the
+    limitation that prevented it (the missing validation means or the unreachable store)
+  And the review does not record the claim as PASS, and does not silently treat the
+    skipped verification as a clean result
+  And the inconclusive verification is visible in the review output rather than omitted
+depends_on:
+  - BO-1400a-1
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1400-trustworthy-pre-pr-review/BO-1400a.yaml"
+    relationship: parent
+    status: exists
+  - path: templates/agents/pr-reviewer.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The verification step must distinguish three outcomes for a bulk data claim: PASS (real run agreed with the claim), BLOCKER (real run contradicted the claim), and INCONCLUSIVE (the real run could not be performed)."
+  - "INCONCLUSIVE must never be collapsed into PASS; the unavailable-tool / unreachable-store path is fail-visible — the limitation is surfaced in the review output."
+  - "The inconclusive message must name the cause (missing validation means or unreachable data store) so the user knows the claim remains unverified."
+delivers_to: null
+expects_from:
+  ac_id: BO-1400a-1
+  contract: "The real-data verification step (BO-1400a-1) that runs the asserted validation over all real records; this edge case is the path where that run cannot execute and must report INCONCLUSIVE rather than PASS."
+origin_agent: business-analyst
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

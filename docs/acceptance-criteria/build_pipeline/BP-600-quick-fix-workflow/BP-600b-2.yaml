@@ -5,7 +5,7 @@ level: L2
 status: active
 readiness: reviewed
 priority: medium
-work_status: todo
+work_status: done
 criteria: |
   Given the AC store for component "build-pipeline" already contains ACs
     with IDs BP-001 through BP-006,
@@ -44,4 +44,7 @@ created: 2026-06-05
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - "docs/reference/ac-schema.md#quick-fix-workflow-id-assignment"
+  - "docs/acceptance-criteria/index.yaml"
+  - "docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md#ac-bp-600b-2"

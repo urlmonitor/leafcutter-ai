@@ -260,11 +260,16 @@ def main(argv: list[str] | None = None) -> None:
         except subprocess.CalledProcessError:
             pass
 
-        subprocess.run(
-            ["git", "tag", next_version],
-            cwd=repo_root,
-            check=True,
-        )
+        try:
+            subprocess.run(
+                ["git", "tag", next_version],
+                cwd=repo_root,
+                check=True,
+            )
+        except (subprocess.SubprocessError, OSError) as exc:
+            raise subprocess.SubprocessError(  # noqa: TRY003
+                f"Failed to create git tag {next_version}: {exc}"
+            ) from exc
         print(f"Tagged {next_version}")
     else:
         print(next_version)

@@ -39,11 +39,12 @@ delivers_to:
   agent: python-coder
   contract: "dict[str, list[str]] — mapping from leaf AC ID to list of leaf AC IDs it depends on (only those in the generated set). E.g. { 'ACD-050a-2-i': ['ACD-050a-1'], 'ACD-050a-1': [], 'ACD-050b-1': [] }"
 expects_from:
-  ac_id: ACD-1200a-1
+  ac_id: ACD-1200f-1
   contract: "list[str] — leaf AC IDs with their depends_on fields accessible from disk"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: "split: re-pointed traversal contract edge ACD-1200a-1 -> ACD-1200f-1, 2026-06-17"
 superseded_by: null
-covered_by: []
+covered_by: [ACD-1200c-1-i]
 implemented_by: []

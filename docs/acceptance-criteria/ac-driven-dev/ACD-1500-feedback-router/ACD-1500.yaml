@@ -1,0 +1,39 @@
+id: ACD-1500
+readiness: approved
+priority: medium
+title: "The platform turns its own agents' feedback into shipped improvements"
+component: ac-driven-dev
+level: L0
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Agent feedback stops piling up unread and starts becoming finished work on its own.
+
+  Your agents constantly leave behind observations -- gaps, quality concerns,
+  tooling friction, recurring success patterns. Today the only way out of that
+  pile is for a human to triage every entry by hand. This goal closes the loop:
+  the high-confidence portion of that feedback is automatically classified,
+  routed to the right next step, and marked resolved -- so the system learns
+  from how it is actually used without anyone babysitting the queue. When the
+  feedback itself is too thin to act on confidently, the platform flags its own
+  feedback process for improvement, so every cycle leaves the corpus richer than
+  the last. Anything uncertain is always handed back to a human.
+depends_on:
+  - ACD-1200
+  - ACD-700
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1500a
+  - ACD-1500b
+  - ACD-1500c
+  - ACD-1500d
+  - ACD-1500e
+implemented_by: []

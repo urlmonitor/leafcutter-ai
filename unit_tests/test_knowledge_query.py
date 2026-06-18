@@ -25,7 +25,6 @@ sys.path.insert(0, str(_SCRIPTS_DIR))
 # all tests in this file are collected as errors (valid RED state).
 # -----------------------------------------------------------------------
 from knowledge_query import (  # noqa: E402
-    EdgeRecord,
     NodeRecord,
     extract_edges,
     extract_nodes,
@@ -886,7 +885,7 @@ class TestEdgeCountIntegration:
         # Must contain at least one component_membership edge
         cm_edges = [e for e in edges if e["type"] == "component_membership"]
         assert len(cm_edges) >= 1, (
-            f"Expected at least one component_membership edge; got 0 (KM-KQS-025)"
+            "Expected at least one component_membership edge; got 0 (KM-KQS-025)"
         )
         # Must not contain phantoms "user" or "__ticket_phase_agents__" unless they are real nodes
         phantom_ids = {"user", "__ticket_phase_agents__"}

@@ -1,0 +1,56 @@
+id: GE-100d
+readiness: approved
+priority: high
+title: "diff-cover hook exits cleanly when the diff-cover tool or coverage artifact is absent"
+component: guardrail-engine
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100.yaml"
+criteria: |
+  Given the commit guardian configuration has the diff_coverage section with:
+    enabled: true
+    strict: false
+    min_coverage_percent: 80
+    coverage_xml_path: "coverage.xml"
+    max_age_seconds: 3600
+  And the diff-cover binary is not present on the system PATH
+  When the diff-cover hook runs at pre-commit time
+  Then the hook exits with code 0 (fail-open)
+  And it emits an advisory message to stderr stating that diff-cover was not found
+  And the advisory includes installation guidance
+
+  ---
+
+  Given the diff-cover binary IS present on the system PATH
+  And the configured coverage.xml file does not exist at the expected path
+  When the diff-cover hook runs at pre-commit time
+  Then the hook exits with code 0 (fail-open)
+  And it emits an advisory message stating that coverage.xml was not found
+  And the advisory includes guidance on generating the coverage artifact
+depends_on:
+  - GE-101
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-11
+amended_by:
+  - reason: "split: GE-100 -> GE-100 + GE-101, moved to GE-101 (intermediate Pattern C), 2026-06-16"
+superseded_by: null
+covered_by:
+  - GE-100d-1
+implemented_by:
+- tickets/00_inbox/TICKET-20260616-GE-100d.md

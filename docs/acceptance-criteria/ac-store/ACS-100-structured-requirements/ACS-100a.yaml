@@ -27,5 +27,11 @@ created: 2026-06-04
 amended_by:
   - "split: ACS-100a -> ACS-100a + ACS-100i, 2026-06-05"
 superseded_by: null
-covered_by: []
+covered_by:
+  - ACS-100a-1
+  - ACS-100a-2
+  - ACS-100a-3
+  - ACS-100a-4
+  - ACS-100a-5
+  - ACS-100a-6
 implemented_by: []

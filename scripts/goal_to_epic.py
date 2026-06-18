@@ -45,7 +45,6 @@ import re
 import shutil
 import subprocess
 import sys
-from datetime import date
 from pathlib import Path
 
 import yaml
@@ -57,6 +56,23 @@ import yaml
 
 _DEFAULT_STORE_ROOT = "docs/acceptance-criteria"
 _DEFAULT_INBOX_DIR = "tickets/00_inbox"
+
+# ---------------------------------------------------------------------------
+# Deploy-location-aware sibling resolution (AC-4 of EPIC-AcPipelineDeployGaps)
+# ---------------------------------------------------------------------------
+# When this file is deployed into .leafcutter/scripts/ac_store/ (consumer install),
+# its sibling scripts are in the SAME directory (no ac_store/ subdirectory needed).
+# When run from the source layout (scripts/goal_to_epic.py), siblings live under
+# scripts/ac_store/.  The guard below detects which case is active at runtime.
+#
+# If parent.name == "ac_store" → deployed layout: siblings are alongside this file
+# Otherwise                    → source layout:   siblings are in parent / "ac_store"
+_scripts_dir = Path(__file__).parent
+_sibling_dir = (
+    _scripts_dir                           # deployed: siblings are alongside this file
+    if Path(__file__).parent.name == "ac_store"
+    else Path(__file__).parent / "ac_store"  # source layout: siblings are in ac_store/
+)
 
 
 # ---------------------------------------------------------------------------
@@ -358,23 +374,30 @@ def _call_generate_ticket_from_ac(
         subprocess.CalledProcessError: When the script exits non-zero.
         RuntimeError: When the script exits 0 but emits no ``Written:`` line.
     """
-    script_path = Path(__file__).parent / "ac_store" / "generate_ticket_from_ac.py"
-    result = subprocess.run(
-        [
-            sys.executable,
-            str(script_path),
-            "--ac",
-            ac_id,
-            "--ac-root",
-            str(ac_root),
-            "--tickets-root",
-            str(tickets_root),
-        ],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        check=True,
-    )
+    script_path = _sibling_dir / "generate_ticket_from_ac.py"
+    try:
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(script_path),
+                "--ac",
+                ac_id,
+                "--ac-root",
+                str(ac_root),
+                "--tickets-root",
+                str(tickets_root),
+            ],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            check=True,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        import logging  # noqa: PLC0415
+        logging.getLogger(__name__).warning(
+            "generate_ticket_from_ac.py failed for AC %s: %s", ac_id, exc
+        )
+        raise
     for line in result.stdout.splitlines():
         if line.startswith("Written:"):
             return line[len("Written:"):].strip()
@@ -1034,7 +1057,7 @@ def dispatch_it_po_v3(unapproved_ids: list[str], store_root: Path) -> None:
         subprocess.CalledProcessError: If the IT PO v3 invocation fails.
         RuntimeError: If the IT PO v3 agent is not available.
     """
-    script_path = Path(__file__).parent / "ac_store" / "run_it_po_v3.py"
+    script_path = _sibling_dir / "run_it_po_v3.py"
     if not script_path.exists():
         raise RuntimeError(  # noqa: TRY003
             f"IT PO v3 runner not found at {script_path}. "
@@ -1304,7 +1327,7 @@ def _collect_master_plan_data(
         agents_map = fm.get("agents") or {}
         needed_agents = [
             a for a, status in agents_map.items()
-            if status in ("needed", "signed_off")
+            if a is not None and status in ("needed", "signed_off")
         ]
         for agent_name in needed_agents:
             all_agents.setdefault(agent_name, []).append(ticket_num)
@@ -1523,9 +1546,10 @@ def run(
     # Import traverse_ac_tree here to keep the top-level import surface small
     # and to allow this module to be imported even if scan_ac_store is not on
     # sys.path at module load time (e.g. in tests that patch the function).
-    _scripts_dir = Path(__file__).parent / "ac_store"
-    if str(_scripts_dir) not in sys.path:
-        sys.path.insert(0, str(_scripts_dir))
+    # Use the module-level _sibling_dir so this works from both the source
+    # layout (scripts/) and the deployed layout (.../scripts/ac_store/).
+    if str(_sibling_dir) not in sys.path:
+        sys.path.insert(0, str(_sibling_dir))
 
     from scan_ac_store import traverse_ac_tree  # noqa: PLC0415
 
@@ -1690,14 +1714,22 @@ def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
 
-    try:
-        worktree = _find_worktree_root(Path(__file__))
-    except FileNotFoundError as exc:
-        print(f"ERROR: {exc}", file=sys.stderr)
-        return 1
-
-    ac_store_root = Path(args.store_root) if args.store_root else worktree / _DEFAULT_STORE_ROOT
-    inbox_dir = Path(args.inbox_dir) if args.inbox_dir else worktree / _DEFAULT_INBOX_DIR
+    # Resolve the worktree root lazily: only when at least one default path is
+    # needed.  When both --store-root and --inbox-dir are supplied explicitly,
+    # _find_worktree_root() is never called — allowing the script to run from
+    # a location outside any git tree (e.g. .leafcutter/scripts/) without error.
+    # See BP-901 for the root-cause analysis.
+    if args.store_root and args.inbox_dir:
+        ac_store_root = Path(args.store_root)
+        inbox_dir = Path(args.inbox_dir)
+    else:
+        try:
+            worktree = _find_worktree_root(Path(__file__))
+        except FileNotFoundError as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+        ac_store_root = Path(args.store_root) if args.store_root else worktree / _DEFAULT_STORE_ROOT
+        inbox_dir = Path(args.inbox_dir) if args.inbox_dir else worktree / _DEFAULT_INBOX_DIR
 
     if not ac_store_root.exists():
         print(f"ERROR: AC store root not found: {ac_store_root}", file=sys.stderr)
@@ -1789,5 +1821,16 @@ DECISION HISTORY
   as a non-zero CLI exit. Helper functions: _read_ticket_title(), _read_ac_criteria(),
   generate_master_plan(). Integration point: run() calls generate_master_plan()
   after epic_folder is created, using the already-computed dep_graph and topo_order.
+- 2026-06-18 [BP-901]: Defer _find_worktree_root() when both CLI paths are supplied.
+  Root cause: main() called _find_worktree_root(Path(__file__)) unconditionally
+  before checking whether --store-root / --inbox-dir were provided. When the script
+  is deployed to .leafcutter/scripts/ (outside any git tree) and both flags are
+  passed explicitly, the call raised FileNotFoundError and exited 1 even though
+  the worktree value would never have been used (it only constructs the default
+  paths). Fix: restructured the path-resolution block in main() to check whether
+  both args.store_root and args.inbox_dir are present. If so, Path() wrappers are
+  applied directly and _find_worktree_root() is not called at all. When either
+  default is needed the try/except block runs as before. Covered by regression
+  test tests/test_goal_to_epic_worktree_skip.py::TestMainSkipsWorktreeWhenBothPathsSupplied.
 ====================================================================
 """

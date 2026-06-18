@@ -1,0 +1,51 @@
+id: ACD-1500a-2
+readiness: approved
+priority: medium
+title: "Each entry is classified into a work type and a size"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a single unresolved feedback entry F1 with:
+    - category: tooling-issue
+    - note: "aggregate.py crashes with a KeyError when an entry has no tags field"
+    - tags: [aggregate, crash]
+    - source: agent
+  When the classifier sub-agent (dispatched at depth 1) evaluates F1,
+  Then it assigns exactly one work type from the set {bug-fix, feature, improvement},
+  And it assigns exactly one size from the set {S, M, L},
+  And for F1 it returns work type bug-fix and size S
+    (a single-file defect with a named symptom),
+  And the classification records the specific signals it used
+    (category, note content, tags) so the decision is explainable.
+depends_on: [ACD-1500a, ACD-1500a-1]
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Implementation surface is a NEW classifier agent template at templates/agents/feedback-classifier.md PLUS a matching entry in config/agent_registry.json (run build.py --validate for bidirectional consistency). This is the depth-1 sub-agent the depth-0 feedback-router.js dispatches per ADR-006 — it must NOT itself spawn the Agent tool (depth-1 hard limit) or chain a build supervisor"
+  - "Pin the classifier to Haiku (model: haiku in the registry entry), matching the ac-triage precedent for per-entry type/size/confidence classification"
+  - "The agent template must constrain output to exactly one work_type from {bug-fix, feature, improvement} and one size from {S, M, L}, returned as a structured machine-parseable record (JSON) the router consumes without free-text parsing"
+  - "The output record must include a signals field enumerating the entry fields (category, note, tags) that drove the decision, so the classification is explainable and auditable"
+  - "Classification must depend only on the entry's own fields, never on queue position or run timestamp, to support the determinism requirement in ACD-1500a-4"
+delivers_to:
+  agent: python-coder
+  contract: "A per-entry classification record {feedback_id, work_type in {bug-fix,feature,improvement}, size in {S,M,L}, signals: [str]} consumed by the routing matrix in ACD-1500a-3"
+expects_from:
+  ac_id: ACD-1500a-1
+  contract: "A single unresolved feedback entry drawn from the work queue (dict with feedback_id, category, note, tags, source)"
+origin_agent: business-analyst-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: [ACD-1500a-2-i, ACD-1500a-2-ii]
+implemented_by: []

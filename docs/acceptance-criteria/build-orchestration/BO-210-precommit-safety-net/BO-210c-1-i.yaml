@@ -1,0 +1,45 @@
+id: BO-210c-1-i
+readiness: approved
+priority: high
+title: "The re-dispatched coder runs at depth 2 and spawns no sub-agents"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200b-3.yaml"
+criteria: |
+  Given the dispatch chain is ticket-supervisor at depth 0, the commit agent at depth 1,
+    and the auto-fix fixer at depth 2,
+  When the auto-fix path re-dispatches the originating coder for a judgment-tier failure,
+  Then the re-dispatched coder runs at depth 2,
+  And its dispatch instruction explicitly forbids spawning any sub-agent (including research-agent),
+  And the re-dispatched coder relies on the capsule's consumers_checked instead of a fresh
+    blast-radius lookup,
+  And no agent is created at depth 3, so the depth-1 nesting cap is never exceeded.
+depends_on: [BO-210c-1]
+doc_links:
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: describes
+    status: exists
+  - path: "templates/skills/precommit-autofix/SKILL.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md"
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The re-dispatch prompt in the precommit-autofix skill must instruct the coder not to spawn sub-agents"
+  - "No dispatch may occur below depth 2 — the depth-1 Agent-tool nesting cap from ADR-006 must never be exceeded"
+delivers_to: null
+expects_from:
+  ac_id: BO-210c-1
+  contract: "The originator re-dispatch invocation whose nesting depth this constrains"
+origin_agent: business-analyst
+created: 2026-06-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

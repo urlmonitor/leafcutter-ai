@@ -1,0 +1,56 @@
+id: BO-1100d-6
+title: "Already-classified shapes are not recorded as unknown observations"
+component: build-orchestration
+level: L2
+status: active
+readiness: reviewed
+priority: medium
+req_status: active
+work_status: todo
+criteria: |
+  Given the routing config contains an entry for "tickets" with path_pattern "tickets/**/*.md",
+  And the staged files are:
+    - tickets/00_inbox/TICKET-050.md
+    - tickets/00_inbox/TICKET-051.md
+  And the classifier assigns both files to the "tickets" group (a known pattern match),
+  When the learner evaluates whether to record an observation,
+  Then the learner does NOT record any observation to the shape-tracking store,
+  And the learner does NOT propose a new routing rule,
+  And the shape-tracking store is unchanged after this invocation.
+
+  Given the routing config contains an entry for "implementation" with path_pattern "scripts/**",
+  And the staged files include a mix:
+    - scripts/new_feature.py (matched by "implementation")
+    - docs/design/rationale.md (unmatched by any entry)
+  When the learner evaluates whether to record an observation,
+  Then the learner records an observation ONLY for the unmatched shape
+    (directory pattern "docs/design/**", extensions [".md"]),
+  And the learner does NOT record a duplicate observation for the "scripts/**" shape
+    that is already covered by the "implementation" routing entry.
+depends_on: [BO-1100d, BO-1100d-1, BO-1100a-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-1100-smart-commit-routing/BO-1100d-1.yaml
+    relationship: constrains
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-1100-smart-commit-routing/BO-1100a-1.yaml
+    relationship: constrains
+    status: exists
+  - path: docs/agents/git/commit.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must not perform unnecessary writes to the observation store -- only unmatched shapes are recorded"
+  - "Must handle the boundary case where a mixed set contains both matched and unmatched files"
+  - "Must be idempotent -- repeated invocations with the same input must not create duplicate entries"
+delivers_to: null
+expects_from:
+  ac_id: BO-1100a-1
+  contract: "Classification result indicating whether each file matched a known routing pattern"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

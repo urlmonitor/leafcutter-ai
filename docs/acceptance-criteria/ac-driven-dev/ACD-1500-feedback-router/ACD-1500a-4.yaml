@@ -1,0 +1,43 @@
+id: ACD-1500a-4
+readiness: approved
+priority: medium
+title: "Classification of the same entry is deterministic across runs"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given an unresolved feedback entry F1 whose fields do not change between runs,
+  When the router classifies and routes F1 on run A,
+  And the router classifies and routes the same unchanged F1 on run B,
+  Then run A and run B produce the same work type, the same size,
+    and the same routing destination for F1,
+  And the confidence score recorded for F1 is the same on both runs,
+  And no run produces a destination for F1 that a prior run did not, given
+    identical input fields.
+depends_on: [ACD-1500a, ACD-1500a-2, ACD-1500a-3]
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Implemented in the classifier agent template (templates/agents/feedback-classifier.md): the prompt must drive deterministic output for identical input — Haiku pinning plus temperature 0 (or the lowest the harness allows) and an output contract that maps the same field set to the same {work_type, size, confidence}"
+  - "The prompt must not reference run time, queue position, or any non-entry state; the only inputs to a classification decision are F1's own fields"
+  - "The routing matrix downstream (ACD-1500a-3) is already deterministic; determinism risk is concentrated in the classifier, so the constraint is enforced there"
+delivers_to: null
+expects_from:
+  ac_id: ACD-1500a-3
+  contract: "A per-entry routing decision that must be reproducible for identical input"
+origin_agent: business-analyst-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -3,9 +3,9 @@ description: 'TDD test-first authoring agent. Spawned by ticket-supervisor at pr
 
   BEFORE python-coder or sql-coder run. Reads the ## Test Requirements section
 
-  from the ticket body (produced by test-planner during ticket creation), writes
+  from the ticket body and writes the specified failing test stubs, runs the suite
 
-  the specified failing test stubs, runs the suite to confirm all new tests are
+  to confirm all new tests are
 
   RED (non-zero exit), captures a structured red_baseline block in its sign-off
 
@@ -258,10 +258,10 @@ Before writing any file:
    the **Docs-only / config-only skip rule** above — sign off immediately
    with `test_requirements empty` comment, zero file writes, stop.
 
-2. **Load testing context** — same priority order as test-planner:
+2. **Load testing context** — in priority order:
    1. `.claude/skills_config.json` → `testing_context` key.
    2. Fall back to `leafcutter/config/skills_config.default.json`.
-   3. Fall back to built-in defaults (see test-planner template for defaults).
+   3. Fall back to built-in defaults (see skills_config.default.json for defaults).
 
 3. **Read the test README** at `testing_context.readme_path` (if it exists).
    This gives you naming conventions, directory layout, and performance rules.

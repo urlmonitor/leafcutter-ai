@@ -1,0 +1,48 @@
+id: ACS-500e-1-i
+readiness: approved
+priority: high
+title: "Circular composition dependency is detected and rejected"
+component: ac-store
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given composite pattern PTN-020 has depends_on: [PTN-010],
+  And someone attempts to add depends_on: [PTN-020] to atomic pattern PTN-010,
+  When the schema validator runs at commit time,
+  Then the commit is blocked with an error stating:
+    "Circular dependency detected: PTN-010 -> PTN-020 -> PTN-010"
+  And the error names all ACs in the cycle,
+  And the circular depends_on addition is not persisted.
+depends_on: [ACS-500e-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must detect cycles in the depends_on graph at commit time using standard graph traversal (DFS or equivalent)"
+  - "Must complete cycle detection in <100ms for dependency graphs with up to 500 nodes"
+  - "Error message must list the full cycle path, not just 'cycle detected'"
+  - "Must not regress any existing depends_on validation behavior"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must be idempotent -- repeated runs with the same input produce the same result"
+delivers_to: null
+expects_from:
+  ac_id: ACS-500e-1
+  contract: "Composite pattern ACs with depends_on references that can form a directed graph for cycle detection"
+origin_agent: business-analyst-v3
+created: 2026-06-11
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260611-ACS-500e-1-i.md

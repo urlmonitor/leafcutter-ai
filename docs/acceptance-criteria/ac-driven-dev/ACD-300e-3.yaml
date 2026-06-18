@@ -27,7 +27,7 @@ criteria: |
     return sufficient context on their own.
 depends_on: [ACD-300e, ACD-300e-1]
 doc_links:
-  - path: templates/agents/business-analyst-v3.md
+  - path: templates/agents/business-analyst.md
     relationship: modifies
     status: exists
   - path: templates/skills/knowledge-query/SKILL.md

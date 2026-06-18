@@ -363,6 +363,115 @@ Do not add any other preamble or summary text.
   a `(status: question)` or a `failed` payload, this skill is a
   passthrough — it does not try to answer on the user's behalf.
 
+## Contrast: this skill vs. `/quick-fix`
+
+This skill (`build-single-ticket`) always creates a **new isolated worktree** (Step 2 via
+`setup_ticket_worktree.py`) and drives the ticket on a **new branch**. The ticket persists
+in the inbox until `finalize-feature.js` reconciles it on `main` after the PR is merged.
+
+The `/quick-fix` workflow (AC BP-600a-1; `templates/workflows-js/quick-fix.js`) is the
+**current-worktree** counterpart. It differs from this skill in four key ways:
+
+| Aspect | `build-single-ticket` (this skill) | `/quick-fix` |
+|--------|-----------------------------------|----|
+| Worktree | New isolated worktree created | **Current worktree — no new directory** |
+| Branch | New branch per ticket | **Current branch — no switch** |
+| Entry | Invoked by `/build-feature` for single-ticket paths | Invoked directly by `/quick-fix` |
+| Ticket lifecycle | Full inbox → PR → finalize | Single-shot — ticket created and driven to commit inline |
+
+**When to use this skill vs. `/quick-fix`:** use this skill when the fix requires a clean
+branch and a full PR lifecycle. Use `/quick-fix` when you have already diagnosed a bug,
+want the fix committed on your current branch immediately, and do not want a new worktree
+directory created (AC BP-600a-1).
+
+See `docs/architecture/agent_delivery_workflows.md` §5 for the full quick-fix workflow diagram.
+
+### Close phase of `/quick-fix` vs. this skill (AC BP-600d-4)
+
+The `/quick-fix` close phase (AC BP-600d-4) runs three inline operations at depth 0
+after the `commit` agent returns:
+
+1. **Push** — `git push origin HEAD` sends the committed change to the remote
+   tracking branch.
+2. **PR check** — `gh pr list --head <branch>` logs the PR URL if one exists. If
+   no PR exists, the close phase logs a URL for the user to open one manually. The
+   push makes the commit visible to the PR automatically — no `gh pr update` command
+   is needed.
+3. **Ticket close** — `python scripts/set_ticket_status.py --ticket <ticket_path> --status done`
+   marks the internal quick-fix ticket as done in its frontmatter.
+
+These three steps are the quick-fix equivalent of this skill's `pull-request` phase agent
+(Step 4) and `finalize-feature.js` Step 5 (ticket lifecycle reconciliation). The key
+difference: `/quick-fix` performs all three inline at depth 0 rather than dispatching
+dedicated phase agents, because the quick-fix close phase produces no reviewable
+artefacts and needs no sign-off audit trail beyond the commit message.
+
+**Idempotency:** all three close-phase operations are idempotent. A re-drive of
+`/quick-fix` after a partial close (e.g. push succeeded but `set_ticket_status.py`
+failed) completes the remaining steps without duplicating the push or logging a
+spurious PR URL.
+
+**Push failure halt:** if `git push origin HEAD` fails, the close phase halts and
+prints a structured recovery message. The ticket is NOT marked done until the push
+succeeds. This preserves consistency: `status: done` implies the change is visible
+on the remote, not just committed locally.
+
+See `docs/architecture/agent_delivery_workflows.md` §5 "AC BP-600d-4" for the full
+push contract, PR update contract, ticket close contract, ordering invariant, and
+push failure halt message.
+
+### Handling `/quick-fix` escalation (AC BP-600e-3)
+
+When the `/quick-fix` workflow escalates to the full build pipeline — either because the
+python-coder modified more than one source file (BP-600e-1) or because the red-phase test
+revealed a different root cause than diagnosed (BP-600e-2) — the user receives a structured
+escalation summary with:
+
+- An **AC ID** (e.g. `BP-600e-3`) identifying the traceability artefact in the AC store.
+- A **test file path** pointing to the failing test that was written during the quick-fix run.
+- A **diagnosed file** and **root cause** from the original diagnosis.
+
+When the user then invokes `/build-feature` (or `/create-ticket`) to continue the fix, this
+skill (`build-single-ticket`) is the vehicle. The workflow for continuing from a `/quick-fix`
+escalation:
+
+1. **Stage and commit the preserved artefacts** before invoking this skill. The AC YAML file
+   and test file are already in the working tree (left by `/quick-fix`). Commit them as a
+   starting point on the current branch:
+   ```
+   git add <ac_path> <test_file_path>
+   git commit -m "chore: stage quick-fix artefacts for escalated fix (AC <ac_id>)"
+   ```
+   This pre-commit is the user's responsibility — this skill does not stage or commit
+   pre-existing artefacts from a prior `/quick-fix` run.
+
+2. **Create a ticket** referencing the AC ID. The ticket's `## Acceptance Criteria` section
+   should include the AC ID from the escalation summary so the `ac-validator` phase can
+   locate the coverage evidence:
+   ```
+   /create-ticket
+   > Fix the multi-file bug diagnosed by /quick-fix. AC ID: <ac_id>.
+   >   Test file already written: <test_file_path>
+   >   Target file: <target_file>
+   >   Root cause: <root_cause>
+   ```
+
+3. **Invoke this skill** (via `/build-feature`) on the resulting ticket. This skill creates
+   a new isolated worktree, bootstraps the branch, and drives the full phase-agent pipeline
+   (including `python-coder` for the fix and `pr-reviewer` for review).
+
+**AC ID continuity contract (BP-600e-3):**
+
+The AC YAML file created during the `/quick-fix` run remains `status: active` throughout this
+escalated flow. The escalated ticket's `python-coder` phase writes the fix to the target file;
+the `test-runner` phase verifies the test written during the quick-fix turns green; the
+`commit` phase references the same AC ID in the commit message. The AC YAML file is not
+re-created — the same file that `/quick-fix` created is the traceability artefact for the
+full-pipeline fix.
+
+See `docs/architecture/agent_delivery_workflows.md` §5 "AC BP-600e-3" for the full
+escalation summary output format and artefact preservation rules.
+
 ## References
 
 - `.claude/commands/build-feature.md` — the slash command that

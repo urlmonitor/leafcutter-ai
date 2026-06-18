@@ -1,0 +1,44 @@
+id: ACD-1500e-3-i
+readiness: approved
+priority: medium
+title: "Router-emitted process-feedback cannot drive an infinite self-referential loop"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the router emitted a process-finding entry P1, and P1 is itself thin
+    (for instance it lacks a clean target for the recommended tooling change),
+  When the router processes P1 in a later run and finds it too thin to route
+    confidently,
+  Then the router does NOT emit a further process-finding entry ABOUT its own
+    process-feedback P1,
+  And router-emitted process-feedback is distinguishable from ordinary feedback
+    (by its router-generated source marker) so the router can recognize its own
+    output and refuse to recurse on it,
+  And emission of process-feedback is rate-limited per run so a single run cannot
+    produce an unbounded cascade of process entries,
+  And P1 is instead parked for human /feedback-review when it cannot be routed.
+depends_on: [ACD-1500e-3]
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "feedback-router.js must detect router-generated entries by their source marker (set in ACD-1500e-1) and refuse to emit a process-finding ABOUT a router-generated process-finding — breaking the self-referential cycle"
+  - "CONFIG PREREQUISITE: per-run process-feedback emission must be rate-limited via a config/feedback_router.yaml key (e.g. max_process_findings_per_run, an int) so a single run cannot produce an unbounded cascade; do NOT hard-code the cap"
+  - "A thin router-generated entry that cannot be routed is parked for /feedback-review, not re-emitted; the recursion guard plus the rate-limit together bound the loop"
+delivers_to: null
+expects_from:
+  ac_id: ACD-1500e-1
+  contract: "The router-generated source marker that lets the router detect and refuse to recurse on its own process-feedback"
+origin_agent: business-analyst-v3
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

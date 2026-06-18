@@ -1,0 +1,49 @@
+id: GE-102a
+readiness: approved
+priority: high
+title: "Doc-frontmatter transform hook fills missing dates and defaults in place, stages, and exits clean"
+component: guardrail-engine
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200b-3.yaml"
+criteria: |
+  Given a staged docs markdown file whose YAML frontmatter is missing the created date,
+    the last_updated date, the type field, or the status field,
+  And the commit guardian config doc_frontmatter section lists allowed types and statuses,
+  When the doc-frontmatter transform hook runs at pre-commit time,
+  Then it writes the missing created and last_updated dates in place using the current date,
+  And it fills a missing type and status from the doc_frontmatter defaults for that path,
+  And it re-stages the corrected file,
+  And it exits with code 0 so the commit proceeds,
+  And it never blocks the commit and never rewrites a field that was already present.
+depends_on: [GE-102]
+doc_links:
+  - path: "scripts/commit_guardian/commit_guardian.json"
+    relationship: configures
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Pure-Python deterministic transform: write in place, git add, exit 0"
+  - "type/status defaults must be sourced from the doc_frontmatter config lists, not hard-coded"
+  - "Scaffold the new transform_doc_frontmatter.py hook via the create-hook skill so it is registered in commit_guardian.json (config key + hooks_manifest entry with tier: transform) and added to the hook doc index in one pass"
+  - "Must complete fast enough not to perceptibly slow the pre-commit run for a typical staged-file count"
+  - "Must not overwrite any field that is already populated"
+delivers_to:
+  agent: python-coder
+  contract: "A staged docs file with complete frontmatter (created, last_updated, type, status filled) that the doc-frontmatter validator hook then passes"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-16
+amended_by: []
+superseded_by: null
+covered_by: [GE-102a-1-i]
+implemented_by: []

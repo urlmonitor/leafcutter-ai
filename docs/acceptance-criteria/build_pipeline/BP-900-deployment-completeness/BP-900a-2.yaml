@@ -1,0 +1,46 @@
+id: BP-900a-2
+title: "build.py deploys standalone scripts goal_to_epic.py and build_ac_mode_detection.py"
+component: build_pipeline
+level: L2
+status: active
+req_status: approved
+readiness: approved
+priority: critical
+work_status: not_started
+criteria: |
+  Given build.py is invoked with --target-dir pointing to a consumer project,
+  When the build completes successfully,
+  Then the file {target}/.leafcutter/scripts/goal_to_epic.py exists
+  And the file {target}/.leafcutter/scripts/build_ac_mode_detection.py exists
+  And each deployed file is byte-identical to its source in templates/scripts/
+  And a shim at {target}/scripts/goal_to_epic.py resolves to the deployed copy
+  And a shim at {target}/scripts/build_ac_mode_detection.py resolves to the deployed copy
+depends_on: [BP-900a]
+doc_links:
+  - path: scripts/build.py
+    relationship: implements
+    status: exists
+  - path: scripts/build_phases.py
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must follow the existing build phase function pattern in build_phases.py"
+  - "Shim installation must use the same mechanism as build_helpers.py (symlinks at {target}/scripts/ pointing to .leafcutter/scripts/)"
+  - "Deployed files must be byte-identical to sources — no transformation or interpolation"
+  - "Build must be idempotent — re-running with the same inputs produces the same output"
+  - "Must handle file I/O errors gracefully per the project error handling policy"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-11
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260611-BP-900a-2.md

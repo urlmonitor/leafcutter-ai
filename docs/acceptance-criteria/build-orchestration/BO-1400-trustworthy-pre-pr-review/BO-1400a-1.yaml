@@ -1,0 +1,55 @@
+id: BO-1400a-1
+readiness: approved
+priority: high
+title: "Pre-PR review re-verifies bulk/quantitative data-claim ACs against the real data store"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1400-trustworthy-pre-pr-review/BO-1400a.yaml"
+criteria: |
+  Given a ticket under pre-PR review whose acceptance criteria contain a bulk or
+    quantitative claim about a whole body of stored records (for example "every stored
+    record validates against the new shape", "no currently-valid record is rejected",
+    or "all N records match")
+  When the pre-PR self-review reviews the working diff for that ticket
+  Then the review independently runs the asserted validation across the real data store
+    (every real record, not a sample and not the implementer's self-reported count)
+  And the review reports the actual pass count and fail count it observed against the
+    real records
+  And the review raises a blocking finding when the observed real-data result contradicts
+    the bulk/quantitative claim in the acceptance criteria (for example the AC claims
+    every record validates but the real-data run rejects some records)
+  And the review cannot return a clean verdict on that claim while relying only on a
+    sample or on the implementer's reported figure
+depends_on:
+  - BO-1400a
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1400-trustworthy-pre-pr-review/BO-1400a.yaml"
+    relationship: parent
+    status: exists
+  - path: templates/agents/pr-reviewer.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Detection of a bulk/quantitative claim is a review-checklist judgment in the pr-reviewer agent template: recognize universal/quantitative language in the ticket's ACs (all / every / none / no record / N records / a percentage of records) that asserts something about a whole body of stored data."
+  - "When such a claim is detected, the review must execute the asserted validation against the real data store rather than accepting a reported count — the actual validation invocation (e.g. running the schema validation over every real record) is a helper concern, not an LLM judgment."
+  - "The review must report observed pass/fail counts in its findings and raise a high-confidence blocking finding when the observed result contradicts the claim."
+  - "A clean verdict on the claim is only reachable when the real-data run was actually performed; a sample-only or self-reported basis must not yield a clean verdict on that claim."
+delivers_to:
+  agent: python-coder
+  contract: "Deterministic all-records validation runner (suggested home: scripts/pr_review/realdata_verifier.py). Input: the validation the AC asserts (e.g. a JSON-schema / validator invocation) plus the real store location. Output: { total: int, passed: int, failed: int, failing_ids: list[str] } over EVERY real record (no sampling). The reviewer (llm-expert pr-reviewer template) consumes these observed counts to decide PASS vs BLOCKER and to populate its reported figures; the helper performs no judgment. The reviewer cannot reach a clean verdict on the claim without this runner having been executed."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1400a-1-i
+implemented_by: []

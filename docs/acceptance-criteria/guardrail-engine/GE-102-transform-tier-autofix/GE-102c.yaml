@@ -1,0 +1,47 @@
+id: GE-102c
+readiness: approved
+priority: high
+title: "Each manifest hook declares a tier and transform hooks are ordered before their validators"
+component: guardrail-engine
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200b-3.yaml"
+criteria: |
+  Given the commit guardian hooks_manifest after the transform hooks are registered,
+  When a consumer inspects the hooks array,
+  Then every hook entry carries a tier field whose value is either transform or judgment,
+  And the doc-frontmatter and description-field transform hooks have tier transform,
+  And the complexity, file-size, docstrings, and exception-handling hooks have tier judgment,
+  And each transform hook appears earlier in the hooks array than the validator hook that
+    checks the same field,
+  so that the field is filled before it is validated within a single pre-commit run.
+depends_on: [GE-102, GE-102a, GE-102b]
+doc_links:
+  - path: "scripts/commit_guardian/commit_guardian.json"
+    relationship: configures
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "tier is a new field on every hooks_manifest entry whose value is exactly transform or judgment"
+  - "The tier field and the transform-before-validator ordering should follow the same scaffold pattern the create-hook skill produces — apply that pattern by hand when adding tier to the existing judgment hooks, so new and existing entries are consistent"
+  - "Manifest ordering must place each transform hook before its matching validator within the hooks array"
+  - "Judgment-required checks (complexity, file size, docstrings, exception handling) must not be assigned tier transform"
+  - "Edit the deployed commit_guardian.json and its packaged template source together; the build.py round-trip must leave both in parity"
+delivers_to:
+  agent: llm-expert
+  contract: "A per-hook tier field (string: transform | judgment) on every commit_guardian.json hooks_manifest entry that the auto-fix re-dispatch skill logic reads to choose the mechanical vs originator route"
+expects_from:
+  ac_id: GE-102a
+  contract: "The registered transform hooks (transform_doc_frontmatter, transform_description_field) whose manifest entries gain the tier field and ordering"
+origin_agent: business-analyst
+created: 2026-06-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

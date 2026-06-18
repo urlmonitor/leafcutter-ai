@@ -22,7 +22,7 @@ criteria: |
     - python_coding (python-coder implementation)
     - sql_coding (sql-coder + sub-agents: table, procedure, function, index, view, query)
     - frontend_coding (frontend-coder implementation)
-    - testing_quality (test-planner, test-writer, test-runner, ac-validator, user-surface-smoker)
+    - testing_quality (test-writer, test-runner, ac-validator, user-surface-smoker)
     - review_system (architect-review, pr-reviewer, change-scope-reviewer, code-review-architect)
     - documentation_system (documentation-expert, adr-author, diagram-author, explanation/how-to/reference authors)
     - git_vcs_operations (commit, pull-request, conflict-resolver, worktree-agent, changelog-agent)
@@ -52,5 +52,11 @@ origin_agent: BrainCandy
 created: 2026-06-05
 amended_by: [it-po-v3]
 superseded_by: null
-covered_by: [ACS-300g-1, ACS-300g-2, ACS-300g-3, ACS-300g-4a, ACS-300g-4b]
+covered_by:
+  - ACS-300g-1
+  - ACS-300g-2
+  - ACS-300g-3
+  - ACS-300g-4a
+  - ACS-300g-4b
+  - ACS-300g-4
 implemented_by: []

@@ -1,0 +1,58 @@
+id: GE-104a-1-ii
+readiness: approved
+priority: high
+title: "Nested and dynamic route segments derive a single deterministic doc path"
+component: guardrail-engine
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-104-enforced-page-docs/GE-104.yaml"
+criteria: |
+  Given a newly added frontend page at a nested route site/app/parts/list/page.tsx
+  When the guardrail derives the expected reference doc path for that page
+  Then it produces exactly one deterministic reference doc path under
+    docs/reference/frontend/ that uniquely identifies the nested route
+  And two different nested routes never collapse to the same doc path
+
+  ---
+
+  Given a newly added frontend page at a dynamic route segment
+    site/app/parts/[id]/page.tsx
+  When the guardrail derives the expected reference doc path for that page
+  Then it produces exactly one deterministic reference doc path under
+    docs/reference/frontend/ for that dynamic route
+  And the dynamic segment marker [id] is normalized consistently so the same
+    route always maps to the same doc path on every commit
+depends_on:
+  - GE-104a-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-104-enforced-page-docs/GE-104a-1.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "scripts/commit_guardian/check_frontend_page_docs.py"
+    relationship: implements
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Extend the SAME shared derive_doc_path helper from GE-104a-1-i to handle multi-segment and dynamic routes; do not create a second derivation path."
+  - "Nested-route flattening (canonical): join all route segments between 'site/app/' and '/page.tsx' with a single hyphen '-'. Example: site/app/parts/list/page.tsx -> docs/reference/frontend/parts-list.md. Because the full ordered segment list is preserved in the joined name, two different nested routes can never collapse to the same doc path (the join is injective over distinct segment sequences given the rules below)."
+  - "Dynamic-segment normalization (canonical, resolves BA open question on [id] handling): a Next.js dynamic segment of the form '[param]' is normalized by stripping the surrounding brackets and prefixing with a stable marker so it never collides with a literal segment of the same name. Use the literal segment text with brackets removed and the parameter name preserved, prefixed with the token 'p_'. Example: site/app/parts/[id]/page.tsx -> docs/reference/frontend/parts-p_id.md. The same dynamic route therefore always maps to the same doc path on every commit (deterministic)."
+  - "Catch-all / optional-catch-all segments ([...slug], [[...slug]]) must also normalize deterministically without colliding with simple or single-dynamic segments; apply the same bracket-strip + 'p_' prefix rule to the inner name (e.g. [...slug] -> p_slug), and treat the same input identically on every run. If a route shape outside {literal, [param], [...param], [[...param]]} is encountered, the helper must fail loudly (raise) rather than silently produce an ambiguous path, per the project error handling policy."
+  - "The resulting <name> must be filesystem-safe (lowercase, hyphen-separated, underscore-prefixed dynamic tokens) so the doc path is a valid on-disk path on all target platforms."
+  - "Derivation remains a pure, deterministic, idempotent function of the page path with no filesystem or git dependence."
+delivers_to: null
+expects_from:
+  ac_id: GE-104a-1-i
+  contract: "The base derive_doc_path(page_path) helper and its simple-segment rules, which this AC extends with nested and dynamic-segment normalization. Both share the single scripts/commit_guardian/frontend_page_docs.py module."
+origin_agent: business-analyst
+created: 2026-06-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260617-GE-104a-1-ii.md

@@ -31,6 +31,9 @@ covered_by:
   - BP-800b-2
   - BP-800b-3
   - BP-800b-4
+  - BP-800b-5
+  - BP-800b-6
+  - BP-800b-7
 implemented_by: []
 documentation_triggers:
   - how-to

@@ -142,7 +142,7 @@ class TestTicketPrioritizerStatusFilter(unittest.TestCase):
         in the ready set (dependency is satisfied by frontmatter status, not folder).
         """
         # covers: BO-400a-4
-        ticket_c = _write_ticket(self.epic_dir / "03_ticket_c.md", "Ticket C", "done")
+        _write_ticket(self.epic_dir / "03_ticket_c.md", "Ticket C", "done")
         ticket_d = _write_ticket(  # noqa: F841
             self.epic_dir / "04_ticket_d.md",
             "Ticket D",

@@ -6,14 +6,13 @@ component: build-pipeline
 level: L0
 status: active
 criteria: |
-  Build once, trust the result — no silent breakage, no missing pieces.
+  Build once, trust the result — every artifact lands exactly where it should.
 
   After a build completes, every artifact the system promised is present and
-  functional. Hooks point to real scripts, compiled workflows land where agents
-  can find them, folder paths respect the project's own configuration, and
-  skill files are validated before deployment. When something in the build
-  chain is misconfigured, you find out immediately — not three commits later
-  when a workflow silently fails.
+  correctly placed. Hooks point to real scripts, compiled workflows land where
+  agents can find them, folder paths respect the project's own configuration,
+  and hook templates ship identically across all template directories so
+  consumer projects receive the same hooks the package itself uses.
 depends_on: []
 doc_links: []
 origin_agent: BrainCandy
@@ -21,11 +20,13 @@ created: 2026-06-05
 amended_by:
   - "split: BP-100g -> BP-100g + BP-100h, 2026-06-05"
   - "split: BP-100 -> BP-100 + BP-500, 2026-06-05"
+  - "split: BP-100b -> BP-100j + BP-100k + BP-100l, 2026-06-08"
+  - "split: BP-100 -> BP-100 + BP-101, 2026-06-08"
 superseded_by: null
 covered_by:
   - BP-100a
-  - BP-100b
   - BP-100c
-  - BP-100g
-  - BP-100h
+  - BP-100i
+  - BP-100j
+  - BP-100k
 implemented_by: []

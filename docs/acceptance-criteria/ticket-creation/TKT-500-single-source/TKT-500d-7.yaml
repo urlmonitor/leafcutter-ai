@@ -1,5 +1,5 @@
 id: TKT-500d-7
-readiness: approved
+readiness: draft
 priority: medium
 title: "ac-supervisor completes a full dispatch cycle on a single test AC"
 component: ticket-creation

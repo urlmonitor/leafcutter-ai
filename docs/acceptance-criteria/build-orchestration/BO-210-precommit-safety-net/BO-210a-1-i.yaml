@@ -1,0 +1,42 @@
+id: BO-210a-1-i
+readiness: approved
+priority: high
+title: "The packaged template source of the routing config matches the deployed config byte-for-content"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200b-3.yaml"
+criteria: |
+  Given the deployed routing config has been reconciled to the documented schema
+    with a blocking_hook_ids array,
+  When the packaged template source of the routing config is parsed and compared
+    to the deployed config,
+  Then both contain the same defaults, commit_review, rules, and blocking_hook_ids content,
+  And a fresh consumer install built from the template receives the populated config,
+    not the dead empty-routes stub,
+  And neither file references a hook id that is absent from the other.
+depends_on: [BO-210a-1]
+doc_links:
+  - path: "templates/skills/precommit-autofix/SKILL.md"
+    relationship: describes
+    status: exists
+  - path: "docs/build-pipeline.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Template source and deployed config must not diverge after reconcile"
+  - "Parity is verified through the build.py round-trip, not by hand-copying one file to the other"
+delivers_to: null
+expects_from:
+  ac_id: BO-210a-1
+  contract: "The reconciled deployed routing config to compare the template source against"
+origin_agent: business-analyst
+created: 2026-06-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

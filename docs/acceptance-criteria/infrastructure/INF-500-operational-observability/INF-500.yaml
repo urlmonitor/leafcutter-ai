@@ -21,5 +21,5 @@ created: 2026-06-05
 amended_by:
   - "split: INF-500b -> INF-500b + INF-500c, 2026-06-05"
 superseded_by: null
-covered_by: []
+covered_by: [INF-500a, INF-500b, INF-500c]
 implemented_by: []
