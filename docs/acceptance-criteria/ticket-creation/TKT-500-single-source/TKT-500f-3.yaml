@@ -1,4 +1,4 @@
-id: TKT-500d-8
+id: TKT-500f-3
 readiness: draft
 priority: medium
 title: "Old and new pipelines produce equivalent outcomes on the same AC"
@@ -17,7 +17,7 @@ criteria: |
   And both reach the same signoff state (all agents signed off),
   And the old pipeline's ticket file is treated as a reference artifact only
     (not consumed by the new pipeline).
-depends_on: [TKT-500d-7]
+depends_on: [TKT-500f-2]
 doc_links:
   - path: docs/architecture/agent_delivery_workflows.md
     relationship: describes
@@ -31,11 +31,12 @@ it_requirements:
   - "Run sequentially, not concurrently. Compare git diffs after both complete. Old pipeline runs first as baseline."
 delivers_to: null
 expects_from:
-  ac_id: TKT-500d-7
+  ac_id: TKT-500f-2
   contract: "Proven ac-supervisor dispatch cycle from canary run"
 origin_agent: business-analyst-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+  - reason: "renamed TKT-500d-8 -> TKT-500f-3 in split of TKT-500d, 2026-06-18"
 superseded_by: null
 covered_by: []
 implemented_by: []

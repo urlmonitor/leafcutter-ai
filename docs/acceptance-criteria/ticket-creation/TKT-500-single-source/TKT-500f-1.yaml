@@ -1,4 +1,4 @@
-id: TKT-500d-6
+id: TKT-500f-1
 readiness: approved
 priority: low
 title: "Component diagram: goal-as-dispatch-boundary architecture"
@@ -14,13 +14,14 @@ criteria: |
   the ac-supervisor, worktree isolation, and the AC hierarchy
 assigned_agent: architecture-diagram-author
 estimated_complexity: S
-depends_on: [TKT-500d-1]
+depends_on: [TKT-500f]
 doc_links: []
 delivers_to: []
 expects_from: []
 origin_agent: business-analyst-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+  - reason: "renamed TKT-500d-6 -> TKT-500f-1 in split of TKT-500d, 2026-06-18"
 superseded_by: null
 covered_by: []
 implemented_by: []

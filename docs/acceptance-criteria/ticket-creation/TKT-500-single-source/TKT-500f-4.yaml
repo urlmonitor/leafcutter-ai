@@ -1,4 +1,4 @@
-id: TKT-500d-9
+id: TKT-500f-4
 readiness: draft
 priority: medium
 title: "Old ticket pipeline remains functional after ac-supervisor is deployed"
@@ -15,7 +15,7 @@ criteria: |
   And the two systems coexist until explicit decommission,
   And no ticket-supervisor behavior is degraded or broken
     by the presence of ac-supervisor code.
-depends_on: [TKT-500d-7]
+depends_on: [TKT-500f-2]
 doc_links:
   - path: docs/architecture/agent_delivery_workflows.md
     relationship: describes
@@ -26,11 +26,12 @@ it_requirements:
   - "The ac-supervisor must not modify or break any code paths used by ticket-supervisor. Feature flag or separate entry point -- not a replacement of the existing code."
 delivers_to: null
 expects_from:
-  ac_id: TKT-500d-7
+  ac_id: TKT-500f-2
   contract: "Deployed ac-supervisor that has passed the canary run"
 origin_agent: business-analyst-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+  - reason: "renamed TKT-500d-9 -> TKT-500f-4 in split of TKT-500d, 2026-06-18"
 superseded_by: null
 covered_by: []
 implemented_by: []

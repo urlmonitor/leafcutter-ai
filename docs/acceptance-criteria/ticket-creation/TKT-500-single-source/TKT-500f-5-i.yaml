@@ -1,0 +1,50 @@
+id: TKT-500f-5-i
+readiness: approved
+priority: high
+title: "Generator substitutes a safe default when assigned_agent is absent from the registry"
+component: ticket-creation
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f.yaml"
+criteria: |
+  Given a leaf AC whose assigned_agent names an agent that has no entry
+    at all in the agent registry (for example "made-up-agent"),
+  When a ticket is generated from that AC by an AC-to-ticket generator,
+  Then the generated ticket does NOT name that unknown agent as its phase agent,
+  And the generator substitutes a valid ticket-phase agent in its place
+    following the same substitution rule used for non-phase agents
+    ("llm-expert" when the work edits agent or skill templates,
+    "python-coder" otherwise),
+  And the generator records a warning that states the original assigned_agent
+    was not found in the registry, names the substitute agent, and names the AC id,
+  And ticket generation completes without raising an unhandled error.
+depends_on: [TKT-500f-5]
+doc_links:
+  - path: scripts/goal_to_epic.py
+    relationship: constrains
+    status: exists
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+  - path: config/agent_registry.json
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "A missing registry entry is treated the same as is_ticket_phase: false (ineligible) — never emit an agent id that has no registry entry as a ticket phase agent."
+  - "Use the same shared substitution helper as TKT-500f-5; the unknown-agent path must not be a second, divergent code branch."
+  - "The warning for the unknown-agent case must be distinguishable from the non-phase-agent case (state 'not found in registry' rather than 'is_ticket_phase: false')."
+delivers_to: null
+expects_from:
+  ac_id: TKT-500f-5
+  contract: "The shared validate-and-substitute helper that both generators call"
+origin_agent: business-analyst
+created: 2026-06-18
+amended_by:
+  - reason: "renamed TKT-500d-10-i -> TKT-500f-5-i in split of TKT-500d, 2026-06-18"
+superseded_by: null
+covered_by: []
+implemented_by: []

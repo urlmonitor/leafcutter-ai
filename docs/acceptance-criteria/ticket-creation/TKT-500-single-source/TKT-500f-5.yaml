@@ -1,0 +1,60 @@
+id: TKT-500f-5
+readiness: approved
+priority: high
+title: "Generators emit only ticket-phase agents, substituting non-phase assignments"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f.yaml"
+criteria: |
+  Given a leaf AC whose assigned_agent names an agent whose agent registry
+    entry has is_ticket_phase set to false (for example "workflow-architect"),
+  When a ticket is generated from that AC by an AC-to-ticket generator,
+  Then the generated ticket does NOT name that agent as its phase agent,
+  And the generator substitutes a valid ticket-phase agent in its place:
+    "llm-expert" when the work edits agent templates or skill templates,
+    and "python-coder" for all other work,
+  And the generator records a warning that states the substitution was made,
+    names the substitute agent, and names the AC's original assigned_agent.
+
+  Given a leaf AC whose assigned_agent names an agent whose agent registry
+    entry has is_ticket_phase set to true (for example "python-coder"),
+  When a ticket is generated from that AC by an AC-to-ticket generator,
+  Then the generated ticket names that agent as its phase agent unchanged,
+  And no substitution warning is recorded.
+depends_on: [TKT-500f, TKT-300a-1, TKT-100e-2]
+doc_links:
+  - path: scripts/goal_to_epic.py
+    relationship: constrains
+    status: exists
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+  - path: config/agent_registry.json
+    relationship: specifies
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Read the is_ticket_phase boolean for the AC's assigned_agent from config/agent_registry.json; treat a true value as eligible and a false value as ineligible for emission as a ticket phase agent."
+  - "Apply the substitution in BOTH generators (scripts/goal_to_epic.py and scripts/ac_store/generate_ticket_from_ac.py) via a single shared helper so the two emission points cannot drift."
+  - "Substitution rule: choose llm-expert when the AC's work surface is agent/skill templates (templates/agents/*, templates/skills/*); choose python-coder otherwise. Both substitutes must themselves have is_ticket_phase: true in the registry."
+  - "Emit the warning through the project logger at WARNING level; the message must include the original assigned_agent, the substitute, and the AC id. Wrap registry-file I/O per the project error handling policy."
+delivers_to:
+  agent: python-coder
+  contract: "Generated ticket whose phase agent is guaranteed to be a registry entry with is_ticket_phase: true"
+expects_from:
+  ac_id: TKT-300a-1
+  contract: "An AC carrying a single assigned_agent value set during IT PO enrichment"
+origin_agent: business-analyst
+created: 2026-06-18
+amended_by:
+  - reason: "renamed TKT-500d-10 -> TKT-500f-5 in split of TKT-500d, 2026-06-18"
+superseded_by: null
+covered_by: [TKT-500f-5-i]
+implemented_by: []
