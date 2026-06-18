@@ -1,0 +1,62 @@
+id: BO-1500a-1
+readiness: approved
+priority: medium
+title: "Self-hosting non-regression is proven by recorded command output, never by a bare assertion"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1500-self-protecting-build/BO-1500a.yaml"
+criteria: |
+  Given a ticket acceptance criterion requires self-hosting non-regression -- that a
+    change to a guard, linter, or hook must not newly flag the project's own code when
+    the changed rule is run over the real repository
+  When the implementing agent marks that acceptance criterion as done
+  Then the sign-off for that criterion includes the actual command that was run to apply
+    the changed check over the real repository
+  And the sign-off includes the actual output of that run showing zero new violations on
+    the repository's own code
+  And a sign-off that asserts only "self-hosting verified" (or equivalent) with no recorded
+    command and no recorded output is rejected: the fulfillment gate treats the
+    self-hosting criterion as NOT satisfied and blocks
+  And when the recorded output of running the changed check over the real repository shows
+    one or more new violations on the repository's own code, the self-hosting criterion
+    cannot be marked done until the recorded output shows zero new violations
+depends_on:
+  - BO-1500a
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1500-self-protecting-build/BO-1500a.yaml"
+    relationship: parent
+    status: exists
+  - path: templates/agents/ac-fulfillment-gate.md
+    relationship: specifies
+    status: exists
+  - path: templates/agents/ac-validator.md
+    relationship: specifies
+    status: exists
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "The self-hosting-evidence rule is authored into the gate that adjudicates AC fulfillment: ac-fulfillment-gate.md (priority 11.7) and ac-validator.md (priority 11). Add a verification step that, when an AC's text asserts self-hosting non-regression (the changed guard/linter/hook does not newly flag the project's own code), inspects the recorded sign-off for that AC and treats the criterion as satisfied ONLY when concrete evidence is present."
+  - "Evidence is defined as BOTH: (a) the literal command string that was invoked to run the changed check over the real repository, AND (b) an excerpt of that run's actual output demonstrating zero new violations on the repository's own code. The evidence is recorded in the sign-off Comments / completion_manifest of the AC's phase agent -- consistent with the signoff skill's completion_manifest model (signoff SKILL.md section 2b) that building-epics SKILL.md routes on."
+  - "A sign-off that asserts only a bare verdict (e.g. 'self-hosting verified') with no recorded command and no recorded output must yield a blocking verdict from the gate: the self-hosting criterion is reported NOT satisfied and the commit phase is blocked, mirroring the existing blocker path in ac-fulfillment-gate.md Step 5."
+  - "When recorded output shows one or more new violations on the repository's own code, the gate must keep the criterion unsatisfied (blocker) until a subsequent recorded run shows zero new violations -- the gate never infers success from the absence of a violation count."
+  - "This is a prompt/template instruction change only: no new exception types, exit codes, or scripts are prescribed. The HOW of locating and parsing the recorded evidence is the implementing agent's choice; this AC fixes only the WHAT (evidence is mandatory; a bare assertion fails)."
+  - "Detection of a self-hosting AC is a review-checklist judgment in the gate template: recognize AC language asserting that a changed guard/linter/hook does not newly flag the project's own real code. No detection heuristic is hard-coded."
+delivers_to: null
+expects_from:
+  ac_id: BO-1500a
+  contract: "The L1 guardrail that self-checks are believed only when actually run with real command + real output kept as evidence. This leaf operationalizes that guarantee as an enforcement rule at the AC-fulfillment gates (ac-fulfillment-gate.md priority 11.7, ac-validator.md priority 11)."
+origin_agent: business-analyst
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

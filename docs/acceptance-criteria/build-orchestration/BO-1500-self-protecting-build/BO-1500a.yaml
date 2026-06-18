@@ -1,0 +1,35 @@
+id: BO-1500a
+readiness: approved
+priority: medium
+title: "Self-checks are proven by running them, and a build can't trash the work in progress"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Claims that our own tooling still passes are backed by a real run, and a build can never overwrite the active workspace.
+
+  When a change to a guard, linter, or hook claims the project's own code still
+  passes the changed rule, that claim is only accepted when the changed check was
+  actually run over the real codebase with the real command and its real output kept
+  as evidence -- never merely asserted. And while work is in progress, building can
+  never deploy over the workspace being worked in: edits land in the source the build
+  reads from, and any deploy test happens somewhere disposable, so an attempt to test
+  the build can never silently delete or rewrite the work already done.
+depends_on:
+  - BO-1500
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1500a-1
+  - BO-1500a-2
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Internal process guardrails on the build/enforcement tooling itself -- no user-facing command, workflow, state machine, or new component is introduced; behavior is verified by evidence checks and worktree-safety checks, not user docs."

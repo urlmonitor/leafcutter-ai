@@ -1,0 +1,60 @@
+id: BO-1500a-2
+readiness: approved
+priority: medium
+title: "A build never deploys over the active worktree; deploy tests target a disposable directory"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1500-self-protecting-build/BO-1500a.yaml"
+criteria: |
+  Given a coding agent is working inside a feature or epic worktree
+  When the agent implements a ticket in that worktree
+  Then the agent does not run the build (build.py or build-self.sh) against the worktree
+    root, because deploying into the worktree root deletes the tracked build-output
+    directories and rewrites generated cards and the generated INDEX, corrupting the
+    working diff
+
+  And given a deploy-output behavior genuinely needs to be exercised
+  When the agent runs the build to test that behavior
+  Then the build targets a throwaway directory outside the worktree (a disposable
+    target directory such as one under /tmp), and never the worktree root, so the
+    working diff is left untouched
+
+  And given the agent needs to change a file that exists in both the package source tree
+    and the deployed tree (a dual-tree templated file, for example a commit-guardian hook)
+  When the agent makes that change
+  Then the agent edits the file in the package source (templates/) directly and confirms
+    the two trees agree by comparing them, and does NOT run the build to "sync" the trees
+    from inside the worktree
+depends_on:
+  - BO-1500a
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1500-self-protecting-build/BO-1500a.yaml"
+    relationship: parent
+    status: exists
+  - path: templates/agents/python-coder.md
+    relationship: specifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The worktree-safety rule is authored into the coder agent templates that may touch package source from inside a worktree: templates/agents/python-coder.md primarily, and the complementary coder templates templates/agents/frontend-coder.md and templates/agents/sql-coder.md if they carry the same build/deploy guidance. State the rule as a standing instruction in the agent body, not as a runtime check."
+  - "The rule has three parts, mirroring the criteria: (1) never run build.py or build-self.sh against the worktree root while working inside a feature/epic worktree; (2) when a deploy-output behavior must be exercised, run the build with a disposable target directory outside the worktree (e.g. --target-dir /tmp/<scratch>), never the worktree root; (3) for a dual-tree templated file, edit the package source under templates/ directly and confirm tree parity by comparison, never by running the build to 'sync' from inside the worktree."
+  - "This is the complementary half of the existing dual-tree-parity guidance (KI-1, added to python-coder.md): that guidance covers editing both trees in parity; this AC adds the build-invocation-safety rule (never deploy over the worktree; use a disposable --target-dir). Co-locate the two so a coder reads them together."
+  - "Grounded in ADR-001 (self-hosting boundary): build.py / build-self.sh deploy the package into a target root by deleting and regenerating tracked build-output directories, the generated cards, and INDEX -- so deploying into a worktree root destroys the working diff. The instruction text must make this consequence explicit so the rule is self-justifying to the agent."
+  - "Prompt/template instruction change only: no new flags, scripts, exit codes, or runtime guards are prescribed by this AC. The agent already has access to build.py's --target-dir flag; this AC fixes only the standing behavioral rule (WHAT the coder must and must not do), leaving the HOW of any deploy test to the coder."
+delivers_to: null
+expects_from:
+  ac_id: BO-1500a
+  contract: "The L1 guardrail that, while work is in progress, building can never deploy over the workspace being worked in -- edits land in the source the build reads from, and any deploy test happens somewhere disposable. This leaf operationalizes that as a standing behavioral rule in the coder agent template(s)."
+origin_agent: business-analyst
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

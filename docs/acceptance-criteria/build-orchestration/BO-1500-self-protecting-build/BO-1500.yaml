@@ -1,0 +1,37 @@
+id: BO-1500
+readiness: approved
+title: "The build system protects its own correctness while agents work on it"
+component: build-orchestration
+level: L0
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  A safeguard so the package's own tooling can't be silently broken during an agent-driven change.
+
+  When agents change the very rules and machinery the project relies on -- the
+  guards that police the code, the build that ships everything into place -- a
+  mistake there is uniquely dangerous, because it can quietly poison every change
+  that follows and corrupt the work already in progress. Twice this has bitten us:
+  once when a change claimed our own tooling still passed on our own code but never
+  actually ran the check, leaving a trap that would have started blocking every
+  commit the moment it shipped; and once when running the build inside the active
+  workspace overwrote the work in progress and forced a full do-over. This goal makes
+  the build system defend itself: claims about its own health are only believed when
+  they are actually demonstrated, and the act of building can never destroy the work
+  being done on it. After this, a change to the project's own tooling is something
+  you can trust as much as any other change -- safe to make without fear of silently
+  breaking the foundation everyone stands on.
+depends_on: []
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1500a
+implemented_by: []
+priority: medium
