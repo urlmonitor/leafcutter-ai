@@ -14,6 +14,12 @@ ARCHITECTURE: Tests import check_diff_coverage module directly and call its
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-18 [python-coder/TICKET-20260616-GE-100e-1]: Added TestStrictModeBlocksCommit
+  test class for AC GE-101b-1 (originally GE-100e-1). Six tests covering the strict-mode
+  blocking scenario: exits 1 when strict=True and diff-cover reports coverage below
+  threshold; per-file coverage output from diff-cover appears in stderr; threshold (80%)
+  and overall coverage (45%) appear in stderr; 'Commit blocked' message appears in stderr;
+  exits 0 (warn-only) when strict=False; exits 0 when diff-cover passes even in strict mode.
 - 2026-06-18 [python-coder/TICKET-20260616-GE-100d-1]: Added fallback-chain
   tests for AC GE-101a-1. New test classes: TestRemoteBranchIsReachable,
   TestBranchExistsLocally, TestResolveCompareBranch, TestMainUsesResolvedBranch.
@@ -444,6 +450,167 @@ class TestMainUsesResolvedBranch(unittest.TestCase):
         call_args = mock_run.call_args
         # compare_branch is the third positional arg
         self.assertEqual(call_args[0][2], "main")
+
+
+class TestStrictModeBlocksCommit(unittest.TestCase):
+    """AC GE-100e-1: strict mode exits 1 and emits per-file error when coverage is below threshold.
+
+    Scenario:
+      - enabled: true, strict: true, min_coverage_percent: 80
+      - coverage.xml exists and is fresh (generated 600 s ago, within 3600 s window)
+      - diff-cover binary is present
+      - diff-cover reports 45% coverage (below 80% threshold) → exits non-zero
+    Expected:
+      - hook exits 1 (blocking)
+      - per-file under-coverage output from diff-cover is emitted to stderr
+      - overall coverage vs threshold message is emitted to stderr
+      - commit is prevented (caller receives exit code 1)
+    """
+
+    _DIFF_COVER_OUTPUT = (
+        "-------------\n"
+        "Diff Coverage\n"
+        "-------------\n"
+        "src/mymodule.py (45%)\n"
+        "src/other.py (30%)\n"
+        "-------------\n"
+        "Total:   45%\n"
+        "Missing: origin/main\n"
+    )
+
+    def _make_patches(self, strict: bool = True, diff_cover_returncode: int = 1) -> list:
+        """Return a list of context-manager patches for the happy-path strict scenario."""
+        import tempfile
+        import time
+
+        xml_path = Path(tempfile.mktemp(suffix=".xml"))
+        return [
+            patch.object(check_diff_coverage, "DIFF_COVERAGE_ENABLED", True),
+            patch.object(check_diff_coverage, "DIFF_COVERAGE_STRICT", strict),
+            patch.object(check_diff_coverage, "DIFF_COVERAGE_MIN_COVERAGE_PERCENT", 80),
+            patch.object(
+                check_diff_coverage, "_diff_cover_binary",
+                return_value="/usr/local/bin/diff-cover",
+            ),
+            patch.object(
+                check_diff_coverage, "_resolve_coverage_xml",
+                return_value=xml_path,
+            ),
+            patch.object(check_diff_coverage, "_coverage_xml_exists", return_value=True),
+            patch.object(check_diff_coverage, "_coverage_xml_is_fresh", return_value=True),
+            patch.object(
+                check_diff_coverage, "_resolve_compare_branch",
+                return_value="origin/main",
+            ),
+            patch.object(
+                check_diff_coverage, "_run_diff_cover",
+                return_value=(diff_cover_returncode, self._DIFF_COVER_OUTPUT),
+            ),
+        ]
+
+    def test_exits_1_when_strict_and_coverage_below_threshold(self) -> None:
+        """main() exits 1 when strict=True and diff-cover reports coverage below threshold."""
+        patches = self._make_patches(strict=True, diff_cover_returncode=1)
+        with (
+            patches[0], patches[1], patches[2], patches[3], patches[4],
+            patches[5], patches[6], patches[7], patches[8],
+            patch("sys.stderr", new_callable=StringIO),
+        ):
+            result = check_diff_coverage.main()
+
+        self.assertEqual(
+            result,
+            1,
+            msg=f"Expected exit 1 (blocking) in strict mode with coverage below threshold, got {result}.",
+        )
+
+    def test_stderr_contains_per_file_coverage_output(self) -> None:
+        """stderr contains per-file coverage output from diff-cover when strict mode blocks."""
+        patches = self._make_patches(strict=True, diff_cover_returncode=1)
+        with (
+            patches[0], patches[1], patches[2], patches[3], patches[4],
+            patches[5], patches[6], patches[7], patches[8],
+            patch("sys.stderr", new_callable=StringIO) as mock_stderr,
+        ):
+            check_diff_coverage.main()
+
+        stderr_text = mock_stderr.getvalue()
+        self.assertIn(
+            "src/mymodule.py",
+            stderr_text,
+            msg=f"stderr should list under-covered files. Got: {stderr_text!r}",
+        )
+        self.assertIn(
+            "45%",
+            stderr_text,
+            msg=f"stderr should state overall coverage (45%). Got: {stderr_text!r}",
+        )
+
+    def test_stderr_contains_threshold_in_blocking_message(self) -> None:
+        """stderr includes the threshold (80%) in the blocking message when strict mode fires."""
+        patches = self._make_patches(strict=True, diff_cover_returncode=1)
+        with (
+            patches[0], patches[1], patches[2], patches[3], patches[4],
+            patches[5], patches[6], patches[7], patches[8],
+            patch("sys.stderr", new_callable=StringIO) as mock_stderr,
+        ):
+            check_diff_coverage.main()
+
+        stderr_text = mock_stderr.getvalue()
+        self.assertIn(
+            "80%",
+            stderr_text,
+            msg=f"stderr should state the threshold (80%). Got: {stderr_text!r}",
+        )
+
+    def test_exits_0_when_not_strict_and_coverage_below_threshold(self) -> None:
+        """main() exits 0 (warn-only) when strict=False even if coverage is below threshold."""
+        patches = self._make_patches(strict=False, diff_cover_returncode=1)
+        with (
+            patches[0], patches[1], patches[2], patches[3], patches[4],
+            patches[5], patches[6], patches[7], patches[8],
+            patch("sys.stderr", new_callable=StringIO),
+        ):
+            result = check_diff_coverage.main()
+
+        self.assertEqual(
+            result,
+            0,
+            msg=f"Expected exit 0 (warn-only) when strict=False, got {result}.",
+        )
+
+    def test_exits_0_when_strict_and_coverage_at_threshold(self) -> None:
+        """main() exits 0 when strict=True but diff-cover reports coverage at or above threshold."""
+        patches = self._make_patches(strict=True, diff_cover_returncode=0)
+        with (
+            patches[0], patches[1], patches[2], patches[3], patches[4],
+            patches[5], patches[6], patches[7], patches[8],
+            patch("sys.stderr", new_callable=StringIO),
+        ):
+            result = check_diff_coverage.main()
+
+        self.assertEqual(
+            result,
+            0,
+            msg=f"Expected exit 0 when strict=True but diff-cover passes (coverage at/above threshold), got {result}.",
+        )
+
+    def test_blocking_message_contains_commit_blocked(self) -> None:
+        """The blocking message includes a 'Commit blocked' indicator."""
+        patches = self._make_patches(strict=True, diff_cover_returncode=1)
+        with (
+            patches[0], patches[1], patches[2], patches[3], patches[4],
+            patches[5], patches[6], patches[7], patches[8],
+            patch("sys.stderr", new_callable=StringIO) as mock_stderr,
+        ):
+            check_diff_coverage.main()
+
+        stderr_text = mock_stderr.getvalue()
+        self.assertIn(
+            "Commit blocked",
+            stderr_text,
+            msg=f"stderr should contain 'Commit blocked'. Got: {stderr_text!r}",
+        )
 
 
 if __name__ == "__main__":

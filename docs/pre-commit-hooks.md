@@ -146,7 +146,10 @@ to gate commits on coverage of the lines that actually changed.
   priority option.
 - **Strict mode**: set `diff_coverage.strict: true` to block the commit when
   coverage of changed lines falls below `min_coverage_percent`.  In non-strict
-  mode (the default) the hook warns but exits 0.
+  mode (the default) the hook warns but exits 0.  When strict mode fires, the
+  hook emits the diff-cover output (per-file coverage percentages and overall
+  diff coverage vs threshold) followed by a `Commit blocked` message, then
+  exits 1 (AC GE-101b-1).
 
 **Configuration** (in `diff_coverage` section of `commit_guardian.json`):
 
