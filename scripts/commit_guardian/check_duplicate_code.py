@@ -24,6 +24,12 @@ Output format (GE-100b): duplicate pairs are emitted as human-readable lines:
 Only clones that involve at least one staged file are reported. Clones between
 two non-staged files are silently discarded (GE-100b-1).
 
+Blocking message (GE-100c): when strict mode is enabled and duplicates exceed the
+configured threshold, the commit is blocked with a message that states both the
+measured duplication percentage and the configured threshold:
+    [check-duplicate-code] Commit blocked. Measured duplication: 8.0% (threshold: 5%).
+    Reduce copy-paste clones or set duplicate_code.strict to false to warn only.
+
 Usage:
     python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_duplicate_code.py
 
@@ -236,6 +242,32 @@ def _normalise_path(raw: str, scan_root: str | None, orig_root: Path) -> str:
         return str(p.relative_to(orig_root))
     except ValueError:
         return raw
+
+
+def _extract_percentage(jscpd_output: str) -> float | None:
+    """Extract the overall duplication percentage from jscpd JSON output.
+
+    jscpd's JSON reporter writes a top-level ``statistics`` key with a ``total``
+    sub-object that contains a ``percentage`` float (duplication by lines, two
+    decimal precision).  This function extracts that value for use in the
+    threshold-blocking error message required by GE-100c.
+
+    Args:
+        jscpd_output: Raw stdout from jscpd (expected to be JSON).
+
+    Returns:
+        float | None: The measured duplication percentage, or None if the field
+        cannot be extracted (e.g. invalid JSON or missing key).
+    """
+    try:
+        data = json.loads(jscpd_output)
+    except json.JSONDecodeError:
+        return None
+
+    try:
+        return float(data["statistics"]["total"]["percentage"])
+    except (KeyError, TypeError, ValueError):
+        return None
 
 
 def _parse_clones(
@@ -469,6 +501,7 @@ def _run_jscpd(
                 )
 
         clones = _parse_clones(raw_json, staged_set, scan_root)
+        measured_pct = _extract_percentage(raw_json)
 
         if not clones:
             # No clones involving staged files — pass silently.
@@ -478,9 +511,16 @@ def _run_jscpd(
         _emit_clone_warnings(clones, mode)
 
         if DUPLICATE_CODE_STRICT:
+            if measured_pct is not None:
+                pct_line = (
+                    f"Measured duplication: {measured_pct:.1f}% "
+                    f"(threshold: {DUPLICATE_CODE_THRESHOLD_PERCENT}%)."
+                )
+            else:
+                pct_line = f"Threshold: {DUPLICATE_CODE_THRESHOLD_PERCENT}% (measured percentage unavailable)."
             print(
-                "\n[check-duplicate-code] Commit blocked. Reduce copy-paste clones "
-                "above the threshold or set duplicate_code.strict to false to warn only.",
+                f"\n[check-duplicate-code] Commit blocked. {pct_line}\n"
+                "Reduce copy-paste clones or set duplicate_code.strict to false to warn only.",
                 file=sys.stderr,
             )
             return 1
@@ -503,6 +543,14 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-18 [python-coder/TICKET-20260616-GE-100c]: Implements AC GE-100c (strict-mode
+  threshold blocking with measured vs configured percentage in the error message). Added
+  _extract_percentage() which reads data["statistics"]["total"]["percentage"] from the
+  jscpd JSON report and returns it as a float (None on missing/invalid). Updated
+  _run_jscpd() to call _extract_percentage() alongside _parse_clones() and embed the
+  measured percentage in the commit-blocked message: "Measured duplication: X.X%
+  (threshold: Y%)." Falls back to reporting only the configured threshold when the
+  measured value is unavailable. Module docstring updated with GE-100c output format.
 - 2026-06-18 [python-coder/TICKET-20260616-GE-100b]: Implements AC GE-100b (human-readable
   duplicate pair output) and GE-100b-1 (staged-only filter). Replaced --reporters console
   with --reporters json + --output to get structured jscpd output. Added _parse_clones()
