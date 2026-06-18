@@ -41,4 +41,5 @@ created: 2026-06-18
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-IndependentSpotCheck/02_TICKET-20260618-BO-1300a-1-i.md
