@@ -382,6 +382,12 @@ checking file existence. No registry lookup is needed.
 > install. This agent uses the Embedded Design Principles above exclusively.
 > Reading the legacy file on top of the embedded principles would apply the
 > same constraints twice and may introduce conflicting rules.
+>
+> **Wizard note:** The `/onboard` wizard does NOT offer `frontend-design` as a
+> separate installable skill. If an adopter's `optional_skills` config still
+> lists `"frontend-design"` from a previous install, treat the entry as a
+> no-op — do not load or apply that skill file. The wizard now only offers
+> `webapp-testing` as a frontend optional skill.
 
 ### webapp-testing skill
 

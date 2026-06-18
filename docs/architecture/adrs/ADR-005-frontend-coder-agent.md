@@ -1,9 +1,10 @@
 ---
 title: "ADR-005: frontend-coder as a First-Class Sibling Implementation Agent"
+description: "Decides to add frontend-coder as a sibling implementation agent alongside python-coder and sql-coder, dispatched directly by ticket-supervisor."
 type: "adr"
 status: "active"
 created: "2026-05-28"
-last_updated: "2026-06-08"
+last_updated: "2026-06-18"
 components:
   - build_pipeline
 ---
@@ -29,7 +30,7 @@ The sub-agent pattern was rejected for three reasons:
 - It **overloads `python-coder`** with frontend concerns. `python-coder` has no Stop-and-Ask rule for HTML/CSS/JS files, no awareness of framework tooling (Vite, webpack, esbuild), and no optional-skill integration contract. Augmenting it would require forking its prompt into a multi-persona agent — harder to maintain and test.
 - It **obscures the dispatch log**: a ticket with both backend and frontend work would show `python-coder: signed_off` as the only record, hiding that frontend sub-work was done and preventing the BA from assigning `frontend-coder: needed` at refinement time.
 
-The optional-skill integration contract (webapp-testing, frontend-design) also needed a home. The sibling pattern gives `frontend-coder` its own agent template where the skill-loading logic is self-contained, rather than burying it inside a sub-spawn branch of `python-coder`.
+The optional-skill integration contract (webapp-testing) also needed a home. The sibling pattern gives `frontend-coder` its own agent template where the skill-loading logic is self-contained, rather than burying it inside a sub-spawn branch of `python-coder`. (Note: `frontend-design` was previously listed here as an optional skill but has since been deprecated — see the Optional-skill integration contract section below.)
 
 ## Decision
 
@@ -40,7 +41,9 @@ The optional-skill integration contract (webapp-testing, frontend-design) also n
 `frontend-coder` detects installed optional skills by checking file existence at the expected path. The detection logic is:
 
 - **webapp-testing**: if `.claude/skills/webapp-testing/SKILL.md` exists, invoke the skill after making UI changes to capture a screenshot and verify no console errors.
-- **frontend-design (legacy)**: the `frontend-design` skill is **no longer loaded** by `frontend-coder`, regardless of whether `.claude/skills/frontend-design/SKILL.md` exists on disk. Design principles are embedded directly in the agent template (see `## Embedded Design Principles` section). If a project still has `.claude/skills/frontend-design/SKILL.md` from a previous install, `frontend-coder` ignores it entirely.
+- **frontend-design (deprecated)**: the `frontend-design` skill is **no longer loaded** by `frontend-coder`, regardless of whether `.claude/skills/frontend-design/SKILL.md` exists on disk. Design principles are embedded directly in the agent template (see `## Embedded Design Principles` section). If a project still has `.claude/skills/frontend-design/SKILL.md` from a previous install, `frontend-coder` ignores it entirely.
+
+  The `/onboard` wizard **does NOT offer `frontend-design` as a separate installable skill**. When an adopter runs `/onboard`, the wizard presents `webapp-testing` as the only frontend optional skill. There is no "install frontend-design? (yes / skip)" prompt. If the adopter opts into frontend capabilities (i.e. installs `frontend-coder`), unified design principles are deployed as part of the agent template itself — no additional skill files are needed or offered. (Satisfies AC `BP-700d-2`.)
 
 This change was introduced to satisfy AC `BP-700a-1-i`: when the unified frontend agent template is deployed, it uses only its embedded design principles, preventing the agent from applying design constraints twice (once from the embedded principles and once from the external skill file).
 
@@ -85,7 +88,7 @@ Priority 8 (after `sql-coder` at 7, before `test-runner` at 9) is chosen because
 **Positive:**
 - Tickets involving `.tsx`, `.jsx`, `.vue`, `.svelte`, `.html`, `.css`, `.scss` files are correctly routed at BA/refinement time without manual intervention.
 - The `frontend-coder` agent template is self-contained: all frontend conventions, stop-and-ask rules, and optional-skill integration live in one file.
-- Optional skills (webapp-testing, frontend-design) compose cleanly without changing the `ticket-supervisor` dispatch loop.
+- Optional skills (webapp-testing only — `frontend-design` is deprecated and no longer offered by the wizard) compose cleanly without changing the `ticket-supervisor` dispatch loop.
 - The commit-phase serialization lock continues to work correctly — `frontend-coder` is a leaf agent, not a spawner.
 
 **Negative:**
