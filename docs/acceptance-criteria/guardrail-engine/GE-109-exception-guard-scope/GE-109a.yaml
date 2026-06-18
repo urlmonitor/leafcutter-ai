@@ -1,4 +1,4 @@
-id: GE-107a
+id: GE-109a
 readiness: approved
 priority: medium
 title: "Exception-handling guard skips test files"
@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: active
 work_status: done
-created_by: "docs/acceptance-criteria/guardrail-engine/GE-107-exception-guard-scope/GE-107.yaml"
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-109-exception-guard-scope/GE-109.yaml"
 criteria: |
   Given the check-exception-handling pre-commit hook receives a staged Python file,
   And the file is a test file — its path contains a `tests` or `unit_tests`
@@ -19,9 +19,9 @@ criteria: |
   And a non-test production `.py` file with the same violations is still
     blocked (exit 1), so the exemption never widens to production code.
 depends_on:
-  - GE-107
+  - GE-109
 doc_links:
-  - path: "docs/acceptance-criteria/guardrail-engine/GE-107-exception-guard-scope/GE-107.yaml"
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-109-exception-guard-scope/GE-109.yaml"
     relationship: parent
     status: exists
   - path: "templates/scripts/commit_guardian/check_exception_handling.py"
@@ -35,14 +35,19 @@ it_requirements:
   - "Production files (normal directory, normal name) must remain subject to the full E722/BLE001/IO-001 check."
 delivers_to: null
 expects_from:
-  ac_id: GE-107
+  ac_id: GE-109
   contract: "The check_exception_handling hook's per-file processing loop in main()"
 origin_agent: business-analyst
 created: 2026-06-17
 amended_by: []
 superseded_by: null
 covered_by:
-  - unit_tests/commit_guardian/test_check_exception_handling.py::TestTestFileExemption
+- unit_tests/commit_guardian/test_check_exception_handling.py::TestGE109aTestFileE722Exempt
+- unit_tests/commit_guardian/test_check_exception_handling.py::TestGE109aTestFileBLE001Exempt
+- unit_tests/commit_guardian/test_check_exception_handling.py::TestGE109aTestFileIO001Exempt
+- unit_tests/commit_guardian/test_check_exception_handling.py::TestGE109aProductionFileStillFlagged
+- unit_tests/commit_guardian/test_check_exception_handling.py::TestGE109aPathComponentTestsDir
+- unit_tests/commit_guardian/test_check_exception_handling.py::TestGE109aBasenameDetection
 implemented_by:
-  - templates/scripts/commit_guardian/check_exception_handling.py#_is_test_file
-  - templates/commit-guardian/check_exception_handling.py#_is_test_file
+- templates/commit-guardian/check_exception_handling.py#is_test_file
+- tickets/00_inbox/TICKET-20260617-GE-109a.md
