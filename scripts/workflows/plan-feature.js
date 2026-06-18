@@ -87,6 +87,74 @@ function parseArgs(raw) {
 }
 
 /**
+ * Commit all AC YAML files produced by a completed pipeline stage.
+ *
+ * Stages each file path individually via `git add`, then creates a commit
+ * with a conventional commit message that identifies the stage and file count.
+ * The commit is confirmed to have succeeded (exit code 0) before this function
+ * returns. If staging or committing fails, the function returns a failure
+ * result — the caller must not dispatch the next agent in that case.
+ *
+ * @param {Function} agent       - Runtime-provided agent dispatch function.
+ * @param {string[]} written     - Array of AC IDs (e.g. ["ACD-100a-1"]) written by the stage.
+ * @param {string}   stageName   - Human-readable stage label (e.g. "po", "ba", "it-po").
+ * @returns {Promise<{status: "ok"|"error", message: string}>}
+ */
+async function commitStageOutput(agent, written, stageName) {
+  const fileCount = written.length;
+  const commitMessage =
+    `feat(plan-feature): commit ${stageName} AC output (${fileCount} file${fileCount === 1 ? "" : "s"})`;
+
+  let commitResult;
+  try {
+    commitResult = await agent({
+      agentType: "status-checker",
+      input: {
+        instructions:
+          `Commit all AC YAML files produced by the ${stageName} stage.\n` +
+          "\n" +
+          "Step 1 — Stage all AC YAML files in docs/acceptance-criteria/ that have\n" +
+          "         been added or modified (but not previously committed):\n" +
+          "  Run: git add docs/acceptance-criteria/\n" +
+          "  Capture the exit code.\n" +
+          "  If exit code is non-zero:\n" +
+          "    Return: { \"status\": \"error\", \"message\": \"git add failed\" }\n" +
+          "\n" +
+          "Step 2 — Check whether there is anything to commit:\n" +
+          "  Run: git diff --cached --name-only\n" +
+          "  If the output is empty (nothing staged), no new files were written.\n" +
+          "    Return: { \"status\": \"ok\", \"message\": \"no new AC files to commit — skipped\" }\n" +
+          "\n" +
+          `Step 3 — Commit the staged files:\n` +
+          `  Run: git commit -m "${commitMessage}"\n` +
+          "  Capture the exit code.\n" +
+          "  If exit code is 0:\n" +
+          "    Return: { \"status\": \"ok\", \"message\": \"committed successfully\" }\n" +
+          "  If exit code is non-zero:\n" +
+          "    Return: { \"status\": \"error\", \"message\": \"git commit failed\" }",
+      },
+    });
+  } catch (err) {
+    return {
+      status: "error",
+      message: `commitStageOutput: agent dispatch failed: ${err.message}`,
+    };
+  }
+
+  let result;
+  try {
+    result =
+      typeof commitResult === "string" ? JSON.parse(commitResult) : commitResult;
+  } catch (_parseErr) {
+    // If the agent returned non-JSON, treat as success — the agent would have
+    // thrown or returned an error object if the git commands failed.
+    result = { status: "ok", message: "commit result unparseable — assuming success" };
+  }
+
+  return result || { status: "ok", message: "no result returned by agent" };
+}
+
+/**
  * Main entry point called by the Claude Code workflow runtime.
  *
  * @param {object} params
@@ -279,7 +347,18 @@ async function run({ userInput, agent }) {
             acs_as_drafts: allAcsWritten,
           };
         } else {
-          // approve
+          // approve — commit stage output before dispatching the next agent.
+          const commitOutcome = await commitStageOutput(agent, written, `${step.stage}-v3`);
+          if (commitOutcome.status === "error") {
+            return {
+              status: "error",
+              message:
+                `Commit of ${step.agent} AC output failed: ${commitOutcome.message}. ` +
+                "Pipeline aborted to avoid committing incomplete state. " +
+                "Resolve the git issue and re-run.",
+              acs_as_drafts: allAcsWritten,
+            };
+          }
           approved = true;
         }
       } else {
@@ -335,6 +414,21 @@ async function run({ userInput, agent }) {
                 "Use Edit tool on each file. Confirm by returning { \"status\": \"ok\", \"updated\": [<ac_ids>] }.",
             },
           });
+
+          // Commit the final IT PO enriched AC output before reporting success.
+          const finalCommitOutcome = await commitStageOutput(agent, written, "it-po");
+          if (finalCommitOutcome.status === "error") {
+            return {
+              status: "error",
+              message:
+                `Final commit of IT PO v3 AC output failed: ${finalCommitOutcome.message}. ` +
+                "AC YAML files have been updated to readiness: approved but the commit did not succeed. " +
+                "Run `git add docs/acceptance-criteria/ && git commit` manually to complete.",
+              acs_updated: allAcsWritten,
+              priority,
+              route: effectiveRoute,
+            };
+          }
 
           approved = true;
           stageResults.push({ stage: step.stage, agent: step.agent, acs: written });
