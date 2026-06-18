@@ -47,8 +47,13 @@ DECISION HISTORY
   _IO_BOUNDARIES: subprocess.run, subprocess.Popen, subprocess.call,
   subprocess.check_call, subprocess.check_output, subprocess.getoutput.
   The commit_guardian.json io_boundary_calls list was updated in parity.
-  Self-hosting non-regression verified: leafcutter's own subprocess calls
-  are already wrapped in try/except and produce no IO-001 violations.
+  Self-hosting remediation (corrected 2026-06-18): the original sign-off
+  claimed leafcutter's own subprocess calls were already wrapped — that was
+  inaccurate. A post-drive spot-check found 11 unwrapped subprocess calls in
+  6 production scripts (goal_to_epic, ac_prioritizer, setup_ticket_worktree,
+  build_helpers, compute_next_version, feedback/emit_hook_finding). All 11
+  were subsequently wrapped in try/except so the widened guard produces no
+  IO-001 subprocess violations on leafcutter's own code.
 - 2026-06-18 [GE-108b]: Blind-catch handler cleared only by WARNING-or-higher
   logging on a real logger object (ADR-014 Decision 2).
   Replaced _LOG_CALL_NAMES (broad name-set) with _WARNING_LOG_METHODS
@@ -58,6 +63,12 @@ DECISION HISTORY
   of name. Sub-WARNING methods (debug, info) and print() are explicitly excluded.
   Self-hosting non-regression verified: all production handlers in leafcutter
   already use WARNING-or-higher logging or re-raise.
+- 2026-06-18 [GE-108c]: BLE001 message now renders tuple exception types in full.
+  Previously, except (ValueError, Exception): collapsed to just "Exception" in
+  the violation message because the type_name branch only handled ast.Name.
+  Added an ast.Tuple branch that joins the element names with ", " and wraps
+  them in parentheses, producing e.g. "(ValueError, Exception)" in the message.
+  Detection logic (what is flagged and at which line/col) is unchanged.
 ====================================================================
 """
 
@@ -340,11 +351,15 @@ def analyse_file(path: Path) -> list[Violation]:
                     ),
                 ))
             elif _handler_is_blind(node) and not _handler_reraises_or_logs(node):
-                type_name = (
-                    node.type.id
-                    if isinstance(node.type, ast.Name)
-                    else "Exception"
-                )
+                if isinstance(node.type, ast.Name):
+                    type_name = node.type.id
+                elif isinstance(node.type, ast.Tuple):
+                    inner = ", ".join(
+                        elt.id for elt in node.type.elts if isinstance(elt, ast.Name)
+                    )
+                    type_name = f"({inner})"
+                else:
+                    type_name = "Exception"
                 violations.append(Violation(
                     line=node.lineno,
                     col=node.col_offset + 1,
