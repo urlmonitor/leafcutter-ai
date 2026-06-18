@@ -1,0 +1,47 @@
+id: BO-1300b-2
+readiness: approved
+priority: high
+title: "Findings from all three reviewers are aggregated into one consolidated result"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-independent-spot-check/BO-1300b.yaml"
+criteria: |
+  Given the three reviewers have each finished probing the feature from their assigned angle
+  When the spot-check pass collects their results
+  Then the findings from all three reviewers are combined into a single consolidated result
+  And the consolidated result records which reviewer angle surfaced each finding
+  And a reviewer that finished with no findings still contributes a clean result rather than
+    being silently dropped
+  And the consolidated result is produced only after all three reviewers have completed
+depends_on:
+  - BO-1300b
+  - BO-1300b-1
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-independent-spot-check/BO-1300b.yaml"
+    relationship: parent
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Aggregation runs at the command level (depth 0, the same level that dispatched the reviewers) per ADR-006; it must join on all three reviewer results returning, treating a missing or errored reviewer result as a defect rather than silently producing a partial consolidation."
+  - "Each consolidated finding must retain its source angle label so downstream ticketing (BO-1300e-1) and dedup (BO-1300e-1-ii) can attribute and merge by angle."
+  - "A reviewer reporting zero findings must be represented as an explicit clean contribution in the consolidated result, never omitted."
+  - "The consolidated result is the single producer feeding both the ticket-emission step (BO-1300e-1) and the clean-signoff path (BO-1300e-1-i); its shape must serve both."
+delivers_to:
+  agent: python-coder
+  contract: "Consolidated spot-check result: { findings: [{ id, angle: edge|integration|usability, summary, detail, blocking: bool }], angles_covered: [...], clean: bool }, consumed by the ticket-emission step (BO-1300e-1)."
+expects_from:
+  ac_id: BO-1300b-1
+  contract: "Three per-reviewer finding sets, each tagged with its angle { angle, findings: [...] }, to be merged into one consolidated result."
+origin_agent: BrainCandy
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

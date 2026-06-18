@@ -1,0 +1,43 @@
+id: BO-1300c-1-i
+readiness: approved
+priority: high
+title: "Reviewer tempted to fall back to running tests must refuse and exercise the feature instead"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-independent-spot-check/BO-1300c.yaml"
+criteria: |
+  Given a spot-check reviewer is unsure how to probe a feature and the easiest path would be
+    to run the existing unit test suite and report its result
+  When the reviewer decides what to do next
+  Then the reviewer does not run the unit test suite as a substitute for exercising the feature
+  And the reviewer instead invokes the feature directly to probe the uncovered gap from its
+    assigned angle
+  And if the reviewer genuinely cannot exercise the feature for its angle, it reports that it
+    could not exercise the feature (and why) rather than reporting unit-test output as its result
+depends_on:
+  - BO-1300c-1
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-independent-spot-check/BO-1300c.yaml"
+    relationship: parent
+    status: exists
+  - path: docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The reviewer prompt must include an explicit anti-fallback rule: running the unit test suite is never an acceptable substitute for exercising the feature, even when it is the path of least resistance."
+  - "A could-not-exercise outcome must be a first-class reportable result (with a reason), distinct from a clean no-findings result and from any test-derived output."
+delivers_to: null
+expects_from:
+  ac_id: BO-1300c-1
+  contract: "The no-unit-tests / no-test-authoring review boundary (BO-1300c-1) that this edge case stress-tests under the temptation to fall back to the test suite."
+origin_agent: BrainCandy
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

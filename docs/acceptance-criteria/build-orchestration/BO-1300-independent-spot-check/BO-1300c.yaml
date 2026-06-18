@@ -1,0 +1,31 @@
+id: BO-1300c
+readiness: approved
+priority: high
+title: "Reviewers exercise the feature instead of re-running your tests"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  The review goes after gaps your existing tests and criteria do not cover.
+
+  These reviewers deliberately do not re-run the unit tests that already passed.
+  They put the feature through real use -- edge cases, awkward inputs, the seams
+  where it meets the rest of the system -- to surface problems the existing tests
+  and acceptance criteria were never written to catch.
+depends_on:
+  - BO-1300
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1300c-1
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "States the scope boundary that distinguishes spot-checking from existing test running; the behavior is documented as part of the on-demand review how-to in BO-1300a."

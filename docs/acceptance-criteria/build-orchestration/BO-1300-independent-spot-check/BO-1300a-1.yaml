@@ -1,0 +1,50 @@
+id: BO-1300a-1
+readiness: approved
+priority: high
+title: "On-demand spot-check command targets a named finished feature"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-independent-spot-check/BO-1300a.yaml"
+criteria: |
+  Given a feature has just finished building (its tickets are implemented and merged)
+  When the user invokes the standalone spot-check command and names that feature as the
+    target scope (for example, the epic folder, the feature branch, or the changed files
+    of the just-built feature)
+  Then the command resolves the target into a concrete review scope describing what was
+    built (the feature's behavior and the files it changed)
+  And the review proceeds against that scope without requiring a full build cycle to run
+  And the command does not ask the user to author any new tests
+depends_on:
+  - BO-1300a
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-independent-spot-check/BO-1300a.yaml"
+    relationship: parent
+    status: exists
+  - path: docs/architecture/components/build-ticket-workflow-dispatch.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Implemented as a slash-command skill (SKILL.md under templates/skills/) following the existing plan-feature/create-ac workflow pattern; if a deterministic resolution step is needed it lives in a depth-0 workflow body, not inline in a sub-agent."
+  - "Scope resolution must accept all three target forms (epic folder path, feature branch name, changed-file set) and normalize them to one resolved-scope shape that the dispatch step consumes."
+  - "Resolved scope must capture changed files relative to the repo root (absolute or repo-root-relative paths), never paths dependent on a transient working directory."
+  - "Must not invoke /build-feature, a build supervisor, or any test-authoring agent as part of resolving or running the review."
+  - "Must surface a human-readable confirmation of the resolved scope before dispatch so the user can see what will be reviewed."
+delivers_to:
+  agent: llm-expert
+  contract: "Resolved review scope object: { feature_id|epic_folder, changed_files: [repo-root-relative path], behavior_summary: string }, consumed by the three-reviewer parallel dispatch step (BO-1300a-2)."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1300a-1-i
+implemented_by: []

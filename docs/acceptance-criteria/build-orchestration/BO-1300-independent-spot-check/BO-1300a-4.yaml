@@ -1,0 +1,52 @@
+id: BO-1300a-4
+readiness: approved
+priority: high
+title: "Sequence diagram: on-demand spot-check pass from invocation to tracked tickets"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-independent-spot-check/BO-1300a.yaml"
+criteria: |
+  Given the on-demand spot-check command, the three distinct-angle reviewers, the aggregation
+    step, and the ticket-emission step exist
+  When a sequence diagram for the spot-check pass is authored
+  Then the diagram shows, in order: the user invoking the command, scope resolution, parallel
+    dispatch of exactly three reviewers each with a distinct angle, the three reviewers
+    exercising the feature concurrently, aggregation of their findings into one consolidated
+    result, and the consolidated findings being written as deduplicated inbox tickets
+  And the diagram shows the clean-result branch where no tickets are created and a signoff is returned
+  And the diagram covers the on-demand surface (BO-1300a), the three-perspective fan-out (BO-1300b),
+    and the auto-ticketing (BO-1300e) so those L1s share one authored diagram
+depends_on:
+  - BO-1300a
+  - BO-1300a-2
+  - BO-1300b-2
+  - BO-1300e-1
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-independent-spot-check/BO-1300a.yaml"
+    relationship: parent
+    status: exists
+  - path: docs/architecture/components/supervisor-spawn-topology.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "Authored as a sequence diagram in the project's standard diagram format (mermaid under docs/architecture/diagrams/) consistent with existing component diagrams."
+  - "The fan-out must depict exactly three reviewers dispatched at depth 1 from the command (depth 0), reflecting the ADR-006 flat dispatch — no nested supervisor between the command and the reviewers."
+  - "Must show both branches: findings -> deduplicated inbox tickets, and clean -> signoff with no tickets, matching BO-1300e-1 and BO-1300e-1-i."
+delivers_to: null
+expects_from:
+  ac_id: BO-1300b-2
+  contract: "The dispatch-aggregate-ticket flow (resolved scope -> three concurrent reviewers -> one consolidated result -> deduplicated tickets) that this sequence diagram depicts end to end."
+origin_agent: business-analyst
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
