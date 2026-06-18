@@ -730,6 +730,31 @@
                 ],
                 "pass_filenames": false,
                 "_comment": "ACS-500e-1-i: Blocks commits when a staged AC YAML file's depends_on field would create a circular dependency chain. Builds the full depends_on graph from the AC store (overlaying staged changes), runs DFS cycle detection, and reports the full cycle path (e.g. 'Circular dependency detected: PTN-010 -> PTN-020 -> PTN-010'). Fail-open on unexpected errors."
+            },
+            {
+                "id": "check-ac-pattern-refs",
+                "name": "Check AC implements_pattern References (ACS-500a-3 / ACS-500d-1-i)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_ac_pattern_refs.py",
+                "language": "system",
+                "files": "^docs/acceptance-criteria/.*\\.yaml$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "ACS-500a-3 / ACS-500d-1-i: (1) Blocks commits where an AC YAML file's implements_pattern field references a non-existent AC ID or an AC without parameterized slots. (2) Blocks deletion of a pattern AC when any surviving AC in the store still references it via implements_pattern, with error 'Cannot delete <id>: still referenced by N consuming ACs'. Fail-open on parse errors. See docs/acceptance-criteria/ac-store/ACS-500-pattern-reuse/."
+            },
+            {
+                "id": "check-ac-schema",
+                "tier": "judgment",
+                "name": "Check AC Store Schema, Binding Completeness, and Field Preservation (ACS-500f-1)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_ac_schema.py",
+                "language": "system",
+                "files": "^docs/acceptance-criteria/.*\\.yaml$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "ACS-500f-1: (1) Validates every staged AC YAML file against config/ac_store_schema.json (JSON Schema draft-07). (2) Blocks commits where a consuming AC's pattern_bindings is missing at least one slot declared by the referenced pattern AC — error names the missing binding key and the pattern AC id. (3) Blocks commits where implements_pattern was present in HEAD but is absent in the staged modification — error identifies the file and states that implements_pattern was dropped. Fail-open on unexpected errors. Scoped to docs/acceptance-criteria/ staged files."
             }
         ]
     },

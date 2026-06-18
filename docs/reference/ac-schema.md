@@ -31,18 +31,38 @@ Each AC file is a single YAML document with the following fields.
 | `id` | string | **yes** | Stable AC identifier. Format: `PREFIX-NNN` (see ID Format below). Never changes after creation. |
 | `title` | string | **yes** | One-line human-readable description of the criterion. |
 | `component` | string | **yes** | Component name matching an `id` key in `docs/acceptance-criteria/index.yaml`. |
-| `status` | enum | **yes** | Lifecycle state: `active`, `deprecated`, or `superseded_by`. |
-| `created_by` | string | **yes** | Path to the ticket (relative to repo root) that first introduced this criterion. |
+| `status` | enum | **yes** | Lifecycle state: `active`, `deprecated`, `superseded_by`, or `superseded`. (`superseded_by` is canonical; `superseded` is accepted for older records.) |
 | `criteria` | string | **yes** | Multi-line Gherkin scenario body (`Given`/`When`/`Then`/`And`). |
-| `superseded_by` | string or null | no | AC ID of the replacement criterion. Must be set when `status` is `superseded_by`; null otherwise. |
-| `amended_by` | list of strings | no | Ticket paths that subsequently amended this criterion. Default: `[]`. |
-| `covered_by` | list of strings | no | Test file paths (optionally with `::test_function`) that verify this criterion. Default: `[]`. |
+| `created` | date or string | no | Date this AC was created (`YYYY-MM-DD`). Most records use this field (92 %). YAML bare dates are parsed as native date objects; both forms are accepted. |
+| `created_by` | string | no | Path to the ticket that introduced this criterion. Used by some older authoring flows (14 % of records). Newer records use `created` + `created_by_ticket` instead. |
+| `created_by_ticket` | string or null | no | Path to the ticket that introduced this criterion. Used by newer authoring flows (10 % of records) alongside `created`. |
+| `superseded_by` | string, list of strings, or null | no | AC ID of the replacement criterion. Null when not superseded. A list form (`[ID-1, ID-2]`) is accepted when an AC is split into multiple successors. Must be set when `status` is `superseded_by`; null otherwise. |
+| `amended_by` | list | no | Amendment history. Items may be plain strings (ticket paths or free-form notes) or objects with a `reason` key (structured records produced by agent workflows). Default: `[]`. |
+| `covered_by` | list of strings | no | Test file paths (optionally with `::test_function`) or child AC IDs that verify or cover this criterion. Default: `[]`. |
 | `implemented_by` | list of strings | no | Source file paths (optionally with `#anchor`) that implement this criterion. Default: `[]`. |
 | `depends_on` | list of strings or null | no | List of AC IDs that this AC depends on. Used for two purposes: (1) parent-child hierarchy links — a child AC lists its structural parent ID so the hierarchy is navigable from the child direction; (2) pattern composition — a composite pattern AC lists the atomic pattern AC IDs it wires together. **Must not form a cycle.** The `check_ac_circular_deps` pre-commit hook enforces a directed-acyclic-graph (DAG) invariant on all `depends_on` edges and blocks commits that would introduce a cycle. Default: `[]`. |
 | `origin_agent` | string | no | Identity of the agent or workflow that created this AC file. Free-form provenance string — any non-empty value is valid. The field is **not** validated against the current agent registry. Historical agent names (including names of deleted, renamed, or decomissioned agents) remain valid and are never rewritten during schema upgrades. Example values: `business-analyst` (canonical name, also used historically as v1 and promoted from v3), `business-analyst-v2` (deleted agent), `business-analyst-v3` (legacy v3 name, now renamed to `business-analyst`), `create-ticket` (deleted agent), `refinement` (deleted agent), `BrainCandy` (human author), `ticket-wiring` (workflow). |
+| `readiness` | enum or null | no | Lifecycle readiness state: `draft`, `reviewed`, or `approved`. Present on ~69 % of records. |
+| `priority` | enum or null | no | Implementation priority: `critical`, `high`, `medium`, or `low`. Present on ~69 % of records. |
+| `level` | enum or null | no | Hierarchy level: `L0` (portfolio), `L1` (feature), `L2` (story/task), `L3` (sub-task). |
+| `work_status` | enum or null | no | Implementation lifecycle: `not_started` / `todo` (aliases), `in_progress`, `done`. |
+| `req_status` | enum | no | Requirement lifecycle status from a product perspective: `active`, `draft`, `approved`, or `superseded`. Independent of `work_status`. |
+| `assigned_agent` | string or null | no | Implementation agent assigned to this AC (e.g. `python-coder`). Set by it-po during technical enrichment. |
+| `estimated_complexity` | enum or null | no | T-shirt size estimate: `XS`, `S`, `M`, `L`, or `XL`. Set by it-po. |
+| `delivers_to` | null, string, object, or list | no | Downstream contract: what this AC's implementation delivers. May be null, a free-form agent name string, a structured `{agent, contract}` object, or a list of such objects. |
+| `expects_from` | null, string, object, or list | no | Upstream contract: what this AC expects to receive. Same type space as `delivers_to`. |
+| `it_requirements` | string, list of strings, or null | no | Technical requirements for implementation. May be a multi-line string or a list of requirement strings. Set by it-po. |
+| `doc_links` | list | no | Documentation links. Items are either plain path strings or objects with `path`, `relationship`, `status` (`exists`/`planned`), and optional `relevance` fields. Default: `[]`. |
+| `roadmap_phase` | string | no | Roadmap phase this AC belongs to (e.g. `phase_1`). Matches a phase key in `docs/roadmap.json`. |
+| `notes` | string | no | Free-form contextual notes — authorship context, post-implementation findings, or rationale that does not belong in `criteria`. |
+| `parent` | string | no | Explicit parent AC ID. Used when the structural parent cannot be mechanically derived from the ID format. Prefer the id-based derivation algorithm where possible. |
+| `components` | list of strings | no | Additional component names this AC spans beyond the primary `component` field. Rarely used. |
+| `scope` | string | no | Scope qualifier (e.g. `standing` for standing/permanent requirements that persist across sprints). |
 | `implements_pattern` | string or null | no | ID of the reusable behavior pattern this AC inherits from (e.g. `PTN-001`). When set, the effective behavior is derived from the referenced pattern combined with any `pattern_bindings`. The `criteria` field may contain a plain-text placeholder rather than a full `Given`/`When`/`Then` scenario. |
 | `pattern_bindings` | object or null | no | Key-value bindings that instantiate the referenced pattern for this AC. Values may be strings, arrays, or objects. Only meaningful when `implements_pattern` is set. Example: `{entity_type: "users", columns: ["name", "email"]}`. |
 | `pattern_slots` | list of strings or null | no | List of `{word}` placeholder strings that this pattern AC exposes as bindable slots. Only meaningful on pattern ACs — ACs that other ACs reference via `implements_pattern`. Each entry is a placeholder matching a named placeholder in the `criteria` field (e.g. `"{columns}"`, `"{default_sort}"`). Consuming ACs must supply a value for every slot via `pattern_bindings`. The `check_ac_schema.py` hook derives required slots from this list (falling back to scanning `criteria` for `{word}` placeholders when `pattern_slots` is absent). |
+| `documentation_triggers` | list of enums or null | no | Documentation types required for this feature. Valid on L1 ACs only. Values: `how-to`, `sequence-diagram`, `state-diagram`, `component-diagram`, `reference-doc`. Empty array = no docs needed (provide `documentation_rationale`). |
+| `documentation_rationale` | string or null | no | Explains why no documentation is needed when `documentation_triggers` is empty on an L1 AC. |
 
 ### Full example
 
@@ -51,7 +71,7 @@ id: FIN-001
 title: "Merge main before running tests"
 component: finalize
 status: active
-created_by: "tickets/00_inbox/epics/EPIC-FinalizeFeatureHardening/01_merge_main.md"
+created: 2026-06-04
 criteria: |
   Given a worktree branched from an older commit of main
   When the finalize-feature workflow begins
@@ -193,18 +213,21 @@ re-implementing this logic inline.
 active ──── deprecated
   │
   └──────── superseded_by ──── (points to new active AC)
+  │
+  └──────── superseded ──────── (alternate form; equivalent to superseded_by)
 ```
 
 | Status | Meaning | Effect on hooks |
 |---|---|---|
 | `active` | Criterion is currently enforced. | `check_ac_coverage.py` requires at least one `covered_by` entry. |
 | `deprecated` | Criterion is retired; retained for audit. | `check_ac_coverage.py` skips this AC. `check_test_ac_tags.py` emits a warning if any test still tags this AC. |
-| `superseded_by` | Criterion was replaced by another AC. `superseded_by` field identifies the replacement. | Same as `deprecated` — excluded from active enforcement. |
+| `superseded_by` | Criterion was replaced by another AC. `superseded_by` field identifies the replacement. Canonical form for new records. | Same as `deprecated` — excluded from active enforcement. |
+| `superseded` | Alternate form of `superseded_by` accepted by the schema for older records. Functionally equivalent. | Same as `deprecated` — excluded from active enforcement. |
 
 **Transition rules:**
 
 - `active` → `deprecated`: set `status: deprecated`. No other changes required.
-- `active` → `superseded_by`: set `status: superseded_by` and `superseded_by: <new-ID>`.
+- `active` → `superseded_by`: set `status: superseded_by` and `superseded_by: <new-ID>` (canonical) or `superseded_by: [ID-1, ID-2]` when split into multiple successors.
 - `deprecated` or `superseded_by` → re-activation is not supported. Create a new AC instead.
 
 ---
