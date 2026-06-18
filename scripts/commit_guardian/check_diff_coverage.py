@@ -9,15 +9,19 @@ ARCHITECTURE: Part of the commit_guardian hook suite. Reads configuration from
     commit_guardian.json via config.py. Checks for the diff-cover binary via
     shutil.which, validates coverage.xml existence and freshness, then delegates
     scanning to a diff-cover subprocess. Fail-open on binary absence, missing
-    coverage artifact, stale artifact, and subprocess errors. Blocking (exit 1)
-    only when strict: true AND measured coverage is below min_coverage_percent
-    AND the tool ran successfully.
+    coverage artifact, stale artifact, shallow clone, and subprocess errors.
+    Blocking (exit 1) only when strict: true AND measured coverage is below
+    min_coverage_percent AND the tool ran successfully.
 
     Compare-branch resolution (AC GE-101a-1): the configured compare_branch is
     tried first.  When it is unreachable (e.g. origin/main in a repo whose
     remote uses "master" or is offline), the hook falls back to a local branch
     with the same bare name (e.g. "main"), and finally to "HEAD~1" if no local
     branch matches.
+
+    Shallow-clone detection (AC GE-101c / GE-101c-1): before attempting any
+    branch resolution, the hook runs ``git rev-parse --is-shallow-repository``
+    and fails open with an advisory when the repo is shallow.
 
 Usage:
     python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_diff_coverage.py
@@ -78,6 +82,20 @@ See the diff-cover output above for files with insufficient coverage and their
 individual percentages.
 strict is false — this is a warning only. The commit will proceed.
 To block commits on low coverage, set diff_coverage.strict: true in commit_guardian.json."""
+
+_STALE_ARTIFACT_ADVISORY = """\
+[check-diff-coverage] WARNING: coverage.xml is stale (age: {age}s, max allowed: {max_age}s).
+Diff-coverage checking was skipped (fail-open despite strict mode).
+Regenerate coverage.xml before committing:
+  pytest --cov=. --cov-report=xml"""
+
+_SHALLOW_CLONE_ADVISORY = """\
+[check-diff-coverage] Advisory: diff-cover requires full git history but this \
+repository is a shallow clone.
+Diff-coverage checking was skipped (fail-open).
+To fetch full history, re-clone or run:
+  git fetch --unshallow
+or, in CI, set fetch-depth: 0 in your workflow."""
 
 
 # ---------------------------------------------------------------------------
@@ -261,6 +279,60 @@ def _coverage_xml_is_fresh(xml_path: Path, max_age_seconds: int) -> bool:
     return age <= max_age_seconds
 
 
+def _coverage_xml_age_seconds(xml_path: Path) -> float | None:
+    """Return the age of the coverage XML file in seconds, or None on stat error.
+
+    Args:
+        xml_path: Absolute path to the coverage XML file.
+
+    Returns:
+        float | None: Age in seconds (may be fractional), or None when the file
+            cannot be stat'd.
+    """
+    try:
+        mtime = xml_path.stat().st_mtime
+    except OSError as exc:
+        print(
+            f"[check-diff-coverage] WARNING: cannot stat coverage.xml: {exc}",
+            file=sys.stderr,
+        )
+        return None
+    return time.time() - mtime
+
+
+# ---------------------------------------------------------------------------
+# Shallow-clone detection (AC GE-101c / GE-101c-1)
+# ---------------------------------------------------------------------------
+
+
+def _is_shallow_clone() -> bool:
+    """Return True when the current git repository is a shallow clone.
+
+    Runs ``git rev-parse --is-shallow-repository`` which outputs ``"true"`` for
+    shallow repos and ``"false"`` for full clones.  On any subprocess error
+    (git absent, non-git directory, timeout) returns False so the hook fails
+    open rather than blocking.
+
+    Returns:
+        bool: True when the repository is shallow, False otherwise or on error.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--is-shallow-repository"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        print(
+            f"[check-diff-coverage] WARNING: could not determine clone depth: {exc}",
+            file=sys.stderr,
+        )
+        return False
+    else:
+        return result.returncode == 0 and result.stdout.strip() == "true"
+
+
 # ---------------------------------------------------------------------------
 # diff-cover invocation
 # ---------------------------------------------------------------------------
@@ -349,17 +421,23 @@ def main() -> int:
         )
         return 0
 
-    # Stale-artifact guard — fail-open when coverage.xml is too old
-    if not _coverage_xml_is_fresh(xml_path, DIFF_COVERAGE_MAX_AGE_SECONDS):
-        age_hours = DIFF_COVERAGE_MAX_AGE_SECONDS / 3600
-        print(
-            f"[check-diff-coverage] Advisory: coverage.xml is older than "
-            f"{age_hours:.0f} hour(s).\n"
-            "Diff-coverage checking was skipped (fail-open).\n"
-            "Regenerate coverage.xml before committing:\n"
-            "  pytest --cov=. --cov-report=xml",
-            file=sys.stderr,
-        )
+    # AC GE-101c — stale-artifact guard: fail-open and warn with exact age values
+    if DIFF_COVERAGE_MAX_AGE_SECONDS > 0:
+        age = _coverage_xml_age_seconds(xml_path)
+        if age is None or age > DIFF_COVERAGE_MAX_AGE_SECONDS:
+            actual_age = int(age) if age is not None else -1
+            print(
+                _STALE_ARTIFACT_ADVISORY.format(
+                    age=actual_age,
+                    max_age=DIFF_COVERAGE_MAX_AGE_SECONDS,
+                ),
+                file=sys.stderr,
+            )
+            return 0
+
+    # AC GE-101c-1 — shallow-clone detection: fail-open before branch resolution
+    if _is_shallow_clone():
+        print(_SHALLOW_CLONE_ADVISORY, file=sys.stderr)
         return 0
 
     # AC GE-101a-1 — resolve compare branch with fallback chain
@@ -401,6 +479,18 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-18 [python-coder/TICKET-20260616-GE-100f]: Implemented AC GE-101c
+  stale-artifact warning with exact age values and AC GE-101c-1 shallow-clone
+  detection. Added _coverage_xml_age_seconds() to return the raw float age so
+  main() can format both the actual age and the configured max in the warning
+  message (e.g. "age: 7200s, max allowed: 3600s"). Added _is_shallow_clone()
+  which runs `git rev-parse --is-shallow-repository`; a "true" response causes
+  an immediate fail-open with advisory suggesting fetch-depth: 0. Replaced the
+  generic stale-artifact guard in main() with the new age-aware check that
+  emits _STALE_ARTIFACT_ADVISORY. Shallow-clone check runs after stale-artifact
+  guard and before the compare-branch resolution step. Both paths exit 0
+  (fail-open) regardless of the strict setting. Added _STALE_ARTIFACT_ADVISORY
+  and _SHALLOW_CLONE_ADVISORY string constants.
 - 2026-06-18 [python-coder/TICKET-20260616-GE-100e]: Added warn-only advisory
   (AC GE-101b). When strict is false and diff-cover exits non-zero (coverage
   below threshold), main() now emits _WARN_ONLY_ADVISORY to stderr listing that
