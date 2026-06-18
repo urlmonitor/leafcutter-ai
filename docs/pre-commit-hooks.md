@@ -144,6 +144,14 @@ to gate commits on coverage of the lines that actually changed.
 
   An advisory is printed to stderr whenever the hook falls back to a lower
   priority option.
+- **Shallow-clone guard** (AC GE-101c-1): before any branch resolution is
+  attempted, the hook calls `git rev-parse --is-shallow-repository`.  When
+  that returns `"true"`, the hook emits an advisory explaining that diff-cover
+  requires full git history and instructs the developer to re-clone with
+  `fetch-depth: 0` (or run `git fetch --unshallow`), then exits 0 (fail-open).
+  The commit proceeds unblocked.  This guard fires before the fallback-chain
+  logic so that shallow clones never trigger a misleading `HEAD~1` fallback
+  message.
 - **Strict mode**: set `diff_coverage.strict: true` to block the commit when
   coverage of changed lines falls below `min_coverage_percent`.  In non-strict
   mode (the default) the hook warns but exits 0.  When strict mode fires, the
