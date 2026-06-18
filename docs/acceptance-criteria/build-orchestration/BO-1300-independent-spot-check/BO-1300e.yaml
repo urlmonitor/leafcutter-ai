@@ -1,0 +1,30 @@
+id: BO-1300e
+readiness: approved
+priority: high
+title: "Issues found become tracked work, ready to be fixed"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Anything a reviewer finds is captured as a tracked item, not lost in a report.
+
+  When a reviewer spots a problem, it is recorded as its own piece of work in the
+  backlog so the normal fix process can pick it up -- nothing the review finds
+  slips through or has to be re-discovered later.
+depends_on:
+  - BO-1300
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1300e-1
+implemented_by: []
+documentation_triggers:
+  - sequence-diagram

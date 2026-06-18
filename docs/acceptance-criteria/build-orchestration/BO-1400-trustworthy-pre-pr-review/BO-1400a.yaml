@@ -1,0 +1,35 @@
+id: BO-1400a
+readiness: approved
+priority: high
+title: "The review checks bold claims against the real data and confirms the work will actually ship"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Sweeping data claims get checked against the live data, and delivered work gets checked for real reach.
+
+  When a change asserts something about a whole body of records (for example "every
+  record still fits the new shape"), the review confirms that against the real store
+  rather than a sample, and when a change adds something users are meant to receive,
+  the review confirms it is placed where a clean install would actually pick it up --
+  so a change can never pass while secretly rejecting the bulk of real data or being
+  undeployable.
+depends_on:
+  - BO-1400
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1400a-1
+  - BO-1400a-2
+  - BO-1400a-3
+implemented_by: []
+documentation_triggers:
+  - sequence-diagram

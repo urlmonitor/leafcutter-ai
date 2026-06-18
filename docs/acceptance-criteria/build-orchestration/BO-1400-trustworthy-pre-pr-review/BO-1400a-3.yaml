@@ -1,0 +1,54 @@
+id: BO-1400a-3
+readiness: approved
+priority: high
+title: "Sequence diagram documents the pre-PR real-data and deployable-placement verification flow"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1400-trustworthy-pre-pr-review/BO-1400a.yaml"
+criteria: |
+  Given the pre-PR self-review performs real-data verification of bulk/quantitative AC
+    claims (BO-1400a-1) and deployable-artifact placement verification (BO-1400a-2)
+  When the documentation for this feature is authored
+  Then a sequence diagram exists that shows the interaction across the review run:
+    the reviewer detecting a bulk/quantitative data claim, invoking the real-store
+    validation over all records, and receiving the observed pass/fail counts; the
+    reviewer detecting a delivered artifact and checking it against the deployable
+    package source; and the decision points where each check yields a clean verdict,
+    a blocking finding, or (for the data claim) an inconclusive result
+  And the diagram identifies the participants (the pre-PR reviewer, the real data store /
+    validation step, and the deployable-source / fresh-install reachability check)
+  And the diagram shows the INCONCLUSIVE branch when the validation means is unavailable
+    (BO-1400a-1-i) and the no-flag branch for a build-output-only artifact (BO-1400a-2-i)
+depends_on:
+  - BO-1400a
+  - BO-1400a-1
+  - BO-1400a-2
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1400-trustworthy-pre-pr-review/BO-1400a.yaml"
+    relationship: parent
+    status: exists
+  - path: templates/agents/pr-reviewer.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/diagrams/bo-1400-pre-pr-review-sequence.md
+    relationship: describes
+    status: planned
+delivers_to: null
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "Authored as a sequence diagram (the documentation_triggers value on BO-1400a) under docs/architecture/diagrams/, following the project's existing diagram conventions."
+  - "The diagram documents behavior described by BO-1400a-1 and BO-1400a-2 and their edge cases BO-1400a-1-i and BO-1400a-2-i; it is documentation of the review flow, not a new runtime surface."
+  - "Participants must include the deterministic helpers named in the BO-1400a-1 / BO-1400a-2 delivers_to contracts (the all-records validation runner and the fresh-install reachability probe) as distinct lifelines from the pr-reviewer, so the LLM-judgment vs deterministic-helper boundary is visible in the diagram."
+expects_from:
+  ac_id: BO-1400a-1
+  contract: "The verification behaviors (BO-1400a-1 real-data check and BO-1400a-2 placement check, plus their edge cases) whose interaction this sequence diagram documents."
+origin_agent: business-analyst
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

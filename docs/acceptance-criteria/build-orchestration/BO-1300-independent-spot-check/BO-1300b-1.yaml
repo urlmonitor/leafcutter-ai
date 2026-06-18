@@ -1,0 +1,53 @@
+id: BO-1300b-1
+readiness: approved
+priority: high
+title: "Each of the three reviewers is seeded with a distinct review angle"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-independent-spot-check/BO-1300b.yaml"
+criteria: |
+  Given three spot-check reviewers are dispatched against one resolved review scope
+  When each reviewer is given its instructions
+  Then the three reviewers are each seeded with a different review angle, and the three
+    angles together are:
+      - edge cases and boundary inputs (empty, null, oversized, malformed, extreme values)
+      - integration points and error handling (the seams where the feature meets the rest
+        of the system, and how it behaves when those seams fail)
+      - user-facing behavior and usability (how the feature behaves in real use from the
+        perspective of the person invoking it)
+  And no two reviewers are seeded with the same angle
+  And each reviewer probes the feature only from its assigned angle
+depends_on:
+  - BO-1300b
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-independent-spot-check/BO-1300b.yaml"
+    relationship: parent
+    status: exists
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Implemented as a spot-check reviewer agent template (templates/agents/*.md) parameterized by angle, or three angle-specific prompt seeds; the angle assignment is injected at dispatch and is part of the prompt body, not user input."
+  - "If a new reviewer agent template is introduced it must be registered in config/agent_registry.json and be dispatchable at depth 1 (is_ticket_phase / tier set so the spot-check command can spawn it); a reviewer must not be assigned a tier that the command cannot dispatch."
+  - "The three angles (edge/boundary, integration & error-handling, user-facing/usability) are a fixed closed set; the seed for each reviewer must name exactly one angle and instruct the reviewer to stay within it."
+  - "Each reviewer's output must be a structured per-angle finding set tagging which angle produced it, so the aggregation step (BO-1300b-2) can attribute findings."
+delivers_to:
+  agent: llm-expert
+  contract: "Three per-reviewer finding sets, one per angle, each tagged with its angle label { angle: edge|integration|usability, findings: [...] }, consumed by the aggregation step (BO-1300b-2)."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1300b-1-i
+implemented_by:
+- tickets/00_inbox/epics/EPIC-IndependentSpotCheck/04_TICKET-20260618-BO-1300b-1.md

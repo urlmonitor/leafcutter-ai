@@ -1,0 +1,50 @@
+id: ACD-1200a-9-i
+readiness: approved
+priority: high
+title: "A ticket whose basename already exists at the epic-folder path is resolved deterministically, never duplicated to a second location"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500d.yaml"
+criteria: |
+  Given the epic folder tickets/00_inbox/epics/EPIC-ValidateApiInputs/ already
+    contains a file named 01_validate-input-schema.md from a prior run,
+  And the system is generating a ticket for a leaf AC whose computed filename is
+    also 01_validate-input-schema.md,
+  When the system writes that ticket,
+  Then it resolves the collision deterministically by writing to the existing
+    epic-folder path (overwriting it in place) and reports that the existing
+    file was replaced,
+  And it does not create a second ticket file at any other location for that
+    leaf AC (neither a renamed sibling inside the epic folder nor a copy at the
+    tickets inbox root),
+  And after the run exactly one ticket file with that basename exists for that
+    leaf AC, at the epic-folder path,
+  And the leaf AC's implemented_by back-reference names that single
+    epic-folder path.
+depends_on: [ACD-1200a-9]
+doc_links:
+  - path: scripts/goal_to_epic.py
+    relationship: modifies
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Basename collision within the epic folder must resolve deterministically: overwrite the existing epic-folder path in place rather than minting a renamed sibling or a second copy elsewhere — the same input must always converge to the same single file."
+  - "The collision path must emit a report/log line at an appropriate severity stating the existing file was replaced, so an overwrite is observable and not silent."
+  - "After the run, exactly one ticket file with that basename must exist for the leaf AC (at the epic-folder path), and the AC's implemented_by must name that single path — consistent with ACD-1200a-9. Wrap the overwrite I/O per the project error handling policy."
+delivers_to: null
+expects_from:
+  ac_id: ACD-1200a-9
+  contract: "The single-location epic-folder write contract from ACD-1200a-9; this edge case specifies how a pre-existing basename at that epic-folder path is resolved (deterministic in-place overwrite, no second location)"
+origin_agent: business-analyst
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,31 @@
+id: BO-1300b
+readiness: approved
+priority: high
+title: "Get three independent perspectives, not one opinion"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Three reviewers look at the same feature from three different angles at once.
+
+  Instead of a single pass that sees the feature one way, three independent
+  reviewers each probe it from their own perspective -- so blind spots one
+  reviewer would miss are likely to be caught by another.
+depends_on:
+  - BO-1300
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1300b-1
+  - BO-1300b-2
+implemented_by: []
+documentation_triggers:
+  - sequence-diagram
