@@ -1,0 +1,59 @@
+id: ACS-900b-3
+readiness: approved
+priority: high
+title: "How-to guide and sequence diagram for the retirement-blocks-commit behavior"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the blocking enforcement (ACS-900b-1) and its commit_guardian wiring
+    (ACS-900b-2) are implemented,
+  When a contributor hits the block or needs to understand the enforcement
+    posture,
+  Then a how-to guide documents that retiring an AC whose implementing code
+    still lives blocks the commit, that the block is never downgraded to a
+    warning, and that an internal hook error fails open instead of hard-blocking,
+  And a sequence diagram shows the block path at commit time: retired transition
+    detected, surviving implemented_by entries found, non-zero exit returned,
+    commit halted — with the fail-open branch shown as an alternative on
+    internal error.
+depends_on: [ACS-900b-1, ACS-900b-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/how-to/ac-traceability-store.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "The how-to guide and its embedded Mermaid sequenceDiagram satisfy BOTH documentation_triggers on the parent L1 ACS-900b ([how-to, sequence-diagram]); the sequence diagram is an embedded Mermaid block inside the how-to (see notes for the no-split rationale)."
+  - "The how-to MUST make the block-vs-fail-open distinction explicit: a real violation always blocks (never downgraded to a warning), while an INTERNAL hook error fails open (exit 0 + stderr warning). These two postures are orthogonal and must not be conflated for the reader."
+  - "The sequence diagram MUST show the block path (retired transition -> surviving entries found -> non-zero exit -> commit halted) AND the fail-open branch as an alt/alternative on internal error, matching ACS-900b-1 and ACS-900b-1-i."
+  - "Doc frontmatter MUST satisfy check_doc_frontmatter.py for docs/** (title, type how-to, status, created, last_updated, components); prefer extending docs/how-to/ac-traceability-store.md over a new file to avoid frontmatter drift, and coordinate with ACS-900a-3 / ACS-900c-2 / ACS-900d-3 so the four how-to ACs form one coherent guide rather than four overlapping files."
+  - "The sequence diagram MUST stay within mermaid_complexity limits (<=8 participants, <=25 interactions) so check-mermaid-complexity does not warn."
+delivers_to: null
+expects_from:
+  ac_id: ACS-900b-1
+  contract: "The implemented block-decision behavior (always-block-on-violation + the ACS-900b-1-i fail-open branch) that the how-to and embedded sequence diagram document"
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC for ACS-900b's how-to and sequence-diagram triggers. The
+  sequence-diagram portion may be reassigned to architecture-diagram-author by
+  the IT PO; both required artifacts are described here so neither trigger is
+  dropped.
+
+  IT-PO decision (2026-06-22): NOT split. Kept as one documentation-expert AC
+  (embedded Mermaid sequenceDiagram inside the how-to) for the same rationale as
+  ACS-900a-3. Both documentation_triggers on ACS-900b ([how-to, sequence-diagram])
+  are satisfied — S7b documentation gate PASSES for ACS-900b. Flagged in
+  it_requirements that the four ac-store how-to ACs (900a-3, 900b-3, 900c-2,
+  900d-3) should compose one coherent guide, not four overlapping files.

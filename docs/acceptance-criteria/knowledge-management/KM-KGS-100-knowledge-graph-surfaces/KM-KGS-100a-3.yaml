@@ -1,0 +1,51 @@
+id: KM-KGS-100a-3
+readiness: approved
+priority: high
+title: "An acceptance criterion's four relationship fields each become a distinct edge"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100a.yaml"
+criteria: |
+  Given an acceptance-criterion file with id KM-EX-010 whose frontmatter sets
+    implemented_by to ["scripts/foo.py"], covered_by to ["unit_tests/test_foo.py"],
+    depends_on to ["KM-EX-009"], and components to ["build-pipeline"]
+  When the knowledge map is built from the "acs" surface
+  Then an edge of type implemented_by runs from node KM-EX-010 to the node for
+    scripts/foo.py
+  And an edge of type covered_by runs from node KM-EX-010 to the node for
+    unit_tests/test_foo.py
+  And an edge of type depends_on runs from node KM-EX-010 to node KM-EX-009
+  And an edge of type component_membership runs from node KM-EX-010 to the
+    build-pipeline component hub node
+depends_on:
+  - KM-KGS-100a
+  - KM-KGS-100a-2
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+  - path: config/ac_store_schema.json
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "extract_edges currently reads a hard-coded _SURFACE_EDGE_FIELDS dict that does NOT include the acs surface or the implemented_by/covered_by fields; the per-surface edge_fields must instead be sourced from the surface's declared edge_fields in paths.json so the acs surface's four fields produce edges with no surface-specific code branch (this is the declaration-driven invariant the KM-KGS-100c ACs depend on)"
+  - "The components field must continue to emit the component_membership edge type (existing _COMPONENT_FIELDS behavior), while implemented_by, covered_by, and depends_on emit edges whose type equals the field name"
+  - "Target-id resolution for file-path edge fields (implemented_by source files, covered_by test files) must reduce a path value to the same node-id form used for those target nodes, consistent with the existing depends_on path-stem resolution, so the edge lands on the real target node rather than a phantom id"
+  - "implemented_by values may carry an optional #symbol anchor per the AC schema; the anchor must not corrupt the resolved target node id (resolve to the file/path node, ignoring or stripping the anchor for edge-target purposes)"
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100a-2
+  contract: "One acs-surface node per acceptance-criterion file, keyed by the criterion id, with the criterion's frontmatter available for edge extraction"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-ACCodeTraceabilityGraph/04_TICKET-20260622-KM-KGS-100a-3.md

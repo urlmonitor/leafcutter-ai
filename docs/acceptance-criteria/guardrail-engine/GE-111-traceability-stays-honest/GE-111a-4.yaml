@@ -1,0 +1,52 @@
+id: GE-111a-4
+readiness: approved
+priority: high
+title: "Sequence diagram: developer to hook to AC store to commit decision"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111a.yaml"
+criteria: |
+  Given the traceability reconciliation guardrail runs at commit time
+  When a sequence diagram of the commit-time interaction is produced
+  Then the diagram shows the developer initiating a commit
+  And it shows the guardrail reading the staged source files and the AC store's
+    implemented_by links
+  And it shows the drift-detection step producing either a clean verdict or a
+    drift verdict
+  And it shows the two terminal outcomes: commit proceeds on a clean verdict, and
+    commit is blocked with an actionable message on a drift verdict
+depends_on:
+  - GE-111a
+  - GE-111a-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "Author as a mermaid sequenceDiagram in a docs/architecture/ markdown file following the c{level}-{seq}-{slug} diagram naming and frontmatter conventions enforced by check_diagram_naming.py / check_doc_frontmatter.py (diagram_type: sequence)."
+  - "Keep within the mermaid complexity budget enforced by check_mermaid_complexity.py (max_participants 8, max_interactions 25) — participants are at most: Developer, git/pre-commit, the traceability hook, the AC store, and the symbol resolver."
+  - "Must include a parent-link back to the component doc per check_mermaid_parent_link.py bidirectionality."
+delivers_to: null
+expects_from:
+  ac_id: GE-111a-1
+  contract: "The commit-decision flow the sequence diagram depicts"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC satisfying GE-111a documentation_triggers [..., sequence-diagram].
+
+  IT-PO enrichment (2026-06-22): architecture-diagram-author retained.
+  it_requirements pin the diagram-naming / mermaid-complexity / parent-link
+  commit-guardian conventions so the diagram itself passes the hook suite.

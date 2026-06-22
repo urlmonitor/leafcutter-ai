@@ -1,0 +1,59 @@
+id: GE-111d-1
+readiness: approved
+priority: high
+title: "Reconcile by updating implemented_by to the code's new location"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111d.yaml"
+criteria: |
+  Given the traceability reconciliation check has flagged criterion AC-X because
+    its implemented_by entry "src/foo.py#process_order" no longer resolves
+  And the developer edits AC-X's implemented_by entry to "src/orders/foo.py#process_order",
+    which resolves in the staged tree (with the symbol present at symbol tier)
+  And the developer re-stages the AC file and the source change in the same commit
+  When the traceability reconciliation check runs again at pre-commit time
+  Then the check produces a clean verdict for AC-X
+  And the same commit is allowed to proceed
+depends_on:
+  - GE-111d
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111d.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/reference/ac-schema.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+it_requirements:
+  - "The update route requires NO new write-mechanism from this hook — the developer (or an implementation agent) edits implemented_by directly, which ACS-400b-2 already permits implementation agents to do, so it does not collide with the check_ac_governance write-lock. The hook's only behavior is to re-evaluate the re-staged AC and return clean when the new entry resolves."
+  - "Re-evaluation must read the re-staged AC YAML from the staged index (the AC file itself is now staged), and re-run GE-111c scope + GE-111b verdict against the updated entry — no special-case update path; correctness falls out of re-running the same pipeline."
+  - "The updated implemented_by value must be accepted in the exact 'path#symbol' anchor form GE-111b-3 suggests, so applying a suggested location is a verbatim copy with no transform."
+  - "Must follow the project error handling policy (CLAUDE.md Rules 1-4)."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: GE-111b-3
+  contract: "The suggested new location string 'path#symbol' that the developer can apply verbatim as the updated implemented_by value"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Reconciliation route 1 (UPDATE the link). ACS-400b-2 already permits
+  implementation agents to write implemented_by, so the update route does not
+  collide with field-write governance. GE-111b-3 can supply the suggested new
+  location when jcodemunch found the symbol moved rather than vanished, making
+  this a guided one-step edit.
+
+  IT-PO enrichment (2026-06-22): confirmed the update route adds no new write
+  mechanism — correctness is "re-run the same pipeline on the re-staged AC".
+  Contrast with the CONFIRM route (GE-111d-2), which DOES need a new durable
+  record because the code legitimately does not move.

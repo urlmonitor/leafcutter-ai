@@ -1,0 +1,49 @@
+id: ACS-900c-1-i
+readiness: approved
+priority: high
+title: "For a superseded_by retirement, the message names the successor AC to re-point to"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the blocked AC's status is "superseded_by" and its superseded_by field
+    names a successor AC id,
+  When the block message presents remedy (b) (re-point the implementing code),
+  Then the message names the specific successor AC id from the superseded_by
+    field as the re-point target,
+  And when the blocked AC's status is "deprecated" (no successor exists),
+    the message omits the re-point-to-successor remedy and presents only the
+    remove-the-code remedy.
+depends_on: [ACS-900c-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Remedy (b) wording MUST read the successor id from the blocked AC's superseded_by field. Per ac_store_schema.json, superseded_by may be a single AC-id string OR a list of AC-id strings (when an AC is split into multiple successors) — the message MUST handle both forms (name the one successor, or name all of them)."
+  - "A deprecated AC (and any superseded form whose superseded_by is null/empty) MUST omit remedy (b) entirely and present only remedy (a) remove-the-code — do not emit a re-point line with a missing/placeholder target."
+  - "This per-status remedy selection MUST be the SINGLE source of truth shared with ACS-900c-1's formatter (one helper that maps status + superseded_by -> remedy lines), not a second independent branch that could drift from the base message."
+  - "Remedy selection is a pure transform (no I/O); keep it a pure function, outside the fail-open wrapper and unit-testable per the project error-handling policy."
+delivers_to: null
+expects_from:
+  ac_id: ACS-900c-1
+  contract: "The formatted block message (and the per-AC block record carrying status + superseded_by) into which the per-status remedy line is inserted"
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Edge case ensuring the remedy is correct per retirement kind: a deprecated AC
+  has no successor, so the re-point remedy must not be offered; a superseded_by
+  AC must name the actual successor from the superseded_by field.
+
+  IT-PO enrichment (2026-06-22): surfaced the schema fact that superseded_by may
+  be a string OR a list of successor ids (AC split into multiple successors) — the
+  message must handle both. Pinned single-source-of-truth remedy selection shared
+  with ACS-900c-1 to prevent drift.

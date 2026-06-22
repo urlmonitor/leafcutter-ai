@@ -1,0 +1,67 @@
+id: GE-111b-3
+readiness: approved
+priority: high
+title: "Suggest the new location when a moved symbol can be located"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111b.yaml"
+criteria: |
+  Given the symbol tier produced a drift verdict for AC-X because the function
+    process_order moved out of "src/foo.py"
+  And the symbol-analysis tooling locates a single function named process_order
+    now residing in "src/orders/foo.py"
+  When the traceability reconciliation check finalizes the verdict for AC-X
+  Then the drift verdict carries a suggested new location "src/orders/foo.py#process_order"
+
+  Given the symbol tier produced a drift verdict for AC-Y because the function
+    charge_card was removed entirely and the symbol-analysis tooling finds no
+    function named charge_card anywhere in the staged tree
+  When the traceability reconciliation check finalizes the verdict for AC-Y
+  Then the drift verdict carries no suggested new location
+  And the verdict records the change kind as removed
+depends_on:
+  - GE-111b
+  - GE-111b-2
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111b.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/agents/coding/research-agent.md"
+    relationship: related
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Location search must use the SAME resolver chosen in GE-111b-2 (in-process Python AST scan over the staged tree for .py; optional CLI resolver otherwise) — do NOT introduce a second, divergent resolution path. The search scopes to the staged tree (git ls-files --cached), consistent with the staged-only scope."
+  - "Suggest a new location ONLY when EXACTLY ONE staged file defines a symbol with the anchored name (single unambiguous home). Zero matches => change_kind removed, suggested_location null. Two-or-more matches => ambiguous => suggested_location null (the IT-PO decision: suggest none on ambiguity rather than guess); record the ambiguity for the message but do not pick a candidate."
+  - "Suggested location string format MUST be the exact implemented_by anchor form 'path#symbol' so GE-111d-1 can apply it as a drop-in updated implemented_by value with no reformatting."
+  - "When the symbol tier was skipped via the GE-111b-2-i fail-open ladder, location suggestion is also skipped (no resolver => no location) — never block or error on a missing suggestion."
+  - "Must follow the project error handling policy (CLAUDE.md Rules 1-4); a resolver failure here degrades to suggested_location null, never a hard error."
+delivers_to:
+  agent: python-coder
+  contract: "The suggested new location string 'path#symbol' (or null when removed/ambiguous) on the verdict object, consumed by GE-111d-1 (update route) and GE-111e (message)"
+expects_from:
+  ac_id: GE-111b-2
+  contract: "The symbol-level drift verdict object and the moved-symbol name to be located"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  TIER 3 of the resolved file-vs-symbol design question. When the symbol moved
+  rather than vanished, locating its new home turns reconciliation into a guided
+  one-step edit. This feeds the GE-111d-1 update route and the GE-111e message.
+  Ambiguity (multiple candidate symbols of the same name) is a known edge.
+
+  IT-PO enrichment (2026-06-22): resolved the ambiguity edge the BA flagged —
+  suggest a location ONLY on a single unambiguous match; null on zero (removed)
+  or multiple (ambiguous). Pinned the 'path#symbol' output format so the update
+  route consumes it verbatim, and mandated reuse of the GE-111b-2 resolver.

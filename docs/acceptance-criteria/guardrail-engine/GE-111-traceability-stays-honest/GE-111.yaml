@@ -1,0 +1,41 @@
+id: GE-111
+readiness: approved
+priority: high
+title: "Refactoring can never silently break the link between your requirements and your code"
+component: guardrail-engine
+level: L0
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Your requirement-to-code map stays trustworthy through every refactor.
+
+  Every acceptance criterion records which source it satisfies. When that source
+  is later moved, renamed, restructured, or deleted, the recorded link quietly
+  rots — the map still looks complete, but it now points at code that no longer
+  exists or no longer does what the criterion describes. This goal closes that
+  gap: the moment a refactor breaks an AC-to-code link, you are stopped and asked
+  to put it right, before the broken link ever lands. The traceability graph you
+  rely on to answer "where is this requirement implemented?" stays honest for the
+  life of the project, not just on the day each link was first written.
+depends_on: []
+doc_links:
+  - path: "docs/reference/ac-schema.md"
+    relationship: related
+    status: exists
+  - path: "scripts/commit_guardian/check_exception_handling.py"
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-111a
+  - GE-111b
+  - GE-111c
+  - GE-111d
+  - GE-111e
+implemented_by: []

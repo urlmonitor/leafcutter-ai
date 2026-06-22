@@ -1,0 +1,60 @@
+id: GE-111a-3
+readiness: approved
+priority: high
+title: "How-to guide: reconciling a blocked commit when a refactor breaks an AC link"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111a.yaml"
+criteria: |
+  Given the traceability reconciliation check has blocked a commit because a
+    refactor broke an AC-to-code link
+  When a developer opens the how-to guide for this guardrail
+  Then the guide explains what the block means (a recorded implemented_by link
+    points at source that moved, was renamed, or was deleted)
+  And the guide shows the developer how to read the block message to identify the
+    affected criterion and the broken link
+  And the guide describes both reconciliation routes (update the link, or confirm
+    the code still satisfies the criterion) with a worked example of each
+  And the guide states that blocking is the default behavior and how to opt into
+    the warn-only tier
+depends_on:
+  - GE-111a
+  - GE-111a-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: related
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Author as a Diataxis how-to under docs/how-to/ (new file or a new section of docs/how-to/managing-pre-commit-hooks.md), with the doc frontmatter required by check_doc_frontmatter.py (title, type: how-to, status, created, last_updated, components, description) so the commit guardian doc-frontmatter and description-field hooks pass."
+  - "Must keep the worked confirm-route example consistent with the durable confirmation mechanism decided on GE-111d-2 (structured amended_by entry with a source fingerprint) — do not invent an alternate confirm mechanism in the docs."
+  - "Must state the config key and default (enforcement_mode: block default, warn opt-in) exactly as implemented per GE-111a-2."
+delivers_to: null
+expects_from:
+  ac_id: GE-111a-1
+  contract: "The blocking behavior and block message the how-to documents"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC satisfying GE-111a documentation_triggers [how-to, ...]. The
+  user-facing how-to for the whole reconciliation experience lives here on
+  GE-111a (per PO note); GE-111d-4 documents the step-by-step reconciliation
+  routes in detail.
+
+  IT-PO enrichment (2026-06-22): documentation-expert retained (docs/**/*.md
+  surface). it_requirements pin doc-frontmatter compliance and consistency with
+  the GE-111d-2 confirm mechanism and GE-111a-2 config key.

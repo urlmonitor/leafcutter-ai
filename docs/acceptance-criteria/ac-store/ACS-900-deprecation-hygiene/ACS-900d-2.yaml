@@ -1,0 +1,56 @@
+id: ACS-900d-2
+readiness: approved
+priority: high
+title: "Superseded AC re-pointed to its successor passes cleanly even with the code intact"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a commit sets an AC's status to "superseded_by" with a successor named
+    in its superseded_by field,
+    And in the same commit the implementing source paths are moved out of the
+    retired AC's implemented_by list and into the successor AC's implemented_by
+    list (the code itself still exists on disk),
+  When the deprecation-hygiene hook runs,
+  Then the hook treats the retired AC as reconciled because none of its own
+    implemented_by entries still claim surviving code,
+  And the hook does not block the commit on account of the retired AC,
+  And the surviving source files are not flagged, because they are now claimed
+    by the live successor AC rather than the retired one.
+depends_on: [ACS-900d, ACS-900a-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The presence verdict MUST be computed against the retired AC's OWN (post-re-point, now-emptied) staged implemented_by list — NOT against any global set of files referenced anywhere in the store. An intact file that has moved to the successor's implemented_by is therefore not a target of the retired AC and is correctly NOT flagged."
+  - "The hook MUST NOT attempt to verify that the successor AC actually now claims the moved paths (that is out of scope here and would couple the check to cross-AC reconciliation); the block decision is strictly 'does THIS retired AC still claim surviving code via ITS own implemented_by'. Re-pointing emptying the retired AC's list is sufficient to pass."
+  - "This re-point-to-successor reconciliation is a USER-CONFIRMED legitimate-pass case (ACS-900 notes): for superseded_by, 'reconciled' includes re-pointing implemented_by to the successor, not only deletion — it MUST pass even though the source file still exists on disk. Do not treat a surviving file as a violation when the retired AC no longer claims it."
+  - "Pass path MUST be silent on stdout and exit 0 for that AC (no over-firing), per the no-false-positive guarantee."
+  - "Deployed and packaged-template copies of the hook MUST stay in parity (ADR-001)."
+delivers_to: null
+expects_from:
+  ac_id: ACS-900a-2
+  contract: "Per-implemented_by-entry presence verdict mapping evaluated against the retired AC's OWN staged implemented_by list after re-pointing (empty list => no surviving entries => no block)"
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The load-bearing reconciliation case (ACS-900 + ACS-900d notes): for
+  superseded_by, "reconciled" includes re-pointing implemented_by to the
+  successor, NOT only deletion. This MUST pass — the code moved to the successor.
+  The verdict is computed against the retired AC's own (now-emptied) list, so an
+  intact file is not a false positive.
+
+  IT-PO enrichment (2026-06-22): pinned the load-bearing scoping rule — verdict is
+  against the retired AC's OWN implemented_by, never a store-global file set — and
+  explicitly de-scoped successor-claim verification (avoids coupling to cross-AC
+  reconciliation). This is the single most likely false-positive source, so the
+  scoping is stated as a hard it_requirement.

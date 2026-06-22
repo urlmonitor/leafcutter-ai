@@ -1,0 +1,50 @@
+id: ACS-900d-3
+readiness: approved
+priority: high
+title: "How-to guide documents the legitimate-pass cases so the check is trusted"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the clean-pass behaviors (ACS-900d-1, ACS-900d-2, ACS-900d-1-i) are
+    implemented,
+  When a contributor needs to retire an AC without tripping the block,
+  Then a how-to guide documents each way to reconcile a retirement so it passes:
+    delete the implementing files, empty the implemented_by list, re-point
+    implemented_by to the successor AC for a superseded_by retirement, or retire
+    an AC that never claimed code — and states that these cases produce no block
+    so the check has no false positives.
+depends_on: [ACS-900d-1, ACS-900d-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/how-to/ac-traceability-store.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Satisfies the [how-to] documentation_trigger on parent L1 ACS-900d. The guide MUST enumerate all FOUR legitimate-pass reconciliation paths (delete the implementing files; empty the implemented_by list; re-point implemented_by to the successor for a superseded_by retirement; retire an AC that never claimed code) and state plainly that each produces NO block — this is the trust-building content that keeps the hook from being worked around."
+  - "MUST make explicit that for the re-point case the source file legitimately stays on disk (it moved to the successor AC), so an intact file is NOT a violation when the retired AC no longer claims it (mirrors ACS-900d-2)."
+  - "Doc frontmatter MUST satisfy check_doc_frontmatter.py for docs/** (title, type how-to, status, created, last_updated, components); prefer extending docs/how-to/ac-traceability-store.md and coordinating with ACS-900a-3 / ACS-900b-3 / ACS-900c-2 for one coherent guide."
+  - "Documentation MUST track the IMPLEMENTED clean-pass behaviors (depends_on ACS-900d-1 and ACS-900d-2)."
+delivers_to: null
+expects_from:
+  ac_id: ACS-900d-1
+  contract: "The implemented clean-pass behaviors (delete / empty / re-point / never-claimed) that the how-to guide documents"
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC for ACS-900d's how-to trigger. Documenting the reconciliation
+  paths is what keeps a blocking hook trustworthy instead of worked around.
+
+  IT-PO enrichment (2026-06-22): enumerated the four legitimate-pass paths the
+  guide must cover and the intact-file-after-re-point clarification. Satisfies
+  ACS-900d documentation_triggers [how-to] — S7b gate PASSES for ACS-900d.

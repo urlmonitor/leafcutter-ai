@@ -1,0 +1,62 @@
+id: GE-111d
+readiness: approved
+priority: high
+title: "Fix a broken link by updating it or confirming the code still satisfies it"
+component: guardrail-engine
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Two clear ways to make a flagged link honest again and unblock your commit.
+
+  When a link is flagged, you can either point the criterion at where the code
+  now lives, or confirm that the existing code still satisfies the criterion — and
+  once you have done either, the same commit proceeds. The check tells you which
+  options apply so reconciliation is a quick, guided step rather than a guess.
+depends_on: [GE-111]
+doc_links:
+  - path: "docs/reference/ac-schema.md"
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-111d-1
+  - GE-111d-2
+  - GE-111d-3
+  - GE-111d-4
+  - GE-111d-5
+implemented_by: []
+documentation_triggers: [how-to, sequence-diagram]
+notes: |
+  PO authoring note (for the BA). The user named exactly two reconciliation
+  routes — keep BOTH as the explicit happy paths, do not collapse to one:
+    1. UPDATE the link — developer edits the criterion's implemented_by to point
+       at the new file/symbol location (GE-111b can supply the suggested new
+       location when jcodemunch found the symbol moved rather than vanished).
+    2. CONFIRM the code still satisfies the criterion — a developer affirmation
+       that the link is still valid despite the structural change, which clears
+       the block for this commit.
+  OPEN QUESTIONS for the BA / IT-PO at L2 (do not assume):
+    - For route 2, what is the durable record of the confirmation? (e.g. an
+      amended_by entry, an updated anchor, or a confirmation token) so the next
+      commit does not re-flag the same already-confirmed link. Tie to the
+      ACS-400 governance precedent: writing implemented_by is an allowed
+      implementation-agent field change (ACS-400b-2), so the update route does
+      not collide with field-write governance.
+    - Whether confirmation is per-link and whether it must be re-affirmed if the
+      code changes again later.
+  documentation_triggers [how-to, sequence-diagram] — reconciliation is a guided
+  user action (how-to) and a multi-step developer<->hook<->store interaction
+  (sequence-diagram).
+
+  BA decomposition resolution (2026-06-22): route 1 = GE-111d-1 (update); route 2
+  = GE-111d-2 (confirm, decomposed as a version-aware durable confirmation that
+  re-flags when the confirmed source changes again — IT-PO decides the storage
+  field); routes-presentation = GE-111d-3; docs = GE-111d-4 (how-to), GE-111d-5
+  (sequence-diagram).

@@ -1,0 +1,41 @@
+id: ACS-900d
+readiness: approved
+priority: high
+title: "Honestly reconciled retirements pass cleanly"
+component: ac-store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Remove the code, or re-point it to the successor, and the retirement commits without friction.
+
+  When a requirement is retired and its implementing code has genuinely been
+  removed — or, for a superseded requirement, correctly re-pointed to its
+  successor — the commit proceeds with no block. The check produces no false
+  positives, so developers trust it instead of working around it.
+depends_on: [ACS-900]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: [ACS-900d-1, ACS-900d-2, ACS-900d-1-i, ACS-900d-3]
+implemented_by: []
+documentation_triggers: [how-to]
+notes: |
+  The no-false-positive / happy-path AC. A blocking hook is only trustworthy if
+  the correctly-reconciled case passes silently. BA/IT-PO must specify the
+  legitimate-pass cases explicitly so the hook does not over-fire:
+    - implementing source file deleted in the same commit;
+    - implemented_by entry removed / emptied;
+    - for status: superseded_by, implemented_by re-pointed to the successor AC
+      named in the superseded_by field (the code moved to the successor, not
+      deleted — this MUST pass);
+    - an empty implemented_by list (nothing was ever claimed -> nothing to block).
+  This is the guardrail against the hook being so aggressive that teams disable it.

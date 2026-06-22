@@ -1,0 +1,61 @@
+id: ACS-900e-2
+readiness: approved
+priority: high
+title: "Component diagram shows the boundary between the new hook and the audit script"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the deprecation-hygiene hook reuses the audit tool's traceability logic
+    (ACS-900e-1),
+  When a future reader needs to see how the two capabilities relate,
+  Then a component diagram shows the new commit-time blocking hook and the
+    existing cross_reference_audit.py as distinct components, the shared
+    traceability-resolution helper they both depend on, and the direction of
+    each capability (audit = backfill of implemented_by; hook = detection +
+    block at commit time),
+  And the diagram makes explicit that the two are complementary with no
+    overlapping responsibility (audit does not detect retirement orphans; the
+    hook does not backfill).
+depends_on: [ACS-900e-1]
+doc_links:
+  - path: scripts/ac_store/cross_reference_audit.py
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/architecture/c3-deprecation-hygiene-hook.md
+    relationship: describes
+    status: planned
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "Satisfies the [component-diagram] documentation_trigger on parent L1 ACS-900e. The diagram MUST show three distinct components: (1) the new commit-time deprecation-hygiene blocking hook, (2) the existing cross_reference_audit.py backfill tool, (3) the shared traceability-resolution helper (the extracted _load_ac_yamls module from ACS-900e-1) that BOTH depend on."
+  - "The diagram MUST label the direction/responsibility of each capability: audit = backfill of implemented_by (write); hook = detection + block at commit time (read-only) — and make explicit there is NO overlapping responsibility (audit does not detect retirement orphans; the hook does not backfill)."
+  - "The diagram MUST be a Mermaid component (C3) diagram living under docs/architecture/ with frontmatter satisfying check_doc_frontmatter.py for docs/architecture/** (title, type architecture, status, created, last_updated, components, flight_level L3-Component) and a diagram filename following the c{level}-{seq}-{slug} convention; it must carry the bidirectional parent-link required by check-mermaid-parent-link."
+  - "The diagram MUST stay within mermaid_complexity limits (<=15 nodes, <=20 edges, <=4 boundaries) so check-mermaid-complexity does not warn — three components plus the shared helper is well within budget."
+  - "Documentation MUST track the IMPLEMENTED reuse boundary (depends_on ACS-900e-1) — draw the helper boundary as actually extracted, not as speculated."
+delivers_to: null
+expects_from:
+  ac_id: ACS-900e-1
+  contract: "The implemented reuse boundary — the extracted shared traceability-resolution helper plus the two distinct capabilities (audit backfill vs hook detection) — that the component diagram depicts"
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC for ACS-900e's component-diagram trigger. Captures the
+  boundary between the new blocking hook and the existing audit script so the
+  complementary-by-design relationship is visible to future readers.
+
+  IT-PO enrichment (2026-06-22): assigned_agent architecture-diagram-author
+  confirmed (component diagram). Added a planned doc_link for the C3 diagram file,
+  pinned the three-component structure, the C3/Mermaid frontmatter + naming +
+  parent-link + complexity constraints, and the read-only-vs-write capability
+  labelling. Satisfies ACS-900e documentation_triggers [component-diagram] —
+  S7b gate PASSES for ACS-900e.

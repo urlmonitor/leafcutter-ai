@@ -1,0 +1,46 @@
+id: ACS-900d-1-i
+readiness: approved
+priority: high
+title: "Retiring an AC that never claimed any code passes cleanly"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a commit retires an AC whose implemented_by list was already empty in
+    HEAD and remains empty on disk (nothing was ever claimed),
+  When the deprecation-hygiene hook runs,
+  Then there are no implemented_by targets to inspect,
+  And the hook does not block the commit,
+  And the hook produces no block message for that AC.
+depends_on: [ACS-900d-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "An empty implemented_by list (missing, null, or []) MUST yield zero inspection targets and therefore no block — nothing was ever claimed, so there is nothing to orphan. Normalize null/missing/[] to the same empty-target outcome."
+  - "This case is outcome-identical to the emptied-list case in ACS-900d-1; the implementation MUST NOT special-case 'never claimed' versus 'just emptied' — both reduce to zero targets => no block. (No HEAD-vs-staged provenance check on implemented_by is needed for the pass decision.)"
+  - "Pass path MUST be silent on stdout and exit 0 for that AC, per the no-false-positive guarantee."
+  - "Deployed and packaged-template copies of the hook MUST stay in parity (ADR-001)."
+delivers_to: null
+expects_from:
+  ac_id: ACS-900a-2
+  contract: "The empty implemented_by target set (zero entries) for the retired AC, yielding no presence verdicts to evaluate"
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Guards against over-firing on an AC that never claimed code — the
+  empty-implemented_by-list case from ACS-900d notes. Nothing claimed => nothing
+  to block.
+
+  IT-PO enrichment (2026-06-22): pinned null/missing/[] normalization to one
+  empty-target outcome and forbade special-casing never-claimed vs just-emptied
+  (both reduce to zero targets => no block), keeping the logic minimal.

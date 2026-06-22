@@ -2,8 +2,10 @@ id: KM-VIS-013
 title: "visualise_knowledge_graph.py produces a graph with nodes and edges against the real repository"
 component: knowledge-management
 level: L2
-status: active
+status: superseded_by
 work_status: todo
+readiness: reviewed
+priority: low
 criteria: |
   Given the "surfaces" section has been added to config/paths.json
   When running visualise_knowledge_graph.py --no-open
@@ -31,7 +33,7 @@ doc_links:
     status: exists
 origin_agent: "business-analyst-v3"
 created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/04a_surfaces_config_wiring.md"
-superseded_by: null
+superseded_by: KM-KGS-100a
 amended_by: []
 covered_by: []
 implemented_by: []

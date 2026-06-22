@@ -1,0 +1,84 @@
+id: GE-111b-2
+readiness: approved
+priority: high
+title: "Symbol tier: a #symbol anchor that no longer resolves in a surviving file is drift"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111b.yaml"
+criteria: |
+  Given an acceptance criterion AC-X has implemented_by entry
+    "src/foo.py#process_order"
+  And the staged commit keeps "src/foo.py" present but moves the function
+    process_order out of that file (or renames it, or removes it)
+  And the symbol-analysis tooling is available for the file's language
+  When the traceability reconciliation check evaluates AC-X
+  Then the check parses the #symbol anchor as the symbol name "process_order"
+  And it resolves the symbol via the symbol-analysis tooling
+  And it produces a drift verdict for AC-X naming the symbol "process_order" and
+    the change kind as moved, renamed, or removed
+
+  Given an acceptance criterion AC-Y has implemented_by entry
+    "src/foo.py#charge_card"
+  And the staged commit keeps "src/foo.py" present and the function charge_card
+    still resides in that file
+  And the symbol-analysis tooling is available for the file's language
+  When the traceability reconciliation check evaluates AC-Y
+  Then the check produces a clean verdict for AC-Y even though the file content
+    changed
+depends_on:
+  - GE-111b
+  - GE-111b-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111b.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/agents/coding/research-agent.md"
+    relationship: related
+    status: exists
+  - path: "docs/reference/ac-schema.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "ARCHITECTURE CONSTRAINT (load-bearing): the jcodemunch family (search_symbols / find_references / get_blast_radius) is exposed ONLY as MCP tools (mcp__jcodemunch__*), which are LLM-agent capabilities. Per ADR-006 / docs/agents/conventions.md the rule strips these even from coding agents — only research-agent holds them. A pre-commit hook is a plain Python subprocess invoked by git with NO MCP channel. Therefore the symbol tier MUST resolve symbols WITHOUT MCP: either (a) shell out to a CLI/index binary (mirror check_duplicate_code.py shelling out to jscpd), or (b) resolve in-process via stdlib AST for Python (ast.parse + walk top-level/class-scope def/class nodes in the staged blob)."
+  - "Strongly recommended default: in-process Python AST resolution for .py files (no external dependency, always available, deterministic) as the primary resolver; treat any CLI-based cross-language resolver as an optional add-on guarded by the GE-111b-2-i fail-open ladder. This keeps the common (Python) case dependency-free."
+  - "Symbol presence test: the symbol is CLEAN iff a top-level (or class-scoped, for dotted Class.method anchors) definition with the anchored name exists in the SAME staged file. Absent-from-this-file => drift. Locating where it moved is GE-111b-3's job, not this AC's."
+  - "The symbol tier runs ONLY when (a) the entry has a meaningful anchor (GE-111b-1-i) AND (b) the file-path floor already returned clean for that file (file survives). It must consume, not recompute, the GE-111b-1 file verdict."
+  - "Must read the symbol's source from the STAGED blob (git cat-file :path), never the working tree, to stay consistent with the file-path floor and the staged-only scope (GE-111c)."
+  - "Must follow the project error handling policy (CLAUDE.md Rules 1-4): wrap the resolver subprocess / ast.parse in try/except SyntaxError|OSError|subprocess.SubprocessError and route a failure into the GE-111b-2-i fail-open path (advisory skip), never a hard block."
+  - "Verdict object extends the GE-111b-1 shape with tier: 'symbol', symbol: <name>, and (for moves) suggested_location populated by GE-111b-3."
+delivers_to:
+  agent: python-coder
+  contract: "Per-AC symbol-level verdict object {ac_id, entry, tier: 'symbol', verdict, change_kind: 'moved'|'renamed'|'removed'|null, symbol: str, suggested_location: str|null} consumed by GE-111a and GE-111e; the moved-symbol identity consumed by GE-111b-3"
+expects_from:
+  ac_id: GE-111b-1
+  contract: "The surviving-file confirmation (file-tier verdict == clean) that gates whether the symbol tier runs"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: [GE-111b-2-i]
+implemented_by: []
+notes: |
+  TIER 2 of the resolved file-vs-symbol design question. The symbol tier only
+  engages when (a) the implemented_by entry carries a #symbol anchor AND (b) the
+  file still survives in the staged tree (so the file-path floor passed). It then
+  parses the anchor and resolves the named symbol. A relocated/renamed/removed
+  symbol is the exact "moved function inside a surviving file" staleness the user
+  wants closed.
+
+  IT-PO RESOLUTION of the open question on tooling access (2026-06-22): jcodemunch
+  is MCP-only and unreachable from a subprocess hook. The symbol tier therefore
+  does NOT call jcodemunch via MCP. Primary resolver = in-process Python stdlib
+  AST (zero dependency, always available); optional CLI resolvers for other
+  languages are add-ons gated by the GE-111b-2-i fail-open ladder. The "available
+  for the file's language" phrasing in the criteria is satisfied by AST for .py
+  and degrades to fail-open (GE-111b-2-i) for any language the resolver does not
+  cover. This is the precise unavailability boundary the BA deferred to IT-PO.

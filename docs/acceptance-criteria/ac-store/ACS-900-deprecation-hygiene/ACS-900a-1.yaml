@@ -1,0 +1,59 @@
+id: ACS-900a-1
+readiness: approved
+priority: high
+title: "Check fires only when an AC's status transitions to a retired state in the staged diff"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a staged commit modifies an AC YAML file under docs/acceptance-criteria/
+    whose status field changes from "active" in HEAD to one of "deprecated",
+    "superseded_by", or "superseded" on disk,
+  When the deprecation-hygiene pre-commit hook runs,
+  Then the hook arms its orphaned-code check for that AC,
+  And for any staged AC YAML file whose status is unchanged from HEAD (e.g. an
+    AC that was already "deprecated" in HEAD and stays "deprecated"), the hook
+    performs no orphaned-code check,
+  And when no staged AC YAML file has a status transition into a retired state,
+    the hook exits 0 without inspecting any source files.
+depends_on: [ACS-900a]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: scripts/commit_guardian/check_ac_governance.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The status-transition signal MUST be computed as a HEAD-vs-staged YAML-level diff (parse both versions and compare the status field), mirroring check_ac_governance.py's _load_head_content / _fields_changed approach — not a raw text diff and not the mere presence of a retired status on disk."
+  - "All three retired-status forms MUST arm the check: deprecated, superseded_by, and superseded (the older alias), per ac-schema.md Status Lifecycle. Treat them as a single named constant set so adding a future form is a one-line change."
+  - "When the staged commit stages no AC YAML file that transitions into a retired state, the hook MUST exit 0 without reading any source files."
+  - "Must complete well within the pre-commit budget (<1s) for a normal commit staging a handful of AC YAML files; the inspection set scales with the number of retired transitions, not the whole AC store."
+  - "Must log internal failures (YAML parse, git read) at WARNING via stderr and fail open per the project error-handling policy — an internal error must not arm or mis-arm the check."
+  - "The deployed hook (scripts/commit_guardian/check_*.py) and its packaged template source (templates/commit-guardian/check_*.py) MUST be created/edited together and verified in parity via the build.py round-trip — never edit one side only (ADR-001 self-hosting boundary)."
+delivers_to:
+  agent: python-coder
+  contract: "The set of retired ACs (id + status + implemented_by list) whose status transitioned active->retired in this commit, passed to the orphaned-code check (ACS-900a-2 / ACS-900b-1) as the armed-inspection set"
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: [ACS-900a-1-i]
+implemented_by: []
+notes: |
+  Detection-trigger AC. The arming signal is the HEAD-vs-staged status diff
+  (mirroring check_ac_governance.py's _load_head_content / _fields_changed
+  approach), NOT the mere presence of a retired status. All three retired-status
+  forms (deprecated, superseded_by, superseded) are triggers per ac-schema.md
+  Status Lifecycle and ACS-900 notes.
+
+  IT-PO enrichment (2026-06-22): assigned_agent python-coder confirmed — the
+  implementation surface is a new check_*.py hook under scripts/commit_guardian/
+  (deployed) + templates/commit-guardian/ (package source). delivers_to refined
+  to name the status field in the armed-inspection set the downstream check
+  consumes. ADR-001 deployed/template parity captured in it_requirements.

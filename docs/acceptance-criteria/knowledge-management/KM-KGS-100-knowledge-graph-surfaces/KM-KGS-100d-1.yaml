@@ -1,0 +1,47 @@
+id: KM-KGS-100d-1
+readiness: approved
+priority: high
+title: "Each declared surface is validated for the relationship kinds it promises"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100d.yaml"
+criteria: |
+  Given a surfaces configuration where each declared surface lists the relationship
+    fields (edge_fields) it claims to contribute
+  When the knowledge map is validated
+  Then for every declared surface, the validation checks that surface against the
+    exact edge_fields it declares — not against a fixed expected list of relationship
+    kinds
+  And a surface that declares an empty edge_fields list is accepted as contributing
+    no edges
+  And the validation iterates over whatever set of surfaces is declared, so adding
+    or removing a surface changes the set checked without any edit to the validation
+    rule
+depends_on:
+  - KM-KGS-100d
+doc_links:
+  - path: config/paths.json
+    relationship: specifies
+    status: exists
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Validation must iterate over the declared surfaces map from paths.json and check each surface against its own declared edge_fields list — never against a hard-coded expected list of relationship kinds, so the validation set tracks the config automatically"
+  - "An empty edge_fields list (e.g. the glossary surface) must be a valid declaration meaning 'contributes no edges', not a validation failure"
+  - "Validation failures must report which surface and which declared edge_field is at fault, logged per the error-handling policy, so a misconfigured surface is diagnosable without reading code"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-ACCodeTraceabilityGraph/13_TICKET-20260622-KM-KGS-100d-1.md

@@ -2,8 +2,10 @@ id: KM-KQS-018
 title: "Edge fields in surfaces config match fields present in each surface source"
 component: knowledge-management
 level: L2
-status: active
+status: superseded_by
 work_status: todo
+readiness: reviewed
+priority: low
 criteria: |
   Given config/paths.json "surfaces" section lists edge_fields for each surface
   When the edge_fields for "agents" are inspected
@@ -37,7 +39,7 @@ doc_links:
     status: exists
 origin_agent: "business-analyst-v3"
 created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/04a_surfaces_config_wiring.md"
-superseded_by: null
+superseded_by: KM-KGS-100d
 amended_by: []
 covered_by: []
 implemented_by: []

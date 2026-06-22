@@ -1,0 +1,51 @@
+id: KM-KGS-100b-1
+readiness: approved
+priority: high
+title: "Answer which code file delivers an acceptance criterion by following its edges"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100b.yaml"
+criteria: |
+  Given the knowledge map contains a node for acceptance criterion KM-EX-010 and
+    that criterion's implemented_by, covered_by, depends_on, and components fields
+    each produced their edges
+  When the knowledge map is exported in machine-readable form and a reader collects
+    the outbound edges of node KM-EX-010
+  Then the implemented_by edges name the source files that deliver the criterion
+  And the covered_by edges name the tests that prove it
+  And the depends_on edges name the other criteria it depends on
+  And the component_membership edge names the part of the product it belongs to
+  And no extra outbound relationship kind is returned beyond these four
+depends_on:
+  - KM-KGS-100b
+  - KM-KGS-100a-3
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The machine-readable export (JSON form) must expose each edge with its source id, target id, and edge_type so a reader can collect a node's outbound edges and group them by type without parsing display text"
+  - "An acs node's outbound edge set must contain exactly the four declared edge kinds for criteria (implemented_by, covered_by, depends_on, component_membership) and no other outbound relationship type — edge production must stay bounded by the surface's declared edge_fields"
+  - "The query path that scopes to a single criterion id must remain available through the existing knowledge-query interface (filter/select by node id) without a new bespoke command, so the how-to AC can reference a stable invocation"
+delivers_to:
+  agent: documentation-expert
+  contract: "A stable knowledge-query invocation that selects one acs node by id and returns its outbound edges grouped as implemented_by (source files), covered_by (tests), depends_on (criteria), component_membership (component hub) in the machine-readable export"
+expects_from:
+  ac_id: KM-KGS-100a-3
+  contract: "The four acceptance-criterion edge types attached to each acs node (implemented_by, covered_by, depends_on, component_membership)"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-ACCodeTraceabilityGraph/06_TICKET-20260622-KM-KGS-100b-1.md

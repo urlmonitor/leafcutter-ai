@@ -1,0 +1,47 @@
+id: KM-KGS-100c-2
+readiness: approved
+priority: high
+title: "Declaring a new surface makes it join the map with no code change"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100c.yaml"
+criteria: |
+  Given a knowledge map built from an existing surfaces configuration
+  When a maintainer adds one new surface entry to the configuration — a key with a
+    path that exists and an edge_fields list — and rebuilds the map
+  Then the new surface's nodes appear in the rebuilt map
+  And the new surface's declared edge_fields produce edges
+  And no change to the map-building code was required to ingest the new surface
+  And the acceptance-criteria store is treated as exactly one such declared surface,
+    with no special-casing that other surfaces do not also receive
+depends_on:
+  - KM-KGS-100c
+  - KM-KGS-100c-1
+doc_links:
+  - path: config/paths.json
+    relationship: specifies
+    status: exists
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "edge_fields must be read per-surface from the surface's declared config entry, not from a hard-coded per-surface mapping, so a newly declared surface's edge_fields produce edges with zero code change — this is the same _SURFACE_EDGE_FIELDS removal required by KM-KGS-100a-3 and KM-KGS-100c-1, restated as the no-special-casing invariant"
+  - "The acs surface must flow through the identical generic ingestion path as any other declared surface; any acs-specific handling needed for its file type must be expressed generically (by the surface's declared shape) and not as an if surface == 'acs' branch that other surfaces are denied"
+  - "Node and edge extraction must key off the declared path and edge_fields only, so the 'add one config entry, rebuild' workflow is genuinely the sole step a maintainer performs"
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100c-1
+  contract: "Surface ingestion driven entirely by the declared surfaces set in paths.json, with no hard-coded surface enumeration"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-ACCodeTraceabilityGraph/11_TICKET-20260622-KM-KGS-100c-2.md
