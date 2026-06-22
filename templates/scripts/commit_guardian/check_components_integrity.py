@@ -38,6 +38,15 @@ DECISION HISTORY:
   - 2026-05-12 00:00 [Agent]: Created components.json integrity guard
     (EPIC-ArchitectureDocs ticket 21). Only enforces on newly-added keys to
     avoid blocking legacy work-in-progress.
+  - 2026-06-22 [Agent]: Added merge-in-progress skip (ACS-300g-5). When
+    MERGE_HEAD is present the hook exits 0 immediately so merge commits are
+    committable without --no-verify. Normal (non-merge) commits are unchanged.
+  - 2026-06-22 [Agent]: Applied I/O-boundary wraps to _git_show() and
+    _is_components_json_staged() (ACS-300g-5). Both subprocess.run() calls now
+    catch (subprocess.SubprocessError, OSError), print a WARNING diagnostic to
+    stderr, and return the function's pre-existing safe default (None / False)
+    on error. This satisfies the check-exception-handling (IO-001) pre-commit
+    guard. Pattern matches _is_merge_in_progress() which was already compliant.
 """
 
 from __future__ import annotations
@@ -71,12 +80,19 @@ def _git_show(ref: str) -> str | None:
     Returns:
         File content as a string, or None if the ref does not exist.
     """
-    result = subprocess.run(
-        ["git", "show", ref],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-    )
+    try:
+        result = subprocess.run(
+            ["git", "show", ref],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        print(
+            f"[components-integrity] WARNING: could not run git show {ref!r}: {exc}",
+            file=sys.stderr,
+        )
+        return None
     if result.returncode != 0:
         return None
     return result.stdout
@@ -126,17 +142,52 @@ def _parse_components_json(content: str | None) -> dict:
     return {}
 
 
+def _is_merge_in_progress() -> bool:
+    """Return True when a git merge is currently in progress.
+
+    Detects the merge state by verifying that MERGE_HEAD resolves to a valid
+    commit object via ``git rev-parse -q --verify MERGE_HEAD``.  Exit code 0
+    means MERGE_HEAD exists (merge in progress); non-zero means it does not.
+
+    Returns:
+        True if a merge is in progress (MERGE_HEAD is present and valid),
+        False if no merge is in progress or if the git command cannot be run.
+        Fails open toward running the normal check so a broken git environment
+        never silently suppresses the integrity guard.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "-q", "--verify", "MERGE_HEAD"],
+            capture_output=True,
+            text=True,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        print(
+            f"[components-integrity] WARNING: could not check MERGE_HEAD: {exc}",
+            file=sys.stderr,
+        )
+        return False
+    return result.returncode == 0
+
+
 def _is_components_json_staged() -> bool:
     """Return True if docs/components.json is in the staged index.
 
     Returns:
         True if the file is currently staged (modified, added, etc.).
     """
-    result = subprocess.run(
-        ["git", "diff", "--cached", "--name-only"],
-        capture_output=True,
-        text=True,
-    )
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--cached", "--name-only"],
+            capture_output=True,
+            text=True,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        print(
+            f"[components-integrity] WARNING: could not run git diff --cached: {exc}",
+            file=sys.stderr,
+        )
+        return False
     if result.returncode != 0:
         return False
     staged_files = result.stdout.strip().split("\n")
@@ -240,6 +291,18 @@ def main() -> int:
     """
     if not _is_components_json_staged():
         # File not staged — nothing to check
+        return 0
+
+    if _is_merge_in_progress():
+        # Components arriving from the merged-in parent appear "newly added"
+        # relative to HEAD but are not genuine additions by this commit.
+        # Skipping the new-component check lets merge commits proceed without
+        # --no-verify. (ACS-300g-5)
+        print(
+            "[components-integrity] merge in progress (MERGE_HEAD present)"
+            " — skipping new-component check",
+            file=sys.stderr,
+        )
         return 0
 
     before_content = _git_show(f"HEAD:{COMPONENTS_JSON_PATH}")
