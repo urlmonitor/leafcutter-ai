@@ -13,14 +13,14 @@ requires_diagram: false
 requires_adr: false
 agents:
   architect-review: not_needed
-  test-writer: not_needed
-  python-coder: not_needed
+  test-writer: needed
+  python-coder: needed
   sql-coder: not_needed
-  test-runner: not_needed
+  test-runner: needed
   documentation-expert: not_needed
-  pr-reviewer: not_needed
-  commit: not_needed
-  pull-request: not_needed
+  pr-reviewer: needed
+  commit: needed
+  pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
 ---
