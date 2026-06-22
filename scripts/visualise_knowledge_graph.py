@@ -39,6 +39,7 @@ SURFACE_COLORS: dict[str, str] = {
     "components": "#60a5fa",
     "roadmap": "#fb923c",
     "glossary": "#94a3b8",
+    "acs": "#f472b6",
 }
 
 # ---------------------------------------------------------------------------
@@ -243,6 +244,22 @@ window.addEventListener('resize', () => {
 """
 
 # ---------------------------------------------------------------------------
+# Surface priority (higher value = more specific; wins deduplication)
+# ---------------------------------------------------------------------------
+
+#: When knowledge_query._collect_all returns duplicate node IDs from a
+#: parent surface (e.g. ``docs``) and a more-specific child surface
+#: (e.g. ``acs``, ``adrs``), the child surface must win so that the
+#: node appears in the correct surface legend slot.
+#: Surfaces not listed here receive priority 0 (lowest).
+_SURFACE_PRIORITY: dict[str, int] = {
+    "docs": 1,
+    "adrs": 2,
+    "acs": 2,
+}
+
+
+# ---------------------------------------------------------------------------
 # Data assembly helpers
 # ---------------------------------------------------------------------------
 
@@ -253,6 +270,12 @@ def _assemble_graph(
     surface_filter: list[str] | None = None,
 ) -> dict:
     """Assemble nodes and edges by delegating to knowledge_query._collect_all.
+
+    When the same node ID appears under multiple surfaces (e.g. an AC YAML
+    file under ``docs/acceptance-criteria/`` is walked by both the ``docs``
+    and ``acs`` surface traversals), the record with the highest
+    ``_SURFACE_PRIORITY`` wins so that the node is rendered in its correct
+    surface colour and legend slot.
 
     Returns:
         Dict with 'nodes' and 'edges' lists suitable for JSON serialisation.
@@ -270,19 +293,26 @@ def _assemble_graph(
         kept_ids = {n.id for n in node_records}
         edge_records = [e for e in edge_records if e.source_id in kept_ids and e.target_id in kept_ids]
 
-    nodes = []
-    seen: set[str] = set()
+    # Deduplicate by node ID, preferring the most-specific surface label.
+    best: dict[str, object] = {}
     for nr in node_records:
-        if nr.id in seen:
-            continue
-        seen.add(nr.id)
-        nodes.append({
+        existing = best.get(nr.id)
+        if existing is None:
+            best[nr.id] = nr
+        else:
+            if _SURFACE_PRIORITY.get(nr.surface, 0) > _SURFACE_PRIORITY.get(existing.surface, 0):
+                best[nr.id] = nr
+
+    nodes = [
+        {
             "id": nr.id,
             "surface": nr.surface,
             "title": nr.title,
             "description": nr.description,
             "color": SURFACE_COLORS.get(nr.surface, "#94a3b8"),
-        })
+        }
+        for nr in best.values()
+    ]
 
     edges = [
         {"source": e.source_id, "target": e.target_id, "type": e.edge_type}
@@ -413,5 +443,10 @@ DECISION HISTORY
   overrides auto-detect and is passed as project_root to load_surfaces() (AC-2).
   _assemble_graph() now accepts optional project_root and surface_filter parameters.
   (#EPIC-KnowledgeGraphQueryLayer/03b)
+- 2026-06-22 [EPIC-ACCodeTraceabilityGraph/07]: Added "acs" entry (#f472b6) to SURFACE_COLORS
+  so acceptance-criterion nodes are rendered in their own colour and appear in the
+  surface legend (AC KM-KGS-100b-2). The acs surface was already emitted by
+  knowledge_query._collect_all; only the colour mapping was absent.
+  (#EPIC-ACCodeTraceabilityGraph/07)
 ====================================================================
 """
