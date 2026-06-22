@@ -317,6 +317,51 @@ function formatCommitError(agentLabel, stageName, commitOutcome, allAcsWritten) 
 }
 
 /**
+ * Build a human-readable cancel/abort exit message that distinguishes between
+ * ACs already committed in prior stages and the current stage's uncommitted drafts.
+ *
+ * The AC store keeps one YAML file per AC ID at the path:
+ *   docs/acceptance-criteria/<AC_ID>.yaml
+ *
+ * When the user cancels at a gate, draft files for the cancelled stage remain on
+ * disk as uncommitted working-tree changes. Files from stages that were already
+ * committed are in git history and are not listed here.
+ *
+ * @param {string[]} committedAcs   - AC IDs that have already been committed to git (prior stages).
+ * @param {string[]} draftAcs       - AC IDs written by the cancelled stage; still uncommitted.
+ * @param {string}   cancelledAt    - Human label for where the cancel occurred (e.g. "gate after product-owner").
+ * @returns {string} Formatted exit message for the user.
+ */
+function buildCancelMessage(committedAcs, draftAcs, cancelledAt) {
+  const draftFilePaths = draftAcs.map(
+    (id) => `  docs/acceptance-criteria/${id}.yaml`
+  );
+
+  const parts = [`Pipeline cancelled at ${cancelledAt}.`];
+
+  if (committedAcs.length > 0) {
+    parts.push(
+      `\nCommitted ACs from prior stages (in git history): ${committedAcs.join(", ")}`
+    );
+  }
+
+  if (draftAcs.length > 0) {
+    parts.push(
+      `\nUncommitted draft AC files from the cancelled stage (${draftAcs.join(", ")}):`
+    );
+    parts.push(draftFilePaths.join("\n"));
+    parts.push(
+      "\nYou can inspect these files, manually commit them with `git add` + `git commit`, " +
+      "or discard them with `git checkout -- docs/acceptance-criteria/`."
+    );
+  } else {
+    parts.push("\nNo draft AC files were left on disk.");
+  }
+
+  return parts.join("\n");
+}
+
+/**
  * Main entry point called by the Claude Code workflow runtime.
  *
  * @param {object} params
@@ -441,6 +486,13 @@ async function run({ userInput, agent }) {
   // -------------------------------------------------------------------------
   /** All AC ids written during this run (accumulated across all agents). */
   const allAcsWritten = [];
+  /**
+   * AC ids that have been successfully committed to git in prior stages.
+   * Updated immediately after each successful commitStageOutput() call.
+   * Used to distinguish "committed from prior stages" vs "draft from cancelled stage"
+   * in cancel/abort exit messages (AC ACD-300g-4).
+   */
+  const committedAcs = [];
   const stageResults = [];
 
   for (const step of pipeline) {
@@ -493,20 +545,30 @@ async function run({ userInput, agent }) {
         const action = (gateDecision.action || "cancel").toLowerCase();
 
         if (action === "cancel") {
+          // AC ACD-300g-4: do NOT commit — draft files remain on disk.
+          // Distinguish committed ACs from prior stages vs. this stage's drafts.
+          const cancelLabel = `gate after ${step.agent}`;
           return {
             status: "ok",
-            message: `Pipeline cancelled at gate after ${step.agent}. ACs remain as drafts.`,
-            acs_as_drafts: allAcsWritten,
+            message: buildCancelMessage(committedAcs, written, cancelLabel),
+            committed_acs: committedAcs,
+            acs_as_drafts: written,
           };
         } else if (action === "edit" && editRetries < MAX_EDIT_RETRIES) {
           editRetries++;
           // Re-dispatch same agent with feedback (loop continues)
           continue;
         } else if (action === "edit" && editRetries >= MAX_EDIT_RETRIES) {
+          // Max retries exhausted — abort without committing the draft.
+          // AC ACD-300g-4: draft files remain on disk uncommitted.
+          const abortLabel = `${step.agent} after ${MAX_EDIT_RETRIES + 1} attempts`;
           return {
             status: "error",
-            message: `${step.agent} failed to produce satisfactory ACs after ${MAX_EDIT_RETRIES + 1} attempts. Pipeline aborted.`,
-            acs_as_drafts: allAcsWritten,
+            message:
+              `${step.agent} failed to produce satisfactory ACs after ${MAX_EDIT_RETRIES + 1} attempts. Pipeline aborted.\n` +
+              buildCancelMessage(committedAcs, written, `max-retries abort for ${step.agent}`),
+            committed_acs: committedAcs,
+            acs_as_drafts: written,
           };
         } else {
           // approve — commit stage output before dispatching the next agent.
@@ -518,6 +580,9 @@ async function run({ userInput, agent }) {
               acs_as_drafts: allAcsWritten,
             };
           }
+          // Track successfully committed ACs so cancel messages can distinguish
+          // prior-stage commits from the current draft (AC ACD-300g-4).
+          committedAcs.push(...written);
           approved = true;
         }
       } else {
@@ -548,10 +613,13 @@ async function run({ userInput, agent }) {
           : "medium";
 
         if (finalAction === "cancel") {
+          // AC ACD-300g-4: do NOT commit — draft files remain on disk.
+          // written here are the IT-PO files; committedAcs holds prior-stage commits.
           return {
             status: "ok",
-            message: "Pipeline cancelled at final gate. ACs remain as reviewed.",
-            acs_as_reviewed: allAcsWritten,
+            message: buildCancelMessage(committedAcs, written, "final gate (IT-PO)"),
+            committed_acs: committedAcs,
+            acs_as_drafts: written,
           };
         } else if (finalAction === "edit" && editRetries < MAX_EDIT_RETRIES) {
           editRetries++;
