@@ -2799,6 +2799,103 @@
             "produces": "analysis"
         },
         {
+            "id": "business-analyst",
+            "name": "Business Analyst",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/business-analyst.md",
+            "model": "opus",
+            "skills_used": [
+                "ac-tree-split",
+                "knowledge-query"
+            ],
+            "description": "Business Analyst — L2/L3 behavioral decomposition agent. Receives L1 feature ACs from the Product Owner and decomposes them into testable Gherkin behaviors (L2) and edge-case specifications (L3). Produces individual AC YAML files as its primary output. Use when: the PO has produced L0/L1 ACs and the pipeline needs behavioral specifications before implementation agents can begin work. This agent operates exclusively at L2/L3 and produces AC YAML files.",
+            "category": "planning",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ],
+            "produces": "analysis"
+        },
+        {
+            "id": "it-po",
+            "name": "IT Product Owner",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/it-po.md",
+            "model": "opus",
+            "skills_used": [
+                "knowledge-query"
+            ],
+            "description": "IT Product Owner — technical enrichment agent for the AC pipeline. Operates AFTER the BA has produced L2/L3 AC YAML files. Enriches each AC with technical fields: assigned_agent, it_requirements, estimated_complexity, delivers_to/expects_from contracts, and doc_links to architecture documents. Does NOT create tickets. Does NOT modify the BA's criteria field. Uses architecture docs, component registries, and agent registries to understand the technical landscape. Splits ACs when technical boundaries reveal multi-agent work. Use when: the BA has produced L2/L3 AC files and the pipeline needs technical enrichment before implementation agents can begin work. This agent operates on AC YAML files directly.",
+            "category": "planning",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ],
+            "produces": "analysis"
+        },
+        {
             "id": "build-ac",
             "name": "Build AC",
             "tier": "utility",
