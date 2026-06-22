@@ -1,6 +1,6 @@
 ---
 title: "Migrate orphaned scripts off the deprecated templates/commit-guardian/ tree, then remove it"
-status: in_progress
+status: done
 components:
   - build_pipeline
   - commit_guardian
@@ -232,6 +232,22 @@ completion_manifest:
     remediation: "Stage all migration-relevant files before commit: git add scripts/build.py scripts/build_phases.py scripts/build_precommit.py scripts/build_propagation_audit.py scripts/changelog/emit_entry.py config/package_boundary.json config/paths.json docs/components.json unit_tests/commit_guardian/test_check_ac_coverage.py unit_tests/commit_guardian/test_check_contract_shrinking.py unit_tests/test_build_guard_real_package.py and all templates/commit-guardian/ deletions. Then re-run pr-reviewer."
 
 Second-pass review: build_glossary.py fallback block is confirmed removed and clean (only DECISION HISTORY comments remain). However, the staged commit set is missing the bulk of the migration. Four high-confidence findings: [H-1] scripts/build.py live fallbacks unstaged — `_inject_file_size_limits()` and `_inject_changelogs_dir()` still reference `templates/commit-guardian/commit_guardian.json` in HEAD; [H-2] scripts/changelog/emit_entry.py `_CONFIG_REL_PATH_LEGACY` constant and fallback in `_load_changelogs_dir()` unstaged; [H-3] all 78+ `templates/commit-guardian/` deletions unstaged — deprecated directory survives the commit; [H-4] build_phases.py, build_precommit.py, config, doc, and test files with migration changes unstaged. Committing the current 10-file staged set would produce a HEAD that violates AC-2, AC-3, and AC-5. Respawn python-coder (or commit agent) to stage all remaining working-tree migration files, then re-run pr-reviewer.
+
+### 2026-06-22 12:52 — pull-request (status: ok)
+
+feedback-id: (submit-failed)
+PR #134 opened and merged. During the push, `origin/main` had diverged (PR #117
+modified `templates/commit-guardian/check_exception_handling.py` after this branch
+was created), producing a modify/delete conflict. Resolved by a clean rebase onto
+current `origin/main`: kept the deprecated-tree deletion and ported PR #117's
+`# noqa: BLE001` inline-suppression feature to the canonical
+`templates/scripts/commit_guardian/check_exception_handling.py`. The rebased branch
+(367fe36) was force-pushed (user-authorized) and merged via `gh pr merge 134 --squash
+--delete-branch` (urlmonitor account). Squash merge commit: `21d341e`. Two independent
+spot-checks confirmed SHIP: deployed commit-guardian script set proven identical
+before/after (no hook dropped) and the deprecated tree fully removed. Sign-off recorded
+post-merge during /finalize-feature Step 6 reconciliation (the in-drive ticket-commit
+was pre-empted by the force-push authorization gate).
 
 ## Sign-offs
 
