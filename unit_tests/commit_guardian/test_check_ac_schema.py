@@ -1161,5 +1161,78 @@ class TestMissingRequiredFieldAfterWidening(unittest.TestCase):
         self.assertIn("criteria", result.stderr)
 
 
+class TestSchemaAuthoritativeOverManual(unittest.TestCase):
+    """GE-112: JSON Schema is authoritative; validate_manually() must NOT run on jsonschema success path.
+
+    The bug: in _validate_file(), the `if not errors: errors.extend(validate_manually(data))`
+    block runs validate_manually() whenever jsonschema PASSES (errors empty), instead of
+    only as a fallback when jsonschema was unavailable.  validate_manually() enforces
+    stricter rules than the authoritative config/ac_store_schema.json:
+      - REQUIRED_FIELDS includes 'created_by' (the JSON Schema does NOT require it)
+      - _ID_REGEX is ^[A-Z]{2,6}-[0-9]{3}$ (rejects hierarchical ids like ACS-300g-1)
+
+    These tests assert the POST-FIX correct behaviour: a file that satisfies
+    config/ac_store_schema.json must exit 0 even if it omits 'created_by' and uses a
+    hierarchical id that the narrow manual regex rejects.
+
+    Both tests FAIL against the current (unfixed) check_ac_schema.py — which is the
+    intended red state for the TDD phase.
+    """
+
+    def test_ac1_hierarchical_id_without_created_by_passes_when_schema_valid(self) -> None:
+        # covers: GE-112
+        """AC-1 (GE-112): An AC YAML valid per JSON Schema but omitting `created_by` and
+        using a hierarchical id (e.g. ACS-300g-1) must exit 0 when jsonschema is available.
+
+        This test MUST FAIL against unmodified check_ac_schema.py because:
+          - validate_manually() runs on the jsonschema-success path (if not errors: …)
+          - validate_manually() requires 'created_by' → emits "missing required field: 'created_by'"
+          - validate_manually() rejects 'ACS-300g-1' against ^[A-Z]{2,6}-[0-9]{3}$ → id error
+
+        The fix requires validate_manually() to run ONLY as a fallback when jsonschema
+        did not actually run (schema is None or jsonschema not importable).
+
+        To make this test green:
+          Change the `if not errors:` guard in _validate_file() so that validate_manually()
+          is gated on schema being None (or jsonschema unavailable), NOT on jsonschema
+          passing cleanly.
+        """
+        # Deliberately omit 'created_by'; use a hierarchical id that the JSON Schema
+        # allows but that the narrow manual regex ^[A-Z]{2,6}-[0-9]{3}$ rejects.
+        content = textwrap.dedent("""\
+            id: ACS-300g-1
+            title: "Schema-valid AC with hierarchical id and no created_by"
+            component: ac-store
+            status: active
+            criteria: |
+              Given a hierarchical AC id
+              When check_ac_schema.py validates the file with jsonschema available
+              Then the file passes and the hook does not reject it
+            priority: medium
+            readiness: draft
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            # _write_ac_file copies config/ac_store_schema.json so jsonschema validation
+            # is active.  The schema does NOT list 'created_by' under required[], and
+            # its id pattern allows hierarchical forms like ACS-300g-1.
+            _write_ac_file(root, "ACS-300g-1.yaml", content)
+            result = _run_hook(root)
+        # Phase 2 (git diff --cached) may emit non-fatal WARNING lines to stderr
+        # for files that exist in the real worktree but not in the temp dir.
+        # Those warnings do NOT change the exit code — assert only on returncode.
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "An AC YAML file that satisfies config/ac_store_schema.json (hierarchical "
+                "id ACS-300g-1, no created_by field) must exit 0.  The hook currently "
+                "rejects it because validate_manually() runs on the jsonschema SUCCESS "
+                "path (if not errors: …) and applies stricter rules than the schema.  "
+                f"Stderr: {result.stderr}"
+            ),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

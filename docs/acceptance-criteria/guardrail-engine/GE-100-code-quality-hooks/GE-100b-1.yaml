@@ -6,7 +6,7 @@ component: guardrail-engine
 level: L3
 status: active
 req_status: active
-work_status: implemented
+work_status: done
 created_by: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100.yaml"
 criteria: |
   Given the commit guardian configuration has the duplicate_code section with:
