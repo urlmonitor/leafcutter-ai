@@ -1,9 +1,10 @@
 ---
 title: "ADR-010: AC Store as Authoritative Backlog — Source-of-Truth Inversion"
+description: "Records the decision to treat the AC YAML store as the single source of truth for the product backlog, inverting the traditional ticket-first model. Covers staged-commit model and partial-run recovery."
 type: "adr"
 status: "accepted"
 created: "2026-06-05"
-last_updated: "2026-06-16"
+last_updated: "2026-06-22"
 deciders:
   - BrainCandy
 components:
@@ -254,6 +255,30 @@ mechanical invariant. When a pattern amendment requires re-implementation,
 the appropriate action is to open a new AC or amend the specific consuming ACs
 and reset their `work_status` explicitly.
 
+## Staged-Commit Model and Partial-Run Recovery
+
+The `/create-ac` workflow (see `templates/skills/create-ac/SKILL.md`) uses a
+**staged-commit model**: after each authoring stage (product-owner-v3,
+business-analyst-v3, it-po-v3), the AC files produced by that stage are
+committed before the next stage begins. This ensures that a session crash
+does not lose an entire session's worth of authoring work.
+
+A consequence of this model is **partial-run recovery**: when a session
+crashes after writing AC YAML files to disk but before the stage commit
+occurred, those orphaned files remain in the working tree. The next
+invocation of `/create-ac` detects them by running `git status --porcelain`
+on the AC store directory and qualifying files by their `origin_agent`
+(must be one of the three AC-authoring agents) and `readiness` (must be
+`draft`). The user is then offered three choices:
+
+- **yes** — commit the orphaned files before starting new work.
+- **no** — abort; the user must resolve the orphaned files manually.
+- **discard** — revert or delete the orphaned files, then proceed with a
+  clean working tree.
+
+This recovery behaviour is defined in full in
+`templates/skills/create-ac/SKILL.md §PRR`.
+
 ## References
 
 - [ADR-007 — Contract-Driven Acceptance Criteria](ADR-007-contract-driven-acs.md) — establishes the per-agent AC format and two-phase ticket creation pipeline that this ADR's generated tickets must comply with.
@@ -261,3 +286,4 @@ and reset their `work_status` explicitly.
 - [Component diagram: AC-Driven Ticket Generation Pipeline](../diagrams/c2-001-ac-driven-pipeline.md) — shows the data flow from AC store through scanner and generator to ticket file and back-write.
 - [docs/acceptance-criteria/index.yaml](../../acceptance-criteria/index.yaml) — component registry enumerating the namespaces (`ac-driven-dev`, `ac-store`, `build-orchestration`, etc.) that the scanner walks.
 - EPIC-ACDrivenDevelopment ticket 01 — the commissioning ticket for this ADR and the two scripts it covers.
+- [create-ac skill — Partial-Run Recovery](../../templates/skills/create-ac/SKILL.md) — full specification of the orphan detection and resolution pre-flight (AC ACD-300g-2-i).
