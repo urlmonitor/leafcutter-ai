@@ -161,8 +161,9 @@ The script scans all surfaces defined in `paths.json` at invocation time. The de
 | `docs` | `docs/` | Documentation files (`.md`) |
 | `adrs` | `docs/architecture/adrs/` | Architecture Decision Records |
 | `hooks` | `.claude/hooks/` | Hook scripts |
+| `acs` | `docs/acceptance-criteria/` | Acceptance-criteria store files (`.yaml`); each AC contributes `implemented_by`, `covered_by`, `depends_on`, and `components` edges |
 
-The exact surface list is read dynamically from `paths.json` at runtime, so new surfaces added to the project configuration are picked up automatically without updating this skill.
+This table is illustrative, not exhaustive — the exact surface list is read dynamically from `paths.json` at runtime, so new surfaces added to the project configuration are picked up automatically without updating this skill.
 
 ## Error Behaviour
 
