@@ -47,4 +47,5 @@ created: 2026-06-18
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - tickets/00_inbox/epics/EPIC-GoalToEpicBugfixes/02_basename_collision_resolution.md

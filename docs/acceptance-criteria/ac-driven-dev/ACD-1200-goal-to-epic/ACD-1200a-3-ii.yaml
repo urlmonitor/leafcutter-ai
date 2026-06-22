@@ -1,0 +1,61 @@
+id: ACD-1200a-3-ii
+readiness: approved
+priority: high
+title: "Apostrophes and quote characters in the goal title are stripped before PascalCasing the epic folder name"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the AC store contains goal ACD-070 (level: L0) with a title
+    containing an ASCII apostrophe: "Validate user's API inputs",
+  And ACD-070 has leaf ACs beneath it,
+  When the system derives the epic folder name from that title,
+  Then the apostrophe is stripped entirely (not replaced with a space,
+    a separator, or a placeholder character),
+  And the derived folder is named exactly EPIC-ValidateUsersApiInputs
+    (the segment "user's" becomes "Users", NOT "User's", "User-s",
+    "User_s", "Users " or two separate words "User" + "S"),
+  And the resulting folder name contains no literal apostrophe, quote,
+    backtick, or truncated/empty path segment.
+
+  Given a second goal ACD-071 (level: L0) whose title contains the
+    typographic / curly apostrophe U+2019: "Reject malformed customer’s payloads",
+  When the system derives the epic folder name from that title,
+  Then the curly apostrophe U+2019 is stripped entirely, identically to
+    the ASCII apostrophe U+0027,
+  And the derived folder is named exactly EPIC-RejectMalformedCustomersPayloads
+    (the segment "customer’s" becomes "Customers"),
+  And the same stripping rule applies to the ASCII single quote (U+0027),
+    the curly apostrophe (U+2019), the double quote (U+0022), and the
+    backtick (U+0060): each is removed in-place with no separator inserted,
+    so adjacent letters join into a single PascalCase word.
+depends_on: [ACD-1200a-3]
+doc_links:
+  - path: scripts/goal_to_epic.py
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Apostrophe and quote characters must be removed in-place (zero-width deletion) BEFORE the title is split into words, so a quote embedded mid-word (user's -> users) does not create a word boundary; the existing word-split set [\\s\\-_]+ must NOT be extended to include quote characters."
+  - "The character set to strip must cover at minimum: ASCII single quote/apostrophe (U+0027), ASCII double quote (U+0022), backtick (U+0060), and the typographic apostrophe (U+2019). Both straight and curly forms must be handled identically."
+  - "The rule must be deterministic and consistent with ACD-1200a-3's existing PascalCase / no-special-characters requirement: the stripped, PascalCased name must contain only ASCII alphanumeric characters with no spaces or punctuation."
+  - "Must not produce an empty or whitespace-only segment, a trailing/leading separator, or a folder name with a literal quote character for any title containing the covered quote characters."
+  - "Must be idempotent: deriving the name twice from the same title yields the identical folder name; re-running over an already-named epic does not change it."
+  - "Any I/O performed while reading the goal title or creating the folder must follow the project error handling policy (wrap external I/O, no bare except, log-or-reraise)."
+delivers_to: null
+expects_from:
+  ac_id: ACD-1200a-3
+  contract: "str — the goal AC's title string read from its YAML, fed into the PascalCase epic-name derivation; this AC constrains how quote/apostrophe characters in that title are sanitized before the EPIC- folder name is formed."
+origin_agent: it-po-v3
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - tickets/00_inbox/epics/EPIC-GoalToEpicBugfixes/03_apostrophe_safe_epic_names.md
