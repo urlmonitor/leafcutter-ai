@@ -1,6 +1,6 @@
 ---
 title: "A ticket whose basename already exists at the epic-folder path is resolved deterministically, never duplicated to a second location"
-status: in_progress
+status: done
 source_ac: ACD-1200a-9-i
 components:
   - ac-driven-dev
@@ -22,7 +22,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # A ticket whose basename already exists at the epic-folder path is resolved deterministically, never duplicated to a second location
@@ -122,6 +122,14 @@ completion_manifest:
   ticket_staged: true
 Committed 3 staged files (507 insertions, 29 deletions): in-place collision resolution in scripts/goal_to_epic.py, 5 new tests in tests/test_goal_to_epic_basename_collision.py, and ticket sign-off. Batch-drive auto-authorized per COMMIT_AGENT_MODE=1.
 
+### 2026-06-22 17:00 — pull-request (status: ok)
+feedback-id: fb_2026-06-22_a7533bf8
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Pushed commit cef89d7 (feat(goal_to_epic): resolve basename collision in-place ACD-1200a-9-i) to origin/EPIC-GoalToEpicBugfixes. PR #127 at https://github.com/urlmonitor/leafcutter-ai/pull/127 is already open and now includes this commit. Ticket status flipped to done — all agents signed_off or not_needed.
+
 ## Sign-offs
 
 - [x] python-coder — 2026-06-22 14:30
@@ -129,7 +137,7 @@ Committed 3 staged files (507 insertions, 29 deletions): in-place collision reso
 - [x] test-runner — 2026-06-22 15:00
 - [x] pr-reviewer — 2026-06-22 15:30
 - [x] commit — 2026-06-22 16:00
-- [ ] pull-request
+- [x] pull-request — 2026-06-22 17:00
 
 ## Implementation Tasks
 
