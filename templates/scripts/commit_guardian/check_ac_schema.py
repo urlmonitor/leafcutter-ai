@@ -24,6 +24,11 @@ DECISION HISTORY:
     __main__ exception handler (added in ACS-500f-1) catches unexpected errors
     and exits 0 with a stderr diagnostic. Unit tests added for all fail-open
     and no-staged-relevant-files paths.
+  - 2026-06-22 [python-coder/GE-112]: Fixed validate_manually() running on the
+    jsonschema SUCCESS path. Introduced schema_validated flag; validate_manually()
+    now runs only as a fallback when jsonschema did not actually execute (schema
+    absent, jsonschema not importable, or PyYAML unavailable). The authoritative
+    config/ac_store_schema.json verdict is now final when jsonschema ran.
 """
 
 from __future__ import annotations
@@ -216,7 +221,7 @@ def _find_ac_files(root: Path) -> list[Path]:
     ac_dir = root / AC_GLOB_PATTERN
     if not ac_dir.is_dir():
         return []
-    return sorted(ac_dir.rglob("*.yaml"))
+    return sorted(p for p in ac_dir.rglob("*.yaml") if p.name != "index.yaml")
 
 
 def _load_schema(root: Path) -> dict[str, Any] | None:
@@ -286,13 +291,15 @@ def _validate_file(
         errors.append(f"expected YAML mapping at top level, got {type(data).__name__}")
         return errors
 
+    schema_validated = False
     if schema is not None and yaml_available:
         try:
             errors.extend(validate_with_jsonschema(data, schema))
+            schema_validated = True
         except ImportError:
             pass
 
-    if not errors:
+    if not schema_validated:
         errors.extend(validate_manually(data))
 
     if all_ac_data is not None:

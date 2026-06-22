@@ -6,7 +6,7 @@ component: guardrail-engine
 level: L2
 status: active
 req_status: active
-work_status: active
+work_status: todo
 created_by: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-110.yaml"
 criteria: |
   Given the canonical commit-guardian template tree

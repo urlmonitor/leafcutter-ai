@@ -16,7 +16,7 @@
         "id": {
             "type": "string",
             "description": "Stable AC identifier. Supports multiple formats: base form PREFIX-NNN (e.g. ACS-100, FIN-001), hierarchical L1 form PREFIX-NNNx (e.g. ACS-100a), L2 form PREFIX-NNNx-N (e.g. ACS-500a-1), L3 extension form PREFIX-NNNx-N-y (e.g. ACS-500a-1-i), numeric-only hierarchy (e.g. BO-510-1), and compound-prefix forms (e.g. KM-DBF-001). Assigned at creation time; never changes.",
-            "pattern": "^[A-Z]{2,6}(-[A-Z]{2,6})?-\\d+([a-z]\\d*(-\\d+[a-z\\d]*(-[a-z\\d]+)?)?|-\\d+[a-z\\d]*(-[a-z\\d]+)?)?$"
+            "pattern": "^[A-Z]{2,6}(-[A-Z]{2,6})?-\\d+([a-z]\\d*(-\\d+[a-z\\d]*(-[a-z\\d]+(-[a-z\\d]+)?)?)?|-\\d+[a-z\\d]*(-[a-z\\d]+(-[a-z\\d]+)?)?)?$"
         },
         "title": {
             "type": "string",
@@ -68,7 +68,7 @@
             "oneOf": [
                 {
                     "type": "string",
-                    "pattern": "^[A-Z]{2,6}(-[A-Z]{2,6})?-\\d+([a-z]\\d*(-\\d+[a-z\\d]*(-[a-z\\d]+)?)?|-\\d+[a-z\\d]*(-[a-z\\d]+)?)?$"
+                    "pattern": "^[A-Z]{2,6}(-[A-Z]{2,6})?-\\d+([a-z]\\d*(-\\d+[a-z\\d]*(-[a-z\\d]+(-[a-z\\d]+)?)?)?|-\\d+[a-z\\d]*(-[a-z\\d]+(-[a-z\\d]+)?)?)?$"
                 },
                 {
                     "type": "null"

@@ -1,0 +1,65 @@
+id: GE-112
+readiness: approved
+priority: high
+title: "AC schema hook treats the JSON Schema as authoritative; manual field checks are a fallback only"
+component: guardrail-engine
+level: L2
+status: active
+req_status: active
+work_status: done
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-112-schema-validator-authoritative/GE-112.yaml"
+criteria: |
+  Scenario: jsonschema success is not overridden by stricter manual rules
+    Given an AC YAML file that satisfies config/ac_store_schema.json
+      (the authoritative contract — required fields id, title, component,
+      status, criteria; hierarchical id pattern allowing forms like ACS-300g-1),
+    And the file omits the legacy `created_by` field,
+    And the file uses a hierarchical id that does not match the narrow
+      manual regex ^[A-Z]{2,6}-[0-9]{3}$,
+    When check_ac_schema.py validates the file with jsonschema available,
+    Then the hook does NOT additionally apply validate_manually() to that file,
+    And the file passes validation,
+    And the hook does not reject it for a missing `created_by` field,
+    And the hook does not reject it for the hierarchical id format.
+
+  Scenario: manual validator still runs as a fallback when jsonschema is unavailable
+    Given an environment where the JSON Schema could not be applied
+      (schema file absent, or jsonschema/PyYAML not importable),
+    When check_ac_schema.py validates an AC YAML file,
+    Then validate_manually() runs as the fallback field check,
+    And a file that fails the fallback field checks is still rejected.
+
+  Scenario: an already-committed schema-valid file is no longer rejected
+    Given an AC YAML file already present in the store with a hierarchical id
+      (e.g. ACS-300g-1) and no `created_by` field,
+    When check_ac_schema.py validates the store with jsonschema available,
+    Then that file is reported as passing,
+    And the commit is not blocked on account of that file.
+depends_on: []
+doc_links:
+  - path: "templates/scripts/commit_guardian/check_ac_schema.py"
+    relationship: specifies
+    status: exists
+  - path: "templates/scripts/commit_guardian/_ac_schema_validators.py"
+    relationship: specifies
+    status: exists
+  - path: "config/ac_store_schema.json"
+    relationship: specifies
+    status: exists
+  - path: "docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "BUILD-CONVENTION: The committable source of truth is templates/scripts/commit_guardian/check_ac_schema.py. The scripts/commit_guardian/ and .leafcutter/scripts/commit_guardian/ copies are build output synced by `python leafcutter-ai/scripts/build.py`. The fix MUST edit the template and then rebuild; do NOT hand-edit the deployed copies (ADR-001 self-hosting boundary)."
+  - "AUTHORITATIVE CONTRACT: config/ac_store_schema.json is the source of truth for AC validity. validate_manually() in _ac_schema_validators.py is a degraded fallback for environments lacking jsonschema/PyYAML and its stricter rules (required created_by, narrow id regex) must never override a jsonschema PASS."
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_check_ac_schema.py
+implemented_by:
+  - templates/scripts/commit_guardian/check_ac_schema.py
+notes: "Authored by /quick-fix. Root cause: in _validate_file, validate_manually() was gated by `if not errors:` so it ran on the jsonschema SUCCESS path rather than only as a fallback when jsonschema was unavailable. Its stricter rules (created_by required, ^[A-Z]{2,6}-[0-9]{3}$ id regex) contradicted the permissive authoritative schema and rejected the bulk of the existing AC store. Companion store-scope bug (whole-store rglob instead of staged-files-only) is tracked separately."
