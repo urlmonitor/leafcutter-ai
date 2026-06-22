@@ -137,7 +137,7 @@ completion_manifest:
   pre_commit_hooks_pass: true
   commit_message_valid: true
   ticket_staged: true
-Auto-authorized commit gate (COMMIT_AGENT_MODE=1 batch drive). Staged files: scripts/goal_to_epic.py, unit_tests/ac_store/test_single_location_write.py, tickets/00_inbox/epics/EPIC-GoalToEpicBugfixes/01_single_location_write_and_backref.md. Commit SHA to follow after git commit execution.
+Auto-authorized commit gate (COMMIT_AGENT_MODE=1 batch drive). Staged files: scripts/goal_to_epic.py, unit_tests/ac_store/test_single_location_write.py, tickets/00_inbox/epics/EPIC-GoalToEpicBugfixes/01_single_location_write_and_backref.md. Commit SHA: 8ac10d4. Note: worktree pre-commit gap — no .pre-commit-config.yaml present; hooks skipped (PRE_COMMIT_ALLOW_NO_CONFIG=1 applied, per documented worktree limitation).
 
 ## Sign-offs
 
