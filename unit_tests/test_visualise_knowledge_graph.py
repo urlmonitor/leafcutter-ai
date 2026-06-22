@@ -40,16 +40,32 @@ def _load_module():
 # ---------------------------------------------------------------------------
 
 def _make_mock_kq(nodes=None, edges=None):
-    """Return a mock knowledge_query module with controllable outputs."""
+    """Return a mock knowledge_query module with controllable outputs.
+
+    _assemble_graph() delegates collection to knowledge_query._collect_all,
+    which returns a (nodes, edges) tuple. The mock models that boundary: when a
+    single-surface filter is passed (the path _assemble_graph uses for one
+    surface), the double restricts the returned nodes/edges to that surface,
+    mirroring the real _collect_all's surface_filter behaviour.
+    """
     if nodes is None:
         nodes = []
     if edges is None:
         edges = []
 
+    def _fake_collect_all(project_root, paths_json, surface_filter=None):
+        if surface_filter is not None:
+            kept_nodes = [n for n in nodes if n.surface == surface_filter]
+            kept_ids = {n.id for n in kept_nodes}
+            kept_edges = [
+                e for e in edges
+                if e.source_id in kept_ids and e.target_id in kept_ids
+            ]
+            return kept_nodes, kept_edges
+        return list(nodes), list(edges)
+
     mock_kq = MagicMock()
-    mock_kq.load_surfaces.return_value = {"agents": Path("/fake/agents")}
-    mock_kq.extract_nodes.return_value = iter(nodes)
-    mock_kq.extract_edges.return_value = iter(edges)
+    mock_kq._collect_all.side_effect = _fake_collect_all
 
     # NodeRecord and EdgeRecord as simple namedtuple-like objects
     mock_kq.NodeRecord = MagicMock
@@ -485,21 +501,21 @@ class TestSurfaceFilterExcludesOthers(unittest.TestCase):
 
 
 class TestProjectRootFlagPassedToKq(unittest.TestCase):
-    """AC-2: --project-root flag passes the path to load_surfaces().
+    """AC-2: --project-root flag passes the path to the kq assembly boundary.
 
-    test_project_root_flag_passed_to_kq: mock load_surfaces, assert it is
-    called with the value passed to --project-root.
+    test_project_root_flag_passed_to_kq: mock _collect_all, assert it is
+    called with the value passed to --project-root. _assemble_graph delegates
+    to knowledge_query._collect_all, so the project root reaches kq there
+    (not via a direct load_surfaces call, which was removed).
     """
 
     def test_project_root_flag_passed_to_kq(self):
-        # covers: UNKNOWN
-        """AC-2: --project-root value is passed to kq.load_surfaces() as project_root."""
+        # covers: KM-VIS-014
+        """AC-2: --project-root value is passed to kq._collect_all() as project_root."""
         import tempfile
         mod = _load_module()
 
         mock_kq = _make_mock_kq()
-        # Patch load_surfaces so we can inspect the call args
-        mock_kq.load_surfaces.return_value = {}
 
         custom_root = "/custom/project/root"
 
@@ -516,20 +532,19 @@ class TestProjectRootFlagPassedToKq(unittest.TestCase):
             except SystemExit as exc:
                 self.assertEqual(exc.code, 0, f"Script exited with code {exc.code}")
 
-        # Verify load_surfaces was called with the custom project_root
+        # Verify _collect_all was called with the custom project_root
         self.assertTrue(
-            mock_kq.load_surfaces.called,
-            "load_surfaces() must be called when --project-root is passed",
+            mock_kq._collect_all.called,
+            "_collect_all() must be called when --project-root is passed",
         )
 
-        call_kwargs = mock_kq.load_surfaces.call_args
-
-        # Accept both positional and keyword argument forms
-        call_args_list = call_kwargs[0] if call_kwargs[0] else []
-        call_kwargs_dict = call_kwargs[1] if call_kwargs[1] else {}
+        call_args = mock_kq._collect_all.call_args
+        call_args_list = call_args[0] if call_args[0] else []
+        call_kwargs_dict = call_args[1] if call_args[1] else {}
 
         custom_path = Path(custom_root)
         found_root = False
+        # project_root is the first positional arg to _collect_all.
         if call_args_list and Path(str(call_args_list[0])) == custom_path:
             found_root = True
         if "project_root" in call_kwargs_dict and Path(str(call_kwargs_dict["project_root"])) == custom_path:
@@ -537,8 +552,8 @@ class TestProjectRootFlagPassedToKq(unittest.TestCase):
 
         self.assertTrue(
             found_root,
-            f"load_surfaces() must be called with project_root={custom_root!r}. "
-            f"Actual call args: {call_kwargs}",
+            f"_collect_all() must be called with project_root={custom_root!r}. "
+            f"Actual call args: {call_args}",
         )
 
         Path(output_path).unlink(missing_ok=True)
