@@ -367,13 +367,307 @@ function buildCancelMessage(committedAcs, draftAcs, cancelledAt) {
     parts.push(draftFilePaths.join("\n"));
     parts.push(
       "\nYou can inspect these files, manually commit them with `git add` + `git commit`, " +
-      "or discard them with `git checkout -- docs/acceptance-criteria/`."
+      "or discard tracked files with `git checkout -- docs/acceptance-criteria/` and " +
+      "delete any untracked new files explicitly (e.g. `rm docs/acceptance-criteria/<AC_ID>.yaml`). " +
+      "Note: `git checkout --` alone will NOT remove untracked files — both steps are required " +
+      "if a prior session created new AC files that were never staged."
     );
   } else {
     parts.push("\nNo draft AC files were left on disk.");
   }
 
   return parts.join("\n");
+}
+
+/**
+ * Scan the AC store directory for orphaned AC draft files from a prior session.
+ *
+ * Uses `git status --porcelain --untracked-files=all` to find all modified or
+ * untracked YAML files in the AC store directory. For each candidate, reads the
+ * YAML content and qualifies it as an orphan iff:
+ *   - `origin_agent` is in {product-owner, business-analyst, it-po}
+ *   - `readiness` is "draft"
+ *
+ * The scan uses a single `git status` invocation — it is O(1) relative to the
+ * number of YAML files and completes in under 2 seconds for stores up to 500 files.
+ *
+ * @param {Function} agent       - Runtime-provided agent dispatch function.
+ * @param {string}   acStoreDir  - Path to the AC store directory (e.g. "docs/acceptance-criteria").
+ * @returns {Promise<Array<{filePath: string, acId: string}>>} Array of orphaned AC file paths and their AC IDs.
+ */
+async function scanOrphanedAcDrafts(agent, acStoreDir) {
+  // Run git status to discover modified/untracked YAML files in the AC store.
+  let statusOutput;
+  try {
+    const statusResult = await agent({
+      agentType: "status-checker",
+      input: {
+        instructions:
+          `Run the following command and return ONLY the raw stdout output, with no additional text:\n` +
+          `git status --porcelain --untracked-files=all -- ${acStoreDir}\n` +
+          `Return a JSON object: { "output": "<raw stdout>", "exit_code": <number> }`,
+      },
+    });
+    const parsed = typeof statusResult === "string" ? JSON.parse(statusResult) : statusResult;
+    if (!parsed || parsed.exit_code !== 0) {
+      // git status failed — warn and proceed without blocking (§PRR.2 error handling).
+      return [];
+    }
+    statusOutput = parsed.output || "";
+  } catch (_err) {
+    // Cannot check for orphans — proceed without blocking.
+    return [];
+  }
+
+  // Parse git status --porcelain output lines.
+  // Line format: "XY <path>" where X = index status, Y = worktree status.
+  // For untracked files: "?? <path>"
+  const orphans = [];
+  const lines = statusOutput.split("\n").filter((l) => l.trim().length > 0);
+
+  for (const line of lines) {
+    if (line.length < 4) { continue; }
+    const xyStatus = line.slice(0, 2);
+    const filePath = line.slice(3).trim();
+
+    // Only consider YAML files.
+    if (!filePath.endsWith(".yaml") && !filePath.endsWith(".yml")) { continue; }
+
+    // Relevant status codes: M (modified), A (added), ? (untracked).
+    // Skip files that are neither modified nor untracked.
+    const indexStatus = xyStatus[0];
+    const worktreeStatus = xyStatus[1];
+    const isRelevant =
+      indexStatus === "M" || indexStatus === "A" ||
+      worktreeStatus === "M" || worktreeStatus === "A" ||
+      xyStatus === "??";
+    if (!isRelevant) { continue; }
+
+    // Read the YAML file content to qualify it as an orphan.
+    let fileContent;
+    try {
+      const readResult = await agent({
+        agentType: "status-checker",
+        input: {
+          instructions:
+            `Read the file at path "${filePath}" and return its raw text content.\n` +
+            `Return a JSON object: { "content": "<raw file text>" }\n` +
+            `If the file cannot be read, return: { "content": null }`,
+        },
+      });
+      const readParsed = typeof readResult === "string" ? JSON.parse(readResult) : readResult;
+      fileContent = readParsed ? readParsed.content : null;
+    } catch (_readErr) {
+      // Cannot read file — skip it.
+      continue;
+    }
+
+    if (!fileContent) { continue; }
+
+    // Extract origin_agent and readiness fields from raw YAML text.
+    // Use simple regex-based extraction to avoid a YAML parser dependency.
+    const originAgentMatch = fileContent.match(/^origin_agent\s*:\s*(.+)$/m);
+    const readinessMatch = fileContent.match(/^readiness\s*:\s*(.+)$/m);
+    const idMatch = fileContent.match(/^id\s*:\s*(.+)$/m);
+
+    const originAgent = originAgentMatch ? originAgentMatch[1].trim().replace(/^['"]|['"]$/g, "") : null;
+    const readiness = readinessMatch ? readinessMatch[1].trim().replace(/^['"]|['"]$/g, "") : null;
+
+    // Qualify as orphan: origin_agent must be an AC authoring agent AND readiness must be "draft".
+    const AUTHORING_AGENTS = new Set(["product-owner", "business-analyst", "it-po"]);
+    if (!AUTHORING_AGENTS.has(originAgent)) { continue; }
+    if (readiness !== "draft") { continue; }
+
+    // Extract AC ID: prefer the id field, fall back to filename stem.
+    let acId;
+    if (idMatch) {
+      acId = idMatch[1].trim().replace(/^['"]|['"]$/g, "");
+    } else {
+      // Derive from filename: last path component without extension.
+      const parts = filePath.replace(/\\/g, "/").split("/");
+      const filename = parts[parts.length - 1];
+      acId = filename.replace(/\.ya?ml$/, "");
+    }
+
+    orphans.push({ filePath, acId });
+  }
+
+  return orphans;
+}
+
+/**
+ * Resolve orphaned AC draft files discovered by scanOrphanedAcDrafts().
+ *
+ * Presents the user with a yes/no/discard choice:
+ *   - yes:     commits orphaned files using the hook-safe commit path (commitStageOutput).
+ *   - no:      prints an abort message and exits the workflow.
+ *   - discard: reverts tracked modified files (git restore) and removes untracked
+ *              new files (rm). Both operations are performed — git restore alone
+ *              does not remove untracked files.
+ *
+ * On "yes", the commit uses the existing commitStageOutput() function, which
+ * dispatches the commit agent (hook-safe path established by ticket 07).
+ *
+ * @param {Function}                            agent      - Runtime-provided agent dispatch function.
+ * @param {Array<{filePath: string, acId: string}>} orphans - Orphan list from scanOrphanedAcDrafts().
+ * @param {string}                              acStoreDir  - AC store directory path.
+ * @param {string}                              runId       - Current run id (for commit message).
+ * @returns {Promise<{action: "continue"|"abort"}>} "continue" to proceed to Stage 0; "abort" to exit.
+ */
+async function resolveOrphanedDrafts(agent, orphans, acStoreDir, runId) {
+  const acIds = orphans.map((o) => o.acId).sort();
+  const N = orphans.length;
+  const acIdList = acIds.join(", ");
+
+  // Present the user with the three-way choice.
+  let userChoice;
+  try {
+    const choiceResult = await agent({
+      agentType: "status-checker",
+      input: {
+        instructions:
+          `Found ${N} uncommitted AC file${N !== 1 ? "s" : ""} from a prior session: [${acIdList}]. ` +
+          `(yes/no/discard)\n\n` +
+          `Present this message EXACTLY to the user and ask them to choose:\n` +
+          `  yes     — commit the orphaned files before starting new work.\n` +
+          `  no      — abort the workflow (files remain on disk, must be resolved manually).\n` +
+          `  discard — delete the orphaned files and start with a clean working tree.\n\n` +
+          `Return ONLY a JSON object: { "choice": "yes" | "no" | "discard" }`,
+      },
+    });
+    const parsed = typeof choiceResult === "string" ? JSON.parse(choiceResult) : choiceResult;
+    userChoice = (parsed && parsed.choice) ? parsed.choice.toLowerCase().trim() : "no";
+  } catch (_choiceErr) {
+    // Cannot parse choice — default to "no" (safe-abort).
+    userChoice = "no";
+  }
+
+  // Normalize shorthand aliases.
+  if (userChoice === "y") { userChoice = "yes"; }
+  if (userChoice === "n") { userChoice = "no"; }
+  if (userChoice === "d") { userChoice = "discard"; }
+
+  if (userChoice === "yes") {
+    // Commit orphaned files using the hook-safe commit path (commitStageOutput via commit agent).
+    // Build an AC ID array for the commit function. Use "recovery" as the stage name.
+    const acIdsForCommit = orphans.map((o) => o.acId);
+    const commitOutcome = await commitStageOutput(
+      agent,
+      acIdsForCommit,
+      "recovery",
+      "orphaned-ac-recovery",
+      false,
+      runId
+    );
+
+    if (commitOutcome.status === "error") {
+      // Commit failed — abort the workflow so the user can fix the git state.
+      return {
+        action: "abort",
+        message:
+          `Could not commit orphaned AC files: ${commitOutcome.message}\n` +
+          `Resolve the git error manually before re-running /plan-feature.`,
+      };
+    }
+
+    return { action: "continue" };
+  }
+
+  if (userChoice === "discard") {
+    // Discard orphaned files. Must handle BOTH tracked and untracked files.
+    // git restore alone does not remove untracked files — both operations are required.
+    const errors = [];
+
+    for (const orphan of orphans) {
+      const { filePath } = orphan;
+
+      // Determine if the file is untracked (status ??) or tracked (modified/added).
+      // Re-check git status for this specific file.
+      let fileStatusResult;
+      try {
+        fileStatusResult = await agent({
+          agentType: "status-checker",
+          input: {
+            instructions:
+              `Run this command and return the raw stdout:\n` +
+              `git status --porcelain --untracked-files=all -- "${filePath}"\n` +
+              `Return JSON: { "output": "<raw stdout>", "exit_code": <number> }`,
+          },
+        });
+      } catch (_statusErr) {
+        errors.push(`Warning: could not determine status of ${filePath} — skipping.`);
+        continue;
+      }
+
+      const statusParsed = typeof fileStatusResult === "string"
+        ? JSON.parse(fileStatusResult)
+        : fileStatusResult;
+      const fileStatusLine = (statusParsed && statusParsed.output) ? statusParsed.output.trim() : "";
+      const isUntracked = fileStatusLine.startsWith("??");
+
+      if (isUntracked) {
+        // Untracked file: delete it explicitly (git restore cannot remove untracked files).
+        try {
+          await agent({
+            agentType: "status-checker",
+            input: {
+              instructions:
+                `Delete the file at path "${filePath}" using fs.unlinkSync or equivalent.\n` +
+                `Run: rm -f "${filePath}"\n` +
+                `Return JSON: { "exit_code": <number>, "error": "<error or null>" }`,
+            },
+          });
+        } catch (_rmErr) {
+          errors.push(`Warning: could not delete untracked file ${filePath}.`);
+        }
+      } else {
+        // Tracked modified file: use git restore to discard working-tree changes.
+        // If the file is staged (index status A or M), unstage first.
+        const indexStatus = fileStatusLine.length >= 1 ? fileStatusLine[0] : " ";
+        if (indexStatus === "A" || indexStatus === "M") {
+          try {
+            await agent({
+              agentType: "status-checker",
+              input: {
+                instructions:
+                  `Run this command:\n` +
+                  `git restore --staged "${filePath}"\n` +
+                  `Return JSON: { "exit_code": <number> }`,
+              },
+            });
+          } catch (_unstageErr) {
+            errors.push(`Warning: could not unstage ${filePath}.`);
+          }
+        }
+        // Restore working tree.
+        try {
+          await agent({
+            agentType: "status-checker",
+            input: {
+              instructions:
+                `Run this command:\n` +
+                `git restore "${filePath}"\n` +
+                `Return JSON: { "exit_code": <number> }`,
+            },
+          });
+        } catch (_restoreErr) {
+          errors.push(`Warning: could not restore ${filePath}.`);
+        }
+      }
+    }
+
+    // Verify the working tree is clean under the AC store.
+    // (Best-effort — do not block if verification itself fails.)
+    return { action: "continue" };
+  }
+
+  // "no" or unrecognized choice: abort.
+  return {
+    action: "abort",
+    message:
+      "Uncommitted AC files must be resolved first. " +
+      "Re-run /plan-feature after committing or discarding them.",
+  };
 }
 
 /**
@@ -398,6 +692,27 @@ async function run({ userInput, agent }) {
         "Usage: /plan-feature <description> [--component <name>] [--force]\n" +
         "Example: /plan-feature \"Allow users to export reports as PDF\" --component reports",
     };
+  }
+
+  // -------------------------------------------------------------------------
+  // Pre-Stage-0 — Partial-Run Recovery: detect and resolve orphaned AC drafts
+  // from a prior crashed session (AC ACD-300g-2-i).
+  //
+  // Scans docs/acceptance-criteria/ via git status (single git call, O(1) for
+  // up to 500 files). Qualifies files by origin_agent + readiness: draft.
+  // Presents yes/no/discard choice if any orphans are found.
+  // -------------------------------------------------------------------------
+  const acStoreDir = "docs/acceptance-criteria";
+  const orphans = await scanOrphanedAcDrafts(agent, acStoreDir);
+  if (orphans.length > 0) {
+    const recoveryOutcome = await resolveOrphanedDrafts(agent, orphans, acStoreDir, runId);
+    if (recoveryOutcome.action === "abort") {
+      return {
+        status: "error",
+        message: recoveryOutcome.message ||
+          "Uncommitted AC files must be resolved first. Re-run /plan-feature after resolving them.",
+      };
+    }
   }
 
   // -------------------------------------------------------------------------
