@@ -1,6 +1,6 @@
 """
 MODULE: test_check_exception_handling
-GOAL: Unit tests for templates/commit-guardian/check_exception_handling.py
+GOAL: Unit tests for templates/scripts/commit_guardian/check_exception_handling.py
     pre-commit AST hook that flags I/O calls not wrapped in try/except.
 BUSINESS CONTEXT: TDD red-baseline tests written before the implementation.
     All tests are expected to fail until check_exception_handling.py is created.
@@ -41,7 +41,7 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_HOOK_SCRIPT = _REPO_ROOT / "templates" / "commit-guardian" / "check_exception_handling.py"
+_HOOK_SCRIPT = _REPO_ROOT / "templates" / "scripts" / "commit_guardian" / "check_exception_handling.py"
 
 
 def _run_hook(code: str) -> subprocess.CompletedProcess:

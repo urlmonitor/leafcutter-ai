@@ -294,15 +294,15 @@ def check_ticket(
 def _repo_root() -> Path:
     """Return a best-effort repo root path.
 
-    Uses this script's location (templates/commit-guardian/) and ascends two
-    levels to reach the repo root.  Falls back to the current working directory
-    when the layout does not match.
+    Uses this script's location (templates/scripts/commit_guardian/) and ascends
+    three levels to reach the repo root.  Falls back to the current working
+    directory when the layout does not match.
 
     Returns:
         Absolute Path to the inferred repo root.
     """
     script_dir = Path(__file__).resolve().parent
-    candidate = script_dir.parent.parent
+    candidate = script_dir.parent.parent.parent
     if (candidate / ".git").exists() or (candidate / "templates").is_dir():
         return candidate
     return Path(os.getcwd())

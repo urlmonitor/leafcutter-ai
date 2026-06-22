@@ -252,7 +252,7 @@ conflicts), surface them verbatim and stop — the user must resolve manually.
 | `package.config` | `leafcutter/config/` |
 | `package.templates_agents` | `leafcutter/templates/agents/` |
 | `package.templates_skills` | `leafcutter/templates/skills/` |
-| `package.templates_commit_guardian` | `leafcutter/templates/commit-guardian/` |
+| `package.templates_commit_guardian` | `leafcutter/templates/scripts/commit_guardian/` |
 | `package.scripts` | `leafcutter/scripts/` |
 | `package.scripts_commit_guardian` | `leafcutter/scripts/commit_guardian/` |
 | `package.scripts_doc_compliance` | `leafcutter/scripts/doc_compliance/` |

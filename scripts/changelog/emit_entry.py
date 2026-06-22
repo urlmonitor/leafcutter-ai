@@ -41,10 +41,6 @@ VALID_TYPES: frozenset[str] = frozenset(
 _CONFIG_REL_PATH: str = (
     "leafcutter/templates/scripts/commit_guardian/commit_guardian.json"
 )
-#: Legacy fallback path (deprecated after EPIC-PortableInstallHardening T03).
-_CONFIG_REL_PATH_LEGACY: str = (
-    "leafcutter/templates/commit-guardian/commit_guardian.json"
-)
 
 #: Fields that must always be present in the payload.
 REQUIRED_FIELDS: tuple[str, ...] = (
@@ -95,7 +91,7 @@ def _resolve_repo_root() -> Path:
 def _load_changelogs_dir(repo_root: Path) -> str:
     """Read ``changelogs_dir`` from the commit-guardian config JSON.
 
-    Looks for ``<repo_root>/leafcutter/templates/commit-guardian/
+    Looks for ``<repo_root>/leafcutter/templates/scripts/commit_guardian/
     commit_guardian.json`` and returns the value of the ``changelogs_dir``
     key.  Falls back to ``"changelogs"`` when the file or key is absent so
     that unusual setups (missing template, partial package checkout) degrade
@@ -110,9 +106,6 @@ def _load_changelogs_dir(repo_root: Path) -> str:
         to ``"changelogs"`` when the config cannot be read.
     """
     config_path = repo_root / _CONFIG_REL_PATH
-    if not config_path.exists():
-        # Fall back to legacy path for backward compatibility
-        config_path = repo_root / _CONFIG_REL_PATH_LEGACY
     try:
         with config_path.open(encoding="utf-8") as fh:
             config = json.load(fh)

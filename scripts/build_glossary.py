@@ -127,7 +127,7 @@ def build_glossary_hook_registration(
     ``check-glossary-coverage`` hook entry if it is not already present.
 
     The hook entry is sourced from the package template's
-    ``templates/commit-guardian/commit_guardian.json`` hooks_manifest section.
+    ``templates/scripts/commit_guardian/commit_guardian.json`` hooks_manifest section.
 
     Args:
         target_root: Absolute path to the target project root directory.
@@ -187,9 +187,6 @@ def _load_hook_entry_from_template(package_root: Path) -> dict | None:
         Hook entry dict, or None if the template cannot be loaded.
     """
     template_cg = package_root / "templates" / "scripts" / "commit_guardian" / "commit_guardian.json"
-    if not template_cg.exists():
-        # Fall back to legacy path for backward compatibility
-        template_cg = package_root / "templates" / "commit-guardian" / "commit_guardian.json"
     if not template_cg.exists():
         print(
             "  glossary: WARNING — package commit_guardian.json template not found.",

@@ -68,7 +68,7 @@
       "config": "leafcutter/config/",
       "templates_agents": "leafcutter/templates/agents/",
       "templates_skills": "leafcutter/templates/skills/",
-      "templates_commit_guardian": "leafcutter/templates/commit-guardian/",
+      "templates_commit_guardian": "leafcutter/templates/scripts/commit_guardian/",
       "scripts": "leafcutter/scripts/",
       "scripts_commit_guardian": "leafcutter/scripts/commit_guardian/",
       "scripts_commit_guardian_optional": true,

@@ -92,6 +92,15 @@ EXTERNAL_DEPENDENCY_ALLOWLIST: frozenset[str] = frozenset([
     # absence causes a hard failure. A separate authoring ticket is required to either
     # create and deploy this script or add a graceful-skip guard to commit.md.
     "scripts/commit_guardian/known_failing_tests.py",
+    # scripts/onboard_hook_opt_in.py — referenced in agents/onboard.md as an
+    # optional standalone helper ("You can also run this step via the standalone
+    # script"). The reference is advisory — onboard.md describes the same
+    # detection-and-prompt logic inline above the note, so absence of the script
+    # does not break the onboarding flow. The script lives in scripts/ (source)
+    # and is deployed to consumer projects via the onboarding flow itself (not via
+    # build_template_standalone_scripts), so it is legitimately absent from the
+    # _manifest_template_standalone_scripts scan of templates/scripts/.
+    "scripts/onboard_hook_opt_in.py",
 ])
 
 # Regex to extract script basename from entries like:
@@ -139,11 +148,10 @@ def _candidate_template_paths(script_name: str, package_root: Path) -> list[Path
         package_root: Root of the leafcutter package.
 
     Returns:
-        List of candidate Paths in priority order (canonical first, legacy second).
+        List of candidate Paths (canonical only).
     """
     return [
         package_root / "templates" / "scripts" / "commit_guardian" / script_name,
-        package_root / "templates" / "commit-guardian" / script_name,
     ]
 
 
@@ -351,7 +359,7 @@ def propagation_audit(
     try:
         entries = _parse_hook_entries_yaml(precommit_path)
     except Exception as exc:  # noqa: BLE001
-        print(f"  propagation_audit: WARNING — could not parse .pre-commit-config.yaml: {exc}", file=sys.stderr)
+        _log.warning("propagation_audit: could not parse .pre-commit-config.yaml: %s", exc)
         return 0
 
     checked: set[str] = set()
