@@ -1,7 +1,7 @@
 ---
 epic_name: EPIC-CodeQualityHooks
 created: 2026-06-16
-status: in_progress
+status: done
 components:
   - guardrail-engine
 source_ac: GE-100
