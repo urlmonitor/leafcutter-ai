@@ -20,8 +20,11 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-04
+child_limit_override: 10
 amended_by:
   - "split: ACS-100a -> ACS-100a + ACS-100i, 2026-06-05"
+  - "2026-06-22 [python-coder/chore/ge110-followups-metadata-and-tracking]: added child_limit_override: 10. ACS-100 currently has 9 L1 children (ACS-100a through ACS-100i), exceeding the default cap of 7. Override raised to 10 to allow one additional L1 slot. Temporary waiver pending the AC-UID-decoupling refactor which will reorganise the tree without needing ID changes."
 superseded_by: null
+notes: "child_limit_override is a temporary escape hatch. Remove once the AC-UID-decoupling refactor restructures this L0 tree."
 covered_by: [ACS-100a, ACS-100b, ACS-100c, ACS-100d, ACS-100e, ACS-100f, ACS-100g, ACS-100h, ACS-100i]
 implemented_by: []

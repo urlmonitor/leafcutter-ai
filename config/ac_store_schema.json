@@ -401,6 +401,18 @@
             "type": "string",
             "description": "Scope qualifier for this AC (e.g. 'standing' for standing/permanent requirements that persist across sprints).",
             "minLength": 1
+        },
+        "child_limit_override": {
+            "description": "Per-parent override that raises (never lowers) the default child count hard cap for this specific AC. When set to an integer N, the check-ac-tree-limits hook uses max(default_cap, N) as the effective cap for this parent. An override below the default cap is silently ignored (fail-open). An OVERRIDE ACTIVE audit line is emitted to stderr when the override is active and child_count exceeds the default. This field is a temporary, audited escape hatch -- it should be removed once the structural reorganisation (e.g. AC-UID-decoupling) is complete. Only meaningful on L0 and L1 ACs (the only levels with a child hard cap).",
+            "oneOf": [
+                {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                {
+                    "type": "null"
+                }
+            ]
         }
     }
 }

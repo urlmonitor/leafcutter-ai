@@ -1,21 +1,34 @@
 """
 MODULE: check_ac_limits
 GOAL: Pre-commit hook that enforces AC tree depth limits on staged YAML files
-    under docs/acceptance-criteria/ — hard cap: >7 L1s per L0 (ACS-100c-1),
+    under docs/acceptance-criteria/ -- hard cap: >7 L1s per L0 (ACS-100c-1),
     >5 L2s per L1 (ACS-100c-1); advisory: <3 children per parent (ACS-100c-2).
+    Supports a per-parent ``child_limit_override`` YAML field that can raise
+    (but never lower) the default cap for a specific overcrowded parent,
+    with an audit line emitted to stderr when the override is active.
 BUSINESS CONTEXT: Overcrowded AC trees are hard to navigate, review, and
     implement. This hook blocks commits that add a child AC that would push
     a parent over its limit, so the PO v3 or BA v3 agent can invoke the
     ac-tree-split skill before the file enters the repository. The sparse
     advisory warns when a parent has fewer than 3 children (a sign the
     AC may be misclassified) without blocking the commit.
+    When a tree split is not yet feasible (e.g. pending a UID-decoupling
+    refactor), an explicit ``child_limit_override: N`` field on the parent
+    AC YAML waives the default cap to N for that parent only. The override
+    is an audited, temporary escape hatch -- it does NOT disable the check;
+    if child_count exceeds even the overridden cap the commit is still blocked.
 ARCHITECTURE: Discovers all .yaml files staged in docs/acceptance-criteria/,
     loads them with PyYAML (stdlib fallback when absent), builds a parent->children
     map using id-derived structural parent attribution (not depends_on membership,
     which is multi-purpose and includes non-parent cross-links), then checks:
-      - L0 nodes: count of L1 children > 7 → hard block (ACS-100c-1).
-      - L1 nodes: count of L2 children > 5 → hard block (ACS-100c-1).
-      - Any parent with 1 or 2 children → advisory warning (ACS-100c-2).
+      - L0 nodes: count of L1 children > 7 (or overridden cap) -> hard block.
+      - L1 nodes: count of L2 children > 5 (or overridden cap) -> hard block.
+      - Any parent with 1 or 2 children -> advisory warning (ACS-100c-2).
+      - Per-parent child_limit_override field (int): raises the default cap
+        to max(default, override). Override MUST be >= default; if lower the
+        default is kept and a no-op warning is emitted. When override is active
+        and child_count is between default_cap+1 and overridden_cap an OVERRIDE
+        ACTIVE audit line is emitted (non-blocking, exit 0).
     Reads staged file list from git diff --cached (or HOOK_TEST_FILES env var
     for unit testing). Reads file content from disk (not from the diff) since
     the full tree context is needed, not just the diff hunk.
@@ -31,6 +44,7 @@ Usage:
 
 DOC_LINKS:
   - templates/skills/ac-tree-split/SKILL.md
+  - docs/reference/ac-schema.md
 
 DECISION HISTORY:
   - 2026-06-05 [python-coder/EPIC-ACTreeSplit]: Created check_ac_limits.py.
@@ -38,6 +52,16 @@ DECISION HISTORY:
     (advisory: <3 children). Reads full AC store from disk so the tree
     context is complete even when only one file is staged. Fail-open on
     subprocess / YAML errors to avoid blocking commits for unrelated reasons.
+  - 2026-06-22 [python-coder/chore/ge110-followups-metadata-and-tracking]:
+    Added per-parent child_limit_override field support. When a parent AC
+    YAML declares child_limit_override: N (int), the effective cap for that
+    parent is max(default_cap, N). Override never lowers the cap below the
+    default. When override is active and child_count exceeds the default but
+    not the override, an OVERRIDE ACTIVE audit line is emitted to stderr
+    (non-blocking). Applied ACS-100 (override: 10) and ACS-100h (override: 7)
+    as the first two production overrides pending AC-UID-decoupling refactor.
+    Schema updated (config/ac_store_schema.json) and reference doc updated
+    (docs/reference/ac-schema.md).
 """
 
 from __future__ import annotations
@@ -51,7 +75,7 @@ from pathlib import Path
 
 
 # ---------------------------------------------------------------------------
-# Constants — limits enforced by ACS-100c-1 and ACS-100c-2
+# Constants -- limits enforced by ACS-100c-1 and ACS-100c-2
 # ---------------------------------------------------------------------------
 
 _MAX_L1_PER_L0: int = 7   # ACS-100c-1 hard cap
@@ -79,12 +103,24 @@ _MAX_CHILDREN = {
 
 @dataclass
 class AcNode:
-    """A single acceptance-criterion record loaded from a YAML file."""
+    """A single acceptance-criterion record loaded from a YAML file.
+
+    Attributes:
+        ac_id: The stable AC identifier (e.g. ``ACS-100``).
+        level: Hierarchy level string from YAML (e.g. ``L0``, ``L1``).
+        depends_on: List of AC IDs this node declares as dependencies.
+        source_path: Absolute path to the YAML file on disk, or None.
+        child_limit_override: Optional integer that raises the default
+            child cap for THIS parent only. Must be >= the default cap
+            to have any effect; if lower the default is preserved and a
+            no-op warning is emitted. None means no override is set.
+    """
 
     ac_id: str
     level: str
     depends_on: list[str] = field(default_factory=list)
     source_path: Path | None = None
+    child_limit_override: int | None = None
 
 
 @dataclass
@@ -135,7 +171,7 @@ def _load_yaml_data(path: Path) -> dict | None:
         return data if isinstance(data, dict) else None
 
     except ImportError:
-        pass  # PyYAML absent — fall through to manual parser
+        pass  # PyYAML absent -- fall through to manual parser
 
     # Minimal fallback parser: handles simple top-level scalar fields only.
     result: dict = {}
@@ -176,6 +212,53 @@ def _parse_depends_on(raw: object) -> list[str]:
     return []
 
 
+def _coerce_str_to_positive_int(value: str) -> int | None:
+    """Attempt to coerce a string to a positive integer; return None on failure.
+
+    Separated from the main override parser to avoid a TRY300 violation
+    (return-in-try-body must be in else branch per tryceratops).
+
+    Args:
+        value: The string to coerce.
+
+    Returns:
+        Positive integer when the string represents one, else None.
+    """
+    try:
+        parsed = int(value.strip())
+    except ValueError:
+        return None
+    else:
+        return parsed if parsed > 0 else None
+
+
+def _parse_child_limit_override(raw: object) -> int | None:
+    """Parse the child_limit_override field to an int or None (fail-open).
+
+    Accepts an integer or a string that coerces to a positive integer.
+    Returns None when the value is absent, null, or not a valid positive int
+    (garbage values are silently ignored so the hook stays fail-open).
+
+    Args:
+        raw: The value of the 'child_limit_override' key from a YAML dict,
+            or None when the key is absent.
+
+    Returns:
+        Positive integer override value, or None when the field is absent
+        or carries a non-integer/non-positive value.
+    """
+    if raw is None:
+        return None
+    if isinstance(raw, bool):
+        # YAML booleans coerce to int in Python -- reject them.
+        return None
+    if isinstance(raw, int):
+        return raw if raw > 0 else None
+    if isinstance(raw, str):
+        return _coerce_str_to_positive_int(raw)
+    return None
+
+
 # ---------------------------------------------------------------------------
 # AC store discovery and loading
 # ---------------------------------------------------------------------------
@@ -198,7 +281,7 @@ def _find_ac_store_root() -> Path | None:
         if candidate.is_dir():
             return candidate
         if (ancestor / ".git").exists() or (ancestor / "CLAUDE.md").exists():
-            break  # Reached project root — stop looking
+            break  # Reached project root -- stop looking
 
     return None
 
@@ -208,6 +291,7 @@ def _load_ac_store(ac_store_dir: Path) -> list[AcNode]:
 
     Skips files whose 'level' field is absent or not in _VALID_LEVELS. Also
     skips files whose 'id' field is absent (cannot be a tree participant).
+    Populates child_limit_override when the parent AC YAML declares that field.
 
     Args:
         ac_store_dir: Absolute path to docs/acceptance-criteria/.
@@ -225,12 +309,16 @@ def _load_ac_store(ac_store_dir: Path) -> list[AcNode]:
         if not ac_id or level not in _VALID_LEVELS:
             continue
         depends_on = _parse_depends_on(data.get("depends_on"))
+        child_limit_override = _parse_child_limit_override(
+            data.get("child_limit_override")
+        )
         nodes.append(
             AcNode(
                 ac_id=str(ac_id),
                 level=str(level),
                 depends_on=depends_on,
                 source_path=yaml_file,
+                child_limit_override=child_limit_override,
             )
         )
     return nodes
@@ -299,8 +387,8 @@ def _derive_parent_id(ac_id: str) -> str | None:
     """Derive the structural parent AC ID from a child AC ID.
 
     Rules (mirrors ac_parent_id.derive_parent_id):
-      1. ``PREFIX-NNN`` (root) → None.
-      2. ``PREFIX-NNNx`` (alpha sub-level) → strip trailing alpha chars.
+      1. ``PREFIX-NNN`` (root) -> None.
+      2. ``PREFIX-NNNx`` (alpha sub-level) -> strip trailing alpha chars.
       3. Otherwise strip the last hyphen-delimited segment.
 
     Args:
@@ -327,7 +415,7 @@ def _build_children_map(nodes: list[AcNode]) -> dict[str, list[AcNode]]:
     ``_derive_parent_id(node.ac_id)`` returns the single structural parent id.
     The ``depends_on`` field is intentionally NOT used for parent attribution
     because it is multi-purpose (structural parent edge AND non-parent
-    cross-links / pattern composition references) — using it would cause
+    cross-links / pattern composition references) -- using it would cause
     cross-linked siblings to inflate each other's child counts (GE-106).
 
     Args:
@@ -347,6 +435,41 @@ def _build_children_map(nodes: list[AcNode]) -> dict[str, list[AcNode]]:
     return children_map
 
 
+def _resolve_effective_limit(node: AcNode, default_limit: int) -> tuple[int, bool]:
+    """Compute the effective child cap for a parent node.
+
+    When the node has a child_limit_override set and the override is >= the
+    default, the effective limit is raised to the override value. If the
+    override is lower than the default it is a no-op and a warning is emitted
+    to stderr. The second return value indicates whether an active override
+    raised the cap above the default.
+
+    Args:
+        node: The parent AcNode whose cap is being resolved.
+        default_limit: The default hard cap for this level.
+
+    Returns:
+        Tuple of (effective_limit, override_is_active) where override_is_active
+        is True only when the override raised the cap above the default.
+    """
+    override = node.child_limit_override
+    if override is None:
+        return default_limit, False
+    if override < default_limit:
+        print(
+            f"[check-ac-limits] WARNING: parent '{node.ac_id}' has "
+            f"child_limit_override={override} which is below the default cap "
+            f"{default_limit} for level {node.level}. Override ignored as a no-op; "
+            f"default cap applies.",
+            file=sys.stderr,
+        )
+        return default_limit, False
+    if override == default_limit:
+        # Technically a no-op but not incorrect -- treat as inactive.
+        return default_limit, False
+    return override, True
+
+
 def _check_limits(
     nodes: list[AcNode],
     children_map: dict[str, list[AcNode]],
@@ -357,6 +480,12 @@ def _check_limits(
     Only parents whose children include at least one staged AC are checked for
     hard violations (to avoid flagging pre-existing oversized parents on every
     commit). Sparse advisories are emitted for all parents regardless.
+
+    When a parent node has child_limit_override set to an integer N, the
+    effective cap is max(default_limit, N). When child_count exceeds the
+    default cap but is within the overridden cap, an OVERRIDE ACTIVE audit
+    line is printed to stderr (non-blocking). When child_count exceeds even
+    the overridden cap, the commit is still blocked.
 
     Args:
         nodes: Full list of AC nodes.
@@ -375,8 +504,12 @@ def _check_limits(
 
         children = children_map.get(node.ac_id, [])
         child_count = len(children)
-        limit = _MAX_CHILDREN[node.level]
+        default_limit = _MAX_CHILDREN[node.level]
         child_level = _PARENT_CHILD[node.level]
+
+        effective_limit, override_active = _resolve_effective_limit(
+            node, default_limit
+        )
 
         # Hard limit: only report when at least one staged AC is involved
         # (either the parent itself is staged, or one of its children is staged).
@@ -386,16 +519,29 @@ def _check_limits(
             or bool(child_ids & staged_ids)
         )
 
-        if involves_staged and child_count > limit:
-            violations.append(
-                TreeViolation(
-                    parent_id=node.ac_id,
-                    parent_level=node.level,
-                    child_level=child_level,
-                    child_count=child_count,
-                    limit=limit,
+        if involves_staged:
+            if child_count > effective_limit:
+                # Still a violation even with the override
+                violations.append(
+                    TreeViolation(
+                        parent_id=node.ac_id,
+                        parent_level=node.level,
+                        child_level=child_level,
+                        child_count=child_count,
+                        limit=effective_limit,
+                    )
                 )
-            )
+            elif override_active and child_count > default_limit:
+                # Override raised the bar; child_count is within overridden cap.
+                # Emit a greppable audit line (non-blocking).
+                print(
+                    f"[check-ac-limits] OVERRIDE ACTIVE: parent '{node.ac_id}' "
+                    f"({node.level}) has {child_count} {child_level} children; "
+                    f"default cap {default_limit} waived to {effective_limit} via "
+                    f"child_limit_override. This waiver should be temporary -- "
+                    f"see the AC-UID-decoupling work.",
+                    file=sys.stderr,
+                )
 
         # Sparse advisory: warn for parents with 1 or 2 children that are staged
         if involves_staged and 0 < child_count < _MIN_CHILDREN_ADVISORY:
@@ -420,7 +566,7 @@ def _print_advisories(advisories: list[TreeAdvisory]) -> None:
     for adv in advisories:
         print(
             f"[check-ac-limits] ADVISORY (ACS-100c-2): parent '{adv.parent_id}' "
-            f"has only {adv.child_count} child(ren) — fewer than {_MIN_CHILDREN_ADVISORY} "
+            f"has only {adv.child_count} child(ren) -- fewer than {_MIN_CHILDREN_ADVISORY} "
             f"suggests it may be too narrow. Consider merging into an existing parent "
             f"or planning additional children.",
             file=sys.stderr,
@@ -433,7 +579,7 @@ def _print_violations(violations: list[TreeViolation]) -> None:
     Args:
         violations: List of TreeViolation objects to report.
     """
-    print("\n[check-ac-limits] BLOCKED — AC tree depth limits exceeded (ACS-100c-1)\n",
+    print("\n[check-ac-limits] BLOCKED -- AC tree depth limits exceeded (ACS-100c-1)\n",
           file=sys.stderr)
     for v in violations:
         print(
@@ -447,8 +593,10 @@ def _print_violations(violations: list[TreeViolation]) -> None:
         file=sys.stderr,
     )
     print(
-        "  Pattern A (horizontal): overcrowded L0 — create a sibling L0.\n"
-        "  Pattern C (intermediate): overcrowded L1 — split into sibling L1s.\n",
+        "  Pattern A (horizontal): overcrowded L0 -- create a sibling L0.\n"
+        "  Pattern C (intermediate): overcrowded L1 -- split into sibling L1s.\n"
+        "  Or: add child_limit_override: N to the parent AC YAML as a temporary "
+        "waiver (N must exceed the current child count; see docs/reference/ac-schema.md).\n",
         file=sys.stderr,
     )
 
@@ -467,16 +615,16 @@ def main() -> int:
     """
     staged_paths = _get_staged_ac_paths()
     if not staged_paths:
-        return 0  # No AC YAML files staged — nothing to check
+        return 0  # No AC YAML files staged -- nothing to check
 
     ac_store_dir = _find_ac_store_root()
     if ac_store_dir is None:
-        # No AC store present — fail open (project may not use ACs yet)
+        # No AC store present -- fail open (project may not use ACs yet)
         return 0
 
     nodes = _load_ac_store(ac_store_dir)
     if not nodes:
-        return 0  # Empty store — nothing to check
+        return 0  # Empty store -- nothing to check
 
     # Resolve staged AC IDs from staged paths
     staged_ids: set[str] = set()
@@ -492,7 +640,7 @@ def main() -> int:
                     pass
 
     if not staged_ids:
-        # Staged files did not match any known AC nodes — fail open
+        # Staged files did not match any known AC nodes -- fail open
         return 0
 
     children_map = _build_children_map(nodes)

@@ -1,0 +1,78 @@
+id: BP-100b-11
+readiness: approved
+priority: high
+title: "Registry referential integrity: every commit-guardian hook entry points at a script that exists, and the deployed registry is derivable from the canonical template"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k.yaml"
+criteria: |
+  Given the canonical template commit-guardian hook registry (the template
+    commit_guardian.json that the build system reads when deploying to a
+    consumer project) declares a hooks_manifest with these registered hooks:
+    - id "check-ac-tree-limits", entry referencing check_ac_limits.py
+    - id "check-ac-schema", entry referencing check_ac_schema.py
+  And every entry's resolved script path exists in the template tree
+  When the registry referential-integrity check runs at pre-commit time
+  Then it exits with code 0 and reports no violations
+
+  And given the deployed commit-guardian hook registry
+    (scripts/commit_guardian/commit_guardian.json) declares a hooks_manifest
+    entry with id "check-ac-limits" whose entry references the script
+    scripts/commit_guardian/hooks/check_ac_limits.py
+  And no file exists at scripts/commit_guardian/hooks/check_ac_limits.py
+  When the registry referential-integrity check runs at pre-commit time
+  Then the commit is blocked with exit code 1
+  And the error message names the hook id "check-ac-limits"
+  And the error message names the missing script path
+    scripts/commit_guardian/hooks/check_ac_limits.py
+  And the error message states that the entry references a script that does
+    not exist on disk
+
+  And given the deployed registry registers a hook id "check-ac-limits" that
+    is absent from the canonical template registry (the template registers only
+    "check-ac-tree-limits")
+  When the registry referential-integrity check runs at pre-commit time
+  Then the commit is blocked with exit code 1
+  And the error message names "check-ac-limits" as a deployed-only hook id that
+    the canonical template registry does not contain and cannot regenerate
+  And the message states the deployed registry must be derivable from the
+    canonical template — either add the hook (and its script) to the template,
+    or remove the entry from the deployed registry
+depends_on:
+  - BP-100k
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k.yaml"
+    relationship: parent
+    status: exists
+  - path: "templates/scripts/commit_guardian/commit_guardian.json"
+    relationship: describes
+    status: exists
+  - path: "scripts/build_phases.py"
+    relationship: describes
+    status: exists
+  - path: "docs/build-drift-hook.md"
+    relationship: describes
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Resolve each hooks_manifest entry's script path (handling the run_hook.py wrapper form and any {{config.output_root}} template placeholder) and assert the referenced script file exists in the corresponding tree (template entries resolve against the template tree; deployed entries against the deployed tree)."
+  - "Compare the set of hook ids in the deployed registry against the set derivable from the canonical template registry; flag any deployed-only id that has no corresponding template entry."
+  - "Concrete grounding defect this AC must catch: the deployed scripts/commit_guardian/commit_guardian.json registers id 'check-ac-limits' (entry scripts/commit_guardian/hooks/check_ac_limits.py) which (a) references a non-existent script and (b) is absent from templates/scripts/commit_guardian/commit_guardian.json, which only declares 'check-ac-tree-limits'. The fix edits the registration (add to template with its script, or remove the deployed entry)."
+  - "Exit 0 (fail-open) on unexpected errors such as unreadable directories or malformed JSON; exit 1 only on a detected referential-integrity or template-derivability violation."
+  - "Read registry file paths from configuration; do not hardcode them."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-100b-11-i
+implemented_by: []
