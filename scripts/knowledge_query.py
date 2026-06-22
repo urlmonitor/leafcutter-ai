@@ -94,6 +94,28 @@ _COMPONENT_FIELDS: frozenset[str] = frozenset({"components"})
 # Fields whose values may be file paths that need stem resolution
 _PATH_FIELDS: frozenset[str] = frozenset({"depends_on"})
 
+# Canonical outbound edge types produced by the ``acs`` surface.
+#
+# When a reader collects the outbound edges of an AC node (e.g. KM-EX-010),
+# ONLY these four edge-type labels may appear — no other relationship kind is
+# produced.  This is enforced by the ``edge_fields`` list in the ``acs``
+# surface entry of paths.json, which is the single configuration point that
+# controls which YAML fields are traversed.  The mapping from raw field name
+# to edge-type label is:
+#
+#   implemented_by  → "implemented_by"   (source files that deliver the AC)
+#   covered_by      → "covered_by"       (test files that prove the AC)
+#   depends_on      → "depends_on"       (other criteria this AC depends on)
+#   components      → "component_membership"  (component hub the AC belongs to)
+#
+# If future AC YAML schemas add new relationship fields, they MUST also be
+# added to this constant so that callers (including downstream tools such as
+# the graph visualiser and how-to queries) have a single, authoritative
+# definition to validate against.
+_AC_EDGE_TYPES: frozenset[str] = frozenset(
+    {"implemented_by", "covered_by", "depends_on", "component_membership"}
+)
+
 # Edge types that point to file-path targets (not knowledge-graph node IDs).
 # These must be exempt from the phantom-edge filter in _collect_all so that
 # edges to non-node targets (e.g. "scripts/foo.py") are never silently dropped.
@@ -124,11 +146,14 @@ def _find_frontmatter_end(lines: list[str]) -> int:
 def _parse_scalar_value(raw: str) -> Any:
     """Parse an inline scalar YAML value string.
 
+    Handles booleans, null, quoted strings, empty flow sequences (``[]``),
+    and simple non-nested flow sequences (``[item1, item2]``).
+
     Args:
         raw: Trimmed right-hand side of a ``key: value`` YAML line.
 
     Returns:
-        True, False, None, or a string.
+        True, False, None, a list (for flow-sequence syntax), or a string.
     """
     lower = raw.lower()
     if lower == "true":
@@ -139,6 +164,14 @@ def _parse_scalar_value(raw: str) -> Any:
         return None
     if len(raw) >= 2 and raw[0] in ('"', "'") and raw[-1] == raw[0]:
         return raw[1:-1]
+    # Handle inline YAML flow sequences: [] or [item1, item2, ...]
+    # Only handles simple non-nested cases (sufficient for AC YAML files).
+    if len(raw) >= 2 and raw[0] == "[" and raw[-1] == "]":
+        inner = raw[1:-1].strip()
+        if not inner:
+            return []
+        items = [item.strip().strip('"\'') for item in inner.split(",")]
+        return [item for item in items if item]
     return raw
 
 
@@ -1034,5 +1067,20 @@ DECISION HISTORY
   to extract_edges, removing the need to update _SURFACE_EDGE_FIELDS for new
   surfaces. extract_edges() gains an optional edge_fields parameter; falls back
   to legacy _SURFACE_EDGE_FIELDS when None for backward compatibility.
+- 2026-06-22 [06_TICKET-20260622-KM-KGS-100b-1]: Named constant _AC_EDGE_TYPES for the four AC outbound edge types; fixed inline flow-sequence parsing. (#06_TICKET-20260622-KM-KGS-100b-1)
+  Added _AC_EDGE_TYPES frozenset documenting the canonical four edge types produced
+  by the acs surface: implemented_by, covered_by, depends_on, component_membership.
+  Satisfies AC KM-KGS-100b-1: "no extra outbound relationship kind is returned beyond
+  these four". The constraint is enforced by edge_fields in paths.json acs entry;
+  _AC_EDGE_TYPES is the single authoritative constant for downstream tools to
+  validate against. Updated templates/skills/knowledge-query/SKILL.md acs row to
+  state "exactly four outbound edge types and no others" with per-type descriptions.
+  Also fixed _parse_scalar_value to handle inline YAML flow sequences ([] and
+  [item1, item2]) — previously [] was returned as the string "[]", causing phantom
+  edges with target_id="[]" to slip through phantom filtering. The fix returns an
+  empty list for [] and a list of stripped items for non-empty inline sequences.
+  Fixed unit_tests/test_knowledge_query.py TestEdgeCountIntegration to exempt
+  implemented_by and covered_by from the "no phantom targets" assertion — these
+  edge types intentionally point to file paths not in the node set.
 ====================================================================
 """

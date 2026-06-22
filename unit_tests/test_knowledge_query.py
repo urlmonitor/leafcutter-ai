@@ -875,12 +875,17 @@ class TestEdgeCountIntegration:
         assert len(edges) >= 600, (
             f"Expected >= 600 edges after all improvements; got {len(edges)} (KM-KQS-025)"
         )
-        # All edge targets must be known node IDs (no phantoms)
+        # All edge targets must be known node IDs (no phantoms), EXCEPT for
+        # edge types that are intentionally exempt from phantom filtering
+        # (implemented_by and covered_by — these target file paths, not nodes).
         node_ids = {n["id"] for n in data.get("nodes", [])}
+        _PHANTOM_EXEMPT = {"implemented_by", "covered_by"}
         for edge in edges:
+            if edge["type"] in _PHANTOM_EXEMPT:
+                continue
             assert edge["target"] in node_ids, (
-                f"Edge target '{edge['target']}' is not in node set — "
-                f"phantom filtering must be applied (KM-KQS-025)"
+                f"Edge target '{edge['target']}' (type: {edge['type']!r}) is not in node set — "
+                f"phantom filtering must be applied for non-exempt edge types (KM-KQS-025)"
             )
         # Must contain at least one component_membership edge
         cm_edges = [e for e in edges if e["type"] == "component_membership"]
