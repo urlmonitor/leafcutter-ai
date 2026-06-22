@@ -1,0 +1,65 @@
+id: BP-900e-5
+readiness: approved
+priority: high
+title: "The registry-completeness check fires at the finalize merge gate, not the build preflight"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: not_started
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900e.yaml"
+criteria: |
+  Given an epic branch is being finalized for merge
+  And the branch contains a hook registered in commit_guardian.json with no
+    deploy-source copy under templates/scripts/
+  When the finalize-feature merge flow runs its gates
+  Then the registry-completeness check runs in the same enforcement position as
+    the existing source-to-template parity gate (after merge-origin/main, before
+    the pull-request merge step)
+  And on a registry-completeness violation the finalize flow HALTs and surfaces
+    the violation to the user, never reaching the pull-request merge step
+  And the registry-completeness check is NOT run as part of the build.py
+    preflight (the build.py preflight script-reference guard, which scans
+    template references against the deployable manifest, remains a separate
+    PREFLIGHT check that does not read commit_guardian.json)
+  And when the branch has no registry-completeness violation the finalize flow
+    proceeds past this gate to the pull-request merge step
+depends_on:
+  - BP-900e
+  - BP-900e-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900e.yaml"
+    relationship: parent
+    status: exists
+  - path: templates/workflows-js/finalize-feature.js
+    relationship: describes
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000b.yaml"
+    relationship: describes
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900b.yaml"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Wire the registry-completeness check into the finalize-feature merge flow (templates/workflows-js/finalize-feature.js) at the same position as the BP-1000 parity gate: after the merge-origin/main step and before the pull-request merge step. On violation, HALT and surface to the user; do not reach the PR-merge step. Mirror the existing finalize HALT shape (the Step 3 test-regression HALT) for the abort path."
+  - "This is a MERGE-GATE check, deliberately distinct from BP-900b's build.py preflight script-reference guard. The preflight guard reads template references only and does NOT read commit_guardian.json; this check adds the registry source of truth at the merge gate. Do not relocate BP-900b's preflight, and do not duplicate its template-reference scan here beyond the registry axis."
+  - "The registry-completeness check shares the finalize merge gate's invocation point with the BP-1000 parity gate but emits its findings as a separate, distinctly-LABELLED class so a reader can tell a missing-copy failure (this check) from a byte-drift failure (BP-1000). When both gates emit structured (JSONL) gap/drift reports, the two report streams carry distinct class labels and must not be merged into one undifferentiated failure list."
+delivers_to: null
+expects_from:
+  ac_id: BP-900e-1
+  contract: "The registry-completeness verdict { ok, items:[...] } whose ok/violation outcome drives the halt-vs-proceed branch at the merge gate; emitted as a distinctly-labelled class alongside (not merged into) the BP-1000a-1 byte-parity verdict at the same gate."
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RegistryCompletenessGate/07_TICKET-20260622-BP-900e-5.md
