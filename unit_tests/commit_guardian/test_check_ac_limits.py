@@ -625,15 +625,6 @@ class TestAgentTemplatesSkillsUsed(unittest.TestCase):
             msg="Expected 'ac-tree-split' in product-owner.md skills_used",
         )
 
-    def test_business_analyst_v3_has_ac_tree_split(self) -> None:
-        """business-analyst.md must include ac-tree-split in skills_used."""
-        content = self._read_agent("business-analyst.md")
-        self.assertIn(
-            "ac-tree-split",
-            content,
-            msg="Expected 'ac-tree-split' in business-analyst.md skills_used",
-        )
-
     def test_product_owner_v3_skills_used_is_in_frontmatter(self) -> None:
         """skills_used must appear within the frontmatter block (between --- markers)."""
         content = self._read_agent("product-owner.md")
@@ -650,24 +641,6 @@ class TestAgentTemplatesSkillsUsed(unittest.TestCase):
             frontmatter,
             msg="'ac-tree-split' must be in the skills_used frontmatter of product-owner.md",
         )
-
-    def test_business_analyst_v3_skills_used_is_in_frontmatter(self) -> None:
-        """skills_used must appear within the frontmatter block (between --- markers)."""
-        content = self._read_agent("business-analyst.md")
-        parts = content.split("---", 2)
-        self.assertGreaterEqual(len(parts), 3, msg="No frontmatter found in business-analyst.md")
-        frontmatter = parts[1]
-        self.assertIn(
-            "skills_used",
-            frontmatter,
-            msg="'skills_used' must be in the frontmatter of business-analyst.md",
-        )
-        self.assertIn(
-            "ac-tree-split",
-            frontmatter,
-            msg="'ac-tree-split' must be in the skills_used frontmatter of business-analyst.md",
-        )
-
 
 class TestHookRegisteredInCommitGuardian(unittest.TestCase):
     """check_ac_limits.py must be registered in the hooks_manifest."""

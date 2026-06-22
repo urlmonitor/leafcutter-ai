@@ -64,16 +64,15 @@ sequenceDiagram
 ## Agent Spawn Graph
 
 <!-- BEGIN:AGENT_SPAWN_GRAPH -->
-<!-- registry-hash:7d2dc871 -->
+<!-- registry-hash:c6603636 -->
 ```mermaid
 graph TD
     subgraph Supervisors
         epic_supervisor["Epic Supervisor"]
         ticket_supervisor["Ticket Supervisor"]
-        create_ticket["Create Ticket"]
-        create_epic["Create Epic"]
         sql_coder["SQL Coder"]
         workflow_architect["Workflow Architect"]
+        finalize_feature["Finalize Feature"]
     end
     subgraph Phase Agents
         architect_review["Architect Review"]
@@ -81,19 +80,24 @@ graph TD
         test_writer["Test Writer"]
         test_runner["Test Runner"]
         documentation_expert["Documentation Expert"]
+        change_scope_reviewer["Change Scope Reviewer"]
         pr_reviewer["PR Reviewer"]
         commit["Commit"]
         pull_request["Pull Request"]
         status_checker["Status Checker"]
+        frontend_coder["Frontend Coder"]
         sql_query["SQL Query"]
         adr_author["ADR Author"]
         architecture_diagram_author["Architecture Diagram Author"]
         explanation_author["Explanation Author"]
         how_to_author["How-To Author"]
         reference_author["Reference Author"]
+        user_surface_smoker["User Surface Smoker"]
+        ac_validator["AC Validator"]
+        ac_fulfillment_gate["AC Fulfillment Gate"]
+        llm_expert["LLM Expert"]
     end
     subgraph Utility Agents
-        business_analyst["Business Analyst"]
         brainstorm_lead["Brainstorm Lead"]
         brainstorm_worker["Brainstorm Worker"]
         research_agent["Research Agent"]
@@ -101,22 +105,23 @@ graph TD
         worktree_agent["Worktree Agent"]
         changelog_agent["Changelog Agent"]
         retrospective_agent["Retrospective Agent"]
-        refinement["Refinement"]
+        feedback_analyst["Feedback Analyst"]
         sql_table_creator["SQL Table Creator"]
         sql_test_writer["SQL Test Writer"]
         sql_procedure_creator["SQL Procedure Creator"]
         sql_function_creator["SQL Function Creator"]
         sql_index_creator["SQL Index Creator"]
         sql_view_creator["SQL View Creator"]
-        database_agent["Database Agent"]
-        prod_deploy["Prod Deploy"]
-        reporting_agent["Reporting Agent"]
-        strategy_builder["Strategy Builder"]
         architect_review_deep["Architect Review Deep"]
-        architecture_author["Architecture Author"]
         conflict_resolver_deep["Conflict Resolver Deep"]
-        onboarding_agent["Onboarding Agent"]
-        rollback_agent["Rollback Agent"]
+        glossary_triage["Glossary Triage"]
+        onboard["Onboard Install Wizard"]
+        onboard_config_section["Onboard Config Section Sub-agent"]
+        test_failure_triage["Test Failure Triage"]
+        product_owner["Product Owner"]
+        build_ac["Build AC"]
+        ac_triage["AC Triage"]
+        knowledge_harvester["Knowledge Harvester"]
     end
     epic_supervisor --> ticket_supervisor
     epic_supervisor --> retrospective_agent
@@ -127,24 +132,24 @@ graph TD
     ticket_supervisor --> test_writer
     ticket_supervisor --> test_runner
     ticket_supervisor --> documentation_expert
+    ticket_supervisor --> change_scope_reviewer
     ticket_supervisor --> pr_reviewer
     ticket_supervisor --> commit
     ticket_supervisor --> pull_request
     ticket_supervisor --> status_checker
     ticket_supervisor --> sql_coder
+    ticket_supervisor --> frontend_coder
     ticket_supervisor --> sql_query
     ticket_supervisor --> adr_author
     ticket_supervisor --> architecture_diagram_author
     ticket_supervisor --> explanation_author
     ticket_supervisor --> how_to_author
     ticket_supervisor --> reference_author
-    create_ticket --> business_analyst
-    create_ticket --> refinement
-    create_ticket --> architect_review
-    create_ticket --> create_epic
-    create_epic --> business_analyst
-    create_epic --> create_ticket
-    business_analyst --> research_agent
+    ticket_supervisor --> user_surface_smoker
+    ticket_supervisor --> ac_validator
+    ticket_supervisor --> ac_fulfillment_gate
+    ticket_supervisor --> llm_expert
+    ticket_supervisor --> llm_expert
     brainstorm_lead --> brainstorm_worker
     architect_review --> research_agent
     architect_review --> architect_review_deep
@@ -154,11 +159,11 @@ graph TD
     test_writer --> test_runner
     documentation_expert --> research_agent
     documentation_expert --> adr_author
-    documentation_expert --> architecture_author
     documentation_expert --> architecture_diagram_author
     documentation_expert --> explanation_author
     documentation_expert --> how_to_author
     documentation_expert --> reference_author
+    documentation_expert --> glossary_triage
     pull_request --> conflict_resolver
     conflict_resolver --> conflict_resolver_deep
     status_checker --> research_agent
@@ -171,6 +176,7 @@ graph TD
     sql_coder --> sql_test_writer
     sql_coder --> research_agent
     sql_coder --> python_coder
+    frontend_coder --> research_agent
     sql_table_creator --> research_agent
     sql_query --> research_agent
     sql_test_writer --> research_agent
@@ -178,12 +184,17 @@ graph TD
     sql_function_creator --> research_agent
     sql_index_creator --> research_agent
     sql_view_creator --> research_agent
-    strategy_builder --> research_agent
+    finalize_feature --> pull_request
+    finalize_feature --> test_runner
+    finalize_feature --> test_failure_triage
+    finalize_feature --> status_checker
+    finalize_feature --> worktree_agent
+    reference_author --> research_agent
+    onboard --> onboard_config_section
+    llm_expert --> research_agent
+    build_ac --> ac_triage
     style epic_supervisor fill:#4a9eff,color:#fff
     style ticket_supervisor fill:#4a9eff,color:#fff
-    style create_ticket fill:#4a9eff,color:#fff
-    style create_epic fill:#4a9eff,color:#fff
-    style business_analyst fill:#888,color:#fff
     style brainstorm_lead fill:#888,color:#fff
     style brainstorm_worker fill:#888,color:#fff
     style research_agent fill:#888,color:#fff
@@ -192,7 +203,9 @@ graph TD
     style test_writer fill:#45b37a,color:#fff
     style test_runner fill:#45b37a,color:#fff
     style documentation_expert fill:#45b37a,color:#fff
+    style change_scope_reviewer fill:#45b37a,color:#fff
     style pr_reviewer fill:#45b37a,color:#fff
+    style code_review_architect fill:#ccc
     style commit fill:#45b37a,color:#fff
     style pull_request fill:#45b37a,color:#fff
     style conflict_resolver fill:#888,color:#fff
@@ -200,8 +213,9 @@ graph TD
     style worktree_agent fill:#888,color:#fff
     style changelog_agent fill:#888,color:#fff
     style retrospective_agent fill:#888,color:#fff
-    style refinement fill:#888,color:#fff
+    style feedback_analyst fill:#888,color:#fff
     style sql_coder fill:#4a9eff,color:#fff
+    style frontend_coder fill:#45b37a,color:#fff
     style sql_table_creator fill:#888,color:#fff
     style sql_query fill:#45b37a,color:#fff
     style sql_test_writer fill:#888,color:#fff
@@ -209,32 +223,27 @@ graph TD
     style sql_function_creator fill:#888,color:#fff
     style sql_index_creator fill:#888,color:#fff
     style sql_view_creator fill:#888,color:#fff
-    style database_agent fill:#888,color:#fff
-    style prod_deploy fill:#888,color:#fff
-    style reporting_agent fill:#888,color:#fff
-    style strategy_builder fill:#888,color:#fff
     style workflow_architect fill:#4a9eff,color:#fff
+    style finalize_feature fill:#4a9eff,color:#fff
     style adr_author fill:#45b37a,color:#fff
     style architect_review_deep fill:#888,color:#fff
-    style architecture_author fill:#888,color:#fff
     style architecture_diagram_author fill:#45b37a,color:#fff
     style conflict_resolver_deep fill:#888,color:#fff
     style explanation_author fill:#45b37a,color:#fff
     style how_to_author fill:#45b37a,color:#fff
-    style onboarding_agent fill:#888,color:#fff
     style reference_author fill:#45b37a,color:#fff
-    style rollback_agent fill:#888,color:#fff
-    style database_agent stroke-dasharray: 5 5
-    style prod_deploy stroke-dasharray: 5 5
-    style reporting_agent stroke-dasharray: 5 5
-    style strategy_builder stroke-dasharray: 5 5
-    style architect_review_deep stroke-dasharray: 5 5
-    style architecture_author stroke-dasharray: 5 5
-    style architecture_diagram_author stroke-dasharray: 5 5
-    style conflict_resolver_deep stroke-dasharray: 5 5
-    style onboarding_agent stroke-dasharray: 5 5
-    style reference_author stroke-dasharray: 5 5
-    style rollback_agent stroke-dasharray: 5 5
+    style glossary_triage fill:#888,color:#fff
+    style user_surface_smoker fill:#45b37a,color:#fff
+    style onboard fill:#888,color:#fff
+    style onboard_config_section fill:#888,color:#fff
+    style test_failure_triage fill:#888,color:#fff
+    style ac_validator fill:#45b37a,color:#fff
+    style ac_fulfillment_gate fill:#45b37a,color:#fff
+    style llm_expert fill:#45b37a,color:#fff
+    style product_owner fill:#888,color:#fff
+    style build_ac fill:#888,color:#fff
+    style ac_triage fill:#888,color:#fff
+    style knowledge_harvester fill:#888,color:#fff
 ```
 <!-- END:AGENT_SPAWN_GRAPH -->
 

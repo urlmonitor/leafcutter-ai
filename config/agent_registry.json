@@ -1,9 +1,9 @@
 {
     "$schema": "./agent_registry.schema.json",
-    "_comment": "Single source of truth for all agents in the leafcutter ecosystem. When adding a new agent: (1) add an entry here, (2) create the template file, (3) run build.py --validate to confirm bidirectional consistency. business-analyst reads this file to build the agents: map for new tickets. trigger_conditions use the two-tier format per ADR-018: type=dsl for mechanically-evaluable rules, type=llm for natural-language judgment calls.",
+    "_comment": "Single source of truth for all agents in the leafcutter ecosystem. When adding a new agent: (1) add an entry here, (2) create the template file, (3) run build.py --validate to confirm bidirectional consistency. trigger_conditions use the two-tier format per ADR-018: type=dsl for mechanically-evaluable rules, type=llm for natural-language judgment calls.",
     "self_description_enforcement": "error",
     "agent_categories": {
-        "_comment": "Defines the five canonical agent categories and their default constraints. Each agent entry may carry a 'category' field referencing one of these keys. Per-agent explicit field values always override these category defaults. The 'category' field is additive to (not a replacement for) the existing 'tier' field: 'tier' describes supervisor-hierarchy role (phase/supervisor/utility); 'category' describes functional domain for capability inference. Category mapping for common agents: python-coder/sql-coder/frontend-coder/documentation-expert -> implementation; architect-review/pr-reviewer/business-analyst/it-po -> planning; test-writer/test-runner -> testing; research-agent -> research; ticket-supervisor/create-epic/create-ticket -> supervisor.",
+        "_comment": "Defines the five canonical agent categories and their default constraints. Each agent entry may carry a 'category' field referencing one of these keys. Per-agent explicit field values always override these category defaults. The 'category' field is additive to (not a replacement for) the existing 'tier' field: 'tier' describes supervisor-hierarchy role (phase/supervisor/utility); 'category' describes functional domain for capability inference. Category mapping for common agents: python-coder/sql-coder/frontend-coder/documentation-expert -> implementation; architect-review/pr-reviewer -> planning; test-writer/test-runner -> testing; research-agent -> research; ticket-supervisor -> supervisor.",
         "implementation": {
             "default_tools": [
                 "Bash",
@@ -291,7 +291,6 @@
             "spawn_allowlist": [],
             "spawned_by": [
                 "architect-review",
-                "business-analyst",
                 "python-coder",
                 "documentation-expert",
                 "reference-author",
@@ -2783,86 +2782,6 @@
                 {
                     "channel": 4,
                     "source": "pre-flight file reads"
-                },
-                {
-                    "channel": 6,
-                    "source": "project files read during execution"
-                },
-                {
-                    "channel": 7,
-                    "source": "bash command output (git, build, tests)"
-                },
-                {
-                    "channel": 8,
-                    "source": "PROJECT_CONTEXT.md"
-                }
-            ],
-            "produces": "analysis"
-        },
-        {
-            "id": "business-analyst",
-            "name": "Business Analyst",
-            "tier": "utility",
-            "role": "analysis",
-            "portable": true,
-            "domain": null,
-            "spawn_allowlist": [
-                "research-agent"
-            ],
-            "spawned_by": [],
-            "is_ticket_phase": false,
-            "selection_criteria": null,
-            "template_path": "templates/agents/business-analyst.md",
-            "model": "opus",
-            "skills_used": [
-                "knowledge-query"
-            ],
-            "description": "Business Analyst for v3 ticket-creation pipeline. Operates at L2/L3 flight level: decomposes L1 feature ACs into testable Gherkin behaviors and edge-case specifications. Produces AC YAML files.",
-            "category": "planning",
-            "skills_invoked": [],
-            "knowledge_channels": [
-                {
-                    "channel": 1,
-                    "source": "template description field"
-                },
-                {
-                    "channel": 6,
-                    "source": "project files read during execution"
-                },
-                {
-                    "channel": 7,
-                    "source": "bash command output (git, build, tests)"
-                },
-                {
-                    "channel": 8,
-                    "source": "PROJECT_CONTEXT.md"
-                }
-            ],
-            "produces": "analysis"
-        },
-        {
-            "id": "it-po",
-            "name": "IT Product Owner",
-            "tier": "utility",
-            "role": "analysis",
-            "portable": true,
-            "domain": null,
-            "spawn_allowlist": [],
-            "spawned_by": [],
-            "is_ticket_phase": false,
-            "selection_criteria": null,
-            "template_path": "templates/agents/it-po.md",
-            "model": "opus",
-            "skills_used": [
-                "knowledge-query"
-            ],
-            "description": "IT Product Owner for v3 ticket-creation pipeline. Enriches L2/L3 AC YAML files with technical fields: assigned_agent, it_requirements, estimated_complexity, delivers_to/expects_from contracts, and doc_links.",
-            "category": "planning",
-            "skills_invoked": [],
-            "knowledge_channels": [
-                {
-                    "channel": 1,
-                    "source": "template description field"
                 },
                 {
                     "channel": 6,
