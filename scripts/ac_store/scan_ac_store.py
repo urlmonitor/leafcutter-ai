@@ -17,10 +17,11 @@ Options:
 
 Exit codes:
     0  Success (even when no ACs match the filter — empty is valid).
+       Dependency cycles confined to one component subtree are surfaced as
+       WARNINGs on stderr and the acyclic remainder is still ranked and
+       emitted (ACD-1200c-3).
     1  One or more AC YAML files could not be read or parsed. A per-file
        diagnostic is written to stderr for each bad file.
-    2  A dependency cycle was detected in the depends_on graph. The cycle
-       description is written to stderr.
 
 AC-1: Leaf scanner identifies todo, unblocked L2/L3 ACs.
 AC-5: Scanner JSON output is machine-consumable.
@@ -443,6 +444,9 @@ def _load_ac_by_id(ac_store_root: Path, ac_id: str) -> AcRecord | None:
 def traverse_ac_tree(
     root_id: str,
     ac_store_root: Path,
+    *,
+    exclude_done: bool = True,
+    exclude_superseded: bool = True,
 ) -> list[str]:
     """Return the ordered list of leaf AC ids beneath *root_id*.
 
@@ -467,9 +471,27 @@ def traverse_ac_tree(
     Performance: completes in under 200ms for trees up to 200 nodes when each
     AC YAML is small (< 4 KB) and *ac_store_root* is on a local filesystem.
 
+    ACD-1200a-10: Exclusion flags filter collected leaf nodes.
+
+    When ``exclude_done=True`` (default), leaf nodes whose ``work_status`` is
+    ``"done"`` are omitted from the result list.
+
+    When ``exclude_superseded=True`` (default), leaf nodes whose ``status``
+    starts with ``"superseded"`` are omitted from the result list.  Traversal
+    still recurses into those nodes' ``covered_by`` children so that replacement
+    ACs are collected even though their superseded parent is skipped.
+
+    When both flags are ``False``, all leaves are collected as before
+    (backward-compatible).
+
     Args:
         root_id: The AC id to start traversal from (may be L0, L1, or deeper).
         ac_store_root: Absolute path to the root of the AC YAML store.
+        exclude_done: When ``True`` (default), omit leaves with
+            ``work_status == "done"`` from the result.
+        exclude_superseded: When ``True`` (default), omit leaves whose
+            ``status`` starts with ``"superseded"`` from the result.
+            Traversal still recurses into their ``covered_by`` children.
 
     Returns:
         Ordered list of leaf AC ids, depth-first alphabetical-sibling order.
@@ -493,7 +515,14 @@ def traverse_ac_tree(
 
     leaves: list[str] = []
     seen: set[str] = set()
-    _dfs_collect_leaves(root_id, id_index, leaves, seen)
+    _dfs_collect_leaves(
+        root_id,
+        id_index,
+        leaves,
+        seen,
+        exclude_done=exclude_done,
+        exclude_superseded=exclude_superseded,
+    )
     return leaves
 
 
@@ -502,6 +531,9 @@ def _dfs_collect_leaves(
     id_index: dict[str, AcRecord],
     result: list[str],
     seen: set[str],
+    *,
+    exclude_done: bool = True,
+    exclude_superseded: bool = True,
 ) -> None:
     """Recursive DFS helper that appends leaf ids to *result*.
 
@@ -510,12 +542,22 @@ def _dfs_collect_leaves(
     the function returns immediately.  This prevents duplicate emissions when a
     node is reachable by more than one covered_by path (ACD-1200a-9-i).
 
+    ACD-1200a-10: When *exclude_done* is ``True``, leaf nodes whose
+    ``work_status`` is ``"done"`` are not appended to *result*.  When
+    *exclude_superseded* is ``True``, leaf nodes whose ``status`` starts with
+    ``"superseded"`` are not appended to *result*, but traversal still recurses
+    into their ``covered_by`` children so replacement ACs are collected.
+
     Args:
         node_id: Current AC id being visited.
         id_index: Full id-to-record mapping built from the AC store.
         result: Accumulator list — leaf ids are appended here in traversal order.
         seen: Set of already-visited node ids; mutated in place to guard against
             re-traversal.  First-visit order wins.
+        exclude_done: When ``True`` (default), omit leaves with
+            ``work_status == "done"`` from *result*.
+        exclude_superseded: When ``True`` (default), omit superseded leaves
+            from *result* while still recursing into their children.
     """
     if node_id in seen:
         return
@@ -527,15 +569,36 @@ def _dfs_collect_leaves(
 
     level: str = record.get("level", "")
     children: list[str] = record.get("covered_by") or []
+    status: str = record.get("status", "")
+    work_status: str = record.get("work_status", "")
 
-    # L2 and L3 are always leaves — emit them regardless of covered_by.
+    # Determine whether this node is superseded (status starts with "superseded").
+    is_superseded = status.startswith("superseded")
+
+    # L2 and L3 are always leaves — emit them unless an exclusion flag applies.
     # L0/L1 nodes are composites and must never be emitted as leaves.
     if level in _LEAF_LEVELS:
-        result.append(node_id)
+        # Apply exclusion filters before appending.
+        emit = True
+        if exclude_done and work_status == "done":
+            emit = False
+        if exclude_superseded and is_superseded:
+            emit = False
+        if emit:
+            result.append(node_id)
 
     # Recurse into covered_by children for any level that has them.
+    # NOTE: we always recurse even for superseded nodes so that replacement
+    # children (listed in covered_by) are still collected (ACD-1200a-10).
     for child_id in sorted(children):
-        _dfs_collect_leaves(child_id, id_index, result, seen)
+        _dfs_collect_leaves(
+            child_id,
+            id_index,
+            result,
+            seen,
+            exclude_done=exclude_done,
+            exclude_superseded=exclude_superseded,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -765,6 +828,43 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _drain_cycles(
+    id_index: dict[str, AcRecord],
+    all_records: list[AcRecord],
+) -> None:
+    """Remove all dependency-cycle nodes from *id_index* and *all_records* in place.
+
+    Repeatedly detects the first cycle found, emits a WARNING to stderr naming
+    the cyclic AC IDs, removes those nodes from both *id_index* and
+    *all_records*, and loops until the graph is acyclic.  This allows the
+    store-wide scan to continue with the acyclic remainder (ACD-1200c-3).
+
+    Args:
+        id_index: Full id-to-record mapping; mutated in place — cyclic entries
+            are deleted.
+        all_records: Master list of all loaded AC records; mutated in place —
+            records whose id is in a cycle are removed.
+    """
+    while True:
+        cycle = _detect_cycle(id_index)
+        if cycle is None:
+            break
+        # Deduplicate cycle ids (the path may repeat the start node at end).
+        cyclic_ids: list[str] = list(dict.fromkeys(cycle))
+        print(
+            f"WARNING: dependency cycle detected (store-wide scan continues with "
+            f"acyclic ACs): {' → '.join(cycle)}",
+            file=sys.stderr,
+        )
+        for ac_id in cyclic_ids:
+            id_index.pop(ac_id, None)
+        # Remove cyclic records from all_records in place.
+        cyclic_set = set(cyclic_ids)
+        for i in range(len(all_records) - 1, -1, -1):
+            if all_records[i].get("id") in cyclic_set:
+                del all_records[i]
+
+
 def main(argv: list[str] | None = None) -> int:
     """Entry point for scan_ac_store.py.
 
@@ -772,7 +872,9 @@ def main(argv: list[str] | None = None) -> int:
         argv: Command-line arguments (default: sys.argv[1:]).
 
     Returns:
-        Exit code: 0 on success, 1 on YAML errors, 2 on dependency cycle.
+        Exit code: 0 on success (dependency cycles are surfaced as WARNINGs
+        and the acyclic remainder is still ranked and emitted), 1 on YAML
+        errors.
     """
     parser = _build_parser()
     args = parser.parse_args(argv)
@@ -810,14 +912,10 @@ def main(argv: list[str] | None = None) -> int:
     # Build id index for dependency resolution
     id_index = _build_id_index(all_records)
 
-    # Cycle detection
-    cycle = _detect_cycle(id_index)
-    if cycle is not None:
-        print(
-            f"ERROR: dependency cycle detected: {' → '.join(cycle)}",
-            file=sys.stderr,
-        )
-        return 2
+    # Cycle detection — drain all cycles, emitting a WARNING per cycle and
+    # removing cyclic nodes so the acyclic remainder can still be ranked.
+    # ACD-1200c-3: store-wide scan must NOT hard-abort on a subtree cycle.
+    _drain_cycles(id_index, all_records)
 
     # Filter: level + work_status + status + readiness (approved only)
     filtered: list[AcRecord] = []
@@ -891,5 +989,25 @@ DECISION HISTORY
   composite's depends_on list. Returns a list of BehaviorLayer dicts with
   keys: layer, ac_id, criteria, source. Composition depth is visible
   through the two standard fields alone — no additional mechanism required.
+- 2026-06-22 [TICKET-20260622-ACD-1200a-10]: Added exclude_done and
+  exclude_superseded parameters to traverse_ac_tree() and
+  _dfs_collect_leaves() (ACD-1200a-10). Both default to True.
+  When exclude_done=True, leaf nodes with work_status=="done" are omitted.
+  When exclude_superseded=True, leaf nodes whose status starts with
+  "superseded" are omitted from the result but traversal still recurses
+  into their covered_by children so replacement ACs are collected. When
+  both flags are False, all leaves are collected as before (backward-
+  compatible). The caller in goal_to_epic.py uses the default signature
+  and gets the new filtered behaviour automatically.
+- 2026-06-22 [TICKET-20260622-ACD-1200c-3]: Implemented cycle-degrades-to-
+  warning behaviour (ACD-1200c-3). Added _drain_cycles() helper that
+  iteratively detects dependency cycles, emits a WARNING per cycle naming
+  the cyclic AC IDs, removes those nodes from the id_index and all_records,
+  and repeats until the graph is acyclic. main() now calls _drain_cycles()
+  instead of hard-aborting (exit 2) on cycle detection. The acyclic
+  remainder is still ranked and emitted; exit code remains 0. The scoped
+  build guard in goal_to_epic.py (CyclicDependencyError from
+  topological_sort) is NOT weakened — it still hard-fails for intra-scope
+  cycles (ACD-1200c-1-i preserved).
 ====================================================================
 """
