@@ -1,0 +1,60 @@
+id: BP-900e-2
+readiness: approved
+priority: high
+title: "A registered hook that does have a template copy passes without a false alarm"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: not_started
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900e.yaml"
+criteria: |
+  Given the commit-guardian hook registry registers a hook whose entry resolves
+    to scripts/commit_guardian/check_ac_schema.py
+  And a deploy-source copy exists at
+    templates/scripts/commit_guardian/check_ac_schema.py
+  And every other registered hook also has a deploy-source copy under
+    templates/scripts/
+  And no deployable template references a script that lacks a template copy
+  When the registry-completeness check runs at the finalize merge gate
+  Then the check reports no registry-completeness violations
+  And check_ac_schema.py does not appear in any promised-but-undeployed list
+  And the merge gate is not blocked by this check
+  And the check does NOT inspect whether the existing template copy is
+    byte-identical to its source (that comparison is owned by BP-1000a-1, not
+    by this check)
+depends_on:
+  - BP-900e
+  - BP-900e-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900e.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000a-1.yaml"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "A registered script is satisfied for THIS check the moment any deploy-source copy exists at its derived templates/scripts/ path — presence is sufficient; content equality is explicitly out of scope (BP-1000a-1 owns byte parity)."
+  - "Make the seam against BP-1000 concrete in a test: a registered script whose template copy exists but DIFFERS byte-for-byte must pass this completeness check (and would be caught instead by the BP-1000 parity gate). This check and BP-1000 must not both claim the same finding."
+  - "Consume the verdict produced by BP-900e-1's check rather than re-deriving the registered set independently."
+delivers_to: null
+expects_from:
+  ac_id: BP-900e-1
+  contract: "The registry-completeness verdict object { ok, items:[{ script_path, promised_by, registry_entry_id, referencing_template, expected_template_path }] }; the empty-list (ok=true) case is the pass path asserted here."
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

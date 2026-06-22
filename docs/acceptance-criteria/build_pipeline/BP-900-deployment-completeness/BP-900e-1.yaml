@@ -1,0 +1,70 @@
+id: BP-900e-1
+readiness: approved
+priority: high
+title: "A hook registered in commit_guardian.json with no template copy fails the registry-completeness gate"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: not_started
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900e.yaml"
+criteria: |
+  Given the commit-guardian hook registry
+    (scripts/commit_guardian/commit_guardian.json) registers a hook whose entry
+    resolves to the script path scripts/commit_guardian/check_test_fixture_bloat.py
+  And that script exists under scripts/commit_guardian/
+  And no copy of that script exists anywhere under templates/scripts/
+    (specifically templates/scripts/commit_guardian/check_test_fixture_bloat.py
+    is absent)
+  And the registry also registers a hook resolving to
+    scripts/commit_guardian/hooks/check_agent_spawn_consistency.py
+  And no copy exists under
+    templates/scripts/commit_guardian/hooks/check_agent_spawn_consistency.py
+  When the registry-completeness check runs at the finalize merge gate
+  Then the check fails the merge gate
+  And the failure names both check_test_fixture_bloat.py and
+    check_agent_spawn_consistency.py as registered-but-undeployed scripts
+  And the merge stays blocked until each named script has a deploy-source copy
+    under templates/scripts/ (or its registration is removed)
+depends_on:
+  - BP-900e
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900e.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: exists
+  - path: scripts/build_propagation_audit.py
+    relationship: extends
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Read the registered hook set from the hooks_manifest in the commit-guardian registry (scripts/commit_guardian/commit_guardian.json); resolve each entry's script path handling the run_hook.py wrapper form and any {{config.output_root}} placeholder, consistent with the resolution already done by BP-100b-11."
+  - "For each resolved registered script path, derive the expected deploy-source path by mapping the scripts/ prefix to templates/scripts/ (preserving any sub-path such as commit_guardian/hooks/). The script is registered-but-undeployed when NO file exists at that derived templates/scripts/ path."
+  - "check_test_fixture_bloat.py and hooks/check_agent_spawn_consistency.py are the live regression fixtures — the check MUST flag both as of the present state of the tree, and a regression test must pin this."
+  - "Distinct from BP-100b-11 (registry entry -> script exists within its OWN tree) and from BP-1000a-1 (byte equality of scripts present in BOTH trees). This check fires only when the template-side copy is entirely ABSENT. Do not reuse the BP-1000 byte-diff path for this determination."
+  - "Read registry and template-root paths from configuration; do not hardcode them. Exit non-zero only on a detected completeness violation; fail-open (warn + pass) on unexpected I/O or parse errors per the project error-handling policy."
+  - "This verdict is the SINGLE load-bearing producer for the BP-900e tree: BP-900e-2, -3, -4, -5, -1-i, and -3-i all consume it. The verdict item shape must encode BOTH promise origins (registry hook AND template reference) so the downstream reporter (BP-900e-4) and the template-reference L3 (BP-900e-1-i) are satisfiable from one verdict, rather than each consumer re-scanning the tree."
+  - "At the finalize merge gate this completeness verdict is emitted as a DISTINCTLY-LABELLED finding class, separate from the BP-1000a-1 byte-parity verdict ({ ok, pairs:[...] }) that runs at the same gate. A missing-template-copy failure (this check) and a byte-drift failure (BP-1000) must never be reported as the same finding; co-locate the gate invocation but keep the two verdict outputs and their labels distinct so a reader can tell them apart."
+delivers_to:
+  agent: python-coder
+  contract: "A registry-completeness verdict object listing each promised-but-undeployed script as { script_path: str, promised_by: 'registry'|'template', registry_entry_id: str|null, referencing_template: str|null, expected_template_path: str } where script_path and expected_template_path are repo-root-relative POSIX paths, registry_entry_id is the hook id when promised_by='registry' (else null), and referencing_template is the referencing deployable template path when promised_by='template' (else null); ok=true iff the list is empty. Emitted at the finalize merge gate as a distinctly-labelled completeness class, separate from the BP-1000a-1 byte-parity verdict that runs at the same gate. Consumed by the failure reporter BP-900e-4, the pass case BP-900e-2, the no-false-positive scope assertion BP-900e-3, the merge-gate placement BP-900e-5, the template-reference axis BP-900e-1-i, and the allowlist exemption BP-900e-3-i."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-900e-1-i
+implemented_by: []
