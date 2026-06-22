@@ -20,11 +20,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import re
 import sys
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any, NamedTuple
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -567,10 +570,18 @@ def _extract_nodes_from_dir(surface: str, path: Path) -> Generator[NodeRecord, N
             continue
         try:
             text = yaml_file.read_text(encoding="utf-8")
-        except OSError:
+        except OSError as exc:
+            logger.warning("Skipping unreadable YAML file %s: %s", yaml_file, exc)
             continue
         fields = _parse_yaml_file(text)
-        node_id = str(fields.get("id") or yaml_file.stem)
+        raw_id = fields.get("id")
+        if not raw_id:
+            logger.warning(
+                "Skipping YAML file %s: no 'id' field found (file may be non-criterion or unparseable)",
+                yaml_file,
+            )
+            continue
+        node_id = str(raw_id)
         title = str(fields.get("title") or yaml_file.stem)
         description = str(fields.get("description") or "")
         yield NodeRecord(
@@ -984,6 +995,13 @@ DECISION HISTORY
   (AC-7). NodeRecord/EdgeRecord NamedTuples. CLI flags: --query, --surface,
   --format, --edges, --project-root. Stdlib-only (AC-1). Clean error when
   paths.json absent (AC-6). render_text and render_json as separate functions.
+- 2026-06-22 [03_TICKET-20260622-KM-KGS-100a-2-i]: Skip YAML files with no id field in _extract_nodes_from_dir. (#03_TICKET-20260622-KM-KGS-100a-2-i)
+  Added import logging and a module-level logger. Updated _extract_nodes_from_dir to skip
+  YAML files where _parse_yaml_file returns no 'id' field — covers both "file with no id
+  field" and "unparseable file" cases (both yield an empty or id-less dict). Emits a
+  logger.warning per skipped file. Valid criterion files with an id field are unaffected.
+  Also tightened the OSError except block in the YAML read path to log the exception
+  instead of silently continuing (error handling policy compliance).
 - 2026-06-22 [02_TICKET-20260622-KM-KGS-100a-2]: AC YAML node extraction in _extract_nodes_from_dir. (#02_TICKET-20260622-KM-KGS-100a-2)
   Added _parse_yaml_file() — a stdlib-only plain-YAML parser (no --- delimiters) that
   handles scalar values, block-scalar (|/>), and block-list items. Updated
