@@ -4,7 +4,7 @@ agents:
   commit: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  pull-request: needed
+  pull-request: signed_off
   python-coder: signed_off
   sql-coder: not_needed
   test-runner: signed_off
@@ -137,6 +137,13 @@ completion_manifest:
   commit_issued: true
 All 4 files staged (scripts/workflows/plan-feature.js, templates/workflows-js/plan-feature.js, unit_tests/test_commit_stage_output_staging.py, ticket). Frontmatter updated commit: signed_off; Sign-offs checkbox checked. Commit issued with the authorized message.
 
+### 2026-06-22 17:00 — pull-request (status: ok)
+feedback-id: fb_2026-06-22_c603ff4a
+completion_manifest:
+  branch_pushed_to_existing_pr: true
+  pr_114_confirmed_open: true
+Branch EPIC-CommitAcOutputPerStage pushed to origin (9a303a8..d2593c2). PR #114 ("feat(plan-feature): commit approved AC stage output before next dispatch (ACD-300g-1)") is confirmed OPEN and updated with ticket 08 changes.
+
 ### 2026-06-22 14:30 — test-writer (status: ok)
 feedback-id: fb_2026-06-22_980056e0
 completion_manifest:
@@ -159,7 +166,7 @@ Wrote `unit_tests/test_commit_stage_output_staging.py` (9 tests across 3 classes
 - [x] test-runner — 2026-06-22 15:30
 - [x] pr-reviewer — 2026-06-22 16:00
 - [x] commit — 2026-06-22 16:30
-- [ ] pull-request
+- [x] pull-request — 2026-06-22 17:00
 
 ## Risk & Safety
 - Touches money? No.
