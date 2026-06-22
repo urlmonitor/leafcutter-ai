@@ -5,14 +5,16 @@ GOAL: Single-pass traversal of all knowledge surfaces defined in paths.json.
 BUSINESS CONTEXT: Gives agents and humans a one-command answer to
     "show me everything related to X" across all leafcutter knowledge surfaces.
     Reads paths.json for surface discovery, traverses tickets, ADRs, docs,
-    agents, skills, components, roadmap, glossary, and feedback in a single
-    pass, extracts a one-line description for every node, follows cross-surface
-    edges, and dumps a flat index in both human-readable text and JSON format.
-ARCHITECTURE: Three public functions (load_surfaces, extract_nodes,
-    extract_edges) and a CLI entry point. Surface discovery driven by paths.json;
-    no surface path is hardcoded. All file I/O wrapped in try/except with
-    specific exception types (repo error-handling policy). Stdlib-only: no
-    third-party dependencies.
+    agents, skills, components, roadmap, glossary, acs, and feedback in a
+    single pass, extracts a one-line description for every node, follows
+    cross-surface edges, and dumps a flat index in both human-readable text
+    and JSON format.
+ARCHITECTURE: Four public functions (load_surfaces, load_surfaces_with_meta,
+    extract_nodes, extract_edges) and a CLI entry point. Surface discovery
+    driven by paths.json; no surface path or edge_fields list is hardcoded —
+    adding a new surface only requires a new entry in paths.json. All file I/O
+    wrapped in try/except with specific exception types (repo error-handling
+    policy). Stdlib-only: no third-party dependencies.
 """
 from __future__ import annotations
 
@@ -67,6 +69,11 @@ class EdgeRecord(NamedTuple):
 # Surface-specific edge fields
 # ---------------------------------------------------------------------------
 
+# NOTE: _SURFACE_EDGE_FIELDS is kept only as a legacy fallback for callers
+# that invoke extract_edges() without passing edge_fields explicitly.
+# The authoritative source of edge_fields is the ``edge_fields`` array in each
+# surface entry of paths.json (loaded by load_surfaces_with_meta).
+# Do NOT add new surfaces here — declare them in paths.json instead.
 _SURFACE_EDGE_FIELDS: dict[str, list[str]] = {
     "agents": ["spawn_allowlist", "spawned_by", "skills_used", "components"],
     "skills": ["dependencies", "components"],
@@ -245,6 +252,35 @@ def load_surfaces(project_root: Path, paths_json: Path) -> dict[str, Path]:
     Raises:
         SystemExit: With exit code 1 when paths.json is absent or invalid JSON.
     """
+    meta = load_surfaces_with_meta(project_root, paths_json)
+    return {name: info["path"] for name, info in meta.items()}
+
+
+def load_surfaces_with_meta(
+    project_root: Path, paths_json: Path
+) -> dict[str, dict[str, Any]]:
+    """Load surface paths and edge_fields from paths.json.
+
+    Reads paths.json, resolves each surface's root path relative to
+    project_root, and captures the ``edge_fields`` list from each surface
+    entry. Silently skips surfaces marked ``_optional: true`` when the path
+    does not exist.
+
+    This is the preferred loader for code that needs both paths and edge
+    metadata. ``load_surfaces`` delegates to this function and strips the
+    extra metadata for backward compatibility.
+
+    Args:
+        project_root: Absolute path to the project root directory.
+        paths_json: Absolute path to the paths.json configuration file.
+
+    Returns:
+        Dict mapping surface name (str) to ``{"path": Path, "edge_fields":
+        list[str]}``.
+
+    Raises:
+        SystemExit: With exit code 1 when paths.json is absent or invalid JSON.
+    """
     if not paths_json.exists():
         print(
             f"ERROR: {paths_json.name} not found at {paths_json}.",
@@ -265,7 +301,7 @@ def load_surfaces(project_root: Path, paths_json: Path) -> dict[str, Path]:
         sys.exit(1)
 
     surfaces_cfg = data.get("surfaces", {})
-    result: dict[str, Path] = {}
+    result: dict[str, dict[str, Any]] = {}
 
     for name, cfg in surfaces_cfg.items():
         if not isinstance(cfg, dict):
@@ -279,7 +315,10 @@ def load_surfaces(project_root: Path, paths_json: Path) -> dict[str, Path]:
             if optional:
                 continue
             # Non-optional but missing: include anyway; extract_nodes will handle
-        result[name] = resolved
+        edge_fields: list[str] = cfg.get("edge_fields", [])
+        if not isinstance(edge_fields, list):
+            edge_fields = []
+        result[name] = {"path": resolved, "edge_fields": edge_fields}
 
     return result
 
@@ -467,7 +506,10 @@ def _resolve_depends_on_target(value: str) -> str:
 
 
 def extract_edges(
-    surface: str, record: NodeRecord, raw_data: dict[str, Any]
+    surface: str,
+    record: NodeRecord,
+    raw_data: dict[str, Any],
+    edge_fields: list[str] | None = None,
 ) -> Generator[EdgeRecord, None, None]:
     """Yield EdgeRecords from a node's raw data.
 
@@ -486,11 +528,18 @@ def extract_edges(
         record: The source NodeRecord.
         raw_data: Dict of raw data for the node (e.g. a registry entry or
             frontmatter dict). May contain edge fields as strings or lists.
+        edge_fields: Explicit list of field names to treat as edges. When
+            ``None``, falls back to the legacy ``_SURFACE_EDGE_FIELDS`` lookup
+            keyed by ``surface``. Callers that load surface metadata from
+            paths.json (via ``load_surfaces_with_meta``) should pass the
+            ``edge_fields`` value from that metadata so that no new surface
+            requires a corresponding change in this module.
 
     Yields:
         EdgeRecord for each outbound edge.
     """
-    edge_fields = _SURFACE_EDGE_FIELDS.get(surface, [])
+    if edge_fields is None:
+        edge_fields = _SURFACE_EDGE_FIELDS.get(surface, [])
     for field in edge_fields:
         value = raw_data.get(field)
         if value is None:
@@ -544,11 +593,13 @@ def _collect_all(
     Returns:
         Tuple of (nodes_list, edges_list).
     """
-    surfaces = load_surfaces(project_root, paths_json)
+    surfaces_meta = load_surfaces_with_meta(project_root, paths_json)
     all_nodes: list[NodeRecord] = []
     all_edges: list[EdgeRecord] = []
 
-    for surface_name, surface_path in surfaces.items():
+    for surface_name, surface_info in surfaces_meta.items():
+        surface_path: Path = surface_info["path"]
+        surface_edge_fields: list[str] = surface_info["edge_fields"]
         if surface_filter and surface_name != surface_filter:
             continue
         # Collect nodes
@@ -577,7 +628,9 @@ def _collect_all(
                     if isinstance(entry, dict):
                         entry_id = str(entry.get("id") or entry.get("name") or "")
                         if entry_id == node.id:
-                            for edge in extract_edges(surface_name, node, entry):
+                            for edge in extract_edges(
+                                surface_name, node, entry, surface_edge_fields
+                            ):
                                 all_edges.append(edge)
             elif surface_path.is_dir() or (surface_path.is_file() and surface_path.suffix == ".md"):
                 # For markdown nodes, try to extract edges from frontmatter
@@ -587,7 +640,9 @@ def _collect_all(
                     except OSError:
                         continue
                     fm = _parse_frontmatter(text)
-                    for edge in extract_edges(surface_name, node, fm):
+                    for edge in extract_edges(
+                        surface_name, node, fm, surface_edge_fields
+                    ):
                         all_edges.append(edge)
 
     # Post-processing step 1: create synthetic hub nodes for component values
@@ -819,5 +874,13 @@ DECISION HISTORY
   (AC-7). NodeRecord/EdgeRecord NamedTuples. CLI flags: --query, --surface,
   --format, --edges, --project-root. Stdlib-only (AC-1). Clean error when
   paths.json absent (AC-6). render_text and render_json as separate functions.
+- 2026-06-22 [01_TICKET-20260622-KM-KGS-100a-1]: Added acs surface + dynamic edge_fields loading. (#01_TICKET-20260622-KM-KGS-100a-1)
+  Added "acs" surface entry to config/paths.json (path: docs/acceptance-criteria/,
+  edge_fields: implemented_by, covered_by, depends_on, components). Introduced
+  load_surfaces_with_meta() to return both path and edge_fields per surface.
+  Updated _collect_all() to use load_surfaces_with_meta and pass surface_edge_fields
+  to extract_edges, removing the need to update _SURFACE_EDGE_FIELDS for new
+  surfaces. extract_edges() gains an optional edge_fields parameter; falls back
+  to legacy _SURFACE_EDGE_FIELDS when None for backward compatibility.
 ====================================================================
 """

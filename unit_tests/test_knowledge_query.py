@@ -373,7 +373,7 @@ class TestPathsJsonSurfacesKey:
             "paths.json must have a top-level 'surfaces' key (KM-KQS-015)"
         )
         surfaces = data["surfaces"]
-        required_names = {"agents", "skills", "tickets", "docs", "adrs", "components", "roadmap", "glossary"}
+        required_names = {"agents", "skills", "tickets", "docs", "adrs", "components", "roadmap", "glossary", "acs"}
         actual_names = set(surfaces.keys())
         assert actual_names == required_names, (
             f"surfaces must have exactly {required_names}; got {actual_names}"
