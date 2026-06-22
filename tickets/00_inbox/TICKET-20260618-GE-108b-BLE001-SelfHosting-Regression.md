@@ -191,6 +191,7 @@ completion_manifest:
   pr_url_recorded: true
 PR #117 was already open at https://github.com/urlmonitor/leafcutter-ai/pull/117 (opened 2026-06-18T09:38). The branch had been rebased locally to resolve a conflict; the remote branch retains the original commits. Bypass logged: relay-approval deadlock resolved by confirming PR state directly. PR is open, branch is functional.
 
+
 ## Out of Scope
 
 - The 23 pre-existing `open()` IO-001 detections (separate pre-existing debt,
