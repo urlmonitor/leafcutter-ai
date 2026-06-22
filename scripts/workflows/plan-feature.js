@@ -87,6 +87,23 @@ function parseArgs(raw) {
 }
 
 /**
+ * Map an internal pipeline stage key to a display-name used in commit messages.
+ *
+ * Canonical display names per AC ACD-300g-3:
+ *   po   → PO
+ *   ba   → BA
+ *   itpo → IT-PO
+ *   (any other key is returned uppercase as a fallback)
+ *
+ * @param {string} stageKey - Internal stage key (e.g. "po", "ba", "itpo").
+ * @returns {string} Display name (e.g. "PO", "BA", "IT-PO").
+ */
+function stageDisplayName(stageKey) {
+  const map = { po: "PO", ba: "BA", itpo: "IT-PO" };
+  return map[stageKey] || stageKey.toUpperCase();
+}
+
+/**
  * Commit AC YAML files produced by a completed pipeline stage.
  *
  * Stages ONLY the files that correspond to AC IDs in the `written` array,
@@ -103,6 +120,11 @@ function parseArgs(raw) {
  *      an AC ID in the `written` array — these are the current stage's files.
  *   3. Stage each matching file with an individual `git add <path>` call.
  *
+ * Commit message format (AC ACD-300g-3):
+ *   Subject: create-ac(<STAGE>): <component>
+ *   Body:    AC IDs: <comma-separated list>
+ *            <"mid-pipeline commit" | "final commit of run">
+ *
  * On pre-commit hook failure the result includes:
  *   hook_name    {string|null} — name of the failing hook (parsed from git output)
  *   failing_files {string[]}  — file paths that failed validation
@@ -110,7 +132,9 @@ function parseArgs(raw) {
  *
  * @param {Function} agent       - Runtime-provided agent dispatch function.
  * @param {string[]} written     - Array of AC IDs (e.g. ["ACD-100a-1"]) written by the stage.
- * @param {string}   stageName   - Human-readable stage label (e.g. "po", "ba", "it-po").
+ * @param {string}   stageName   - Internal stage key (e.g. "po", "ba", "itpo").
+ * @param {string}   component   - Target component name (e.g. "ac-driven-dev").
+ * @param {boolean}  isFinal     - True when this is the final commit of the pipeline run.
  * @returns {Promise<{
  *   status: "ok"|"error",
  *   message: string,
@@ -119,10 +143,13 @@ function parseArgs(raw) {
  *   is_conflict?: boolean
  * }>}
  */
-async function commitStageOutput(agent, written, stageName) {
-  const fileCount = written.length;
+async function commitStageOutput(agent, written, stageName, component, isFinal) {
+  const displayStage = isFinal ? "final" : stageDisplayName(stageName);
+  const componentLabel = component || "unknown-component";
+  const acIdList = written.length > 0 ? written.join(", ") : "(none)";
+  const commitKind = isFinal ? "final commit of run" : "mid-pipeline commit";
   const commitMessage =
-    `feat(plan-feature): commit ${stageName} AC output (${fileCount} file${fileCount === 1 ? "" : "s"})`;
+    `create-ac(${displayStage}): ${componentLabel}\n\nAC IDs: ${acIdList}\n${commitKind}`;
 
   // Build a JSON-safe representation of the AC IDs so the agent can filter on them.
   const writtenJson = JSON.stringify(written);
@@ -483,11 +510,11 @@ async function run({ userInput, agent }) {
           };
         } else {
           // approve — commit stage output before dispatching the next agent.
-          const commitOutcome = await commitStageOutput(agent, written, `${step.stage}-v3`);
+          const commitOutcome = await commitStageOutput(agent, written, step.stage, component, false);
           if (commitOutcome.status === "error") {
             return {
               status: "error",
-              message: formatCommitError(step.agent, `${step.stage}-v3`, commitOutcome, allAcsWritten),
+              message: formatCommitError(step.agent, step.stage, commitOutcome, allAcsWritten),
               acs_as_drafts: allAcsWritten,
             };
           }
@@ -548,11 +575,11 @@ async function run({ userInput, agent }) {
           });
 
           // Commit the final IT PO enriched AC output before reporting success.
-          const finalCommitOutcome = await commitStageOutput(agent, written, "it-po");
+          const finalCommitOutcome = await commitStageOutput(agent, written, step.stage, component, true);
           if (finalCommitOutcome.status === "error") {
             return {
               status: "error",
-              message: formatCommitError("it-po", "it-po", finalCommitOutcome, allAcsWritten),
+              message: formatCommitError("it-po", step.stage, finalCommitOutcome, allAcsWritten),
               acs_updated: allAcsWritten,
               priority,
               route: effectiveRoute,
