@@ -1,7 +1,7 @@
 ---
 advances_current_outcome: true
 agents:
-  commit: needed
+  commit: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
   pull-request: needed
@@ -104,7 +104,7 @@ Scenario: a genuinely successful commit still advances the pipeline
 - [x] python-coder — 2026-06-22 15:00
 - [x] test-runner — 2026-06-22 15:30
 - [x] pr-reviewer — 2026-06-22 16:00
-- [ ] commit
+- [x] commit — 2026-06-22 (auto-authorized by ticket-supervisor)
 - [ ] pull-request
 
 ## Comments
@@ -160,6 +160,17 @@ Reviewed the staged diff. Both defects are correctly fixed: (1) `agentType` is n
 - [x] Flip the unparseable/empty result coercion from ok → error (fail closed).
 - [x] Apply the identical change to `templates/workflows-js/plan-feature.js` (parity is required — see ticket 10/spot-check).
 - [x] Add a test asserting the behavior. NOTE: grep-only tests let the original phantom-done through — prefer a replay/behavioral assertion over a string-scan where feasible.
+
+### 2026-06-22 — commit (status: ok)
+
+feedback-id: fb_2026-06-22_commit_07
+completion_manifest:
+  commit_sha: 1cc4e1e
+  files_committed: 4
+  pre_commit_hooks_passed: true
+  io_001_autofix_applied: true
+  branch: EPIC-CommitAcOutputPerStage
+Committed 4 files (scripts/workflows/plan-feature.js, templates/workflows-js/plan-feature.js, unit_tests/test_commit_stage_output_behavioral.py, ticket sign-offs). Pre-commit hooks all passed after one autofix: IO-001 violation in _read_source() at line 75 (open() not wrapped in try/except) was fixed and re-staged before the successful retry commit.
 
 ## Risk & Safety
 - Touches money? No.
