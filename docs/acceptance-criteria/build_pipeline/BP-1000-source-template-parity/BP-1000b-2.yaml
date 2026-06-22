@@ -1,0 +1,54 @@
+id: BP-1000b-2
+readiness: approved
+priority: high
+title: "When the parity gate finds drift, finalize HALTs and the PR-merge step is never reached"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000b.yaml"
+criteria: |
+  Given the finalize-feature workflow has reached the parity gate (after the
+    merge-origin/main step, before the PR-merge step)
+  And the parity check reports drift (at least one mirrored source-template pair
+    is not byte-identical)
+  When the gate evaluates that outcome
+  Then the workflow HALTs at the parity gate and returns a non-success status
+  And the PR-merge step is never reached — the branch is not merged to main
+  And the drift is surfaced to the user in the halt block summary, exactly the
+    way a test regression halts finalize today
+  And the workflow does not attempt to auto-fix or auto-sync the drifted copy —
+    it halts and hands the fix back to the user
+depends_on:
+  - BP-1000b
+  - BP-1000b-1
+  - BP-1000a-2
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000b.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "templates/workflows-js/finalize-feature.js"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "On a drift verdict the gate must perform a HARD EARLY RETURN that mirrors the existing test-regression HALT (the workflow returns { status: 'halted', halted_at_step: <parity-gate-step>, reason: 'parity_drift', ... } and the PR-merge step is structurally unreachable after that return). Do not raise an unhandled exception — surface the block through the workflow's existing HALT/return contract."
+  - "The halt summary forwarded to the user must carry the drift detail (the per-pair drift report owned by BP-1000c-1), so the halt is actionable. This AC owns the HALT/return semantics; the report content comes from BP-1000c-1."
+  - "Keep distinct from BP-1000a-2, which establishes that a drifted pair produces ok=false (the verdict). This AC owns the WORKFLOW HALT behavior: that ok=false at this gate stops the workflow before the PR-merge step and surfaces drift the same way a regression halt does."
+  - "The halt must be idempotent: re-running finalize after the drift is unresolved must HALT again at the same gate with no residual state that could let the PR-merge step proceed."
+delivers_to: null
+expects_from:
+  ac_id: BP-1000a-2
+  contract: "The drift verdict (ok=false on at least one mirrored pair) that this AC consumes to drive the workflow HALT before the PR-merge step."
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1000b-2-i
+implemented_by: []

@@ -1,0 +1,48 @@
+id: BO-100d-2a
+readiness: approved
+priority: high
+title: "build-epic.js lets the drive proceed when the telemetry sink is reachable"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given /build-feature is invoked for an epic that has at least one ready ticket,
+  And the pre-drive feedback-sink reachability probe appends one probe line to
+    the telemetry sink at debugging/logs/agent_telemetry.jsonl,
+  When the probe returns a successful (zero) result,
+  Then the drive proceeds past the pre-dispatch stage and dispatches
+    ticket-supervisors according to the normal sequencing rules,
+  And no pre-drive sink error is shown to the operator,
+  And the only content the probe added to the sink is its single probe line.
+depends_on: [BO-100d-2, BO-100d-1a]
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "On a successful probe the build-epic.js gate must fall through to the normal batch loop (Step 3/4 parallel dispatch) without altering sequencing — the gate is a pass/fail guard, not a sequencing change."
+  - "The probe must be idempotent: the success path adds exactly one probe line to debugging/logs/agent_telemetry.jsonl and must not duplicate or rewrite prior content."
+  - "Dual-surface parity (the KI-3 lesson): the success-path behavior in build-epic.js and in the build-feature.md prose gate must match — both proceed only on a genuine exit-0 probe via the same shared helper."
+  - "Deployed/template parity (ADR-001 self-hosting): edit the build-epic.js package source (and any helper) and verify the deployed copy via the build.py round-trip — never edit only one side."
+delivers_to: null
+expects_from:
+  ac_id: BO-100d-1a
+  contract: "The shared pre-drive sink probe helper's success (exit-0) path — a typed pass result indicating the single probe line was appended to debugging/logs/agent_telemetry.jsonl. build-epic.js proceeds to Step 4 parallel dispatch only on this pass result."
+origin_agent: it-po
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Split from BO-100d-2 by it-po. Deterministic surface
+  (templates/workflows-js/build-epic.js) success path. Sibling BO-100d-2b owns
+  the build-feature.md prose success path. Both reuse the BO-100d-1a probe
+  helper. Lineage: TICKET-20260527-FeedbackSinkPreDriveCheck.

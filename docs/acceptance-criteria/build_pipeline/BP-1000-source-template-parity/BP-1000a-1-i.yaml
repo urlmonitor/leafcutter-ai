@@ -1,0 +1,53 @@
+id: BP-1000a-1-i
+readiness: approved
+priority: high
+title: "The merge-gate parity check catches cumulative cross-ticket drift that per-ticket sync verification let through"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000a-1.yaml"
+criteria: |
+  Given an early ticket on the branch added a behavior to a canonical source
+    script and updated its shipped template copy to match, so that ticket's own
+    per-ticket template-sync verification passed
+  And a later ticket on the same branch edited that source script again and
+    silently dropped the earlier addition from the shipped template copy, yet
+    its own per-ticket verification still passed because that ticket touched a
+    different region
+  When the merge-gate parity check runs over the final state of the whole branch
+  Then it compares the final source and final shipped copy as they now stand,
+    independent of any single ticket's verification
+  And it reports the accumulated divergence as drift
+  And it blocks the merge
+  And the per-ticket template-sync verification is supplemented, not replaced —
+    the gate is the backstop that catches drift no individual ticket flagged
+depends_on:
+  - BP-1000a-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000a-1.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "templates/workflows-js/finalize-feature.js"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The verdict MUST be computed against the final worktree tree (the post-origin/main-merge state at finalize time), reading the working-copy bytes of each mirrored file as they stand now — never as a diff of per-ticket commits or per-ticket deltas. This whole-branch-final-state comparison is precisely what makes the gate a backstop."
+  - "The gate is independent of and additive to any per-ticket template-sync verification: it must reach a block verdict on accumulated divergence even when every individual ticket's own sync check passed. Do not short-circuit the comparison based on per-ticket pass records."
+  - "Stateless across runs: the verdict depends only on the current file bytes, with no memory of prior per-ticket outcomes, so re-running after the divergence is repaired passes deterministically."
+delivers_to: null
+expects_from:
+  ac_id: BP-1000a-1
+  contract: "The per-pair parity verdict object { ok, pairs: [...] } computed over the final branch worktree state, not per-ticket deltas; this L3 pins that the verdict's input is the final tree so cumulative cross-ticket drift is caught."
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

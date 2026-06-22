@@ -1,0 +1,52 @@
+id: TKT-500f-6-iii
+readiness: approved
+priority: high
+title: "An absent Test Requirements section must not silently skip test-writer when an implementation .py is in scope"
+component: ticket-creation
+level: L3
+status: superseded_by
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f.yaml"
+criteria: |
+  Given a generated ticket whose files_touched list contains an implementation
+    .py file (for example "scripts/ac_store/generate_ticket_from_ac.py"),
+  And that ticket body contains no section headed "## Test Requirements",
+  When the ticket-supervisor decides whether to run the test-writer phase,
+  Then the ticket-supervisor does NOT skip the test-writer phase,
+  And it halts with a structured error stating that an implementation file is in
+    scope but the ticket carries no Test Requirements section,
+  And the error names the implementation file and the ticket.
+
+  Given a generated ticket whose files_touched list contains only docs,
+    .yaml, .json, or tickets-path files and no implementation .py file,
+  And that ticket body contains no section headed "## Test Requirements",
+  When the ticket-supervisor decides whether to run the test-writer phase,
+  Then the ticket-supervisor skips the test-writer phase,
+  And it records that the skip was a legitimate docs-or-config-only skip.
+depends_on: [TKT-500f-6, TKT-500b-1]
+doc_links:
+  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+    relationship: constrains
+    status: exists
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+assigned_agent: null
+estimated_complexity: M
+it_requirements:
+  - "The presence or absence of the '## Test Requirements' section is the authoritative signal the ticket-supervisor reads to decide whether the test-writer phase is required for the ticket."
+  - "When the section is absent but an implementation .py is present in files_touched, the supervisor must treat this as a contradiction and halt with a structured error rather than silently skipping test-writer."
+  - "When the section is absent and files_touched is docs/config/tickets-only, the supervisor skips test-writer and records the skip reason; this path must not raise."
+  - "Reuse the same files_touched classification rule as TKT-500f-6 so the supervisor's notion of 'implementation .py in scope' matches the generator's."
+delivers_to: null
+expects_from:
+  ac_id: TKT-500f-6
+  contract: "A generated ticket whose Test Requirements section presence-or-absence is a reliable signal, plus the shared classification rule for what counts as an implementation .py"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by:
+  - reason: "it-po split 2026-06-22: superseded by TKT-500f-6-iii-a (python-coder: generator emission + shared classification helper) and TKT-500f-6-iii-b (llm-expert: ticket-supervisor template skip-rule halt-on-absent-with-impl-.py). Crossed a .py/.md owner boundary the BA could not see. NOTE FOR FINAL-GATE REVIEWER: the criteria PROSE above still says 'ac-supervisor' (no such agent in config/agent_registry.json); the real gating agent is 'ticket-supervisor'. The split children use the correct agent name; the prose here should be corrected in a follow-up BA edit."
+superseded_by: [TKT-500f-6-iii-a, TKT-500f-6-iii-b]
+covered_by: [TKT-500f-6-iii-a, TKT-500f-6-iii-b]
+implemented_by: []

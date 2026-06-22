@@ -1,0 +1,55 @@
+id: BP-1000b-1
+readiness: approved
+priority: high
+title: "The parity check runs as a pre-merge gate, positioned before the PR-merge step in finalize"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000b.yaml"
+criteria: |
+  Given the finalize-feature workflow is being run to land an epic branch
+  And the workflow has already merged origin/main into the worktree (the
+    merge-origin/main step has completed) but has NOT yet merged the PR to main
+  When the workflow reaches the point at which it would proceed toward landing
+    the branch
+  Then a parity-check gate runs as its own step before the PR-merge step is
+    reached
+  And that gate occupies the same enforcement position as the existing
+    test-regression gate: after the merge-origin/main step and before the
+    PR-merge step
+  And the parity gate is the last safety gate the branch passes through before
+    the PR can be merged
+depends_on:
+  - BP-1000b
+  - BP-1000a-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000b.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "templates/workflows-js/finalize-feature.js"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Insert the parity gate as a new step in templates/workflows-js/finalize-feature.js BETWEEN the merge-origin/main step (Step 2) and the PR-merge step (Step 4), co-located with the test-regression gate (Step 3). The gate must run against the post-merge worktree state (i.e. after origin/main has been merged in) so it evaluates the exact tree that would land on main."
+  - "This AC owns WHERE/WHEN the gate fires (workflow position), not the diff comparison itself. The byte-level comparison and per-pair verdict come from BP-1000a-1; do not re-implement comparison logic here — consume the verdict object."
+  - "Keep distinct from BP-1000a-2/-3, which own the block-on-drift and pass-on-clean verdict semantics. This AC asserts only that the gate exists at the correct enforcement point in the finalize-feature workflow ordering, mirroring the test-regression HALT placement."
+  - "finalize-feature is a workflow (.js), not a dispatchable ticket-phase agent; the workflow-body edit plus any Python glue is python-coder work."
+delivers_to:
+  agent: python-coder
+  contract: "A parity-gate step wired into finalize-feature.js at the pre-merge enforcement point (after merge-origin/main, before PR-merge). The step invokes the BP-1000a-1 verdict and exposes its pass/fail outcome to the HALT-or-continue logic implemented by BP-1000b-2 (halt-on-drift) and BP-1000b-3 (continue-on-pass)."
+expects_from:
+  ac_id: BP-1000a-1
+  contract: "The per-pair parity verdict object { ok, pairs: [...] } produced by the standalone diff runner; this AC positions the step that invokes it within the finalize-feature ordering."
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

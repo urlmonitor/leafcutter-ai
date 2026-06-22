@@ -1,0 +1,60 @@
+id: BP-1000a-1
+readiness: approved
+priority: high
+title: "Any diff between a source script and its shipped template copy blocks the merge"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000a.yaml"
+criteria: |
+  Given an epic branch is being finalized for merge
+  And the source tree contains a directory of canonical scripts (for example
+    scripts/commit_guardian/) that is mirrored by a shipped template directory
+    (for example templates/scripts/commit_guardian/)
+  And the parity check compares every mirrored pair recursively, byte-for-byte
+  When the parity check runs as part of the merge gate
+  And at least one mirrored pair is NOT byte-identical (the comparison reports
+    any difference at all — content, added line, removed line, or whitespace)
+  Then the parity check fails the merge gate
+  And the merge is blocked until every mirrored pair is byte-identical again
+depends_on:
+  - BP-1000a
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md"
+    relationship: describes
+    status: exists
+  - path: "templates/workflows-js/finalize-feature.js"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The verdict is computed by a standalone Python module (a discoverable diff runner over mirrored scripts/ <-> templates/scripts/ directories) so it is invokable both from the merge-gate workflow and standalone for local pre-flight; do not inline the comparison logic only inside the workflow."
+  - "Pair discovery must be data-driven, not a hardcoded list: a mirrored pair exists when a source directory under scripts/<group>/ has a counterpart directory templates/scripts/<group>/. Recurse into each pair and compare every file present on either side, treating a file present on only one side of a mirrored pair as a difference."
+  - "Comparison is exact byte equality of file contents; do not normalize whitespace, line endings, or trailing newlines (whitespace-only drift must fail, per the criteria)."
+  - "Keep this check strictly distinct from BP-100k (compiled-workflow-output drift via hash manifests at pre-commit on .claude/workflows/). This is source-to-shipped script parity, byte diff, at the merge gate. Do not reuse or extend the BP-100k manifest mechanism."
+  - "Must complete in under 5 seconds for the current mirrored-pair set (low hundreds of files); the comparison is O(files) and must not invoke a subprocess per file."
+  - "Must handle filesystem errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3): wrap file reads in try/except with a specific exception type, log at WARNING or higher, and surface an unreadable-file condition as a determinate failure rather than silently passing."
+  - "Per ADR-001 / ADR-013 self-hosting boundary: if the parity module is itself deployed to consumers it must round-trip through build.py (canonical source under scripts/ edited, templates/scripts/ counterpart regenerated). If it is a merge-gate-only development tool with no consumer counterpart (the expected case, like scripts/ci/ and scripts/workflows/), it is correctly source-only and exempt from its own check — record which choice was made and avoid a self-referential parity recursion."
+delivers_to:
+  agent: python-coder
+  contract: "A per-pair parity verdict object: { ok: bool, pairs: [ { source_path: str, template_path: str, identical: bool, diff: str|null } ] } where source_path/template_path are repo-root-relative POSIX paths, identical=false carries a non-null unified diff string (source vs shipped), and ok=true iff every mirrored pair is identical. Consumed by the merge-gate enforcement step (BP-1000a-2/-3), the failure reporter (BP-1000c-1), and the scope filter (BP-1000d-1)."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1000a-1-i
+implemented_by: []

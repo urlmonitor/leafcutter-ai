@@ -1,0 +1,51 @@
+id: BP-1000a-4
+readiness: approved
+priority: high
+title: "Component diagram of the source-to-shipped parity relationship at the merge gate"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000a.yaml"
+criteria: |
+  Given the source-to-shipped script parity guarantee described by BP-1000a and
+    its behaviors BP-1000a-1, BP-1000a-2, and BP-1000a-3
+  When a reader opens the component documentation for this feature
+  Then a component diagram shows the canonical source script directories, their
+    mirrored shipped template directories, the parity check that compares the
+    mirrored pairs, and the merge gate the check feeds its pass/fail verdict into
+  And the diagram visually distinguishes this source-to-shipped script parity
+    concern from the compiled-workflow-output drift concern owned by BP-100k
+depends_on:
+  - BP-1000a
+  - BP-1000a-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/components/template-compiler.md"
+    relationship: describes
+    status: exists
+  - path: "templates/workflows-js/finalize-feature.js"
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "The diagram must depict the merge gate as a pre-merge step of the finalize-feature workflow (templates/workflows-js/finalize-feature.js), placed after the origin/main merge-in and before the PR merge, so the timing is unambiguous."
+  - "The diagram must concretely name at least one real mirrored pair (e.g. scripts/commit_guardian/ <-> templates/scripts/commit_guardian/) and show source-only directories as out-of-scope, so the scope boundary (BP-1000d) is visible."
+  - "Per PROJECT_CONTEXT, the diagram must visually separate this source-to-shipped byte-diff merge-gate concern from BP-100k (compiled-workflow-output drift via hash manifests at pre-commit) — do not conflate the two drift mechanisms."
+delivers_to: null
+expects_from:
+  ac_id: BP-1000a-1
+  contract: "The parity check structure (verdict over mirrored pairs) and merge-gate flow the diagram depicts"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

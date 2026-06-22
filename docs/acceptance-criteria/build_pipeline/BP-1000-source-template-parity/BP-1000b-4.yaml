@@ -1,0 +1,55 @@
+id: BP-1000b-4
+readiness: approved
+priority: high
+title: "Sequence diagram of the parity gate firing within the finalize-feature merge flow"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000b.yaml"
+criteria: |
+  Given the parity gate's enforcement position and halt semantics described by
+    BP-1000b and its behaviors BP-1000b-1, BP-1000b-2, and BP-1000b-3
+  When a reader opens the component documentation for this feature
+  Then a sequence diagram shows the finalize-feature workflow stepping in order
+    through the merge-origin/main step, then the parity gate, then (only on a
+    pass) the PR-merge step
+  And the diagram shows two outcome branches at the parity gate: a drift branch
+    where the workflow HALTs and surfaces the drift to the user (never reaching
+    the PR-merge step), and a clean branch where the workflow proceeds to the
+    PR-merge step
+  And the diagram places the parity gate in the same enforcement position as the
+    existing test-regression gate (after merge-origin/main, before PR-merge), so
+    the timing is unambiguous
+  And the diagram makes clear that drift is caught before merge, contrasting with
+    the post-merge spot-check that previously found such drift (the KI-2 origin)
+depends_on:
+  - BP-1000b
+  - BP-1000b-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000b.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "templates/workflows-js/finalize-feature.js"
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "The sequence diagram must depict finalize-feature as the driving participant and show the ordered messages: merge-origin/main step -> parity gate -> PR-merge step, with the parity gate placed strictly between the latter two (mirroring the test-regression gate position)."
+  - "Show both branches at the parity gate as alt fragments: drift -> HALT + surface drift to user (PR-merge step not invoked); clean -> proceed to PR-merge step. The HALT branch must visually terminate before the PR-merge participant is reached."
+  - "Annotate that drift detection happens pre-merge (before the branch lands on main), contrasting with the historical post-merge spot-check that found the KI-2 jscpd drift. Do not depict the byte-diff comparison internals — that mechanism is owned by BP-1000a and its component diagram (BP-1000a-4); this diagram is about gate timing and halt/continue flow."
+delivers_to: null
+expects_from:
+  ac_id: BP-1000b-1
+  contract: "The parity-gate position within the finalize-feature ordering (after merge-origin/main, before PR-merge) and the halt/continue branches the diagram depicts."
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

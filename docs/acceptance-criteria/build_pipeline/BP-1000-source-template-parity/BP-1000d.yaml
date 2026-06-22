@@ -1,0 +1,31 @@
+id: BP-1000d
+title: "Only real shipped copies are checked — no false alarms"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Parity is enforced only for scripts that actually have a deployed counterpart.
+
+  Source-only tooling with no shipped copy never triggers a parity failure, so
+  the gate stays trustworthy and never blocks a merge over something a consumer
+  would never receive.
+depends_on:
+  - BP-1000
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1000d-1
+  - BP-1000d-2
+implemented_by: []
+documentation_triggers:
+  - reference-doc

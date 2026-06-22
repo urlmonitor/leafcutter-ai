@@ -1,0 +1,51 @@
+id: TKT-500f-6-ii
+readiness: approved
+priority: high
+title: "Test files and tickets-path .py do not trigger the Test Requirements section"
+component: ticket-creation
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f.yaml"
+criteria: |
+  Given a leaf AC whose files_touched list contains only .py paths that are
+    test files or tickets-path files and no implementation .py file:
+    "unit_tests/test_generate_ticket.py" (a test_*.py file),
+    "scripts/ac_store/generator_test.py" (a *_test.py file),
+    and "tickets/00_inbox/helper.py" (a .py under tickets/),
+  When a ticket is generated from that AC by an AC-to-ticket generator,
+  Then the generated ticket body contains no section headed "## Test Requirements",
+  And ticket generation completes without recording a warning about a missing
+    Test Requirements section.
+
+  Given a leaf AC whose files_touched list contains
+    "unit_tests/test_generate_ticket.py" (a test file)
+    alongside "scripts/ac_store/generate_ticket_from_ac.py" (an implementation file),
+  When a ticket is generated from that AC by an AC-to-ticket generator,
+  Then the generated ticket body contains a section headed "## Test Requirements",
+  And the test stub entry in that section names the implementation file
+    "scripts/ac_store/generate_ticket_from_ac.py" and not the test file.
+depends_on: [TKT-500f-6]
+doc_links:
+  - path: scripts/goal_to_epic.py
+    relationship: constrains
+    status: exists
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "A .py path is NOT a qualifying implementation file when its basename matches test_*.py or *_test.py, or when it is under a tickets/ directory. These are excluded by the same classification helper used in TKT-500f-6."
+  - "Exclusion of test and tickets-path .py files must not exclude a genuine implementation .py present in the same files_touched list — classification is per-entry, and any single qualifying implementation entry triggers the section."
+delivers_to: null
+expects_from:
+  ac_id: TKT-500f-6
+  contract: "The shared files_touched classification helper whose test-file and tickets-path exclusion rules this case exercises"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,31 @@
+id: BP-1000c
+title: "See exactly which file drifted and how it differs"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  When parity fails, you get the specific file and a clear view of the difference.
+
+  A blocked merge names every script that diverged and shows how the shipped
+  copy differs from its tested source, so the fix is obvious instead of a
+  hunt.
+depends_on:
+  - BP-1000
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1000c-1
+  - BP-1000c-2
+implemented_by: []
+documentation_triggers:
+  - how-to

@@ -1,0 +1,53 @@
+id: BP-1000c-1
+readiness: approved
+priority: high
+title: "A parity failure names each drifted script and shows how the shipped copy differs from its source"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000c.yaml"
+criteria: |
+  Given the merge-gate parity check has found that one or more mirrored
+    source-template script pairs are not byte-identical
+  When the check reports the failure
+  Then the failure output names the specific path of every drifted file (both
+    the canonical source path and its shipped template counterpart)
+  And for each drifted pair it shows the line-level difference between the
+    shipped copy and its tested source
+  And when more than one pair drifted, every drifted pair is listed, not only
+    the first one found
+depends_on:
+  - BP-1000c
+  - BP-1000a-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000c.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "templates/workflows-js/finalize-feature.js"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The reporter must enumerate ALL drifted pairs from the verdict, never stop at the first difference — the comparison in BP-1000a-1 must collect every differing pair before the reporter renders, so the contributor sees the full remediation surface in one pass."
+  - "For each drifted pair the message must include both repo-root-relative paths (canonical source and shipped template) and a line-level unified diff oriented source-vs-shipped, with a stable header naming which side is which, so a reader can tell what the shipped copy is missing or has extra."
+  - "The failure text is the artifact the how-to (BP-1000c-2) teaches contributors to read — keep the path-naming and diff layout stable and self-describing so the doc can reference concrete labels."
+  - "Diff rendering must be deterministic (stable ordering of pairs, e.g. sorted by source path) so the same drift produces the same message across runs and machines."
+  - "Output goes to the channel the finalize-feature workflow surfaces to the user on a HALT (the block summary); it must read as a clear remediation message, not a stack trace."
+delivers_to:
+  agent: documentation-expert
+  contract: "The human-readable parity-failure report format: a per-pair block listing the canonical source path, the shipped template path, and a source-vs-shipped unified diff, with all drifted pairs listed in stable order. BP-1000c-2 documents how to read this exact format."
+expects_from:
+  ac_id: BP-1000a-1
+  contract: "The per-pair parity verdict object { ok, pairs: [{source_path, template_path, identical, diff}] }; this AC consumes the full pairs list (filtering identical=false) plus each pair's diff string to render the failure report."
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,51 @@
+id: BP-1000b-2-i
+readiness: approved
+priority: high
+title: "Drift caught at this gate is caught before merge, never discovered in a post-merge spot-check"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000b.yaml"
+criteria: |
+  Given a source script was changed during the drive so its shipped template
+    copy is now stale (the exact KI-2 scenario: the jscpd hook source gained the
+    GE-100c measured%/threshold% logic and its templates/ copy was not synced)
+  And that drift was, before this gate existed, found only by a post-merge
+    spot-check after the downgraded copy had already shipped
+  When the finalize-feature workflow runs with the parity gate in place
+  Then the drift is caught at the parity gate, which fires before the PR-merge
+    step
+  And because the gate HALTs before the PR-merge step, the drifted copy never
+    reaches main and never ships to a consumer
+  And there is no execution path in which a drifted pair passes the gate and is
+    discovered only after the branch has landed on main
+depends_on:
+  - BP-1000b-2
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000b.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "templates/workflows-js/finalize-feature.js"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "This edge encodes the whole point of BP-1000b: the gate's pre-merge position is what converts a post-release discovery into a pre-merge block. Verify that the HALT (BP-1000b-2) is reached strictly before the PR-merge step for the KI-2 regression input, so no drifted pair can land on main."
+  - "The verification must reproduce the KI-2 jscpd scenario specifically (source has the measured%/threshold% logic; templates/ copy does not) and confirm the gate HALTs before the PR-merge step rather than the divergence being left for a post-merge spot-check."
+  - "Contrast with the historical EPIC-CodeQualityHooks behavior where the drift was found only post-merge — the test must assert there is no pass-through path that defers detection past the merge."
+delivers_to: null
+expects_from:
+  ac_id: BP-1000b-2
+  contract: "The halt-on-drift behavior at the pre-merge gate; this edge case asserts that behavior guarantees pre-merge (never post-merge) detection for the KI-2 regression."
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

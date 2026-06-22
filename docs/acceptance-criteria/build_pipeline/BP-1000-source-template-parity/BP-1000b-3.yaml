@@ -1,0 +1,51 @@
+id: BP-1000b-3
+readiness: approved
+priority: high
+title: "When the parity gate passes, finalize proceeds to the PR-merge step normally"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000b.yaml"
+criteria: |
+  Given the finalize-feature workflow has reached the parity gate (after the
+    merge-origin/main step, before the PR-merge step)
+  And the parity check reports no drift (every mirrored source-template pair is
+    byte-identical)
+  When the gate evaluates that outcome
+  Then the workflow does not halt at the parity gate
+  And the workflow proceeds to the PR-merge step as it would when no parity gate
+    were present
+  And the parity gate produces no warning or noise on the clean path — it passes
+    silently, consistent with the other finalize steps on their pass path
+depends_on:
+  - BP-1000b
+  - BP-1000b-1
+  - BP-1000a-3
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000b.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "templates/workflows-js/finalize-feature.js"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "On a pass verdict (ok=true) the gate must fall through to the next finalize step (the PR-merge step / Step 4) without altering any other step's behavior. The parity step is purely additive on the clean path — it must not change the existing pass-through ordering or gating of the PR-merge step."
+  - "A repository state with zero mirrored pairs discovered is a vacuous pass at this gate (the workflow proceeds), not a halt — consistent with the BP-1000a-3 vacuous-pass rule."
+  - "Keep distinct from BP-1000a-3, which establishes that an all-identical pair set yields ok=true (the verdict). This AC owns the WORKFLOW CONTINUATION behavior: that ok=true at this gate lets finalize advance to the PR-merge step unchanged."
+delivers_to: null
+expects_from:
+  ac_id: BP-1000a-3
+  contract: "The clean verdict (ok=true, every mirrored pair identical) that this AC consumes to let the workflow continue to the PR-merge step."
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

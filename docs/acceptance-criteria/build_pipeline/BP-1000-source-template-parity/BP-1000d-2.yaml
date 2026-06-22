@@ -1,0 +1,48 @@
+id: BP-1000d-2
+readiness: approved
+priority: high
+title: "Reference doc defining which scripts are in scope for the parity check and which are exempt"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000d.yaml"
+criteria: |
+  Given a maintainer needs to know exactly which scripts the merge-gate parity
+    check enforces and which it deliberately ignores
+  When the maintainer opens the reference documentation for this feature
+  Then it states the rule that only a source script with a shipped template
+    counterpart is checked, and that source-only tooling is exempt
+  And it enumerates the mirrored source-template directory pairs that define the
+    parity scope
+  And it explains how a newly added source script enters scope (by gaining a
+    shipped template counterpart) so the scope rule stays unambiguous over time
+depends_on:
+  - BP-1000d
+  - BP-1000d-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000d.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md"
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "The scope rule must be stated as derived (a pair is in scope iff a templates/scripts/<group>/ counterpart exists), not as a static list — the enumerated pairs are a snapshot, and the doc must say the authoritative scope is the presence of the mirror directory."
+  - "Anchor the in-scope/exempt distinction to ADR-013's portable (consumer-facing) vs package-internal boundary, and note that 'a new script enters scope by gaining a templates/scripts/ counterpart' is the same act as making it portable per ADR-013."
+delivers_to: null
+expects_from:
+  ac_id: BP-1000d-1
+  contract: "The in-scope/exempt classification rule (mirror-directory-presence derivation) and the mirrored directory-pair list the reference doc records"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

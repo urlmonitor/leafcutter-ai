@@ -1,0 +1,58 @@
+id: BO-100d
+readiness: approved
+priority: high
+title: "The telemetry sink is verified reachable before any ticket is dispatched"
+component: build-orchestration
+level: L1
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Before any ticket-supervisor is dispatched for an epic drive, the system
+  verifies that the feedback/telemetry sink can actually be written to.
+  If the sink is unreachable, the drive is hard-blocked — no tickets run —
+  and the operator is told exactly which sink path failed and how to fix it.
+  This prevents a drive from completing while every feedback submission fails
+  silently, which would leave the retrospective and post-merge triage with no data.
+depends_on: [BO-100]
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+it_requirements: []
+delivers_to: null
+expects_from: null
+child_limit_override: 6
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by:
+  - reason: "Retrospective finding EPIC-CodeQualityHooks KI-3 — warn-only pre-drive sink check (TICKET-20260527-FeedbackSinkPreDriveCheck) was insufficient; promote to hard block."
+  - reason: "it-po technical enrichment: cleared assigned_agent/estimated_complexity on this L0/L1 composite — only L2/L3 leaves carry an implementing agent. Behavioral coverage flows through the split children BO-100d-1a/-1b and BO-100d-2a/-2b."
+superseded_by: null
+covered_by:
+  - BO-100d-1
+  - BO-100d-2
+implemented_by: []
+notes: |
+  Repeat of TICKET-20260527-FeedbackSinkPreDriveCheck. The original warn-only
+  behavior allowed a drive to proceed with an unreachable sink, producing 23
+  silent submit-failed events and an impossible retrospective. This L1 raises
+  the gate from warn-only to hard block, matching the BO-100 pre-dispatch-gate
+  pattern (cycle detection halts before dispatch).
+
+  it-po enrichment finding (dual-surface parity): the pre-dispatch gate has TWO
+  enforcement surfaces that must BOTH hard-block, or the JS path silently
+  bypasses the prose gate and reintroduces the exact KI-3 bug —
+    (1) templates/workflows/build-feature.md (slash-command prose, Step A -> B),
+    (2) templates/workflows-js/build-epic.js (deterministic JS workflow that
+        Step B delegates to; its Step 0 worktree-guard is the precedent shape).
+  The probe (append one line to debugging/logs/agent_telemetry.jsonl, mkdir-and-
+  retry, classify genuine write failure) is factored as ONE shared probe helper
+  consumed by both surfaces. This is why BO-100d-1 and BO-100d-2 were each split
+  across python-coder (build-epic.js + helper) and llm-expert (build-feature.md
+  prose parity).

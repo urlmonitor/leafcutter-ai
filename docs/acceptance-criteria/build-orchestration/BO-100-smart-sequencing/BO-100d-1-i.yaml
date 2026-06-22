@@ -1,0 +1,45 @@
+id: BO-100d-1-i
+readiness: approved
+priority: high
+title: "Missing log directory is created and re-probed rather than hard-failing on first miss"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given /build-feature is invoked for an epic with at least one ready ticket,
+  And the debugging/logs/ directory does not exist,
+  When the pre-drive feedback-sink reachability probe first attempts to append a
+    probe line to debugging/logs/agent_telemetry.jsonl and that attempt fails
+    only because the parent directory is absent,
+  Then the remediation step creates the missing debugging/logs/ directory
+    (including any missing parents),
+  And the probe is retried against the now-existing directory,
+  And the drive does NOT halt on the first miss,
+  And the first-miss directory-absence condition alone never produces the
+    hard-block operator message.
+depends_on: [BO-100d-1a]
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The remediation must create debugging/logs/ including any missing parents (mkdir -p semantics) and then re-probe exactly once; the first directory-absence miss must NOT trigger the hard-block path."
+  - "Directory-absence must be classified distinctly from a genuine write failure — only the absent-parent cause is auto-remediated; everything else flows to the BO-100d-1-ii hard-block path."
+  - "The mkdir + re-probe is part of the single shared probe helper (BO-100d-1a); do not implement a second, divergent remediation in either enforcement surface."
+  - "Handle the mkdir and re-probe I/O gracefully per the project error handling policy (CLAUDE.md Rules 1-3): typed except, log at WARNING, no silent swallow."
+  - "Idempotent: after remediation the re-probe appends exactly one probe line; the first failed attempt must not have left partial/duplicate content."
+delivers_to: null
+expects_from:
+  ac_id: BO-100d-1a
+  contract: "The shared pre-drive sink probe helper exposing the first-probe attempt, the mkdir-and-reprobe remediation step (creates debugging/logs/ with parents, retries once), and the directory-absent-vs-genuine-failure classification. This L3 specifies the directory-absent remediation branch of that helper."
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by:
+  - reason: "it-po enrichment: re-pointed depends_on from the now-superseded BO-100d-1 to the surviving BO-100d-1a (the shared probe helper); added expects_from contract, it_requirements, and doc_links."
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,48 @@
+id: TKT-500f-7
+readiness: approved
+priority: high
+title: "Docs-and-config-only tickets omit the Test Requirements section"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f.yaml"
+criteria: |
+  Given a leaf AC whose files_touched list contains only paths that are under a
+    docs/ directory, or are .yaml configuration files, or are .json configuration
+    files, or are under a tickets/ directory
+    (for example "docs/reference/ac-schema.md" and "config/agent_registry.json"),
+  And the files_touched list contains no path that qualifies as an implementation
+    .py file,
+  When a ticket is generated from that AC by an AC-to-ticket generator,
+  Then the generated ticket body contains no section headed "## Test Requirements",
+  And ticket generation completes without recording a warning about a missing
+    Test Requirements section.
+depends_on: [TKT-500f, TKT-500f-6]
+doc_links:
+  - path: scripts/goal_to_epic.py
+    relationship: constrains
+    status: exists
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "When the shared classification helper finds zero qualifying implementation .py entries in files_touched, the generators must not emit the '## Test Requirements' heading."
+  - "A docs/config/tickets-only ticket is a legitimate skip: do not log a warning, do not raise, and do not block generation when the section is omitted on this path."
+  - "Use the same shared helper introduced by TKT-500f-6 (one helper across goal_to_epic.py AND generate_ticket_from_ac.py); the omit path must be the negative branch of that helper, not a separate divergent code path."
+delivers_to: null
+expects_from:
+  ac_id: TKT-500f-6
+  contract: "The shared files_touched classification helper that decides whether a Test Requirements section is required"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
