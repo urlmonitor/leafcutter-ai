@@ -240,7 +240,7 @@ Second-pass review: build_glossary.py fallback block is confirmed removed and cl
 - [x] test-runner — 2026-06-22 20:00
 - [x] pr-reviewer — 2026-06-22 22:00
 - [x] commit — 2026-06-22 22:30
-- [ ] pull-request
+- [x] pull-request — 2026-06-22 12:52
 
 ## Implementation Tasks
 
