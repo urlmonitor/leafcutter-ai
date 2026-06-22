@@ -136,9 +136,58 @@ def _find_worktree_root(start: Path) -> Path:
 # PascalCase conversion
 # ---------------------------------------------------------------------------
 
+#: Characters stripped in-place (zero-width deletion) before PascalCase
+#: conversion: U+0027 ASCII apostrophe, U+0022 double-quote,
+#: U+0060 backtick, U+2019 curly apostrophe (ACD-1200a-3-ii).
+_QUOTE_CHARS_TO_STRIP = chr(0x0027) + chr(0x0022) + chr(0x0060) + chr(0x2019)
+
+
+def _strip_quote_chars(title: str) -> str:
+    """Remove apostrophe and quote characters from *title* in-place.
+
+    Deletes each of the following characters with zero width (no separator
+    inserted, adjacent letters join into a single word):
+
+    - U+0027 — ASCII apostrophe / straight single-quote
+    - U+0022 — ASCII double-quote
+    - U+0060 — backtick / grave accent
+    - U+2019 — right single quotation mark (curly apostrophe)
+
+    The deletion happens BEFORE any word-splitting so that a quote embedded
+    mid-word (e.g. ``user's``) does not create a word boundary; the result
+    is a single intact word (``users``), not two words (``user`` + ``s``).
+
+    This function is a pure string transformation with no I/O and must NOT
+    be wrapped in try/except (Error Handling Policy Rule 4).
+
+    Args:
+        title: Raw AC title string that may contain quote/apostrophe chars.
+
+    Returns:
+        Title string with all specified quote characters removed.
+        Adjacent letters join directly — no separator is inserted.
+
+    Examples::
+
+        _strip_quote_chars("Validate user's API inputs")
+        # → "Validate users API inputs"
+
+        _strip_quote_chars("Reject malformed customer’s payloads")
+        # → "Reject malformed customers payloads"
+
+        _strip_quote_chars('say "hello" and `go`')
+        # → "say hello and go"
+    """
+    return title.translate(str.maketrans("", "", _QUOTE_CHARS_TO_STRIP))
+
 
 def _to_pascal_case(title: str) -> str:
     """Convert a human-readable title string to PascalCase.
+
+    Strips apostrophe/quote characters (U+0027, U+0022, U+0060, U+2019)
+    in-place before splitting so that a quote embedded mid-word
+    (e.g. ``user's``) joins its adjacent letters into a single
+    PascalCase word (e.g. ``Users``) rather than creating a word boundary.
 
     Splits on spaces, hyphens, and underscores. Capitalises the first
     character of each word and joins without separators.
@@ -149,7 +198,8 @@ def _to_pascal_case(title: str) -> str:
     Returns:
         PascalCase string (e.g. "ValidateApiInputs").
     """
-    words = re.split(r"[\s\-_]+", title.strip())
+    stripped = _strip_quote_chars(title.strip())
+    words = re.split(r"[\s\-_]+", stripped)
     return "".join(word.capitalize() for word in words if word)
 
 
