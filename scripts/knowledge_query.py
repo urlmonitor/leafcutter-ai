@@ -9,17 +9,22 @@ BUSINESS CONTEXT: Gives agents and humans a one-command answer to
     single pass, extracts a one-line description for every node, follows
     cross-surface edges, and dumps a flat index in both human-readable text
     and JSON format.
-ARCHITECTURE: Five public functions (load_surfaces, load_surfaces_with_meta,
-    build_knowledge_map, extract_nodes, extract_edges) and a CLI entry point.
+ARCHITECTURE: Six public functions (load_surfaces, load_surfaces_with_meta,
+    build_knowledge_map, validate_knowledge_map, extract_nodes, extract_edges)
+    and a CLI entry point.
     build_knowledge_map() is the primary API for callers that need both the
     graph data and surface-completeness audit metadata (declared_surfaces,
-    contributing_surfaces). Surface discovery driven by paths.json; no surface
-    path, edge_fields list, or phantom-filter-exempt field name is hardcoded —
-    adding a new surface only requires a new entry in paths.json. Surfaces that
-    declare edge fields pointing to file paths (not node IDs) use the optional
-    ``file_path_fields`` attribute in their paths.json entry; those edge types
-    are automatically exempt from phantom-edge filtering. All file I/O wrapped
-    in try/except with specific exception types (repo error-handling policy).
+    contributing_surfaces). validate_knowledge_map() verifies each declared
+    surface produces only the edge relationship kinds it declares in paths.json
+    — the check is fully data-driven, so adding or removing a surface in
+    paths.json changes the validated set without any code edit. Surface
+    discovery driven by paths.json; no surface path, edge_fields list, or
+    phantom-filter-exempt field name is hardcoded — adding a new surface only
+    requires a new entry in paths.json. Surfaces that declare edge fields
+    pointing to file paths (not node IDs) use the optional ``file_path_fields``
+    attribute in their paths.json entry; those edge types are automatically
+    exempt from phantom-edge filtering. All file I/O wrapped in try/except with
+    specific exception types (repo error-handling policy).
     Stdlib-only: no third-party dependencies.
 """
 from __future__ import annotations
@@ -553,6 +558,110 @@ def build_knowledge_map(
         declared_surfaces=frozenset(declared),
         contributing_surfaces=frozenset(contributing),
     )
+
+
+# ---------------------------------------------------------------------------
+# Public API: validate_knowledge_map
+# ---------------------------------------------------------------------------
+
+
+class SurfaceValidationResult(NamedTuple):
+    """Validation result for a single declared surface.
+
+    Attributes:
+        surface: The name of the surface (e.g. 'agents', 'tickets').
+        declared_edge_fields: The relationship kinds declared in paths.json for
+            this surface.  An empty list means the surface claims to contribute
+            no edges.
+        unexpected_edge_types: Edge types found in the graph for nodes from
+            this surface that are NOT in ``declared_edge_fields``.  An empty
+            set means the surface is valid.
+        valid: ``True`` when ``unexpected_edge_types`` is empty (the surface
+            produced only the relationship kinds it declared, or declared none
+            and produced none).
+    """
+
+    surface: str
+    declared_edge_fields: list[str]
+    unexpected_edge_types: frozenset[str]
+    valid: bool
+
+
+def validate_knowledge_map(
+    knowledge_map: KnowledgeMap,
+    project_root: Path,
+    paths_json: Path,
+) -> list[SurfaceValidationResult]:
+    """Validate each declared surface against the edge_fields it promises.
+
+    For every surface declared in paths.json (and present in
+    ``knowledge_map.declared_surfaces``), this function:
+
+    1. Reads the ``edge_fields`` the surface declared in paths.json.
+    2. Collects all edge types emitted by nodes belonging to that surface in
+       the knowledge map.
+    3. Computes the unexpected edge types (emitted but not declared).
+    4. Returns a :class:`SurfaceValidationResult` per surface.
+
+    A surface that declares an empty ``edge_fields`` list is treated as
+    promising no edges.  If such a surface produces zero edges (or only
+    phantom-filter-exempt edges) it is valid.
+
+    The iteration is fully data-driven: the function reads the declared
+    surfaces from paths.json at call time, so adding or removing a surface
+    in paths.json automatically changes the set of surfaces validated without
+    any edit to this function.
+
+    Args:
+        knowledge_map: A :class:`KnowledgeMap` produced by
+            ``build_knowledge_map()``.
+        project_root: Absolute path to the project root directory (used to
+            locate paths.json).
+        paths_json: Absolute path to the paths.json configuration file.
+
+    Returns:
+        A list of :class:`SurfaceValidationResult`, one per surface in
+        ``knowledge_map.declared_surfaces``.  The list is sorted by surface
+        name for stable ordering.
+    """
+    surfaces_meta = load_surfaces_with_meta(project_root, paths_json)
+
+    # Index edges by source-node surface for efficient lookup.
+    # Build a mapping: surface_name -> set of edge_types produced by that surface.
+    node_surface: dict[str, str] = {n.id: n.surface for n in knowledge_map.nodes}
+    edges_by_surface: dict[str, set[str]] = {}
+    for edge in knowledge_map.edges:
+        surface_name = node_surface.get(edge.source_id)
+        if surface_name is None:
+            continue
+        edges_by_surface.setdefault(surface_name, set()).add(edge.edge_type)
+
+    results: list[SurfaceValidationResult] = []
+
+    for surface_name in sorted(knowledge_map.declared_surfaces):
+        surface_info = surfaces_meta.get(surface_name, {})
+        declared_edge_fields: list[str] = surface_info.get("edge_fields", [])
+
+        # Allowed edge types: the declared edge_fields plus any remapped names.
+        # The 'components' field is remapped to 'component_membership' in extract_edges,
+        # so 'components' in declared_edge_fields implicitly allows 'component_membership'.
+        allowed_types: set[str] = set(declared_edge_fields)
+        if "components" in allowed_types:
+            allowed_types.add("component_membership")
+
+        actual_types: set[str] = edges_by_surface.get(surface_name, set())
+        unexpected: frozenset[str] = frozenset(actual_types - allowed_types)
+
+        results.append(
+            SurfaceValidationResult(
+                surface=surface_name,
+                declared_edge_fields=declared_edge_fields,
+                unexpected_edge_types=unexpected,
+                valid=len(unexpected) == 0,
+            )
+        )
+
+    return results
 
 
 # ---------------------------------------------------------------------------
@@ -1242,5 +1351,18 @@ DECISION HISTORY
   surface entry in config/paths.json. Any new surface that declares file-path edge
   fields now only needs a paths.json entry — no code change is required. Satisfies
   AC KM-KGS-100c-2: "no special-casing for acs that other surfaces do not also receive."
+- 2026-06-22 [13_TICKET-20260622-KM-KGS-100d-1]: Data-driven surface edge_fields validation via validate_knowledge_map(). (#13_TICKET-20260622-KM-KGS-100d-1)
+  Added SurfaceValidationResult NamedTuple (surface, declared_edge_fields,
+  unexpected_edge_types, valid) and validate_knowledge_map() public function.
+  Satisfies AC KM-KGS-100d-1: "for every declared surface, the validation checks
+  that surface against the exact edge_fields it declares — not against a fixed
+  expected list of relationship kinds." The validation iterates over
+  knowledge_map.declared_surfaces (derived from paths.json) so adding or removing
+  a surface changes the validated set without any code edit. Surfaces that declare
+  an empty edge_fields list are accepted as valid when they produce no edges.
+  The 'components' field is transparently remapped to 'component_membership' in
+  allowed_types so the validation accounts for the canonical edge-type rename
+  applied by extract_edges(). Updated module docstring ARCHITECTURE field to list
+  six public functions (validate_knowledge_map added).
 ====================================================================
 """
