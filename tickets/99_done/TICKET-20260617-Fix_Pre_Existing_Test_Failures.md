@@ -1,6 +1,6 @@
 ---
 title: "Fix 24 pre-existing unit-test failures (tree_traversal, transform_hooks, visualise_knowledge_graph)"
-status: todo
+status: done
 components:
   - testing_quality
   - ac_store
@@ -183,3 +183,32 @@ clusters on a fresh `main` before fixing.
 - Note: if Cluster 2 requires re-creating deleted scripts, confirm they are also
   wired into the build manifest so they deploy to consumers (relates to the
   BP-900 manifest-derivation work just completed in EPIC-BuildGuardFalsePositive).
+
+## Resolution (2026-06-22)
+
+Closed via PR #144 (squash `19b618c`). Re-verification against current `main`
+found the documented baseline was **stale**: only **14** of the claimed 24–34
+failures were genuine. Clusters 2, 4, and `commit_guardian_imports` (21 tests)
+were already fixed on `main` — the stale-tree artifacts the caveat warned about.
+
+All 14 genuine failures were **stale tests, not production bugs** — production
+code is unchanged:
+
+- **Cluster 1** (`test_tree_traversal.py`, 5): tests asserted the superseded
+  covered_by-based leaf definition; production is level-based (`leaf == level in
+  {L2,L3}`) across `scan_ac_store.py`, `build_ac_mode_detection.py`,
+  `goal_to_epic.py`. `ACD-1200a-1` no longer exists. Rewrote to the level-based
+  contract. New AC: ACS-1000.
+- **Cluster 3** (`test_visualise_knowledge_graph.py`, 8): `_assemble_graph` now
+  delegates to `knowledge_query._collect_all`, but the test mock stubbed only the
+  old granular API → tuple-unpack ValueError. Rewrote the mock factory. New AC:
+  KM-VIS-014.
+- **Cluster 5** (`test_install_hooks.py`, 1): test never simulated a git repo, so
+  BP-007's deliberate not-a-git-repo guard short-circuited it. Mocked the
+  `rev-parse --git-dir` probe. Covers existing BP-007.
+
+Out-of-scope follow-up: 6 additional pre-existing failures were discovered that
+were never in this ticket's inventory (`test_epic_folder_assembly` ACD-1200a-3,
+`test_scan_ac_store_cycle` ACD-1200c-3, `test_build_file_size_injection` ×2,
+`test_goal_to_epic_worktree_skip` BP-901, `test_skill_registry` orphaned
+`create-ac`). Several are unimplemented-feature tests. Tracked separately.
