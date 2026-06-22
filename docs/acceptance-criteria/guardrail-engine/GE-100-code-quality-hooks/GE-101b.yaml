@@ -1,4 +1,4 @@
-id: GE-100e
+id: GE-101b
 readiness: approved
 priority: high
 title: "diff-cover hook reports uncovered lines in changed files against the configured threshold"
@@ -6,7 +6,7 @@ component: guardrail-engine
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100.yaml"
 criteria: |
   Given the commit guardian configuration has the diff_coverage section with:
@@ -27,9 +27,9 @@ criteria: |
   And because strict is false, the hook exits with code 0 (warn-only)
 depends_on:
   - GE-101
-  - GE-100d
+  - GE-101a
 doc_links:
-  - path: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100.yaml"
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-101.yaml"
     relationship: parent
     status: exists
   - path: "docs/pre-commit-hooks.md"
@@ -42,14 +42,16 @@ assigned_agent: python-coder
 estimated_complexity: M
 delivers_to: null
 expects_from:
-  ac_id: GE-100d
+  ac_id: GE-101a
   contract: "The tool and artifact detection function that confirms diff-cover is available and coverage.xml is present and fresh before invoking the coverage check"
 origin_agent: BrainCandy
 created: 2026-06-11
 amended_by:
   - reason: "split: GE-100 -> GE-100 + GE-101, moved to GE-101 (intermediate Pattern C), 2026-06-16"
+  - reason: "rename: GE-100e -> GE-101b, structural parent corrected to GE-101, 2026-06-18"
 superseded_by: null
 covered_by:
-  - GE-100e-1
+  - GE-101b-1
 implemented_by:
 - tickets/00_inbox/TICKET-20260616-GE-100e.md
+- tickets/00_inbox/epics/EPIC-CodeQualityHooks/10_TICKET-20260616-GE-100e.md

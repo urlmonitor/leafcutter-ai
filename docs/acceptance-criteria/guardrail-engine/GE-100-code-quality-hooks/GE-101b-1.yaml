@@ -1,4 +1,4 @@
-id: GE-100e-1
+id: GE-101b-1
 readiness: approved
 priority: high
 title: "diff-cover hook blocks commit when strict mode is enabled and coverage is below threshold"
@@ -6,7 +6,7 @@ component: guardrail-engine
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100.yaml"
 criteria: |
   Given the commit guardian configuration has the diff_coverage section with:
@@ -26,9 +26,9 @@ criteria: |
   And the error states the overall diff coverage (45%) vs the threshold (80%)
   And the commit is prevented
 depends_on:
-  - GE-100e
+  - GE-101b
 doc_links:
-  - path: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100e.yaml"
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-101b.yaml"
     relationship: parent
     status: exists
   - path: "docs/pre-commit-hooks.md"
@@ -38,12 +38,14 @@ assigned_agent: python-coder
 estimated_complexity: S
 delivers_to: null
 expects_from:
-  ac_id: GE-100e
+  ac_id: GE-101b
   contract: "The coverage evaluation function that compares diff coverage percentage against the configured threshold and respects the strict flag"
 origin_agent: BrainCandy
 created: 2026-06-11
-amended_by: []
+amended_by:
+  - reason: "rename: GE-100e-1 -> GE-101b-1, structural parent corrected to GE-101b, 2026-06-18"
 superseded_by: null
-covered_by: []
+covered_by:
+  - unit_tests/commit_guardian/test_check_diff_coverage.py::TestStrictModeBlocksCommit
 implemented_by:
 - tickets/00_inbox/TICKET-20260616-GE-100e-1.md

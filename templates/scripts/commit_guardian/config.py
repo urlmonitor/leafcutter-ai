@@ -45,8 +45,21 @@ def load_config(path: Path | None = None) -> dict[str, Any]:
             "  FIX: Ensure commit_guardian.json exists next to config.py."
         )
 
-    with open(config_file, encoding="utf-8") as f:
-        _config = json.load(f)
+    try:
+        with open(config_file, encoding="utf-8") as f:
+            _config = json.load(f)
+    except OSError as exc:
+        raise FileNotFoundError(
+            f"Commit Guardian config could not be read: {config_file}\n"
+            f"  OS error: {exc}"
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise json.JSONDecodeError(
+            f"Commit Guardian config contains invalid JSON: {config_file}\n"
+            f"  {exc.msg}",
+            exc.doc,
+            exc.pos,
+        ) from exc
 
     return _config
 
@@ -253,11 +266,48 @@ MERMAID_COMPLEXITY_MAX_STATES: int = _get("mermaid_complexity", "max_states", 10
 MERMAID_COMPLEXITY_MAX_CLASSES: int = _get("mermaid_complexity", "max_classes", 10)
 MERMAID_COMPLEXITY_MAX_BOUNDARIES: int = _get("mermaid_complexity", "max_boundaries", 4)
 
+# ---------------------------------------------------------------------------
+# check_duplicate_code
+# ---------------------------------------------------------------------------
+DUPLICATE_CODE_ENABLED: bool = _get("duplicate_code", "enabled", False)
+DUPLICATE_CODE_STRICT: bool = _get("duplicate_code", "strict", False)
+DUPLICATE_CODE_MIN_LINES: int = _get("duplicate_code", "min_lines", 5)
+DUPLICATE_CODE_MIN_TOKENS: int = _get("duplicate_code", "min_tokens", 50)
+DUPLICATE_CODE_THRESHOLD_PERCENT: int = _get("duplicate_code", "threshold_percent", 5)
+DUPLICATE_CODE_CHECKED_EXTENSIONS: list[str] = _get(
+    "duplicate_code",
+    "checked_extensions",
+    [".py", ".ts", ".js", ".tsx", ".jsx", ".sql"],
+)
+
+
+# ---------------------------------------------------------------------------
+# check_diff_coverage
+# ---------------------------------------------------------------------------
+DIFF_COVERAGE_ENABLED: bool = _get("diff_coverage", "enabled", False)
+DIFF_COVERAGE_STRICT: bool = _get("diff_coverage", "strict", False)
+DIFF_COVERAGE_MIN_COVERAGE_PERCENT: int = _get("diff_coverage", "min_coverage_percent", 80)
+DIFF_COVERAGE_XML_PATH: str = _get("diff_coverage", "coverage_xml_path", "coverage.xml")
+DIFF_COVERAGE_COMPARE_BRANCH: str = _get("diff_coverage", "compare_branch", "origin/main")
+DIFF_COVERAGE_MAX_AGE_SECONDS: int = _get("diff_coverage", "max_age_seconds", 3600)
+
 
 """
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-18 [python-coder/TICKET-20260616-GE-100d]: Added DIFF_COVERAGE_* constants for
+  check_diff_coverage.py (AC GE-101a / originally GE-100d). enabled and strict both
+  default to False; min_coverage_percent=80; coverage_xml_path='coverage.xml';
+  compare_branch='origin/main'; max_age_seconds=3600. All tunable via diff_coverage
+  section in commit_guardian.json.
+- 2026-06-18 [python-coder/TICKET-20260616-GE-100b]: Added DUPLICATE_CODE_THRESHOLD_PERCENT
+  and DUPLICATE_CODE_CHECKED_EXTENSIONS constants (AC GE-100b). threshold_percent defaults
+  to 5; checked_extensions defaults to [.py, .ts, .js, .tsx, .jsx, .sql] matching the AC.
+  Removed the legacy DUPLICATE_CODE_THRESHOLD int (superseded by threshold_percent).
+- 2026-06-18 [python-coder/TICKET-20260616-GE-100a]: Added DUPLICATE_CODE_* constants for
+  check_duplicate_code.py (AC GE-100a). enabled and strict both default to False;
+  min_lines/min_tokens/threshold are tunable via duplicate_code section in commit_guardian.json.
 - 2026-05-15 12:00 [python-coder/T06]: Added AGENT_REGISTRY_PATH constant for check_ticket_signoff_parity
   check #6 (unchecked-tasks parity guard). Defaults to
   "leafcutter/config/agent_registry.json" relative to project root;

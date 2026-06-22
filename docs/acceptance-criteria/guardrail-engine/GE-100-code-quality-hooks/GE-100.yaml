@@ -39,4 +39,5 @@ covered_by:
   - GE-100c
   - GE-100g
   - GE-100h
-implemented_by: []
+implemented_by:
+  - GE-100h

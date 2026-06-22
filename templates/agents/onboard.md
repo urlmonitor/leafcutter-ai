@@ -81,6 +81,7 @@ silently on failure — halt and surface the error.
 9.  Run build.py --target-dir . — report output                          [ ]
 10. Confirm .claude/ outputs exist                                       [ ]
 11. Pre-commit: check availability, run pre-commit install               [ ]
+11b. Hook opt-in: offer jscpd and diff-cover if binaries found on PATH  [ ]
 12. Detect placeholder content in vision.md and roadmap.json             [ ]
 13. If placeholders detected: walk user through interactive fill         [ ]
 14. Glossary: check if empty, prompt for /glossary-bootstrap             [ ]
@@ -366,6 +367,80 @@ pre-commit install
 Verify `.git/hooks/pre-commit` exists and is executable. If `pre-commit install`
 fails, log the error and add it to the checklist — do not halt.
 
+## Step 11b — Hook Opt-In (jscpd and diff-cover)
+
+After `pre-commit install` succeeds (or is skipped), offer opt-in for the two
+optional quality hooks that ship **disabled by default** because they depend on
+external binaries.
+
+**Idempotency:** If `duplicate_code.enabled` is already `true` in
+`scripts/commit_guardian/commit_guardian.json`, skip the jscpd prompt silently.
+If `diff_coverage.enabled` is already `true`, skip the diff-cover prompt silently.
+This makes Step 11b safe to run on re-onboard.
+
+### jscpd (duplicate code detection)
+
+Check if the `jscpd` binary is on the system PATH:
+
+```bash
+which jscpd 2>/dev/null || echo "not-found"
+```
+
+**If found:**
+
+Ask the user:
+> "jscpd is installed. Would you like to enable the duplicate code check
+> (check-duplicate-code hook)? It ships disabled by default. (yes / skip)"
+
+On `yes`:
+1. Open `scripts/commit_guardian/commit_guardian.json`.
+2. Set `duplicate_code.enabled` to `true`.
+3. Write the file.
+4. Print: "  → duplicate_code.enabled set to true in commit_guardian.json"
+
+On `skip`: proceed silently — no config change.
+
+**If not found:**
+
+Skip the prompt silently. Add `"jscpd (duplicate code detection)"` to the
+post-onboard optional-tools checklist (Step 15).
+
+### diff-cover (test coverage gating)
+
+Check if the `diff-cover` binary is on the system PATH:
+
+```bash
+which diff-cover 2>/dev/null || echo "not-found"
+```
+
+**If found:**
+
+Ask the user:
+> "diff-cover is installed. Would you like to enable the diff coverage check
+> (check-diff-coverage hook)? It ships disabled by default. (yes / skip)"
+
+On `yes`:
+1. Open `scripts/commit_guardian/commit_guardian.json`.
+2. Set `diff_coverage.enabled` to `true`.
+3. Write the file.
+4. Print: "  → diff_coverage.enabled set to true in commit_guardian.json"
+
+On `skip`: proceed silently — no config change.
+
+**If not found:**
+
+Skip the prompt silently. Add `"diff-cover (test coverage gating)"` to the
+post-onboard optional-tools checklist (Step 15).
+
+**Note:** You can also run this step via the standalone script:
+
+```bash
+python scripts/onboard_hook_opt_in.py
+```
+
+This is the same detection-and-prompt logic as above, useful for re-running the
+opt-in step independently after installing the binaries.
+
 ## Step 12 — Placeholder Detection
 
 Check the build output for placeholder markers. Read `docs/vision.md` and
@@ -463,6 +538,14 @@ Group items by category. Mark items that were completed during onboard as done.
 - [ ] Install pre-commit: pip install pre-commit && pre-commit install
 - [ ] Create missing file: <path> (referenced by <config_key>)
 
+### Optional Tools (install to unlock hooks)
+- [ ] jscpd (duplicate code detection) — npm install -g jscpd@^3
+- [ ] diff-cover (test coverage gating) — pip install diff-cover
+
+Only include optional tool items that were NOT found on PATH during Step 11b.
+After installing a tool, re-run `python scripts/onboard_hook_opt_in.py` to
+enable its hook without re-running the full wizard.
+
 ### How to Fix
 | Item | Command |
 |------|---------|
@@ -470,6 +553,8 @@ Group items by category. Mark items that were completed during onboard as done.
 | Roadmap | Edit docs/roadmap.json and fill in phases |
 | Glossary | Run /glossary-bootstrap |
 | Pre-commit | pip install pre-commit && pre-commit install |
+| jscpd | npm install -g jscpd@^3, then python scripts/onboard_hook_opt_in.py |
+| diff-cover | pip install diff-cover, then python scripts/onboard_hook_opt_in.py |
 ```
 
 Print this checklist at the end of the onboard run. Only include items that are

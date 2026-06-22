@@ -1,4 +1,4 @@
-id: GE-100d-1
+id: GE-101a-1
 readiness: approved
 priority: high
 title: "diff-cover hook falls back through compare branch chain when origin/main is unavailable"
@@ -6,7 +6,7 @@ component: guardrail-engine
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100.yaml"
 criteria: |
   Given the commit guardian configuration has the diff_coverage section with:
@@ -29,9 +29,9 @@ criteria: |
   Then the hook falls back to comparing against "HEAD~1"
   And the coverage check proceeds using the previous commit as the base
 depends_on:
-  - GE-100d
+  - GE-101a
 doc_links:
-  - path: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100d.yaml"
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-101a.yaml"
     relationship: parent
     status: exists
   - path: "docs/pre-commit-hooks.md"
@@ -41,12 +41,15 @@ assigned_agent: python-coder
 estimated_complexity: S
 delivers_to: null
 expects_from:
-  ac_id: GE-100d
+  ac_id: GE-101a
   contract: "The compare-branch resolution function that implements the fallback chain: origin/main -> main -> HEAD~1"
 origin_agent: BrainCandy
 created: 2026-06-11
-amended_by: []
+amended_by:
+  - reason: "rename: GE-100d-1 -> GE-101a-1, structural parent corrected to GE-101a, 2026-06-18"
 superseded_by: null
-covered_by: []
+covered_by:
+  - unit_tests/commit_guardian/test_check_diff_coverage.py
 implemented_by:
 - tickets/00_inbox/TICKET-20260616-GE-100d-1.md
+- tickets/00_inbox/epics/EPIC-CodeQualityHooks/09_TICKET-20260616-GE-100d-1.md

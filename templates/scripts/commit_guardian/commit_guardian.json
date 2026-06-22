@@ -744,6 +744,34 @@
                 "_comment": "ACS-500a-3 / ACS-500d-1-i: (1) Blocks commits where an AC YAML file's implements_pattern field references a non-existent AC ID or an AC without parameterized slots. (2) Blocks deletion of a pattern AC when any surviving AC in the store still references it via implements_pattern, with error 'Cannot delete <id>: still referenced by N consuming ACs'. Fail-open on parse errors. See docs/acceptance-criteria/ac-store/ACS-500-pattern-reuse/."
             },
             {
+                "id": "check-duplicate-code",
+                "tier": "judgment",
+                "name": "Check Duplicate Code (jscpd copy-paste clone detection)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_duplicate_code.py",
+                "language": "system",
+                "files": "\\.(py|ts|js|tsx|jsx|sql)$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "enabled": false,
+                "_comment": "GE-100a/GE-100b: Scans staged source files for copy-paste clones using jscpd. Disabled by default (duplicate_code.enabled: false). Fails open when jscpd is not installed — emits advisory to stderr with install guidance and exits 0. Fails open on jscpd v4.x (incompatible CLI). Set strict: true to block commits on threshold violations."
+            },
+            {
+                "id": "check-diff-coverage",
+                "tier": "judgment",
+                "name": "Check Diff Coverage (diff-cover coverage gating)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_diff_coverage.py",
+                "language": "system",
+                "files": "\\.(py|sql)$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "enabled": false,
+                "_comment": "GE-101a: Verifies changed lines in staged files have adequate test coverage using diff-cover. Disabled by default (diff_coverage.enabled: false). Fails open when diff-cover is not installed or coverage.xml is absent — emits advisory to stderr and exits 0. Set strict: true to block commits below min_coverage_percent threshold."
+            },
+            {
                 "id": "check-ac-schema",
                 "tier": "judgment",
                 "name": "Check AC Store Schema, Binding Completeness, and Field Preservation (ACS-500f-1)",
@@ -794,5 +822,24 @@
         "max_states": 10,
         "max_classes": 10,
         "max_boundaries": 4
+    },
+    "duplicate_code": {
+        "_comment": "check_duplicate_code.py — Copy-paste clone detection using jscpd. Disabled by default. Fails open when jscpd is not installed or when jscpd v4.x is detected. Set strict: true to block commits on threshold violations. threshold_percent sets the percentage of duplicate code that triggers a warning/error. checked_extensions restricts scanning to the listed file types.",
+        "enabled": false,
+        "strict": false,
+        "min_lines": 5,
+        "min_tokens": 50,
+        "threshold_percent": 5,
+        "checked_extensions": [".py", ".ts", ".js", ".tsx", ".jsx", ".sql"],
+        "excluded_dirs": ["node_modules", ".venv", "__pycache__"]
+    },
+    "diff_coverage": {
+        "_comment": "check_diff_coverage.py — Diff-based coverage gating using diff-cover. Disabled by default. Fails open when diff-cover is not installed or coverage.xml is absent. Set strict: true to block commits when coverage falls below min_coverage_percent. max_age_seconds guards against stale coverage artifacts.",
+        "enabled": false,
+        "strict": false,
+        "min_coverage_percent": 80,
+        "coverage_xml_path": "coverage.xml",
+        "compare_branch": "origin/main",
+        "max_age_seconds": 3600
     }
 }

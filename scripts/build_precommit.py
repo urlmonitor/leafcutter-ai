@@ -297,7 +297,9 @@ def build_precommit_config(target_root: Path, config: dict[str, Any],
     and tagged with the ``@package-managed`` sentinel on its ``name:`` line.
 
     Merge logic (idempotent): parse the existing YAML, strip package-managed
-    blocks, append rendered blocks for all manifest hooks. Project-specific
+    blocks, append rendered blocks for all enabled manifest hooks. Hooks whose
+    ``"enabled"`` field is explicitly ``false`` are skipped and not emitted.
+    When ``"enabled"`` is absent, the hook is emitted (default-on). Project-specific
     hooks (no sentinel) are preserved.
 
     Args:
@@ -326,6 +328,13 @@ def build_precommit_config(target_root: Path, config: dict[str, Any],
 
     raw = json.loads(manifest_path.read_text(encoding="utf-8"))
     hooks = raw.get("hooks_manifest", {}).get("hooks", [])
+    if not hooks:
+        return 0
+
+    # Gating: skip hooks that are explicitly disabled in the manifest.
+    # A hook is emitted when "enabled" is absent (default true) or true.
+    # When "enabled" is false, the hook is NOT written to .pre-commit-config.yaml.
+    hooks = [h for h in hooks if h.get("enabled", True)]
     if not hooks:
         return 0
 
@@ -375,4 +384,5 @@ def build_precommit_config(target_root: Path, config: dict[str, Any],
 # - 2026-05-14 00:40 [epic-supervisor]: Fixed _build_output_lines to insert package-managed hooks BEFORE DECISION HISTORY sentinel. (#TICKETLESS reason=build-precommit-fix)
 # - 2026-05-18 11:15 [EPIC-PortableInstallHardening/T03]: Updated cg_dir to canonical templates/scripts/commit_guardian/ with backward-compat fallback. (#EPIC-PortableInstallHardening/T03)
 # - 2026-06-04 12:00 [EPIC-BuildPathCorrectness/T02]: Added _check_hook_script_integrity() helper and call in build_precommit_config() to warn on missing hook scripts at canonical cg_dir. (#EPIC-BuildPathCorrectness/T02)
+# - 2026-06-18 [EPIC-CodeQualityHooks/GE-100h-1]: Added enabled-flag gating: hooks with "enabled": false in hooks_manifest are excluded from .pre-commit-config.yaml emission. Default when absent is true (backward-compatible). (#GE-100h-1)
 # ===========================================================================
