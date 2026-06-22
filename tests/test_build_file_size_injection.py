@@ -46,7 +46,10 @@ class TestFileSizeLimitInjectedIntoConfig(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.tmp_path = Path(self.tmp.name)
         # Create the directory structure expected by _inject_file_size_limits.
-        self.cg_dir = self.tmp_path / "templates" / "commit-guardian"
+        # Production reads templates/scripts/commit_guardian/commit_guardian.json
+        # (build.py:252) — the fixture path must match exactly, or the function
+        # silently falls back to its hardcoded 400 default.
+        self.cg_dir = self.tmp_path / "templates" / "scripts" / "commit_guardian"
         self.cg_dir.mkdir(parents=True)
 
     def tearDown(self) -> None:
