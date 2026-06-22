@@ -14,10 +14,13 @@ ARCHITECTURE: Five public functions (load_surfaces, load_surfaces_with_meta,
     build_knowledge_map() is the primary API for callers that need both the
     graph data and surface-completeness audit metadata (declared_surfaces,
     contributing_surfaces). Surface discovery driven by paths.json; no surface
-    path or edge_fields list is hardcoded — adding a new surface only requires
-    a new entry in paths.json. All file I/O wrapped in try/except with specific
-    exception types (repo error-handling policy). Stdlib-only: no third-party
-    dependencies.
+    path, edge_fields list, or phantom-filter-exempt field name is hardcoded —
+    adding a new surface only requires a new entry in paths.json. Surfaces that
+    declare edge fields pointing to file paths (not node IDs) use the optional
+    ``file_path_fields`` attribute in their paths.json entry; those edge types
+    are automatically exempt from phantom-edge filtering. All file I/O wrapped
+    in try/except with specific exception types (repo error-handling policy).
+    Stdlib-only: no third-party dependencies.
 """
 from __future__ import annotations
 
@@ -393,7 +396,10 @@ def load_surfaces_with_meta(
 
     Returns:
         Dict mapping surface name (str) to ``{"path": Path, "edge_fields":
-        list[str]}``.
+        list[str], "file_path_fields": list[str]}``.  The ``file_path_fields``
+        entry lists edge fields whose values are file-path strings rather than
+        node IDs; these are exempt from phantom-edge filtering in
+        ``_collect_all``.
 
     Raises:
         SystemExit: With exit code 1 when paths.json is absent or invalid JSON.
@@ -435,7 +441,14 @@ def load_surfaces_with_meta(
         edge_fields: list[str] = cfg.get("edge_fields", [])
         if not isinstance(edge_fields, list):
             edge_fields = []
-        result[name] = {"path": resolved, "edge_fields": edge_fields}
+        file_path_fields: list[str] = cfg.get("file_path_fields", [])
+        if not isinstance(file_path_fields, list):
+            file_path_fields = []
+        result[name] = {
+            "path": resolved,
+            "edge_fields": edge_fields,
+            "file_path_fields": file_path_fields,
+        }
 
     return result
 
@@ -836,11 +849,15 @@ def _collect_all(
     1. Creates synthetic hub NodeRecords for each unique component value seen in
        component_membership edges that doesn't already exist as a node. These
        hubs have surface="components".
-    2. Filters edges to keep only those where both source_id and target_id exist
+    2. Builds an effective phantom-filter-exempt set by unioning the legacy
+       ``_PHANTOM_FILTER_EXEMPT_EDGE_TYPES`` constant with all edge-type names
+       declared in ``file_path_fields`` entries across all surfaces in paths.json.
+       This means any surface can exempt its file-path edge fields by declaring
+       them in paths.json — no code change required.
+    3. Filters edges to keep only those where both source_id and target_id exist
        in the full node set (including synthetic hubs), OR where the edge type is
-       in _PHANTOM_FILTER_EXEMPT_EDGE_TYPES. Exempt edge types (implemented_by,
-       covered_by) point to file-path targets that are intentionally not
-       knowledge-graph nodes and must not be dropped by the phantom-edge check.
+       in the effective exempt set. Exempt edge types point to file-path targets
+       that are intentionally not knowledge-graph nodes and must not be dropped.
 
     Args:
         project_root: Absolute path to the project root.
@@ -853,6 +870,19 @@ def _collect_all(
     surfaces_meta = load_surfaces_with_meta(project_root, paths_json)
     all_nodes: list[NodeRecord] = []
     all_edges: list[EdgeRecord] = []
+
+    # Build the phantom-filter-exempt edge-type set dynamically from paths.json
+    # file_path_fields declarations, so that any surface declaring file-path edge
+    # fields is automatically exempt without a code change.  This replaces the
+    # previous hardcoded _PHANTOM_FILTER_EXEMPT_EDGE_TYPES constant, which was
+    # a code-level special-case for the acs surface.
+    dynamic_exempt: set[str] = set()
+    for _si in surfaces_meta.values():
+        for _fpf in _si.get("file_path_fields", []):
+            dynamic_exempt.add(_fpf)
+    # Merge with the legacy constant so that any hardcoded exemptions remain
+    # honoured even for surfaces that predate the file_path_fields convention.
+    effective_exempt: frozenset[str] = _PHANTOM_FILTER_EXEMPT_EDGE_TYPES | frozenset(dynamic_exempt)
 
     for surface_name, surface_info in surfaces_meta.items():
         surface_path: Path = surface_info["path"]
@@ -936,17 +966,18 @@ def _collect_all(
             existing_ids.add(component_name)
 
     # Post-processing step 2: filter phantom edges — keep only edges where both
-    # source and target exist in the node set, OR where the edge type is exempt
-    # from the filter.  Exempt types (implemented_by, covered_by) point to
-    # file-path targets that are intentionally not knowledge-graph nodes and
-    # must not be dropped by the phantom-edge check.
+    # source and target exist in the node set, OR where the edge type is in the
+    # effective_exempt set (derived dynamically from file_path_fields in paths.json,
+    # merged with the legacy _PHANTOM_FILTER_EXEMPT_EDGE_TYPES constant).
+    # Exempt edge types point to file-path targets that are intentionally not
+    # knowledge-graph nodes and must not be dropped by the phantom-edge check.
     node_ids = existing_ids
     filtered_edges = [
         e for e in all_edges
         if e.source_id in node_ids
         and (
             e.target_id in node_ids
-            or e.edge_type in _PHANTOM_FILTER_EXEMPT_EDGE_TYPES
+            or e.edge_type in effective_exempt
         )
     ]
 
@@ -1199,5 +1230,17 @@ DECISION HISTORY
   is the subset that actually produced at least one primary NodeRecord. Tests in
   unit_tests/test_knowledge_query.py (TestSurfaceContributionCompleteness) validate
   the AC behavior using parametric assertions against the declared set.
+- 2026-06-22 [11_TICKET-20260622-KM-KGS-100c-2]: Data-driven phantom-filter-exempt via file_path_fields in paths.json. (#11_TICKET-20260622-KM-KGS-100c-2)
+  Added optional ``file_path_fields`` attribute to paths.json surface entries. When
+  present, these field names are automatically added to the phantom-edge-filter-exempt
+  set in _collect_all(), removing the code-level special-case of hardcoding
+  ``implemented_by`` and ``covered_by`` in ``_PHANTOM_FILTER_EXEMPT_EDGE_TYPES``.
+  Updated ``load_surfaces_with_meta()`` to capture ``file_path_fields`` from each
+  surface entry. Updated ``_collect_all()`` to build ``effective_exempt`` dynamically
+  by unioning the legacy constant with all ``file_path_fields`` values from
+  paths.json. Added ``file_path_fields: [implemented_by, covered_by]`` to the ``acs``
+  surface entry in config/paths.json. Any new surface that declares file-path edge
+  fields now only needs a paths.json entry — no code change is required. Satisfies
+  AC KM-KGS-100c-2: "no special-casing for acs that other surfaces do not also receive."
 ====================================================================
 """
