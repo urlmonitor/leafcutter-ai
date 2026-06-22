@@ -1,0 +1,43 @@
+id: TKT-500f-6-i
+readiness: approved
+priority: high
+title: "A mix of one implementation .py and several docs/config files still requires Test Requirements"
+component: ticket-creation
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f.yaml"
+criteria: |
+  Given a leaf AC whose files_touched list contains a mix of paths:
+    one implementation file "scripts/ac_store/generate_ticket_from_ac.py",
+    one documentation file "docs/reference/ac-schema.md",
+    and one configuration file "config/agent_registry.json",
+  When a ticket is generated from that AC by an AC-to-ticket generator,
+  Then the generated ticket body contains a section headed "## Test Requirements",
+  And that section contains at least one test stub entry for the
+    "scripts/ac_store/generate_ticket_from_ac.py" implementation file,
+  And the documentation and configuration files do not suppress the section.
+depends_on: [TKT-500f-6]
+doc_links:
+  - path: scripts/goal_to_epic.py
+    relationship: constrains
+    status: exists
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The section-required decision is triggered by the presence of ANY qualifying implementation .py entry, regardless of how many docs/config entries accompany it (logical OR over qualifying entries, not a unanimity check)."
+  - "Use the same shared classification helper as TKT-500f-6; the mixed-list case must exercise the same branch, not a separate code path."
+delivers_to: null
+expects_from:
+  ac_id: TKT-500f-6
+  contract: "The shared files_touched classification helper whose presence-of-any-qualifying-.py rule this case exercises"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

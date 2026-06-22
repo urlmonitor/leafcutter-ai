@@ -1,0 +1,48 @@
+id: BP-1000a-3
+readiness: approved
+priority: high
+title: "When every mirrored script is byte-identical the parity check passes and the merge proceeds"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000a.yaml"
+criteria: |
+  Given an epic branch is being finalized for merge
+  And for every canonical source script that has a shipped template counterpart,
+    the two files are byte-for-byte identical
+  When the parity check runs at the merge gate
+  Then the parity check passes with no drift reported
+  And the merge gate is not blocked by the parity check
+  And the merge is allowed to proceed
+depends_on:
+  - BP-1000a
+  - BP-1000a-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "templates/workflows-js/finalize-feature.js"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The pass verdict must let the finalize-feature workflow continue to the PR-merge step (Step 4) unchanged — the parity step is additive and must not alter the existing pass-through behavior of any other finalize step."
+  - "An all-identical mirrored-pair set yields ok=true (no pairs reported as differing); the gate must NOT emit a warning or noise on the clean path (silent success, consistent with the existing finalize steps)."
+  - "A repository state with zero mirrored pairs discovered (no templates/scripts/<group>/ counterpart for any source group) is a vacuous pass, not a failure — the gate guarantees parity over the pairs that exist, and an empty pair set trivially satisfies that."
+  - "Must complete in under 5 seconds on the clean path for the current mirrored-pair set."
+delivers_to: null
+expects_from:
+  ac_id: BP-1000a-1
+  contract: "The per-pair parity verdict object { ok, pairs: [...] }; this AC consumes ok=true (every pair identical) to allow the merge gate to proceed."
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

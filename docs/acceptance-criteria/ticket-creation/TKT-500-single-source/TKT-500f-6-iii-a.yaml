@@ -1,0 +1,57 @@
+id: TKT-500f-6-iii-a
+readiness: approved
+priority: high
+title: "Generator emits the Test Requirements signal and owns the shared implementation-.py classification helper"
+component: ticket-creation
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f-6-iii.yaml"
+criteria: |
+  Given a leaf AC whose files_touched list contains an implementation
+    .py file (for example "scripts/ac_store/generate_ticket_from_ac.py"),
+  When a ticket is generated from that AC by an AC-to-ticket generator,
+  Then the generated ticket body contains a "## Test Requirements" section so that
+    the section's presence is the authoritative signal that the test-writer phase
+    is required for that ticket.
+
+  Given a leaf AC whose files_touched list contains only docs, .yaml, .json,
+    or tickets-path files and no implementation .py file,
+  When a ticket is generated from that AC by an AC-to-ticket generator,
+  Then the generated ticket body contains no "## Test Requirements" section so that
+    its absence is the authoritative signal that a docs/config-only skip is legitimate.
+depends_on: [TKT-500f-6-iii, TKT-500f-6]
+doc_links:
+  - path: scripts/goal_to_epic.py
+    relationship: constrains
+    status: exists
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+    relationship: constrains
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Own the SINGLE shared files_touched classification helper used by both scripts/goal_to_epic.py and scripts/ac_store/generate_ticket_from_ac.py: a path is a qualifying implementation .py when it ends in .py AND is not under docs/ AND is not a .yaml/.json file AND is not under tickets/ AND its basename does NOT match test_*.py or *_test.py. Do not duplicate or inline the predicate in either generator."
+  - "The generated ticket's presence-or-absence of the '## Test Requirements' section must be a RELIABLE signal: present iff at least one qualifying implementation .py is in files_touched. This is the signal TKT-500f-6-iii-b's ticket-supervisor rule consumes."
+  - "Reconcile this predicate with the ticket-supervisor template (markdown prose) by SPEC PARITY, not code import: the supervisor cannot import this helper, so state the classification rule once normatively in docs/reference/ac-schema.md and keep both the generator helper and the supervisor template matching that single normative definition."
+  - "Idempotent on re-runs: regenerating a ticket from the same AC produces the same section presence/absence and the same stub set."
+delivers_to:
+  agent: llm-expert
+  contract: "(1) A generated ticket whose '## Test Requirements' section presence/absence is the authoritative test-writer-required signal the ticket-supervisor reads; (2) the normative classification rule for 'implementation .py in scope' (impl-.py = ends .py AND not under docs/ AND not .yaml/.json AND not under tickets/ AND basename not test_*.py / *_test.py), published in docs/reference/ac-schema.md for the supervisor template to mirror by spec parity"
+expects_from:
+  ac_id: TKT-500f-6
+  contract: "The shared files_touched classification helper and the '## Test Requirements' emission introduced by TKT-500f-6"
+origin_agent: it-po
+created: 2026-06-22
+amended_by:
+  - reason: "it-po split 2026-06-22: TKT-500f-6-iii crossed a .py/.md owner boundary; this child carries the python-coder generator + shared classification-helper portion. Sibling TKT-500f-6-iii-b carries the ticket-supervisor template skip-rule change (llm-expert)."
+superseded_by: null
+covered_by: []
+implemented_by: []

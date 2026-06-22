@@ -1,0 +1,53 @@
+id: BP-1000a-2
+readiness: approved
+priority: high
+title: "A source script edited during the drive whose template copy was not updated is reported as drift and blocks"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000a.yaml"
+criteria: |
+  Given an epic branch modified a canonical source script (for example
+    scripts/commit_guardian/check_duplicate_code.py) so that it now contains
+    logic the shipped template copy does not have
+  And the corresponding shipped template copy
+    (templates/scripts/commit_guardian/check_duplicate_code.py) was NOT updated
+    to match the source change
+  When the parity check runs at the merge gate
+  Then the parity check reports the pair as drifted
+  And it fails the merge gate
+  And the merge stays blocked until the shipped template copy is brought back
+    byte-for-byte into agreement with its source
+depends_on:
+  - BP-1000a
+  - BP-1000a-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "templates/workflows-js/finalize-feature.js"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "This is the exact KI-2 regression to reproduce: the jscpd hook (check_duplicate_code.py) source gained the GE-100c measured%/threshold% logic and the templates/ copy was not synced, shipping a downgraded copy caught only post-merge. The gate must turn that scenario into a hard block at finalize time."
+  - "Wire the gate as a pre-merge step in the finalize-feature workflow (templates/workflows-js/finalize-feature.js): it runs against the final worktree state after origin/main is merged in (Step 2) and BEFORE the PR is merged to main (Step 4). A drift verdict HALTs the workflow with a non-success status, mirroring the existing test-regression HALT in Step 3 — do not auto-fix or auto-sync."
+  - "finalize-feature is a workflow (.js) — assigned_agent finalize-feature is is_ticket_phase:false and not dispatchable; the .js workflow-body edit plus any Python script glue is python-coder work, not an agent-template prose change."
+  - "Re-running the gate after the template copy is restored to byte-identical must pass deterministically with no residual state (idempotent; no caching that could mask a subsequent re-drift)."
+  - "Must surface the blocking outcome through the workflow's existing HALT/return contract (a non-ok status with the drift summary), not by raising an unhandled exception."
+delivers_to: null
+expects_from:
+  ac_id: BP-1000a-1
+  contract: "The per-pair parity verdict object { ok, pairs: [{source_path, template_path, identical, diff}] }; this AC consumes ok=false on a drifted pair to drive the merge-gate block."
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,62 @@
+id: ACD-1200a-10
+readiness: approved
+priority: high
+title: "Leaf collection excludes done and superseded ACs while still recursing into a superseded AC's replacement children"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the AC store contains these leaf ACs beneath goal ACD-070:
+    - ACD-070a-1 (level: L2, status: active, work_status: done)
+    - ACD-070a-2 (level: L2, status: active, work_status: todo)
+    - ACD-070b-1 (level: L2, status: superseded_by, superseded_by: [ACD-070b-1a, ACD-070b-1b],
+        covered_by: [ACD-070b-1a, ACD-070b-1b])
+    - ACD-070b-1a (level: L2, status: active, work_status: todo)
+    - ACD-070b-1b (level: L2, status: active, work_status: todo)
+  When the leaf collection over goal ACD-070 runs with its exclusion flags at their defaults,
+  Then the returned leaf list does NOT contain ACD-070a-1 (it is already done),
+  And the returned leaf list does NOT contain ACD-070b-1 (it was superseded by a split),
+  And the returned leaf list DOES contain ACD-070a-2 (active + todo, the unchanged default),
+  And the returned leaf list DOES contain both ACD-070b-1a and ACD-070b-1b
+    (traversal still recurses into a superseded AC's covered_by so the replacement
+    children are collected even though their superseded parent is skipped),
+  And a leaf that is itself active and todo is always emitted unchanged.
+
+  And the exclusion is parameterizable via two flags (exclude_done and
+    exclude_superseded) that both default to True, so the leaf-collection
+    function stays unit-testable with exclusions individually toggled off,
+  And when both flags are passed as False the returned leaf list contains all
+    five ACs (ACD-070a-1, ACD-070a-2, ACD-070b-1, ACD-070b-1a, ACD-070b-1b),
+    reproducing the prior unfiltered behavior.
+depends_on: [ACD-1200a, ACD-1200a-9]
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: specifies
+    status: exists
+  - path: scripts/goal_to_epic.py
+    relationship: related
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The leaf-collection traversal (traverse_ac_tree / its _dfs_collect_leaves helper in scan_ac_store.py) must, by default, omit any L2/L3 leaf whose work_status is 'done' and any leaf whose status is one of the superseded forms ('superseded_by' or 'superseded') from the emitted leaf list. The exclusion happens at emission time only — a node may still be skipped from emission while its covered_by children continue to be traversed."
+  - "A superseded leaf that was split must NOT short-circuit recursion: the traversal must still descend into its covered_by replacement children so they are collected when they are themselves emittable (active + todo). The critical case is a superseded BO-100d-1 being skipped while its children BO-100d-1a / BO-100d-1b are still collected."
+  - "Exclusion must be parameterizable via two keyword flags (suggested names exclude_done and exclude_superseded) defaulting to True, so the function remains unit-testable with each exclusion independently disabled. With both flags False, the function must reproduce the prior unfiltered leaf set exactly."
+  - "Audit every caller of traverse_ac_tree for reliance on the old unfiltered behavior before changing the default. goal_to_epic.py imports traverse_ac_tree for goal-mode leaf collection (the intended beneficiary of the new default). scan_ac_store.py main() filters work_status / status / readiness separately downstream, so its own pipeline must not be double-filtered or broken — verify it either passes flags explicitly or is unaffected by the new default."
+  - "Recurse-but-skip-emit and the seen-set de-duplication must remain compatible: a replacement child reachable only through a skipped superseded parent must still be reached exactly once. Wrap any added YAML/file I/O per the project error handling policy."
+delivers_to:
+  agent: python-coder
+  contract: "list[str] — leaf AC ids beneath the goal with done and superseded leaves omitted by default, but with replacement children of superseded leaves still included; consumed by goal-mode ticket generation (ACD-1200a-2)"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1200a-10-i
+implemented_by: []

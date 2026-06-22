@@ -1,0 +1,65 @@
+id: ACS-100h-7-i
+title: "When the AC tree is already at the limit and cannot be auto-split, the scaffold error tells the author to split first"
+component: ac-store
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Scenario: Target subtree is already at or over the limit at scaffold time
+    Given an author triggers /create-epic and the target AC subtree already has a
+      parent whose ID-derived child count is at or over its effective limit (so the
+      new epic's ACs cannot be added without exceeding it),
+    When the scaffold-time AC-tree-limit check runs before stub generation,
+    Then the scaffold is blocked and the error explicitly states that the AC tree
+      must be split BEFORE scaffolding can proceed,
+    And the error names the over-limit parent and points the author to the
+      ac-tree-split procedure (Pattern A for an over-limit L0, Pattern C for an
+      over-limit L1),
+    And no Master_Plan or ticket stub file is written.
+
+  Scenario: Auto-split is not possible at scaffold time
+    Given the scaffold step cannot itself perform a structural split safely
+      (splitting is a user-confirmed, multi-gate procedure per ACS-100h-3),
+    When a limit violation is detected,
+    Then the scaffold step does NOT attempt an automatic rename-based
+      redistribution,
+    And the error makes clear the split is a separate, author-driven step (and
+      that child_limit_override on the parent is the documented temporary escape
+      hatch when a structural split is not yet warranted, per ACS-100h-6).
+depends_on: [ACS-100h-7, ACS-100h-7b]
+doc_links:
+  - path: templates/agents/create-epic.md
+    relationship: specifies
+    status: exists
+  - path: templates/skills/ac-tree-split/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The scaffold step MUST NOT attempt an automatic structural split — splitting is the user-confirmed, multi-gate ac-tree-split procedure (ACS-100h-3). It only detects, blocks, and directs"
+  - "The error MUST name the over-limit parent and the applicable split pattern (A for L0, C for L1), and mention child_limit_override as the documented temporary escape hatch when a structural split is not yet warranted"
+  - "On this branch, zero scaffold files are written"
+delivers_to: null
+expects_from:
+  ac_id: ACS-100h-7a
+  contract: "Violation set as a list of { parent_id, level, id_derived_child_count, effective_limit }; a non-empty list on a target subtree already at/over limit triggers the split-first error"
+readiness: approved
+priority: high
+origin_agent: it-po
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  L3 edge of ACS-100h-7b (EPIC-CodeQualityHooks KI-4). Covers the case the IT-PO
+  hit live while authoring this very tree: ACS-100h was already over the L1 child
+  limit, so a naive scaffold under it would be blocked. The product behavior is to
+  fail clearly ("split first") rather than silently proceed or attempt an unsafe
+  auto-rename. child_limit_override is the documented temporary stopgap (ACS-100h-6
+  scenario 3), to be retired once ACS-800e lands.

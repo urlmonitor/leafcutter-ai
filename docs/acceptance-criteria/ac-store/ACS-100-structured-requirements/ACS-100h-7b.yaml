@@ -1,0 +1,57 @@
+id: ACS-100h-7b
+title: "/create-epic runs the AC-tree-limit check before stub generation and blocks on violation"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the /create-epic scaffold procedure (Phase 1 — Scaffold, which writes
+    Master_Plan.md and N ticket stub files),
+  When the procedure runs,
+  Then BEFORE writing any Master_Plan or ticket stub file it invokes the shared
+    AC-tree-limit check (ACS-100h-7a) against the target AC subtree,
+  And if the check returns one or more violations, the procedure does NOT write
+    any scaffold file and instead returns a blocking error that names each
+    over-limit parent (ID, level, ID-derived child count, effective limit) and
+    directs the author to split the AC tree first using the ac-tree-split
+    procedure,
+  And if the check returns no violations, the procedure proceeds to stub
+    generation exactly as it does today.
+depends_on: [ACS-100h, ACS-100h-7, ACS-100h-7a]
+doc_links:
+  - path: templates/agents/create-epic.md
+    relationship: specifies
+    status: exists
+  - path: templates/skills/ac-tree-split/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "The limit check MUST be invoked before any scaffold file is written; on violation, zero scaffold files exist afterwards (no partial Master_Plan or orphan stubs left on disk)"
+  - "The blocking error MUST name each over-limit parent and point the author to the ac-tree-split procedure — state the remedy, not just the failure"
+  - "create-epic is is_ticket_phase: false (supervisor tier); this AC edits its agent-template body (templates/agents/create-epic.md). The template change is llm-expert work, not python-coder"
+  - "MUST call the single shared callable from ACS-100h-7a rather than re-deriving the limit rule in the template prose, so commit-time and scaffold-time enforcement stay identical"
+delivers_to: null
+expects_from:
+  ac_id: ACS-100h-7a
+  contract: "Callable returning the violation set as a list of { parent_id, level, id_derived_child_count, effective_limit }; empty list means proceed, non-empty means block scaffold"
+readiness: approved
+priority: high
+origin_agent: it-po
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-100h-7-i
+implemented_by: []
+notes: |
+  llm-expert leaf of ACS-100h-7 (EPIC-CodeQualityHooks KI-4). Wires the
+  scaffold-time gate into the create-epic agent template's Phase 1, before stub
+  generation. The actual limit logic lives in ACS-100h-7a (python); this AC is the
+  template-prose change that calls it and blocks. The L3 edge ACS-100h-7-i covers
+  the tree-already-at-limit / cannot-auto-split branch of the blocking error.

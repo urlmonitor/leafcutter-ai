@@ -1,0 +1,51 @@
+id: BP-1000d-1
+readiness: approved
+priority: high
+title: "A source script with no shipped template counterpart is never flagged as a parity failure"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000d.yaml"
+criteria: |
+  Given the source tree contains a script that has NO corresponding shipped
+    template copy (source-only tooling a consumer would never receive, for
+    example a developer-only build or maintenance script)
+  And the source tree also contains mirrored source-template script pairs
+  When the merge-gate parity check runs
+  Then the source-only script is not included in the parity comparison
+  And the source-only script never causes the parity check to report drift
+  And the parity check evaluates only scripts that have a shipped template
+    counterpart, so its pass or fail verdict depends solely on mirrored pairs
+depends_on:
+  - BP-1000d
+  - BP-1000a-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000d.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The in-scope set is exactly the source directories under scripts/ that have a matching templates/scripts/<group>/ counterpart directory (currently ac_store/, commit_guardian/, sync_platforms/). Membership is derived from the presence of the mirror directory, never from a hardcoded allowlist, so the scope tracks reality as pairs are added or removed."
+  - "Source-only directories that have NO templates/scripts/ counterpart (currently agent-health/, changelog/, ci/, doc_compliance/, feedback/, knowledge/, proposals/, release/, retrospective/, workflows/, worktree/) must be excluded entirely — they must never enter the comparison and never contribute to the pass/fail verdict. This is the concrete false-positive class the gate must not trip on."
+  - "Scope filtering is a property of the pair-discovery step in BP-1000a-1, not a post-hoc suppression: a file is only ever compared if it lives inside a directory that has a mirror. Do not compare-then-exempt; never-compare in the first place."
+  - "Exclude build/cache noise (e.g. __pycache__/, *.pyc) from comparison on both sides so transient artifacts never read as drift."
+  - "Aligns with ADR-013: only consumer-facing scripts (portable group with a templates/scripts/ source) are in scope; package-development-only tooling is correctly exempt. Reference ADR-013's portable-vs-package-internal boundary as the rationale for the scope rule."
+delivers_to: null
+expects_from:
+  ac_id: BP-1000a-1
+  contract: "The mirrored-pair enumeration that the parity verdict is computed over (the pairs list in { ok, pairs: [...] }); pairing logic must exclude any source directory with no templates/scripts/ counterpart so source-only files never appear as a pair."
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

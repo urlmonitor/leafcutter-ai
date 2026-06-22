@@ -25,11 +25,12 @@ assigned_agent: null
 estimated_complexity: null
 delivers_to: null
 expects_from: null
+child_limit_override: 7
 origin_agent: product-owner-v3
 created: 2026-06-08
 amended_by:
   - reason: "split: TKT-500d -> TKT-500d + TKT-500f, 2026-06-18 (TKT-500d exceeded 5 L2 children; migration + generator-integrity cluster moved here)"
 superseded_by: null
-covered_by: [TKT-500f-1, TKT-500f-2, TKT-500f-3, TKT-500f-4, TKT-500f-5]
+covered_by: [TKT-500f-1, TKT-500f-2, TKT-500f-3, TKT-500f-4, TKT-500f-5, TKT-500f-6, TKT-500f-7]
 implemented_by: []
 documentation_triggers: [sequence-diagram, component-diagram]

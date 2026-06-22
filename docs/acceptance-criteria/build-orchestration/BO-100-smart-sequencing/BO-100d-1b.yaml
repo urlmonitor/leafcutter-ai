@@ -1,0 +1,57 @@
+id: BO-100d-1b
+readiness: approved
+priority: high
+title: "build-feature.md prose hard-blocks the drive before dispatch when the telemetry sink is unreachable"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given /build-feature is invoked for an epic that has at least one ready ticket,
+  And the pre-drive feedback-sink reachability probe attempts to append one probe
+    line to the telemetry sink at debugging/logs/agent_telemetry.jsonl,
+  When the probe returns a non-zero result (the append fails — for example the
+    path is not writable),
+  Then no ticket-supervisor is dispatched for the epic,
+  And the drive halts immediately at the pre-dispatch stage,
+  And the operator is shown an actionable message that names the failing sink
+    path (debugging/logs/agent_telemetry.jsonl),
+  And that message states the remediation needed to make the sink writable,
+  And no epic tickets are transitioned to in_progress.
+depends_on: [BO-100d-1, BO-100d-1a]
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The blocking sink-probe gate must be added to templates/workflows/build-feature.md as a mandatory step between Step A (worktree exists) and Step B (dispatch), so the prose path hard-blocks before any ticket-supervisor is dispatched — never after."
+  - "The prose gate must invoke the SAME probe semantics defined by BO-100d-1a (append-one-line + mkdir-and-reprobe + genuine-failure classification); the prose must reference the shared probe rather than restate divergent logic, so the two surfaces cannot drift."
+  - "Dual-surface parity (the KI-3 lesson): the build-feature.md prose gate and the deterministic build-epic.js gate must BOTH hard-block; a gate that blocks in one path but not the other silently reintroduces the original warn-only bug. The prose must make clear the gate is non-bypassable, not advisory/warn-only."
+  - "The abort branch must print an operator message naming debugging/logs/agent_telemetry.jsonl and the concrete remediation, then exit without dispatching any supervisor (mirror the existing Step A worktree-guard abort prose)."
+  - "Deployed/template parity (ADR-001 self-hosting): build-feature.md is a package source compiled by build.py; edit the package source and verify the deployed slash-command copy via the build.py round-trip — never edit only one side."
+  - "Apply the Prompt-Quality Checklist: keep bash probe snippets single-command per the shell convention; do not introduce inline implementation work that the inline_work_guard.py lock would block."
+delivers_to: null
+expects_from:
+  ac_id: BO-100d-1a
+  contract: "The shared pre-drive sink probe helper and its pass/fail semantics (first-probe append to debugging/logs/agent_telemetry.jsonl, mkdir-and-reprobe remediation, genuine-write-failure classification, typed blocked result with sink_path + remediation). The prose gate invokes this same probe so build-feature.md and build-epic.js enforce identical behavior."
+origin_agent: it-po
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Split from BO-100d-1 by it-po. This child owns the command-prose enforcement
+  surface (templates/workflows/build-feature.md, Step A -> B). Sibling
+  BO-100d-1a owns the deterministic build-epic.js gate + the shared probe helper
+  that this prose gate reuses. Both surfaces must hard-block (dual-surface
+  parity) or the JS path silently bypasses the prose gate.
+
+  Lineage: repeat of TICKET-20260527-FeedbackSinkPreDriveCheck — warn-only was
+  insufficient; this raises the prose gate to a hard block.

@@ -11,19 +11,21 @@ criteria: |
   contract intact. No requirement is lost, no link is broken, and the split itself
   is recorded for review.
 depends_on: [ACS-100, ACS-100c]
+readiness: approved
+priority: medium
 doc_links: []
 assigned_agent: llm-expert
 estimated_complexity: L
 delivers_to: null
 expects_from: null
+child_limit_override: 9
 origin_agent: BrainCandy
 created: 2026-06-05
-child_limit_override: 7
 amended_by:
   - "2026-06-22 [python-coder/chore/ge110-followups-metadata-and-tracking]: added child_limit_override: 7. ACS-100h currently has 5 L2 children (ACS-100h-1 through ACS-100h-5) and a 6th findings AC will be added. Override raised to 7 to provide modest headroom beyond the default cap of 5. Temporary waiver pending the AC-UID-decoupling refactor."
   - "2026-06-22 [business-analyst/ac/acs-100h-6-pattern-c]: added ACS-100h-6 (Pattern C documentation consistency, EPIC-AcPatternEnforcementIsMechanically finding #1) to covered_by. Brings ID-derived child count to 6, within the child_limit_override: 7."
+  - "2026-06-22 [it-po/ac/acs-100h-7-ki4]: added ACS-100h-7 (scaffold-time AC-tree-limit constraint, EPIC-CodeQualityHooks KI-4) to covered_by. Brings ID-derived child count to 7, at the child_limit_override: 7 ceiling. Resolved a git-stash conflict marker that had been left in covered_by."
 superseded_by: null
-notes: "child_limit_override is a temporary escape hatch. Remove once the AC-UID-decoupling refactor restructures this L1 tree."
 covered_by:
   - ACS-100h-1
   - ACS-100h-2
@@ -31,4 +33,25 @@ covered_by:
   - ACS-100h-4
   - ACS-100h-5
   - ACS-100h-6
+  - ACS-100h-7
+  - ACS-100h-7a
+  - ACS-100h-7b
 implemented_by: []
+notes: |
+  child_limit_override: 7 is a TEMPORARY stopgap (the documented escape hatch from
+  ACS-100h-6 scenario 3). It was added 2026-06-22 to admit ACS-100h-7 (the
+  scaffold-time AC-tree-limit constraint, EPIC-CodeQualityHooks KI-4) without
+  forcing a Pattern-C structural split mid-authoring. Before that addition this L1
+  already held 6 ID-derived L2 children (h-1..h-6) against the default L1 limit of
+  5 — i.e. the tree was already saturated.
+
+  The tree-saturation hit here is itself an instance of the very problem ACS-100h-7
+  prevents: adding requirements under an over-limit parent forces either an override
+  or an ID-rename cascade. Per the ac-store PROJECT_CONTEXT (ACS-800), this override
+  is to be RETIRED once ACS-800e lands (tooling will count children from metadata
+  rather than from ID strings, so re-parenting no longer requires ID renames). Do
+  not let it silently become permanent.
+
+  Note: covered_by previously listed only h-1..h-5; h-6 (approved 2026-06-22) was
+  added to covered_by in the same edit so the parent-child link is recorded from the
+  parent's direction.

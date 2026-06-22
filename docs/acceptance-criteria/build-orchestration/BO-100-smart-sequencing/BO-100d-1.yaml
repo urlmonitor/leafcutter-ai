@@ -1,0 +1,42 @@
+id: BO-100d-1
+readiness: approved
+priority: high
+title: "An unreachable telemetry sink hard-blocks the drive before any dispatch"
+component: build-orchestration
+level: L2
+status: superseded_by
+req_status: active
+work_status: todo
+criteria: |
+  Given /build-feature is invoked for an epic that has at least one ready ticket,
+  And the pre-drive feedback-sink reachability probe attempts to append one probe
+    line to the telemetry sink at debugging/logs/agent_telemetry.jsonl,
+  When the probe returns a non-zero result (the append fails — for example the
+    path is not writable),
+  Then no ticket-supervisor is dispatched for the epic,
+  And the drive halts immediately at the pre-dispatch stage,
+  And the operator is shown an actionable message that names the failing sink
+    path (debugging/logs/agent_telemetry.jsonl),
+  And that message states the remediation needed to make the sink writable,
+  And no epic tickets are transitioned to in_progress.
+depends_on: [BO-100d]
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+it_requirements: []
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by:
+  - reason: "it-po split: this behavior crosses two enforcement surfaces (build-epic.js deterministic gate vs build-feature.md command prose) owned by different agents. Split into BO-100d-1a (python-coder, build-epic.js gate + shared probe helper) and BO-100d-1b (llm-expert, build-feature.md prose parity). Criteria preserved verbatim across the children."
+superseded_by:
+  - BO-100d-1a
+  - BO-100d-1b
+covered_by:
+  - BO-100d-1a
+  - BO-100d-1b
+implemented_by: []

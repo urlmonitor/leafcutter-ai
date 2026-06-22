@@ -1,0 +1,58 @@
+id: ACD-1200c-3
+readiness: approved
+priority: high
+title: "A dependency cycle in one subtree degrades the store-wide scan to a warning, while a real intra-scope cycle still hard-fails a scoped epic build"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the AC store contains a dependency cycle confined to one component subtree
+    (for example BO-1100a-3 depends_on BO-1100d-1 and BO-1100d-1 depends_on BO-1100a-3),
+  And the rest of the store is acyclic,
+  When the store-wide scan / ready-AC ranking runs over the whole store,
+  Then it does NOT hard-abort the entire scan,
+  And it surfaces the cycle as a warning that names the cyclic AC ids,
+  And it continues to rank and emit the ready ACs from the acyclic remainder of the store,
+  And the store-wide scan exits with status 0 (the cycle is reported as a warning,
+    not a fatal error) when the only problem is a cycle outside the requested scope.
+
+  And given a goal-scoped goal-mode run whose OWN collected leaf set contains a
+    genuine intra-epic dependency cycle among the leaves being built,
+  When the scoped topological sort over that leaf set runs,
+  Then it still raises the cyclic-dependency error for that scoped build
+    (the scoped pre-write guard specified by ACD-1200c-1-i is preserved and not weakened),
+  And no epic folder is created and no ticket files are generated for that scoped build,
+  And the distinction is explicit: store-wide ranking degrades gracefully and keeps going,
+    whereas a scoped epic build with a real intra-scope cycle still fails fast before any write.
+depends_on: [ACD-1200c, ACD-1200c-1-i]
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: specifies
+    status: exists
+  - path: scripts/goal_to_epic.py
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The store-wide scanner (scan_ac_store.py main / the ready-AC ranking it drives) must NOT treat a depends_on cycle anywhere in the store as a fatal whole-scan abort. Today it detects a cycle and returns a non-zero exit (the 'ERROR: dependency cycle detected' path), which blocks /build-ac ranking for ALL trees. Replace this with graceful degradation: emit a warning naming the cyclic AC ids and continue ranking the acyclic remainder."
+  - "When the only problem is a cycle that lies outside the requested ranking scope, the store-wide scan must exit 0. Reserve non-zero store-wide exits for genuinely fatal conditions (e.g. YAML load failure), not for an isolated cycle the scan can route around."
+  - "Cycle isolation must be subtree-local: ACs participating in a cycle (and only those) are excluded from the ready set; ACs in unrelated acyclic subtrees must still be classified ready/blocked and ranked normally."
+  - "MUST NOT weaken the scoped guard: goal_to_epic.py's topological_sort must continue to raise CyclicDependencyError for a cycle within a scoped epic's own leaf set, before any ticket files or AC mutations are written (preserving ACD-1200c-1-i). The store-wide softening applies only to the store-wide ranking path, never to the scoped pre-write topological sort."
+  - "Keep the two code paths clearly separated so the relaxation cannot leak into the scoped guard. Wrap any added I/O per the project error handling policy."
+delivers_to:
+  agent: python-coder
+  contract: "Store-wide scan that warns-and-continues on an out-of-scope cycle (exit 0, acyclic remainder ranked); scoped goal-mode topological sort unchanged (still raises CyclicDependencyError and exits non-zero on an intra-scope cycle)"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1200c-3-i
+implemented_by: []

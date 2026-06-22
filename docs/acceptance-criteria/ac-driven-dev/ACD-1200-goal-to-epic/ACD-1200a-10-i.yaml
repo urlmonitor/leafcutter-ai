@@ -1,0 +1,52 @@
+id: ACD-1200a-10-i
+readiness: approved
+priority: high
+title: "A goal whose every leaf is done or superseded yields an empty leaf set and triggers the zero-leaf error path, not an empty epic"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the AC store contains goal ACD-080 (level: L0) whose only leaf descendants are:
+    - ACD-080a-1 (level: L2, status: active, work_status: done)
+    - ACD-080a-2 (level: L2, status: superseded_by, superseded_by: [ACD-080a-3])
+    - ACD-080a-3 (level: L2, status: active, work_status: done)
+  And every L2/L3 leaf beneath ACD-080 is therefore either done or superseded
+    (this differs from ACD-1200a-3-i, where the goal is structurally leaf-less
+    because its only descendant is a composite L1 with no L2/L3 children;
+    here leaf ACs exist but are all filtered out by the done/superseded exclusion),
+  When goal-mode is invoked with goal ACD-080 and the leaf collection runs with
+    its default exclusion flags,
+  Then the leaf collection returns an empty list,
+  And the existing zero-leaf error path fires with a message stating no buildable
+    leaf ACs remain beneath ACD-080 (all are done or superseded),
+  And no epic folder is created,
+  And no ticket files are generated,
+  And the AC store is left unmodified (no implemented_by or target_epic back-references stamped),
+  And the run exits with a non-zero status so a stale or fully-completed goal
+    never silently produces an empty epic.
+depends_on: [ACD-1200a-10]
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: specifies
+    status: exists
+  - path: scripts/goal_to_epic.py
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "When the default-filtered leaf set is empty, goal-mode must route into the same zero-leaf failure path already specified by ACD-1200a-3-i (no epic folder, no ticket files, non-zero exit), rather than assembling an empty epic."
+  - "The error message must make the cause distinguishable from the structurally-leaf-less case: it must indicate that buildable leaves were excluded because they are all done or superseded, so the user understands the goal is complete/retired rather than undecomposed."
+  - "Detection must occur before any file system writes (no epic folder mkdir, no ticket write, no AC YAML mutation). Wrap any I/O per the project error handling policy and exit non-zero."
+delivers_to: null
+expects_from:
+  ac_id: ACD-1200a-10
+  contract: "list[str] — the default-filtered leaf set; this edge case specifies the behavior when that list is empty because every leaf was excluded as done or superseded"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
