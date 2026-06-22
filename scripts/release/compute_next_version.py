@@ -56,7 +56,6 @@ def _resolve_changelogs_dir(repo_root: Path) -> Path:
 
     config_paths = [
         repo_root / "leafcutter" / "templates" / "scripts" / "commit_guardian" / "commit_guardian.json",
-        repo_root / "leafcutter" / "templates" / "commit-guardian" / "commit_guardian.json",
         repo_root / "templates" / "scripts" / "commit_guardian" / "commit_guardian.json",
     ]
     for config_path in config_paths:

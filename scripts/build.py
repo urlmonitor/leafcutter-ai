@@ -250,9 +250,6 @@ def _inject_file_size_limits(config: dict, package_root: Path) -> None:
             used to locate ``templates/scripts/commit_guardian/commit_guardian.json``.
     """
     cg_path = package_root / "templates" / "scripts" / "commit_guardian" / "commit_guardian.json"
-    if not cg_path.exists():
-        # Fall back to legacy path for backward compatibility
-        cg_path = package_root / "templates" / "commit-guardian" / "commit_guardian.json"
     py_limit: int = 400  # ultimate fallback
     try:
         with cg_path.open(encoding="utf-8") as fh:
@@ -285,8 +282,6 @@ def _inject_changelogs_dir(config: dict, package_root: Path) -> None:
             used to locate templates/scripts/commit_guardian/commit_guardian.json.
     """
     cg_path = package_root / "templates" / "scripts" / "commit_guardian" / "commit_guardian.json"
-    if not cg_path.exists():
-        cg_path = package_root / "templates" / "commit-guardian" / "commit_guardian.json"
     changelogs_dir: str = "changelogs/"
     try:
         with cg_path.open(encoding="utf-8") as fh:
@@ -347,27 +342,23 @@ def _manifest_ac_store_scripts(package_root: Path) -> set[str]:
 def _manifest_commit_guardian_scripts(package_root: Path) -> set[str]:
     """Return ``scripts/commit_guardian/<rel>`` entries for all template .py files.
 
-    Scans both ``templates/scripts/commit_guardian/`` (canonical) and
-    ``templates/commit-guardian/`` (legacy) and unions their ``.py`` files.
-    Scanning both paths prevents false positives for scripts that reside only in
-    the legacy location (e.g. ``check_v2_ac_store_alignment.py``).
+    Scans ``templates/scripts/commit_guardian/`` (canonical) and returns one
+    manifest entry per ``.py`` file, matching what ``build_commit_guardian``
+    deploys to the target project.
 
     Args:
         package_root: Absolute path to the leafcutter package root.
 
     Returns:
         Set of ``scripts/commit_guardian/<rel>`` strings, or empty set when
-        both source directories are absent.
+        the source directory is absent.
     """
     result: set[str] = set()
-    for src in (
-        package_root / "templates" / "scripts" / "commit_guardian",
-        package_root / "templates" / "commit-guardian",
-    ):
-        if src.is_dir():
-            for f in src.rglob("*"):
-                if f.is_file() and f.suffix == ".py":
-                    result.add(f"scripts/commit_guardian/{f.relative_to(src).as_posix()}")
+    src = package_root / "templates" / "scripts" / "commit_guardian"
+    if src.is_dir():
+        for f in src.rglob("*"):
+            if f.is_file() and f.suffix == ".py":
+                result.add(f"scripts/commit_guardian/{f.relative_to(src).as_posix()}")
     return result
 
 

@@ -323,8 +323,7 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
             if result.returncode == 0:
                 version_str = result.stdout.strip().split()[-1]
         except Exception as exc:  # noqa: BLE001
-            import warnings
-            warnings.warn(f"claude --version probe failed: {exc}", stacklevel=2)
+            _log.warning("claude --version probe failed: %s", exc)
             version_str = None
 
     version_known = version_str is not None
@@ -937,8 +936,7 @@ def build_commit_guardian(target_root: Path, config: dict[str, Any],
     Returns:
         Count of files written (or that would be written in dry-run mode).
     """
-    _canonical = TEMPLATES_DIR / "scripts" / "commit_guardian"
-    cg_dir = _canonical if _canonical.exists() else TEMPLATES_DIR / "commit-guardian"
+    cg_dir = TEMPLATES_DIR / "scripts" / "commit_guardian"
     if not cg_dir.exists():
         return 0
 

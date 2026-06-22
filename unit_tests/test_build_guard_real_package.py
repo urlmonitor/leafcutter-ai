@@ -155,8 +155,8 @@ def test_manifest_covers_commit_guardian_scripts() -> None:
 
     This test calls the REAL _get_source_deployable_scripts() with the REAL
     package_root — it does NOT construct the deployable set manually — and then
-    asserts that every .py file under templates/scripts/commit_guardian/ (or the
-    legacy templates/commit-guardian/ directory) appears in the returned set.
+    asserts that every .py file under templates/scripts/commit_guardian/ (canonical)
+    appears in the returned set.
 
     If a new .py file is added to scripts/commit_guardian/ in a future change
     without updating the manifest derivation, this test fails and names the
@@ -164,17 +164,14 @@ def test_manifest_covers_commit_guardian_scripts() -> None:
     """
     deployable = _build._get_source_deployable_scripts(_REAL_PACKAGE_ROOT)
 
-    # Discover the expected set by scanning the same source directories that
+    # Discover the expected set by scanning the canonical source directory that
     # _manifest_commit_guardian_scripts() scans.
     expected: set[str] = set()
-    for src in (
-        _REAL_PACKAGE_ROOT / "templates" / "scripts" / "commit_guardian",
-        _REAL_PACKAGE_ROOT / "templates" / "commit-guardian",
-    ):
-        if src.is_dir():
-            for f in src.rglob("*"):
-                if f.is_file() and f.suffix == ".py":
-                    expected.add(f"scripts/commit_guardian/{f.relative_to(src).as_posix()}")
+    src = _REAL_PACKAGE_ROOT / "templates" / "scripts" / "commit_guardian"
+    if src.is_dir():
+        for f in src.rglob("*"):
+            if f.is_file() and f.suffix == ".py":
+                expected.add(f"scripts/commit_guardian/{f.relative_to(src).as_posix()}")
 
     missing = expected - deployable
     assert not missing, (

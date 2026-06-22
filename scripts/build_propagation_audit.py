@@ -139,11 +139,10 @@ def _candidate_template_paths(script_name: str, package_root: Path) -> list[Path
         package_root: Root of the leafcutter package.
 
     Returns:
-        List of candidate Paths in priority order (canonical first, legacy second).
+        List of candidate Paths (canonical only).
     """
     return [
         package_root / "templates" / "scripts" / "commit_guardian" / script_name,
-        package_root / "templates" / "commit-guardian" / script_name,
     ]
 
 
@@ -351,7 +350,7 @@ def propagation_audit(
     try:
         entries = _parse_hook_entries_yaml(precommit_path)
     except Exception as exc:  # noqa: BLE001
-        print(f"  propagation_audit: WARNING — could not parse .pre-commit-config.yaml: {exc}", file=sys.stderr)
+        _log.warning("propagation_audit: could not parse .pre-commit-config.yaml: %s", exc)
         return 0
 
     checked: set[str] = set()

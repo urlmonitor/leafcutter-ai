@@ -47,10 +47,9 @@ behave is:
 leafcutter/templates/scripts/commit_guardian/commit_guardian.json
 ```
 
-> **Deprecated path warning.** The directory `leafcutter/templates/commit-guardian/`
-> is **deprecated** as of EPIC-PortableInstallHardening (2026-05-18). It still
-> exists for backward compatibility but will be removed in a future release.
-> **Always use the canonical path above** — never the deprecated path.
+> **Note.** The directory `leafcutter/templates/commit-guardian/` was removed
+> in TICKET-20260618-RemoveDeprecatedCommitGuardianTree. The canonical path
+> `leafcutter/templates/scripts/commit_guardian/` is the only source of truth.
 
 When `build.py` runs, it reads scripts from the canonical path and regenerates
 `.pre-commit-config.yaml` in the consumer project from the `hooks_manifest`
@@ -436,8 +435,7 @@ This restricts the hook to markdown files under `docs/`. Alternatively use
 
 `commit_guardian.json` is read at runtime by each hook script. Make sure you
 edited the file at the canonical path
-(`leafcutter/templates/scripts/commit_guardian/commit_guardian.json`), not the
-deprecated copy at `leafcutter/templates/commit-guardian/commit_guardian.json`.
+(`leafcutter/templates/scripts/commit_guardian/commit_guardian.json`).
 
 **"build.py regenerated .pre-commit-config.yaml but my hook is missing."**
 
@@ -528,5 +526,3 @@ See `docs/pre-commit-hooks.md` for the full configuration reference table.
   Guardian system overview and integration guide.
 - `docs/how-to/creating-a-claude-code-hook.md` — how to add Claude Code
   tool-event hooks (a separate system).
-- `leafcutter/templates/commit-guardian/DEPRECATED.md` — migration notes for
-  projects still referencing the old path.

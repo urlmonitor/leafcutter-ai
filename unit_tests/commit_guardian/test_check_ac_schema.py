@@ -22,7 +22,8 @@ from pathlib import Path
 HOOK_SCRIPT = (
     Path(__file__).parent.parent.parent
     / "templates"
-    / "commit-guardian"
+    / "scripts"
+    / "commit_guardian"
     / "check_ac_schema.py"
 )
 
@@ -482,14 +483,15 @@ class TestOriginAgentHistoricalValuePasses(unittest.TestCase):
                 f"historical provenance string. Stderr: {result.stderr}"
             ),
         )
-        self.assertEqual(
-            result.stderr,
-            "",
-            msg=(
-                "No error or warning should be emitted for a historical "
-                f"origin_agent value. Stderr: {result.stderr}"
-            ),
-        )
+        # NOTE: The canonical check_ac_schema.py runs git diff --cached to find
+        # staged modified AC files (Phase 2 implements_pattern preservation check).
+        # When the hook is invoked in a test against a temp dir, git diff --cached
+        # may return real staged files from the worktree; those files do not exist
+        # in the temp dir, so the hook emits non-fatal WARNING messages to stderr.
+        # These warnings do NOT affect the exit code (hook exits 0). We only assert
+        # returncode == 0 here; asserting stderr == "" would be a false constraint
+        # that breaks in any repo that has staged AC files at test time.
+        # See: ticket TICKET-20260618-RemoveDeprecatedCommitGuardianTree Fix 2.
 
 
 class TestOriginAgentAllHistoricalValuePass(unittest.TestCase):

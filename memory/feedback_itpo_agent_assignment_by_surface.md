@@ -10,7 +10,7 @@ surface is NOT Python. The IT-PO must re-assign by the file the work actually
 edits:
 
 - **`python-coder`** — `.py` only. Pre-commit hook scripts under
-  `scripts/commit_guardian/` and `templates/commit-guardian/check_*.py`,
+  `scripts/commit_guardian/` and `templates/scripts/commit_guardian/check_*.py`,
   build/config round-trips of `.claude/*.json` + `templates/scripts/.../*.json`
   (the JSON is edited and round-tripped by build.py, so it is python-coder work),
   and `commit_guardian.json` hooks_manifest edits (e.g. adding a `tier` field).
@@ -49,7 +49,7 @@ cross-component links travel via depends_on). Same-folder `covered_by` only.
 
 ## Config/template parity is a recurring it_requirement
 
-For any AC editing `.claude/*.json` or `templates/commit-guardian/*.py`, add an
+For any AC editing `.claude/*.json` or `templates/scripts/commit_guardian/*.py`, add an
 it_requirement that the deployed file and its packaged template source are
 edited together and verified in parity via the build.py round-trip — never edit
 one side only. This is a standing leafcutter self-hosting constraint (ADR-001).

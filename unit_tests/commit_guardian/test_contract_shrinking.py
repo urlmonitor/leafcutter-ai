@@ -16,7 +16,7 @@ import unittest
 from pathlib import Path
 
 # The hook script that will be created by python-coder (does not exist yet — tests are RED)
-HOOK_SCRIPT = Path(__file__).parent.parent.parent / "templates" / "commit-guardian" / "check_contract_shrinking.py"
+HOOK_SCRIPT = Path(__file__).parent.parent.parent / "templates" / "scripts" / "commit_guardian" / "check_contract_shrinking.py"
 
 
 def run_hook_with_diff(diff_content: str) -> subprocess.CompletedProcess:

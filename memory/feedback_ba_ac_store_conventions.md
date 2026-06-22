@@ -31,7 +31,7 @@ created, amended_by, superseded_by, covered_by, implemented_by`.
 When a feature spans components, route each AC to the component whose
 `index.yaml` `directory_patterns` match the files it governs:
 - `guardrail-engine` (GE): owns `scripts/commit_guardian/check_*.py` and
-  `templates/commit-guardian/check_*.py` — i.e. hook scripts, hooks_manifest
+  `templates/scripts/commit_guardian/check_*.py` — i.e. hook scripts, hooks_manifest
   tier fields, AUTOFIX_AGENT emission, transform hooks.
 - `build-orchestration` (BO): owns the autofix skill/commit-agent orchestration,
   `.claude/precommit-autofix.json` config, and signoff-skill capsule behavior.

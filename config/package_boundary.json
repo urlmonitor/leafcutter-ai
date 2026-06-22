@@ -3,9 +3,9 @@
 
     "sections": {
         "commit-guardian": {
-            "_comment": "Maps scripts/commit_guardian/ (live) vs leafcutter/templates/commit-guardian/ (template)",
+            "_comment": "Maps scripts/commit_guardian/ (live) vs leafcutter/templates/scripts/commit_guardian/ (template)",
             "live_dir": "scripts/commit_guardian",
-            "template_dir": "leafcutter/templates/commit-guardian",
+            "template_dir": "leafcutter/templates/scripts/commit_guardian",
             "items": {
                 "check_build_drift.py":          "portable",
                 "check_secrets.py":              "portable",
