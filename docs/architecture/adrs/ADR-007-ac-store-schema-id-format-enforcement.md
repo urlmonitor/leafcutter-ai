@@ -4,7 +4,7 @@ description: "Defines the AC YAML schema, hierarchical ID format with parent der
 type: "adr"
 status: "accepted"
 created: "2026-06-04"
-last_updated: "2026-06-17"
+last_updated: "2026-06-18"
 components:
   - build_pipeline
 ---
@@ -275,3 +275,33 @@ making Gherkin criteria illegible.
 **Alternative D: Use `jsonschema` as a hard dependency**
 Rejected. Commit hooks must be zero-dependency-at-runtime on fresh project
 clones. A soft dependency with a stdlib fallback is the safer default.
+
+## Partial-Run Recovery — Field-Based Orphan Detection
+
+The `origin_agent` and `readiness` fields defined in this ADR are used by the
+`/create-ac` workflow's Partial-Run Recovery pre-flight (AC ACD-300g-2-i) to
+detect orphaned AC files left by a prior crashed session.
+
+**Detection approach:**
+
+1. `git status --porcelain <ac-store-dir>` identifies YAML files with any
+   uncommitted change (modified, added, or untracked).
+2. Each candidate file is loaded and its `origin_agent` field is checked
+   against the set of AC-authoring agents:
+   `{product-owner-v3, business-analyst-v3, it-po-v3}`.
+3. The `readiness` field is checked for the value `draft` — only ACs that
+   have not yet been reviewed or approved can be orphaned.
+
+A file qualifies as an orphan only if both checks pass. Files that fail
+either check (e.g. a YAML file modified by a human, or an AC already
+promoted to `readiness: reviewed`) are skipped. This ensures the recovery
+pre-flight is non-destructive and does not accidentally commit or discard
+intentionally-staged work.
+
+The `origin_agent` field is optional in the schema (see Optional fields
+table above) but is written by all three AC-authoring agents (product-owner-v3,
+business-analyst-v3, it-po-v3) as part of their standard output. The
+`readiness` field is also optional in the raw schema but is always set by
+authoring agents.
+
+Full pre-flight specification: `templates/skills/create-ac/SKILL.md §PRR`.
