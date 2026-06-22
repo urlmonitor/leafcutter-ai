@@ -167,8 +167,8 @@ in the ecosystem. Each entry in the `agents` array describes one agent.
 | `domain` | string or null | **yes** | Domain tag for domain-specific agents. `null` for portable agents. |
 | `spawn_allowlist` | array of string | **yes** | Agent IDs this agent may spawn. May contain the macro `__ticket_phase_agents__`. |
 | `spawned_by` | array of string | **yes** | Agent IDs (or `"user"`) that are expected to spawn this agent. Used for documentation and validation. |
-| `is_ticket_phase` | boolean | **yes** | When `true`, this agent appears in the `agents:` map of a ticket and is dispatched by `ticket-supervisor`. Business-analyst and refinement use this flag to populate new ticket `agents:` maps. |
-| `selection_criteria` | object or null | **yes** | Structured criteria used by `business-analyst` to decide whether to include this agent in a ticket's `agents:` map. `null` when the agent is not ticket-phase or is always/never included. |
+| `is_ticket_phase` | boolean | **yes** | When `true`, this agent appears in the `agents:` map of a ticket and is dispatched by `ticket-supervisor`. The `create-ticket` workflow uses this flag to populate new ticket `agents:` maps. |
+| `selection_criteria` | object or null | **yes** | Structured criteria used by `ticket-supervisor` to decide whether to include this agent in a ticket's `agents:` map. `null` when the agent is not ticket-phase or is always/never included. |
 | `template_path` | string | for portable | Relative path from the leafcutter workspace root to the template file. Format: `templates/agents/<id>.md`. |
 | `model` | string | **yes** | Default model, mirroring the frontmatter `model` field. |
 | `skills_used` | array of string | no | Skill IDs the agent loads at runtime. Used by `registry_validator.py` to validate skills exist. |
