@@ -191,6 +191,77 @@ def _parse_frontmatter(text: str) -> dict[str, Any]:
     return fm
 
 
+def _parse_yaml_file(text: str) -> dict[str, Any]:
+    """Parse a plain YAML file (no ``---`` delimiters) and return a flat field dict.
+
+    Handles only the scalar and block-list syntax used by AC YAML files:
+    - ``key: value`` scalar lines at column 0
+    - ``key: |`` multiline block scalars (value collected as-is)
+    - ``key:`` bare lines followed by indented ``- item`` list lines
+
+    This is intentionally minimal — it covers the AC YAML schema and nothing
+    more. It does not support nested mappings, anchors, or flow scalars.
+    Stdlib-only: no third-party imports (PyYAML is explicitly excluded by the
+    project's stdlib-only policy and by the AC test suite's forbidden-imports
+    check).
+
+    Args:
+        text: Full text content of a YAML file (no frontmatter delimiters).
+
+    Returns:
+        Dict of field names to parsed values.  Empty dict on empty input.
+    """
+    lines = text.splitlines()
+    total = len(lines)
+    result: dict[str, Any] = {}
+    i = 0
+    while i < total:
+        line = lines[i]
+        # Skip blank lines and comment lines
+        if not line.strip() or line.strip().startswith("#"):
+            i += 1
+            continue
+        # Skip indented lines at the top level (they belong to a prior block)
+        if line.startswith("  ") or line.startswith("\t"):
+            i += 1
+            continue
+        m = re.match(r"^(\w[\w_-]*):\s*(.*)", line)
+        if not m:
+            i += 1
+            continue
+        key = m.group(1)
+        raw = m.group(2).strip()
+        # Block scalar indicator ``|`` or ``>``
+        if raw in ("|", ">"):
+            # Collect all indented lines following as a single string
+            block_lines: list[str] = []
+            i += 1
+            while i < total and (lines[i].startswith("  ") or lines[i].startswith("\t") or lines[i].strip() == ""):
+                block_lines.append(lines[i])
+                i += 1
+            # Dedent by 2 spaces if applicable, then join
+            dedented = []
+            for bl in block_lines:
+                if bl.startswith("  "):
+                    dedented.append(bl[2:])
+                elif bl.startswith("\t"):
+                    dedented.append(bl[1:])
+                else:
+                    dedented.append(bl)
+            result[key] = "\n".join(dedented).rstrip()
+            continue
+        # Bare key — may be followed by block list items
+        if raw == "":
+            children, i = _parse_block_children(lines, i + 1, total)
+            if children:
+                result[key] = children
+            continue
+        # Inline scalar value
+        result[key] = _parse_scalar_value(raw)
+        i += 1
+    return result
+
+
 def _extract_frontmatter_end_line(text: str) -> int:
     """Return line index (0-based) of the closing ``---`` delimiter, or 0.
 
@@ -444,25 +515,29 @@ def _extract_nodes_from_md_file(surface: str, path: Path) -> Generator[NodeRecor
 
 
 def _extract_nodes_from_dir(surface: str, path: Path) -> Generator[NodeRecord, None, None]:
-    """Yield nodes from all markdown files in a directory tree.
+    """Yield nodes from all markdown and YAML files in a directory tree.
 
-    Skips ``Master_Plan.md`` and ``README.md``.
+    Skips ``Master_Plan.md``, ``README.md``, and ``index.yaml``.
+    For ``.md`` files, description falls back to the first non-blank body line.
+    For ``.yaml`` files, description falls back to empty string (no body text).
 
     Args:
         surface: Surface name.
         path: Path to the directory.
 
     Yields:
-        NodeRecord for each markdown file found.
+        NodeRecord for each markdown or YAML file found.
     """
-    _SKIP = {"Master_Plan.md", "README.md"}
+    _SKIP_MD = {"Master_Plan.md", "README.md"}
+    _SKIP_YAML = {"index.yaml"}
+
     try:
         md_files = sorted(path.glob("**/*.md"))
     except OSError:
         return
 
     for md_file in md_files:
-        if md_file.name in _SKIP:
+        if md_file.name in _SKIP_MD:
             continue
         try:
             text = md_file.read_text(encoding="utf-8")
@@ -480,6 +555,30 @@ def _extract_nodes_from_dir(surface: str, path: Path) -> Generator[NodeRecord, N
             title=title,
             description=description,
             path=md_file,
+        )
+
+    try:
+        yaml_files = sorted(path.glob("**/*.yaml"))
+    except OSError:
+        return
+
+    for yaml_file in yaml_files:
+        if yaml_file.name in _SKIP_YAML:
+            continue
+        try:
+            text = yaml_file.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        fields = _parse_yaml_file(text)
+        node_id = str(fields.get("id") or yaml_file.stem)
+        title = str(fields.get("title") or yaml_file.stem)
+        description = str(fields.get("description") or "")
+        yield NodeRecord(
+            id=node_id,
+            surface=surface,
+            title=title,
+            description=description,
+            path=yaml_file,
         )
 
 
@@ -642,6 +741,17 @@ def _collect_all(
                     fm = _parse_frontmatter(text)
                     for edge in extract_edges(
                         surface_name, node, fm, surface_edge_fields
+                    ):
+                        all_edges.append(edge)
+                # For YAML nodes (e.g. acs surface), extract edges from parsed fields
+                elif node.path.is_file() and node.path.suffix == ".yaml":
+                    try:
+                        text = node.path.read_text(encoding="utf-8")
+                    except OSError:
+                        continue
+                    fields = _parse_yaml_file(text)
+                    for edge in extract_edges(
+                        surface_name, node, fields, surface_edge_fields
                     ):
                         all_edges.append(edge)
 
@@ -874,6 +984,14 @@ DECISION HISTORY
   (AC-7). NodeRecord/EdgeRecord NamedTuples. CLI flags: --query, --surface,
   --format, --edges, --project-root. Stdlib-only (AC-1). Clean error when
   paths.json absent (AC-6). render_text and render_json as separate functions.
+- 2026-06-22 [02_TICKET-20260622-KM-KGS-100a-2]: AC YAML node extraction in _extract_nodes_from_dir. (#02_TICKET-20260622-KM-KGS-100a-2)
+  Added _parse_yaml_file() — a stdlib-only plain-YAML parser (no --- delimiters) that
+  handles scalar values, block-scalar (|/>), and block-list items. Updated
+  _extract_nodes_from_dir() to glob **/*.yaml after **/*.md, skipping index.yaml, and
+  yield NodeRecords with id/title/description taken from parsed YAML fields (fallback to
+  stem). Updated _collect_all() to also extract edges from .yaml nodes via _parse_yaml_file
+  + extract_edges, mirroring the existing .md frontmatter path. PyYAML is intentionally
+  excluded (forbidden by AC test suite stdlib-only check).
 - 2026-06-22 [01_TICKET-20260622-KM-KGS-100a-1]: Added acs surface + dynamic edge_fields loading. (#01_TICKET-20260622-KM-KGS-100a-1)
   Added "acs" surface entry to config/paths.json (path: docs/acceptance-criteria/,
   edge_fields: implemented_by, covered_by, depends_on, components). Introduced
