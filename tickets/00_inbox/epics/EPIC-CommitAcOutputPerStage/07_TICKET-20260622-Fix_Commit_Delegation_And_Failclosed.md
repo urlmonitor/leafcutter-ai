@@ -4,7 +4,7 @@ agents:
   commit: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  pull-request: needed
+  pull-request: signed_off
   python-coder: signed_off
   sql-coder: not_needed
   test-runner: signed_off
@@ -105,7 +105,7 @@ Scenario: a genuinely successful commit still advances the pipeline
 - [x] test-runner — 2026-06-22 15:30
 - [x] pr-reviewer — 2026-06-22 16:00
 - [x] commit — 2026-06-22 (auto-authorized by ticket-supervisor)
-- [ ] pull-request
+- [x] pull-request — 2026-06-22 17:00
 
 ## Comments
 
@@ -171,6 +171,15 @@ completion_manifest:
   io_001_autofix_applied: true
   branch: EPIC-CommitAcOutputPerStage
 Committed 4 files (scripts/workflows/plan-feature.js, templates/workflows-js/plan-feature.js, unit_tests/test_commit_stage_output_behavioral.py, ticket sign-offs). Pre-commit hooks all passed after one autofix: IO-001 violation in _read_source() at line 75 (open() not wrapped in try/except) was fixed and re-staged before the successful retry commit.
+
+### 2026-06-22 17:00 — pull-request (status: ok)
+
+feedback-id: fb_2026-06-22_e15551b2
+completion_manifest:
+  existing_pr_detected: true
+  branch_pushed: true
+  pr_url_confirmed: true
+Detected existing PR #114 (feat(plan-feature): commit approved AC stage output before next dispatch) on branch EPIC-CommitAcOutputPerStage. Pushed ticket 07 commits (cd64441) to the remote, updating the existing PR without creating a duplicate. PR is at https://github.com/urlmonitor/leafcutter-ai/pull/114.
 
 ## Risk & Safety
 - Touches money? No.
