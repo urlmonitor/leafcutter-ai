@@ -1,0 +1,45 @@
+id: ACS-100h-6-i
+title: "Pattern C warns that the L2 rename is an ID-change cascade requiring a store-wide grep"
+component: ac-store
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Scenario: The skill warns that renaming a moved L2 is a store-wide ID-change cascade
+    Given the ac-tree-split skill's Pattern C (Intermediate Split) procedure,
+    When the rename-and-redistribute step is read,
+    Then the procedure explicitly warns that renaming a moved L2 is an
+      ID-change cascade whose blast radius extends beyond the moved subtree,
+    And it requires a store-wide search for every occurrence of each old child
+      ID across all AC files before the rename, so the full set of references
+      to update is known,
+    And it requires a second store-wide search for each old child ID after the
+      rename to confirm that zero stale references to the old ID remain
+      anywhere in the store.
+depends_on: [ACS-100h-6]
+doc_links:
+  - path: templates/skills/ac-tree-split/SKILL.md
+    relationship: specifies
+    status: exists
+  - path: templates/scripts/commit_guardian/check_ac_limits.py
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+readiness: approved
+priority: high
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Edge case for ACS-100h-6. A moved L2 rename is not a local edit: the old ID
+  may be referenced from depends_on, covered_by, delivers_to, expects_from,
+  superseded_by, or amended_by entries on completely unrelated AC files. The
+  skill must require a before-and-after store-wide grep of each old ID so no
+  stale reference survives the rename.

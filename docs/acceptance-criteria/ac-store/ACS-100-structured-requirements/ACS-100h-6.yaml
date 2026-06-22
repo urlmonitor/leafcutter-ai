@@ -1,0 +1,72 @@
+id: ACS-100h-6
+title: "Pattern C documentation is consistent with the ID-derivation child-counting rule"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Scenario: Documented Pattern C renames moved children to the new parent's prefix
+    Given the ac-tree-split skill's Pattern C (Intermediate Split) procedure,
+    When an overcrowded L1's L2 children are moved to a new sibling L1,
+    Then the procedure instructs that each moved L2 child is RENAMED so that
+      its ID prefix matches the new parent L1
+      (e.g. "<OLD-L1>-k" becomes "<NEW-L1>-m"),
+    And the procedure requires updating every depends_on, covered_by,
+      delivers_to, expects_from, superseded_by, and amended_by reference —
+      store-wide, not only within the moved subtree — from each old child ID
+      to its new ID,
+    And after the documented procedure is followed, the originally-overcrowded
+      L1's ID-derived child count (as computed the same way the limit check
+      derives a parent from a child's ID string) is at or below its effective
+      child limit.
+
+  Scenario: Pattern C documentation must not claim a covered_by-only rewrite clears the limit
+    Given the child-limit enforcement counts a parent's children by deriving
+      the parent from each child's ID string (not by reading covered_by,
+      depends_on, or any other reference field),
+    When the Pattern C procedure is read,
+    Then the procedure does NOT state or imply that rewiring covered_by or
+      depends_on alone (while leaving the moved children's ID prefixes
+      unchanged) is sufficient to bring the overcrowded L1 below its limit,
+    And the procedure explicitly states that the child IDs themselves must be
+      changed for the overcrowded parent's count to drop.
+
+  Scenario: Documented alternative when a structural split is not yet warranted
+    Given a parent for which a structural split is not yet warranted,
+    When the Pattern C procedure is read,
+    Then it documents child_limit_override on the parent as the auditable
+      escape hatch to raise that parent's effective child limit instead of
+      performing a rename-based redistribution,
+    And it frames child_limit_override as a temporary exception to be removed
+      once a structural rebalance is performed.
+depends_on: [ACS-100h]
+doc_links:
+  - path: templates/skills/ac-tree-split/SKILL.md
+    relationship: specifies
+    status: exists
+  - path: templates/scripts/commit_guardian/check_ac_limits.py
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+readiness: approved
+priority: high
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-100h-6-i
+implemented_by: []
+notes: |
+  Authored from EPIC-AcPatternEnforcementIsMechanically spot-check FINDING #1.
+  The ac-tree-split Pattern C prose previously said moved L2 children keep their
+  IDs and only need depends_on/covered_by rewiring. The check_ac_limits.py hook
+  (registered as check-ac-tree-limits) counts a parent's children purely by
+  ID-string derivation (_derive_parent_id), deliberately not via covered_by or
+  depends_on (GE-106), so a covered_by-only Pattern C split did not reduce the
+  overcrowded L1's ID-derived count and the commit stayed blocked. This AC makes
+  the corrected (rename-based) procedure a tracked, testable requirement.
