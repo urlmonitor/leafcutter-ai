@@ -23,7 +23,7 @@ requires_adr: false
 requires_diagram: false
 roadmap_phase: phase_1
 source_ac: ACD-300g-1
-status: in_progress
+status: done
 title: 'Fix commitStageOutput: route commit through commit agent + fail closed on
   unparseable output'
 ---
