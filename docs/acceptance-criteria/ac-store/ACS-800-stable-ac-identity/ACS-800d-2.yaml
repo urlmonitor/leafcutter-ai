@@ -1,0 +1,40 @@
+id: ACS-800d-2
+readiness: approved
+priority: high
+title: "Existing cross-references keep resolving after migration"
+component: ac-store
+level: L2
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given a requirement referenced by other requirements through dependency,
+    coverage, contract, and supersedes links written under the old
+    position-encoded names,
+  When the migration completes,
+  Then every one of those references still resolves to the same requirement it
+    pointed at before the migration,
+  And resolution succeeds whether the reference is read by its old
+    position-encoded name or by the migrated requirement's new UID (the
+    migration preserves a mapping from old name to UID, or rewrites the
+    references, such that neither form dangles).
+depends_on: [ACS-800d, ACS-800d-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: [ACS-800d-2-i]
+implemented_by: []
+notes: |
+  Decomposed from ACS-800d. The back-compat guarantee: old-id->UID mapping OR
+  in-migration rewrite, with dual-key resolution during the window. Leaves the
+  choice of mechanism to IT-PO/python-coder; the observable guarantee is "no
+  reference dangles, by either key".

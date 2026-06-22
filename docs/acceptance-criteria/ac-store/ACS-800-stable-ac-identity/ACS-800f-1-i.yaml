@@ -1,0 +1,38 @@
+id: ACS-800f-1-i
+readiness: approved
+priority: high
+title: "Guidance documents the child-limit override as removable once tooling reads metadata"
+component: ac-store
+level: L3
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given the authoring guidance and schema notes that today describe the
+    child-limit override as a temporary escape hatch,
+  When the guidance is updated,
+  Then it states that the child-limit override is a stopgap that becomes
+    unnecessary once the tooling counts children from parent-pointer metadata,
+  And it instructs that the override should be removed from any requirement once
+    that metadata-based child counting is in effect,
+  And it does not present the override as a permanent feature.
+depends_on: [ACS-800f-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Edge case of ACS-800f-1, carrying the load-bearing STOPGAP-RETIREMENT cross-reference
+  from PROJECT_CONTEXT: child_limit_override is scaffolding for ACS-800 and must be
+  documented as removable once ACS-800e-1 (metadata child counting) lands. Keeps the
+  retirement note from silently becoming permanent.

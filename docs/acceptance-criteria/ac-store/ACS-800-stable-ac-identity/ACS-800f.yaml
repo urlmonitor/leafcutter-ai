@@ -1,0 +1,53 @@
+id: ACS-800f
+readiness: approved
+priority: high
+title: "The authoring guidance reflects the new model"
+component: ac-store
+level: L1
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  The skills and agent instructions that authors follow describe stable names and
+  metadata hierarchy — not the old name-encodes-position mechanic.
+
+  When a person or agent reads how to create, split, or move a requirement, the
+  guidance matches how the store actually works: it explains permanent names and
+  metadata-based hierarchy, so the written instructions never quietly contradict the
+  real behavior.
+depends_on: [ACS-800]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by:
+  - reason: "BA decomposed ACS-800f into L2/L3 behaviors (ACS-800f-1/2/3, ACS-800f-1-i)."
+    agent: business-analyst
+    date: 2026-06-22
+superseded_by: null
+covered_by: [ACS-800f-1, ACS-800f-2, ACS-800f-3]
+implemented_by: []
+documentation_triggers: [how-to]
+notes: |
+  Prompt / skill-body / agent-template surface (llm-expert per the IT-PO
+  agent-assignment-by-surface convention: text that tells an agent or skill what to
+  DO/SAY is template/skill work, not python-coder). Templates/skills that today
+  describe the OLD id-derivation mechanic and would silently contradict reality once
+  ACS-800 lands:
+    - the ac-tree-split skill (templates/skills/ac-tree-split/SKILL.md) — today frames
+      a "move" as a rename + reference cascade and leans on horizontal/intermediate
+      splits; must be updated to describe a re-parent as a single metadata change, and
+      to note that the routine manual tree-split it documents is no longer the primary
+      remedy for saturation.
+    - product-owner and business-analyst agent templates — the parent-derivation /
+      "id encodes position" guidance and the parent covered_by update protocol that
+      references derive_parent_id() id-string logic.
+    - docs/reference/ac-schema.md prose (the ID Format / Parent Derivation sections).
+  This L1 also captures retiring references to child_limit_override as a stopgap once
+  ACS-800 has landed.

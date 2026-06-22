@@ -1,0 +1,38 @@
+id: ACS-800e-3
+readiness: approved
+priority: high
+title: "Tree traversal for epic generation follows parent-pointer metadata"
+component: ac-store
+level: L2
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given a goal requirement and its descendants whose hierarchy is recorded in
+    parent-pointer, level, and order metadata,
+  When the tree is traversed to build the set of work items beneath the goal,
+  Then the traversal walks from the goal to its children by matching each
+    requirement's parent-pointer field to the current node's UID,
+  And children are visited in the sequence given by their order field,
+  And the resulting set of descendants is identical whether or not any
+    requirement in the subtree has been re-homed since creation, because the
+    traversal never reads the requirement names to infer structure.
+depends_on: [ACS-800e, ACS-800b-1, ACS-800b-3]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Decomposed from ACS-800e. Updates goal_to_epic.py tree traversal to walk the
+  parent-pointer + order metadata instead of decoding the id string. Depends on the
+  parent-pointer (ACS-800b-1) and order (ACS-800b-3) fields.

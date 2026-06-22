@@ -1,0 +1,41 @@
+id: ACS-800d-1
+readiness: approved
+priority: high
+title: "Migration assigns a UID and populates hierarchy metadata for every existing requirement"
+component: ac-store
+level: L2
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given the store contains requirements whose hierarchy is today encoded only in
+    their position-encoded names (for example ACS-100, ACS-100a, ACS-100a-1,
+    ACS-100a-1-i),
+  When the one-time migration runs,
+  Then every existing requirement is assigned a stable opaque UID,
+  And every existing requirement's parent-pointer, level, and order metadata are
+    populated from its current position-encoded name (the parent pointer is set
+    to the UID of the requirement its old name derived as parent, the level
+    matches its old name's depth, and the order reflects its old sibling
+    sequence),
+  And no two migrated requirements receive the same UID.
+depends_on: [ACS-800d, ACS-800a-1, ACS-800b-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: [ACS-800d-1-i]
+implemented_by: []
+notes: |
+  Decomposed from ACS-800d (highest-risk L1, complexity L). The one-time backfill
+  that derives each existing requirement's parent UID from today's derive_parent_id()
+  output mapped through the old-id->UID assignment. Cross-L1 deps: needs the UID
+  allocation (ACS-800a-1) and the parent-pointer field (ACS-800b-1).

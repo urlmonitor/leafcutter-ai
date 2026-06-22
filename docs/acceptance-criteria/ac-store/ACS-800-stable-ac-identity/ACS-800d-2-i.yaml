@@ -1,0 +1,38 @@
+id: ACS-800d-2-i
+readiness: approved
+priority: high
+title: "Migration surfaces a reference that points at a non-existent requirement"
+component: ac-store
+level: L3
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given a requirement whose dependency, coverage, or contract link names another
+    requirement id that does not exist in the store at migration time (an
+    already-dangling reference),
+  When the migration runs,
+  Then the migration reports the dangling reference, naming the referencing
+    requirement and the missing target id,
+  And the migration does not invent a UID for the missing target,
+  And the pre-existing dangling reference is not counted as a new dangling
+    reference introduced by the migration itself.
+depends_on: [ACS-800d-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Edge case of ACS-800d-2: a reference to a non-existent id already present before
+  migration. Distinguishes pre-existing breakage (reported, not caused) from
+  migration-introduced breakage (forbidden by ACS-800d-3).

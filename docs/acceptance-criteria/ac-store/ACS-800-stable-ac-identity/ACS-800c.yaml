@@ -1,0 +1,44 @@
+id: ACS-800c
+readiness: approved
+priority: high
+title: "Re-home a requirement with a single change"
+component: ac-store
+level: L1
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Move a requirement under a new parent without renaming it or touching anything that points to it.
+
+  Reorganizing the tree — splitting an overcrowded branch, rebalancing, or moving a
+  requirement to a better home — is a single change to where it says its parent is.
+  The requirement keeps its name, and every existing dependency, coverage, contract,
+  and supersedes link keeps working untouched.
+depends_on: [ACS-800]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by:
+  - reason: "BA decomposed ACS-800c into L2/L3 behaviors (ACS-800c-1/2/3, ACS-800c-3-i)."
+    agent: business-analyst
+    date: 2026-06-22
+superseded_by: null
+covered_by: [ACS-800c-1, ACS-800c-2, ACS-800c-3]
+implemented_by: []
+documentation_triggers: [how-to]
+notes: |
+  This is the core payoff of ACS-800. A re-parent is ONE metadata-field change
+  (the parent pointer from ACS-800b) — no id rename and no store-wide rewrite of
+  depends_on / covered_by / delivers_to / expects_from / superseded_by references.
+  PERMANENT FIX: this is what makes the repeated manual tree splits (ac-tree-split
+  skill) and the child_limit_override stopgap on check_ac_limits.py unnecessary going
+  forward — an over-cap branch is rebalanced by moving children, not by renaming them.
+  The BA should specify at L2 the "no reference cascade" guarantee and the moved-child
+  bookkeeping (parent's child list and the child's parent pointer stay consistent).

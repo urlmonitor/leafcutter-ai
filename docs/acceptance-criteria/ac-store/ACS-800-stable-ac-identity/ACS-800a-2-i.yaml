@@ -1,0 +1,37 @@
+id: ACS-800a-2-i
+readiness: approved
+priority: high
+title: "A requirement's UID survives a re-home unchanged"
+component: ac-store
+level: L3
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given a requirement with stable UID 42 whose parent is the requirement with
+    UID 10,
+  When the requirement is re-homed so that its parent becomes the requirement
+    with UID 25,
+  Then the requirement still reports stable UID 42 after the move,
+  And every other requirement that referenced UID 42 (via a dependency,
+    coverage, or contract link) still resolves to the same requirement,
+  And no rename or reference rewrite was required to keep those links resolving.
+depends_on: [ACS-800a-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Edge case of ACS-800a-2 that demonstrates the immutability guarantee under the
+  specific operation ACS-800c specifies (re-home). Verifies the UID is the anchor
+  that makes ACS-800c's "no reference cascade" possible.

@@ -1,0 +1,45 @@
+id: ACS-800e-5
+readiness: approved
+priority: high
+title: "The schema accepts an opaque id and validates the new hierarchy metadata fields"
+component: ac-store
+level: L2
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given the store schema that today requires a requirement id to match a
+    position-encoding pattern,
+  When the schema is updated for the new identity model,
+  Then a requirement whose id is an opaque UID that encodes no hierarchy is
+    accepted as valid,
+  And the schema defines and validates the parent-pointer, level, and order
+    metadata fields,
+  And a requirement that declares a level outside L0..L3, or a parent-pointer
+    that is not a well-formed UID, is rejected by schema validation,
+  And requirements written under the old position-encoded id form continue to
+    validate during the migration window.
+depends_on: [ACS-800e, ACS-800a-1, ACS-800b-1, ACS-800b-2, ACS-800b-3]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: config/ac_store_schema.json
+    relationship: governs
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Decomposed from ACS-800e. Relaxes the config/ac_store_schema.json id regex (id no
+  longer carries hierarchy meaning) AND adds the parent-pointer/level/order field
+  definitions to the schema. NOTE the schema is currently additionalProperties:false
+  and does NOT yet contain the parent-pointer or order fields — adding them is part of
+  this AC. Depends on the field-defining ACs ACS-800a-1, ACS-800b-1/2/3.

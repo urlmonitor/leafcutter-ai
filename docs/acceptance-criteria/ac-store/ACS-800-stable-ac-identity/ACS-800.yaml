@@ -1,0 +1,53 @@
+id: ACS-800
+readiness: approved
+priority: high
+title: "Reorganize your requirements freely as they grow, without breaking a single reference"
+component: ac-store
+level: L0
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Move a requirement anywhere in the tree by changing one field — no renames, no broken links.
+
+  Today a requirement's name encodes where it sits in the tree, so reshaping the tree
+  means renaming requirements and chasing every cross-reference across the whole store
+  by hand. This goal gives every requirement a permanent name of its own and records
+  its place in the tree as ordinary information you can read and change. The result:
+  you split, rebalance, and re-home requirements as your thinking evolves, and nothing
+  else has to change — every dependency, coverage, and contract link keeps pointing
+  at the right requirement.
+depends_on: []
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: [ACS-800a, ACS-800b, ACS-800c, ACS-800d, ACS-800e, ACS-800f]
+implemented_by: []
+notes: |
+  Strategic structural capability proposed directly by the user (BrainCandy).
+  Decouples AC identity from tree position: every AC gets a STABLE, opaque,
+  position-independent unique identifier (assigned sequentially at creation, never
+  derived from tree position), and the parent relationship, level, and ordering move
+  into metadata fields rather than being encoded in the id string.
+
+  PERMANENT FIX FOR TREE SATURATION: ACS-800 is the permanent resolution of the
+  tree-saturation and re-parenting pain that today forces repeated manual L0/L1
+  tree splits (see the ac-tree-split skill) and that the newly added
+  `child_limit_override` field on check_ac_limits.py is only a TEMPORARY stopgap for.
+  The override exists to let an over-cap tree (e.g. ACS-100, currently at 9 L1
+  children) keep being worked on in the interim; it is intended to be RETIRED once
+  ACS-800 lands and tooling counts children from metadata instead of from the id
+  string. A future reader should treat child_limit_override as scaffolding for this
+  L0, not a permanent feature.
+
+  This L0 was minted as a NEW root (next free ACS-NNN = ACS-800) rather than as an
+  L1 under ACS-100, precisely because ACS-100 is already over the 7-child cap — the
+  saturation this capability cures. Placement in the ac-store component is correct:
+  this is the store's own structural-identity concern.

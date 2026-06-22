@@ -1,0 +1,35 @@
+id: ACS-800d-4
+readiness: approved
+priority: high
+title: "Re-running the migration changes nothing"
+component: ac-store
+level: L2
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given a store that has already been migrated (every requirement has a UID and
+    populated hierarchy metadata),
+  When the migration is run a second time,
+  Then no requirement is assigned a new or different UID,
+  And no requirement's parent-pointer, level, or order metadata is changed,
+  And the second run reports that there was nothing to migrate.
+depends_on: [ACS-800d, ACS-800d-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Decomposed from ACS-800d. Idempotency / re-runnability — a second run is a no-op,
+  so a partially-applied or repeated migration is safe. Important because this is
+  the highest-risk, whole-store operation.
