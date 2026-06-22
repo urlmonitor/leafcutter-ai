@@ -61,4 +61,5 @@ created: 2026-06-22
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RegistryCompletenessGate/07_TICKET-20260622-BP-900e-5.md
