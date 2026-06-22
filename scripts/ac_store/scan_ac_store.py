@@ -17,10 +17,11 @@ Options:
 
 Exit codes:
     0  Success (even when no ACs match the filter — empty is valid).
+       Dependency cycles confined to one component subtree are surfaced as
+       WARNINGs on stderr and the acyclic remainder is still ranked and
+       emitted (ACD-1200c-3).
     1  One or more AC YAML files could not be read or parsed. A per-file
        diagnostic is written to stderr for each bad file.
-    2  A dependency cycle was detected in the depends_on graph. The cycle
-       description is written to stderr.
 
 AC-1: Leaf scanner identifies todo, unblocked L2/L3 ACs.
 AC-5: Scanner JSON output is machine-consumable.
@@ -827,6 +828,43 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _drain_cycles(
+    id_index: dict[str, AcRecord],
+    all_records: list[AcRecord],
+) -> None:
+    """Remove all dependency-cycle nodes from *id_index* and *all_records* in place.
+
+    Repeatedly detects the first cycle found, emits a WARNING to stderr naming
+    the cyclic AC IDs, removes those nodes from both *id_index* and
+    *all_records*, and loops until the graph is acyclic.  This allows the
+    store-wide scan to continue with the acyclic remainder (ACD-1200c-3).
+
+    Args:
+        id_index: Full id-to-record mapping; mutated in place — cyclic entries
+            are deleted.
+        all_records: Master list of all loaded AC records; mutated in place —
+            records whose id is in a cycle are removed.
+    """
+    while True:
+        cycle = _detect_cycle(id_index)
+        if cycle is None:
+            break
+        # Deduplicate cycle ids (the path may repeat the start node at end).
+        cyclic_ids: list[str] = list(dict.fromkeys(cycle))
+        print(
+            f"WARNING: dependency cycle detected (store-wide scan continues with "
+            f"acyclic ACs): {' → '.join(cycle)}",
+            file=sys.stderr,
+        )
+        for ac_id in cyclic_ids:
+            id_index.pop(ac_id, None)
+        # Remove cyclic records from all_records in place.
+        cyclic_set = set(cyclic_ids)
+        for i in range(len(all_records) - 1, -1, -1):
+            if all_records[i].get("id") in cyclic_set:
+                del all_records[i]
+
+
 def main(argv: list[str] | None = None) -> int:
     """Entry point for scan_ac_store.py.
 
@@ -834,7 +872,9 @@ def main(argv: list[str] | None = None) -> int:
         argv: Command-line arguments (default: sys.argv[1:]).
 
     Returns:
-        Exit code: 0 on success, 1 on YAML errors, 2 on dependency cycle.
+        Exit code: 0 on success (dependency cycles are surfaced as WARNINGs
+        and the acyclic remainder is still ranked and emitted), 1 on YAML
+        errors.
     """
     parser = _build_parser()
     args = parser.parse_args(argv)
@@ -872,14 +912,10 @@ def main(argv: list[str] | None = None) -> int:
     # Build id index for dependency resolution
     id_index = _build_id_index(all_records)
 
-    # Cycle detection
-    cycle = _detect_cycle(id_index)
-    if cycle is not None:
-        print(
-            f"ERROR: dependency cycle detected: {' → '.join(cycle)}",
-            file=sys.stderr,
-        )
-        return 2
+    # Cycle detection — drain all cycles, emitting a WARNING per cycle and
+    # removing cyclic nodes so the acyclic remainder can still be ranked.
+    # ACD-1200c-3: store-wide scan must NOT hard-abort on a subtree cycle.
+    _drain_cycles(id_index, all_records)
 
     # Filter: level + work_status + status + readiness (approved only)
     filtered: list[AcRecord] = []
@@ -963,5 +999,15 @@ DECISION HISTORY
   both flags are False, all leaves are collected as before (backward-
   compatible). The caller in goal_to_epic.py uses the default signature
   and gets the new filtered behaviour automatically.
+- 2026-06-22 [TICKET-20260622-ACD-1200c-3]: Implemented cycle-degrades-to-
+  warning behaviour (ACD-1200c-3). Added _drain_cycles() helper that
+  iteratively detects dependency cycles, emits a WARNING per cycle naming
+  the cyclic AC IDs, removes those nodes from the id_index and all_records,
+  and repeats until the graph is acyclic. main() now calls _drain_cycles()
+  instead of hard-aborting (exit 2) on cycle detection. The acyclic
+  remainder is still ranked and emitted; exit code remains 0. The scoped
+  build guard in goal_to_epic.py (CyclicDependencyError from
+  topological_sort) is NOT weakened — it still hard-fails for intra-scope
+  cycles (ACD-1200c-1-i preserved).
 ====================================================================
 """
