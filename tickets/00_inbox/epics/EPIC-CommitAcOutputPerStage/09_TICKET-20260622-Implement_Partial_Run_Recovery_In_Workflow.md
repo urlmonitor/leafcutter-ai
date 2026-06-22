@@ -1,7 +1,7 @@
 ---
 advances_current_outcome: true
 agents:
-  commit: needed
+  commit: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
   pull-request: needed
@@ -103,7 +103,7 @@ Scenario: scan is fast
 - [x] python-coder — 2026-06-22 18:45
 - [x] test-runner — 2026-06-22 19:10
 - [x] pr-reviewer — 2026-06-22 19:30
-- [ ] commit
+- [x] commit — 2026-06-22 19:45
 - [ ] pull-request
 
 ## Comments
@@ -152,8 +152,12 @@ completion_manifest_notes:
   medium_finding_2: "errors[] array in discard branch is populated by push() on each per-file failure but is not surfaced to the user or returned before function returns {action:continue} — silent swallow of individual file-delete/restore errors in discard path."
 
 ### 2026-06-22 19:45 — commit (status: ok)
-feedback-id: submit-failed
-Auto-authorized commit gate: subject "feat(plan-feature): implement partial-run recovery scan in run()"; staged files: scripts/workflows/plan-feature.js, templates/workflows-js/plan-feature.js, unit_tests/test_partial_run_recovery.py, tickets/00_inbox/epics/EPIC-CommitAcOutputPerStage/09_TICKET-20260622-Implement_Partial_Run_Recovery_In_Workflow.md.
+feedback-id: fb_2026-06-22_33b46ce6
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Auto-authorized commit gate: subject "feat(plan-feature): implement partial-run recovery scan in run()"; staged files: scripts/workflows/plan-feature.js, templates/workflows-js/plan-feature.js, unit_tests/test_partial_run_recovery.py, tickets/00_inbox/epics/EPIC-CommitAcOutputPerStage/09_TICKET-20260622-Implement_Partial_Run_Recovery_In_Workflow.md. Commit cc35118 landed after one pre-commit retry (check-feedback-id required adding feedback-id lines to the ticket-supervisor and commit audit headings; mechanical autofix applied).
 
 ## Implementation Tasks
 - [x] Add a pre-Stage-0 recovery scan to `run()` in plan-feature.js (git status --porcelain --untracked-files=all over docs/acceptance-criteria/, qualify by origin_agent + readiness: draft).
