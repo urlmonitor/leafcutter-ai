@@ -157,12 +157,13 @@ async function commitStageOutput(agent, written, stageName, component, isFinal) 
   let commitResult;
   try {
     commitResult = await agent({
-      agentType: "status-checker",
+      agentType: "commit",
       input: {
         instructions:
-          `Commit the AC YAML files produced by the ${stageName} stage.\n` +
+          `Stage and commit the AC YAML files produced by the ${stageName} stage.\n` +
           "\n" +
           `The AC IDs written by this stage are: ${writtenJson}\n` +
+          `The commit message to use is: ${commitMessage}\n` +
           "\n" +
           "IMPORTANT STAGING RULE: You MUST stage ONLY the files that correspond to the\n" +
           "AC IDs listed above. Never run 'git add docs/acceptance-criteria/' or\n" +
@@ -195,9 +196,9 @@ async function commitStageOutput(agent, written, stageName, component, isFinal) 
           "  If the output is empty (nothing staged despite Step 3 succeeding):\n" +
           "    Return: { \"status\": \"ok\", \"message\": \"no new AC files to commit — skipped\" }\n" +
           "\n" +
-          `Step 5 — Commit the staged files:\n` +
-          `  Run: git commit -m "${commitMessage}" 2>&1\n` +
-          "  Capture ALL output (stdout + stderr combined) and the exit code.\n" +
+          "Step 5 — Commit the staged files using the commit agent's standard flow.\n" +
+          "  The commit message has already been provided above. Use it exactly.\n" +
+          "  After committing, capture the exit code and output.\n" +
           "  If exit code is 0:\n" +
           "    Return: { \"status\": \"ok\", \"message\": \"committed successfully\" }\n" +
           "  If exit code is non-zero:\n" +
@@ -260,12 +261,12 @@ async function commitStageOutput(agent, written, stageName, component, isFinal) 
     result =
       typeof commitResult === "string" ? JSON.parse(commitResult) : commitResult;
   } catch (_parseErr) {
-    // If the agent returned non-JSON, treat as success — the agent would have
-    // thrown or returned an error object if the git commands failed.
-    result = { status: "ok", message: "commit result unparseable — assuming success" };
+    // If the agent returned non-JSON, treat as failure — an unparseable result
+    // means we cannot confirm the commit succeeded (fail-closed per ACD-300g-1-i).
+    result = { status: "error", message: "commit result unparseable — cannot confirm success", hook_name: null, failing_files: [], is_conflict: false };
   }
 
-  return result || { status: "ok", message: "no result returned by agent" };
+  return result || { status: "error", message: "no result returned by agent", hook_name: null, failing_files: [], is_conflict: false };
 }
 
 /**
