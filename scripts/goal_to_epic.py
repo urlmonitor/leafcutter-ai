@@ -36,6 +36,11 @@ ACD-1200a-8: generate_master_plan() writes Master_Plan.md into the EPIC folder.
 ACD-1200b-1: classify_readiness reads readiness field and classifies approved vs unapproved.
 ACD-1200b-1-i: All-approved fast-path skips prompt; prints confirmation.
 ACD-1200b-2: readiness_gate_prompt presents three-choice prompt and routes correctly.
+ACD-1200a-9: each generated ticket is written only inside the epic folder; no loose inbox-root copy
+             is left behind; implemented_by back-references name the epic-folder path (with prefix).
+ACD-1200a-9-i: basename collision inside the epic folder is resolved by overwriting the existing
+               epic-folder file in place; no renamed sibling or second copy is created; a WARNING
+               is emitted for each overwritten file; implemented_by names the single epic-folder path.
 """
 
 from __future__ import annotations
@@ -131,9 +136,58 @@ def _find_worktree_root(start: Path) -> Path:
 # PascalCase conversion
 # ---------------------------------------------------------------------------
 
+#: Characters stripped in-place (zero-width deletion) before PascalCase
+#: conversion: U+0027 ASCII apostrophe, U+0022 double-quote,
+#: U+0060 backtick, U+2019 curly apostrophe (ACD-1200a-3-ii).
+_QUOTE_CHARS_TO_STRIP = chr(0x0027) + chr(0x0022) + chr(0x0060) + chr(0x2019)
+
+
+def _strip_quote_chars(title: str) -> str:
+    """Remove apostrophe and quote characters from *title* in-place.
+
+    Deletes each of the following characters with zero width (no separator
+    inserted, adjacent letters join into a single word):
+
+    - U+0027 — ASCII apostrophe / straight single-quote
+    - U+0022 — ASCII double-quote
+    - U+0060 — backtick / grave accent
+    - U+2019 — right single quotation mark (curly apostrophe)
+
+    The deletion happens BEFORE any word-splitting so that a quote embedded
+    mid-word (e.g. ``user's``) does not create a word boundary; the result
+    is a single intact word (``users``), not two words (``user`` + ``s``).
+
+    This function is a pure string transformation with no I/O and must NOT
+    be wrapped in try/except (Error Handling Policy Rule 4).
+
+    Args:
+        title: Raw AC title string that may contain quote/apostrophe chars.
+
+    Returns:
+        Title string with all specified quote characters removed.
+        Adjacent letters join directly — no separator is inserted.
+
+    Examples::
+
+        _strip_quote_chars("Validate user's API inputs")
+        # → "Validate users API inputs"
+
+        _strip_quote_chars("Reject malformed customer’s payloads")
+        # → "Reject malformed customers payloads"
+
+        _strip_quote_chars('say "hello" and `go`')
+        # → "say hello and go"
+    """
+    return title.translate(str.maketrans("", "", _QUOTE_CHARS_TO_STRIP))
+
 
 def _to_pascal_case(title: str) -> str:
     """Convert a human-readable title string to PascalCase.
+
+    Strips apostrophe/quote characters (U+0027, U+0022, U+0060, U+2019)
+    in-place before splitting so that a quote embedded mid-word
+    (e.g. ``user's``) joins its adjacent letters into a single
+    PascalCase word (e.g. ``Users``) rather than creating a word boundary.
 
     Splits on spaces, hyphens, and underscores. Capitalises the first
     character of each word and joins without separators.
@@ -144,7 +198,8 @@ def _to_pascal_case(title: str) -> str:
     Returns:
         PascalCase string (e.g. "ValidateApiInputs").
     """
-    words = re.split(r"[\s\-_]+", title.strip())
+    stripped = _strip_quote_chars(title.strip())
+    words = re.split(r"[\s\-_]+", stripped)
     return "".join(word.capitalize() for word in words if word)
 
 
@@ -742,8 +797,10 @@ def assemble_epic_folder(
     Raises :class:`ZeroLeafError` when *ticket_paths* is empty — this
     guard must fire before any filesystem writes (ACD-1200a-3-i).
 
-    Raises :class:`EpicFolderConflictError` when the target EPIC folder
-    already exists, to prevent silent overwrites.
+    When the target EPIC folder already exists (e.g. from a prior partial run),
+    file writes continue inside it.  If an individual destination file already
+    exists with the same basename, it is overwritten in place and a WARNING is
+    emitted (ACD-1200a-9-i).  No renamed sibling or second copy is ever created.
 
     Args:
         ticket_paths: Ordered list of existing ticket file paths (strings or
@@ -759,8 +816,11 @@ def assemble_epic_folder(
 
     Raises:
         ZeroLeafError: When *ticket_paths* is empty.
-        EpicFolderConflictError: When the EPIC folder already exists.
     """
+    import logging  # noqa: PLC0415
+
+    _log = logging.getLogger(__name__)
+
     # Zero-leaf guard: must fire before ANY filesystem writes (ACD-1200a-3-i)
     if not ticket_paths:
         raise ZeroLeafError(  # noqa: TRY003
@@ -772,20 +832,32 @@ def assemble_epic_folder(
     epics_dir = inbox_dir / "epics"
     epic_folder = epics_dir / folder_name
 
-    if epic_folder.exists():
-        raise EpicFolderConflictError(  # noqa: TRY003
-            f"EPIC folder already exists and would conflict: {epic_folder}. "
-            "Delete or rename the existing folder before re-running."
-        )
-
-    epic_folder.mkdir(parents=True, exist_ok=False)
+    try:
+        epic_folder.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        _log.warning("Cannot create EPIC folder %s: %s", epic_folder, exc)
+        raise
 
     for index, raw_path in enumerate(ticket_paths, start=1):
         source = Path(raw_path)
         prefix = f"{index:02d}_"
         dest_name = prefix + source.name
         dest = epic_folder / dest_name
-        shutil.copy2(str(source), str(dest))
+
+        if dest.exists():
+            _log.warning(
+                "Basename collision in EPIC folder: %s already exists — "
+                "overwriting in place (ACD-1200a-9-i). No second copy created.",
+                dest,
+            )
+
+        try:
+            shutil.copy2(str(source), str(dest))
+        except OSError as exc:
+            _log.warning(
+                "Cannot write ticket file %s to epic folder: %s", dest, exc
+            )
+            raise
 
     return epic_folder.resolve()
 
@@ -1512,6 +1584,168 @@ def generate_master_plan(
 
 
 # ---------------------------------------------------------------------------
+# Single-location write helpers (ACD-1200a-9)
+# ---------------------------------------------------------------------------
+
+
+def _build_loose_to_epic_map(
+    ticket_paths: list[str],
+    epic_folder: Path,
+) -> dict[str, str]:
+    """Build a mapping from loose inbox ticket paths to their epic-folder counterparts.
+
+    Mirrors the numeric-prefix logic in :func:`assemble_epic_folder` so that
+    after assembly the caller can update ``implemented_by`` and delete the loose
+    copies without re-scanning the filesystem.
+
+    Args:
+        ticket_paths: Ordered list of ticket paths as written into the loose inbox
+                      root (output of :func:`generate_tickets_for_leaves`).
+        epic_folder: Absolute path to the assembled EPIC folder.
+
+    Returns:
+        Dict mapping each loose ticket path string → the corresponding
+        epic-folder path string (absolute), in the same order as *ticket_paths*.
+    """
+    mapping: dict[str, str] = {}
+    for index, raw_path in enumerate(ticket_paths, start=1):
+        source = Path(raw_path)
+        prefix = f"{index:02d}_"
+        dest_name = prefix + source.name
+        dest = epic_folder / dest_name
+        mapping[raw_path] = str(dest.resolve())
+    return mapping
+
+
+def _remove_loose_inbox_tickets(
+    ticket_paths: list[str],
+    inbox_dir: Path,
+) -> None:
+    """Delete loose ticket files from the inbox root after they have been assembled.
+
+    Only deletes files that are direct children of *inbox_dir* (i.e. at the
+    inbox root level, not inside any subdirectory). Files that are already
+    inside a subfolder — including the epic folder — are never touched.
+
+    Missing files are silently skipped (they may have already been removed by
+    a previous run).
+
+    Args:
+        ticket_paths: List of ticket file path strings to remove.
+        inbox_dir: The tickets inbox root (e.g. ``tickets/00_inbox``). Only
+                   files whose resolved parent equals *inbox_dir*.resolve() are
+                   eligible for deletion.
+    """
+    import logging  # noqa: PLC0415
+    _log = logging.getLogger(__name__)
+    resolved_inbox = inbox_dir.resolve()
+
+    for raw_path in ticket_paths:
+        path = Path(raw_path).resolve()
+        if path.parent != resolved_inbox:
+            # Not a direct child of inbox root — skip (already in a subfolder)
+            continue
+        if not path.exists():
+            continue
+        try:
+            path.unlink()
+        except OSError as exc:
+            _log.warning(
+                "Could not remove loose ticket %s: %s", path, exc
+            )
+
+
+def _replace_implemented_by_entry(
+    ac_store_root: Path,
+    old_path: str,
+    new_path: str,
+) -> None:
+    """Replace *old_path* with *new_path* in the ``implemented_by`` list of any AC YAML.
+
+    Scans *ac_store_root* for AC YAML files that contain *old_path* in their
+    ``implemented_by`` list and replaces it with *new_path* using a targeted
+    line-level update that preserves all other YAML content.
+
+    This is idempotent: if *new_path* is already present and *old_path* is not,
+    the file is not rewritten.
+
+    Args:
+        ac_store_root: Root directory of the AC YAML store.
+        old_path: The old ``implemented_by`` path to replace (loose inbox path).
+        new_path: The replacement path (epic-folder path).
+    """
+    import logging  # noqa: PLC0415
+    _log = logging.getLogger(__name__)
+
+    for yaml_path in sorted(ac_store_root.rglob("*.yaml")):
+        try:
+            content = yaml_path.read_text(encoding="utf-8")
+        except OSError as exc:
+            _log.warning("Cannot read %s for implemented_by update: %s", yaml_path, exc)
+            continue
+
+        try:
+            data = yaml.safe_load(content)
+        except yaml.YAMLError as exc:
+            _log.warning("YAML parse error in %s: %s", yaml_path, exc)
+            continue
+
+        if not isinstance(data, dict):
+            continue
+
+        implemented_by: list[str] = data.get("implemented_by") or []
+        if not isinstance(implemented_by, list):
+            continue
+        if old_path not in implemented_by:
+            continue
+
+        # Build the updated list: replace old_path with new_path (dedup)
+        updated: list[str] = []
+        for entry in implemented_by:
+            if entry == old_path:
+                if new_path not in updated:
+                    updated.append(new_path)
+            else:
+                updated.append(entry)
+
+        # Targeted rewrite: replace the implemented_by block only
+        new_value_yaml = yaml.dump(
+            {"implemented_by": updated},
+            default_flow_style=False,
+            allow_unicode=True,
+        ).strip()
+
+        lines = content.splitlines(keepends=True)
+        result_lines: list[str] = []
+        i = 0
+        replaced = False
+        while i < len(lines):
+            line = lines[i]
+            if not replaced and line.startswith("implemented_by:"):
+                result_lines.append(new_value_yaml + "\n")
+                i += 1
+                while i < len(lines) and (
+                    lines[i].startswith("- ")
+                    or lines[i].startswith("  - ")
+                    or lines[i].strip() == "-"
+                ):
+                    i += 1
+                replaced = True
+            else:
+                result_lines.append(line)
+                i += 1
+
+        new_content = "".join(result_lines)
+
+        try:
+            yaml_path.write_text(new_content, encoding="utf-8")
+        except OSError as exc:
+            _log.warning(
+                "Cannot write updated implemented_by to %s: %s", yaml_path, exc
+            )
+
+
+# ---------------------------------------------------------------------------
 # Orchestration entry point
 # ---------------------------------------------------------------------------
 
@@ -1521,6 +1755,7 @@ def run(
     ac_store_root: Path,
     inbox_dir: Path,
     dry_run: bool = False,
+    worktree_root: Path | None = None,
 ) -> Path:
     """Full orchestration: traverse → generate tickets → assemble EPIC folder.
 
@@ -1536,6 +1771,15 @@ def run(
         ac_store_root: Root directory of the AC YAML store.
         inbox_dir: Absolute path to the tickets inbox root.
         dry_run: When True, print the plan and return without writing files.
+        worktree_root: Absolute path to the git worktree root. When supplied,
+            the loose ticket paths (which are absolute, as returned by
+            ``generate_ticket_from_ac.py``'s ``Written:`` stdout line) are
+            converted to paths relative to *worktree_root* before being
+            passed to :func:`_replace_implemented_by_entry`. This is required
+            because ``generate_ticket_from_ac.py`` stamps ``implemented_by``
+            in source AC YAMLs using a relative path (relative to the worktree
+            root), so the comparison inside :func:`_replace_implemented_by_entry`
+            must use the same form or the guard will always evaluate False.
 
     Returns:
         Absolute path to the created EPIC folder (or a placeholder in dry-run).
@@ -1603,7 +1847,9 @@ def run(
         print(f"ERROR: {exc}", file=sys.stderr)
         sys.exit(1)
 
-    # Tickets root: write individual tickets to inbox before assembling
+    # Tickets root: write individual tickets to inbox before assembling.
+    # These are the loose inbox-root copies that will be removed after assembly
+    # (ACD-1200a-9: single-location write — only the epic-folder copies survive).
     tickets_root = inbox_dir
 
     try:
@@ -1620,11 +1866,46 @@ def run(
             epic_name,
             inbox_dir,
         )
-    except (ZeroLeafError, EpicFolderConflictError) as exc:
+    except (ZeroLeafError, OSError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         sys.exit(1)
 
     print(f"EPIC folder created: {epic_folder}")
+
+    # --- Single-location write + correct implemented_by (ACD-1200a-9) ---
+    # Build the old→new path mapping, then:
+    #   1. Update implemented_by in each source AC YAML to point at the
+    #      epic-folder path (with numeric prefix) instead of the loose path.
+    #   2. Delete the loose inbox-root ticket copies so only one copy exists.
+    #
+    # Path normalisation (bug fix): generate_ticket_from_ac.py stamps
+    # implemented_by in the source AC YAML using a path *relative* to the
+    # worktree root (see generate_ticket_from_ac.py line:
+    #   relative_ticket_path = str(ticket_path.relative_to(worktree))
+    # ), but _call_generate_ticket_from_ac() returns the *absolute* path
+    # from the "Written: <abs_path>" stdout line.  If we pass the absolute
+    # loose_path directly to _replace_implemented_by_entry the guard
+    # "if old_path not in implemented_by" always evaluates False and the
+    # function silently does nothing.  We must relativise loose_path before
+    # the call so the comparison form matches what generate_ticket_from_ac.py
+    # wrote.
+    loose_to_epic_map = _build_loose_to_epic_map(ticket_paths, epic_folder)
+    for loose_path, epic_path in loose_to_epic_map.items():
+        # Normalise loose_path to a relative form when worktree_root is known
+        # so that the comparison inside _replace_implemented_by_entry matches
+        # the relative path stored in the AC YAML by generate_ticket_from_ac.py.
+        comparison_old_path = loose_path
+        if worktree_root is not None:
+            loose_as_path = Path(loose_path)
+            try:
+                comparison_old_path = str(loose_as_path.relative_to(worktree_root))
+            except ValueError:
+                # loose_path is not under worktree_root — fall back to the
+                # original value (covers edge cases like absolute paths
+                # outside the tree).
+                pass
+        _replace_implemented_by_entry(ac_store_root, comparison_old_path, epic_path)
+    _remove_loose_inbox_tickets(ticket_paths, inbox_dir)
 
     # --- Master_Plan.md generation (ACD-1200a-7) ---
     # Build goal summary from the AC title (the "why" paragraph). Use the
@@ -1719,15 +2000,30 @@ def main(argv: list[str] | None = None) -> int:
     # _find_worktree_root() is never called — allowing the script to run from
     # a location outside any git tree (e.g. .leafcutter/scripts/) without error.
     # See BP-901 for the root-cause analysis.
+    #
+    # worktree_for_run is tracked separately so it can be passed to run() even
+    # when both explicit paths are supplied. run() needs the worktree root to
+    # normalise absolute ticket paths to relative form before comparing them
+    # against the relative implemented_by values in the AC YAML store.
+    worktree_for_run: Path | None = None
     if args.store_root and args.inbox_dir:
         ac_store_root = Path(args.store_root)
         inbox_dir = Path(args.inbox_dir)
+        # Try to detect the worktree root even when both paths are explicit so
+        # that run() can relativise loose ticket paths correctly.
+        try:
+            worktree_for_run = _find_worktree_root(Path(__file__))
+        except FileNotFoundError:
+            # Running outside a git tree (e.g. in certain test harnesses).
+            # worktree_for_run stays None; run() will skip path relativisation.
+            pass
     else:
         try:
             worktree = _find_worktree_root(Path(__file__))
         except FileNotFoundError as exc:
             print(f"ERROR: {exc}", file=sys.stderr)
             return 1
+        worktree_for_run = worktree
         ac_store_root = Path(args.store_root) if args.store_root else worktree / _DEFAULT_STORE_ROOT
         inbox_dir = Path(args.inbox_dir) if args.inbox_dir else worktree / _DEFAULT_INBOX_DIR
 
@@ -1740,6 +2036,7 @@ def main(argv: list[str] | None = None) -> int:
         ac_store_root=ac_store_root,
         inbox_dir=inbox_dir,
         dry_run=args.dry_run,
+        worktree_root=worktree_for_run,
     )
     return 0
 
@@ -1832,5 +2129,24 @@ DECISION HISTORY
   applied directly and _find_worktree_root() is not called at all. When either
   default is needed the try/except block runs as before. Covered by regression
   test tests/test_goal_to_epic_worktree_skip.py::TestMainSkipsWorktreeWhenBothPathsSupplied.
+- 2026-06-22 [EPIC-GoalToEpicBugfixes/01]: Single-location write + correct implemented_by.
+  Implements ACD-1200a-9: fixes dual-write bug where each generated ticket was
+  written to tickets/00_inbox/<file>.md (loose) AND copied into the epic folder.
+  Added _build_loose_to_epic_map(), _remove_loose_inbox_tickets(), and
+  _replace_implemented_by_entry(). run() now calls these three helpers after
+  assemble_epic_folder() succeeds: (1) builds the loose→epic path mapping,
+  (2) updates implemented_by in each source AC YAML from the loose path to the
+  epic-folder path (with numeric prefix), (3) removes the loose inbox copies.
+- 2026-06-22 [EPIC-GoalToEpicBugfixes/02]: Basename collision resolution.
+  Implements ACD-1200a-9-i: when a generated ticket's computed basename already
+  exists at the epic-folder path, assemble_epic_folder() overwrites it in place
+  rather than raising EpicFolderConflictError or minting a renamed sibling.
+  A WARNING log line is emitted for each overwrite so the replacement is
+  observable. The epic folder is now created with exist_ok=True so partial
+  re-runs converge correctly. EpicFolderConflictError is no longer raised by
+  assemble_epic_folder(); run() exception handler updated to catch OSError in
+  its place. After the run exactly one ticket file with the computed basename
+  exists at the epic-folder path, and implemented_by names that single path
+  (consistent with ACD-1200a-9).
 ====================================================================
 """
