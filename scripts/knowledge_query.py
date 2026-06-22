@@ -94,6 +94,13 @@ _COMPONENT_FIELDS: frozenset[str] = frozenset({"components"})
 # Fields whose values may be file paths that need stem resolution
 _PATH_FIELDS: frozenset[str] = frozenset({"depends_on"})
 
+# Edge types that point to file-path targets (not knowledge-graph node IDs).
+# These must be exempt from the phantom-edge filter in _collect_all so that
+# edges to non-node targets (e.g. "scripts/foo.py") are never silently dropped.
+_PHANTOM_FILTER_EXEMPT_EDGE_TYPES: frozenset[str] = frozenset(
+    {"implemented_by", "covered_by"}
+)
+
 # ---------------------------------------------------------------------------
 # Frontmatter parser (stdlib only, mirrors roadmap_query.py pattern)
 # ---------------------------------------------------------------------------
@@ -692,8 +699,10 @@ def _collect_all(
        component_membership edges that doesn't already exist as a node. These
        hubs have surface="components".
     2. Filters edges to keep only those where both source_id and target_id exist
-       in the full node set (including synthetic hubs). This removes phantom
-       edge targets without using a hardcoded blocklist.
+       in the full node set (including synthetic hubs), OR where the edge type is
+       in _PHANTOM_FILTER_EXEMPT_EDGE_TYPES. Exempt edge types (implemented_by,
+       covered_by) point to file-path targets that are intentionally not
+       knowledge-graph nodes and must not be dropped by the phantom-edge check.
 
     Args:
         project_root: Absolute path to the project root.
@@ -789,11 +798,18 @@ def _collect_all(
             existing_ids.add(component_name)
 
     # Post-processing step 2: filter phantom edges — keep only edges where both
-    # source and target exist in the node set (no hardcoded blocklist).
+    # source and target exist in the node set, OR where the edge type is exempt
+    # from the filter.  Exempt types (implemented_by, covered_by) point to
+    # file-path targets that are intentionally not knowledge-graph nodes and
+    # must not be dropped by the phantom-edge check.
     node_ids = existing_ids
     filtered_edges = [
         e for e in all_edges
-        if e.source_id in node_ids and e.target_id in node_ids
+        if e.source_id in node_ids
+        and (
+            e.target_id in node_ids
+            or e.edge_type in _PHANTOM_FILTER_EXEMPT_EDGE_TYPES
+        )
     ]
 
     return all_nodes, filtered_edges
