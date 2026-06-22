@@ -1,0 +1,61 @@
+id: GE-111d-3
+readiness: approved
+priority: high
+title: "The block tells the developer which reconciliation routes apply"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111d.yaml"
+criteria: |
+  Given the traceability reconciliation check blocks a commit because criterion
+    AC-X points at a symbol that moved, and the new location was located
+  When the check presents the reconciliation options for AC-X
+  Then it offers the update route, naming the suggested new location to point at
+  And it offers the confirm route, describing how to affirm the code still
+    satisfies AC-X
+
+  Given the check blocks a commit because criterion AC-Y points at source that
+    was deleted with no locatable replacement
+  When the check presents the reconciliation options for AC-Y
+  Then it offers the update route (point at wherever the behavior now lives)
+    without a suggested location
+  And it offers the confirm route
+depends_on:
+  - GE-111d
+  - GE-111d-1
+  - GE-111d-2
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111d.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+it_requirements:
+  - "Route applicability is derived from the verdict object, not re-computed: UPDATE is always offered; UPDATE-with-suggested-location is offered iff verdict.suggested_location is non-null (GE-111b-3); CONFIRM is offered iff change_kind is moved/renamed on a SURVIVING file (it must NOT be offered for a file-path-floor 'deleted' verdict, consistent with the GE-111d-2 boundary that confirm cannot clear a vanished file)."
+  - "Produces structured route content (not the final formatted string) handed to GE-111e for assembly — single-responsibility: this AC decides WHICH routes apply, GE-111e renders the message."
+  - "Must follow the project error handling policy (CLAUDE.md Rules 1-4)."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: "The applicable-routes content {update: {suggested_location: str|null}, confirm: bool} per flagged AC that GE-111e includes in the block message"
+expects_from:
+  ac_id: GE-111b-3
+  contract: "Whether a suggested new location exists (and the change kind), which determines what the update route can name and whether confirm is offered"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The PO's "The check tells you which options apply so reconciliation is a quick,
+  guided step rather than a guess." This is the routes-presentation behavior; the
+  full message assembly (AC id, broken entry, change kind, pointer) is GE-111e-1.
+
+  IT-PO enrichment (2026-06-22): pinned the route-applicability rule (confirm not
+  offered on a deleted-file verdict, aligning with the GE-111d-2 boundary) and
+  the structured {update, confirm} content shape consumed by GE-111e.

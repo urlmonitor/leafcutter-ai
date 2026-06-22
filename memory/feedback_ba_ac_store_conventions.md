@@ -180,3 +180,110 @@ if it prefers. The doc AC (BO-1400a-3) is `architecture-diagram-author`.
 If the IT-PO wants the python-coder helper as its own implementable AC, that is
 a legitimate split at enrichment time — the delivers_to contract already names
 the boundary.
+
+## KM-KGS-100 count-agnostic surfaces re-author: framing note for the BA (2026-06-22, PO)
+
+KM-KGS-100 ("Trace any requirement to the exact code and tests that fulfil it") is
+a NEW L0 in knowledge-management, slug folder
+KM-KGS-100-knowledge-graph-surfaces/, four L1 children KM-KGS-100a..d,
+origin_agent: BrainCandy (user-authored), readiness: draft. It uses a FRESH
+KM-KGS sub-namespace (Knowledge Graph Surfaces) deliberately kept OUT of the
+dense KM-KQS numbering. component: knowledge-management (NOT yet in index.yaml --
+flagged for the supervisor to add a KM-prefix entry; the manual validator
+fallback lets KM files pass without it today).
+
+This is a DEPRECATE + RE-AUTHOR of the count-pinned incumbents. The old ACs
+(KM-KQS-015/016/017/018/023/025 + KM-VIS-013, all L2) hard-coded "exactly EIGHT
+surfaces" by NAME (agents/skills/tickets/docs/adrs/components/roadmap/glossary).
+The user chose count-agnostic re-framing. The supervisor will flip those
+incumbents to status: superseded via governance -- the BA must NOT decompose
+against the old eight-surface enumeration.
+
+Decomposition guidance the PO baked into the L1 split (decompose each into L2
+behaviors; do NOT re-cut at L1, and do NOT reintroduce a hard-coded count):
+- KM-KGS-100a -- AC store joins the graph as a surface INSTANCE. The four edge
+  types to derive per AC node are the load-bearing facts: implemented_by
+  (AC->source file), covered_by (AC->test file), depends_on (AC->AC), components
+  (AC->component hub). Surfaces are declared in config/paths.json under the
+  top-level "surfaces" key (each entry: path + edge_fields). documentation_triggers
+  [component-diagram].
+- KM-KGS-100b -- traversal/answerability: "which AC is delivered by which code
+  file" answered by following an AC node out along the four edges. Implemented in
+  scripts/knowledge_query.py; visualised by scripts/visualise_knowledge_graph.py.
+  documentation_triggers [how-to, sequence-diagram].
+- KM-KGS-100c -- DECLARATION genericity: ingest N surfaces declared in paths.json,
+  NO fixed count. The "acs" surface is just one declared instance. This is the AC
+  that replaces the eight-by-name enumeration -- keep it count-AGNOSTIC at L2 too
+  (assert "every declared surface is ingested", never "exactly 8").
+  documentation_triggers [how-to].
+- KM-KGS-100d -- INTEGRITY genericity (distinct from 100c declaration): each
+  declared surface is validated GENERICALLY for the edge_fields it claims, and
+  every edge target resolves to a real node (no phantom targets like the old
+  "user"/"__ticket_phase_agents__"). This is where the old KM-KQS-025 ">=600
+  edges / no phantom target" integrity gate is re-homed -- but express it as a
+  generic per-declared-surface invariant, NOT a magic edge-count threshold tied
+  to exactly eight surfaces. documentation_triggers [] (internal integrity).
+
+The declaration-vs-integrity split (100c vs 100d) is intentional and
+independently testable -- declaring a surface and validating its promised
+connections are separate concerns. Coordinator confirmed keeping all four L1s.
+
+IT-PO surface hints (for assignment): config/paths.json edits + the surfaces
+ingestion/validation logic in scripts/knowledge_query.py and
+scripts/visualise_knowledge_graph.py are python-coder (.py + JSON round-trip).
+The how-to docs are documentation-expert; the component/sequence diagrams are
+architecture-diagram-author.
+
+Superseded-incumbent mapping (supervisor actions via governance):
+KM-KQS-015->KM-KGS-100c; KM-KQS-016->KM-KGS-100c+100d; KM-KQS-017->KM-KGS-100a;
+KM-KQS-018->KM-KGS-100d; KM-KQS-023->KM-KGS-100d; KM-KQS-025->KM-KGS-100b+100d;
+KM-VIS-013->KM-KGS-100a.
+
+### KM-KGS-100 decomposition COMPLETE (2026-06-22, BA) — count-agnostic L2 set
+
+KM-KGS-100a..d are now fully decomposed (do not re-decompose; enrich existing
+files). All children readiness: draft, priority: medium (inherited), origin_agent:
+business-analyst. Count-agnostic throughout — verified no "exactly 8/9", no
+">=600 edges" reintroduced.
+
+Children:
+- 100a-1 (L2, python-coder): "acs" surface entry exists in config/paths.json,
+  resolves to docs/acceptance-criteria/, edge_fields = implemented_by/covered_by/
+  depends_on/components. delivers_to python-coder.
+- 100a-2 (L2, python-coder): one node per AC file (id-keyed). expects_from 100a-1.
+- 100a-2-i (L3, python-coder): no-id / unparseable files under acs produce no
+  spurious nodes; valid neighbours still ingested.
+- 100a-3 (L2, python-coder): four edge types derived (implemented_by->source,
+  covered_by->test, depends_on->AC, components->component_membership hub).
+- 100a-4 (L2, architecture-diagram-author): component diagram (satisfies
+  documentation_triggers [component-diagram]).
+- 100b-1 (L2, python-coder): "which code file delivers this AC" answerable by
+  reading the AC node's four outbound edges; negative clause "no fifth edge kind".
+- 100b-2 (L2, python-coder): AC nodes+edges appear in visualise_knowledge_graph.py
+  output + acs surface in legend.
+- 100b-3 (L2, documentation-expert): how-to. 100b-4 (L2, architecture-diagram-author):
+  sequence-diagram. (satisfies 100b triggers [how-to, sequence-diagram]).
+- 100c-1 (L2, python-coder): every DECLARED surface ingested, asserted against the
+  declared set, never a fixed count. 100c-2: adding a surface entry = it joins, no
+  code change, acs is one instance. 100c-3 (documentation-expert): how-to.
+- 100d-1 (L2, python-coder): each declared surface validated GENERICALLY for its own
+  edge_fields (empty list = no edges, ok). 100d-2: every edge target resolves to a
+  real node, checked against full node set not an allow-list. 100d-2-i (L3): edge to
+  a missing target is dropped (not a dead end), build does not fail, other edges kept.
+
+Agent-assignment pattern (IT-PO scanning *it-po* files should expect this): the
+mechanism is config/paths.json + knowledge_query.py + visualise_knowledge_graph.py
+(.py + JSON round-trip) => python-coder on all behavioral leaves; how-tos =>
+documentation-expert; component/sequence diagrams => architecture-diagram-author.
+Matches the PO's IT-PO surface hint exactly. 100a-1 carries a delivers_to
+python-coder contract (the paths.json acs entry the loader consumes).
+
+### Operational gotcha: .build-feature.lock can transiently block AC writes
+
+During this /create-ac run a `.build-feature.lock` appeared mid-session and the
+`inline_work_guard` PreToolUse hook BLOCKED Write calls on AC YAML files (it fires
+on ANY Write while the lock exists, even AC-authoring, not just /build-feature
+implementation). It cleared on its own seconds later (a supervisor/workflow deletes
+it). Do NOT delete the lock yourself — re-check with `ls .build-feature.lock` and
+retry the Write once it is gone. If it persists, return status: blocked to the
+orchestrator rather than circumventing the guard.

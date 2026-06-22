@@ -1,0 +1,79 @@
+id: GE-111b-2-i
+readiness: approved
+priority: high
+title: "Symbol tier fails open when tooling is unavailable; the file-path floor still applies"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111b.yaml"
+criteria: |
+  Given an acceptance criterion AC-X has implemented_by entry
+    "src/foo.py#process_order"
+  And the staged commit keeps "src/foo.py" present in the staged tree
+  And the symbol-analysis tooling is unavailable (the binary is missing) OR the
+    file's language is unsupported by that tooling
+  When the traceability reconciliation check evaluates AC-X
+  Then the symbol tier does not produce a drift verdict for AC-X
+  And the check emits an advisory message stating the symbol could not be
+    resolved and the symbol-level check was skipped for AC-X
+  And the file-path floor verdict for "src/foo.py" still applies (clean, because
+    the file survives), so AC-X is not blocked on the unresolved symbol alone
+
+  Given an acceptance criterion AC-Z has implemented_by entry
+    "src/gone.py#helper"
+  And the staged commit deletes "src/gone.py"
+  And the symbol-analysis tooling is unavailable
+  When the traceability reconciliation check evaluates AC-Z
+  Then the file-path floor still produces a drift verdict for AC-Z naming the
+    change kind as deleted
+  And AC-Z is blocked on the file-path floor verdict despite the symbol tier
+    being unavailable
+depends_on:
+  - GE-111b-2
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111b-2.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100a.yaml"
+    relationship: related
+    status: exists
+  - path: "scripts/commit_guardian/check_duplicate_code.py"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "FAIL-OPEN LADDER (IT-PO resolution of the open question) — the symbol tier degrades to an advisory skip (no drift verdict, file-path floor still authoritative) on ALL of these signals, each modeled on the check_duplicate_code.py jscpd precedent: (1) resolver binary/index absent from PATH; (2) file language unsupported by the resolver (extension outside the supported set; for the AST default this is any non-.py file); (3) resolver present but version/interface-incompatible; (4) resolution exceeds the configured timeout budget (precedent: jscpd 30s) — terminate the subprocess and skip; (5) resolver non-zero exit or malformed/unparseable output, including ast.parse SyntaxError on a partially-staged file."
+  - "The advisory on a skip names the AC id and states the symbol-level check was skipped (to stderr with a [check-ac-traceability] prefix), never altering the exit code on that ground alone."
+  - "The file-path floor (GE-111b-1) is INDEPENDENT of the resolver and MUST still run and still block on a vanished file in every fail-open case (criteria scenario 2). The fail-open applies to the SYMBOL tier only, never to the floor."
+  - "SCOPE DECISION (IT-PO, the second half of the BA's question): a fail-open skip is a SILENT-TO-STDERR ADVISORY at commit time only. It must NOT enqueue or defer a store-wide rescan from inside the hook — the commit-time gate stays staged-scoped per GE-111c. Cross-commit / store-wide re-resolution of skipped symbols is a SEPARATE surface and is OUT OF SCOPE for GE-111 (recorded as a caveat for a future store-wide scan feature)."
+  - "Must follow the project error handling policy (CLAUDE.md Rules 1-4): each fail-open branch catches a SPECIFIC exception type (OSError / FileNotFoundError / subprocess.TimeoutExpired / subprocess.SubprocessError / SyntaxError) and logs at WARNING before degrading — no bare except, no silent swallow without the advisory."
+delivers_to: null
+expects_from:
+  ac_id: GE-111b-1
+  contract: "The file-path floor verdict that remains authoritative when the symbol tier degrades"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  EXPLICIT OPEN QUESTION SURFACED FOR THE IT-PO (per GE-111b PO note and the
+  orchestrator's instruction). Mirrors the GE-100 / GE-107 fail-open precedent
+  ("fails open when the binary is missing"; OSError fail-open).
+
+  IT-PO RESOLUTION (2026-06-22) of open question #1:
+  Trigger signals for fail-open = {binary/index absent, unsupported language,
+  version-incompatible resolver, timeout, resolver/parse error}. Each degrades
+  the SYMBOL TIER to an advisory skip; the file-path FLOOR is independent and
+  still blocks on a vanished file. The skip is a silent-to-stderr advisory at
+  commit time and does NOT defer a store-wide scan (that is a separate, out-of-
+  scope surface). Concrete precedent: scripts/commit_guardian/check_duplicate_code.py
+  fails open on missing jscpd, jscpd v4 incompatibility, and a 30s timeout.
+  With the GE-111b-2 default resolver being in-process Python AST, "unsupported
+  language" is the dominant fail-open path (any non-.py anchored entry skips the
+  symbol tier and is covered by the file floor only) until a cross-language CLI
+  resolver is added.

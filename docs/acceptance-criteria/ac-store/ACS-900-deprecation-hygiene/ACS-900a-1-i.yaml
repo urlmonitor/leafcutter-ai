@@ -1,0 +1,50 @@
+id: ACS-900a-1-i
+readiness: approved
+priority: high
+title: "A brand-new AC file authored directly in a retired state does not arm the check"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a commit adds a brand-new AC YAML file (absent from HEAD) whose status
+    is already "deprecated" or "superseded_by" at creation,
+  When the deprecation-hygiene hook runs,
+  Then it does not treat the new file as a status transition (there is no
+    "active" HEAD version to transition away from),
+  And the hook does not perform an orphaned-code check for that new file,
+  And the commit is not blocked on account of that new file.
+depends_on: [ACS-900a-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: scripts/commit_guardian/check_ac_governance.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "A new file (no HEAD version) MUST be detected exactly as check_ac_governance.py does: _load_head_content returns None when `git show HEAD:<path>` exits non-zero, and head is None => is_new_file => there is no prior 'active' value to transition away from."
+  - "A retired status on a new file MUST NOT be treated as a transition: the arming condition is HEAD-status == active AND staged-status in {retired forms}, so head==None can never satisfy it. Do not special-case new files with a separate branch that could re-introduce the block."
+  - "Must not read or inspect any implemented_by source paths for a new retired file (no wasted I/O, and no possibility of a false block)."
+  - "Deployed and packaged-template copies of the hook MUST stay in parity (ADR-001)."
+delivers_to: null
+expects_from:
+  ac_id: ACS-900a-1
+  contract: "The HEAD-vs-staged status-transition detection (new file => HEAD None => no transition) that this edge case constrains"
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Edge case guarding the transition semantics: a retirement is a CHANGE from
+  active, not a static retired status. Mirrors check_ac_governance.py's
+  is_new_file branch (head is None => no prior value to diff against).
+
+  IT-PO enrichment (2026-06-22): pinned the head-None == new-file mechanism to the
+  exact check_ac_governance.py precedent so the python-coder reuses the established
+  pattern rather than inventing a new-file heuristic.

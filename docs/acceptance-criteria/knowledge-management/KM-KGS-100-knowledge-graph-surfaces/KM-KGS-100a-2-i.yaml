@@ -1,0 +1,42 @@
+id: KM-KGS-100a-2-i
+readiness: approved
+priority: high
+title: "Non-criterion and unparseable files under the acs surface produce no spurious nodes"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100a.yaml"
+criteria: |
+  Given the "acs" surface directory contains, besides valid criterion files,
+    one file with no id field and one file whose frontmatter cannot be parsed
+  When the knowledge map is built
+  Then no node is created for the file lacking an id field
+  And no node is created for the unparseable file
+  And the build completes and still produces the nodes for every valid
+    criterion file in the same directory
+depends_on:
+  - KM-KGS-100a-2
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "A file under the acs surface with no id field must be skipped rather than assigned a fallback id — this differs from the markdown surfaces, which fall back to the filename stem; the acs surface must require an explicit id field to emit a node (the store's own index.yaml is a real no-id file that must not become a node)"
+  - "Parse failures on a single file must be caught with a specific exception type, logged at WARNING or higher per the repo error-handling policy, and must not abort the build — every other valid criterion file in the same directory must still produce its node (fail-soft per file, never fail-whole-build)"
+  - "Skipping must be idempotent and deterministic: the same directory contents always yield the same node set across runs"
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100a-2
+  contract: "Per-file node extraction over the acs surface directory, keyed by the criterion id field"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-ACCodeTraceabilityGraph/03_TICKET-20260622-KM-KGS-100a-2-i.md

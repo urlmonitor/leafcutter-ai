@@ -1,0 +1,37 @@
+id: KM-KGS-100d
+readiness: approved
+priority: high
+title: "Trust the map: every connection points somewhere real"
+component: knowledge-management
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Every declared source is checked for the connections it promises.
+
+  Each knowledge source is validated for the kinds of connections it claims to
+  contribute, so the picture you see is complete and accurate — however many
+  sources exist — with no dead ends or connections that lead nowhere.
+depends_on:
+  - KM-KGS-100
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+documentation_triggers: []
+documentation_rationale: "Internal integrity validation of declared knowledge sources — no new user-facing behavior or command surface is introduced."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - KM-KGS-100d-1
+  - KM-KGS-100d-2
+  - KM-KGS-100d-2-i
+implemented_by: []

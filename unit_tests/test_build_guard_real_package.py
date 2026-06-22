@@ -208,9 +208,46 @@ def test_manifest_covers_full_feedback_set() -> None:
         )
 
 
+# ---------------------------------------------------------------------------
+# BP-900d: onboard_hook_opt_in.py must be deployable so the preflight does not
+# abort. Regression for the /debug-diagnosed defect where the script lived only
+# in scripts/ (package-dev tree) and was never promoted into templates/scripts/,
+# causing `python scripts/build.py --target-dir <dir>` to exit 1 on the
+# reference in templates/agents/onboard.md.
+# ---------------------------------------------------------------------------
+
+
+def test_onboard_hook_opt_in_is_deployable() -> None:
+    """_get_source_deployable_scripts() must include scripts/onboard_hook_opt_in.py.
+
+    onboard.md instructs end users to run `python scripts/onboard_hook_opt_in.py`,
+    so the script is consumer-facing and must ship via templates/scripts/. Before
+    the fix the script existed only under scripts/ (package-dev tree) and was not
+    listed as deployable, so the preflight guard flagged the onboard.md reference
+    as broken and build.py aborted with exit 1.
+
+    AC BP-900d.
+    """
+    # covers: BP-900d
+    deployable = _build._get_source_deployable_scripts(_REAL_PACKAGE_ROOT)
+
+    assert "scripts/onboard_hook_opt_in.py" in deployable, (
+        "_get_source_deployable_scripts() does not include "
+        "'scripts/onboard_hook_opt_in.py'. onboard.md (a consumer-facing template) "
+        "references it, so it must be promoted into templates/scripts/ to be "
+        "deployable. Without it, _check_script_reference_guard() exits 1 and "
+        "build.py aborts before writing any output (AC BP-900d)."
+    )
+
+
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-06-22 [debug/quick-fix]: Added test_onboard_hook_opt_in_is_deployable
+#   (AC BP-900d). Regression sentinel for the script-promotion gap that made
+#   `build.py --target-dir` abort on the onboard.md reference. Asserts the
+#   real _get_source_deployable_scripts() lists the promoted script. Pairs with
+#   the broad test_guard_exits_0_on_clean_package positive control. (#BP-900d)
 # - 2026-06-17 [python-coder/EPIC-BuildGuardFalsePositive/04]: Initial implementation.
 #   Added four regression-guard tests targeting AC BP-900-Fix-4, AC-2, AC-3, AC-4.
 #   Positive-control test uses the REAL package_root (not a synthetic manifest) so

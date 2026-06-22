@@ -1,0 +1,40 @@
+id: ACS-900e
+readiness: approved
+priority: high
+title: "Detection complements the existing audit tooling instead of duplicating it"
+component: ac-store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Commit-time lifecycle enforcement fills the gap the backfill-only audit cannot catch.
+
+  The existing audit tooling can reconcile and backfill which code implements which
+  requirement, but it cannot detect code left stranded when a requirement retires.
+  This capability adds exactly that missing detection at commit time, reusing the
+  audit's traceability data rather than re-implementing it, so the two work
+  together with no overlap.
+depends_on: [ACS-900]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: [ACS-900e-1, ACS-900e-2]
+implemented_by: []
+documentation_triggers: [component-diagram]
+notes: |
+  Anti-duplication / scoping AC. The existing tool is
+  scripts/ac_store/cross_reference_audit.py — it BACKFILLS implemented_by links
+  but does NOT detect stale code behind a retired AC. IT-PO/BA: reuse its
+  traceability-resolution logic (the AC<->source mapping) rather than writing a
+  second independent traversal; the new hook is the lifecycle-enforcement
+  complement, not a replacement. The component-diagram trigger captures the
+  boundary between the new blocking hook and the existing audit script so a future
+  reader sees the two are complementary by design.

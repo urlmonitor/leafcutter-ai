@@ -1,0 +1,64 @@
+id: GE-111b-4
+readiness: approved
+priority: high
+title: "Reference doc: the file-vs-symbol resolution model and #symbol anchor contract"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111b.yaml"
+criteria: |
+  Given the traceability reconciliation guardrail resolves links at two
+    granularities (file-path floor and symbol tier)
+  When the reference documentation for the guardrail is produced
+  Then the reference documents the #symbol anchor syntax for an implemented_by
+    entry (path, separator, symbol name) and that an absent or empty anchor means
+    file-path-only evaluation
+  And it documents the three-tier resolution model: file-path floor, symbol tier
+    when an anchor is present and tooling is available, and suggested-new-location
+    when a moved symbol can be located
+  And it documents the graceful-degradation behavior when the symbol tooling is
+    unavailable or the language is unsupported (symbol tier skipped, file-path
+    floor still authoritative)
+  And it documents that the change kinds reported are deleted, moved, renamed, or
+    removed
+depends_on:
+  - GE-111b
+  - GE-111b-1
+  - GE-111b-2
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111b.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/reference/ac-schema.md"
+    relationship: related
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Author as a Diataxis reference under docs/reference/ (extend docs/reference/ac-schema.md's implemented_by/#anchor section, or a new reference page cross-linked from it) with the doc frontmatter required by check_doc_frontmatter.py (title, type: reference, status, created, last_updated, components, description)."
+  - "Must document the IT-PO-resolved fail-open ladder accurately: the symbol resolver is NOT jcodemunch-via-MCP (unavailable to a hook) but in-process Python AST by default, with the unsupported-language/missing-binary/timeout/parse-error skip behavior — keep the doc consistent with GE-111b-2 and GE-111b-2-i as implemented."
+  - "Must document the exact #symbol anchor parse rule (first '#' split; empty anchor == anchorless) from GE-111b-1-i."
+delivers_to: null
+expects_from:
+  ac_id: GE-111b-2
+  contract: "The symbol-resolution model and anchor-parsing contract the reference documents"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC satisfying GE-111b documentation_triggers [reference-doc]. The
+  file-vs-symbol resolution model and the #symbol anchor parsing contract belong
+  in the AC-schema / hook reference (per PO note), not a user how-to — the
+  user-facing how-to lives on GE-111a / GE-111d.
+
+  IT-PO enrichment (2026-06-22): documentation-expert retained. it_requirements
+  require the reference to reflect the IT-PO-resolved resolver model (AST-default,
+  fail-open ladder) rather than implying jcodemunch is callable from a hook.

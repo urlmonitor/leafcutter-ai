@@ -1,0 +1,54 @@
+id: GE-111c-1-i
+readiness: approved
+priority: high
+title: "A pre-existing broken link in untouched source never blocks an unrelated commit"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111c.yaml"
+criteria: |
+  Given acceptance criterion AC-W has implemented_by entry "src/already-gone.py"
+  And "src/already-gone.py" was deleted in an earlier commit, so the link is
+    already broken in the repository before this commit
+  And the current staged commit touches only "src/unrelated.py", which has no
+    AC link pointing at it
+  When the traceability reconciliation check runs at pre-commit time
+  Then the check does not evaluate AC-W (its source is not staged in this commit)
+  And the check produces no drift verdict
+  And the commit is allowed to proceed despite the pre-existing broken AC-W link
+depends_on:
+  - GE-111c-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111c.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/reference/ac-schema.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "This is a negative-scope guarantee: an AC whose implemented_by file portion is NOT in the staged trigger set must be excluded BEFORE any drift evaluation runs — never evaluated-then-suppressed. The exclusion is a direct consequence of the GE-111c-1 scope-membership rule; no separate suppression logic."
+  - "Out-of-scope pre-existing broken links are the boundary the IT-PO must NOT conflate with a store-wide scan: surfacing pre-existing breakage across the whole store is a SEPARATE, out-of-scope surface (recorded as a caveat). The commit-time gate stays staged-scoped."
+  - "Must follow the project error handling policy (CLAUDE.md Rules 1-4)."
+delivers_to: null
+expects_from:
+  ac_id: GE-111c-1
+  contract: "The staged-source scoping rule that excludes untouched-source ACs from this commit's evaluation"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The user-facing promise of GE-111c: "you are asked to fix exactly what this
+  commit broke and nothing more." A pre-existing broken link whose source is NOT
+  in the commit is out of scope for the pre-commit gate — it should be surfaced by
+  a separate store-wide scan, NOT this commit-time check.
+
+  IT-PO enrichment (2026-06-22): confirmed the exclusion is structural (scope set
+  membership), not post-hoc suppression, and re-flagged the store-wide-scan
+  surface as out of scope for GE-111 (caveat).

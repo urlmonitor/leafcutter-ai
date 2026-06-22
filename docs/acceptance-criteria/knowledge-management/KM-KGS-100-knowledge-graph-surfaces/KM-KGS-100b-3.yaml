@@ -1,0 +1,47 @@
+id: KM-KGS-100b-3
+readiness: approved
+priority: high
+title: "How-to guide for tracing a requirement to its code and tests"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100b.yaml"
+criteria: |
+  Given a reader wants to find the code and tests that fulfil a given acceptance
+    criterion
+  When they open the how-to guide for tracing a requirement through the knowledge map
+  Then the guide shows the exact command to query the knowledge map for one
+    acceptance criterion
+  And it shows how to read the result to answer "which code file delivers this
+    criterion?" and "which tests prove it?"
+  And it shows how to open the visualization and locate the same criterion there
+depends_on:
+  - KM-KGS-100b
+  - KM-KGS-100b-1
+doc_links:
+  - path: docs/how-to/ac-traceability-store.md
+    relationship: context
+    status: exists
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: context
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "The guide must live under docs/how-to/ in the Diataxis how-to format used by sibling guides, and the commands it shows must be the real, runnable knowledge-query invocations (and the visualise_knowledge_graph.py run), not illustrative pseudo-commands"
+  - "Command examples must use the single-command shell form (no chained && or ; ), consistent with the repo shell convention, so a reader can copy-paste each step"
+  - "The worked criterion id and the surface key 'acs' shown must match the vocabulary the implementation emits, so the guide stays accurate against the built map"
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100b-1
+  contract: "A stable knowledge-query invocation that selects one acs node by id and returns its outbound edges, which the guide documents step-by-step"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-ACCodeTraceabilityGraph/08_TICKET-20260622-KM-KGS-100b-3.md

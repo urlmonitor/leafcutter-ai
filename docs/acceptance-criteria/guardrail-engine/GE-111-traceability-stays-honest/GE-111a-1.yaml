@@ -1,0 +1,71 @@
+id: GE-111a-1
+readiness: approved
+priority: high
+title: "A commit with a broken AC-to-code link is blocked; an honest commit proceeds"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111a.yaml"
+criteria: |
+  Given an acceptance criterion AC-X has implemented_by entry "src/foo.py"
+  And the staged commit deletes or renames "src/foo.py" so that path no longer
+    resolves to a file in the staged tree
+  When the traceability reconciliation check runs at pre-commit time
+  Then the check finishes with a blocking (non-zero) outcome
+  And the commit does not complete
+  And the blocking outcome names AC-X as the affected criterion
+
+  Given a second acceptance criterion AC-Y has implemented_by entry "src/bar.py"
+  And the staged commit modifies "src/bar.py" but that path still resolves to a
+    file in the staged tree
+  When the traceability reconciliation check runs at pre-commit time
+  Then the check finishes with a passing (zero) outcome for AC-Y
+  And the commit is allowed to proceed
+depends_on:
+  - GE-111a
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/reference/ac-schema.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Implement as a new commit_guardian hook script under scripts/commit_guardian/ (e.g. check_ac_traceability.py), invoked via scripts/commit_guardian/run_hook.py, exiting non-zero to block and zero to proceed — mirror the existing check_ac_circular_deps.py / check_ac_schema.py structure."
+  - "Register the hook in scripts/commit_guardian/commit_guardian.json hooks_manifest with tier: judgment, files scoped to the AC store and staged source, stages: [pre-commit], pass_filenames: false. The deployed config and its packaged template source must be edited together and verified in parity via the build.py round-trip (ADR-001 self-hosting constraint)."
+  - "Must follow the project error handling policy (CLAUDE.md Rules 1-4): wrap all git/file I/O in try/except with a specific exception type and log-or-reraise; never bare except."
+  - "Must fail open on any unexpected internal error (exit 0 with a [check-ac-traceability] advisory to stderr), consistent with the check_ac_circular_deps / check_ac_governance fail-open precedent — a hook crash must never wedge commits."
+  - "Must complete within a typical pre-commit latency budget (target under 2s for a normal staged set); the block decision is a pure aggregation over per-AC verdicts and must add no I/O beyond reading the verdicts it consumes."
+  - "The block decision must be a pure consumer of the GE-111b verdicts and the GE-111c in-scope set: it must not itself parse anchors or touch symbol tooling (single-responsibility — detection lives in GE-111b)."
+delivers_to:
+  agent: python-coder
+  contract: "The pass/block decision and the affected-AC list that GE-111e formats into the actionable message"
+expects_from:
+  ac_id: GE-111b-1
+  contract: "The per-AC drift verdict object {ac_id: str, entry: str, verdict: 'drift'|'clean', change_kind: 'deleted'|'moved'|'renamed'|'removed'|null} for each evaluated implemented_by entry"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  GE-111a owns the BLOCK-the-commit enforcement action. The detection verdict
+  (what counts as a broken link) comes from GE-111b; the message wording comes
+  from GE-111e; the scope of which links are evaluated comes from GE-111c. This
+  AC asserts the enforcement consequence: a drift verdict blocks, a clean verdict
+  proceeds.
+
+  IT-PO enrichment (2026-06-22): this is the single hook entry point. The
+  hook script orchestrates GE-111c (scope) -> GE-111b (verdict) -> GE-111a
+  (block decision) -> GE-111e (message). One script, single non-zero/zero exit.

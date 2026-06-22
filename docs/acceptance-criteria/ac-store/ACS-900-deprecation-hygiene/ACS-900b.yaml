@@ -1,0 +1,39 @@
+id: ACS-900b
+readiness: approved
+priority: high
+title: "Leftover code behind a retired requirement blocks the commit"
+component: ac-store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Retiring a requirement while its code still lives stops the commit instead of slipping through.
+
+  If a requirement is being retired but the source it claimed still exists and
+  still implements the retired behavior, the commit is blocked. Orphaned code
+  cannot be left behind silently — the retirement is held until the code is
+  removed or correctly reconciled.
+depends_on: [ACS-900]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: [ACS-900b-1, ACS-900b-1-i, ACS-900b-2, ACS-900b-3]
+implemented_by: []
+documentation_triggers: [how-to, sequence-diagram]
+notes: |
+  This is the BLOCKING enforcement half (user-confirmed: always block on a real
+  violation; never downgrade to warn). The hook joins the existing commit_guardian
+  framework alongside the other check_ac_*.py hooks. IT-PO: standard fail-open on
+  internal script error still applies (crash/parse/git failure -> exit 0 + stderr
+  warning) — that is error-handling hygiene, not a relaxation of the block-on-
+  violation decision. Pair with ACS-900c (the message) and ACS-900d (the clean
+  pass) so this AC owns ONLY the block decision, not the message text or the
+  reconciliation rules.

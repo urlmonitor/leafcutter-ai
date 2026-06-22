@@ -1,0 +1,46 @@
+id: GE-111e
+readiness: approved
+priority: high
+title: "Understand exactly which requirement broke and why, every time"
+component: guardrail-engine
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Every block names the criterion, the link that broke, and what changed.
+
+  When the check stops a commit, the message identifies the affected acceptance
+  criterion, the source it pointed to, and what happened to that source (moved,
+  renamed, or deleted) — so you know what to reconcile without hunting through the
+  diff.
+depends_on: [GE-111]
+doc_links:
+  - path: "docs/reference/ac-schema.md"
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-111e-1
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Error-message quality refinement of the GE-111a guardrail; the user-facing behavior and its how-to are documented on GE-111a and GE-111d."
+notes: |
+  PO authoring note (for the BA). This mirrors ACS-400e-1 ("Blocked commit
+  produces a clear, actionable error message") for this hook. Load-bearing
+  message contents to preserve at L2: (a) the AC id, (b) the implemented_by
+  entry that broke, (c) the kind of change (moved / renamed / deleted; and at
+  symbol level, the symbol name and — when known via GE-111b/jcodemunch — its
+  new location), and (d) a pointer to the GE-111d reconciliation options. Keep
+  this as a distinct L1 so message quality is independently testable rather than
+  buried inside the GE-111a enforcement behavior.
+
+  BA decomposition resolution (2026-06-22): single L2 GE-111e-1 asserts the
+  message contains all four load-bearing fields plus the change kind and (at
+  symbol tier) the symbol name and located new location. No documentation AC
+  (rationale set; the user-facing how-to lives on GE-111a / GE-111d).

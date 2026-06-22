@@ -2,8 +2,10 @@ id: KM-KQS-025
 title: "Combined edge improvements produce at least 600 valid edges from the real repository"
 component: knowledge-management
 level: L2
-status: active
+status: superseded_by
 work_status: todo
+readiness: reviewed
+priority: low
 criteria: |
   Given the repository with all four edge improvements applied:
     - components frontmatter produces component_membership edges
@@ -36,7 +38,7 @@ doc_links:
     status: exists
 origin_agent: "business-analyst-v3"
 created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/05a_edge_connectivity_improvements.md"
-superseded_by: null
+superseded_by: [KM-KGS-100b, KM-KGS-100d]
 amended_by: []
 covered_by: []
 implemented_by: []

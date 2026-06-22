@@ -1,0 +1,38 @@
+id: ACS-900c
+readiness: approved
+priority: high
+title: "The block tells you exactly what to remove or reconcile"
+component: ac-store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  A clear message names the retired requirement and the files still claiming to implement it.
+
+  When a retirement is blocked, the developer is told which requirement was being
+  retired, which specific source files still claim to implement it, and what to do
+  next — remove the code, or re-point it to the successor — so the fix is obvious
+  without forensic investigation.
+depends_on: [ACS-900]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: [ACS-900c-1, ACS-900c-1-i, ACS-900c-2]
+implemented_by: []
+documentation_triggers: [how-to]
+notes: |
+  Message-quality AC, modeled on the ACS-400e-1 house style (the block message
+  must name the AC id, the offending file path(s), the violated rule, and the
+  remedy). BA/IT-PO: the actionable message should distinguish the two remedies —
+  (a) remove the orphaned code, or (b) for a superseded_by retirement, re-point
+  implemented_by to the successor AC named in superseded_by. Keep the message on
+  the channel the committing agent actually receives (per ACS-400e-1, write to
+  stdout, not only stderr).

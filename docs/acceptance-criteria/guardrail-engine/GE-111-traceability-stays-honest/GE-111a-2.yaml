@@ -1,0 +1,62 @@
+id: GE-111a-2
+readiness: approved
+priority: high
+title: "Blocking is the default; a warn-only tier exists only as an explicit opt-in"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111a.yaml"
+criteria: |
+  Given the commit guardian configuration has the traceability reconciliation
+    section absent, or present without an explicit enforcement-mode setting
+  And a staged commit breaks an AC-to-code link for criterion AC-X
+  When the traceability reconciliation check runs at pre-commit time
+  Then the check finishes with a blocking (non-zero) outcome
+  And the commit does not complete
+
+  Given the commit guardian configuration has the traceability reconciliation
+    section with its enforcement mode explicitly set to warn
+  And a staged commit breaks an AC-to-code link for criterion AC-X
+  When the traceability reconciliation check runs at pre-commit time
+  Then the check emits an advisory message naming AC-X
+  And the check finishes with a non-blocking (zero) outcome
+  And the commit is allowed to proceed
+depends_on:
+  - GE-111a
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100.yaml"
+    relationship: related
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The enforcement-mode setting lives in a new traceability_reconciliation section of scripts/commit_guardian/commit_guardian.json (config-driven, not hard-coded), mirroring the GE-100 duplicate_code.strict / diff_coverage.strict warn-vs-block config keys. Suggested key: enforcement_mode with values block (default) | warn."
+  - "The default when the section is absent OR present-without-the-key must resolve to BLOCK (the user-confirmed headline behavior). Absence of config must never silently degrade to warn."
+  - "Config defaults must be read through scripts/commit_guardian/config.py the same way existing checks read DUPLICATE_CODE_STRICT etc.; do not re-implement JSON loading inline."
+  - "The deployed commit_guardian.json and its packaged template source must be edited together and verified in parity via the build.py round-trip (ADR-001)."
+  - "Must follow the project error handling policy (CLAUDE.md Rules 1-4) when reading config."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  User-confirmed decision (GE-111a notes + PO framing memo): enforcement is
+  BLOCKING, not audit-only, by default. A configurable warn tier may exist as a
+  deliberate opt-in, mirroring GE-100's warn-vs-block config — but the default
+  and headline behavior is BLOCK. This AC pins BLOCK as the default and warn as
+  an explicit, opt-in-only alternate mode.
+
+  IT-PO enrichment (2026-06-22): config home and key named explicitly in
+  it_requirements; absence-of-config must resolve to BLOCK, not warn.

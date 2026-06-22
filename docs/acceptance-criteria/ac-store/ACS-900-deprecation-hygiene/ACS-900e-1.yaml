@@ -1,0 +1,67 @@
+id: ACS-900e-1
+readiness: approved
+priority: high
+title: "Detection reuses the audit tool's traceability logic rather than re-implementing it"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the existing audit script scripts/ac_store/cross_reference_audit.py
+    already implements AC-to-source traceability resolution (loading AC YAML
+    files and reading their implemented_by lists),
+  When the deprecation-hygiene hook resolves which source files a retired AC
+    claims,
+  Then the hook reuses the audit script's existing AC-loading and
+    implemented_by-resolution logic (imported or refactored into a shared
+    helper) rather than introducing a second independent AC-store traversal,
+  And the deprecation-hygiene hook does NOT perform backfill — it neither writes
+    implemented_by links nor sets work_status, leaving backfill solely to
+    cross_reference_audit.py,
+  And the hook performs detection only (at commit time), which the audit script
+    does not do, so the two capabilities are complementary with no overlapping
+    behavior.
+depends_on: [ACS-900e]
+doc_links:
+  - path: scripts/ac_store/cross_reference_audit.py
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The reusable traceability logic in cross_reference_audit.py is the AC-YAML-loading + implemented_by reading in _load_ac_yamls (load each AC dict, read its implemented_by list). The hook MUST reuse this rather than writing a second independent AC-store traversal. Because _load_ac_yamls currently lives inline alongside CLI/backfill code, the preferred approach is to EXTRACT it (and any shared AC-load helper) into an importable shared module both the audit script and the new hook depend on — a true shared helper, not a copy-paste."
+  - "The hook MUST NOT perform backfill: it neither writes implemented_by links nor sets work_status nor mutates any AC YAML. Backfill remains solely cross_reference_audit.py's --apply path. The hook is read-only over the AC store (detection only)."
+  - "The #anchor parsing and the source-file presence verdict (ACS-900a-2) are NEW behavior NOT present in the audit script (whose implemented_by reads are ticket-oriented and never check source-file existence) — adding them is in-scope; duplicating the AC-load traversal is not."
+  - "Extracting the shared helper MUST NOT change cross_reference_audit.py's existing behavior or CLI contract (no regression to backfill); verify the audit script still runs after the refactor."
+  - "Shared-helper extraction touches scripts/ac_store/ source AND its packaged template; both copies MUST stay in parity via build.py (ADR-001). New hook script lives in templates/commit-guardian/ + scripts/commit_guardian/."
+  - "Must follow the project error-handling policy: file/YAML reads wrapped at the I/O boundary with WARNING-level logging and fail-open, matching the existing _load_ac_yamls (catches yaml.YAMLError / OSError, logs, continues)."
+delivers_to:
+  agent: python-coder
+  contract: "A shared, importable AC-load helper (extracted from cross_reference_audit.py._load_ac_yamls) returning parsed AC dicts with their implemented_by lists, consumed by both the audit script and the deprecation-hygiene hook's resolution step (ACS-900a-2)"
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Anti-duplication / scoping AC. cross_reference_audit.py BACKFILLS implemented_by
+  but does NOT detect stale code behind a retired AC. The new hook reuses its
+  traceability-resolution logic (the AC<->source mapping in _load_ac_yamls and
+  the implemented_by reads) and adds the missing detection-at-commit-time half.
+  Detection must not duplicate or invoke backfill.
+
+  IT-PO enrichment (2026-06-22): inspected cross_reference_audit.py. The reusable
+  unit is _load_ac_yamls (AC dict load + implemented_by read); it currently lives
+  inline with CLI/backfill code, so the it_requirement mandates EXTRACTING it into
+  an importable shared module (not import-from-CLI, not copy-paste) with a no-regression
+  guarantee on the audit script. Added a delivers_to contract naming the extracted
+  helper. NOTE the audit script's implemented_by usage is ticket-path-oriented and
+  never checks SOURCE-file existence — so the source-presence + #anchor logic is
+  genuinely new and correctly NOT a duplication. See caveats in the run summary about
+  the extraction surface being a coder decision.

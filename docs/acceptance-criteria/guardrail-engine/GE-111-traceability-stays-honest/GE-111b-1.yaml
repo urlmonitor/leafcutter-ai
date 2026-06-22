@@ -1,0 +1,73 @@
+id: GE-111b-1
+readiness: approved
+priority: high
+title: "File-path floor: a vanished implemented_by path is drift, with no external tooling"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111b.yaml"
+criteria: |
+  Given an acceptance criterion AC-X has implemented_by entry "src/foo.py" with
+    no #symbol anchor
+  And the staged commit deletes "src/foo.py" so the path no longer resolves to a
+    file in the staged tree
+  When the traceability reconciliation check evaluates AC-X
+  Then the check produces a drift verdict for AC-X naming the change kind as deleted
+
+  Given an acceptance criterion AC-Y has implemented_by entry "src/old/bar.py"
+  And the staged commit renames "src/old/bar.py" to "src/new/bar.py" so the
+    recorded path no longer resolves in the staged tree
+  When the traceability reconciliation check evaluates AC-Y
+  Then the check produces a drift verdict for AC-Y naming the change kind as moved or renamed
+
+  Given an acceptance criterion AC-Z has implemented_by entry "src/baz.py"
+  And the staged commit edits "src/baz.py" but the path still resolves to a file
+    in the staged tree
+  When the traceability reconciliation check evaluates AC-Z
+  Then the check produces a clean verdict for AC-Z
+
+  And the file-path floor verdict is produced without invoking any external
+    symbol-analysis tooling
+depends_on:
+  - GE-111b
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111b.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/reference/ac-schema.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Path resolution must be against the STAGED tree, not the working tree — read the staged index (e.g. git ls-files --cached / git cat-file against the staged blob) so an unstaged deletion or a still-present working-tree copy does not mask or fabricate drift. Mirror the staged-files-only precedent in check_ac_circular_deps / check_ac_schema Phase 2."
+  - "Change-kind classification (deleted vs moved/renamed) must use git's staged rename detection (git diff --cached --name-status -M) — a rename surfaces as R and reports change_kind moved/renamed; a pure delete surfaces as D and reports change_kind deleted."
+  - "MUST have zero dependency on any external symbol-analysis binary or MCP tooling — this is the always-on floor and must produce a verdict even when the symbol tier (GE-111b-2) cannot run. Do not import or shell out to jcodemunch/jscpd/any resolver here."
+  - "Must follow the project error handling policy (CLAUDE.md Rules 1-4) for all git subprocess and file I/O; fail open (treat as clean + advisory) only on UNEXPECTED internal errors, never on a confirmed vanished path."
+  - "Verdict object shape is the canonical contract consumed downstream: {ac_id: str, entry: str, tier: 'file', verdict: 'drift'|'clean', change_kind: 'deleted'|'moved'|'renamed'|null, symbol: null, suggested_location: null}. Keep this shape stable; the symbol tier (GE-111b-2) extends the same object."
+delivers_to:
+  agent: python-coder
+  contract: "Per-AC drift/clean verdict object {ac_id, entry, tier: 'file', verdict, change_kind, symbol: null, suggested_location: null} at file-path granularity, consumed by GE-111a (block decision) and GE-111e (message)"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: [GE-111b-1-i]
+implemented_by: []
+notes: |
+  TIER 1 of the resolved file-vs-symbol design question. This is the always-on
+  floor: it depends only on whether the recorded implemented_by path resolves to
+  a file in the staged tree. No jcodemunch dependency, so it can never be
+  degraded by missing tooling — it is the guarantee that survives even when the
+  symbol tier (GE-111b-2) cannot run (see GE-111b-2-i fail-open).
+
+  IT-PO enrichment (2026-06-22): pinned the canonical verdict object shape (the
+  spine all of GE-111a/b/c/d/e exchange) and the staged-tree resolution +
+  git rename-detection mechanics, while leaving the exact data structures to
+  python-coder. This is the load-bearing contract referenced by every sibling.

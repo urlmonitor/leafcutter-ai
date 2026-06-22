@@ -1,0 +1,42 @@
+id: KM-KGS-100c-3
+readiness: approved
+priority: high
+title: "How-to guide for declaring a new knowledge surface"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100c.yaml"
+criteria: |
+  Given a maintainer wants to add a new source of knowledge to the map
+  When they open the how-to guide for declaring a new surface
+  Then the guide shows where surfaces are declared and the fields each entry needs
+    (a path and the relationship fields it contributes as edges)
+  And it states that adding the entry is the only step — no map-building code is edited
+  And it uses the acceptance-criteria store as a worked example of one declared surface
+depends_on:
+  - KM-KGS-100c
+  - KM-KGS-100c-2
+doc_links:
+  - path: config/paths.json
+    relationship: context
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "The guide must live under docs/how-to/ in the Diataxis how-to format and must name the real config location (the 'surfaces' map in config/paths.json) and the exact entry fields (path, edge_fields, optional _optional marker)"
+  - "The worked acs example shown must match the entry actually added by KM-KGS-100a-1 (path docs/acceptance-criteria/, edge_fields implemented_by/covered_by/depends_on/components) so the documentation and the config stay consistent"
+  - "The guide must state the declare-only contract explicitly: adding the config entry is the sole step and no map-building code is edited — and must not contradict the count-agnostic framing by implying a fixed surface roster"
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100c-2
+  contract: "The declare-only workflow for adding a surface (one config entry, rebuild, no code change), demonstrated by the acs surface, which the guide documents"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-ACCodeTraceabilityGraph/12_TICKET-20260622-KM-KGS-100c-3.md

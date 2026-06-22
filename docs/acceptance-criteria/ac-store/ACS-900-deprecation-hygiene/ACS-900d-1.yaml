@@ -1,0 +1,50 @@
+id: ACS-900d-1
+readiness: approved
+priority: high
+title: "Retirement with the implementing code removed passes cleanly"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a commit retires an AC (active to deprecated / superseded_by / superseded)
+    and in the same commit either deletes every file named in that AC's
+    implemented_by list, or empties / removes the implemented_by entries so the
+    list is empty,
+  When the deprecation-hygiene hook runs,
+  Then every implemented_by target is verdicted "gone",
+  And the hook does not block the commit on account of that AC,
+  And the hook produces no block message for that AC.
+depends_on: [ACS-900d, ACS-900a-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "No-false-positive guarantee: when every implemented_by target is verdicted 'gone', the hook MUST NOT block and MUST emit NO block message for that AC. A trustworthy blocking hook hinges on the correctly-reconciled case passing silently (else teams disable it)."
+  - "A file deleted IN THE SAME COMMIT MUST verdict as 'gone'. This requires evaluating presence against the STAGED tree (post-commit state), not HEAD and not the working tree alone — confirm the staged-tree evaluation surface from ACS-900a-2 makes a same-commit deletion observable as absent."
+  - "Emptying the implemented_by list (staged list == []) MUST yield no targets to inspect and therefore no block — distinct from the never-claimed case (ACS-900d-1-i) only in provenance, identical in outcome."
+  - "The pass path MUST be silent on stdout (no block decision emitted) and exit 0; any stderr output on the clean path is limited to optional debug, never a block message."
+  - "Deployed and packaged-template copies of the hook MUST stay in parity (ADR-001)."
+delivers_to: null
+expects_from:
+  ac_id: ACS-900a-2
+  contract: "Per-implemented_by-entry presence verdict mapping {entry_string -> 'present'|'gone'} for the retired AC (every entry 'gone' on this path)"
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: [ACS-900d-1-i]
+implemented_by: []
+notes: |
+  Happy-path AC covering two of the legitimate-pass cases from ACS-900d notes:
+  implementing file deleted in the same commit, and implemented_by emptied. The
+  re-point-to-successor case is ACS-900d-2; the empty-list-at-retirement case is
+  ACS-900d-1-i.
+
+  IT-PO enrichment (2026-06-22): re-stated the staged-tree dependency (same-commit
+  deletion must read as absent) so the no-false-positive guarantee is mechanically
+  achievable, and pinned the silent-pass (clean stdout, exit 0) contract.

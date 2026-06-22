@@ -1,0 +1,41 @@
+id: KM-KGS-100
+readiness: approved
+priority: high
+title: "Trace any requirement to the exact code and tests that fulfil it"
+component: knowledge-management
+level: L0
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  See your requirements, code, and tests as one connected map.
+
+  Every acceptance criterion you write becomes part of the same knowledge map
+  that already connects agents, tickets, docs, and architecture. You can stand
+  on any requirement and ask "what builds this, what proves it, and what does it
+  depend on?" — and get an answer without hunting through folders. The map is
+  not fixed in size: new sources of knowledge can be added over time, however
+  many there are, and the map keeps every connection it promises trustworthy.
+depends_on: []
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: context
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - KM-KGS-100a
+  - KM-KGS-100b
+  - KM-KGS-100c
+  - KM-KGS-100d
+implemented_by: []

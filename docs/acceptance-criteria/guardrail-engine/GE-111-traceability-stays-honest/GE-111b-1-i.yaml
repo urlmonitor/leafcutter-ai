@@ -1,0 +1,61 @@
+id: GE-111b-1-i
+readiness: approved
+priority: high
+title: "An anchorless implemented_by entry is evaluated at file-path tier only"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111b.yaml"
+criteria: |
+  Given an acceptance criterion AC-X has implemented_by entry "src/foo.py" with
+    no #symbol anchor
+  And the staged commit keeps "src/foo.py" present but moves several functions
+    out of it
+  And the symbol-analysis tooling is available
+  When the traceability reconciliation check evaluates AC-X
+  Then the check does not invoke the symbol tier for AC-X
+  And the check produces a clean verdict for AC-X because the file still resolves
+    in the staged tree
+
+  Given an acceptance criterion AC-Y has implemented_by entry "src/foo.py#"
+    (an empty anchor after the # separator)
+  When the traceability reconciliation check evaluates AC-Y
+  Then the check treats AC-Y as having no resolvable symbol name
+  And it evaluates AC-Y at the file-path tier only
+depends_on:
+  - GE-111b-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111b-1.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/reference/ac-schema.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Anchor parsing must split implemented_by on the FIRST '#' only (paths cannot contain '#'; the remainder is the symbol name). An entry with no '#', or with '#' followed by an empty/whitespace-only string, is anchorless and routes to file-path tier only."
+  - "Anchorless detection is the gate that keeps adoption non-breaking for the existing store, where '#anchor' is currently NOT parsed — must not change behavior for any existing anchorless implemented_by entry (regression-safety on the current store)."
+  - "Parsing must be a pure helper (no I/O) and therefore MUST NOT be wrapped in try/except per CLAUDE.md Rule 4."
+delivers_to: null
+expects_from:
+  ac_id: GE-111b-1
+  contract: "The file-path tier verdict object that is the sole granularity for anchorless entries"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Pins the tier-selection boundary: the symbol tier is opt-in via the presence of
+  a meaningful #symbol anchor. Entries without an anchor (the common existing
+  case in the store today, where #anchor is currently NOT parsed) keep their
+  current file-path-only behavior, so adopting symbol-level detection is
+  non-breaking for existing implemented_by entries. An empty anchor ("path#") is
+  treated as anchorless.
+
+  IT-PO enrichment (2026-06-22): pinned first-# split rule and the
+  pure-function / no-try-except constraint per the error-handling policy.

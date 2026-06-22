@@ -1,0 +1,64 @@
+id: GE-111c-1
+readiness: approved
+priority: high
+title: "Only links whose source the commit staged are evaluated"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111c.yaml"
+criteria: |
+  Given the staged commit modifies the source files "src/foo.py" and "src/bar.py"
+  And acceptance criterion AC-X has implemented_by entry "src/foo.py"
+  And acceptance criterion AC-Y has implemented_by entry "src/untouched.py"
+    which the commit does not stage
+  When the traceability reconciliation check runs at pre-commit time
+  Then the check evaluates the link for AC-X (its source is staged)
+  And the check does not evaluate the link for AC-Y (its source is not staged)
+
+  Given acceptance criterion AC-Z has implemented_by entry
+    "src/foo.py#process_order"
+  And the staged commit stages "src/foo.py"
+  When the traceability reconciliation check runs at pre-commit time
+  Then AC-Z is in scope because the symbol it names belongs to a staged file
+depends_on:
+  - GE-111c
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111c.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/reference/ac-schema.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The staged-source trigger set must come from git's staged change list (git diff --cached --name-only, including renames via -M so the OLD path of a rename is in scope) — mirror the established staged-files-only scoping in check_ac_circular_deps (only cycles involving a STAGED AC), check_ac_schema Phase 2 (diff-filter M staged files), and ACS-400e-2 (only staged AC YAML files inspected)."
+  - "Scope membership rule: an AC is in scope iff the FILE PORTION of any of its implemented_by entries (anchor stripped) matches a staged source path (the pre-rename old path for a rename). This must build the in-scope set BEFORE anchor parsing so symbol-anchored entries on a staged file are included (criteria scenario 2)."
+  - "Must scan the full AC store on disk to find which ACs reference staged files, but evaluate ONLY the in-scope subset — the store scan is read-only and must complete within the pre-commit latency budget (target under 2s); prefer a single pass indexing implemented_by file portions by path."
+  - "Must follow the project error handling policy (CLAUDE.md Rules 1-4) for the git subprocess and YAML reads; fail open (empty in-scope set => no block) only on unexpected internal errors."
+delivers_to:
+  agent: python-coder
+  contract: "The in-scope AC set (list of {ac_id, entry} whose implemented_by file portion is staged) that GE-111b evaluates for drift"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: [GE-111c-1-i]
+implemented_by: []
+notes: |
+  Mirrors the established staged-files-only scoping precedent in the GE/ACS hooks
+  (check_ac_circular_deps reports only cycles involving a STAGED AC;
+  check_ac_schema Phase 2 inspects diff-filter M staged files; ACS-400e-2 "only
+  staged AC YAML files are inspected"). The trigger set is the source files in the
+  commit; the ACs to evaluate are those whose implemented_by references one of
+  those files (or a symbol within one of them).
+
+  IT-PO enrichment (2026-06-22): pinned the scope-membership rule (file portion
+  of implemented_by, anchor stripped, pre-rename old path included) and the
+  read-only single-pass store scan within the latency budget.
