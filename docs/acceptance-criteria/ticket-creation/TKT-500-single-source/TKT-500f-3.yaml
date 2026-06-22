@@ -1,0 +1,42 @@
+id: TKT-500f-3
+readiness: draft
+priority: medium
+title: "Old and new pipelines produce equivalent outcomes on the same AC"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a leaf AC with readiness: approved,
+  When both the old pipeline (generate_ticket_from_ac then ticket-supervisor)
+    and the new pipeline (ac-supervisor direct) are run on the same AC
+    sequentially (old pipeline first as baseline),
+  Then both produce the same code changes (git diff identical),
+  And both produce the same test results (all pass),
+  And both reach the same signoff state (all agents signed off),
+  And the old pipeline's ticket file is treated as a reference artifact only
+    (not consumed by the new pipeline).
+depends_on: [TKT-500f-2]
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Run sequentially, not concurrently. Compare git diffs after both complete. Old pipeline runs first as baseline."
+delivers_to: null
+expects_from:
+  ac_id: TKT-500f-2
+  contract: "Proven ac-supervisor dispatch cycle from canary run"
+origin_agent: business-analyst-v3
+created: 2026-06-08
+amended_by:
+  - reason: "renamed TKT-500d-8 -> TKT-500f-3 in split of TKT-500d, 2026-06-18"
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -851,6 +851,19 @@
                 "pass_filenames": false,
                 "enabled": false,
                 "_comment": "GE-101a: Verifies changed lines in staged files have adequate test coverage using diff-cover. Disabled by default (diff_coverage.enabled: false). Fails open when diff-cover is not installed or coverage.xml is absent — emits advisory to stderr and exits 0. Set strict: true to block commits below min_coverage_percent threshold."
+            },
+            {
+                "id": "check-ac-schema",
+                "tier": "judgment",
+                "name": "Check AC Store Schema, Binding Completeness, and Field Preservation (ACS-500f-1)",
+                "entry": "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_ac_schema.py",
+                "language": "system",
+                "files": "^docs/acceptance-criteria/.*\\.yaml$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "ACS-500f-1: (1) Validates every staged AC YAML file against config/ac_store_schema.json (JSON Schema draft-07). (2) Blocks commits where a consuming AC's pattern_bindings is missing at least one slot declared by the referenced pattern AC — error names the missing binding key and the pattern AC id. (3) Blocks commits where implements_pattern was present in HEAD but is absent in the staged modification — error identifies the file and states that implements_pattern was dropped. Fail-open on unexpected errors. Scoped to docs/acceptance-criteria/ staged files."
             }
         ]
     },

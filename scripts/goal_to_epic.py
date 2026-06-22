@@ -375,22 +375,29 @@ def _call_generate_ticket_from_ac(
         RuntimeError: When the script exits 0 but emits no ``Written:`` line.
     """
     script_path = _sibling_dir / "generate_ticket_from_ac.py"
-    result = subprocess.run(
-        [
-            sys.executable,
-            str(script_path),
-            "--ac",
-            ac_id,
-            "--ac-root",
-            str(ac_root),
-            "--tickets-root",
-            str(tickets_root),
-        ],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        check=True,
-    )
+    try:
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(script_path),
+                "--ac",
+                ac_id,
+                "--ac-root",
+                str(ac_root),
+                "--tickets-root",
+                str(tickets_root),
+            ],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            check=True,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        import logging  # noqa: PLC0415
+        logging.getLogger(__name__).warning(
+            "generate_ticket_from_ac.py failed for AC %s: %s", ac_id, exc
+        )
+        raise
     for line in result.stdout.splitlines():
         if line.startswith("Written:"):
             return line[len("Written:"):].strip()
@@ -1707,14 +1714,22 @@ def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
 
-    try:
-        worktree = _find_worktree_root(Path(__file__))
-    except FileNotFoundError as exc:
-        print(f"ERROR: {exc}", file=sys.stderr)
-        return 1
-
-    ac_store_root = Path(args.store_root) if args.store_root else worktree / _DEFAULT_STORE_ROOT
-    inbox_dir = Path(args.inbox_dir) if args.inbox_dir else worktree / _DEFAULT_INBOX_DIR
+    # Resolve the worktree root lazily: only when at least one default path is
+    # needed.  When both --store-root and --inbox-dir are supplied explicitly,
+    # _find_worktree_root() is never called — allowing the script to run from
+    # a location outside any git tree (e.g. .leafcutter/scripts/) without error.
+    # See BP-901 for the root-cause analysis.
+    if args.store_root and args.inbox_dir:
+        ac_store_root = Path(args.store_root)
+        inbox_dir = Path(args.inbox_dir)
+    else:
+        try:
+            worktree = _find_worktree_root(Path(__file__))
+        except FileNotFoundError as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+        ac_store_root = Path(args.store_root) if args.store_root else worktree / _DEFAULT_STORE_ROOT
+        inbox_dir = Path(args.inbox_dir) if args.inbox_dir else worktree / _DEFAULT_INBOX_DIR
 
     if not ac_store_root.exists():
         print(f"ERROR: AC store root not found: {ac_store_root}", file=sys.stderr)
@@ -1806,5 +1821,16 @@ DECISION HISTORY
   as a non-zero CLI exit. Helper functions: _read_ticket_title(), _read_ac_criteria(),
   generate_master_plan(). Integration point: run() calls generate_master_plan()
   after epic_folder is created, using the already-computed dep_graph and topo_order.
+- 2026-06-18 [BP-901]: Defer _find_worktree_root() when both CLI paths are supplied.
+  Root cause: main() called _find_worktree_root(Path(__file__)) unconditionally
+  before checking whether --store-root / --inbox-dir were provided. When the script
+  is deployed to .leafcutter/scripts/ (outside any git tree) and both flags are
+  passed explicitly, the call raised FileNotFoundError and exited 1 even though
+  the worktree value would never have been used (it only constructs the default
+  paths). Fix: restructured the path-resolution block in main() to check whether
+  both args.store_root and args.inbox_dir are present. If so, Path() wrappers are
+  applied directly and _find_worktree_root() is not called at all. When either
+  default is needed the try/except block runs as before. Covered by regression
+  test tests/test_goal_to_epic_worktree_skip.py::TestMainSkipsWorktreeWhenBothPathsSupplied.
 ====================================================================
 """

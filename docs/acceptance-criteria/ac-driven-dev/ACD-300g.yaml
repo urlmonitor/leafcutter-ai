@@ -1,5 +1,5 @@
 id: ACD-300g
-readiness: draft
+readiness: approved
 priority: medium
 title: "Each stage's AC output is committed to git before the workflow advances to the next stage"
 component: ac-driven-dev

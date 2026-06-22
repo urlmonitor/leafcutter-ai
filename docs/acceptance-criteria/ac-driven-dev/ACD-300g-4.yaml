@@ -1,5 +1,5 @@
 id: ACD-300g-4
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "Cancel or abort does not commit -- draft files remain on disk uncommitted"
 component: ac-driven-dev
@@ -51,4 +51,5 @@ created: 2026-06-08
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-CommitAcOutputPerStage/06_TICKET-20260618-ACD-300g-4.md

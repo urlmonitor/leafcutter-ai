@@ -4,7 +4,7 @@ description: "Visualises how the leafcutter-ai agent ecosystem orchestrates code
 type: "reference"
 status: "active"
 created: "2026-05-11"
-last_updated: "2026-06-08"
+last_updated: "2026-06-10"
 flight_level: "L3-Component"
 diagram_type: agent_flow
 components:
@@ -28,6 +28,7 @@ related_agents:
   - "leafcutter/templates/agents/architect-review.md"
   - "leafcutter/templates/agents/python-coder.md"
   - "leafcutter/templates/agents/sql-coder.md"
+  - "leafcutter/templates/agents/frontend-coder.md"
   - "leafcutter/templates/agents/sql-table-creator.md"
   - "leafcutter/templates/agents/sql-index-creator.md"
   - "leafcutter/templates/agents/sql-procedure-creator.md"
@@ -225,7 +226,9 @@ flowchart LR
 This flow illustrates how `epic-supervisor` automates parallel delivery by calculating physical dependencies (`files_touched`), and how `ticket-supervisor` distributes work to phase agents based on the ticket's frontmatter. It also outlines the adjudication ladder for blockers.
 
 The canonical phase-agent dispatch order is:
-`architect-review → python-coder → test-writer → test-runner → documentation-expert → pr-reviewer → commit → pull-request`
+`architect-review → python-coder → sql-coder → frontend-coder → test-writer → test-runner → documentation-expert → pr-reviewer → commit → pull-request`
+
+`frontend-coder` occupies **priority 8** (after `sql-coder` at 7, before `test-runner` at 9). It is a unified implementation agent: design principles and optional-skill detection are embedded in the template. The `frontend-design` skill is no longer a separate node in the dispatch topology — `frontend-coder` ignores it even if it is present on disk.
 
 `test-writer` is dispatched when the ticket has a non-empty `test_requirements.tests` array (produced by `business-analyst` during ticket creation). If the array is empty (docs-only or config-only tickets), `ticket-wiring` sets `test-writer: not_needed` and the phase is skipped.
 
@@ -272,7 +275,7 @@ flowchart TD
     
     %% Agent Execution & Signoff
     subgraph Phase_Execution ["Phase Agent Execution (ordered)"]
-        AgentRun["Agent Does Work<br/>(e.g. architect-review, python-coder,<br/>test-writer, test-runner,<br/>documentation-expert, ...)"]:::worker
+        AgentRun["Agent Does Work<br/>(e.g. architect-review, python-coder,<br/>sql-coder, frontend-coder,<br/>test-writer, test-runner,<br/>documentation-expert, ...)"]:::worker
         AgentSignoff["Agent invokes signoff skill<br/>(Appends to ## Comments)"]:::worker
         
         TS_SpawnAgent --> AgentRun
@@ -305,6 +308,44 @@ flowchart TD
         B_Merge --> TS_HaltUser
     end
 ```
+
+---
+
+## 5. Detail View: `frontend-coder` Dispatch Topology (Priority 8)
+
+`frontend-coder` is a unified implementation agent: a single node in the dispatch topology that handles all frontend work. The `frontend-design` skill has been inlined into the agent template (AC BP-700a-1) and is no longer a separate box.
+
+```mermaid
+flowchart TD
+    classDef worker fill:#d1fae5,stroke:#059669,stroke-width:2px;
+    classDef input fill:#f3f4f6,stroke:#4b5563,stroke-width:2px;
+    classDef optional fill:#ede9fe,stroke:#7c3aed,stroke-width:2px;
+    classDef decision fill:#fde68a,stroke:#ca8a04,stroke-width:2px;
+    classDef handoff fill:#fce7f3,stroke:#db2777,stroke-width:2px;
+
+    TS["ticket-supervisor<br/>(dispatches at priority 8)"]:::worker
+    FC["frontend-coder<br/>(unified implementation agent)"]:::worker
+    PC["PROJECT_CONTEXT.md<br/>(optional design system override)"]:::input
+    WA["webapp-testing skill<br/>(optional — detects by file existence)"]:::optional
+    Signoff["signoff skill<br/>(atomic sign-off)"]:::worker
+
+    IsPySQL{"Backend work needed?"}:::decision
+    Handoff["handoff → python-coder<br/>or sql-coder"]:::handoff
+
+    TS -->|"agents.frontend-coder: needed"| FC
+    FC --> |"Pre-flight: read design system"| PC
+    FC --> |"Pre-flight: detect skill"| WA
+    FC --> IsPySQL
+    IsPySQL -->|Yes — STOP, do not write Python/SQL| Handoff
+    IsPySQL -->|No — implement UI changes| Signoff
+    WA -. "if installed: capture screenshot<br/>verify no console errors" .-> FC
+    PC -. "design_system.primary_colour<br/>design_system.font_heading<br/>design_system.font_body" .-> FC
+```
+
+> [!NOTE]
+> **Embedded design principles**: `frontend-coder` no longer loads the `frontend-design` skill file. Design principles (negative space, accessibility contrast, interactive states, component structure, performance) are embedded directly in the agent template. If `.claude/skills/frontend-design/SKILL.md` exists on disk from a prior install, `frontend-coder` ignores it. Project-specific brand overrides are applied via `PROJECT_CONTEXT.md` (see ADR-005).
+>
+> **`webapp-testing` detection**: if `.claude/skills/webapp-testing/SKILL.md` exists, `frontend-coder` invokes it after making UI changes to capture a screenshot and verify no console errors. No other configuration is required.
 
 > [!TIP]
 > The **Blocker Adjudication Ladder** is designed to shield the user from trivial issues. Only open-ended design questions (which escalate through the `brainstorm-lead` tier) or completely exhausted retries will interrupt the user.
@@ -1577,6 +1618,7 @@ terminates cleanly after printing the summary.
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-10 14:05 [BrainCandy]: Added §5 frontend-coder dispatch topology showing unified agent at priority 8, PROJECT_CONTEXT.md design system override relationship, and optional webapp-testing skill detection. Updated §4 phase-agent dispatch order to include frontend-coder. Removed frontend-design as a separate topology node (design principles are now embedded in the agent template per ADR-005). (#EPIC-Oneagenthandlesboththelookandthecodefor/05)
 - 2026-06-08 [llm-expert]: Added AC BP-600d-4 quick-fix close phase section: Gherkin contract, push contract, PR update contract, ticket lifecycle close contract, ordering invariant, push failure halt message, depth-0 rationale, and contrast table with build-single-ticket Step 4b. (#EPIC-QuickFixWorkflow/13)
 - 2026-06-08 [llm-expert]: Added AC BP-600d-3 commit-agent dispatch section: Gherkin contract, dispatch contract table, staged-files constraint table, commit message format, rationale for agent-dispatch over direct git commit, and ordering invariant. (#EPIC-QuickFixWorkflow/12)
 - 2026-06-08 [llm-expert]: Added AC BP-600e-3 escalation progress-preservation section: Gherkin contract, preserved artefacts table, escalation summary output format, AC ID reference in downstream commands, relationship to BP-600b-3 and BP-600e-1/e-2, BP-600e-1 vs BP-600e-2 escalation comparison table, and ordering invariant. (#EPIC-QuickFixWorkflow/16)
@@ -1590,7 +1632,7 @@ DECISION HISTORY
 - 2026-06-08 [llm-expert]: Added AC BP-600a-3 uncommitted changes guard section to Section 5: guard contract, implementation steps, halt message format, and rationale. (#EPIC-QuickFixWorkflow/03)
 - 2026-06-08 [llm-expert]: Added AC BP-600a-2 documentation to Section 5: prohibited isolation infrastructure table, no-worktree-agent/no-feature-skill constraint, and rationale for the exclusion. (#EPIC-QuickFixWorkflow/02)
 - 2026-06-08 [llm-expert]: Added /quick-fix to high-level overview (§1) and Section 5 documenting the current-worktree-only flow, worktree invariant (BP-600a-1), contrast table with /build-feature, and Mermaid flow diagram. (#EPIC-QuickFixWorkflow/01)
-- 2026-05-13 [Antigravity]: Added test-writer to phase-agent dispatch order (§4) per ADR-018 and ticket 36 (test-expert injection).
+- 2026-05-13 [Antigravity]: Added test-planner spawn to ticket-creation diagram (§2) and test-writer to phase-agent dispatch order (§4) per ADR-018 and ticket 36 (test-expert injection).
 - 2026-05-11 [Antigravity]: Refactored to feature layered abstraction, splitting a single large flow into a high-level overview and specific orchestration detail views. Removed non-coding elements like `trade-report`.
 - 2026-05-11 [Antigravity]: Initial creation. Visualises slash command distribution and Epic Supervisor execution flow based on EPIC-CodingAgents and EPIC-AgentSupervisor patterns.
 ====================================================================

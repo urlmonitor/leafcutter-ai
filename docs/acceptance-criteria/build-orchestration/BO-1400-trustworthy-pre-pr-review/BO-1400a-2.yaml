@@ -1,0 +1,53 @@
+id: BO-1400a-2
+readiness: approved
+priority: high
+title: "Pre-PR review confirms a delivered artifact lands in the deployable package source, not only a build-output tree"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1400-trustworthy-pre-pr-review/BO-1400a.yaml"
+criteria: |
+  Given a ticket under pre-PR review whose diff adds or modifies an artifact that is
+    meant to ship to consumers (for example a pre-commit hook, a script, or a template
+    that a fresh install is supposed to receive)
+  When the pre-PR self-review reviews that diff
+  Then the review confirms the artifact is present in the deployable package source that
+    a clean install copies from (the package source tree, e.g. under templates/)
+  And the review raises a blocking finding when the only copy of a consumer-facing
+    artifact lives in a build-output tree that a clean install does not copy from
+    (e.g. a gitignored or generated scripts/ output), so the artifact would not survive
+    a fresh build-and-install
+  And the review cannot return a clean verdict on the delivery while the artifact exists
+    only in the build-output tree and not in the deployable package source
+depends_on:
+  - BO-1400a
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1400-trustworthy-pre-pr-review/BO-1400a.yaml"
+    relationship: parent
+    status: exists
+  - path: templates/agents/pr-reviewer.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Recognizing that a diff delivers a consumer-facing artifact (a hook/script/template intended to ship) is a review-checklist judgment in the pr-reviewer agent template."
+  - "The deployable-source check must reason about the CONSUMER's clean install: the artifact must live in the package source tree that build.py copies into a target project (templates/...), not only in a build-output tree that the install regenerates or that is gitignored (scripts/... in the deployed layout). Per ADR-001 the dev workspace's own build outputs are NOT evidence of consumer reachability."
+  - "When the only copy of a deliverable is in the build-output tree, the review must raise a high-confidence blocking finding stating the artifact would not survive a fresh build.py install."
+  - "Any deterministic 'would this survive a fresh install' reachability probe (mapping a changed path to whether build.py would deliver it) is a helper concern, not an LLM judgment."
+delivers_to:
+  agent: python-coder
+  contract: "Deterministic fresh-install reachability probe (suggested home: scripts/pr_review/install_reachability.py). Input: a changed path (relative to repo root). Output: { delivered: bool, package_source_path: str | null, reason: str } indicating whether build.py would copy that path into a clean target project (delivered=true only when it maps to a package-source path under templates/...). The reviewer (llm-expert pr-reviewer template) consumes this to confirm deployable placement and to raise a blocker when delivered=false for a consumer-facing artifact; the probe reasons about the consumer's clean install per ADR-001, not the dev workspace's own build outputs, and performs no judgment about whether the artifact is consumer-facing (that classification is the reviewer's, refined by BO-1400a-2-i)."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1400a-2-i
+implemented_by: []

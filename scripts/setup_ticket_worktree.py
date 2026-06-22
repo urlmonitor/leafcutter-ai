@@ -61,12 +61,17 @@ def _git_toplevel() -> Path:
     Returns:
         Absolute Path to the git toplevel directory.
     """
-    result = subprocess.run(
-        ["git", "rev-parse", "--show-toplevel"],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        raise subprocess.SubprocessError(  # noqa: TRY003
+            f"Failed to resolve git toplevel: {exc}"
+        ) from exc
     return Path(result.stdout.strip())
 
 
@@ -83,12 +88,17 @@ def _worktree_exists(branch: str) -> tuple[bool, Path | None]:
         A tuple (exists, worktree_path_or_None) where exists is True when a
         matching worktree was found and worktree_path_or_None is its Path.
     """
-    result = subprocess.run(
-        ["git", "worktree", "list", "--porcelain"],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
+    try:
+        result = subprocess.run(
+            ["git", "worktree", "list", "--porcelain"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        raise subprocess.SubprocessError(  # noqa: TRY003
+            f"Failed to list git worktrees: {exc}"
+        ) from exc
     # Porcelain format: blocks separated by blank lines.
     # Each block starts with "worktree <path>", then "HEAD ...", then "branch ...".
     current_worktree_path: Path | None = None
@@ -126,18 +136,23 @@ def _create_worktree(slug: str, worktrees_dir: Path) -> Path:
         subprocess.CalledProcessError: If ``git worktree add`` exits non-zero.
     """
     worktree_path = worktrees_dir / slug
-    subprocess.run(
-        [
-            "git",
-            "worktree",
-            "add",
-            "-b",
-            f"feature/{slug}",
-            str(worktree_path),
-            "main",
-        ],
-        check=True,
-    )
+    try:
+        subprocess.run(
+            [
+                "git",
+                "worktree",
+                "add",
+                "-b",
+                f"feature/{slug}",
+                str(worktree_path),
+                "main",
+            ],
+            check=True,
+        )
+    except OSError as exc:
+        raise subprocess.SubprocessError(  # noqa: TRY003
+            f"Failed to add git worktree at {worktree_path}: {exc}"
+        ) from exc
     return worktree_path
 
 
@@ -192,17 +207,27 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
         pass
 
     # Populate submodules (like leafcutter) in the new worktree
-    subprocess.run(
-        ["git", "submodule", "update", "--init"],
-        cwd=worktree_path,
-        check=True,
-    )
+    try:
+        subprocess.run(
+            ["git", "submodule", "update", "--init"],
+            cwd=worktree_path,
+            check=True,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        raise subprocess.SubprocessError(  # noqa: TRY003
+            f"Failed to update submodules in {worktree_path}: {exc}"
+        ) from exc
 
-    subprocess.run(
-        ["poetry", "install", "--no-root"],
-        cwd=worktree_path,
-        check=True,
-    )
+    try:
+        subprocess.run(
+            ["poetry", "install", "--no-root"],
+            cwd=worktree_path,
+            check=True,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        raise subprocess.SubprocessError(  # noqa: TRY003
+            f"Failed to run poetry install in {worktree_path}: {exc}"
+        ) from exc
 
     # Run build.py to materialise .leafcutter/ (workflows, agents, skills, hooks)
     # in the new worktree.  Without this step, named-workflow resolution

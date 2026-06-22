@@ -882,7 +882,13 @@
             "open",
             "cursor.execute",
             "cursor.executemany",
-            "cursor.callproc"
+            "cursor.callproc",
+            "subprocess.run",
+            "subprocess.Popen",
+            "subprocess.call",
+            "subprocess.check_call",
+            "subprocess.check_output",
+            "subprocess.getoutput"
         ],
         "blind_exception_names": [
             "Exception",

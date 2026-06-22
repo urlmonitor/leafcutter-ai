@@ -238,10 +238,10 @@ if agents.get("frontend-coder") == "needed":
     spawn("frontend-coder", ticket_path=ticket_path)
 ```
 
-**Note:** `frontend-coder` may invoke `webapp-testing` and `frontend-design` skills
-internally as part of its implementation loop. `ticket-supervisor` does NOT track
-these optional skills as separate phases — they are internal to `frontend-coder`'s
-execution. Only `frontend-coder` itself appears in the ticket's `agents:` map.
+**Note:** `frontend-coder` may invoke the `webapp-testing` skill internally as part
+of its implementation loop. `ticket-supervisor` does NOT track optional skills as
+separate phases — they are internal to `frontend-coder`'s execution. Only
+`frontend-coder` itself appears in the ticket's `agents:` map.
 
 ### Produces-Trait Guardrail Dispatch
 

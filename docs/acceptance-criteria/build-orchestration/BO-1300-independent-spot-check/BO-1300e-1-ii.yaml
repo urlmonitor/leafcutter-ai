@@ -1,0 +1,45 @@
+id: BO-1300e-1-ii
+readiness: approved
+priority: high
+title: "Duplicate findings across reviewers are deduplicated to one ticket per distinct issue"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-independent-spot-check/BO-1300e.yaml"
+criteria: |
+  Given two or three reviewers independently reported what is the same underlying problem
+    with the feature (for example, the same broken seam surfaced from both the integration
+    angle and the usability angle)
+  When the spot-check pass records the findings as tracked work
+  Then it writes exactly one ticket for that distinct issue, not one ticket per reviewer
+  And the single ticket notes that the issue was surfaced by more than one reviewer angle
+  And genuinely different findings still each get their own ticket (deduplication merges only
+    findings that describe the same underlying problem)
+depends_on:
+  - BO-1300e-1
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-independent-spot-check/BO-1300e.yaml"
+    relationship: parent
+    status: exists
+  - path: docs/architecture/components/ticket-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Deduplication must merge only findings describing the same underlying problem; genuinely distinct findings each retain their own ticket. The merge criterion (e.g. same affected seam/behavior) must be explicit, not coincidental string-equality of summaries."
+  - "A merged ticket must record all contributing reviewer angles so the multi-angle corroboration is visible in the tracked work."
+  - "Dedup runs before ticket emission so the one-ticket-per-distinct-issue invariant holds end to end, and remains stable on re-run (no duplicate tickets across repeated passes)."
+delivers_to: null
+expects_from:
+  ac_id: BO-1300e-1
+  contract: "The ticket-emission step (BO-1300e-1) whose one-ticket-per-distinct-issue behavior this verifies; consumes the consolidated result's angle-tagged findings to decide merges."
+origin_agent: BrainCandy
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-IndependentSpotCheck/16_TICKET-20260618-BO-1300e-1-ii.md

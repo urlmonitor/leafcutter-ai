@@ -234,19 +234,30 @@ Record existing L2 IDs and their criteria summaries.
 
 ### Step 7 — Scan the AC store for existing pattern ACs
 
-Before generating any new L2 AC, scan the entire AC store for pattern ACs
-(files that contain a non-null `pattern_slots` field). This is a read-only
-scan — do NOT write any file in this step.
+Before generating any new L2 AC, scan the entire AC store for pattern ACs.
+This is a read-only scan — do NOT write any file in this step.
 
 Use a single Bash call to list all AC YAML files store-wide:
 ```
 find docs/acceptance-criteria -name "*.yaml"
 ```
 
-For each file returned, read it and check whether the `pattern_slots` field is
-present and non-null. Collect these into a `pattern_ac_inventory` list with the
-pattern's `id`, `title`, `pattern_slots`, and the abstract behavior described
-in its `criteria`.
+For each file returned, read it and apply the **pattern-detection predicate**
+to decide whether it is a pattern AC. An AC is a pattern AC when EITHER of
+these conditions holds:
+
+- Its `pattern_slots` field is present and non-empty (a non-empty list), OR
+- Its `criteria` field contains at least one `{word}` placeholder (where
+  "word" is any Python identifier — i.e., the text matches the regex
+  `\{[A-Za-z_][A-Za-z0-9_]*\}`).
+
+This is the same predicate that the deployed `check-ac-pattern-refs` hook uses
+(`_has_parameterized_slots`), expressed here in prose so the inventory scan and
+the hook recognize the same set of pattern ACs.
+
+Collect qualifying ACs into a `pattern_ac_inventory` list with each pattern's
+`id`, `title`, `pattern_slots` (may be empty list), and the abstract behavior
+described in its `criteria`.
 
 Record the `pattern_ac_inventory`. You will consult it in §3a before writing
 any new L2 AC.
@@ -398,7 +409,10 @@ For each behavior you intend to specify as an L2 AC:
 1. **Search the `pattern_ac_inventory` for a matching pattern.** A pattern
    matches when its abstract `criteria` describes the same core behavior you
    are about to specify (e.g. a "sortable table" pattern matches any page
-   requirement that mentions column sorting).
+   requirement that mentions column sorting). The inventory only contains ACs
+   that passed the `_has_parameterized_slots` predicate (non-empty
+   `pattern_slots` list OR at least one `{word}` placeholder in `criteria`),
+   so any AC in the inventory is guaranteed to be a valid pattern.
 
 2. **If a matching pattern is found** (one or more `pattern_slots` cover the
    concrete values your L2 needs):
@@ -528,6 +542,9 @@ This is your quality gate.
        For each found: REWRITE using domain/behavioral language.
 [ ] 12. Pattern-first check applied (§3a): for every L2 AC I am about to write,
        I consulted the pattern_ac_inventory from §1 Step 7.
+       The inventory includes pattern ACs detected via the _has_parameterized_slots
+       predicate: non-empty pattern_slots list OR at least one {word} placeholder
+       in criteria (same predicate as the deployed check-ac-pattern-refs hook).
        For each match found:
          - AC uses implements_pattern + pattern_bindings instead of
            restating the pattern's criteria body.

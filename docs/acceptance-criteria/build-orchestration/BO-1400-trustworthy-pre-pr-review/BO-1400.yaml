@@ -1,0 +1,34 @@
+id: BO-1400
+readiness: approved
+title: "Trust that a passing review means the change really works on the real thing"
+component: build-orchestration
+level: L0
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  A change can't pass review while quietly failing on the real data or being impossible to install.
+
+  Today a feature can sail through its pre-merge review while a claim it makes
+  was only ever checked the easy way -- against a handful of made-up examples, or
+  against files sitting in a throwaway build folder that real users will never
+  receive. The review says "looks good" and the problem ships anyway. This goal
+  makes the pre-merge review prove the hard claims for real: when a change asserts
+  something about the whole body of live data, the review confirms it against that
+  live data rather than a sample; and when a change delivers something to users,
+  the review confirms it actually lands where a fresh install would pick it up.
+  After this, a green review is something you can stand behind, because the
+  riskiest claims have been checked against reality instead of taken on trust.
+depends_on: []
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1400a
+implemented_by: []
+priority: high

@@ -1,0 +1,31 @@
+id: BP-901
+readiness: approved
+priority: medium
+title: "goal_to_epic.py main() only resolves the worktree root when a default path is actually needed"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+origin_agent: BrainCandy
+criteria: |
+  Given the deployed goal_to_epic.py running from .leafcutter/scripts/ (a location
+    outside any git worktree, where no .git marker exists in any parent directory)
+    and the caller supplies BOTH --store-root and --inbox-dir explicitly,
+  When main() is invoked,
+  Then _find_worktree_root() is NOT called (because neither default path is needed)
+    and the script proceeds to run() using the supplied paths
+  And the symptom ("deployed script crashes with FileNotFoundError 'Could not locate
+    worktree root' outside the git tree even when --store-root/--inbox-dir are passed")
+    must not occur
+depends_on: []
+doc_links: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Authored by /quick-fix. Root cause: main() in scripts/goal_to_epic.py calls _find_worktree_root(Path(__file__)) unconditionally before parsing whether --store-root/--inbox-dir were supplied. The worktree value is only consumed to build the DEFAULT store-root/inbox-dir when those flags are absent. When the script is deployed to .leafcutter/scripts/ (outside a git tree) and the caller passes both flags explicitly, the unconditional call still raises FileNotFoundError and exits 1, even though the resolved worktree would never be used. Fix: defer/condition the _find_worktree_root() call so it only runs when at least one default path is needed (i.e. when --store-root or --inbox-dir is absent). The agent that surfaced this worked around it by invoking the source-repo script plus the direct Python API, confirming the deployed path is the broken one."

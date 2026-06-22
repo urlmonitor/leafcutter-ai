@@ -548,12 +548,17 @@ def install_hooks(target_root, dry_run=False):
         return "dry-run"
 
     # 3. Check core.hooksPath git config.
-    hooks_path_result = subprocess.run(
-        ["git", "-C", str(target_root), "config", "--get", "core.hooksPath"],
-        capture_output=True,
-        text=True,
-    )
-    if hooks_path_result.returncode == 0:
+    try:
+        hooks_path_result = subprocess.run(
+            ["git", "-C", str(target_root), "config", "--get", "core.hooksPath"],
+            capture_output=True,
+            text=True,
+        )
+    except OSError as exc:
+        # git binary not found — degrade safely rather than hard-failing.
+        _warn(f"hooks: could not read core.hooksPath (git not found): {exc}")
+        hooks_path_result = None
+    if hooks_path_result is not None and hooks_path_result.returncode == 0:
         hooks_path_value = hooks_path_result.stdout.strip()
         default_hooks = Path(target_root) / ".git" / "hooks"
         is_default = (
@@ -561,11 +566,15 @@ def install_hooks(target_root, dry_run=False):
             or Path(hooks_path_value).resolve() == default_hooks.resolve()
         )
         if is_default:
-            subprocess.run(
-                ["git", "-C", str(target_root), "config", "--unset", "core.hooksPath"],
-                capture_output=True,
-            )
-            _info("hooks: cleared redundant core.hooksPath (.git/hooks)")
+            try:
+                subprocess.run(
+                    ["git", "-C", str(target_root), "config", "--unset", "core.hooksPath"],
+                    capture_output=True,
+                )
+            except OSError as exc:
+                _warn(f"hooks: could not unset core.hooksPath (git not found): {exc}")
+            else:
+                _info("hooks: cleared redundant core.hooksPath (.git/hooks)")
         elif hooks_path_value:
             _warn(
                 f"core.hooksPath is set to '{hooks_path_value}' "

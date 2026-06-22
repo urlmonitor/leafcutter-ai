@@ -1,0 +1,37 @@
+id: BO-1300
+readiness: approved
+priority: high
+title: "Catch the problems your tests never thought to check before calling a feature done"
+component: build-orchestration
+level: L0
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  An independent panel kicks the tyres of a finished feature from angles your tests miss.
+
+  Passing tests and satisfied acceptance criteria only prove that a feature does
+  what someone already thought to check. They say nothing about the edge cases,
+  rough edges, and broken seams nobody anticipated. This goal gives every
+  finished feature a fresh, independent review by a small panel of reviewers who
+  each come at it from a different angle -- usability, edge cases, the places
+  where it touches the rest of the system -- and who look specifically for gaps
+  the existing tests and criteria do not cover. Anything they find is captured as
+  a tracked piece of work, ready to be picked up and fixed, so a feature is only
+  considered truly done once it has survived scrutiny no one scripted in advance.
+depends_on: []
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1300a
+  - BO-1300b
+  - BO-1300c
+  - BO-1300d
+  - BO-1300e
+implemented_by: []

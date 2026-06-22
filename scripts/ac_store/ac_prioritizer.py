@@ -89,11 +89,16 @@ def _run_json_script(script_path: Path, extra_args: list[str]) -> dict[str, Any]
         subprocess.CalledProcessError: When the script exits non-zero.
         json.JSONDecodeError: When stdout is not valid JSON.
     """
-    result = subprocess.run(
-        [sys.executable, str(script_path), "--json"] + extra_args,
-        capture_output=True,
-        text=True,
-    )
+    try:
+        result = subprocess.run(
+            [sys.executable, str(script_path), "--json"] + extra_args,
+            capture_output=True,
+            text=True,
+        )
+    except OSError as exc:
+        raise subprocess.SubprocessError(  # noqa: TRY003
+            f"Failed to invoke {script_path}: {exc}"
+        ) from exc
     if result.returncode != 0:
         raise subprocess.CalledProcessError(
             result.returncode,
@@ -282,8 +287,8 @@ def main(argv: list[str] | None = None) -> int:
     if hasattr(sys.stdout, "reconfigure"):
         try:
             sys.stdout.reconfigure(encoding="utf-8")
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as exc:  # noqa: BLE001 — stdout reconfigure is best-effort
+            print(f"[ac_prioritizer] stdout reconfigure failed (non-fatal): {exc}", file=sys.stderr)
 
     parser = argparse.ArgumentParser(
         description="Merge AC store ready items with ready tickets into a unified priority queue.",

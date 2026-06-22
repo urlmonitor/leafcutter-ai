@@ -1,0 +1,45 @@
+id: BO-1300c-1
+readiness: approved
+priority: high
+title: "Reviewers exercise the feature for uncovered gaps and never run the unit test suite"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-independent-spot-check/BO-1300c.yaml"
+criteria: |
+  Given a spot-check reviewer is probing a finished feature from its assigned angle
+  When the reviewer carries out its review
+  Then the reviewer actually exercises the feature (invokes it, feeds it inputs, walks its
+    seams) to look for problems the existing tests and acceptance criteria were never
+    written to catch
+  And the reviewer does NOT run the project's unit test suite
+  And the reviewer does NOT write or add any new tests
+  And every finding the reviewer reports describes a gap discovered by using the feature,
+    not a failing or passing unit test
+depends_on:
+  - BO-1300c
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-independent-spot-check/BO-1300c.yaml"
+    relationship: parent
+    status: exists
+  - path: docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "The reviewer agent template must constrain its tool surface to read + exercise the feature (read files, run the feature's own entry points/commands, feed inputs); it must not be granted or use a test-runner invocation as its review method."
+  - "The reviewer prompt must explicitly forbid running the unit test suite and forbid creating or editing any test files, and require findings to be framed as observed gaps from using the feature rather than test pass/fail output."
+  - "A reviewer that cannot exercise the feature for its angle must report that limitation explicitly (per BO-1300c-1-i) rather than substituting test output."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1300c-1-i
+implemented_by:
+- tickets/00_inbox/epics/EPIC-IndependentSpotCheck/07_TICKET-20260618-BO-1300c-1.md

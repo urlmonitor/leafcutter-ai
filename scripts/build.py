@@ -845,6 +845,97 @@ def _cleanup_stale_paths(target_root: Path, output_root: Path, dry_run: bool) ->
     return removed
 
 
+def _migrate_skills_config(
+    config_path: Path | None,
+    target_root: Path,
+    dry_run: bool,
+) -> None:
+    """Remove deprecated skill names from the adopter's skills_config.json.
+
+    Currently performs a single migration:
+    - BP-700d-3: Remove ``"frontend-design"`` from ``frontend.optional_skills``
+      if present. The frontend-design skill has been deprecated; its design
+      principles are now embedded in the frontend-coder agent template.
+
+    The function resolves the config file using the same discovery logic as
+    ``load_config``: explicit ``config_path`` first, then auto-detect in
+    ``.claude``, ``.gemini``, ``.cursor``, ``.github``, ``.cline``.
+
+    Does nothing if the file is absent, the ``frontend`` key is missing, or
+    ``"frontend-design"`` is not listed. Does not overwrite if content is
+    byte-identical after migration.
+
+    Args:
+        config_path: Explicit path to skills_config.json, or None to
+            auto-detect from ``target_root``.
+        target_root: Root of the target project (used for auto-detection).
+        dry_run: When True, prints intent but does not write.
+    """
+    _DEPRECATED_OPTIONAL_SKILLS = ["frontend-design"]
+
+    # Resolve the actual file path using the same discovery order as load_config.
+    resolved: Path | None = None
+    if config_path is not None and config_path.exists():
+        resolved = config_path
+    elif config_path is None:
+        platform_dirs = [".claude", ".gemini", ".cursor", ".github", ".cline"]
+        for p_dir in platform_dirs:
+            candidate = target_root / p_dir / "skills_config.json"
+            if candidate.exists():
+                resolved = candidate
+                break
+
+    if resolved is None:
+        print(f"  {DIM}(no skills_config.json found — nothing to migrate){RESET}")
+        return
+
+    try:
+        raw = resolved.read_text(encoding="utf-8")
+        data = json.loads(raw)
+    except (OSError, json.JSONDecodeError) as exc:
+        _warn(f"Could not read {resolved}: {exc} — skipping config migration.")
+        return
+
+    frontend = data.get("frontend")
+    if not isinstance(frontend, dict):
+        print(f"  {DIM}(no 'frontend' section in {resolved.name} — nothing to migrate){RESET}")
+        return
+
+    optional_skills = frontend.get("optional_skills")
+    if not isinstance(optional_skills, list):
+        print(f"  {DIM}(frontend.optional_skills not a list — nothing to migrate){RESET}")
+        return
+
+    removed = [s for s in optional_skills if s in _DEPRECATED_OPTIONAL_SKILLS]
+    if not removed:
+        print(f"  {DIM}(frontend.optional_skills already clean — nothing to migrate){RESET}")
+        return
+
+    updated = [s for s in optional_skills if s not in _DEPRECATED_OPTIONAL_SKILLS]
+    data["frontend"]["optional_skills"] = updated
+
+    new_raw = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+    if dry_run:
+        _dry_run_msg(
+            f"would remove {removed} from frontend.optional_skills in {resolved}"
+        )
+        return
+
+    if new_raw == raw:
+        print(f"  {DIM}(no effective change — {resolved.name} already up-to-date){RESET}")
+        return
+
+    try:
+        resolved.write_text(new_raw, encoding="utf-8")
+    except OSError as exc:
+        _warn(f"Could not write {resolved}: {exc} — migration skipped.")
+        return
+
+    print(
+        f"  Removed deprecated optional_skills {removed} from {resolved.name}"
+    )
+
+
 def _run_migration_report(target_root: Path, output_root: Path) -> int:
     """Scan for stale pre-consolidation files and print a migration report.
 
@@ -1075,6 +1166,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
 
+    _heading("Config migration")
+    _migrate_skills_config(config_path, target_root, args.dry_run)
+    print()
+
     total = _run_phases(target_root, output_root, config, args.dry_run, effective_force)
 
     uptodate = get_uptodate_count()
@@ -1278,26 +1373,14 @@ if __name__ == "__main__":
 #   When enforcement='error' and errors found, main() returns 1 after printing
 #   all errors (aggregated output, never halts on first error). When enforcement
 #   ='warning', main() continues with 0 exit code. (#EPIC-SelfDescribingAgents/04)
-# - 2026-06-10 [python-coder/EPIC-AcPipelineConsolidation/12]: Added
-#   _read_package_version() to read config/version.json. Called in main() after
-#   _compute_version_str(). Prints "Package version: X.Y.Z" in build summary.
-#   Writes LEAFCUTTER_VERSION file to target_root so deployed consumers can
-#   determine the package version without reading the source package directly.
-#   Fallback: "unknown" on any read error. (#EPIC-AcPipelineConsolidation/12)
-# - 2026-06-17 [python-coder/EPIC-AcPipelineDeployGaps/03]: Imported
-#   build_ac_store from build_phases and added ("AC store scripts",
-#   build_ac_store) entry to artifact_phases after ("Workflow scripts",
-#   build_workflow_scripts). Closes the portable-skill/missing-script gap
-#   for ac-scanner and build-ac per ADR-013. (#EPIC-AcPipelineDeployGaps/03)
-# - 2026-06-17 [python-coder/EPIC-BuildGuardFalsePositive/02]: Added
-#   _get_source_deployable_scripts() and _check_script_reference_guard() preflight
-#   functions. The manifest function now scans commit_guardian and feedback source
-#   directories dynamically — eliminating the hardcoded name lists that caused 10
-#   Class A false positives (8 commit_guardian + 2 feedback). The guard emits
-#   broken-ref JSONL to stderr and exits 1 before _run_phases() writes any output.
-#   Added extract_script_path_refs_with_sources import from build_referential_integrity
-#   and build_broken_ref_report/emit_broken_ref_report_jsonl from build_propagation_audit.
-#   (#EPIC-BuildGuardFalsePositive/02)
+# - 2026-06-18 [python-coder/EPIC-Oneagenthandlesboththelookandthecodefor/17]:
+#   Added _migrate_skills_config() and a "Config migration" heading call before
+#   _run_phases(). Implements AC BP-700d-3: removes "frontend-design" from
+#   frontend.optional_skills in the adopter's skills_config.json when they run
+#   build.py. Uses the same file-discovery order as load_config (explicit path
+#   first, then .claude/.gemini/.cursor/.github/.cline). Skips silently when
+#   file is absent or frontend-design was not listed. Idempotent.
+#   (#EPIC-Oneagenthandlesboththelookandthecodefor/17)
 # - 2026-06-17 [python-coder/EPIC-BuildGuardFalsePositive/03]: Class B resolution.
 #   Extended _get_source_deployable_scripts() with four new per-phase manifest helpers:
 #   _manifest_workflow_tool_scripts (add_component, knowledge_query, set_ticket_status,
@@ -1308,4 +1391,24 @@ if __name__ == "__main__":
 #   build_template_standalone_scripts. These close the Class B deploy gaps so the
 #   script reference guard passes after all legitimate scripts are deployed.
 #   (#EPIC-BuildGuardFalsePositive/03)
+# - 2026-06-17 [python-coder/EPIC-BuildGuardFalsePositive/02]: Added
+#   _get_source_deployable_scripts() and _check_script_reference_guard() preflight
+#   functions. The manifest function now scans commit_guardian and feedback source
+#   directories dynamically — eliminating the hardcoded name lists that caused 10
+#   Class A false positives (8 commit_guardian + 2 feedback). The guard emits
+#   broken-ref JSONL to stderr and exits 1 before _run_phases() writes any output.
+#   Added extract_script_path_refs_with_sources import from build_referential_integrity
+#   and build_broken_ref_report/emit_broken_ref_report_jsonl from build_propagation_audit.
+#   (#EPIC-BuildGuardFalsePositive/02)
+# - 2026-06-17 [python-coder/EPIC-AcPipelineDeployGaps/03]: Imported
+#   build_ac_store from build_phases and added ("AC store scripts",
+#   build_ac_store) entry to artifact_phases after ("Workflow scripts",
+#   build_workflow_scripts). Closes the portable-skill/missing-script gap
+#   for ac-scanner and build-ac per ADR-013. (#EPIC-AcPipelineDeployGaps/03)
+# - 2026-06-10 [python-coder/EPIC-AcPipelineConsolidation/12]: Added
+#   _read_package_version() to read config/version.json. Called in main() after
+#   _compute_version_str(). Prints "Package version: X.Y.Z" in build summary.
+#   Writes LEAFCUTTER_VERSION file to target_root so deployed consumers can
+#   determine the package version without reading the source package directly.
+#   Fallback: "unknown" on any read error. (#EPIC-AcPipelineConsolidation/12)
 # ====================================================================

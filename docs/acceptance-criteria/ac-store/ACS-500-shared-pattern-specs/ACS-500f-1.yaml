@@ -56,6 +56,6 @@ notes: |
   enforced at commit time. This is the integrity gap (priority high).
 amended_by: []
 superseded_by: null
-covered_by: [ACS-500f-1-i]
+covered_by: [ACS-500f-1-i, ACS-500f-1-ii]
 implemented_by:
 - tickets/00_inbox/epics/EPIC-Acpatternenforcementismechanically/01_TICKET-20260617-ACS-500f-1.md

@@ -1,0 +1,42 @@
+id: BO-1300b-1-i
+readiness: approved
+priority: high
+title: "Two reviewers may not collapse onto the same angle"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1300-independent-spot-check/BO-1300b.yaml"
+criteria: |
+  Given three reviewers have been seeded with the three distinct angles
+  When a reviewer assigned the integration-and-error-handling angle begins its probe and is
+    tempted to instead re-check edge cases already owned by the edge-case reviewer
+  Then the reviewer stays within its assigned angle and does not duplicate another
+    reviewer's angle
+  And if the consolidated result shows two reviewers reported only against the same single
+    angle, the spot-check pass treats that as a defect in the review (a missing perspective),
+    not as a clean signoff
+depends_on:
+  - BO-1300b-1
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1300-independent-spot-check/BO-1300b.yaml"
+    relationship: parent
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Each reviewer's seed must explicitly forbid drifting into another reviewer's angle and require it to declare its angle in its output."
+  - "The aggregation step must validate angle coverage: if fewer than the three distinct angles are represented across the returned finding sets, the pass reports a review defect (missing perspective) rather than emitting a clean signoff."
+  - "A missing-perspective outcome must be distinguishable from a genuine clean result in the consolidated output so the caller does not mistake it for success."
+delivers_to: null
+expects_from:
+  ac_id: BO-1300b-1
+  contract: "The per-reviewer angle seeding (each finding set tagged with its angle) that this edge case verifies cannot collapse to fewer than three distinct angles."
+origin_agent: BrainCandy
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-IndependentSpotCheck/05_TICKET-20260618-BO-1300b-1-i.md

@@ -1,0 +1,35 @@
+id: TKT-500f
+readiness: approved
+priority: medium
+title: "Ticket generation from ACs is trustworthy and migration-safe"
+component: ticket-creation
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  The machinery that turns acceptance criteria into tickets can be trusted to
+  emit valid, buildable work and to be adopted without breaking what came before.
+
+  When the AC-to-ticket generators produce a ticket, the work assignments they
+  emit are always valid ticket-phase agents — a non-phase assignment is caught
+  and substituted rather than silently producing a ticket no agent can sign off.
+  When the new AC-driven dispatch pipeline is introduced alongside the existing
+  ticket pipeline, both can run, they produce equivalent outcomes on the same
+  acceptance criterion, and the older pipeline keeps working until migration is
+  complete. The dispatch boundary and the migration path are documented so the
+  team can reason about the cut-over.
+depends_on: [TKT-500]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-08
+amended_by:
+  - reason: "split: TKT-500d -> TKT-500d + TKT-500f, 2026-06-18 (TKT-500d exceeded 5 L2 children; migration + generator-integrity cluster moved here)"
+superseded_by: null
+covered_by: [TKT-500f-1, TKT-500f-2, TKT-500f-3, TKT-500f-4, TKT-500f-5]
+implemented_by: []
+documentation_triggers: [sequence-diagram, component-diagram]
