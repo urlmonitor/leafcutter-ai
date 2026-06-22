@@ -4,7 +4,7 @@ agents:
   commit: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  pull-request: needed
+  pull-request: signed_off
   python-coder: signed_off
   sql-coder: not_needed
   test-runner: signed_off
@@ -23,7 +23,7 @@ requires_adr: false
 requires_diagram: false
 roadmap_phase: phase_1
 source_ac: ACD-300g-4
-status: in_progress
+status: done
 title: 'Fix final-gate edit-fallthrough, add run id to commit message, dedupe stage labels'
 ---
 
@@ -103,7 +103,7 @@ Scenario: unrecognized final-gate action aborts instead of looping
 - [x] test-runner — 2026-06-22 14:15
 - [x] pr-reviewer — 2026-06-22 14:30
 - [x] commit — 2026-06-22 15:00
-- [ ] pull-request
+- [x] pull-request — 2026-06-22 15:15
 
 ## Comments
 
@@ -160,6 +160,16 @@ completion_manifest:
   ticket_signed_off: true
 
 All 4 files were already staged from prior agents (scripts/workflows/plan-feature.js, templates/workflows-js/plan-feature.js, unit_tests/test_final_gate_and_commit_message.py, ticket file). Committed with the prescribed message referencing ticket 10 and EPIC-CommitAcOutputPerStage. Frontmatter set to commit: signed_off; Sign-offs checkbox checked.
+
+### 2026-06-22 15:15 — pull-request (status: ok)
+
+feedback-id: fb_2026-06-22_dc66d63b
+completion_manifest:
+  branch_ahead_of_origin_confirmed: true
+  push_to_existing_pr_succeeded: true
+  pr_114_verified_open: true
+
+Pushed 1 commit (50695d2) to existing PR #114 (EPIC-CommitAcOutputPerStage → main). PR title: "feat(plan-feature): commit approved AC stage output before next dispatch (ACD-300g-1)". No new PR was opened.
 
 ### 2026-06-22 13:45 — test-writer (status: ok)
 
