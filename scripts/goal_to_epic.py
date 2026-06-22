@@ -132,6 +132,32 @@ def _find_worktree_root(start: Path) -> Path:
     )
 
 
+def _derive_worktree_from_inbox(inbox_dir: Path) -> Path | None:
+    """Derive the worktree root from a supplied inbox directory by path math only.
+
+    ``inbox_dir`` is conventionally ``<worktree>/tickets/00_inbox``
+    (``_DEFAULT_INBOX_DIR``). When it ends with that suffix, the worktree root is
+    the prefix above it. Returns ``None`` when ``inbox_dir`` does not follow the
+    convention (or has no prefix above the suffix), in which case callers skip
+    path relativisation and ``run()`` degrades gracefully.
+
+    This exists so ``main()`` can satisfy BP-901 — never call
+    ``_find_worktree_root()`` (a filesystem walk from ``__file__``) when both
+    ``--store-root`` and ``--inbox-dir`` are explicit, so the script works when
+    deployed outside a git tree — while still giving ``run()`` the worktree root
+    it needs for ACD-1200a-9 loose-ticket-path relativisation. Pure function: no
+    filesystem access, so no try/except per the project error-handling policy.
+    """
+    suffix_parts = Path(_DEFAULT_INBOX_DIR).parts
+    inbox_parts = inbox_dir.parts
+    if (
+        len(inbox_parts) > len(suffix_parts)
+        and inbox_parts[-len(suffix_parts):] == suffix_parts
+    ):
+        return Path(*inbox_parts[: -len(suffix_parts)])
+    return None
+
+
 # ---------------------------------------------------------------------------
 # PascalCase conversion
 # ---------------------------------------------------------------------------
@@ -2009,14 +2035,16 @@ def main(argv: list[str] | None = None) -> int:
     if args.store_root and args.inbox_dir:
         ac_store_root = Path(args.store_root)
         inbox_dir = Path(args.inbox_dir)
-        # Try to detect the worktree root even when both paths are explicit so
-        # that run() can relativise loose ticket paths correctly.
-        try:
-            worktree_for_run = _find_worktree_root(Path(__file__))
-        except FileNotFoundError:
-            # Running outside a git tree (e.g. in certain test harnesses).
-            # worktree_for_run stays None; run() will skip path relativisation.
-            pass
+        # BP-901: when both paths are explicit, _find_worktree_root() must NOT be
+        # called — the script may be deployed outside any git tree (e.g.
+        # .leafcutter/scripts/), where walking from __file__ raises and the
+        # worktree value would never have been used for path defaults anyway.
+        # run() still needs the worktree root to relativise loose ticket paths
+        # (ACD-1200a-9), so derive it from the supplied inbox_dir by pure path
+        # math instead. When inbox_dir doesn't follow the conventional
+        # <worktree>/tickets/00_inbox shape, worktree_for_run stays None and
+        # run() falls back to its non-relativised comparison (ValueError-guarded).
+        worktree_for_run = _derive_worktree_from_inbox(inbox_dir)
     else:
         try:
             worktree = _find_worktree_root(Path(__file__))
@@ -2148,5 +2176,20 @@ DECISION HISTORY
   its place. After the run exactly one ticket file with the computed basename
   exists at the epic-folder path, and implemented_by names that single path
   (consistent with ACD-1200a-9).
+- 2026-06-22 [BP-901 regression fix]: Restore the BP-901 contract after the
+  ACD-1200a-9 regression. EPIC-GoalToEpicBugfixes/01 (c2b2566) re-introduced a
+  _find_worktree_root(Path(__file__)) call inside the both-paths-supplied branch
+  of main() (wrapped in try/except FileNotFoundError) so run() could obtain a
+  worktree root for loose-ticket-path relativisation. That call violated BP-901
+  ("_find_worktree_root must NOT be called when both --store-root and --inbox-dir
+  are supplied") — the regression test asserts zero calls, not merely a swallowed
+  error. Fix: added _derive_worktree_from_inbox(), a pure path-math helper that
+  derives the worktree root from the supplied inbox_dir (stripping the
+  conventional tickets/00_inbox suffix), and replaced the _find_worktree_root
+  call in the both-paths branch with it. This satisfies BOTH BP-901 (no
+  filesystem walk / no _find_worktree_root call) and ACD-1200a-9 (run() still
+  receives a worktree root for relativisation when inbox_dir follows the
+  convention; falls back to None otherwise). Covered by
+  tests/test_goal_to_epic_worktree_skip.py.
 ====================================================================
 """
