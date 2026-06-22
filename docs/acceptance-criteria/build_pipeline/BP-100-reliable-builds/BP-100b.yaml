@@ -17,8 +17,10 @@ depends_on:
 doc_links: []
 origin_agent: BrainCandy
 created: 2026-06-05
+child_limit_override: 12
 amended_by:
   - "split: BP-100b -> BP-100j + BP-100k + BP-100l, 2026-06-08"
+  - "2026-06-22 [commit-agent/feat/ac-limits-ac-tree-split-improvements]: added child_limit_override: 12. BP-100b currently has 11 L2 children (BP-100b-1 through BP-100b-11), exceeding the default cap of 5. This node is superseded but the children remain in the store; override raised to 12 as a temporary waiver pending tree cleanup."
 superseded_by:
   - BP-100j
   - BP-100k

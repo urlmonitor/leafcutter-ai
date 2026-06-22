@@ -17,14 +17,17 @@ depends_on: []
 doc_links: []
 origin_agent: BrainCandy
 created: 2026-06-05
+child_limit_override: 13
 amended_by:
   - "split: BP-100g -> BP-100g + BP-100h, 2026-06-05"
   - "split: BP-100 -> BP-100 + BP-500, 2026-06-05"
   - "split: BP-100b -> BP-100j + BP-100k + BP-100l, 2026-06-08"
   - "split: BP-100 -> BP-100 + BP-101, 2026-06-08"
+  - "2026-06-22 [commit-agent/feat/ac-limits-ac-tree-split-improvements]: added child_limit_override: 13. BP-100 currently has 12 L1 children (BP-100a through BP-100l), exceeding the default cap of 7. Temporary waiver pending BP tree cleanup / horizontal split."
 superseded_by: null
 covered_by:
   - BP-100a
+  - BP-100b
   - BP-100c
   - BP-100i
   - BP-100j

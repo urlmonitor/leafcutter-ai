@@ -1,0 +1,60 @@
+id: BP-100b-11-i
+readiness: approved
+priority: high
+title: "A dangling registry entry is caught at build/commit time, never silently shipped to consumers"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100b-11.yaml"
+criteria: |
+  Given a developer stages a change to a commit-guardian hook registry
+    (commit_guardian.json) that adds a hooks_manifest entry with id
+    "check-orphan" whose entry references scripts/commit_guardian/check_orphan.py
+  And no file exists at scripts/commit_guardian/check_orphan.py
+  And the developer does not stage any check_orphan.py file
+  When the pre-commit hook framework runs the registry referential-integrity check
+  Then the commit is blocked before the commit object is created
+  And the error names the hook id "check-orphan" and the missing script path
+  And the dangling entry never reaches the deployed registry that a consumer
+    install would copy
+
+  And given the build system runs build.py to regenerate the deployed registry
+    from the canonical template
+  When the build completes
+  Then the deployed registry contains no hook id that is absent from the
+    canonical template registry
+  And the build reports a non-zero result if it would otherwise emit a deployed
+    registry entry whose referenced script is absent from the template tree
+depends_on:
+  - BP-100b-11
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100b-11.yaml"
+    relationship: parent
+    status: exists
+  - path: "templates/scripts/commit_guardian/commit_guardian.json"
+    relationship: describes
+    status: exists
+  - path: "scripts/build_phases.py"
+    relationship: describes
+    status: exists
+  - path: "docs/build-drift-hook.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The referential-integrity check must be wired into the pre-commit hook framework so it fires when a commit_guardian.json registry file is staged."
+  - "The build path (build.py / scripts/build_phases.py) that regenerates the deployed registry must surface a failure rather than emitting a deployed-only or dangling registry entry."
+  - "Exit 0 (fail-open) on unexpected errors; exit 1 only on a detected dangling or deployed-only entry."
+delivers_to: null
+expects_from:
+  ac_id: BP-100b-11
+  contract: "The registry referential-integrity check entry point that, given a registry file and its tree, returns the list of violation records (each naming a hook id and the missing or non-derivable script path)."
+origin_agent: business-analyst
+created: 2026-06-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
