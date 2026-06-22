@@ -9,7 +9,6 @@ COVERS: ACD-1200c-3
 
 from __future__ import annotations
 
-import io
 import sys
 from pathlib import Path
 from typing import Any
