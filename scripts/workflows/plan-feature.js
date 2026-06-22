@@ -124,8 +124,9 @@ function stageDisplayName(stageKey) {
  *   3. Stage each matching file with an individual `git add <path>` call.
  *
  * Commit message format (AC ACD-300g-3):
- *   Subject: create-ac(<STAGE>): <component>
+ *   Subject: plan-feature(<STAGE>): <component>
  *   Body:    AC IDs: <comma-separated list>
+ *            run-id: <runId>
  *            <"mid-pipeline commit" | "final commit of run">
  *
  * On pre-commit hook failure the result includes:
@@ -138,6 +139,7 @@ function stageDisplayName(stageKey) {
  * @param {string}   stageName   - Internal stage key (e.g. "po", "ba", "itpo").
  * @param {string}   component   - Target component name (e.g. "ac-driven-dev").
  * @param {boolean}  isFinal     - True when this is the final commit of the pipeline run.
+ * @param {string}   runId       - Short run identifier generated at the top of run().
  * @returns {Promise<{
  *   status: "ok"|"error",
  *   message: string,
@@ -146,13 +148,14 @@ function stageDisplayName(stageKey) {
  *   is_conflict?: boolean
  * }>}
  */
-async function commitStageOutput(agent, written, stageName, component, isFinal) {
-  const displayStage = isFinal ? "final" : stageDisplayName(stageName);
+async function commitStageOutput(agent, written, stageName, component, isFinal, runId) {
+  const stageLabel = stageDisplayName(stageName);
+  const displayStage = isFinal ? `${stageLabel}, final` : stageLabel;
   const componentLabel = component || "unknown-component";
   const acIdList = written.length > 0 ? written.join(", ") : "(none)";
   const commitKind = isFinal ? "final commit of run" : "mid-pipeline commit";
   const commitMessage =
-    `create-ac(${displayStage}): ${componentLabel}\n\nAC IDs: ${acIdList}\n${commitKind}`;
+    `plan-feature(${displayStage}): ${componentLabel}\n\nAC IDs: ${acIdList}\nrun-id: ${runId}\n${commitKind}`;
 
   // Build a JSON-safe representation of the AC IDs so the agent can filter on them.
   const writtenJson = JSON.stringify(written);
@@ -382,6 +385,9 @@ function buildCancelMessage(committedAcs, draftAcs, cancelledAt) {
  * @param {Function} params.workflow  - Runtime-provided workflow dispatch (not used — leaf).
  */
 async function run({ userInput, agent }) {
+  // Generate a short run id (8 hex chars) to identify this invocation in commit messages (ACD-300g-3).
+  const runId = Math.floor(Math.random() * 0xFFFFFFFF).toString(16).padStart(8, "0");
+
   const { request, component, force } = parseArgs(userInput);
 
   if (!request) {
@@ -584,7 +590,7 @@ async function run({ userInput, agent }) {
           };
         } else {
           // approve — commit stage output before dispatching the next agent.
-          const commitOutcome = await commitStageOutput(agent, written, step.stage, component, false);
+          const commitOutcome = await commitStageOutput(agent, written, step.stage, component, false, runId);
           if (commitOutcome.status === "error") {
             return {
               status: "error",
@@ -636,13 +642,24 @@ async function run({ userInput, agent }) {
         } else if (finalAction === "edit" && editRetries < MAX_EDIT_RETRIES) {
           editRetries++;
           continue;
+        } else if (finalAction === "edit" && editRetries >= MAX_EDIT_RETRIES) {
+          // Max retries exhausted at the final gate — abort without committing.
+          // AC ACD-300g-4: draft files remain on disk uncommitted.
+          return {
+            status: "error",
+            message:
+              `it-po failed to produce satisfactory ACs after ${MAX_EDIT_RETRIES + 1} attempts. Pipeline aborted.\n` +
+              buildCancelMessage(committedAcs, written, "max-retries abort for it-po (final gate)"),
+            committed_acs: committedAcs,
+            acs_as_drafts: written,
+          };
         } else if (finalAction === "defer") {
           return {
             status: "ok",
             message: "ACs left as reviewed (deferred). Re-run /plan-feature to approve.",
             acs_as_reviewed: allAcsWritten,
           };
-        } else if (finalAction === "approve" || finalAction === "edit") {
+        } else if (finalAction === "approve") {
           // Write readiness: approved + priority to all ACs in batch.
           const approvalResult = await agent({
             agentType: "status-checker",
@@ -655,7 +672,7 @@ async function run({ userInput, agent }) {
           });
 
           // Commit the final IT PO enriched AC output before reporting success.
-          const finalCommitOutcome = await commitStageOutput(agent, written, step.stage, component, true);
+          const finalCommitOutcome = await commitStageOutput(agent, written, step.stage, component, true, runId);
           if (finalCommitOutcome.status === "error") {
             return {
               status: "error",
@@ -676,6 +693,17 @@ async function run({ userInput, agent }) {
             acs_approved: allAcsWritten,
             priority,
             route: effectiveRoute,
+          };
+        } else {
+          // Terminal else: unrecognized finalAction — abort immediately without committing.
+          // AC ACD-300g-4: no infinite loop on unexpected gate responses.
+          return {
+            status: "error",
+            message:
+              `Final gate returned unrecognized action: ${JSON.stringify(finalAction)}. Pipeline aborted without committing.\n` +
+              buildCancelMessage(committedAcs, written, "final gate (unrecognized action)"),
+            committed_acs: committedAcs,
+            acs_as_drafts: written,
           };
         }
       }
