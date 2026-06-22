@@ -21,6 +21,7 @@ created: 2026-06-05
 child_limit_override: 7
 amended_by:
   - "2026-06-22 [python-coder/chore/ge110-followups-metadata-and-tracking]: added child_limit_override: 7. ACS-100h currently has 5 L2 children (ACS-100h-1 through ACS-100h-5) and a 6th findings AC will be added. Override raised to 7 to provide modest headroom beyond the default cap of 5. Temporary waiver pending the AC-UID-decoupling refactor."
+  - "2026-06-22 [business-analyst/ac/acs-100h-6-pattern-c]: added ACS-100h-6 (Pattern C documentation consistency, EPIC-AcPatternEnforcementIsMechanically finding #1) to covered_by. Brings ID-derived child count to 6, within the child_limit_override: 7."
 superseded_by: null
 notes: "child_limit_override is a temporary escape hatch. Remove once the AC-UID-decoupling refactor restructures this L1 tree."
 covered_by:
@@ -29,4 +30,5 @@ covered_by:
   - ACS-100h-3
   - ACS-100h-4
   - ACS-100h-5
+  - ACS-100h-6
 implemented_by: []
