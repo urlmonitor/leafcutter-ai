@@ -114,10 +114,13 @@ function stageDisplayName(stageKey) {
  *   - Unrelated uncommitted working-tree changes remain unstaged.
  *
  * The staging strategy:
- *   1. Run `git status --porcelain -- docs/acceptance-criteria/` to find all
- *      modified or new (untracked) AC YAML files in the store.
- *   2. Filter the results to those whose filename stem (without .yaml) matches
- *      an AC ID in the `written` array — these are the current stage's files.
+ *   1. Run `git status --porcelain --untracked-files=all -- docs/acceptance-criteria/`
+ *      to find all modified or new (untracked) AC YAML files in the store.
+ *      The --untracked-files=all flag is required to discover files in previously-
+ *      untracked subfolders that would otherwise be collapsed to a dir-level entry.
+ *   2. Filter the results to those whose filename stem (without .yaml) is EXACTLY
+ *      equal to an AC ID in the `written` array — stems must match exactly, not
+ *      merely share a prefix (e.g. ACD-300g must NOT match written=["ACD-300"]).
  *   3. Stage each matching file with an individual `git add <path>` call.
  *
  * Commit message format (AC ACD-300g-3):
@@ -171,13 +174,21 @@ async function commitStageOutput(agent, written, stageName, component, isFinal) 
           "unrelated working-tree changes, which is a correctness violation.\n" +
           "\n" +
           "Step 1 — Discover which AC files from this stage exist on disk:\n" +
-          "  Run: git status --porcelain -- docs/acceptance-criteria/\n" +
+          "  Run: git status --porcelain --untracked-files=all -- docs/acceptance-criteria/\n" +
+          "  (The --untracked-files=all flag is required so that files inside a\n" +
+          "  previously-untracked subfolder are emitted individually rather than\n" +
+          "  collapsed to a single directory-level '?? <dir>/' line. Without it,\n" +
+          "  a fresh AC store is silently skipped.)\n" +
           "  Parse the output. Each line has the format: XY <path>\n" +
-          "  where XY is a two-character status code. Collect ALL lines where the\n" +
-          "  path ends in '.yaml' and the status is not '  ' (i.e. it is modified or\n" +
-          "  untracked — status codes: M, A, ??, etc.).\n" +
+          "  where XY is a two-character status code. For rename lines the format is:\n" +
+          "  R  old-path -> new-path — extract the NEW path (the part after '-> ').\n" +
+          "  Collect ALL lines where the path ends in '.yaml' and the status is not\n" +
+          "  '  ' (i.e. it is modified or untracked — status codes: M, A, R, ??, etc.).\n" +
           "  From those paths, keep only the ones whose filename stem (the portion\n" +
-          "  after the last '/' and before '.yaml') matches one of the AC IDs above.\n" +
+          "  after the last '/' and before '.yaml') is exactly equal to one of the\n" +
+          "  AC IDs above. The stem must match exactly — not merely share a prefix.\n" +
+          "  For example, ACD-300g.yaml must NOT match ACD-300 (stems must be\n" +
+          "  identical, not merely prefix-equal; ACD-300g !== ACD-300).\n" +
           "  These are the stage-specific files to stage.\n" +
           "\n" +
           "Step 2 — If no matching files are found:\n" +
