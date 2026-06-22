@@ -1,0 +1,34 @@
+id: BP-1100b
+title: "Workflow JavaScript is verified by behavioral-replay tests, not string scans"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket modifies JavaScript workflow code under scripts/workflows/ or
+  templates/workflows-js/,
+  When the ticket is classified and its tests are authored,
+  Then the ticket is never classified as docs-only or config-only (the test-writer
+  phase is never skipped),
+  And the tests execute the modified function in a mocked context and assert its
+  runtime behavior (e.g. the dispatched agent type, fail-closed handling of bad
+  input, the presence of a required flag) rather than merely scanning the source
+  text for expected strings.
+depends_on:
+  - BP-1100
+doc_links:
+  - path: docs/retrospectives/EPIC-CommitAcOutputPerStage.md
+    relationship: describes
+    status: exists
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1100b-1
+  - BP-1100b-2
+implemented_by: []

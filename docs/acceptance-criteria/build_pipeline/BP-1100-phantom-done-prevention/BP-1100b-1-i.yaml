@@ -1,0 +1,39 @@
+id: BP-1100b-1-i
+title: "A non-workflow JavaScript path does not force test-writer dispatch"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket whose files_touched contains a .js file that is NOT under
+  scripts/workflows/ or templates/workflows-js/ (for example a static config asset),
+  and whose test_requirements block is empty,
+  When ticket-supervisor decides whether to skip the test-writer phase,
+  Then the workflow-.js rule from BP-1100b-1 does not apply to this ticket,
+  And the existing docs-only / config-only skip logic governs the decision unchanged,
+  And the rule does not over-trigger on .js files outside the two workflow directories.
+depends_on:
+  - BP-1100b-1
+doc_links:
+  - path: docs/retrospectives/EPIC-CommitAcOutputPerStage.md
+    relationship: describes
+    status: exists
+assigned_agent: workflow-architect
+estimated_complexity: S
+it_requirements:
+  - "The skip-suppression rule must match only .js paths under scripts/workflows/ or templates/workflows-js/, not every .js path in the repository."
+  - "For .js files outside those directories, the pre-existing classification behavior must be preserved exactly (no new forced dispatch)."
+delivers_to: null
+expects_from:
+  ac_id: BP-1100b-1
+  contract: "Path-scoped skip-suppression rule limited to the two workflow directories"
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

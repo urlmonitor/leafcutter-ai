@@ -1,0 +1,47 @@
+id: BP-1100c-1
+title: "Finalization of a behavioral epic dispatches at least two independent angle-testing agents"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an epic that modifies executable code (one or more tickets list a file under
+  scripts/ or scripts/workflows/ in files_touched) has all its tickets at status: done,
+  When the finalization sequence runs for that epic,
+  Then it dispatches at least two independent angle-testing spot-check agents whose
+  brief is to invoke or simulate the feature at runtime and probe edge cases from the
+  outside,
+  And the spot-check phase is distinct from in-loop pr-review of the diff against AC
+  text,
+  And finalization does not report the epic as ready to merge until the spot-check
+  phase has run.
+depends_on:
+  - BP-1100c
+doc_links:
+  - path: docs/retrospectives/EPIC-CommitAcOutputPerStage.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: workflow-architect
+estimated_complexity: L
+it_requirements:
+  - "Finalization must detect whether the epic is behavioral by inspecting files_touched across its tickets for executable surfaces (scripts/ or scripts/workflows/)."
+  - "For a behavioral epic, finalization must dispatch at least two independent spot-check agents with an angle-testing brief (invoke/simulate runtime behavior, probe edge cases) before the merge step."
+  - "The spot-check phase runs in addition to, not in place of, the existing pr-review step."
+delivers_to:
+  agent: finalize-feature
+  contract: "A finalization phase that runs >=2 angle-testing agents before merge for behavioral epics"
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1100c-1-i
+implemented_by: []

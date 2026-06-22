@@ -1,0 +1,47 @@
+id: BP-1100d-2
+title: "pr-reviewer checks the agentType at every commit step in workflow JavaScript"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a pull request whose diff modifies a .js file under scripts/workflows/ or
+  templates/workflows-js/ and that diff introduces or changes a workflow step which
+  performs a git commit,
+  When pr-reviewer reviews that diff,
+  Then pr-reviewer verifies the committing step dispatches agentType "commit" (or runs
+  under COMMIT_AGENT_MODE=1),
+  And pr-reviewer raises a blocking finding when the committing step dispatches any
+  other agentType (such as status-checker) or instructs an agent to run a raw git
+  commit,
+  And pr-reviewer's checklist for workflow .js diffs includes this commit-delegation
+  check explicitly.
+depends_on:
+  - BP-1100d
+doc_links:
+  - path: docs/retrospectives/EPIC-CommitAcOutputPerStage.md
+    relationship: describes
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+assigned_agent: workflow-architect
+estimated_complexity: M
+it_requirements:
+  - "The pr-reviewer agent template must include an explicit commit-delegation check that triggers whenever a reviewed diff touches a .js file under scripts/workflows/ or templates/workflows-js/ and introduces or changes a git commit step."
+  - "The check must require agentType 'commit' (or COMMIT_AGENT_MODE=1) at the committing step and must raise a blocking finding for any other agentType or for a raw git commit instruction."
+  - "This is a human/agent-review enforcement point complementary to the mechanical pre-commit guard in BP-1100d-1."
+delivers_to: null
+expects_from:
+  ac_id: BP-1100d-1
+  contract: "The mechanical guard whose rule the pr-reviewer mirrors as an explicit review-checklist item"
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

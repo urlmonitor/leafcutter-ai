@@ -1,0 +1,35 @@
+id: BP-1100
+title: "A done ticket means the feature actually runs, not just that it looks done"
+component: build-pipeline
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Tickets that reach status: done deliver behavior that executes, not prose that
+  describes it.
+
+  When a ticket changes how the build pipeline behaves at runtime, the pipeline
+  proves the change exists in the executable surface, exercises it from the outside,
+  and refuses to call a behavioral feature "done" on the strength of documentation,
+  string-scan tests, or in-loop diff review alone. This closes the "phantom-done"
+  failure class observed in EPIC-CommitAcOutputPerStage, where six supervisors and a
+  PR reviewer all passed a feature that could not run.
+depends_on: []
+doc_links:
+  - path: docs/retrospectives/EPIC-CommitAcOutputPerStage.md
+    relationship: describes
+    status: exists
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1100a
+  - BP-1100b
+  - BP-1100c
+  - BP-1100d
+implemented_by: []

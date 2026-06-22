@@ -1,0 +1,47 @@
+id: BP-1100d-1
+title: "A pre-commit guard blocks workflow JavaScript that pairs git commit with a non-commit agent"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a staged .js file under scripts/workflows/ or templates/workflows-js/ that
+  contains a workflow step assigning an agentType of "status-checker" (or any agent
+  other than "commit") in proximity to a git commit instruction,
+  When the pre-commit guard runs on the staged files,
+  Then the commit is blocked,
+  And the guard's message names the offending file and the prohibited
+  agentType/git-commit pairing,
+  And a workflow step that dispatches agentType "commit" for its git commit, or runs
+  under COMMIT_AGENT_MODE=1, is not blocked.
+depends_on:
+  - BP-1100d
+doc_links:
+  - path: docs/retrospectives/EPIC-CommitAcOutputPerStage.md
+    relationship: describes
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "A new pre-commit guard scans staged .js files under scripts/workflows/ and templates/workflows-js/ only."
+  - "The guard flags a git commit instruction string that co-occurs (same step / nearby lines) with an agentType set to any value other than 'commit'; status-checker is the canonical bad case."
+  - "The guard must exit non-zero (blocking) on a match and name the file and the offending pairing; it must pass when agentType is 'commit' or when COMMIT_AGENT_MODE=1 is used."
+  - "Follow the project error-handling policy: wrap file I/O in typed try/except and fail-open with a warning on unexpected internal errors so a guard bug never hard-blocks an unrelated commit."
+delivers_to:
+  agent: pr-reviewer
+  contract: "A staged-file guard whose pass/fail result the pr-reviewer can rely on for the commit-delegation check"
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1100d-1-i
+implemented_by: []
