@@ -1,0 +1,39 @@
+id: ACS-800b-2
+readiness: approved
+priority: high
+title: "A requirement's level is recorded as an explicit field"
+component: ac-store
+level: L2
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given a requirement that is a feature-level item,
+  When it records where it sits in the tree,
+  Then it stores an explicit level field holding the value L1,
+  And the level is read directly from that field rather than inferred from the
+    shape of the requirement's name,
+  And the level field accepts only the values L0, L1, L2, and L3.
+depends_on: [ACS-800b]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: config/ac_store_schema.json
+    relationship: governs
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Decomposed from ACS-800b. The explicit level field already exists in the schema
+  (level: L0..L3) but is today redundant with the id-string shape; this AC makes
+  the field the AUTHORITATIVE source of level, so tooling stops inferring level
+  from the id string (see ACS-800e).

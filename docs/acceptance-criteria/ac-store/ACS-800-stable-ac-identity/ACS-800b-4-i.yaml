@@ -1,0 +1,35 @@
+id: ACS-800b-4-i
+readiness: approved
+priority: high
+title: "A child whose level does not sit one below its parent is rejected"
+component: ac-store
+level: L3
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given a parent requirement at level L1,
+  When an edit sets a child of that parent to level L3 (skipping L2),
+  Then the edit is rejected with an error naming the child, its declared level
+    L3, the parent UID, and the parent level L1,
+  And the same rejection occurs when a child is set to the same level as its
+    parent, or to a level above its parent.
+depends_on: [ACS-800b-4]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Edge case of ACS-800b-4: the level/parent mismatch rejection. Ensures metadata
+  cannot encode an impossible hierarchy now that level is declared rather than
+  derived.

@@ -1,0 +1,39 @@
+id: ACS-800f-1
+readiness: approved
+priority: high
+title: "The tree-split guidance describes re-home as a single metadata change"
+component: ac-store
+level: L2
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given the authoring guidance that today instructs an author to reorganize the
+    tree by renaming a requirement and chasing its references,
+  When that guidance is updated for the new identity model,
+  Then it instructs the author to re-home a requirement by changing its single
+    parent-pointer field, with no rename and no reference rewrite,
+  And it states that the routine manual tree-split it previously documented is no
+    longer the primary remedy for an over-full branch,
+  And it contains no remaining instruction that tells an author a move requires
+    renaming the requirement or editing the requirements that point at it.
+depends_on: [ACS-800f, ACS-800c-1, ACS-800c-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: [ACS-800f-1-i]
+implemented_by: []
+notes: |
+  Decomposed from ACS-800f. Target surface: the ac-tree-split SKILL.md. Depends on
+  the re-home behaviors (ACS-800c-1 single-field move, ACS-800c-2 no cascade) being
+  the truth the guidance must now describe. llm-expert (prose/skill body), not
+  python-coder.

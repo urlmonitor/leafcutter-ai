@@ -1,0 +1,49 @@
+id: ACS-800e
+readiness: approved
+priority: high
+title: "The tooling reads the tree from the facts, not the name"
+component: ac-store
+level: L1
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Limit checks, tree views, and traversal all stay correct after a move.
+
+  Every tool that understands the requirement hierarchy reads it from the recorded
+  parent, level, and order metadata instead of decoding the requirement's name — so
+  child counts, tree rendering, and navigation reflect reality the moment a requirement
+  moves, with no rename needed to make the numbers add up.
+depends_on: [ACS-800]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by:
+  - reason: "BA decomposed ACS-800e into L2/L3 behaviors (ACS-800e-1/2/3/4/5, ACS-800e-4-i)."
+    agent: business-analyst
+    date: 2026-06-22
+superseded_by: null
+covered_by: [ACS-800e-1, ACS-800e-2, ACS-800e-3, ACS-800e-4, ACS-800e-5]
+implemented_by: []
+documentation_triggers: [component-diagram]
+notes: |
+  All existing tooling that today derives structure from the id STRING must be updated
+  to read the metadata (parent pointer + level + order from ACS-800b) instead. Known
+  affected surfaces for the BA to enumerate at L2:
+    - check_ac_limits.py — child-count derivation (today counts via id-string parsing;
+      this is why a move that does not rename does not reduce the count, and why the
+      child_limit_override stopgap was needed). Once this reads metadata, the override
+      can be RETIRED.
+    - check_ac_parent_covered_by.py — parent/child link verification.
+    - goal_to_epic.py — tree traversal.
+    - scripts/ac_store/ac_parent_id.py — derive_parent_id() (today the canonical
+      id-string parent-derivation; becomes a metadata lookup).
+    - config/ac_store_schema.json — id regex no longer carries hierarchy meaning.
+  This is python-coder work across multiple scripts; estimated_complexity L.

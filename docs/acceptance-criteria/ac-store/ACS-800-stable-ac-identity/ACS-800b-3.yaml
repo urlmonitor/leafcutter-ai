@@ -1,0 +1,40 @@
+id: ACS-800b-3
+readiness: approved
+priority: high
+title: "A requirement's order among its siblings is recorded as an explicit field"
+component: ac-store
+level: L2
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given three requirements that all share the same parent UID,
+  When they record where they sit in the tree,
+  Then each stores an explicit order field,
+  And rendering the three siblings sorted by their order field produces a
+    deterministic, stable sequence,
+  And changing one sibling's order field is sufficient to change its rendered
+    position among its siblings, with no rename required.
+depends_on: [ACS-800b]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: config/ac_store_schema.json
+    relationship: governs
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Decomposed from ACS-800b. The ordering metadata field (PROJECT_CONTEXT uses
+  "order" as the example name). New field to be added to config/ac_store_schema.json
+  by IT-PO/python-coder. Replaces today's reliance on the numeric/alpha suffix of the
+  id string to imply sibling order.

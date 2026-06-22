@@ -1,0 +1,38 @@
+id: ACS-800c-2
+readiness: approved
+priority: high
+title: "Re-homing a requirement rewrites no cross-references anywhere in the store"
+component: ac-store
+level: L2
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given a requirement with stable UID 42 that is referenced by other
+    requirements through a dependency link, a coverage link, a delivers-to
+    contract, an expects-from contract, and a supersedes link,
+  When UID 42 is re-homed under a new parent,
+  Then none of those referencing links are modified,
+  And every one of those links still resolves to UID 42 after the move,
+  And no store-wide find-and-replace across dependency, coverage, contract, or
+    supersedes fields is performed as part of the move.
+depends_on: [ACS-800c, ACS-800a-2, ACS-800b-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Decomposed from ACS-800c. The "no reference cascade" guarantee — the property
+  that distinguishes the new model from today's rename-and-chase-every-reference
+  pain. Covers all five link kinds named in the L0/L1 notes: depends_on,
+  covered_by, delivers_to, expects_from, superseded_by.

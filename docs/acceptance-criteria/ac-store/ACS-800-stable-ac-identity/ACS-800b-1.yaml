@@ -1,0 +1,42 @@
+id: ACS-800b-1
+readiness: approved
+priority: high
+title: "A requirement names its parent by the parent's stable UID"
+component: ac-store
+level: L2
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given a requirement whose structural parent is the requirement with stable
+    UID 10,
+  When the requirement records where it sits in the tree,
+  Then it stores a parent-pointer metadata field holding the value 10,
+  And the parent relationship is read directly from that field rather than
+    decoded from the requirement's name,
+  And changing the parent-pointer field to a different existing UID is the only
+    edit needed to express a different parent.
+depends_on: [ACS-800b]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: config/ac_store_schema.json
+    relationship: governs
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: [ACS-800b-1-i]
+implemented_by: []
+notes: |
+  Decomposed from ACS-800b. Defines the parent-pointer metadata field (PROJECT_CONTEXT
+  uses parent_uid as the example name; the exact field name is finalized by IT-PO and
+  added to config/ac_store_schema.json, which is currently additionalProperties:false
+  and does NOT yet carry this field). The pointer holds the parent's stable UID from
+  ACS-800a, replacing today's derive_parent_id() id-string parsing.

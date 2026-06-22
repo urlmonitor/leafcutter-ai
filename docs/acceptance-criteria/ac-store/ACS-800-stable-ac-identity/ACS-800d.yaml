@@ -1,0 +1,43 @@
+id: ACS-800d
+readiness: approved
+priority: high
+title: "Everything you already wrote keeps working"
+component: ac-store
+level: L1
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Existing requirements and their references migrate safely, with nothing left dangling.
+
+  Adopting permanent names does not strand the requirements written under the old
+  naming scheme: every existing requirement gains its stable name and metadata, and
+  every reference between requirements continues to resolve — either kept working as-is
+  or migrated cleanly, with no orphaned or dangling pointers left behind.
+depends_on: [ACS-800]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by:
+  - reason: "BA decomposed ACS-800d into L2/L3 behaviors (ACS-800d-1/2/3/4, ACS-800d-1-i, ACS-800d-2-i)."
+    agent: business-analyst
+    date: 2026-06-22
+superseded_by: null
+covered_by: [ACS-800d-1, ACS-800d-2, ACS-800d-3, ACS-800d-4]
+implemented_by: []
+documentation_triggers: [how-to]
+notes: |
+  Migration / back-compat path from the existing position-encoded ids to stable UIDs.
+  The BA should decompose at L2: a one-time migration that assigns each existing AC a
+  UID and populates its parent/level/order metadata from its current id; a back-compat
+  guarantee that existing references either keep resolving or are rewritten in the same
+  migration; and a verification that the migration leaves zero dangling references
+  (relates to scan_ac_orphans.py / check_ac_parent_covered_by.py). This is the
+  highest-risk L1 (estimated_complexity L) because it touches the whole store at once.

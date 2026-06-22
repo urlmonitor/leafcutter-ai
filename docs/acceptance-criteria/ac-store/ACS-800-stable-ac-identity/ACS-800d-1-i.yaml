@@ -1,0 +1,38 @@
+id: ACS-800d-1-i
+readiness: approved
+priority: high
+title: "Migration surfaces a requirement whose legacy name cannot be parsed"
+component: ac-store
+level: L3
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given an existing requirement whose position-encoded name does not match any
+    recognised legacy id form (a malformed name from which no parent, level, or
+    order can be derived),
+  When the migration runs,
+  Then the migration does not silently guess a hierarchy for that requirement,
+  And it reports the malformed name and the requirement so a human can resolve
+    it,
+  And the rest of the store still migrates rather than the whole migration
+    aborting on the single malformed entry.
+depends_on: [ACS-800d-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Edge case of ACS-800d-1: a legacy id that derive_parent_id() cannot meaningfully
+  parse (the function's "malformed ID — treat as root-equivalent" branch). Migration
+  must flag rather than mis-home such entries.

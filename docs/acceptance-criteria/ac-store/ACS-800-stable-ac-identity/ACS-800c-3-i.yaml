@@ -1,0 +1,37 @@
+id: ACS-800c-3-i
+readiness: approved
+priority: high
+title: "A re-home that would make a requirement its own ancestor is rejected"
+component: ac-store
+level: L3
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given a requirement with UID 10 that is an ancestor of the requirement with
+    UID 42 (10 is 42's parent, grandparent, or higher),
+  When an operation attempts to re-home UID 10 so that its new parent is UID 42,
+  Then the operation is rejected with an error naming the cycle it would create
+    (for example "10 -> 42 -> 10"),
+  And neither requirement's parent-pointer field is changed,
+  And re-homing a requirement under an unrelated parent that creates no cycle
+    still succeeds.
+depends_on: [ACS-800c-3]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Edge case of ACS-800c-3: a re-home must not create a hierarchy cycle. The
+  hierarchy (parent-pointer) DAG invariant is the structural analogue of the
+  depends_on DAG that check_ac_circular_deps.py already enforces.

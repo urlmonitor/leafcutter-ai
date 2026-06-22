@@ -1,0 +1,37 @@
+id: ACS-800b-1-i
+readiness: approved
+priority: high
+title: "A parent pointer to a non-existent UID is detected"
+component: ac-store
+level: L3
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given a requirement whose parent-pointer field holds the UID 999, and no
+    requirement with UID 999 exists in the store,
+  When the store is validated for hierarchy integrity,
+  Then the validation reports the requirement as having an orphaned parent
+    pointer,
+  And the report names the offending requirement and the missing UID 999,
+  And a root requirement (one with no parent pointer set) is NOT reported as
+    orphaned.
+depends_on: [ACS-800b-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Edge case of ACS-800b-1. The metadata equivalent of today's scan_ac_orphans.py
+  dangling-link detection, but operating on the parent-pointer UID rather than on a
+  derived id string.

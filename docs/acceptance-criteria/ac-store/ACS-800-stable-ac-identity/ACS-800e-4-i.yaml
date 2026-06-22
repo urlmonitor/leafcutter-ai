@@ -1,0 +1,42 @@
+id: ACS-800e-4-i
+readiness: approved
+priority: high
+title: "During the migration window tooling accepts both metadata and name-derived hierarchy"
+component: ac-store
+level: L3
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given the store contains a mix of requirements that already declare hierarchy
+    metadata and requirements that have not yet been migrated (hierarchy still
+    only inferable from their names),
+  When any hierarchy-aware tool runs during the migration window,
+  Then for a requirement that declares parent-pointer metadata the tool uses the
+    metadata,
+  And for a requirement that does not yet declare it the tool falls back to
+    deriving the parent from the name,
+  And the tool produces a single coherent tree across the mixed store without
+    error,
+  And once every requirement declares metadata the name-derived fallback is no
+    longer exercised.
+depends_on: [ACS-800e-4]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Edge case of ACS-800e-4: tooling back-compat during the migration window. Tools
+  must handle BOTH id-derived and metadata-declared hierarchy simultaneously while
+  ACS-800d's migration is in progress. The fallback retires naturally once the store
+  is fully migrated.

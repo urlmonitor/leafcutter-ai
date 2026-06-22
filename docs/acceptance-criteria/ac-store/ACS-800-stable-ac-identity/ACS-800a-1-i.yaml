@@ -1,0 +1,36 @@
+id: ACS-800a-1-i
+readiness: approved
+priority: high
+title: "Two requirements created concurrently never receive the same UID"
+component: ac-store
+level: L3
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given the highest assigned stable UID in the store is the integer 41,
+  When two separate creation operations each attempt to create a new requirement
+    at the same time,
+  Then one operation is assigned UID 42 and the other is assigned UID 43,
+  And no two requirements in the store ever share the same UID,
+  And neither operation observes the other's in-flight allocation as its own.
+depends_on: [ACS-800a-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Edge case of ACS-800a-1: concurrent creation must not collide. Mirrors the
+  existing /quick-fix O_CREAT|O_EXCL lock pattern documented in ac-schema.md
+  (§/quick-fix workflow — ID assignment) — the same atomicity discipline applies
+  to UID allocation from the store-wide sequence.

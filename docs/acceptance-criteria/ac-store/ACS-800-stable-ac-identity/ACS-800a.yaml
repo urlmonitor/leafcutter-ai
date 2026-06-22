@@ -1,0 +1,44 @@
+id: ACS-800a
+readiness: approved
+priority: high
+title: "Every requirement gets a permanent name of its own"
+component: ac-store
+level: L1
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  A stable, opaque identity that never changes for the life of the requirement.
+
+  Each requirement is assigned a unique identifier when it is created — handed out
+  in sequence and meaning nothing more than "this requirement" — so its name stays
+  the same no matter how the tree around it is later reshaped.
+depends_on: [ACS-800]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: config/ac_store_schema.json
+    relationship: governs
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by:
+  - reason: "BA decomposed ACS-800a into L2/L3 behaviors (ACS-800a-1/2/3, ACS-800a-1-i, ACS-800a-2-i)."
+    agent: business-analyst
+    date: 2026-06-22
+superseded_by: null
+covered_by: [ACS-800a-1, ACS-800a-2, ACS-800a-3]
+implemented_by: []
+documentation_triggers: [reference-doc]
+notes: |
+  The opaque UID is assigned sequentially at creation and is NOT derived from tree
+  position (the opposite of today's position-encoded ids like ACS-100h-3). The BA
+  should decompose at L2 the UID assignment scheme, the never-reused/never-renamed
+  guarantee, and the relaxation of the schema id regex so an AC's id no longer has to
+  encode hierarchy. Relates to: schema id regex in config/ac_store_schema.json and
+  the id-derivation logic this capability replaces.

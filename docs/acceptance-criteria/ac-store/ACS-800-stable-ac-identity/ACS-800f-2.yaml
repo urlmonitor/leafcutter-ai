@@ -1,0 +1,39 @@
+id: ACS-800f-2
+readiness: approved
+priority: high
+title: "The authoring agent instructions describe the UID-and-metadata model"
+component: ac-store
+level: L2
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given the product-owner, business-analyst, and it-po agent instructions that
+    today tell an agent to derive a parent by stripping a segment from a child's
+    name,
+  When those instructions are updated for the new identity model,
+  Then they tell the agent that a requirement's identity is a stable opaque UID
+    and that its parent is read from the parent-pointer metadata field,
+  And the parent-child link update protocol they describe is keyed on the
+    parent's UID rather than on a name-derived parent id,
+  And none of the three agent instruction sets still instructs the agent to
+    derive a parent from a requirement's name as the primary mechanism.
+depends_on: [ACS-800f, ACS-800b-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Decomposed from ACS-800f. Target surfaces: the product-owner, business-analyst,
+  and it-po agent templates (the parent-derivation guidance and the parent covered_by
+  update protocol that today references the id-string derivation). llm-expert work.

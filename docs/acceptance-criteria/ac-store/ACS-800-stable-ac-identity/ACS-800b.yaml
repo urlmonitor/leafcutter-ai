@@ -1,0 +1,44 @@
+id: ACS-800b
+readiness: approved
+priority: high
+title: "A requirement's place in the tree is information, not its name"
+component: ac-store
+level: L1
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Parent, level, and order are recorded as facts you can read and change.
+
+  Where a requirement sits — which parent it belongs to, whether it is a goal,
+  feature, story or sub-task, and its position among its siblings — is captured in
+  plain metadata fields rather than buried in its name, so the structure can be read
+  directly and adjusted deliberately.
+depends_on: [ACS-800]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: config/ac_store_schema.json
+    relationship: governs
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by:
+  - reason: "BA decomposed ACS-800b into L2/L3 behaviors (ACS-800b-1/2/3/4, ACS-800b-1-i, ACS-800b-4-i)."
+    agent: business-analyst
+    date: 2026-06-22
+superseded_by: null
+covered_by: [ACS-800b-1, ACS-800b-2, ACS-800b-3, ACS-800b-4]
+implemented_by: []
+documentation_triggers: [reference-doc]
+notes: |
+  Hierarchy expressed in metadata: a parent pointer (e.g. parent_uid), the level
+  (L0/L1/L2/L3), and an order value among siblings. These are EXAMPLE field names —
+  the BA/IT-PO will finalize exact field names at L2 and add them to the schema. The
+  parent relationship is expressed by a metadata pointer to the parent's stable UID
+  (from ACS-800a), so a child no longer depends on its name to know its parent.

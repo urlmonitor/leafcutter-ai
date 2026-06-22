@@ -1,0 +1,40 @@
+id: ACS-800e-1
+readiness: approved
+priority: high
+title: "Child-count limit checks count children from parent-pointer metadata"
+component: ac-store
+level: L2
+status: active
+req_status: approved
+work_status: todo
+criteria: |
+  Given a parent requirement with UID 10 that has four children, each declaring
+    parent-pointer UID 10,
+  When the child-count limit check runs,
+  Then it reports the parent as having exactly four children, counted by the
+    number of requirements whose parent-pointer field holds UID 10,
+  And the count is not derived by parsing requirement names,
+  And after one of those children is re-homed under a different parent (its
+    parent-pointer changed away from UID 10), the next check reports UID 10 as
+    having three children with no rename of any requirement.
+depends_on: [ACS-800e, ACS-800b-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Decomposed from ACS-800e. Updates check_ac_limits.py child counting to read the
+  parent-pointer metadata instead of id-string parsing (today's _derive_parent_id
+  approach). PERMANENT-FIX cross-reference: once this counts children from metadata,
+  a re-home reduces the count without a rename, which is precisely what makes the
+  child_limit_override stopgap retireable (retirement guidance lands in ACS-800f).
