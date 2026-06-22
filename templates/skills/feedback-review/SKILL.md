@@ -85,7 +85,7 @@ Wait for the user's single-character input.
 
 ### When the user selects [c] — Create Ticket
 
-1. Dispatch `/create-ticket` (or the equivalent `create-ticket` agent invocation)
+1. Dispatch `/create-ticket`
    with the feedback `note`, `category`, `tags`, and `feedback_id` as the
    primary request context. Include the full entry JSON as supplementary context.
 2. After the ticket is created, resolve the entry:

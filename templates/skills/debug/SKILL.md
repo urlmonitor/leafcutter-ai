@@ -27,7 +27,7 @@ then automatically creates and drives a fix ticket. The workflow:
    a different angle
 3. **Synthesize** — merge findings, identify agreement and uncertainty
 4. **Clarify** — if agents disagree or are uncertain, ask the user
-5. **Ticket** — create a fix ticket via `create-ticket` agent
+5. **Ticket** — create a fix ticket via `/create-ticket` command
 6. **Build** — drive the ticket via `/build-feature`
 
 ---
@@ -47,11 +47,11 @@ ground each investigator with the system's declared expected behaviour.
 
 2. **Infer 1–3 component slugs** from the issue description:
    - If the description contains a file path (e.g.
-     `templates/agents/business-analyst.md`), extract the enclosing directory or
+     `templates/agents/python-coder.md`), extract the enclosing directory or
      module name and normalise to a lowercase-hyphenated slug
-     (e.g. `business-analyst`).
+     (e.g. `python-coder`).
    - If the description mentions a recognisable component name directly (e.g.
-     "finalize", "business-analyst"), use that slug.
+     "finalize", "python-coder"), use that slug.
    - If the description is ambiguous and no specific component is identifiable:
      - Log: "component inference ambiguous"
      - Use all component slugs that have a directory under
@@ -269,8 +269,7 @@ ticket. Pass the following context to `/create-ticket`:
   BA-generated or human-authored ACs).
 
 Note: The `create-ticket` agent has been removed. Use the `/create-ticket`
-workflow command (Claude Code >= 2.1.154) or invoke `business-analyst`
-directly on older installs.
+workflow command (Claude Code >= 2.1.154) to create the fix ticket.
 
 ---
 

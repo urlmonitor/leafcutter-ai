@@ -3,7 +3,7 @@
  *
  * Implements the /plan-feature command: triages the user's request via the
  * ac-triage agent (Haiku-tier, fast), routes to the correct AC authoring
- * agents (product-owner, business-analyst, it-po) in sequence with
+ * agents (product-owner, business-analyst-v3, it-po-v3) in sequence with
  * user confirmation gates between stages, and writes all output exclusively
  * to the AC store (docs/acceptance-criteria/). No ticket files are produced.
  *
@@ -32,7 +32,7 @@ export const meta = {
     "Triage, orchestrate, and gate AC authoring for a new feature request. " +
     "Dispatches ac-triage (Haiku) to classify the request as strategic / " +
     "behavioral / technical / covered, then routes through the correct " +
-    "authoring agents (PO v3, BA v3, IT PO v3) with user gates between stages. " +
+    "authoring agents (product-owner, business-analyst-v3, it-po-v3) with user gates between stages. " +
     "All output goes exclusively to the AC store — no ticket files are produced.",
   phases: [
     "stage-0: ac-triage (Haiku) — duplicate check + route classification",
@@ -190,19 +190,19 @@ async function run({ userInput, agent }) {
 
   if (effectiveRoute === "strategic") {
     pipeline = [
-      { agent: "product-owner",    stage: "po",   gate: "after_po" },
-      { agent: "business-analyst", stage: "ba",   gate: "after_ba" },
-      { agent: "it-po",           stage: "itpo",  gate: "final" },
+      { agent: "product-owner",        stage: "po",   gate: "after_po" },
+      { agent: "business-analyst-v3",  stage: "ba",   gate: "after_ba" },
+      { agent: "it-po-v3",             stage: "itpo",  gate: "final" },
     ];
   } else if (effectiveRoute === "behavioral") {
     pipeline = [
-      { agent: "business-analyst", stage: "ba",  gate: "after_ba" },
-      { agent: "it-po",           stage: "itpo", gate: "final" },
+      { agent: "business-analyst-v3",  stage: "ba",  gate: "after_ba" },
+      { agent: "it-po-v3",             stage: "itpo", gate: "final" },
     ];
   } else {
     // technical (or amend → technical, or covered → force handled above)
     pipeline = [
-      { agent: "it-po", stage: "itpo", gate: "final" },
+      { agent: "it-po-v3", stage: "itpo", gate: "final" },
     ];
   }
 

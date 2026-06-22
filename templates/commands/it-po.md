@@ -7,7 +7,7 @@ description: |
   Use after /ba has produced L2/L3 ACs, or to enrich existing ACs with technical detail.
 ---
 
-Invoke the `it-po` agent with the following context:
+Invoke the `it-po-v3` agent with the following context:
 
 **User request:** $ARGUMENTS
 
@@ -23,5 +23,5 @@ Invoke the `it-po` agent with the following context:
 3. Read architecture docs at `docs/architecture/` to understand component boundaries.
 4. Split ACs when technical boundaries reveal multi-agent work (one AC should map to one agent).
 5. Do NOT modify the `criteria` field — that belongs to the BA.
-6. Set `origin_agent: it-po` on any new ACs you create (splits only).
+6. Set `origin_agent: it-po-v3` on any new ACs you create (splits only).
 7. Present enrichments to the user for review before writing.

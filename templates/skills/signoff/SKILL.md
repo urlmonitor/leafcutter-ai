@@ -22,8 +22,8 @@ If you change anything in this file, the parity guard and every consuming agent 
 
 | Status | Meaning | Set by |
 |---|---|---|
-| `not_needed` | The agent is explicitly excluded from this ticket. Creator/refiner determined the work doesn't require this agent. | `business-analyst`, `refinement` |
-| `needed` | The agent is required for this ticket and has not yet completed. | `business-analyst`, `refinement` |
+| `not_needed` | The agent is explicitly excluded from this ticket. The ticket author or the AC pipeline (business-analyst-v3, it-po-v3) determined the work doesn't require this agent. | Ticket author or AC pipeline |
+| `needed` | The agent is required for this ticket and has not yet completed. | Ticket author or AC pipeline |
 | `signed_off` | The agent ran, the work passed acceptance, and a `## Sign-offs` entry exists with timestamp. | The agent itself, on success. |
 | `failed` | The agent ran but the work did not pass acceptance. A `(status: blocker)` comment must accompany. | The agent itself, on failure. |
 

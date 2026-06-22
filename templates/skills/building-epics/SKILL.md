@@ -180,14 +180,14 @@ No additional enforcement is required: the per-pass scan is inherent to the loop
 > 1. `a.files_touched ∩ b.files_touched = ∅`  *(disjoint physical footprint)*, AND
 > 2. neither `a depends_on b` nor `b depends_on a` under the **transitive closure** of `depends_on` *(no logical dependency chain)*.
 
-Both conditions must hold. The file-touch set is authoritative — it is populated by `business-analyst` / `refinement` and validated by the frontmatter guard. If a ticket's `files_touched` is missing or empty, `/build-feature` MUST treat that ticket as conflicting with every other ticket and run it serially (default-conservative).
+Both conditions must hold. The file-touch set is authoritative — it is populated by the AC pipeline (business-analyst-v3 / it-po-v3) and validated by the frontmatter guard. If a ticket's `files_touched` is missing or empty, `/build-feature` MUST treat that ticket as conflicting with every other ticket and run it serially (default-conservative).
 
 ### §1.3 Halt conditions (epic-level)
 
 `/build-feature` halts the entire run only when:
 
 - A child returns `{status: "blocked"}` and the blocker is **structural** — i.e. the suggested remediation requires resolving an ambiguity (`question`-class) that affects multiple tickets, OR a phase agent that is on the critical path of every remaining ticket has returned `failed`.
-- The dependency graph contains a cycle that survives `files_touched` projection (this should never occur — refinement prevents it — but treat it as a halt-class invariant violation).
+- The dependency graph contains a cycle that survives `files_touched` projection (this should never occur — dependency validation during AC authoring prevents it — but treat it as a halt-class invariant violation).
 - The commit-phase lock (§5) cannot be released after a child crash (lock-recovery requires user intervention).
 
 In all other blocker scenarios, the epic continues with the remaining independent tickets while the blocked ticket awaits user input. See §6.
@@ -533,7 +533,6 @@ The priority column is the authoritative ordering for dispatch ties. Lower numbe
 | 1 | `status-checker` | Runs first; verifies system state |
 | 2 | `adr-author` | ADR before coders |
 | 3 | `architecture-diagram-author` | Diagram before coders |
-| 3.5 | `it-po` | Per-agent contracts before architect-review |
 | 4 | `architect-review` | Shapes design before implementation |
 | 5 | `test-writer` | Writes failing tests before coders |
 | 6 | `python-coder` | Primary implementation |

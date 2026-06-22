@@ -2,10 +2,10 @@
 name: ticket-wiring
 description: |
   Procedural skill for assembling a complete ticket file from collected
-  business-analyst, refinement, and architect-review outputs. Handles wiring
-  rules (files_touched, agents map, Sign-offs, Comments), error recovery when
-  a payload is missing, and pre-write parity verification. Used by the
-  create-ticket agent after gathering all upstream outputs.
+  AC pipeline (business-analyst-v3, it-po-v3) and architect-review outputs.
+  Handles wiring rules (files_touched, agents map, Sign-offs, Comments), error
+  recovery when a payload is missing, and pre-write parity verification. Used
+  by the ticket-authoring workflow after gathering all upstream outputs.
 allowed-tools: Bash, Read, Edit, Write
 ---
 
@@ -19,14 +19,12 @@ structured outputs from upstream agents into a valid, guard-passing ticket file.
 You receive (at minimum) these collected payloads before invoking this skill:
 
 ```
-ba_output:          structured JSON from business-analyst (may be absent — see
+ba_output:          structured JSON from business-analyst-v3 (may be absent — see
                     Error Recovery Path)
-refinement_output:  structured JSON from refinement (may be absent — see
-                    Error Recovery Path)
-architect_output:   structured JSON from architect-review (optional; may be
-                    absent without triggering the error recovery path)
-it_po_output:       structured JSON from it-po (optional; present only when
+it_po_output:       structured JSON from it-po-v3 (optional; present only when
                     ba_output.complexity is "standard" or "novel"; may be
+                    absent without triggering the error recovery path)
+architect_output:   structured JSON from architect-review (optional; may be
                     absent without triggering the error recovery path)
 registry_table:     {{registry_phase_agents_table}}
                     (injected at build time — lists all is_ticket_phase agents
@@ -38,14 +36,14 @@ ticket_path:        target path where the ticket file should be written
 
 Resolve `files_touched` and `agents` from this priority chain:
 
-1. **refinement** output — use when present and non-empty.
-2. **business-analyst** output — fall back when refinement omitted them.
+1. **it-po-v3** output — use when present and non-empty (multi-coder tickets).
+2. **business-analyst-v3** output — fall back when it-po-v3 omitted them.
 3. **Registry defaults** (error recovery, epic sub-tickets only) — apply when
-   neither BA nor refinement provided an agents map.
+   neither BA v3 nor IT PO v3 provided an agents map.
 
 The `agents` map values MUST be one of `needed` or `not_needed` at creation
 time. If you see any other value (`signed_off`, `failed`, anything else), STOP
-and re-run refinement — those are runtime-only transitions and would be
+and re-run the AC authoring pipeline — those are runtime-only transitions and would be
 rejected by the parity guard downstream.
 
 ### Reading architect-review signals
@@ -57,7 +55,7 @@ When `architect_output` is present, also read these fields:
 - `requires_documentation` — a list of doc type strings from `doc_types.json` (may be absent or empty list).
 
 Also read `ba_output.requires_documentation` when `architect_output` is absent or does not
-include this field. Priority: architect-review wins over business-analyst when both supply the field.
+include this field. Priority: architect-review wins over business-analyst-v3 when both supply the field.
 
 These signals drive Step 2 wiring decisions below. If `architect_output` is
 absent entirely, treat all three fields as empty (no Architecture Plan emitted,
@@ -105,10 +103,10 @@ signal suggesting a diagram or ADR is needed.
   when `architect_output.requires_adr == true`:
   - Set `adr-author: needed` in the `agents` map.
   - Set `requires_adr: true` in the frontmatter.
-  - This rule **supersedes** any earlier BA/refinement payload that set
+  - This rule **supersedes** any earlier BA v3 payload that set
     `adr-author: not_needed`. The architect-review judgment is authoritative;
     a prior `not_needed` value from upstream must be overridden here.
-- When `requires_documentation` (resolved from architect-review or business-analyst
+- When `requires_documentation` (resolved from architect-review or business-analyst-v3
   per the Priority Chain above) is non-empty:
   - For each entry in the list, look up `writer_agent` in `doc_types.json`. When
     `writer_agent` is non-null, set `<writer_agent>: needed` in the `agents` map.
@@ -303,21 +301,17 @@ For each entry in `ba_output.ac_amendments`:
 
 ## Step 3 — Error Recovery Path
 
-**When this fires:** BA always runs before this skill, and refinement always
-runs for standard tickets. This path fires only when one of them crashes or
-returns no usable payload. It is NOT a normal invocation mode — it is a
-defensive guard.
+**When this fires:** The AC pipeline (business-analyst-v3) always runs before
+this skill for normal tickets. This path fires only when it crashes or returns
+no usable payload. It is NOT a normal invocation mode — it is a defensive guard.
 
 **Two known entry conditions:**
 
-- **BA crash guard**: `business-analyst` failed or returned an empty/malformed
+- **BA crash guard**: `business-analyst-v3` failed or returned an empty/malformed
   payload. Log the failure and surface a warning to the user.
 - **Direct invocation on an existing stub**: a user manually invokes
-  `create-ticket` pointing at a pre-written stub file without any BA payload.
+  `/create-ticket` pointing at a pre-written stub file without any BA payload.
   The user is responsible for supplying the context.
-
-**Note:** When `create-epic` calls `create-ticket` with `stub_path`, BA
-**still runs** at Step 1. This path does NOT apply to stub hardening.
 
 Apply this recovery logic:
 
@@ -336,8 +330,7 @@ Apply this recovery logic:
 
 After the ticket file is written successfully (Step 2 complete, Step 4 not
 yet run), check whether a `feedback_id` is present in the invocation context
-(passed by the user, by create-ticket's orchestrator, or injected by a
-retrospective-agent session).
+(passed by the user or injected by a retrospective-agent session).
 
 **When `feedback_id` is present:**
 
