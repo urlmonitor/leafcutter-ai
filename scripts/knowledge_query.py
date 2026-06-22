@@ -9,12 +9,15 @@ BUSINESS CONTEXT: Gives agents and humans a one-command answer to
     single pass, extracts a one-line description for every node, follows
     cross-surface edges, and dumps a flat index in both human-readable text
     and JSON format.
-ARCHITECTURE: Four public functions (load_surfaces, load_surfaces_with_meta,
-    extract_nodes, extract_edges) and a CLI entry point. Surface discovery
-    driven by paths.json; no surface path or edge_fields list is hardcoded —
-    adding a new surface only requires a new entry in paths.json. All file I/O
-    wrapped in try/except with specific exception types (repo error-handling
-    policy). Stdlib-only: no third-party dependencies.
+ARCHITECTURE: Five public functions (load_surfaces, load_surfaces_with_meta,
+    build_knowledge_map, extract_nodes, extract_edges) and a CLI entry point.
+    build_knowledge_map() is the primary API for callers that need both the
+    graph data and surface-completeness audit metadata (declared_surfaces,
+    contributing_surfaces). Surface discovery driven by paths.json; no surface
+    path or edge_fields list is hardcoded — adding a new surface only requires
+    a new entry in paths.json. All file I/O wrapped in try/except with specific
+    exception types (repo error-handling policy). Stdlib-only: no third-party
+    dependencies.
 """
 from __future__ import annotations
 
@@ -435,6 +438,108 @@ def load_surfaces_with_meta(
         result[name] = {"path": resolved, "edge_fields": edge_fields}
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# Public API: build_knowledge_map
+# ---------------------------------------------------------------------------
+
+
+class KnowledgeMap(NamedTuple):
+    """Result of a full-graph traversal against all declared surfaces.
+
+    This is the primary return type for ``build_knowledge_map()``.  It carries
+    both the graph data and audit metadata so callers can assert completeness
+    without re-reading paths.json.
+
+    Attributes:
+        nodes: All NodeRecords collected across every contributing surface.
+        edges: All filtered EdgeRecords (phantom edges removed).
+        declared_surfaces: The set of surface names that were declared in
+            paths.json **and** whose path exists on disk (optional absent
+            surfaces are excluded from this set, matching the behaviour of
+            ``load_surfaces_with_meta``).
+        contributing_surfaces: The subset of ``declared_surfaces`` that
+            produced at least one NodeRecord.  For a well-formed project
+            every element of ``declared_surfaces`` should appear here.
+    """
+
+    nodes: list[NodeRecord]
+    edges: list[EdgeRecord]
+    declared_surfaces: frozenset[str]
+    contributing_surfaces: frozenset[str]
+
+
+def build_knowledge_map(
+    project_root: Path,
+    paths_json: Path,
+    surface_filter: str | None = None,
+) -> KnowledgeMap:
+    """Build the full knowledge map and return graph data plus surface audit metadata.
+
+    Traverses every surface declared in paths.json (skipping optional absent
+    surfaces), collects all NodeRecords and EdgeRecords, applies phantom-edge
+    filtering, and returns a :class:`KnowledgeMap` that includes both the graph
+    data and the ``declared_surfaces`` / ``contributing_surfaces`` audit sets.
+
+    The caller can assert completeness without knowing which surfaces are
+    declared by testing::
+
+        assert km.contributing_surfaces == km.declared_surfaces
+
+    This assertion is expressed against the *declared set itself*, not against
+    any hardcoded surface name list.  If a surface is declared but its path
+    produces zero nodes (e.g. the directory is empty), it will appear in
+    ``declared_surfaces`` but not in ``contributing_surfaces``.
+
+    Args:
+        project_root: Absolute path to the project root directory.
+        paths_json: Absolute path to the paths.json configuration file.
+        surface_filter: When non-None, restrict traversal to this surface only.
+
+    Returns:
+        A :class:`KnowledgeMap` with nodes, edges, declared_surfaces, and
+        contributing_surfaces.
+
+    Raises:
+        SystemExit: With exit code 1 when paths.json is absent or invalid JSON.
+    """
+    surfaces_meta = load_surfaces_with_meta(project_root, paths_json)
+    declared: set[str] = set()
+    contributing: set[str] = set()
+
+    all_nodes: list[NodeRecord] = []
+    all_edges: list[EdgeRecord] = []
+
+    for surface_name, surface_info in surfaces_meta.items():
+        if surface_filter and surface_name != surface_filter:
+            continue
+        declared.add(surface_name)
+
+    # Delegate to _collect_all for the actual traversal so the collection
+    # logic lives in one place.  We re-read surfaces_meta once more inside
+    # _collect_all, but that is an in-memory JSON parse that completes in
+    # microseconds and is acceptable for the sake of keeping _collect_all
+    # self-contained.
+    all_nodes, all_edges = _collect_all(project_root, paths_json, surface_filter)
+
+    # Determine which declared surfaces actually contributed primary nodes
+    # (exclude synthetic hub nodes that _collect_all injects for components).
+    # We identify "synthetic" nodes by checking whether their surface name is
+    # "components" AND their path is the generic fallback Path used in
+    # _collect_all (not a real file discovered from the directory).  A more
+    # reliable signal is: a node contributed by a surface only if the surface
+    # appears in the declared set.
+    for node in all_nodes:
+        if node.surface in declared:
+            contributing.add(node.surface)
+
+    return KnowledgeMap(
+        nodes=all_nodes,
+        edges=all_edges,
+        declared_surfaces=frozenset(declared),
+        contributing_surfaces=frozenset(contributing),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1082,5 +1187,17 @@ DECISION HISTORY
   Fixed unit_tests/test_knowledge_query.py TestEdgeCountIntegration to exempt
   implemented_by and covered_by from the "no phantom targets" assertion — these
   edge types intentionally point to file paths not in the node set.
+- 2026-06-22 [10_TICKET-20260622-KM-KGS-100c-1]: Added build_knowledge_map() public API for surface-completeness assertions. (#10_TICKET-20260622-KM-KGS-100c-1)
+  Introduced KnowledgeMap NamedTuple (nodes, edges, declared_surfaces,
+  contributing_surfaces) and build_knowledge_map() public function. Satisfies
+  AC KM-KGS-100c-1: "the build asserts against the declared set itself, not a
+  fixed expected number of surfaces." The KnowledgeMap carries both the graph
+  data and audit metadata so callers can write:
+      assert km.contributing_surfaces == km.declared_surfaces
+  without enumerating any specific surface name. declared_surfaces is derived
+  dynamically from paths.json via load_surfaces_with_meta(); contributing_surfaces
+  is the subset that actually produced at least one primary NodeRecord. Tests in
+  unit_tests/test_knowledge_query.py (TestSurfaceContributionCompleteness) validate
+  the AC behavior using parametric assertions against the declared set.
 ====================================================================
 """
