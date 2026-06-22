@@ -1,0 +1,52 @@
+id: ACS-300g-5
+title: "Component integrity hook skips the new-component check during a merge"
+component: ac-store
+level: L2
+status: active
+readiness: approved
+priority: high
+req_status: active
+work_status: todo
+criteria: |
+  Given a git merge is in progress
+    (MERGE_HEAD is present and verifiable via
+     `git rev-parse -q --verify MERGE_HEAD`),
+  And docs/components.json in the merge index contains component entries
+    that arrived from the merged-in parent and are therefore absent from
+    the current HEAD's components.json,
+  When check_components_integrity.py runs as a pre-commit hook for the
+    merge commit,
+  Then it must NOT flag those merged-in component entries as
+    "newly added",
+  And it must exit 0 (skipping the new-component existence check) for the
+    merge commit so the merge can be committed without --no-verify.
+  And as a regression guard, a normal (non-merge) commit where MERGE_HEAD
+    does not exist still runs the full new-component existence check
+    unchanged, flagging genuinely new components whose detail_ref does
+    not exist on disk.
+depends_on: []
+doc_links:
+  - path: scripts/commit_guardian/check_components_integrity.py
+    relationship: governs
+    status: exists
+  - path: docs/components.json
+    relationship: governs
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Detect merge-in-progress via `git rev-parse -q --verify MERGE_HEAD`"
+  - "Must short-circuit main() to return 0 only when a merge is in progress; all other commit types are unaffected"
+  - "Must not regress the non-merge new-component existence check"
+  - "Must handle errors gracefully per the project error handling policy (wrap the git subprocess call, no bare except)"
+  - "Must complete the merge-detection check in <100ms"
+delivers_to:
+  agent: python-coder
+  contract: "A merge-in-progress guard in check_components_integrity.py main() that returns exit code 0 (skipping the staged-vs-HEAD new-component existence check) when `git rev-parse -q --verify MERGE_HEAD` succeeds, and otherwise leaves the existing non-merge check path unchanged"
+expects_from: null
+origin_agent: it-po-v3
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
