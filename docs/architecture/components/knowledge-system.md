@@ -59,6 +59,65 @@ C4Component
 
 Parent: [Agent Knowledge System](../agent_knowledge_system.md)
 
+## Requirement-to-Code Traversal
+
+The sequence diagram below shows how a reader follows a single acceptance
+criterion from its identifier to the source files and tests that deliver it.
+The traversal is driven by `knowledge_query.py`, which reads `config/paths.json`
+to discover all surfaces, indexes their nodes and edges in one pass, and then
+resolves the four outbound edge kinds an AC node can carry.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Reader
+    participant paths as config/paths.json
+    participant kq as knowledge_query.py
+    participant acs as AC Store<br/>(docs/acceptance-criteria/)
+    participant src as Source File Nodes<br/>(implemented_by targets)
+    participant tests as Test Nodes<br/>(covered_by targets)
+    participant deps as Sibling AC Nodes<br/>(depends_on targets)
+    participant hubs as Component Hub Nodes<br/>(component_membership targets)
+
+    Reader->>kq: name a criterion (e.g. KM-EX-010)
+    kq->>paths: load_surfaces_with_meta()
+    paths-->>kq: surface registry<br/>(path + edge_fields per surface)
+
+    Note over kq,acs: Build the map — one pass over all surfaces
+
+    kq->>acs: glob **/*.yaml, parse each AC node
+    acs-->>kq: NodeRecord(id, surface="acs", title, description, path)
+    kq->>kq: extract_edges() for each AC node<br/>using edge_fields=[implemented_by, covered_by,<br/>depends_on, components]
+
+    Note over kq: Resolve the four edge kinds<br/>for the named criterion
+
+    kq->>src: edge_type="implemented_by"<br/>→ file-path targets (exempt from phantom filter)
+    src-->>kq: source files that deliver the criterion
+
+    kq->>tests: edge_type="covered_by"<br/>→ file-path targets (exempt from phantom filter)
+    tests-->>kq: test files that prove the criterion
+
+    kq->>deps: edge_type="depends_on"<br/>→ sibling AC node IDs (stem-resolved)
+    deps-->>kq: predecessor criteria this one depends on
+
+    kq->>hubs: edge_type="component_membership"<br/>→ component hub node IDs
+    hubs-->>kq: component hubs the criterion belongs to
+
+    kq-->>Reader: "Which code file delivers KM-EX-010?"<br/>→ implemented_by edges → source file paths
+```
+
+### Reading the diagram
+
+| Step | What happens |
+|------|--------------|
+| 1–2 | The reader names a criterion; `knowledge_query.py` loads `config/paths.json` to discover all surfaces and their `edge_fields`. |
+| 3–5 | `knowledge_query.py` traverses the `acs` surface (`docs/acceptance-criteria/`), yields one `NodeRecord` per `.yaml` file, and calls `extract_edges()` with the four declared edge fields. |
+| 6–7 | `implemented_by` edges are emitted; targets are file paths (not graph node IDs) and are therefore **exempt from the phantom-edge filter** — they are never silently dropped even when the path is not itself a knowledge-graph node. |
+| 8–9 | `covered_by` edges are emitted; same phantom-filter exemption applies. |
+| 10–11 | `depends_on` edges are emitted; path values are stem-resolved to bare AC IDs before becoming `target_id` values. |
+| 12–13 | `component_membership` edges are emitted; `components` field values become hub node IDs (synthetic hub nodes are created for any component that has no existing node). |
+| 14 | The reader's question — "which code file delivers this criterion?" — is answered by reading the `implemented_by` edge targets from the indexed graph. |
+
 ## Responsibilities
 
 - Harvest learnings from agent sign-off sessions via `harvest_learnings.py`
