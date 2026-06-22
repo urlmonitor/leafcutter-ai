@@ -92,6 +92,15 @@ EXTERNAL_DEPENDENCY_ALLOWLIST: frozenset[str] = frozenset([
     # absence causes a hard failure. A separate authoring ticket is required to either
     # create and deploy this script or add a graceful-skip guard to commit.md.
     "scripts/commit_guardian/known_failing_tests.py",
+    # scripts/onboard_hook_opt_in.py — referenced in agents/onboard.md as an
+    # optional standalone helper ("You can also run this step via the standalone
+    # script"). The reference is advisory — onboard.md describes the same
+    # detection-and-prompt logic inline above the note, so absence of the script
+    # does not break the onboarding flow. The script lives in scripts/ (source)
+    # and is deployed to consumer projects via the onboarding flow itself (not via
+    # build_template_standalone_scripts), so it is legitimately absent from the
+    # _manifest_template_standalone_scripts scan of templates/scripts/.
+    "scripts/onboard_hook_opt_in.py",
 ])
 
 # Regex to extract script basename from entries like:
