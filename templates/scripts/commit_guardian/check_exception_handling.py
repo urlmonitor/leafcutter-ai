@@ -19,6 +19,16 @@ ARCHITECTURE: Pure-stdlib AST visitor; no external dependencies, no
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-18 [GE-108b-regression / ADR-015]: noqa suppression honored per-line, per-code.
+  The guard now respects inline ``# noqa: BLE001`` comments on the same physical
+  source line as the flagged ``except`` clause, aligning the custom AST guard with
+  Ruff's suppression model.  A bare ``# noqa`` with no code list is NOT honored
+  (ADR-015 Decision 3); only code-qualified ``# noqa: BLE001`` (or a comma-separated
+  list that includes ``BLE001``) suppresses the violation.  A ``# noqa: SOMEOTHER``
+  that does not name ``BLE001`` does NOT suppress it.  The noqa check is per-line and
+  per-violation-code: it never suppresses IO-001, E722, or any other rule code.
+  analyse_file() now receives ``source_lines`` (pre-split) so the check is a pure
+  in-memory operation with no additional I/O.  New helper: ``_line_has_noqa()``.
 - 2026-06-01 [EPIC-ErrorHandlingEnforcement/01]: Initial implementation.
   Three violation classes:
     1. Bare except: (E722 equivalent)
@@ -83,6 +93,7 @@ from __future__ import annotations
 
 import ast
 import json
+import re as _re
 import sys
 from pathlib import Path
 from typing import NamedTuple
@@ -337,6 +348,50 @@ def _call_matches_io_boundary(call: ast.Call) -> tuple[str, str] | None:
 
 
 # ---------------------------------------------------------------------------
+# noqa suppression helper (ADR-015 / GE-108b-regression)
+# ---------------------------------------------------------------------------
+
+_NOQA_RE = _re.compile(r"#\s*noqa\s*:?\s*([A-Z0-9, ]*)", _re.IGNORECASE)
+
+
+def _line_has_noqa(source_lines: list[str], lineno: int, code: str) -> bool:
+    """Return True if the source line *lineno* carries a code-qualified noqa suppressor.
+
+    The suppression is honored only when the ``# noqa: <codes>`` comment on the
+    line explicitly names *code* (e.g. ``BLE001``).  A bare ``# noqa`` with no
+    code list is NOT honored per ADR-015 Decision 3.  A ``# noqa: SOMEOTHER``
+    comment that does not include *code* is also NOT honored.
+
+    This function is pure (no I/O) — it operates on already-read source lines and
+    therefore does NOT use try/except per Error Handling Policy Rule 4.
+
+    Args:
+        source_lines: The source file split into lines (1-based indexing: index
+            ``lineno - 1``).
+        lineno: 1-based line number of the AST node to check.
+        code: Violation code to look for in the noqa list (e.g. ``"BLE001"``).
+
+    Returns:
+        True if the line carries a ``# noqa: <codes>`` comment that explicitly
+        names *code*; False otherwise (including bare ``# noqa``).
+    """
+    if lineno < 1 or lineno > len(source_lines):
+        return False
+    line = source_lines[lineno - 1]
+    match = _NOQA_RE.search(line)
+    if match is None:
+        return False
+    # Group 1 is the codes list — may be empty string for bare "# noqa"
+    codes_text = match.group(1).strip()
+    if not codes_text:
+        # Bare "# noqa" with no code list — NOT honored (ADR-015 Decision 3)
+        return False
+    # Split by comma, strip whitespace, upper-case for case-insensitive comparison
+    codes = [c.strip().upper() for c in codes_text.split(",") if c.strip()]
+    return code.upper() in codes
+
+
+# ---------------------------------------------------------------------------
 # Core analysis function
 # ---------------------------------------------------------------------------
 
@@ -379,6 +434,9 @@ def analyse_file(path: Path) -> list[Violation]:
         SyntaxError: If the file cannot be parsed as valid Python.
     """
     source = path.read_text(encoding="utf-8", errors="replace")
+    # Pre-split source into lines for noqa comment lookup (ADR-015 / GE-108b-regression).
+    # Line numbers in AST nodes are 1-based; source_lines[lineno - 1] gives the line.
+    source_lines: list[str] = source.splitlines()
     tree = ast.parse(source, filename=str(path))
 
     violations: list[Violation] = []
@@ -402,6 +460,11 @@ def analyse_file(path: Path) -> list[Violation]:
                     ),
                 ))
             elif _handler_is_blind(node) and not _handler_reraises_or_logs(node):
+                # ADR-015 / GE-108b-regression: skip this BLE001 violation when
+                # the source line carries a code-qualified "# noqa: BLE001" comment.
+                # A bare "# noqa" (no code list) is NOT honored per ADR-015 Decision 3.
+                if _line_has_noqa(source_lines, node.lineno, "BLE001"):
+                    continue
                 if isinstance(node.type, ast.Name):
                     type_name = node.type.id
                 elif isinstance(node.type, ast.Tuple):
