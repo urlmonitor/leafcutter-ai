@@ -1,6 +1,6 @@
 ---
 title: "Apostrophes and quote characters in the goal title are stripped before PascalCasing the epic folder name"
-status: todo
+status: done
 source_ac: ACD-1200a-3-ii
 components:
   - ac-driven-dev
