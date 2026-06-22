@@ -1,7 +1,7 @@
 ---
 epic_name: EPIC-AcPatternEnforcementIsMechanically
 created: 2026-06-17
-status: in_progress
+status: done
 components:
   - ac-store
 source_ac: ACS-500f
