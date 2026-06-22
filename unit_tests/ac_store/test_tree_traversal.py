@@ -2,7 +2,12 @@
 MODULE: test_tree_traversal
 GOAL: Unit tests for traverse_ac_tree() in scan_ac_store.py.
 TICKET: EPIC-GoalToEpic/01_tree-traversal-ticket-generation.md
-COVERS: ACD-1200a-1, ACD-1200a-1-i
+COVERS: ACS-1000, ACD-1200a-1-i, ACD-1200a-9-i
+
+NOTE: leaf semantics are level-based (a node is a leaf iff its level is in
+{L2, L3}), NOT covered_by-based. This matches the production contract in
+scan_ac_store.py, build_ac_mode_detection.py, and goal_to_epic.py. The earlier
+covered_by-based definition (ACD-1200a-1) was superseded; see ACS-1000.
 """
 
 from __future__ import annotations
@@ -43,32 +48,70 @@ def _write_ac(ac_root: Path, ac_id: str, covered_by: list[str] | None = None) ->
     return path
 
 
+def _write_ac_explicit(
+    ac_root: Path,
+    ac_id: str,
+    level: str,
+    covered_by: list[str],
+) -> None:
+    """Write a minimal AC YAML with an explicit *level* value (not inferred).
+
+    Preferred over _write_ac for leaf-semantics tests: leaf-ness is determined
+    by the level field, so tests that exercise the level-based contract must set
+    levels explicitly rather than relying on id-segment inference.
+    """
+    parts = ac_id.split("-")
+    subdir = ac_root / "-".join(parts[:2]) if len(parts) >= 2 else ac_root
+    subdir.mkdir(parents=True, exist_ok=True)
+    path = subdir / f"{ac_id}.yaml"
+    data: dict = {
+        "id": ac_id,
+        "title": f"Test AC {ac_id}",
+        "level": level,
+        "status": "active",
+        "work_status": "todo",
+        "covered_by": covered_by,
+    }
+    path.write_text(yaml.dump(data, allow_unicode=True), encoding="utf-8")
+
+
 # ---------------------------------------------------------------------------
-# ACD-1200a-1: leaf collection from mixed tree
+# ACS-1000: level-based leaf collection from a mixed tree
 # ---------------------------------------------------------------------------
 
 
 class TestTraverseAcTreeLeafCollection:
-    """AC-1: tree traversal returns only leaf ACs from a mixed tree."""
+    """ACS-1000: tree traversal returns only L2/L3 leaf ACs from a mixed tree."""
 
-    def test_ac1_leaf_only_returned_from_mixed_tree(self, tmp_path: Path) -> None:
-        # covers: ACD-1200a-1
-        """AC-1: Given a goal AC with L0->L1s->L2s->L3s, traversal returns only leaves."""
-        # Build tree: L0 -> L1a, L1b; L1a -> L2a, L2b; L2a -> L3a
-        _write_ac(tmp_path, "ACD-050", covered_by=["ACD-050a", "ACD-050b"])
-        _write_ac(tmp_path, "ACD-050a", covered_by=["ACD-050a-1", "ACD-050a-2"])
-        _write_ac(tmp_path, "ACD-050b", covered_by=["ACD-050b-1"])
-        _write_ac(tmp_path, "ACD-050a-1", covered_by=["ACD-050a-1-i"])
-        _write_ac(tmp_path, "ACD-050a-2", covered_by=[])  # leaf
-        _write_ac(tmp_path, "ACD-050a-1-i", covered_by=[])  # leaf
-        _write_ac(tmp_path, "ACD-050b-1", covered_by=[])  # leaf
+    def test_ac1_only_l2_l3_returned_from_mixed_tree(self, tmp_path: Path) -> None:
+        # covers: ACS-1000
+        """ACS-1000: leaves are the L2/L3 nodes; L0/L1 composites are excluded.
+
+        An L2 node that itself has L3 children is still emitted (level-based),
+        and traversal recurses into those children.
+        """
+        # Build tree: L0 -> L1a, L1b; L1a -> L2(a-1, a-2); L1b -> L2(b-1);
+        # L2 a-1 -> L3 a-1-i.
+        _write_ac_explicit(tmp_path, "ACD-050", "L0", ["ACD-050a", "ACD-050b"])
+        _write_ac_explicit(tmp_path, "ACD-050a", "L1", ["ACD-050a-1", "ACD-050a-2"])
+        _write_ac_explicit(tmp_path, "ACD-050b", "L1", ["ACD-050b-1"])
+        _write_ac_explicit(tmp_path, "ACD-050a-1", "L2", ["ACD-050a-1-i"])
+        _write_ac_explicit(tmp_path, "ACD-050a-2", "L2", [])
+        _write_ac_explicit(tmp_path, "ACD-050a-1-i", "L3", [])
+        _write_ac_explicit(tmp_path, "ACD-050b-1", "L2", [])
 
         result = traverse_ac_tree("ACD-050", tmp_path)
 
-        # Only leaves should be returned
-        assert set(result) == {"ACD-050a-1-i", "ACD-050a-2", "ACD-050b-1"}, (
-            f"Expected only leaf ACs, got: {result}"
-        )
+        # All L2/L3 nodes are leaves; L0/L1 composites are excluded.
+        assert set(result) == {
+            "ACD-050a-1",
+            "ACD-050a-1-i",
+            "ACD-050a-2",
+            "ACD-050b-1",
+        }, f"Expected all L2/L3 leaf ACs, got: {result}"
+        assert "ACD-050" not in result, "L0 root must be excluded"
+        assert "ACD-050a" not in result, "L1 composite must be excluded"
+        assert "ACD-050b" not in result, "L1 composite must be excluded"
 
     def test_ac1_composites_excluded(self, tmp_path: Path) -> None:
         # covers: ACD-1200a-1
@@ -84,13 +127,14 @@ class TestTraverseAcTreeLeafCollection:
         assert "ACD-050a-1" in result
 
     def test_ac1_depth_first_alphabetical_order(self, tmp_path: Path) -> None:
-        # covers: ACD-1200a-1
-        """AC-1: Leaves returned in depth-first, alphabetical-sibling order."""
-        _write_ac(tmp_path, "ACD-050", covered_by=["ACD-050b", "ACD-050a"])
-        _write_ac(tmp_path, "ACD-050a", covered_by=["ACD-050a-2", "ACD-050a-1"])
-        _write_ac(tmp_path, "ACD-050b", covered_by=[])  # leaf
-        _write_ac(tmp_path, "ACD-050a-1", covered_by=[])  # leaf
-        _write_ac(tmp_path, "ACD-050a-2", covered_by=[])  # leaf
+        # covers: ACS-1000
+        """ACS-1000: Leaves returned in depth-first, alphabetical-sibling order."""
+        # covered_by listed out of order to prove siblings are visited alphabetically.
+        _write_ac_explicit(tmp_path, "ACD-050", "L0", ["ACD-050b", "ACD-050a"])
+        _write_ac_explicit(tmp_path, "ACD-050a", "L1", ["ACD-050a-2", "ACD-050a-1"])
+        _write_ac_explicit(tmp_path, "ACD-050b", "L2", [])  # leaf
+        _write_ac_explicit(tmp_path, "ACD-050a-1", "L2", [])  # leaf
+        _write_ac_explicit(tmp_path, "ACD-050a-2", "L2", [])  # leaf
 
         result = traverse_ac_tree("ACD-050", tmp_path)
 
@@ -100,16 +144,17 @@ class TestTraverseAcTreeLeafCollection:
         )
 
     def test_ac1_performance_200_nodes(self, tmp_path: Path) -> None:
-        # covers: ACD-1200a-1
-        """AC-1: Traversal completes in under 200ms for trees up to 200 nodes."""
-        # Build a wide tree: root -> 10 L1s -> 19 L2 leaves each = 200 nodes
+        # covers: ACS-1000
+        """ACS-1000: Traversal completes in under 200ms for trees up to 200 nodes."""
+        # Build a wide tree: L0 root -> 10 L1 composites -> 19 L2 leaves each.
+        # 1 + 10 + 190 = 201 nodes; only the 190 L2 leaves are emitted.
         root_children = [f"ACD-PERF-{i:03d}" for i in range(10)]
-        _write_ac(tmp_path, "ACD-PERF", covered_by=root_children)
+        _write_ac_explicit(tmp_path, "ACD-PERF", "L0", root_children)
         for child in root_children:
             grandchildren = [f"{child}-{j:03d}" for j in range(19)]
-            _write_ac(tmp_path, child, covered_by=grandchildren)
+            _write_ac_explicit(tmp_path, child, "L1", grandchildren)
             for gc in grandchildren:
-                _write_ac(tmp_path, gc, covered_by=[])
+                _write_ac_explicit(tmp_path, gc, "L2", [])
 
         start = time.perf_counter()
         result = traverse_ac_tree("ACD-PERF", tmp_path)
@@ -118,20 +163,26 @@ class TestTraverseAcTreeLeafCollection:
         assert len(result) == 190, f"Expected 190 leaf ACs, got {len(result)}"
         assert elapsed_ms < 200, f"Traversal took {elapsed_ms:.1f}ms — exceeded 200ms budget"
 
-    def test_ac1_absent_covered_by_treated_as_leaf(self, tmp_path: Path) -> None:
-        # covers: ACD-1200a-1
-        """AC-1: ACs without a covered_by field are treated as leaves."""
-        _write_ac(tmp_path, "ACD-050", covered_by=["ACD-050a"])
-        # Write ACD-050a WITHOUT covered_by field (absent, not empty list)
+    def test_ac1_absent_covered_by_l2_is_leaf(self, tmp_path: Path) -> None:
+        # covers: ACS-1000
+        """ACS-1000: leaf-ness is level-based, so an L2 node with an absent
+        covered_by field is still emitted, while an L1 with an absent
+        covered_by field is still excluded (composite)."""
+        _write_ac_explicit(tmp_path, "ACD-050", "L0", ["ACD-050a", "ACD-050b"])
+
+        # ACD-050a: L2 with NO covered_by key at all (absent, not empty list).
         subdir = tmp_path / "ACD-050"
         subdir.mkdir(parents=True, exist_ok=True)
-        yaml_path = subdir / "ACD-050a.yaml"
-        data = {"id": "ACD-050a", "title": "AC ACD-050a", "level": "L1", "status": "active", "work_status": "todo"}
-        # Note: no covered_by key at all
-        yaml_path.write_text(yaml.dump(data), encoding="utf-8")
+        l2_data = {"id": "ACD-050a", "title": "AC ACD-050a", "level": "L2", "status": "active", "work_status": "todo"}
+        (subdir / "ACD-050a.yaml").write_text(yaml.dump(l2_data), encoding="utf-8")
+
+        # ACD-050b: L1 with NO covered_by key — a composite with no descendants.
+        l1_data = {"id": "ACD-050b", "title": "AC ACD-050b", "level": "L1", "status": "active", "work_status": "todo"}
+        (subdir / "ACD-050b.yaml").write_text(yaml.dump(l1_data), encoding="utf-8")
 
         result = traverse_ac_tree("ACD-050", tmp_path)
-        assert "ACD-050a" in result, "AC with absent covered_by should be treated as leaf"
+        assert "ACD-050a" in result, "L2 with absent covered_by should be a leaf"
+        assert "ACD-050b" not in result, "L1 with absent covered_by must stay composite"
 
 
 # ---------------------------------------------------------------------------
@@ -175,44 +226,35 @@ class TestTraverseAcTreeL1Scope:
             f"L1-scoped traversal from ACD-050a should return only its leaves, got {result}"
         )
 
-    def test_ac1i_leaf_l1_returns_itself(self, tmp_path: Path) -> None:
+    def test_ac1i_leaf_l2_root_returns_itself(self, tmp_path: Path) -> None:
         # covers: ACD-1200a-1-i
-        """ACD-1200a-1-i: When the scoped root is itself a leaf, return just it."""
-        _write_ac(tmp_path, "ACD-050", covered_by=["ACD-050a"])
-        _write_ac(tmp_path, "ACD-050a", covered_by=[])  # leaf L1
+        """ACD-1200a-1-i: When the scoped root is itself an L2/L3 leaf, return just it."""
+        _write_ac_explicit(tmp_path, "ACD-050", "L0", ["ACD-050a"])
+        _write_ac_explicit(tmp_path, "ACD-050a", "L1", ["ACD-050a-1"])
+        _write_ac_explicit(tmp_path, "ACD-050a-1", "L2", [])  # leaf L2
+
+        result = traverse_ac_tree("ACD-050a-1", tmp_path)
+
+        assert result == ["ACD-050a-1"], (
+            f"A leaf L2 used as scope root should return only itself, got {result}"
+        )
+
+    def test_ac1i_composite_l1_root_with_no_leaves_returns_empty(self, tmp_path: Path) -> None:
+        # covers: ACS-1000
+        """ACS-1000: An L1 scope root with no L2/L3 descendants returns []."""
+        _write_ac_explicit(tmp_path, "ACD-050", "L0", ["ACD-050a"])
+        _write_ac_explicit(tmp_path, "ACD-050a", "L1", [])  # composite, no leaves
 
         result = traverse_ac_tree("ACD-050a", tmp_path)
 
-        assert result == ["ACD-050a"], (
-            f"A leaf L1 used as scope root should return only itself, got {result}"
+        assert result == [], (
+            f"A composite L1 root with no L2/L3 descendants should return [], got {result}"
         )
 
 
 # ---------------------------------------------------------------------------
 # ACD-1200a-9-i: deduplication — leaf reachable by multiple covered_by paths
 # ---------------------------------------------------------------------------
-
-
-def _write_ac_explicit(
-    ac_root: Path,
-    ac_id: str,
-    level: str,
-    covered_by: list[str],
-) -> None:
-    """Write a minimal AC YAML with an explicit *level* value (not inferred)."""
-    parts = ac_id.split("-")
-    subdir = ac_root / "-".join(parts[:2]) if len(parts) >= 2 else ac_root
-    subdir.mkdir(parents=True, exist_ok=True)
-    path = subdir / f"{ac_id}.yaml"
-    data: dict = {
-        "id": ac_id,
-        "title": f"Test AC {ac_id}",
-        "level": level,
-        "status": "active",
-        "work_status": "todo",
-        "covered_by": covered_by,
-    }
-    path.write_text(yaml.dump(data, allow_unicode=True), encoding="utf-8")
 
 
 class TestTraverseDeduplication:

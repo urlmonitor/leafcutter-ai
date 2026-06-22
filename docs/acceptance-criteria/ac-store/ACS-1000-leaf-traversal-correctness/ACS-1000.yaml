@@ -1,0 +1,27 @@
+id: ACS-1000
+status: active
+component: ac-store
+level: L2
+title: "traverse_ac_tree() leaf semantics are level-based (L2/L3 emitted, L0/L1 composite)"
+origin_agent: BrainCandy
+criteria: |
+  Given an AC tree whose nodes carry an explicit level field
+  When traverse_ac_tree() collects the ACs beneath a root
+  Then a node is emitted as a leaf if and only if its level is in {L2, L3},
+    regardless of whether it has covered_by children
+  And L0/L1 nodes are never emitted (they are composite pass-throughs), even
+    when their covered_by is empty or absent
+  And the emitted leaves are returned in depth-first, alphabetical-sibling
+    order with no duplicates
+  And the bug symptom ("unit tests assert the superseded covered_by-based leaf
+    definition — leaf == empty covered_by — and therefore fail against the
+    current level-based implementation") must not occur
+notes: |
+  Authored by /quick-fix. Root cause: the five ACD-1200a-1 tests in
+  unit_tests/ac_store/test_tree_traversal.py encoded the OLD covered_by-based
+  leaf definition (a node with non-empty covered_by is not a leaf), which was
+  superseded by the level-based definition (leaf == level in {L2, L3}) now
+  implemented identically in scripts/ac_store/scan_ac_store.py,
+  scripts/build_ac_mode_detection.py, and consumed by scripts/goal_to_epic.py.
+  ACD-1200a-1 no longer exists in the AC store. The fix updates the stale tests
+  to assert the current production contract; the implementation is unchanged.
