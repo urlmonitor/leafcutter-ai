@@ -1,0 +1,38 @@
+id: BP-1100a-1-i
+title: "Behavior ticket with both documentation and an executable surface passes the lens"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket whose acceptance criterion describes runtime behavior and whose
+  files_touched lists both a documentation surface (a SKILL.md file) and an
+  executable surface (scripts/workflows/plan-feature.js),
+  When the refinement files_touched-completeness lens evaluates the ticket,
+  Then the lens reports no files_touched-completeness violation,
+  And the ticket proceeds to coder dispatch without being flagged.
+depends_on:
+  - BP-1100a-1
+doc_links:
+  - path: docs/retrospectives/EPIC-CommitAcOutputPerStage.md
+    relationship: describes
+    status: exists
+assigned_agent: workflow-architect
+estimated_complexity: S
+it_requirements:
+  - "The lens must treat the presence of at least one executable surface as satisfying completeness, even when documentation surfaces are also listed."
+  - "The lens must not require that documentation surfaces be removed — mixed files_touched is valid for a behavioral ticket that also updates docs."
+delivers_to: null
+expects_from:
+  ac_id: BP-1100a-1
+  contract: "Refinement files_touched-completeness lens that passes when an executable surface is present"
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

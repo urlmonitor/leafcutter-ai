@@ -1,0 +1,34 @@
+id: BP-1100c
+title: "Behavioral epics are angle-tested from the outside before merge"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an epic that modifies executable code has reached the finalization stage
+  with all tickets at status: done,
+  When the epic is finalized,
+  Then finalization runs a post-epic spot-check phase using at least two independent
+  angle-testing agents that probe the feature's runtime behavior from the outside
+  (invoking it, probing edge cases) rather than reviewing the diff against AC text,
+  And the spot-check findings are recorded in the retrospective before the epic
+  merges,
+  And any defect found opens a remediation ticket before the epic is closed.
+depends_on:
+  - BP-1100
+doc_links:
+  - path: docs/retrospectives/EPIC-CommitAcOutputPerStage.md
+    relationship: describes
+    status: exists
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1100c-1
+  - BP-1100c-2
+implemented_by: []

@@ -1,0 +1,41 @@
+id: BP-1100d-1-i
+title: "A git commit string in a documentation file does not trip the workflow commit-delegation guard"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a staged Markdown file (for example a SKILL.md or an ADR) that contains the
+  literal text "git commit" and the word "status-checker" in a prose example, and no
+  staged .js file under scripts/workflows/ or templates/workflows-js/ contains a
+  prohibited pairing,
+  When the pre-commit guard runs on the staged files,
+  Then the commit is not blocked,
+  And the guard does not report the Markdown file,
+  And the guard's scan scope is limited to .js files under the two workflow
+  directories.
+depends_on:
+  - BP-1100d-1
+doc_links:
+  - path: docs/retrospectives/EPIC-CommitAcOutputPerStage.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The guard must restrict its scan to .js files under scripts/workflows/ and templates/workflows-js/; .md, ADR, and other non-workflow files must be ignored."
+  - "Prose occurrences of 'git commit' and 'status-checker' in documentation must not produce a false positive."
+delivers_to: null
+expects_from:
+  ac_id: BP-1100d-1
+  contract: "The path-scoped workflow .js guard that ignores non-workflow files"
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

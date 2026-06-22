@@ -1,0 +1,40 @@
+id: BP-1100c-1-i
+title: "A documentation-only epic finalizes without the angle-testing phase"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an epic whose tickets only modify documentation files (no files_touched entry
+  resolves to a file under scripts/ or scripts/workflows/) and all tickets are at
+  status: done,
+  When the finalization sequence runs for that epic,
+  Then the post-epic angle-testing spot-check phase is not required and is not
+  dispatched,
+  And finalization proceeds through its existing steps unchanged,
+  And the absence of the spot-check phase does not block the merge.
+depends_on:
+  - BP-1100c-1
+doc_links:
+  - path: docs/retrospectives/EPIC-CommitAcOutputPerStage.md
+    relationship: describes
+    status: exists
+assigned_agent: workflow-architect
+estimated_complexity: S
+it_requirements:
+  - "The behavioral-epic detection must classify an epic with no executable surface in any ticket's files_touched as non-behavioral."
+  - "For a non-behavioral epic, the spot-check phase must be skipped without blocking finalization or merge."
+delivers_to: null
+expects_from:
+  ac_id: BP-1100c-1
+  contract: "Behavioral-epic detection that gates whether the angle-testing phase runs"
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
