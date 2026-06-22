@@ -22,7 +22,7 @@ requires_adr: false
 requires_diagram: false
 roadmap_phase: phase_1
 source_ac: ACD-300g-2
-status: in_progress
+status: done
 title: 'Fix stage staging: discover all untracked AC files and match AC IDs exactly'
 ---
 
