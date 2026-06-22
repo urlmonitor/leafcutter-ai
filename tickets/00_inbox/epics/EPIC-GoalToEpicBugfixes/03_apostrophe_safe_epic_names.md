@@ -1,6 +1,6 @@
 ---
 title: "Apostrophes and quote characters in the goal title are stripped before PascalCasing the epic folder name"
-status: in_progress
+status: done
 source_ac: ACD-1200a-3-ii
 components:
   - ac-driven-dev
@@ -21,7 +21,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # Apostrophes and quote characters in the goal title are stripped before PascalCasing the epic folder name
@@ -131,6 +131,14 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 
+### 2026-06-22 17:30 — pull-request (status: ok)
+feedback-id: fb_2026-06-22_91592678
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Pushed commit 39f617c to origin/EPIC-GoalToEpicBugfixes (277409b..39f617c). PR #127 is already open and now reflects the apostrophe-safe epic-name derivation fix (ACD-1200a-3-ii). All prior phases signed off; ticket marked done.
+
 ## Sign-offs
 
 - [x] python-coder — 2026-06-22 14:30
@@ -138,7 +146,7 @@ completion_manifest:
 - [x] test-runner — 2026-06-22 15:00
 - [x] pr-reviewer — 2026-06-22 16:00
 - [x] commit — 2026-06-22 11:21
-- [ ] pull-request
+- [x] pull-request — 2026-06-22 17:30
 
 ## Implementation Tasks
 
