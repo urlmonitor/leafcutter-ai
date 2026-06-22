@@ -4,7 +4,7 @@ agents:
   commit: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  pull-request: needed
+  pull-request: signed_off
   python-coder: signed_off
   sql-coder: not_needed
   test-runner: signed_off
@@ -23,7 +23,7 @@ requires_adr: false
 requires_diagram: false
 roadmap_phase: phase_1
 source_ac: ACD-300g-2-i
-status: in_progress
+status: done
 title: 'Implement partial-run recovery scan in plan-feature.js (not just SKILL.md prose)'
 ---
 
@@ -104,7 +104,7 @@ Scenario: scan is fast
 - [x] test-runner — 2026-06-22 19:10
 - [x] pr-reviewer — 2026-06-22 19:30
 - [x] commit — 2026-06-22 19:45
-- [ ] pull-request
+- [x] pull-request — 2026-06-22 19:50
 
 ## Comments
 
@@ -158,6 +158,14 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Auto-authorized commit gate: subject "feat(plan-feature): implement partial-run recovery scan in run()"; staged files: scripts/workflows/plan-feature.js, templates/workflows-js/plan-feature.js, unit_tests/test_partial_run_recovery.py, tickets/00_inbox/epics/EPIC-CommitAcOutputPerStage/09_TICKET-20260622-Implement_Partial_Run_Recovery_In_Workflow.md. Commit cc35118 landed after one pre-commit retry (check-feedback-id required adding feedback-id lines to the ticket-supervisor and commit audit headings; mechanical autofix applied).
+
+### 2026-06-22 19:50 — pull-request (status: ok)
+feedback-id: fb_2026-06-22_37285a80
+completion_manifest:
+  branch_pushed: true
+  pr_exists: true
+  pr_body_complete: true
+Pushed branch EPIC-CommitAcOutputPerStage (7bd97a7..7f6e530) to origin via SSH key id_urlmonitor. PR #114 confirmed OPEN at https://github.com/urlmonitor/leafcutter-ai/pull/114. No new PR created — existing PR updated automatically by push. Ticket status set to done (pull-request was the last needed agent).
 
 ## Implementation Tasks
 - [x] Add a pre-Stage-0 recovery scan to `run()` in plan-feature.js (git status --porcelain --untracked-files=all over docs/acceptance-criteria/, qualify by origin_agent + readiness: draft).
