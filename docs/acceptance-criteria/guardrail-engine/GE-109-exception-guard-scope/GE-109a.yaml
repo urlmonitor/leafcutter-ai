@@ -49,5 +49,12 @@ covered_by:
 - unit_tests/commit_guardian/test_check_exception_handling.py::TestGE109aPathComponentTestsDir
 - unit_tests/commit_guardian/test_check_exception_handling.py::TestGE109aBasenameDetection
 implemented_by:
-- templates/commit-guardian/check_exception_handling.py#is_test_file
+- templates/scripts/commit_guardian/check_exception_handling.py#is_test_file
 - tickets/00_inbox/TICKET-20260617-GE-109a.md
+notes: |
+  Originally implemented only in the now-deprecated tree
+  templates/commit-guardian/check_exception_handling.py (see TICKET-20260617-GE-109a).
+  The exemption was later ported to the canonical tree
+  templates/scripts/commit_guardian/check_exception_handling.py under AC GE-110
+  (the copy build.py actually deploys); implemented_by now points at the canonical
+  tree to match this AC's doc_links. See GE-110 for the canonical-tree coverage.

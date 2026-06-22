@@ -289,25 +289,33 @@ When implementing a ticket that requires writing or editing a prompt:
 2. **Understand the requirement** — re-read the acceptance criteria and
    implementation task checkboxes in the ticket. Extract what sections must be
    present and what constraints apply.
-3. **Draft the frontmatter** — write the YAML frontmatter first: `name`,
+3. **Deprecation sweep** — if the ticket involves deprecating, removing, or
+   renaming a symbol (skill name, agent name, config key), run a
+   workspace-wide grep for all occurrences of that symbol before limiting
+   the diff to `files_touched`. The `files_touched` list is a planning
+   artifact and may be incomplete for deprecation work. Any live occurrence
+   found outside `files_touched` must either be fixed in the same commit
+   (and the file added to the commit) or escalated to the pr-reviewer as
+   a known gap.
+4. **Draft the frontmatter** — write the YAML frontmatter first: `name`,
    `description`, `model`, `tools`, `portable`, `signoff`, `domain`,
    `config_keys`, `adopter_notes`, `requires_verification`,
    `default_artifact_checklist`. Verify against existing templates for
    consistency.
-4. **Draft the body** — write each required section in declaration order:
+5. **Draft the body** — write each required section in declaration order:
    Pre-Flight Reads, Prompt-Quality Checklist (or domain-specific checklist),
    Stop-and-Ask Rule, Skills, Implementation Sequence, Response Payload, Sign-off,
    Constraints.
-5. **Run the Prompt-Quality Checklist** — apply every item from the Checklist
+6. **Run the Prompt-Quality Checklist** — apply every item from the Checklist
    section to your draft. Fix any violation before writing the file.
-6. **Write the file** — use the `Write` tool to create a new file, or the `Edit`
+7. **Write the file** — use the `Write` tool to create a new file, or the `Edit`
    tool to update an existing one. Never overwrite an existing file with `Write`
    without first reading it.
-7. **Verify** — Read the written file and confirm the structure matches the
+8. **Verify** — Read the written file and confirm the structure matches the
    acceptance criteria.
-8. **Promote (if required)** — if the ticket calls for package promotion, invoke
+9. **Promote (if required)** — if the ticket calls for package promotion, invoke
    `add-agent-to-package` or `add-skill-to-package` per the Skills table above.
-9. **Sign off** — invoke the `signoff` skill to complete the atomic sign-off
+10. **Sign off** — invoke the `signoff` skill to complete the atomic sign-off
    recipe for this phase.
 
 ---
