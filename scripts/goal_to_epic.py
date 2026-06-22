@@ -38,6 +38,9 @@ ACD-1200b-1-i: All-approved fast-path skips prompt; prints confirmation.
 ACD-1200b-2: readiness_gate_prompt presents three-choice prompt and routes correctly.
 ACD-1200a-9: each generated ticket is written only inside the epic folder; no loose inbox-root copy
              is left behind; implemented_by back-references name the epic-folder path (with prefix).
+ACD-1200a-9-i: basename collision inside the epic folder is resolved by overwriting the existing
+               epic-folder file in place; no renamed sibling or second copy is created; a WARNING
+               is emitted for each overwritten file; implemented_by names the single epic-folder path.
 """
 
 from __future__ import annotations
@@ -744,8 +747,10 @@ def assemble_epic_folder(
     Raises :class:`ZeroLeafError` when *ticket_paths* is empty — this
     guard must fire before any filesystem writes (ACD-1200a-3-i).
 
-    Raises :class:`EpicFolderConflictError` when the target EPIC folder
-    already exists, to prevent silent overwrites.
+    When the target EPIC folder already exists (e.g. from a prior partial run),
+    file writes continue inside it.  If an individual destination file already
+    exists with the same basename, it is overwritten in place and a WARNING is
+    emitted (ACD-1200a-9-i).  No renamed sibling or second copy is ever created.
 
     Args:
         ticket_paths: Ordered list of existing ticket file paths (strings or
@@ -761,8 +766,11 @@ def assemble_epic_folder(
 
     Raises:
         ZeroLeafError: When *ticket_paths* is empty.
-        EpicFolderConflictError: When the EPIC folder already exists.
     """
+    import logging  # noqa: PLC0415
+
+    _log = logging.getLogger(__name__)
+
     # Zero-leaf guard: must fire before ANY filesystem writes (ACD-1200a-3-i)
     if not ticket_paths:
         raise ZeroLeafError(  # noqa: TRY003
@@ -774,20 +782,32 @@ def assemble_epic_folder(
     epics_dir = inbox_dir / "epics"
     epic_folder = epics_dir / folder_name
 
-    if epic_folder.exists():
-        raise EpicFolderConflictError(  # noqa: TRY003
-            f"EPIC folder already exists and would conflict: {epic_folder}. "
-            "Delete or rename the existing folder before re-running."
-        )
-
-    epic_folder.mkdir(parents=True, exist_ok=False)
+    try:
+        epic_folder.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        _log.warning("Cannot create EPIC folder %s: %s", epic_folder, exc)
+        raise
 
     for index, raw_path in enumerate(ticket_paths, start=1):
         source = Path(raw_path)
         prefix = f"{index:02d}_"
         dest_name = prefix + source.name
         dest = epic_folder / dest_name
-        shutil.copy2(str(source), str(dest))
+
+        if dest.exists():
+            _log.warning(
+                "Basename collision in EPIC folder: %s already exists — "
+                "overwriting in place (ACD-1200a-9-i). No second copy created.",
+                dest,
+            )
+
+        try:
+            shutil.copy2(str(source), str(dest))
+        except OSError as exc:
+            _log.warning(
+                "Cannot write ticket file %s to epic folder: %s", dest, exc
+            )
+            raise
 
     return epic_folder.resolve()
 
@@ -1796,7 +1816,7 @@ def run(
             epic_name,
             inbox_dir,
         )
-    except (ZeroLeafError, EpicFolderConflictError) as exc:
+    except (ZeroLeafError, OSError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         sys.exit(1)
 
@@ -2067,8 +2087,16 @@ DECISION HISTORY
   assemble_epic_folder() succeeds: (1) builds the loose→epic path mapping,
   (2) updates implemented_by in each source AC YAML from the loose path to the
   epic-folder path (with numeric prefix), (3) removes the loose inbox copies.
-  Idempotency preserved: generate_ticket_from_ac.py's idempotency guard prevents
-  re-generating tickets when the epic folder is re-run; EpicFolderConflictError
-  prevents creating duplicate epic folders.
+- 2026-06-22 [EPIC-GoalToEpicBugfixes/02]: Basename collision resolution.
+  Implements ACD-1200a-9-i: when a generated ticket's computed basename already
+  exists at the epic-folder path, assemble_epic_folder() overwrites it in place
+  rather than raising EpicFolderConflictError or minting a renamed sibling.
+  A WARNING log line is emitted for each overwrite so the replacement is
+  observable. The epic folder is now created with exist_ok=True so partial
+  re-runs converge correctly. EpicFolderConflictError is no longer raised by
+  assemble_epic_folder(); run() exception handler updated to catch OSError in
+  its place. After the run exactly one ticket file with the computed basename
+  exists at the epic-folder path, and implemented_by names that single path
+  (consistent with ACD-1200a-9).
 ====================================================================
 """
