@@ -323,3 +323,15 @@ later reaches `origin/main` independently, the epic PR hits an add/add merge con
 those files at finalize (resolve in favor of the branch — the `status: done` versions win).
 (Source: EPIC-AcPipelineDeployGaps retrospective, 2026-06-17, Findings #1 + #5;
 scaffold-via-PR confirmed in EPIC-AcPatternEnforcementIsMechanically, 2026-06-18.)
+
+### Commit agent in batch-drive mode
+
+When running a sequential single-ticket batch drive (not using epic-supervisor),
+the commit agent will refuse relayed approval from any intermediary. The approved
+workaround for a human-authorized batch drive is to dispatch the commit agent
+with `COMMIT_AGENT_MODE=1`. This bypasses the interactive gate only — the pre-commit
+hook path, sign-off recording, and commit message validation remain active.
+Do NOT use `COMMIT_AGENT_MODE=1` outside of a human-supervised batch drive.
+
+(Source: EPIC-Oneagenthandlesboththelookandthecodefor retrospective, 2026-06-22,
+Friction point #3.)
