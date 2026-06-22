@@ -1,6 +1,6 @@
 ---
 title: "A ticket whose basename already exists at the epic-folder path is resolved deterministically, never duplicated to a second location"
-status: todo
+status: done
 source_ac: ACD-1200a-9-i
 components:
   - ac-driven-dev

@@ -1,7 +1,7 @@
 ---
 title: "EPIC: goal_to_epic.py bug fixes — single-location writes, correct back-refs, apostrophe-safe epic names"
 type: epic
-status: in_progress
+status: done
 components:
   - ac-driven-dev
 created: 2026-06-22

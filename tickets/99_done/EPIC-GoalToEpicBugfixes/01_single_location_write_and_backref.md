@@ -1,6 +1,6 @@
 ---
 title: "Each epic ticket is written only inside the epic folder, with its back-reference pointing at the epic-folder path"
-status: todo
+status: done
 source_ac: ACD-1200a-9
 components:
   - ac-driven-dev
@@ -74,6 +74,16 @@ And no implemented_by back-reference names an inbox-root path
 | ACD-1200a-9 | | | |
 
 ## Comments
+
+### 2026-06-22 — status-checker (status: ok)
+auto-closed: matched merge commit c2b25660a90d53174aa3f762fa074c65cecf5c6f
+
+```yaml
+completion_manifest:
+  state_verified: true
+  git_history_checked: true
+  status_reported: true
+```
 
 ## Sign-offs
 
