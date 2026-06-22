@@ -4,14 +4,21 @@ Pre-commit hook: components.json integrity guard.
 MODULE: check_components_integrity
 GOAL: Block commits that add a new top-level component to docs/components.json
       without providing a detail_ref pointing to a real on-disk doc AND a
-      flight_level in that doc's frontmatter.
+      flight_level in that doc's frontmatter. Skips the new-component existence
+      check entirely when a git merge is in progress (MERGE_HEAD present),
+      exiting 0 to allow merge commits without --no-verify (ACS-300g-5).
 BUSINESS CONTEXT: Prevents the registry from drifting ahead of the documentation
       tree — a component added to the registry must have a doc in the same
       commit (or already have one). This closes the "9 undocumented components"
-      class of drift.
+      class of drift. During merges, components from the merged-in parent are
+      legitimately absent from HEAD, so the new-component check is skipped to
+      avoid false positives.
 ARCHITECTURE: Not needed.
 
 Logic:
+    0. Check if a git merge is in progress (`git rev-parse -q --verify MERGE_HEAD`).
+       If MERGE_HEAD exists, exit 0 immediately — the new-component check does
+       not apply to merge commits (ACS-300g-5).
     1. `git show HEAD:docs/components.json` → "before" JSON (None if new file).
     2. `git show :docs/components.json` (staged index) → "after" JSON.
     3. Diff top-level keys: `added = after_keys - before_keys`.
@@ -23,7 +30,7 @@ Logic:
        backfilling is handled by Phase 4 tickets.
 
 Exit codes:
-    0 - All new components are valid
+    0 - All new components are valid (or merge in progress)
     1 - One or more new components fail validation
 
 Usage (invoked by pre-commit):
@@ -38,6 +45,9 @@ DECISION HISTORY:
   - 2026-05-12 00:00 [Agent]: Created components.json integrity guard
     (EPIC-ArchitectureDocs ticket 21). Only enforces on newly-added keys to
     avoid blocking legacy work-in-progress.
+  - 2026-06-22 00:00 [python-coder]: Added merge-in-progress guard per ACS-300g-5.
+    When MERGE_HEAD is present the hook exits 0, skipping the new-component check
+    so merge commits do not require --no-verify.
 """
 
 from __future__ import annotations
@@ -71,12 +81,15 @@ def _git_show(ref: str) -> str | None:
     Returns:
         File content as a string, or None if the ref does not exist.
     """
-    result = subprocess.run(
-        ["git", "show", ref],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-    )
+    try:
+        result = subprocess.run(
+            ["git", "show", ref],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+    except OSError:
+        return None
     if result.returncode != 0:
         return None
     return result.stdout
@@ -132,15 +145,48 @@ def _is_components_json_staged() -> bool:
     Returns:
         True if the file is currently staged (modified, added, etc.).
     """
-    result = subprocess.run(
-        ["git", "diff", "--cached", "--name-only"],
-        capture_output=True,
-        text=True,
-    )
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--cached", "--name-only"],
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        return False
     if result.returncode != 0:
         return False
     staged_files = result.stdout.strip().split("\n")
     return COMPONENTS_JSON_PATH in staged_files
+
+
+def _is_merge_in_progress() -> bool:
+    """Return True if a git merge is currently in progress.
+
+    Detects a merge by verifying MERGE_HEAD via ``git rev-parse -q --verify
+    MERGE_HEAD``.  A returncode of 0 means MERGE_HEAD exists (merge in
+    progress).  Any non-zero returncode — including the OSError fallback
+    path — means no merge is in progress.
+
+    Returns:
+        True if MERGE_HEAD is present (merge in progress), False otherwise.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "-q", "--verify", "MERGE_HEAD"],
+            capture_output=True,
+            check=False,
+        )
+    except OSError as exc:
+        import warnings
+
+        warnings.warn(
+            f"check_components_integrity: could not verify MERGE_HEAD: {exc}",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        return False
+    else:
+        return result.returncode == 0
 
 
 # ---------------------------------------------------------------------------
@@ -235,9 +281,25 @@ def validate_new_component(
 def main() -> int:
     """Run the components.json integrity check against the staged index.
 
+    When a git merge is in progress (MERGE_HEAD present) the hook exits 0
+    immediately — components arriving from the merged-in parent are legitimately
+    absent from HEAD's registry, so the new-component check must not run
+    (ACS-300g-5).
+
+    For normal (non-merge) commits, newly-added entries must have a detail_ref
+    pointing to an on-disk doc with flight_level frontmatter.
+
     Returns:
         Exit code: 0 on success, 1 if any new component fails validation.
     """
+    # ACS-300g-5: skip the new-component existence check for merge commits.
+    if _is_merge_in_progress():
+        print(
+            "check_components_integrity: merge in progress — "
+            "skipping new-component existence check."
+        )
+        return 0
+
     if not _is_components_json_staged():
         # File not staged — nothing to check
         return 0
