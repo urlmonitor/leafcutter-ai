@@ -22,7 +22,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 ---
@@ -102,7 +102,7 @@ quick-fix, hence this dedicated ticket.
 - [x] test-runner — 2026-06-23 12:30
 - [x] pr-reviewer — 2026-06-23 13:15
 - [x] commit — 2026-06-23 14:00
-- [ ] pull-request
+- [x] pull-request — 2026-06-23 14:30
 
 ## Comments
 
@@ -184,3 +184,15 @@ Commit succeeded on first attempt. All 29 pre-commit hooks passed (secrets, ADR,
   the staged-file scoping must not silently stop validating genuinely-staged
   files. AC-6 exists specifically to guard against the "tests pass because
   nothing is staged" trap.
+
+### 2026-06-23 14:30 — pull-request (status: ok)
+PR URL: https://github.com/urlmonitor/leafcutter-ai/pull/152
+feedback-id: fb_2026-06-23_pull_request_acschemahook
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+  pr_title: "fix(guardrail): scope check-ac-schema Phase 1 to staged files only"
+  pr_number: 152
+  pr_url: "https://github.com/urlmonitor/leafcutter-ai/pull/152"
+  all_acs_addressed: true
+Branch feature/acschemahookstagedscope pushed to origin and PR #152 opened against main. PR body summarises all 6 ACs and test checklist. urlmonitor account was active throughout.
