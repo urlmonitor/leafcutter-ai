@@ -1,6 +1,6 @@
 ---
 title: "Scope check-ac-schema hook to staged files instead of the whole store"
-status: todo
+status: in_progress
 components:
   - guardrail-engine
 created: 2026-06-22
@@ -15,12 +15,12 @@ files_touched:
   - unit_tests/commit_guardian/test_check_ac_schema.py
 agents:
   architect-review: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   adr-author: not_needed
@@ -97,14 +97,66 @@ quick-fix, hence this dedicated ticket.
 
 ## Sign-offs
 
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
-- [ ] pr-reviewer
+- [x] test-writer — 2026-06-23 10:35
+- [x] python-coder — 2026-06-23 11:45
+- [x] test-runner — 2026-06-23 12:30
+- [x] pr-reviewer — 2026-06-23 13:15
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
+
+### 2026-06-23 10:35 — test-writer (status: ok)
+feedback-id: fb_2026-06-23_44716984
+completion_manifest:
+  ac1_unstaged_not_validated_stubs: true
+  ac2_staged_invalid_blocks_stubs: true
+  ac3_no_staged_exits_zero_stubs: true
+  ac4_cross_file_lookup_full_store_stubs: true
+  ac5_fail_open_git_unavailable_stubs: true
+  ac6_seam_wired_stubs: true
+  all_prior_tests_still_pass: true
+  new_tests_are_red: true
+Wrote 14 new test stubs covering AC-1 through AC-6. Ran pytest: 51 tests collected — 37 pre-existing tests remain GREEN, 6 new tests are RED (guard tests for the HOOK_TEST_STAGED_FILES seam and staged-scope behavior), 8 new tests pass immediately (AC-2 positive cases and AC-4/AC-6 edge cases that don't require the seam). The red_baseline is: TestAC1UnstagedFilesNotValidated::test_unstaged_invalid_file_does_not_block_commit, TestAC1UnstagedFilesNotValidated::test_unstaged_file_with_invalid_status_does_not_block, TestAC3NoStagedAcFilesExitsZero::test_empty_staged_list_exits_zero_even_with_invalid_store, TestAC3NoStagedAcFilesExitsZero::test_hook_test_staged_files_unset_falls_back_to_git, TestAC5FailOpenOnGitUnavailable::test_hook_no_git_env_makes_phase1_use_empty_staged_list, TestAC6StagingSeamWiredForExistingExitOneTests::test_seam_empty_string_ignores_store_violations.
+
+### 2026-06-23 11:45 — python-coder (status: ok)
+feedback-id: fb_2026-06-23_061d39b7
+completion_manifest:
+  ac1_staged_scope_only: true
+  ac2_staged_invalid_blocks: true
+  ac3_no_staged_exits_zero: true
+  ac4_cross_file_lookup_full_store: true
+  ac5_fail_open_git_unavailable: true
+  ac6_seam_wired_existing_tests: true
+  all_51_tests_green: true
+  files_touched_match_plan: true
+Added `_get_staged_ac_paths(root)` to `check_ac_schema.py` — checks `HOOK_TEST_STAGED_FILES` env seam first, then falls back to `git diff --cached --name-only --diff-filter=AM`, and returns `[]` when `HOOK_NO_GIT=1` or git is unavailable (fail-open). Modified `main()` to use this function for Phase 1 validation instead of `_find_ac_files()`, while keeping the full-store `_build_ac_index()` for cross-file lookups (AC-4 preserved). Reworked `_run_hook()` in the test file to set `HOOK_TEST_STAGED_FILES` to all yaml files in the temp AC dir so existing exit-1 tests continue to exercise the validation path. All 51 tests pass (45 pre-existing + 6 formerly-RED new tests now GREEN).
+
+### 2026-06-23 12:30 — test-runner (status: ok)
+feedback-id: fb_2026-06-23_a5e84747
+completion_manifest:
+  all_51_tests_pass: true
+  ac1_unstaged_not_validated: true
+  ac2_staged_invalid_blocks: true
+  ac3_no_staged_exits_zero: true
+  ac4_cross_file_pattern_full_store: true
+  ac5_fail_open_git_unavailable: true
+  ac6_seam_wired_existing_tests: true
+Ran `pytest unit_tests/commit_guardian/test_check_ac_schema.py -v`: all 51 tests collected and passed in 15.51 s. All AC-1 through AC-6 coverage tests (TestAC1UnstagedFilesNotValidated, TestAC2StagedInvalidFileBlocksCommit, TestAC3NoStagedAcFilesExitsZero, TestAC4CrossFilePatternChecksUseFullStore, TestAC5FailOpenOnGitUnavailable, TestAC6StagingSeamWiredForExistingExitOneTests) are green, confirming the staged-scope implementation is correct and no regressions in the 37 pre-existing tests.
+
+### 2026-06-23 13:15 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-23_pr_reviewer_01
+completion_manifest:
+  ac1_staged_scope_only: true
+  ac2_staged_invalid_blocks: true
+  ac3_no_staged_exits_zero: true
+  ac4_cross_file_lookup_full_store: true
+  ac5_fail_open_git_unavailable: true
+  ac6_seam_wired_existing_tests: true
+  error_handling_policy_compliant: true
+  no_regressions: true
+  test_quality: true
+Reviewed the working diff. _get_staged_ac_paths() correctly implements the HOOK_TEST_STAGED_FILES seam and git diff --cached fallback, returning [] on git unavailability (fail-open). main() correctly calls _get_staged_ac_paths() for Phase 1 scope and _find_ac_files() for the full-store cross-file lookup index (AC-4 preserved). Error handling uses specific exceptions (subprocess.SubprocessError, OSError) with a stderr WARNING and no silent swallow — compliant with the project error handling policy. The failed variable is correctly initialized in both branches of the if/else before Phase 2 reads it. _run_hook() rework sets HOOK_TEST_STAGED_FILES to all yaml files in the temp AC dir, preserving pre-existing exit-1 test behaviour via the staged-scope path (AC-6). All 14 new tests are meaningful and well-structured. No high-confidence blockers found.
 
 ## Out of Scope
 
