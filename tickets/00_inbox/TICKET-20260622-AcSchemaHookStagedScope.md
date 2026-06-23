@@ -21,7 +21,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -101,7 +101,7 @@ quick-fix, hence this dedicated ticket.
 - [x] python-coder — 2026-06-23 11:45
 - [x] test-runner — 2026-06-23 12:30
 - [x] pr-reviewer — 2026-06-23 13:15
-- [ ] commit
+- [x] commit — 2026-06-23 14:00
 - [ ] pull-request
 
 ## Comments
@@ -157,6 +157,16 @@ completion_manifest:
   no_regressions: true
   test_quality: true
 Reviewed the working diff. _get_staged_ac_paths() correctly implements the HOOK_TEST_STAGED_FILES seam and git diff --cached fallback, returning [] on git unavailability (fail-open). main() correctly calls _get_staged_ac_paths() for Phase 1 scope and _find_ac_files() for the full-store cross-file lookup index (AC-4 preserved). Error handling uses specific exceptions (subprocess.SubprocessError, OSError) with a stderr WARNING and no silent swallow — compliant with the project error handling policy. The failed variable is correctly initialized in both branches of the if/else before Phase 2 reads it. _run_hook() rework sets HOOK_TEST_STAGED_FILES to all yaml files in the temp AC dir, preserving pre-existing exit-1 test behaviour via the staged-scope path (AC-6). All 14 new tests are meaningful and well-structured. No high-confidence blockers found.
+
+### 2026-06-23 14:00 — commit (status: ok)
+feedback-id: fb_2026-06-23_commit_acschemahook
+completion_manifest:
+  staged_files_verified: true
+  all_pre_commit_hooks_passed: true
+  commit_sha: 302fa33
+  commit_message_matches_plan: true
+  ac1_through_ac6_covered: true
+Commit succeeded on first attempt. All 29 pre-commit hooks passed (secrets, ADR, schema, agent-diagrams, etc.). 3 files committed: templates/scripts/commit_guardian/check_ac_schema.py, unit_tests/commit_guardian/test_check_ac_schema.py, tickets/00_inbox/TICKET-20260622-AcSchemaHookStagedScope.md. SHA: 302fa33. Commit message includes Ticket traceability tag.
 
 ## Out of Scope
 
