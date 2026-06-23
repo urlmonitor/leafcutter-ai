@@ -278,5 +278,140 @@ class TestNormalCommitStillBlocksInvalidNewComponent(unittest.TestCase):
         )
 
 
+class TestRepoRootResolvesToGitToplevelForExistingDetailRef(unittest.TestCase):
+    """AC ACS-300g-6: REPO_ROOT must be resolved via git rev-parse --show-toplevel,
+    not via Path(__file__).parents[2].
+
+    When the hook is invoked through the .leafcutter symlink install path,
+    Path(__file__).resolve().parents[2] resolves to the real leafcutter-ai repo
+    (or the .leafcutter install root), NOT to the committing repo's top-level.
+    A new component whose detail_ref exists under the COMMITTING repo's docs/
+    is then wrongly reported as "detail_ref file does not exist" because the
+    existence check resolves against the wrong root.
+
+    This test FAILS against the current code (REPO_ROOT = Path(__file__).parents[2])
+    because docs/architecture/components/widget.md exists only in the temp repo,
+    not in the leafcutter-ai repo that hosts the hook file.  Once the fix is applied
+    (REPO_ROOT resolved via `git rev-parse --show-toplevel` in CWD), the hook finds
+    the file in the temp repo and exits 0.
+    """
+
+    def test_repo_root_resolves_to_git_toplevel_for_existing_detail_ref(self) -> None:
+        # covers: ACS-300g-6
+        """Hook exits 0 when a new component's detail_ref exists under the committing repo.
+
+        Sets up a temp git repo that contains:
+          - docs/architecture/components/widget.md  (has flight_level frontmatter)
+          - HEAD: docs/components.json with no 'widget' key
+          - Staged index: docs/components.json that ADDS 'widget' with a valid detail_ref
+
+        No MERGE_HEAD is present, so the new-component check runs.  The detail_ref
+        file exists in the TEMP REPO.  With the current buggy REPO_ROOT derivation
+        (Path(__file__).parents[2] → leafcutter-ai), the hook resolves the path
+        against the wrong root and reports "detail_ref file does not exist" → exit 1.
+        This test asserts returncode == 0 (the correct post-fix behaviour), so it
+        FAILS (is RED) against the current unmodified hook.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+
+            # --- Initialise the git repo ---
+            _git(["init", "-b", "main"], cwd=repo)
+            _git(["config", "user.email", "test@example.com"], cwd=repo)
+            _git(["config", "user.name", "Test User"], cwd=repo)
+
+            # --- Create the detail_ref doc in the temp repo ---
+            doc_dir = repo / "docs" / "architecture" / "components"
+            doc_dir.mkdir(parents=True, exist_ok=True)
+            widget_doc = doc_dir / "widget.md"
+            widget_doc.write_text(
+                "---\nflight_level: \"L2-Container\"\n---\n# Widget\n\n"
+                "Widget component architecture doc.\n",
+                encoding="utf-8",
+            )
+
+            # --- Write initial components.json (no 'widget' key) and commit as HEAD ---
+            docs_dir = repo / "docs"
+            components_path = docs_dir / "components.json"
+            initial_json = json.dumps(
+                {
+                    "components": {
+                        "existing-component": {
+                            "name": "Existing Component",
+                            "description": "Already in HEAD.",
+                        }
+                    }
+                },
+                indent=2,
+            )
+            components_path.write_text(initial_json, encoding="utf-8")
+            _git(["add", "docs/components.json"], cwd=repo)
+            _git(["commit", "-m", "chore: initial components.json"], cwd=repo)
+
+            # Also commit the widget doc so the working tree is clean for the diff
+            _git(["add", "docs/architecture/components/widget.md"], cwd=repo)
+            _git(["commit", "-m", "docs: add widget architecture doc"], cwd=repo)
+
+            # --- Stage the updated components.json that ADDS 'widget' with a valid detail_ref ---
+            staged_json = json.dumps(
+                {
+                    "components": {
+                        "existing-component": {
+                            "name": "Existing Component",
+                            "description": "Already in HEAD.",
+                        },
+                        "widget": {
+                            "name": "Widget",
+                            "description": "The widget component.",
+                            "detail_ref": "docs/architecture/components/widget.md",
+                        },
+                    }
+                },
+                indent=2,
+            )
+            components_path.write_text(staged_json, encoding="utf-8")
+            _git(["add", "docs/components.json"], cwd=repo)
+
+            # Confirm no MERGE_HEAD (belt-and-suspenders — ensures the new-component check runs)
+            merge_head_path = repo / ".git" / "MERGE_HEAD"
+            self.assertFalse(
+                merge_head_path.exists(),
+                msg=".git/MERGE_HEAD must not exist for the normal-commit scenario.",
+            )
+
+            result = _run_hook(repo)
+
+        # Primary assertion: the hook should exit 0 because the detail_ref exists
+        # under the COMMITTING repo's docs/.  This FAILS against the current code
+        # because REPO_ROOT = Path(__file__).parents[2] points at the leafcutter-ai
+        # repo (not the temp repo), so the file is not found → exit 1.
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "AC ACS-300g-6: hook must exit 0 when the new component's detail_ref "
+                "exists under the committing repo's docs/.  Current buggy code resolves "
+                "REPO_ROOT from Path(__file__).parents[2] (the leafcutter-ai repo root) "
+                "instead of via git rev-parse --show-toplevel (the temp repo root), so "
+                "the detail_ref path is not found and the hook exits 1. "
+                f"Stderr: {result.stderr}"
+            ),
+        )
+
+        # Soft secondary check: the failure mode is specifically the path-resolution one.
+        # If (unexpectedly) the hook exits 1, verify the error is the detail_ref not-found
+        # message, not something unrelated.
+        if result.returncode != 0:
+            self.assertIn(
+                "detail_ref file does not exist",
+                result.stderr,
+                msg=(
+                    "AC ACS-300g-6 diagnostic: expected exit-1 to be caused specifically "
+                    "by the path-resolution bug (detail_ref file does not exist), not by "
+                    f"an unrelated error.  Full stderr: {result.stderr}"
+                ),
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

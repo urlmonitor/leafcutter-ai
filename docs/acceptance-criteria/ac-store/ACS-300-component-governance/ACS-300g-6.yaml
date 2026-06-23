@@ -48,4 +48,5 @@ created: 2026-06-22
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260622-ACS-300g-6.md

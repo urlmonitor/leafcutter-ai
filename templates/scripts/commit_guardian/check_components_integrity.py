@@ -47,6 +47,13 @@ DECISION HISTORY:
     stderr, and return the function's pre-existing safe default (None / False)
     on error. This satisfies the check-exception-handling (IO-001) pre-commit
     guard. Pattern matches _is_merge_in_progress() which was already compliant.
+  - 2026-06-22 [Agent]: Replaced module-level REPO_ROOT constant with
+    _repo_root() helper (ACS-300g-6). The helper resolves the project root via
+    `git rev-parse --show-toplevel` (CWD-based), so detail_ref existence checks
+    resolve against the COMMITTING repository's docs/ rather than against the
+    hook file's install location. Falls back to Path(__file__).resolve().parents[2]
+    when git is unavailable or returns a non-zero exit code. main() calls
+    _repo_root() once and threads the resolved root into validate_new_component().
 """
 
 from __future__ import annotations
@@ -62,8 +69,55 @@ import yaml
 # Constants
 # ---------------------------------------------------------------------------
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
 COMPONENTS_JSON_PATH = "docs/components.json"
+
+# ---------------------------------------------------------------------------
+# Root resolution
+# ---------------------------------------------------------------------------
+
+
+def _repo_root() -> Path:
+    """Return the root of the committing git repository.
+
+    Resolves the root by running ``git rev-parse --show-toplevel`` in the
+    current working directory, which is the repository being committed to when
+    the hook is invoked by pre-commit.  This is correct regardless of where the
+    hook *file* lives (e.g. via a .leafcutter symlink into another repo), fixing
+    the false "detail_ref file does not exist" failure described in ACS-300g-6.
+
+    Falls back to ``Path(__file__).resolve().parents[2]`` when:
+    - The subprocess call raises (subprocess.SubprocessError or OSError).
+    - ``git`` returns a non-zero exit code.
+    - ``git`` returns an empty stdout.
+
+    The fallback preserves the hook's pre-ACS-300g-6 behaviour so it never
+    hard-crashes in environments where git is unavailable.
+
+    Returns:
+        Absolute Path to the repository root; the fallback path when git fails.
+    """
+    _fallback = Path(__file__).resolve().parents[2]
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        print(
+            f"[components-integrity] WARNING: could not run git rev-parse "
+            f"--show-toplevel: {exc}; falling back to __file__-relative root",
+            file=sys.stderr,
+        )
+        return _fallback
+    if result.returncode != 0 or not result.stdout.strip():
+        print(
+            "[components-integrity] WARNING: git rev-parse --show-toplevel "
+            "returned non-zero or empty output; falling back to __file__-relative root",
+            file=sys.stderr,
+        )
+        return _fallback
+    return Path(result.stdout.strip())
 
 # ---------------------------------------------------------------------------
 # Git helpers
@@ -231,12 +285,17 @@ def _extract_flight_level(doc_path: Path) -> str | None:
 
 
 def validate_new_component(
+    root: Path,
     component_id: str,
     component_data: dict,
 ) -> list[str]:
     """Validate that a newly-added component entry meets integrity requirements.
 
     Args:
+        root: Absolute path to the committing repository root, used to resolve
+            the detail_ref path on disk.  Must be obtained from _repo_root() so
+            that the resolution is CWD-based (the committing repo), not relative
+            to the hook file's install location.
         component_id: The top-level key name of the new component.
         component_data: The component's dict value from components.json.
 
@@ -255,8 +314,8 @@ def validate_new_component(
         )
         return errors  # Can't check further without a path
 
-    # 2. detail_ref path must exist on disk
-    doc_path = REPO_ROOT / detail_ref
+    # 2. detail_ref path must exist on disk (resolved against the committing repo root)
+    doc_path = root / detail_ref
     if not doc_path.exists():
         errors.append(
             f"  New component '{component_id}': detail_ref file does not exist: {detail_ref}\n"
@@ -322,10 +381,11 @@ def main() -> int:
 
     after_components = _parse_components_json(after_content)
 
+    repo_root = _repo_root()
     all_errors: list[str] = []
     for component_id in sorted(added_keys):
         component_data = after_components.get(component_id, {})
-        errors = validate_new_component(component_id, component_data)
+        errors = validate_new_component(repo_root, component_id, component_data)
         all_errors.extend(errors)
 
     if not all_errors:
