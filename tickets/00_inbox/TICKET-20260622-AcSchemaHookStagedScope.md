@@ -1,6 +1,6 @@
 ---
 title: "Scope check-ac-schema hook to staged files instead of the whole store"
-status: in_progress
+status: done
 components:
   - guardrail-engine
 created: 2026-06-22
