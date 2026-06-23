@@ -1,0 +1,31 @@
+id: GE-113a
+title: "A misplaced test stops the commit with a fix-it message"
+component: guardrail-engine
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Commit a test outside its configured home and you're stopped, with a pointer to where it belongs.
+
+  When a test file is staged for commit but sits outside the location your
+  project configured for tests, the commit is blocked and the message names the
+  configuration that decides the correct location, so the fix is obvious instead
+  of a guessing game.
+depends_on:
+  - GE-113
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - sequence-diagram
+notes: "User-authored intent: BrainCandy. Turns silently-skipped/misplaced tests into a hard stop pointing at the test-root config."

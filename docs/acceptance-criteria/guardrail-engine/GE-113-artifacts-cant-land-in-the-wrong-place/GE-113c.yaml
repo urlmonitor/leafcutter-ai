@@ -1,0 +1,30 @@
+id: GE-113c
+title: "Guards work correctly even in the installed copy"
+component: guardrail-engine
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  A guard does its job the same way inside a consumer project as it does at home.
+
+  The guards locate your project correctly even when running from the copy
+  installed into a consumer project, so a guard never quietly fails or misbehaves
+  because of where it was deployed — closing a latent gap where a guard could not
+  complete its check in the installed layout.
+depends_on:
+  - GE-113
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Internal robustness fix to guard project-root resolution in the installed layout; no new user-facing behavior or workflow is introduced."
+notes: "User-authored intent: BrainCandy. Latent bug: check-components-integrity has a REPO_ROOT resolution bug in the deployed .leafcutter/ layout (an orphan component could not be registered)."

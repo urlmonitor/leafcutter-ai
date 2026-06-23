@@ -1,0 +1,30 @@
+id: INF-1100b
+title: "A contradicting hand-off can't send work to the wrong place"
+component: infrastructure
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  When a hand-off names a location that disagrees with your config, the config wins.
+
+  If an agent is handed an instruction pointing at a location that contradicts
+  the configured one, the agent resolves the correct location from configuration
+  and uses it — instead of trusting the contradicting input — so a stray path in
+  a hand-off never silently lands work in the wrong folder.
+depends_on:
+  - INF-1100
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - how-to
+notes: "User-authored intent: BrainCandy. Real failure: a wrong test path in the ticket's hand-off field was trusted over the configured test_root."

@@ -1,0 +1,39 @@
+id: GE-113
+title: "Work that lands in the wrong place gets stopped before it ships"
+component: guardrail-engine
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  A misplaced test or artifact can't slip through — the commit is stopped and tells you exactly how to fix it.
+
+  Even when everything upstream is configured correctly, mistakes happen. This
+  goal adds the last line of defense: at the moment you try to commit, work that
+  has landed outside its configured home is caught and the commit is blocked,
+  with a clear message that points you straight at the configuration that decides
+  where it belongs. Just as importantly, the escape hatch that lets people wave
+  through unrelated structural changes can no longer be used to silently excuse a
+  misplaced artifact. And the guards themselves are dependable everywhere the
+  product runs — including the installed copy inside a consumer project — so a
+  guard never quietly fails to do its job because of where it was deployed.
+depends_on: []
+doc_links:
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-22
+amended_by:
+  - reason: "Authored from BrainCandy request: enforcement guard for misplaced artifacts + structural-bypass tightening + latent REPO_ROOT resolution bug."
+superseded_by: null
+covered_by:
+  - GE-113a
+  - GE-113b
+  - GE-113c
+implemented_by: []
+notes: "User-authored intent: BrainCandy. Framed by product-owner-v3."

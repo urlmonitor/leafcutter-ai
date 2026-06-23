@@ -1,0 +1,37 @@
+id: INF-1100
+title: "Agents always do their work where your project keeps it"
+component: infrastructure
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Every agent puts its work in the place your project configured — not somewhere it guessed.
+
+  Your project already declares where things belong: where tests live, where
+  other agent-produced artifacts go. This goal makes that configuration the
+  single source of truth that every agent obeys. When an agent is handed an
+  instruction that contradicts the configured location, the configured location
+  wins — so a stray path in a hand-off can no longer send work to the wrong
+  folder. And because each agent's instructions are compiled from templates, the
+  work-location paths inside those compiled instructions are guaranteed to be
+  filled in correctly, with tests that prove it. The result: no more tests
+  scattered into a folder nobody reads, and no more hunting for artifacts that
+  landed somewhere unexpected.
+depends_on: []
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-22
+amended_by:
+  - reason: "Authored from BrainCandy request: agent work-location correctness. origin intent: BrainCandy."
+superseded_by: null
+covered_by:
+  - INF-1100a
+  - INF-1100b
+  - INF-1100c
+implemented_by: []
+notes: "User-authored intent: BrainCandy. Framed by product-owner-v3."

@@ -1,0 +1,30 @@
+id: INF-1100a
+title: "Your config is the single source of truth for where work goes"
+component: infrastructure
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Every agent reads its work location from your project's configuration.
+
+  The folders where tests and other agent-produced artifacts belong are
+  declared once in your project's configuration, and every agent resolves its
+  work location from there rather than from an assumed default or a hard-coded
+  guess.
+depends_on:
+  - INF-1100
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+notes: "User-authored intent: BrainCandy."
