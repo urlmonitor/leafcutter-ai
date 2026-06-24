@@ -1,6 +1,6 @@
 ---
 title: "Register create-ac skill in skill_registry.json (orphaned directory)"
-status: todo
+status: done
 components:
   - skill_registry
   - testing_quality
@@ -72,10 +72,10 @@ covered by `TICKET-20260617-TrackMissingTransformHookScripts.md`,
 
 ## Acceptance Criteria
 
-- [ ] AC-1: `config/skill_registry.json` contains a `create-ac` entry whose fields match the schema enforced by `tests/test_skill_registry_schema.py` (mirror a sibling entry such as `plan-feature` for required keys and value shapes).
-- [ ] AC-2: `tests/test_skill_registry.py::TestSkillRegistryBidirectional::test_no_orphaned_directories` passes (no orphaned directories).
-- [ ] AC-3: `tests/test_skill_registry_schema.py` continues to pass for the new entry.
-- [ ] AC-4: The full `tests/` suite shows no net-new regressions versus the pre-change baseline.
+- [x] AC-1: `config/skill_registry.json` contains a `create-ac` entry whose fields match the schema enforced by `tests/test_skill_registry_schema.py` (mirror a sibling entry such as `plan-feature` for required keys and value shapes).
+- [x] AC-2: `tests/test_skill_registry.py::TestSkillRegistryBidirectional::test_no_orphaned_directories` passes (no orphaned directories).
+- [x] AC-3: `tests/test_skill_registry_schema.py` continues to pass for the new entry.
+- [x] AC-4: The full `tests/` suite shows no net-new regressions versus the pre-change baseline.
 
 ## AC Coverage
 
@@ -101,6 +101,24 @@ feedback-id: none
 Created from the 2026-06-22 full-suite triage. Only untracked genuine-bug
 failure; all other clusters already have inbox tickets. Likely a one-line
 registry addition plus schema-conformant fields.
+
+### 2026-06-24 — BrainCandy (status: done)
+feedback-id: none
+Closed as already-resolved-upstream. By the time this ticket was driven, the
+`create-ac` entry had already been added to `config/skill_registry.json` by
+PR #146 and was present on `main` (confirmed at the drive branch's merge-base).
+A `/build-feature` drive (PR #155) was opened but made **no functional change** —
+its diff vs. the merge-base touched only this ticket's sign-offs plus a changelog
+whose narrative incorrectly claimed an addition that this branch never made.
+PR #155 was therefore closed unmerged and its branch deleted, to avoid landing a
+misleading artifact on `main`.
+
+The ticket goal is satisfied on `main`: the bidirectional registry invariant
+holds and `tests/test_skill_registry.py::TestSkillRegistryBidirectional::test_no_orphaned_directories`
+plus the schema tests pass (verified by independent spot-check, 524 passed /
+9 pre-existing-unrelated failures in the `diagram_type_validators` deploy gap).
+No dedicated implementation was needed. This commit is bookkeeping only —
+marking the ticket `done` with an honest provenance note pointing to PR #146.
 
 ## Implementation Tasks
 
