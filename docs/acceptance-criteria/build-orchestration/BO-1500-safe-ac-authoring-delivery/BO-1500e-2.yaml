@@ -1,0 +1,53 @@
+id: BO-1500e-2
+readiness: approved
+priority: high
+title: Authoring works when run from a deployed/installed copy, not just the dev layout
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500e.yaml
+criteria: |
+  Given the workflow has been installed into a consumer project (deployed copy)
+    where the package lives in a subdirectory rather than the dev workspace layout,
+  When the user starts /create-ac or /plan-feature there,
+  Then the workflow resolves the repository root and the AC store location from
+    the actual installed layout rather than assuming the dev workspace paths,
+  And the isolated authoring worktree is created relative to the resolved consumer
+    repository root,
+  And the run completes through delivery in the installed copy the same way it
+    does in the dev layout.
+depends_on:
+- BO-1500e
+- BO-1500a-1
+doc_links:
+- path: docs/architecture/agent_delivery_workflows.md
+  relationship: references
+  status: exists
+- path: scripts/setup_ticket_worktree.py
+  relationship: models
+  status: exists
+- path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+  relationship: constrains
+  status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+- Path/root resolution must not hardcode the dev workspace layout (parent leafcutter/ with leafcutter-ai/
+  child). Resolve repo root from the git toplevel of the invocation cwd (see ADR-001 self-hosting boundary).
+- The isolated authoring worktree and AC store location must be derived from the resolved consumer repository
+  root, not assumed dev paths.
+- 'Follow the project Error Handling Policy (CLAUDE.md): wrap all external I/O (git subprocess, gh CLI/REST
+  calls) in explicit error handling; no bare except; surface a user-visible warning/error rather than
+  silently swallowing.'
+delivers_to: null
+expects_from:
+  ac_id: BO-1500a-1
+  contract: The worktree-creation step whose root resolution this AC constrains
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

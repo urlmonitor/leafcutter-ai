@@ -1,0 +1,30 @@
+id: BO-1500e
+readiness: approved
+priority: high
+title: "It works even when you start from the protected main line or an installed copy"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Safe authoring works no matter where you begin -- including the common case of
+  starting while you are on the protected main line, and when running from a
+  deployed or installed copy of the workflow.
+
+  You do not have to prepare a special starting point or be in a particular
+  checkout; the workflow handles the setup for you in every supported context.
+depends_on: [BO-1500]
+documentation_triggers: []
+documentation_rationale: "Covers starting-context robustness for the same workflow documented under BO-1500a and BO-1500c; no separate documentation artifact is needed beyond those."
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: [BO-1500e-1, BO-1500e-2, BO-1500e-3]
+implemented_by: []

@@ -1,0 +1,52 @@
+id: BO-1500a-1-i
+readiness: approved
+priority: high
+title: An existing authoring worktree/branch from a prior run is reused, not blindly recreated
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500a.yaml
+criteria: |
+  Given a previous authoring run for the same feature crashed and left behind
+    an authoring worktree and its branch on disk,
+  When a new AC-authoring run for that same feature begins,
+  Then the workflow detects the pre-existing authoring worktree and branch
+    before attempting to create a new one,
+  And it reuses the existing authoring worktree and branch instead of failing
+    with a "worktree already exists" error,
+  And it does not delete or overwrite any AC YAML files already committed on
+    that branch,
+  And if no usable prior worktree exists, it creates a fresh one as in the
+    normal path.
+depends_on:
+- BO-1500a-1
+doc_links:
+- path: templates/skills/build-single-ticket/SKILL.md
+  relationship: models
+  status: exists
+- path: scripts/setup_ticket_worktree.py
+  relationship: models
+  status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+- Probe `git worktree list` and `git branch` for the deterministic authoring worktree path / branch name
+  before creating; reuse on hit, create on miss.
+- 'Reuse must be safe in the presence of already-committed stage work (BO-1500b): never delete or overwrite
+  committed AC YAML on that branch.'
+- 'Follow the project Error Handling Policy (CLAUDE.md): wrap all external I/O (git subprocess, gh CLI/REST
+  calls) in explicit error handling; no bare except; surface a user-visible warning/error rather than
+  silently swallowing.'
+delivers_to: null
+expects_from:
+  ac_id: BO-1500a-1
+  contract: The deterministic authoring worktree path + branch name this reuse-detection probes for before
+    creating
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
