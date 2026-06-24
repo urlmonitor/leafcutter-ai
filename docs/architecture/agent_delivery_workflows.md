@@ -1732,6 +1732,69 @@ Parent: [Agent Code Delivery Workflows](agent_delivery_workflows.md#6-detail-vie
 
 ---
 
+## 8. Detail View: Approval-to-PR Delivery Flow (`BO-1500c-5`)
+
+Once authoring is complete inside the isolated worktree (see §6) and every stage has been
+committed (see §7), the work is delivered for review through a **pull request** — never by
+committing directly onto `main`. This is the safety counterpart to the isolation invariant:
+isolation keeps authoring off the user's checkout, and the PR-only delivery flow keeps the
+authored AC files off `main` until a reviewer (and the required CI checks) have approved them.
+
+The sequence below shows the ordered interactions from the user's **final approval** through
+to the **PR reference returning to the user**. The five participants are the **User**, the
+**Authoring Workflow** (the orchestrating depth-0 context), **Git** (local repository
+operations), **Origin** (the remote tracking host of the authoring branch), and **GitHub**
+(which opens the PR against `main` and runs the required CI checks). The `Note over` block
+makes the delivery invariant explicit: **no step commits AC files directly onto `main`** —
+the authoring branch is pushed to `Origin` and a PR is opened *against* `main`, so `main`
+only changes later, through a reviewed-and-merged PR that is outside this sequence.
+
+```mermaid
+sequenceDiagram
+    actor User as User
+    participant WF as Authoring Workflow
+    participant Git as Git
+    participant Origin as Origin
+    participant GitHub as GitHub
+
+    Note over User,GitHub: Delivery invariant — no step below commits AC files<br/>directly onto main. Work reaches main ONLY via the<br/>reviewed PR opened against main, never by a direct push.
+
+    Note over User,WF: Step 1 — final approval
+    User->>WF: Approve ticket / AC for delivery
+    activate WF
+
+    Note over WF,Origin: Step 2 — push the authoring branch to origin
+    WF->>Git: push <authoring-branch> (NOT main)
+    Git->>Origin: git push origin <authoring-branch>
+    Origin-->>Git: branch pushed (main untouched)
+    Git-->>WF: push complete
+
+    Note over WF,GitHub: Step 3 — open the PR to main
+    WF->>GitHub: open PR (head: <authoring-branch>, base: main)
+    GitHub-->>WF: PR created (#NNN) — main not yet modified
+
+    Note over GitHub,GitHub: Step 4 — required CI checks run
+    GitHub->>GitHub: run required CI checks (e.g. Lint (ruff))
+    GitHub-->>WF: CI status reported on the PR
+
+    Note over WF,User: Step 5 — PR reference returns to the user
+    WF-->>User: return PR reference (#NNN / URL)
+
+    deactivate WF
+```
+
+Parent: [Agent Code Delivery Workflows](agent_delivery_workflows.md#6-detail-view-isolated-authoring-worktree-lifecycle-bo-1500a-3)
+
+> [!IMPORTANT]
+> **No direct-to-`main` commits.** Every write in this flow targets the **authoring branch**,
+> not `main`. The push in Step 2 pushes `<authoring-branch>` to `Origin`; the PR in Step 3 is
+> opened *against* `main` as its base but does not modify it; and the required CI checks in
+> Step 4 run on the PR head. `main` changes only when a reviewer merges the PR — a step that
+> lives outside this sequence. This is also enforced mechanically: `main` is PR-only (the
+> branch-protection `Lint (ruff)` gate rejects a direct `git push origin main`).
+
+---
+
 ## Key Design Principles
 
 1. **Self-Documenting State:** The `epic-supervisor` determines what phase a ticket is in by parsing the structured `agents:` YAML map in the ticket's frontmatter. It never reads the conversational history.
@@ -1752,6 +1815,7 @@ Parent: [Agent Code Delivery Workflows](agent_delivery_workflows.md#6-detail-vie
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-24 [architecture-diagram-author]: Added §8 approval-to-PR delivery flow sequence diagram (sequenceDiagram) showing the five participants (User, Authoring Workflow, Git, Origin, GitHub) and the ordered interactions from final approval, through pushing the authoring branch to origin, opening the PR to main, the required CI checks running, to the PR reference returning to the user, with an explicit delivery invariant note that no step commits AC files directly onto main (main changes only via the reviewed/merged PR). (#EPIC-SafeAcAuthoring/15 BO-1500c-5)
 - 2026-06-24 [architecture-diagram-author]: Added §7 resumable per-stage authoring lifecycle state diagram (stateDiagram-v2) showing the seven authoring states (PO pending/committed, BA pending/committed, IT-PO pending/committed, delivered) and their transitions, crash-durability self-loops on each committed state, and interruption→resume self-loops on each pending state documenting that resume re-enters the first not-yet-committed stage. (#EPIC-SafeAcAuthoring/09 BO-1500b-4)
 - 2026-06-24 [architecture-diagram-author]: Added §6 isolated-authoring worktree lifecycle sequence diagram showing the five participants (User, Authoring Workflow, git, origin/main, Authoring Worktree), the ordered interactions from workflow start through worktree+branch creation off origin/main to the first authoring stage writing into the isolated worktree, and an explicit isolation-invariant note that no interaction targets the user's original checkout or a concurrent worktree. (#EPIC-SafeAcAuthoring/04 BO-1500a-3)
 - 2026-06-10 14:05 [BrainCandy]: Added §5 frontend-coder dispatch topology showing unified agent at priority 8, PROJECT_CONTEXT.md design system override relationship, and optional webapp-testing skill detection. Updated §4 phase-agent dispatch order to include frontend-coder. Removed frontend-design as a separate topology node (design principles are now embedded in the agent template per ADR-005). (#EPIC-Oneagenthandlesboththelookandthecodefor/05)
