@@ -21,7 +21,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -100,7 +100,7 @@ Added gh EMU account pre-flight to finalize-feature.js between the WORKTREE_ROOT
 - [x] python-coder — 2026-06-24 00:00
 - [x] test-runner — 2026-06-24 14:00
 - [x] pr-reviewer — 2026-06-24 15:00
-- [ ] commit
+- [x] commit — 2026-06-24 16:00
 - [ ] pull-request
 
 ### 2026-06-24 14:00 — test-runner (status: ok)
@@ -120,6 +120,19 @@ completion_manifest:
   ac3_emu_rest_fallback_verified: true
   ac4_config_driven_noop_verified: true
 Reviewed Pre-flight 2 block (lines 159-262 of finalize-feature.js). AC-1: gh auth status probe, conditional switch via gh auth switch --user, and re-verify are all present. AC-2: switchFailed gate returns an early structured error with the required login command when switch exit code is non-zero or verified account mismatches. AC-3: emuFallbackNote (Step 1) and emuMergeFallbackNote (Step 4) are injected into pull-request agent instructions with correct REST endpoints (POST for create, PUT for merge). AC-4: entire block is gated on GH_TARGET_ACCOUNT being non-null; parse errors default to null (no-op). No blocking issues found.
+
+### 2026-06-24 16:00 — commit (status: ok)
+feedback-id: fb_2026-06-24_cf39f7c5
+completion_manifest:
+  commit_sha: 2823a8a
+  files_committed:
+    - templates/workflows-js/finalize-feature.js
+    - tickets/00_inbox/epics/EPIC-FinalizeFeatureHardening/05_gh_emu_preflight.md
+  pre_commit_hooks: all passed (feedback-id fix applied on retry)
+  ac1_gh_preflight_committed: true
+  ac2_halt_on_failure_committed: true
+  ac3_emu_rest_fallback_committed: true
+  ac4_config_driven_noop_committed: true
 
 ## Risk & Safety
 - Touches money? No.
