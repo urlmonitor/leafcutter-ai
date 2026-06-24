@@ -909,9 +909,9 @@ async function run({ userInput, agent, parallel, prompt }) {
             "\n" +
             "=== SUB-STEP B: FIND IN-SCOPE TICKETS ===\n" +
             "Find all ticket .md files that this branch introduced or modified:\n" +
-            `  Run: git diff --name-only origin/main HEAD -- 'tickets/**/*.md'\n` +
+            `  Run: git -C ${WORKTREE_ROOT} diff --name-only origin/main HEAD -- 'tickets/**/*.md'\n` +
             "  Also include any ticket file in the worktree that has status != done:\n" +
-            `  Run: git log --oneline origin/main..${BRANCH} --name-only --diff-filter=A -- 'tickets/**/*.md'\n` +
+            `  Run: git -C ${WORKTREE_ROOT} log --oneline origin/main..${BRANCH} --name-only --diff-filter=A -- 'tickets/**/*.md'\n` +
             "  Combine both lists; deduplicate. Exclude Master_Plan.md.\n" +
             "  For each file, read its frontmatter `status:` field.\n" +
             "  Collect only files where status != 'done' (skip already-done tickets — AC-5 idempotency).\n" +
