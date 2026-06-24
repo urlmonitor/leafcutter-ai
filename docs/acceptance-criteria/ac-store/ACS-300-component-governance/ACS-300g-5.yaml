@@ -6,7 +6,7 @@ status: active
 readiness: approved
 priority: high
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given a git merge is in progress
     (MERGE_HEAD is present and verifiable via
@@ -50,4 +50,5 @@ amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by:
-- tickets/00_inbox/TICKET-20260622-ACS-300g-5.md
+- templates/scripts/commit_guardian/check_components_integrity.py
+- unit_tests/commit_guardian/test_check_components_integrity.py
