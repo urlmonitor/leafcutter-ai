@@ -20,7 +20,6 @@ _SCRIPTS_DIR = _REPO_ROOT / "scripts"
 sys.path.insert(0, str(_SCRIPTS_DIR))
 
 from knowledge_query import (  # noqa: E402
-    EdgeRecord,
     NodeRecord,
     _collect_all,
     extract_edges,
