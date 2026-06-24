@@ -1,6 +1,6 @@
 ---
 title: "Register create-ac skill in skill_registry.json (orphaned directory)"
-status: todo
+status: in_progress
 components:
   - skill_registry
   - testing_quality
@@ -19,11 +19,11 @@ files_touched:
 agents:
   architect-review: not_needed
   test-writer: not_needed
-  python-coder: needed
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
   adr-author: not_needed
@@ -72,25 +72,25 @@ covered by `TICKET-20260617-TrackMissingTransformHookScripts.md`,
 
 ## Acceptance Criteria
 
-- [ ] AC-1: `config/skill_registry.json` contains a `create-ac` entry whose fields match the schema enforced by `tests/test_skill_registry_schema.py` (mirror a sibling entry such as `plan-feature` for required keys and value shapes).
-- [ ] AC-2: `tests/test_skill_registry.py::TestSkillRegistryBidirectional::test_no_orphaned_directories` passes (no orphaned directories).
-- [ ] AC-3: `tests/test_skill_registry_schema.py` continues to pass for the new entry.
-- [ ] AC-4: The full `tests/` suite shows no net-new regressions versus the pre-change baseline.
+- [x] AC-1: `config/skill_registry.json` contains a `create-ac` entry whose fields match the schema enforced by `tests/test_skill_registry_schema.py` (mirror a sibling entry such as `plan-feature` for required keys and value shapes).
+- [x] AC-2: `tests/test_skill_registry.py::TestSkillRegistryBidirectional::test_no_orphaned_directories` passes (no orphaned directories).
+- [x] AC-3: `tests/test_skill_registry_schema.py` continues to pass for the new entry.
+- [x] AC-4: The full `tests/` suite shows no net-new regressions versus the pre-change baseline.
 
 ## AC Coverage
 
 | AC | Test | Implementation | Validated |
 |----|------|----------------|-----------|
-| AC-1 | test_skill_registry_schema.py | config/skill_registry.json | |
-| AC-2 | test_skill_registry.py::test_no_orphaned_directories | config/skill_registry.json | |
-| AC-3 | test_skill_registry_schema.py | config/skill_registry.json | |
-| AC-4 | full tests/ suite | — | |
+| AC-1 | test_skill_registry_schema.py | create-ac entry already present in config/skill_registry.json with all required fields (id, name, portable, domain, template_path, dependencies, description) | |
+| AC-2 | test_skill_registry.py::test_no_orphaned_directories | Verified: test passes, no orphaned directories | |
+| AC-3 | test_skill_registry_schema.py | All 6 schema tests pass including the new create-ac entry | |
+| AC-4 | full tests/ suite | 524 passed, 4 skipped; 9 pre-existing failures (diagram_type_validators / GE-103) unchanged from baseline | |
 
 ## Sign-offs
 
-- [ ] python-coder
-- [ ] test-runner
-- [ ] pr-reviewer
+- [x] python-coder — 2026-06-24 00:00
+- [x] test-runner — 2026-06-24 11:30
+- [x] pr-reviewer — 2026-06-24 12:00
 - [ ] commit
 - [ ] pull-request
 
@@ -102,12 +102,31 @@ Created from the 2026-06-22 full-suite triage. Only untracked genuine-bug
 failure; all other clusters already have inbox tickets. Likely a one-line
 registry addition plus schema-conformant fields.
 
+### 2026-06-24 00:00 — python-coder (status: ok)
+feedback-id: fb_2026-06-24_796bcc2e
+completion_manifest:
+  AC-1_entry_present_with_schema_fields: true
+  AC-2_test_no_orphaned_directories_passes: true
+  AC-3_schema_tests_all_pass: true
+  AC-4_no_net_new_regressions: true
+The create-ac entry was already present in config/skill_registry.json on this branch with all required schema fields (id, name, portable, domain, template_path, dependencies, description). Ran targeted tests: 16/16 passed. Full suite: 524 passed, 4 skipped, 9 pre-existing failures (all in commit_guardian/diagram_type_validators, tracked as GE-103) — no net-new regressions introduced. No file edits were needed; only ticket sign-off and coverage-table updates were written.
+
+### 2026-06-24 12:00 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-24_be79cd28
+completion_manifest:
+  AC-1_entry_schema_valid: true
+  AC-2_test_no_orphaned_directories_passes: true
+  AC-3_schema_tests_pass: true
+  AC-4_no_net_new_regressions: true
+  diff_clean_no_unintended_changes: true
+Reviewed the working diff and config/skill_registry.json. The diff is limited to ticket file updates (status/agent sign-off state, AC checkboxes, AC coverage table, comments). The create-ac entry in config/skill_registry.json is present and schema-valid with all required fields (id, name, portable, domain, template_path, dependencies, description) matching the sibling pattern of build-ac and plan-feature. All 4 ACs are satisfied per python-coder and test-runner sign-offs (524 passed, 9 pre-existing failures unchanged, test_no_orphaned_directories green). No high-confidence issues found.
+
 ## Implementation Tasks
 
-- [ ] Read an existing `config/skill_registry.json` entry (e.g. `plan-feature` or `build-ac`) to determine the required field set.
-- [ ] Add a `create-ac` entry whose `description`/path/metadata mirror the skill's `SKILL.md` frontmatter.
-- [ ] Run `python -m pytest tests/test_skill_registry.py tests/test_skill_registry_schema.py -v` and confirm green.
-- [ ] Run the full `tests/` suite and confirm no net-new regressions.
+- [x] Read an existing `config/skill_registry.json` entry (e.g. `plan-feature` or `build-ac`) to determine the required field set.
+- [x] Add a `create-ac` entry whose `description`/path/metadata mirror the skill's `SKILL.md` frontmatter.
+- [x] Run `python -m pytest tests/test_skill_registry.py tests/test_skill_registry_schema.py -v` and confirm green.
+- [x] Run the full `tests/` suite and confirm no net-new regressions.
 
 ## Risk & Safety
 
