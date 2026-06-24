@@ -1,0 +1,44 @@
+id: BO-1500b-3
+readiness: draft
+priority: medium
+title: "Partial-run recovery pre-flight still detects stranded AC files on the isolated branch"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500b.yaml
+criteria: |
+  Given a prior authoring run left uncommitted AC YAML files in the authoring
+    worktree (the partial-run condition the existing create-ac pre-flight checks for),
+  When a new authoring run starts its mandatory partial-run recovery pre-flight,
+  Then the pre-flight inspects the authoring worktree (not the user's original
+    checkout) for the stranded AC files,
+  And it detects and resolves them using the same recovery behavior it applied
+    before isolation existed,
+  And the pre-flight reports no false orphans caused by AC files that are already
+    committed on the authoring branch.
+depends_on: [BO-1500b, BO-1500a-1]
+doc_links:
+  - path: templates/skills/create-ac/SKILL.md
+    relationship: modifies
+    status: exists
+  - path: scripts/ac_store/scan_ac_orphans.py
+    relationship: references
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  The Partial-Run Recovery pre-flight in create-ac must scope its orphan scan to
+  the authoring worktree path. Committed-on-branch files are not orphans; only
+  uncommitted working-tree files are recovery candidates.
+delivers_to: null
+expects_from:
+  ac_id: BO-1500a-1
+  contract: "The authoring worktree path the pre-flight scopes its scan to"
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

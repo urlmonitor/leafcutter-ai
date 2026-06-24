@@ -1,0 +1,41 @@
+id: BO-1500c-1-i
+readiness: draft
+priority: medium
+title: "Cancelling before final approval leaves draft ACs on the branch and opens no PR"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500c.yaml
+criteria: |
+  Given the authoring pipeline has produced and committed one or more stages on
+    the authoring branch but the user cancels before giving final approval,
+  When the workflow ends due to the cancellation,
+  Then no pull request is opened,
+  And the AC files already committed on the authoring branch remain on the branch
+    (the work is not deleted),
+  And those AC files are not present on main,
+  And the user can resume the run later (per BO-1500b-2) to reach approval and
+    delivery.
+depends_on: [BO-1500c-1]
+doc_links:
+  - path: templates/skills/create-ac/SKILL.md
+    relationship: modifies
+    status: exists
+  - path: scripts/workflows/plan-feature.js
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  PR creation is gated strictly on the final-approval signal. Cancellation must be
+  a clean exit that preserves committed branch state and triggers no push/PR.
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

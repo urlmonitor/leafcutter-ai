@@ -1,0 +1,41 @@
+id: BO-1500d-1
+readiness: draft
+priority: medium
+title: "The PR number and URL are reported back to the user the moment the PR is opened"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500d.yaml
+criteria: |
+  Given the authoring workflow has just opened the delivery pull request to main,
+  When the workflow returns control to the user,
+  Then it prints the pull request's number and its clickable URL in the final
+    output the user sees,
+  And the URL points to the pull request that carries the approved AC files,
+  And the user does not have to run a separate command or search the repository
+    to find the pull request.
+depends_on: [BO-1500d, BO-1500c-1]
+doc_links:
+  - path: templates/skills/create-ac/SKILL.md
+    relationship: modifies
+    status: exists
+  - path: scripts/workflows/plan-feature.js
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  Capture the PR number + URL returned by the PR-creation step (gh CLI or REST
+  fallback per BO-1500e-3) and surface both in the workflow's terminal output.
+delivers_to: null
+expects_from:
+  ac_id: BO-1500c-1
+  contract: "The opened PR number + URL produced by the delivery step"
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

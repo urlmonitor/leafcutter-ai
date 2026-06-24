@@ -1,0 +1,44 @@
+id: BO-1500b-2
+readiness: draft
+priority: medium
+title: "A crash mid-pipeline leaves completed stages committed and resumable"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500b.yaml
+criteria: |
+  Given the product-owner stage has committed its L0/L1 files to the authoring
+    branch and the business-analyst stage is interrupted before it commits
+    (process killed, machine crash, or user closes the session),
+  When the user starts the authoring workflow again for the same feature,
+  Then the L0/L1 files committed by the completed stage are still present on the
+    authoring branch and are not lost,
+  And the workflow resumes from the first stage that had not committed
+    (the business-analyst stage) rather than redoing the completed stage,
+  And no completed-stage work has to be re-authored from scratch.
+depends_on: [BO-1500b, BO-1500b-1]
+doc_links:
+  - path: templates/skills/create-ac/SKILL.md
+    relationship: modifies
+    status: exists
+  - path: scripts/workflows/plan-feature.js
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  Resume point is derived from which stage commits already exist on the authoring
+  branch (per-stage commit boundaries from BO-1500b-1). Uncommitted in-flight work
+  from the interrupted stage may be discarded; committed stages must survive.
+delivers_to: null
+expects_from:
+  ac_id: BO-1500b-1
+  contract: "Per-stage commit boundaries on the authoring branch that mark resume points"
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

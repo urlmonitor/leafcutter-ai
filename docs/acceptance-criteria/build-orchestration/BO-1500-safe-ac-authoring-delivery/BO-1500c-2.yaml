@@ -1,0 +1,38 @@
+id: BO-1500c-2
+readiness: draft
+priority: medium
+title: "The authoring PR passes the same CI gates as any other change"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500c.yaml
+criteria: |
+  Given the authoring pull request has been opened against main,
+  When the project's required status checks run on that pull request,
+  Then the same gates that run on any other PR to main run on this one
+    (the lint gate and the AC schema-diff/validation gate),
+  And the pull request cannot be merged until those required checks pass,
+  And no path exists by which the approved AC files reach main while bypassing
+    those checks.
+depends_on: [BO-1500c, BO-1500c-1]
+doc_links:
+  - path: templates/skills/build-single-ticket/SKILL.md
+    relationship: models
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  Delivery must rely on main's existing branch-protection required checks (ruff
+  lint + AC schema). Do not add a bypass; the PR is an ordinary protected-main PR.
+delivers_to: null
+expects_from:
+  ac_id: BO-1500c-1
+  contract: "An opened PR to main whose checks this AC requires to pass"
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

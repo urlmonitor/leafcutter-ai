@@ -26,5 +26,5 @@ origin_agent: BrainCandy
 created: 2026-06-24
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by: [BO-1500e-1, BO-1500e-2, BO-1500e-3]
 implemented_by: []
