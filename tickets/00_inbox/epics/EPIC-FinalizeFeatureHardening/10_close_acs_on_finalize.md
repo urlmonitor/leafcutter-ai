@@ -1,6 +1,6 @@
 ---
 title: "Close tickets and source ACs on the feature branch BEFORE the PR merge"
-status: in_progress
+status: done
 components:
   - ac_store
   - build_pipeline
