@@ -22,7 +22,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -103,7 +103,7 @@ finalize performs **no writes on `main`** at all.
 - [x] python-coder — 2026-06-24 04:30
 - [x] test-runner — 2026-06-24 05:00
 - [x] pr-reviewer — 2026-06-24 06:00
-- [ ] commit
+- [x] commit — 2026-06-24 09:15
 - [ ] pull-request
 
 ## Comments
@@ -171,3 +171,13 @@ completion_manifest:
       Registry must be updated so agents listing spawned_by: finalize-feature.js resolve correctly.
       This is a separate defect, not introduced by this ticket. The 909 other tests pass cleanly.
   failure_report_structured: true
+
+### 2026-06-24 09:15 — commit (status: ok)
+feedback-id: fb_2026-06-24_a935e040
+Auto-authorized commit gate: subject "feat(finalize): remove Step 6c folder reconciliation from finalize-feature.js"; staged files: templates/workflows-js/finalize-feature.js, templates/workflows/finalize-feature.md, tickets/00_inbox/epics/EPIC-FinalizeFeatureHardening/04_status_as_source_of_truth.md.
+
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+  commit_sha: e3ba2d625e6a02ddda2a8893308f4d1e27a2cf91
