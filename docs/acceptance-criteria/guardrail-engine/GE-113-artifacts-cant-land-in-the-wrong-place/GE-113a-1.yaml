@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given the configured test location is "tests/",
@@ -18,12 +18,33 @@ criteria: |
     test location (the test_root key in skills_config.json).
 depends_on:
   - GE-113a
-doc_links: []
-delivers_to: null
+doc_links:
+  - path: scripts/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: exists
+  - path: scripts/commit_guardian/check_commit_scope.py
+    relationship: describes
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Surface is a NEW pre-commit guard script under scripts/commit_guardian/ (deployed build output) with its canonical source under templates/scripts/commit_guardian/, registered in commit_guardian.json's hooks_manifest with tier:'judgment' and an entry of the form 'python scripts/commit_guardian/run_hook.py scripts/commit_guardian/<new_check>.py' (mirror the sibling structural_change / components_integrity entries)."
+  - "The guard inspects staged files only (git diff --cached), identifies test files (test_*.py naming), and BLOCKS (exit 1) any test file whose path is outside the configured test_root; it must read test_root from config (testing_context.test_root in the merged skills_config), never a hardcoded literal."
+  - "The blocking message must name the offending file AND point at the configuration that decides the correct location (the test_root key in skills_config.json) so the fix is obvious."
+  - "Blocking on a real violation is the user-confirmed intent and must NOT be relaxed to a warn-only/advisory tier (distinct from check_commit_scope.py which is intentionally exit-0 advisory)."
+  - "Fail-open on INTERNAL error only: an unexpected exception in the guard must not block a clean commit (mirror the check_ac_governance.py try/except + stderr-prefix + exit 0 tail with noqa BLE001); stdout stays clean on internal error so it's never mistaken for a violation. This is orthogonal to the always-block-on-real-violation rule."
+  - "Deployed/template parity (ADR-001) on BOTH the hook script and the commit_guardian.json manifest (canonical = templates/scripts/commit_guardian/commit_guardian.json; the scripts/ copy is a build output) via the build.py round-trip."
+delivers_to:
+  agent: python-coder
+  contract: "A misplaced-test verdict: { blocked: bool, offending_files: [repo-root-relative path], configured_test_root: str }, where blocked is true iff any staged test_*.py path is outside configured_test_root; consumed by the GE-113b structural-bypass interaction."
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-23
-amended_by: []
+amended_by:
+  - reason: "it-po-v3 technical enrichment: surface=new commit_guardian hook + manifest (python-coder per the ac-store deprecation-hook precedent); always-block + fail-open-on-internal-error + ADR-001 parity it_requirements added. Criteria unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

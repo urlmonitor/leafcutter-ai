@@ -5,7 +5,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given the guard scripts run from the source-repo (non-deployed) layout where
@@ -16,12 +16,26 @@ criteria: |
     rather than regressing for the source-repo case.
 depends_on:
   - GE-113c-1
-doc_links: []
+doc_links:
+  - path: scripts/commit_guardian/check_components_integrity.py
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/ac-store/ACS-300-component-governance/ACS-300g-6.yaml
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "No regression for the source-repo layout: when the guard runs from <repo>/scripts/commit_guardian/ (non-deployed), the shared resolver must return the source repository root, identical in behavior to the deployed-layout case — both resolve correctly via the one shared mechanism (git rev-parse --show-toplevel with safe fallback per ACS-300g-6)."
+  - "RECONCILIATION WITH ACS-300g-6: ACS-300g-6's regression tests already cover the deployed-vs-source resolution; GE-113c-1-i ensures the GENERALIZED shared resolver (GE-113c-1) preserves the source-repo guarantee for ALL guards, not just check_components_integrity.py. Do not mark done by reference to ACS-300g-6."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: GE-113c-1
+  contract: "The shared project-root resolver from GE-113c-1; this edge exercises the source-repo branch where the resolved root must equal the source repository root."
 origin_agent: business-analyst-v3
 created: 2026-06-23
-amended_by: []
+amended_by:
+  - reason: "it-po-v3 technical enrichment: python-coder (source-repo no-regression edge); noted ACS-300g-6 already covers this for the one hook, GE-113c-1-i generalizes it. Criteria unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

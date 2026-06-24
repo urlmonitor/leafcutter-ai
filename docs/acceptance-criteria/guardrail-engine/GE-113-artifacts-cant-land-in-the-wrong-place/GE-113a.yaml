@@ -5,7 +5,7 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Commit a test outside its configured home and you're stopped, with a pointer to where it belongs.

@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given a hand-off names a test location of "unit_tests/etl/test_pipeline.py"
@@ -17,12 +17,24 @@ criteria: |
   And the report states that the configured location was used.
 depends_on:
   - INF-1100b
-doc_links: []
+doc_links:
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Surface is the test-authoring agent template prose: after overriding, the agent must emit a visible contradiction report in its sign-off/output naming BOTH the hand-off-requested path AND the config-resolved path, and stating that the configured location was used."
+  - "Override alone is insufficient — the contradiction must be visible so the stale hand-off field gets fixed at its source. The report must not be suppressed or downgraded below the agent's normal output channel."
+  - "No spurious reports: a contradiction is reported only when the hand-off path actually disagrees with the resolved path (see INF-1100b-1-i for the agreeing case)."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: INF-1100b-1
+  contract: "The override outcome from INF-1100b-1: the rejected hand-off path, the config-resolved path used, and the fact that an override occurred; this AC formats those into the human-visible contradiction report."
 origin_agent: business-analyst-v3
 created: 2026-06-23
-amended_by: []
+amended_by:
+  - reason: "it-po-v3 technical enrichment: llm-expert (test-writer.md prose reporting rule); expects_from wired to the b-1 override producer. Criteria unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -5,7 +5,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given the project configuration does not declare a test location
@@ -15,12 +15,27 @@ criteria: |
   And it records that the default was applied because no configured value was found.
 depends_on:
   - INF-1100a-1
-doc_links: []
+doc_links:
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+  - path: config/skills_config.default.json
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Surface is the test-authoring agent template prose: when the compiled value for the test root is the documented default (because no project value was configured), the agent must use 'tests/' and must state in its output that the documented default was applied for want of a configured value."
+  - "There must be exactly ONE documented default ('tests/'); the agent must never substitute an arbitrary guess when config is absent."
+  - "The single-default fallback is owned end-to-end with INF-1100c-1 (the compiler supplies the default at substitution time); the agent prose only needs to surface that the default was applied."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: INF-1100a-1
+  contract: "Same config-resolved test-root value the parent AC resolves; this edge case covers the branch where that resolved value is the documented default 'tests/' due to an absent test_root key."
 origin_agent: business-analyst-v3
 created: 2026-06-23
-amended_by: []
+amended_by:
+  - reason: "it-po-v3 technical enrichment: llm-expert (template prose); the one-documented-default rule is shared with the INF-1100c compiler. Criteria unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

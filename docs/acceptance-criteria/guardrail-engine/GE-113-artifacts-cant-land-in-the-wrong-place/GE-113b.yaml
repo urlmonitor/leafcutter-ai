@@ -5,7 +5,7 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Waving through unrelated structural changes never silently lets a misplaced artifact slip past.

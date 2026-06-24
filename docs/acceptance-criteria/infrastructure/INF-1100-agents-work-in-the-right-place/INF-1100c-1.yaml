@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given an agent instruction template that references the work-location
@@ -16,12 +16,32 @@ criteria: |
   And the compiled instructions contain no remaining work-location placeholder token.
 depends_on:
   - INF-1100c
-doc_links: []
-delivers_to: null
+doc_links:
+  - path: scripts/template_compiler.py
+    relationship: describes
+    status: exists
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+  - path: config/skills_config.default.json
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Surface is the build pipeline (scripts/build.py + scripts/template_compiler.py): thread the configured test root into a {{config.testing_context.test_root}} placeholder using the SAME {{config.*}} substitution mechanism that already resolves {{config.file_size_limit_py}} in python-coder.md — do not invent a parallel mechanism."
+  - "Config key is testing_context.test_root (with sibling readme_path) per the skills_config schema; the consumer's .claude/skills_config.json overrides config/skills_config.default.json. Resolve from the merged config, not a hardcoded literal."
+  - "The compiled output must contain the literal resolved value and ZERO remaining {{...}} work-location placeholder tokens."
+  - "Deployed/template parity (ADR-001): templates/ is canonical, .claude/ is the build output; both must be produced by the same build.py run."
+  - "Must handle config-read errors gracefully per the project error handling policy (wrap file I/O, no bare except)."
+delivers_to:
+  agent: llm-expert
+  contract: "Compiled agent instructions in which {{config.testing_context.test_root}} is replaced by the literal resolved test root (e.g. 'tests/'), with no remaining placeholder token; the test-authoring agent prose (INF-1100a/b) consumes this resolved value as its test base location."
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-23
-amended_by: []
+amended_by:
+  - reason: "it-po-v3 technical enrichment: surface=build.py/template_compiler.py {{config.*}} threading (python-coder); this AC is the PRODUCER of the resolved placeholder that INF-1100a/b consume. delivers_to wired to llm-expert template ACs. Criteria unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

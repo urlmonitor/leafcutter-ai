@@ -5,7 +5,7 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   When a hand-off names a location that disagrees with your config, the config wins.

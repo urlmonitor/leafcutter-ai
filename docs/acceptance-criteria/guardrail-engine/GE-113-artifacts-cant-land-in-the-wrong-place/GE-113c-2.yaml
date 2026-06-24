@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given the guard scripts are installed in the deployed .leafcutter layout of a
@@ -18,12 +18,28 @@ criteria: |
     it looked inside the .leafcutter/ subdirectory.
 depends_on:
   - GE-113c
-doc_links: []
+doc_links:
+  - path: scripts/commit_guardian/check_components_integrity.py
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/ac-store/ACS-300-component-governance/ACS-300g-6.yaml
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "RECONCILIATION WITH ACS-300g-6: the already-merged fix made check_components_integrity.py resolve a component detail_ref existence check against the real <repo>/docs/... tree (not <repo>/.leafcutter/docs/...). GE-113c-2 is the behavioral assertion that, in the deployed layout, a guard reads the CONSUMER PROJECT TREE and COMPLETES its check rather than silently finding nothing (the symptom: an orphan component could not be registered because the guard scanned the wrong tree). This is regression coverage / extend-the-fix, NOT a re-implementation — do not mark done; confirm after the branch merges origin/main and extend to any guard whose check input path is derived from the (now-corrected) root."
+  - "Every path the guard uses to locate its check INPUT (components.json, detail_ref docs, test-location data) must be built from the shared resolved project root (GE-113c-1), so the input tree is the consumer project's, not .leafcutter/."
+  - "A guard must distinguish genuinely-nothing-to-check from looked-in-the-wrong-tree: completing against the correct tree is required, never a silent no-op caused by root misresolution."
+  - "Must handle errors gracefully per the project error handling policy; deployed/template parity (ADR-001) via build.py."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: GE-113c-1
+  contract: "The shared resolved project root (consumer/repo top-level Path) from GE-113c-1; this AC uses it as the base for locating the guard's check-input tree so the check runs against the consumer project."
 origin_agent: business-analyst-v3
 created: 2026-06-23
-amended_by: []
+amended_by:
+  - reason: "it-po-v3 technical enrichment: python-coder; recorded the ACS-300g-6 reconciliation (the wrong-tree/silent-no-op symptom was the orphan-component case the fix addressed; GE-113c-2 = regression coverage that the guard COMPLETES against the consumer tree). expects_from wired to the c-1 shared-resolver producer. Criteria unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -5,7 +5,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given the project configuration declares a non-default test location
@@ -16,12 +16,23 @@ criteria: |
   And the resolution does not substitute the built-in default "tests/".
 depends_on:
   - INF-1100a-2
-doc_links: []
+doc_links:
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Surface is the test-authoring agent template prose: the agent must honor whatever test_root the compiled prompt carries (e.g. 'qa/tests/') and join it with the source-area subpath; it must never fall back to the literal default 'tests/' when a non-default value is configured."
+  - "Edge case proves the join is parameterized on the resolved root, not hardcoded to tests/."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: INF-1100a-2
+  contract: "The configured-root-joined-with-area-subpath rule from the parent; this edge case exercises it with a non-default root 'qa/tests/' compiled into the prompt by INF-1100c."
 origin_agent: business-analyst-v3
 created: 2026-06-23
-amended_by: []
+amended_by:
+  - reason: "it-po-v3 technical enrichment: llm-expert (template prose). Criteria unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

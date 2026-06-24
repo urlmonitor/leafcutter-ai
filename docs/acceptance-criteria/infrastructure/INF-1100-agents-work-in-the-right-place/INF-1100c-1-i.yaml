@@ -5,7 +5,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given an agent instruction template references the work-location placeholder
@@ -18,12 +18,27 @@ criteria: |
     or an empty path in its place.
 depends_on:
   - INF-1100c-1
-doc_links: []
+doc_links:
+  - path: scripts/template_compiler.py
+    relationship: describes
+    status: exists
+  - path: scripts/build_placeholder_detection.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Surface is the build pipeline (template_compiler.py / build.py): when a work-location placeholder has no configured value AND no documented default applies, compilation must FAIL LOUDLY with an error that names the unresolved placeholder."
+  - "On that failure, the pipeline must NOT emit a compiled instruction containing the raw {{...}} token or an empty path — fail-closed, never ship a broken prompt (contrast INF-1100a-1-i where a documented default DOES apply and the default is used instead of failing)."
+  - "Error must be raised at the I/O boundary per the project error handling policy; the message must identify the placeholder so the misconfiguration is actionable."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: INF-1100c-1
+  contract: "The same {{config.*}} substitution path from INF-1100c-1; this edge case covers the branch where no value and no default resolve for the work-location placeholder, forcing a loud compile failure rather than a substituted value."
 origin_agent: business-analyst-v3
 created: 2026-06-23
-amended_by: []
+amended_by:
+  - reason: "it-po-v3 technical enrichment: python-coder (compiler fail-closed branch); distinguished from INF-1100a-1-i (documented-default-applies -> use default) vs here (no default -> fail loud). Criteria unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

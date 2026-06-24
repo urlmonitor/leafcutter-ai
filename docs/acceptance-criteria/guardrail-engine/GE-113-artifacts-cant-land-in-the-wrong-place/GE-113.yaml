@@ -5,7 +5,7 @@ level: L0
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   A misplaced test or artifact can't slip through — the commit is stopped and tells you exactly how to fix it.

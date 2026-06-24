@@ -5,7 +5,7 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   A guard does its job the same way inside a consumer project as it does at home.

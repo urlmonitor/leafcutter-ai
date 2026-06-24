@@ -5,7 +5,7 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Every agent reads its work location from your project's configuration.

@@ -5,7 +5,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given the configured test location is "tests/",
@@ -16,12 +16,22 @@ criteria: |
   And no misplaced-test message is emitted for that file.
 depends_on:
   - GE-113a-1
-doc_links: []
+doc_links:
+  - path: scripts/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Boundary case: a test file directly at the configured test_root (no further subfolder, e.g. tests/test_pipeline.py) must be treated as correctly placed — the containment check must include the root boundary itself, not only strict sub-paths, to avoid a false positive exactly at the boundary."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: GE-113a-1
+  contract: "The same containment check from GE-113a-1; this edge exercises the at-root-boundary branch where blocked is false."
 origin_agent: business-analyst-v3
 created: 2026-06-23
-amended_by: []
+amended_by:
+  - reason: "it-po-v3 technical enrichment: python-coder (root-boundary inclusion edge). Criteria unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

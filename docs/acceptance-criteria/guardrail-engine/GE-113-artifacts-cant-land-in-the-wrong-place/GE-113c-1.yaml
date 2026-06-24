@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given the guard scripts are installed in the deployed layout under a
@@ -16,12 +16,32 @@ criteria: |
     runs from.
 depends_on:
   - GE-113c
-doc_links: []
-delivers_to: null
+doc_links:
+  - path: scripts/commit_guardian/check_components_integrity.py
+    relationship: describes
+    status: exists
+  - path: scripts/commit_guardian/_resolve_root.py
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/ac-store/ACS-300-component-governance/ACS-300g-6.yaml
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "RECONCILIATION WITH ACS-300g-6 (already merged on origin/main as commits dd7838f / 0db29a6, NOT yet in this ac/agent-work-locations branch — it branched from a stale point a16a8ad): ACS-300g-6 already fixed REPO_ROOT resolution in check_components_integrity.py by adding _repo_root() resolving via `git rev-parse --show-toplevel` with a __file__-relative fallback, threaded into validate_new_component() and main(), plus 135 lines of regression tests. GE-113c-1 is therefore REGRESSION COVERAGE + GENERALIZATION of that fix, not a fresh discovery. Do NOT mark it done by pointing at ACS-300g-6 — verify the fix is present after this branch merges origin/main, then EXTEND the guarantee to any OTHER guard that still resolves its root via Path(__file__).resolve().parents[N]."
+  - "Pin the divergence to fix: there are currently TWO root-resolution mechanisms in scripts/commit_guardian/ — (a) the ACS-300g-6 _repo_root() (git toplevel + fallback) inside check_components_integrity.py, and (b) the separate _resolve_root.py find_project_root() helper (walks up for .git/CLAUDE.md). Mandate ONE shared root-resolution helper used by all guards that need the project root, so a guard can never regress to a parents[N] literal that resolves to .leafcutter/ in the deployed layout."
+  - "In the deployed layout (project/.leafcutter/scripts/commit_guardian/...) the resolved root must equal the consumer project root, NOT the .leafcutter/ subdirectory — the exact false-fail class ACS-300g-6 fixed (a detail_ref existence check ran against <repo>/.leafcutter/docs/... and false-failed)."
+  - "Must handle git-unavailable gracefully per the project error handling policy: wrap the git subprocess call (no bare except), warn, and fall back to a safe deterministic resolution (the ACS-300g-6 precedent: __file__-relative fallback)."
+  - "Deployed/template parity (ADR-001): the canonical fix lives under templates/scripts/commit_guardian/ and the scripts/ copy is a build output (ACS-300g-6 edited the templates/ copy); any extension must follow the same build.py round-trip."
+delivers_to:
+  agent: python-coder
+  contract: "A single shared project-root resolver returning the consumer/repo top-level Path (via git rev-parse --show-toplevel with a safe fallback) used by every guard needing the project root, replacing per-guard Path(__file__).resolve().parents[N] literals."
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-23
-amended_by: []
+amended_by:
+  - reason: "it-po-v3 technical enrichment: python-coder; recorded the ACS-300g-6 reconciliation (already-merged REPO_ROOT git-toplevel fix in check_components_integrity.py; GE-113c-1 = regression coverage + generalize to other guards via ONE shared resolver). Flagged the stale-branch + two-resolver divergence. Criteria unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -5,7 +5,7 @@ level: L0
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Every agent puts its work in the place your project configured — not somewhere it guessed.

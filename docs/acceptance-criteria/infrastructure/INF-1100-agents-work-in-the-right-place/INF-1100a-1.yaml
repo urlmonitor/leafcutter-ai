@@ -5,7 +5,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given the project configuration declares a test location of "tests/"
@@ -15,12 +15,28 @@ criteria: |
   And the resolution does not fall back to any value baked into the agent itself.
 depends_on:
   - INF-1100a
-doc_links: []
+doc_links:
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+  - path: config/skills_config.default.json
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Surface is the test-authoring agent template prose (templates/agents/test-writer.md): the agent must resolve its test base location from the compiled {{config.testing_context.test_root}} value rather than the hardcoded unit_tests/ example paths currently embedded in the template (e.g. the lines showing unit_tests/live_trader/)."
+  - "The agent template must not name a literal test root in its instructions; it must reference the configured value so the compiled prompt carries the project's actual test_root (delivered by INF-1100c)."
+  - "Resolution must be deterministic across runs: the same config yields the same resolved base location."
+  - "Deployed/template parity (ADR-001): the template under templates/agents/ is canonical; the .claude/agents/ build output must be regenerated via build.py — never edit one side only."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: INF-1100c-1
+  contract: "The compiled agent instructions contain the literal resolved test_root path (e.g. 'tests/') substituted from {{config.testing_context.test_root}}, with no remaining placeholder token; the agent prose consumes that resolved value as its test base location."
 origin_agent: business-analyst-v3
 created: 2026-06-23
-amended_by: []
+amended_by:
+  - reason: "it-po-v3 technical enrichment: surface=test-writer.md prose (llm-expert per the 'what an agent should DO/SAY' rule); the deterministic test_root substitution is owned by the INF-1100c compiler, consumed here via expects_from. Criteria unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []
