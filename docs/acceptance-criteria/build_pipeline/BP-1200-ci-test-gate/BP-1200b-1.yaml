@@ -1,0 +1,70 @@
+id: BP-1200b-1
+title: "A blocking test check runs the full suite on every pull request and fails when any test fails"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the continuous-integration configuration for the repository,
+  When a pull request is opened or updated,
+  Then a dedicated test check runs the full test suite automatically using the
+    documented CI test command
+  And the check reports a failing (non-passing, blocking) result whenever one or
+    more tests fail
+  And the check reports a passing result only when the entire suite passes
+  And the check is a hard, blocking check — not an advisory or informational one
+    that a pull request can be merged despite.
+depends_on:
+  - BP-1200b
+  - BP-1200a-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Add a NEW `test` job to the existing .github/workflows/ci.yml alongside the current lint (blocking) and typecheck (informational, continue-on-error) jobs. The test job MUST be blocking: it must NOT set continue-on-error, so a failing test fails the job and the check."
+  - "The test job MUST run the SAME documented command sequence as BP-1200a-2 (install requirements-dev.txt -> the build step + install_shims shim bridge per decided Approach 1 -> pytest over the integration + unit test directories) so local reproduction matches CI exactly."
+  - "Pin the check NAME deterministically (a stable `name:` on the job) because BP-1200c-1 adds that exact name to the branch-protection required-status-checks list — the name is a cross-AC contract; if it changes, branch protection silently stops requiring it."
+  - "HARD PREREQUISITE on BP-1200a-1: the job can only be trustworthy once the suite is green on a fresh clone (CI runs from a clean checkout via actions/checkout). Do not enable the blocking job before the ADR-016 fresh-clone fix (decided = Approach 1) lands, or every PR is blocked by the pre-existing ~36 import failures."
+  - "Match the existing ci.yml conventions: actions/checkout@v4, actions/setup-python@v5 with python-version 3.13, install from requirements-dev.txt, runs-on ubuntu-latest, triggered on pull_request targeting main (and push to main consistent with the lint job)."
+  - "Errors in the build/shim prepare step must fail the job loudly (non-zero exit) rather than skipping to a misleading green; the blocking guarantee must not be defeatable by a silently-skipped preparation."
+delivers_to:
+  ac_id: BP-1200c-1
+  contract: "A named, blocking GitHub Actions check (stable job name set in .github/workflows/ci.yml) that branch protection on main requires as a status check. The exact check name string is the contract BP-1200c-1 adds to the required-status-checks list."
+expects_from:
+  ac_id: BP-1200a-1
+  contract: "A documented CI test command that runs the full suite green on a fresh clone (post-ADR-016 Approach 1: build step + shim bridge), which this job invokes verbatim"
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Confirmed assigned_agent python-coder (CI YAML config is python-coder's build-scripts/config surface). Added it_requirements (new blocking test job alongside lint/typecheck, no continue-on-error, stable check name as cross-AC contract with BP-1200c-1, ADR-016/BP-1200a-1 hard prerequisite, match existing ci.yml conventions), promoted the ci.yml doc_link status planned->exists (the file already exists), and added the template-compiler architecture link. Criteria and contracts unchanged."
+    by: it-po
+  - reason: "final-gate-decision-applied"
+    entry: "Set readiness: approved and priority: high per the final user gate. Made the CI prepare step concrete (build step + install_shims shim bridge, decided Approach 1) in the it_requirements and contracts. Criteria unchanged."
+    by: it-po
+superseded_by: null
+covered_by:
+  - BP-1200b-1-i
+  - BP-1200b-1-ii
+implemented_by: []
+notes: |
+  This check must behave differently from the current informational typecheck
+  job: a test failure must FAIL the pull request (blocking), not merely report
+  status. Depends on BP-1200a-1 because the check can only be trustworthy once
+  the suite is green on a fresh clone (CI runs from a clean checkout).
+  IT-PO note: ci.yml already exists with lint (blocking) + typecheck
+  (continue-on-error). This AC ADDS a third, blocking test job. The job name is a
+  load-bearing contract consumed by BP-1200c-1's branch-protection list.

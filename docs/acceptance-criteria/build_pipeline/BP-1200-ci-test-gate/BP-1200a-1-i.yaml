@@ -1,0 +1,61 @@
+id: BP-1200a-1-i
+title: "Suite is green across repeated runs with both fixed and varied test-ordering seeds"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fresh checkout that has been prepared per the documented CI test
+    command,
+  When the full test suite is run several times in succession — at least one run
+    with a fixed test-ordering seed and at least two runs with different
+    randomized test-ordering seeds,
+  Then every run reports the full suite passing
+  And the set of passing tests is identical across all runs (no test passes on
+    one ordering and fails on another)
+  And the overall pass/fail outcome does not change between runs.
+depends_on:
+  - BP-1200a-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-016-ci-fresh-clone-test-dependencies.md
+    relationship: depends-on
+    status: planned
+assigned_agent: test-runner
+estimated_complexity: S
+it_requirements:
+  - "Determinism is verified by RUNNING the prepared suite multiple times, not by authoring production code: at least one run with a fixed seed (pytest -p randomly -p no:cacheprovider with a pinned --randomly-seed) and at least two runs with distinct randomized seeds. This is a test-execution/verification behavior, hence test-runner not python-coder."
+  - "The set of passing test node-ids must be IDENTICAL across all runs (compare collected pass sets, not just the aggregate pass/fail count) — order-dependent leakage (a test passing only under one ordering) is a failure of this AC."
+  - "Prerequisite is the ADR-016 mechanism in place. DECIDED DIRECTION (final gate): Approach 1 — CI runs the build step AND install_shims' shim_map is extended to bridge .leafcutter/scripts/... -> scripts/... (for scripts/commit_guardian, scripts/doc_compliance, scripts/feedback). 'Prepared per the documented CI test command' therefore means the build step has run and the shim bridge is present; do not run this determinism verification against an unprepared clone."
+  - "If a non-deterministic test is found, it must be reported with the seed(s) that reproduce the divergence so a follow-up can fix the offending test — the verification surfaces the offender, it does not silently retry until green."
+delivers_to: null
+expects_from:
+  ac_id: BP-1200a-1
+  contract: "A fresh-clone test run that reaches green; this edge case stresses it for determinism across orderings (fixed seed + >=2 randomized seeds, identical pass set across all runs)"
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Re-routed assigned_agent python-coder -> test-runner (this AC is a suite-execution/determinism-verification behavior, not code authoring; test-runner is is_ticket_phase: true and produces test_artifact). Added it_requirements (identical pass-set comparison, seed-reproduction reporting, ADR-016 prerequisite) and planned-ADR doc_link. Criteria and expects_from unchanged."
+    by: it-po
+  - reason: "final-gate-decision-applied"
+    entry: "Set readiness: approved and priority: high per the final user gate. Recorded the DECIDED ADR-016 direction (Approach 1: CI build step + install_shims shim_map extension bridging .leafcutter/scripts/ -> scripts/) in the prerequisite it_requirement, making the prepared-state precondition concrete. Criteria unchanged."
+    by: it-po
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Determinism is a real observed risk: earlier fresh-clone runs swung
+  2 -> 11 -> 15 -> 17 failures because the missing-build-output state interacted
+  with randomized test ordering. This edge case asserts stability once the
+  prerequisite outputs/repointing (ADR-selected) are in place. Stays
+  outcome-focused — it asserts the determinism OUTCOME.
+  IT-PO note: re-routed to test-runner because the behavior is "run the prepared
+  suite N times across seeds and compare pass sets", which is verification, not
+  source authoring. ADR-016 direction now decided = Approach 1.

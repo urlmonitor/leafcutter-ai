@@ -1,0 +1,47 @@
+id: BP-1200b-1-ii
+title: "A pull request whose full suite passes reports a passing test check and is allowed to merge"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a pull request whose changes leave the full test suite passing,
+  When the test check runs on that pull request,
+  Then the test check reports a passing result
+  And the test check does not, by itself, prevent the pull request from being
+    merged.
+depends_on:
+  - BP-1200b-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Exercises the PASSING path of the blocking test job added in BP-1200b-1: a PR that leaves the suite green must drive the test check to a passing (green) conclusion, and that check by itself must not block the merge (no false-negative blocking)."
+  - "Passing-path verification depends on the ADR-016 fresh-clone fix (decided = Approach 1: CI build step + install_shims shim_map extension) being in place — without it the check would be perpetually red and this AC could never pass; do not assert this against an unprepared clone."
+  - "Must confirm the check does not flap: a green PR re-run yields green (no order/seed-induced false failure that would wrongly block a clean PR), consistent with BP-1200a-1-i determinism."
+delivers_to: null
+expects_from:
+  ac_id: BP-1200b-1
+  contract: "The blocking test check (named ci.yml test job) whose passing path this case exercises"
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Confirmed python-coder (exercises the ci.yml test job). Added it_requirements (passing-path acceptance scenario, no false-negative blocking, depends on ADR-016 fresh-clone fix, no-flap consistent with BP-1200a-1-i) and a ci.yml doc_link. Criteria and expects_from unchanged."
+    by: it-po
+  - reason: "final-gate-decision-applied"
+    entry: "Set readiness: approved and priority: high per the final user gate. Recorded the decided ADR-016 direction (Approach 1) in the passing-path prerequisite it_requirement. Criteria unchanged."
+    by: it-po
+superseded_by: null
+covered_by: []
+implemented_by: []
