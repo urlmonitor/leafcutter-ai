@@ -4,7 +4,7 @@ description: "Visualises how the leafcutter-ai agent ecosystem orchestrates code
 type: "reference"
 status: "active"
 created: "2026-05-11"
-last_updated: "2026-06-10"
+last_updated: "2026-06-24"
 flight_level: "L3-Component"
 diagram_type: agent_flow
 components:
@@ -1598,6 +1598,69 @@ terminates cleanly after printing the summary.
 
 ---
 
+## 6. Detail View: Isolated-Authoring Worktree Lifecycle (`BO-1500a-3`)
+
+The isolated-authoring workflow guarantees that AC/ticket authoring never mutates the
+user's original checkout or any concurrent worktree. When the workflow starts, it creates a
+**fresh, dedicated worktree** with its own branch cut from `origin/main`, and every authoring
+stage writes exclusively into that isolated worktree. This is the architectural counterpart
+to the lesson recorded in the MEMORY note "AC authoring needs isolated worktree": a shared
+main checkout can be reset or branch-deleted by concurrent finalize flows mid-session, so
+authoring must run in isolation.
+
+The sequence below shows the ordered interactions from workflow start, through worktree and
+branch creation off `origin/main`, to the first authoring stage writing into the isolated
+worktree. The `Note over` block makes the isolation invariant explicit: **no interaction in
+this sequence targets the user's original checkout or any concurrent worktree** — the only
+read of shared state is the `origin/main` ref fetch that seeds the new branch.
+
+```mermaid
+sequenceDiagram
+    actor User as User
+    participant WF as Authoring Workflow
+    participant Git as git
+    participant Main as origin/main
+    participant WT as Authoring Worktree
+
+    User->>WF: Start authoring workflow
+    activate WF
+
+    Note over WF,Main: Phase 1 — seed isolation from origin/main only
+    WF->>Git: fetch origin
+    Git->>Main: read latest ref
+    Main-->>Git: origin/main commit SHA
+    Git-->>WF: fetch complete
+
+    Note over WF,WT: Phase 2 — create isolated worktree + branch off origin/main
+    WF->>Git: worktree add <isolated-path> -b <authoring-branch> origin/main
+    Git->>Main: resolve base commit
+    Main-->>Git: base commit
+    Git->>WT: materialise worktree at base commit on new branch
+    WT-->>Git: worktree ready
+    Git-->>WF: worktree + branch created
+
+    Note over WF,WT: Phase 3 — first authoring stage writes into the isolated worktree
+    WF->>WT: run first authoring stage (write AC / ticket files)
+    WT-->>WF: files written into isolated worktree
+
+    deactivate WF
+
+    Note over User,WT: Isolation invariant — no interaction in this sequence<br/>targets the user's original checkout or any concurrent<br/>worktree. The only shared-state access is the read-only<br/>origin/main fetch that seeds the new branch.
+```
+
+Parent: [Agent Code Delivery Workflows](agent_delivery_workflows.md#4-detail-view-epic--ticket-supervisor-flow-build-feature)
+
+> [!IMPORTANT]
+> **Isolation invariant.** The workflow communicates with exactly five participants: the
+> **User** (who starts it), the **Authoring Workflow** (the orchestrating depth-0 context),
+> **git** (the tooling that performs all repository operations), **origin/main** (read only,
+> to seed the new branch), and the **Authoring Worktree** (the dedicated, freshly created
+> directory that all authoring stages write into). The user's original checkout and any
+> concurrent worktree are deliberately absent from the topology — they are never read from
+> nor written to.
+
+---
+
 ## Key Design Principles
 
 1. **Self-Documenting State:** The `epic-supervisor` determines what phase a ticket is in by parsing the structured `agents:` YAML map in the ticket's frontmatter. It never reads the conversational history.
@@ -1618,6 +1681,7 @@ terminates cleanly after printing the summary.
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-24 [architecture-diagram-author]: Added §6 isolated-authoring worktree lifecycle sequence diagram showing the five participants (User, Authoring Workflow, git, origin/main, Authoring Worktree), the ordered interactions from workflow start through worktree+branch creation off origin/main to the first authoring stage writing into the isolated worktree, and an explicit isolation-invariant note that no interaction targets the user's original checkout or a concurrent worktree. (#EPIC-SafeAcAuthoring/04 BO-1500a-3)
 - 2026-06-10 14:05 [BrainCandy]: Added §5 frontend-coder dispatch topology showing unified agent at priority 8, PROJECT_CONTEXT.md design system override relationship, and optional webapp-testing skill detection. Updated §4 phase-agent dispatch order to include frontend-coder. Removed frontend-design as a separate topology node (design principles are now embedded in the agent template per ADR-005). (#EPIC-Oneagenthandlesboththelookandthecodefor/05)
 - 2026-06-08 [llm-expert]: Added AC BP-600d-4 quick-fix close phase section: Gherkin contract, push contract, PR update contract, ticket lifecycle close contract, ordering invariant, push failure halt message, depth-0 rationale, and contrast table with build-single-ticket Step 4b. (#EPIC-QuickFixWorkflow/13)
 - 2026-06-08 [llm-expert]: Added AC BP-600d-3 commit-agent dispatch section: Gherkin contract, dispatch contract table, staged-files constraint table, commit message format, rationale for agent-dispatch over direct git commit, and ordering invariant. (#EPIC-QuickFixWorkflow/12)
