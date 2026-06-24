@@ -403,6 +403,21 @@ Do not add any other preamble or summary text.
   `pull-request` agent and runs without asking the user to intervene by hand.
   This skill has no role in that push/PR flow — it operates exclusively on
   implementation worktrees and ticket phase agents.
+
+  **The authoring PR is subject to the same required CI status checks as every
+  other PR to `main` (AC BO-1500c-2).** `deliverAuthoringBranch()` opens an
+  ordinary PR against the protected `main` branch — it does not bypass, disable,
+  or circumvent any required status checks. Specifically:
+  - The **ruff lint gate** runs on the PR as it does on all other changes to
+    `main`.
+  - The **AC schema/diff validation gate** runs on the PR, verifying that all
+    AC YAML files introduced by the authoring branch conform to the schema.
+  - The **PR cannot be merged** until both required checks pass — `main`'s
+    branch-protection rules enforce this; no agent in this skill or in
+    `deliverAuthoringBranch()` has a path to merge without passing those checks.
+  - **No bypass path exists.** There is no direct-push-to-main path, no
+    privileged merge, and no mechanism by which approved AC files can reach
+    `main` while skipping the required checks.
 - **Does not enforce the per-stage AC commit invariant.** The commit-before-next-stage
   invariant (AC BO-1500b-1) is owned by the `/create-ac` skill
   (`templates/skills/create-ac/SKILL.md §1–§3`) and enforced mechanically by the
