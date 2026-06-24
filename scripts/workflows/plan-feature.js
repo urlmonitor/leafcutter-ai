@@ -531,6 +531,90 @@ async function scanOrphanedAcDrafts(agent, acStoreDir, authoringWorktreePath) {
 }
 
 /**
+ * Detect which pipeline stage keys have already been committed to the authoring
+ * branch by inspecting `git log` commit messages.
+ *
+ * Each mid-pipeline commit written by commitStageOutput() has a subject line of
+ * the form:
+ *   plan-feature(<STAGE>[, final]): <component>
+ *
+ * This function parses the git log of the authoring branch (commits since
+ * origin/main) and returns the set of stage keys (e.g. "po", "ba", "itpo")
+ * that already have a commit on the branch.  The pipeline runner uses this set
+ * to skip stages that have already committed their output (AC BO-1500b-2).
+ *
+ * Detection algorithm:
+ *   1. Run `git log --oneline <base>..HEAD` inside the authoring worktree to
+ *      list commits that are on the authoring branch but not yet on origin/main.
+ *   2. For each commit subject line, match the regex:
+ *      /^[0-9a-f]+ plan-feature\(([^,)]+)/
+ *      Capture group 1 is the stage label (e.g. "PO", "BA", "IT-PO",
+ *      "recovery").  Normalise to lowercase and convert display names back to
+ *      internal keys:  PO → po,  BA → ba,  IT-PO → itpo.
+ *   3. Return the Set of matched internal stage keys.
+ *
+ * On any error (git unavailable, worktree not set) the function returns an
+ * empty Set — the caller falls through to running all pipeline stages normally,
+ * which is safe (idempotent from the user's perspective, just redundant).
+ *
+ * @param {Function}    agent                 - Runtime-provided agent dispatch function.
+ * @param {string|null} authoringWorktreePath - Absolute path to the dedicated authoring worktree.
+ *                                             When set, git log uses `git -C <path>`; when null,
+ *                                             falls back to bare git (legacy / test environment).
+ * @returns {Promise<Set<string>>} Set of internal stage keys that already have commits.
+ */
+async function scanCommittedStages(agent, authoringWorktreePath) {
+  const gitLogCmd = authoringWorktreePath
+    ? `git -C "${authoringWorktreePath}" log --oneline origin/main..HEAD`
+    : "git log --oneline origin/main..HEAD";
+
+  let logOutput;
+  try {
+    const logResult = await agent({
+      agentType: "status-checker",
+      input: {
+        instructions:
+          `Run the following command and return ONLY the raw stdout:\n` +
+          `${gitLogCmd}\n` +
+          `Return JSON: { "output": "<raw stdout>", "exit_code": <number> }`,
+      },
+    });
+    const parsed = typeof logResult === "string" ? JSON.parse(logResult) : logResult;
+    if (!parsed || parsed.exit_code !== 0) {
+      // git log failed (e.g. no origin/main yet) — treat as no committed stages.
+      return new Set();
+    }
+    logOutput = parsed.output || "";
+  } catch (_err) {
+    // Cannot inspect git log — proceed without stage-skip optimisation.
+    return new Set();
+  }
+
+  // Display name → internal stage key mapping (inverse of stageDisplayName()).
+  const displayToKey = { "po": "po", "ba": "ba", "it-po": "itpo" };
+
+  const committedStageKeys = new Set();
+  const lines = logOutput.split("\n").filter((l) => l.trim().length > 0);
+
+  for (const line of lines) {
+    // Subject format: "<hash> plan-feature(<STAGE>[, final]): <component>"
+    // Capture the stage portion before the optional ", final" and the "):"
+    const match = line.match(/^[0-9a-f]+\s+plan-feature\(([^,)]+)/i);
+    if (!match) { continue; }
+    const displayName = match[1].trim().toLowerCase();
+
+    // Resolve the display name to an internal key using the mapping table.
+    // Unrecognised display names (e.g. "recovery") are silently ignored —
+    // they do not correspond to a pipeline stage that should be skipped.
+    if (Object.prototype.hasOwnProperty.call(displayToKey, displayName)) {
+      committedStageKeys.add(displayToKey[displayName]);
+    }
+  }
+
+  return committedStageKeys;
+}
+
+/**
  * Resolve orphaned AC draft files discovered by scanOrphanedAcDrafts().
  *
  * Presents the user with a yes/no/discard choice:
@@ -839,6 +923,22 @@ async function run({ userInput, agent }) {
   }
 
   // -------------------------------------------------------------------------
+  // Pre-Stage-0 — Committed-Stage Detection: identify pipeline stages that have
+  // already committed their output to the authoring branch in a prior crashed
+  // session (AC BO-1500b-2).
+  //
+  // Reads git log on the authoring branch (commits since origin/main) and
+  // parses commit subject lines for "plan-feature(<STAGE>):" markers.  Each
+  // matched stage key is added to `committedStageKeys`.  During the pipeline
+  // loop below, any step whose stage key is already in this set is skipped
+  // (its AC files are already in git history and do not need to be re-authored).
+  //
+  // When the set is empty (no prior partial run, or first run) every stage
+  // executes normally — the detection is a no-op on the happy path.
+  // -------------------------------------------------------------------------
+  const committedStageKeys = await scanCommittedStages(agent, authoringWorktreePath);
+
+  // -------------------------------------------------------------------------
   // Stage 0 — ac-triage: duplicate check + route classification
   // -------------------------------------------------------------------------
   const triageResult = await agent({
@@ -945,6 +1045,8 @@ async function run({ userInput, agent }) {
   /**
    * AC ids that have been successfully committed to git in prior stages.
    * Updated immediately after each successful commitStageOutput() call.
+   * Also pre-populated at run start for stages whose commits were detected in
+   * the authoring branch by scanCommittedStages() (AC BO-1500b-2 resume path).
    * Used to distinguish "committed from prior stages" vs "draft from cancelled stage"
    * in cancel/abort exit messages (AC ACD-300g-4).
    */
@@ -952,6 +1054,21 @@ async function run({ userInput, agent }) {
   const stageResults = [];
 
   for (const step of pipeline) {
+    // -----------------------------------------------------------------------
+    // Crash-resume: skip stages that already committed in a prior session
+    // (AC BO-1500b-2).  commitStageOutput() encodes the stage key in the
+    // commit subject as "plan-feature(<STAGE>):", and scanCommittedStages()
+    // reads that back on restart.  When a match is found the stage is marked
+    // done and the pipeline advances to the first uncommitted stage.
+    // -----------------------------------------------------------------------
+    if (committedStageKeys.has(step.stage)) {
+      // Record this stage as committed so cancel messages are accurate.
+      // We do not know exactly which AC IDs were written; leave committedAcs
+      // as-is — the cancel message will correctly report the committed stages.
+      stageResults.push({ stage: step.stage, agent: step.agent, acs: [], skipped: true });
+      continue;
+    }
+
     let stepResult;
     let editRetries = 0;
     let approved = false;

@@ -320,6 +320,75 @@ covered the user's checkout; the scan after §WT covers the authoring worktree.
 
 ---
 
+## §CR — Crash-Resume: Skip Already-Committed Stages (AC BO-1500b-2)
+
+**This step runs AFTER §PRR and AFTER §WT, before Stage 0.** It detects which
+pipeline stages already committed their AC files to the authoring branch in a
+prior crashed session, and skips those stages when the user restarts the
+workflow.
+
+### §CR.1 — Why this is needed
+
+`§PRR` handles **uncommitted** orphaned drafts (files on disk but not in git).
+`§CR` handles the complementary case: stages whose output was **successfully
+committed** before the crash. Without `§CR`, restarting `/plan-feature` would
+re-run product-owner even though its L0/L1 ACs are already in git history,
+forcing the user to re-author from scratch.
+
+### §CR.2 — Detection Algorithm
+
+Call `scanCommittedStages(agent, authoringWorktreePath)` in `plan-feature.js`.
+This function:
+
+1. Runs `git log --oneline origin/main..HEAD` inside the authoring worktree to
+   list commits on the authoring branch that are not yet on `origin/main`.
+
+2. For each commit subject line, matches:
+   ```
+   /^[0-9a-f]+ plan-feature\(([^,)]+)/i
+   ```
+   The captured group is the display-name stage label (e.g. `PO`, `BA`,
+   `IT-PO`).
+
+3. Normalises display names to internal stage keys (`PO→po`, `BA→ba`,
+   `IT-PO→itpo`) and returns a `Set<string>` of matched keys.
+
+**On any git error** (worktree not set, `origin/main` absent): the function
+returns an empty `Set` and the pipeline runs all stages normally. This is safe
+— redundant re-authoring is a UX friction, not a correctness failure.
+
+### §CR.3 — Pipeline Skip Logic
+
+Before dispatching each stage agent, the pipeline loop checks:
+
+```javascript
+if (committedStageKeys.has(step.stage)) {
+  // Stage already committed — advance to the next stage.
+  stageResults.push({ stage: step.stage, agent: step.agent, acs: [], skipped: true });
+  continue;
+}
+```
+
+The first stage NOT in `committedStageKeys` is dispatched normally. This
+ensures the workflow resumes from exactly the stage that had not committed,
+without re-running any completed work.
+
+### §CR.4 — User-visible behaviour
+
+When resuming after a crash:
+
+| Prior run ended after | Stages skipped on restart | First stage dispatched |
+|---|---|---|
+| PO committed, BA interrupted | PO | BA |
+| PO + BA committed, IT PO interrupted | PO, BA | IT PO |
+| No prior commits | (none) | First stage in pipeline |
+
+The user sees no explicit notification that stages were skipped — the
+workflow simply continues from the correct point.  If the user wants to
+verify which stages ran, they can inspect `git log` on the authoring branch.
+
+---
+
 ## §0 — Stage 0: Triage
 
 After the authoring worktree has been set up (§WT) and the Partial-Run Recovery
@@ -427,6 +496,15 @@ silently swallowed — each produces a user-visible warning or error.
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-24 [EPIC-SafeAcAuthoring/07/python-coder]: Implemented AC BO-1500b-2
+  (crash mid-pipeline leaves completed stages committed and resumable).
+  Added §CR (Crash-Resume) section documenting the scanCommittedStages()
+  function added to plan-feature.js. §CR.2 describes the git log detection
+  algorithm (parse "plan-feature(<STAGE>):" subject lines from commits on
+  the authoring branch since origin/main). §CR.3 shows the skip logic in
+  the pipeline loop. §CR.4 gives a user-visible behaviour table. The
+  complement of §PRR (handles uncommitted orphans); §CR handles committed
+  stages that should not be re-run after a crash.
 - 2026-06-24 [EPIC-SafeAcAuthoring/05/python-coder]: Implemented AC BO-1500b-1
   (each authoring stage commits its AC files before the next stage starts).
   Expanded §1–§3 from an abbreviated description to a full specification:
