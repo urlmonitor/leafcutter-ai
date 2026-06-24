@@ -26,7 +26,7 @@ agents:
   llm-expert: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 03: Remove the dead finalize-feature agent fallback; slash command hard-errors
@@ -90,7 +90,7 @@ and ADR addendum.
 - [x] documentation-expert — 2026-06-24 14:30
 - [x] pr-reviewer — 2026-06-24 17:00
 - [x] commit — 2026-06-24 18:30
-- [ ] pull-request
+- [x] pull-request — 2026-06-24 19:15
 
 ## Comments
 
@@ -128,6 +128,13 @@ completion_manifest:
   implementation_tasks_checked: true
   commit_succeeded: true
 Unstaged sibling-ticket files (07: setup_ticket_worktree.py, test, ticket file). Flipped three unchecked ## Implementation Tasks checkboxes to [x]. Staged all ticket-03 files (config/agent_registry.json, templates/agents/README.md, deleted templates/agents/finalize-feature.md, templates/workflows/finalize-feature.md, ADR-006 addendum, how-to update, JS comment fix, ticket file). Committed cleanly on EPIC-FinalizeFeatureHardening branch.
+
+### 2026-06-24 19:15 — pull-request (status: ok)
+feedback-id: fb_2026-06-24_bf0d93a2
+completion_manifest:
+  push_succeeded: true
+  pr_updated: true
+Pushed commit f207b00 to origin/EPIC-FinalizeFeatureHardening. PR #158 (`fix(workflows): collapse meta BinaryExpression to pure literals (EPIC-FinalizeFeatureHardening)`) updated with the ticket-03 implementation. Push exited 0 with no errors.
 
 ## Implementation Tasks
 - [x] Decide removal vs deprecation-window (default: removal); apply to template + registry.
