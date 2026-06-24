@@ -1237,6 +1237,15 @@ async function run({ userInput, agent }) {
         const action = (gateDecision.action || "cancel").toLowerCase();
 
         if (action === "cancel") {
+          // AC BO-1500c-1-i — NO-PR GUARANTEE (mid-pipeline cancel):
+          // The user cancelled before giving final approval.  We return here
+          // WITHOUT calling deliverAuthoringBranch(), so no push and no PR are
+          // opened.  AC files committed in prior stages (committedAcs) remain on
+          // the authoring branch exactly as-is — the work is preserved and the
+          // user can resume via §CR (crash-resume) on a later /plan-feature run.
+          // The current stage's draft files (written) are left on disk uncommitted
+          // so §PRR will surface them on the next run.
+          //
           // AC ACD-300g-4: do NOT commit — draft files remain on disk.
           // Distinguish committed ACs from prior stages vs. this stage's drafts.
           const cancelLabel = `gate after ${step.agent}`;
@@ -1323,6 +1332,15 @@ async function run({ userInput, agent }) {
           : "medium";
 
         if (finalAction === "cancel") {
+          // AC BO-1500c-1-i — NO-PR GUARANTEE (final-gate cancel):
+          // The user cancelled at the final gate, before giving final approval.
+          // We return here WITHOUT calling deliverAuthoringBranch(), so no push
+          // and no PR are opened.  All AC files committed in prior stages
+          // (committedAcs) remain on the authoring branch unchanged — the user
+          // can resume via §CR (crash-resume) on a later /plan-feature run.
+          // The IT-PO stage's draft files (written) remain on disk uncommitted
+          // so §PRR will surface them on the next run.
+          //
           // AC ACD-300g-4: do NOT commit — draft files remain on disk.
           // written here are the IT-PO files; committedAcs holds prior-stage commits.
           return {

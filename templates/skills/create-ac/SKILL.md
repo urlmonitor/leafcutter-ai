@@ -556,6 +556,72 @@ The `message` field includes a manual recovery instruction.
 
 ---
 
+## §C — Cancel Behavior: No PR, Branch Preserved (AC BO-1500c-1-i)
+
+**This section applies whenever the user cancels at any mid-pipeline or
+final-gate prompt — i.e. any gate that is NOT the final-approval gate for
+the IT PO v3 stage.**
+
+### §C.1 — What "cancel" means in the pipeline
+
+At every inter-stage gate (§1–§3) the user is presented with three choices:
+`approve`, `edit`, or `cancel`. The **final-gate prompt** (IT PO v3, the last
+stage) additionally accepts `defer`. The cancel path is the same at all gates:
+
+- The workflow returns immediately.
+- `deliverAuthoringBranch()` is **NOT called**.
+- No `git push` is executed.
+- No pull request is opened.
+
+This is the **no-PR guarantee**: cancellation at any gate — including the
+final gate — leaves the authoring branch in place without opening a PR.
+
+### §C.2 — What happens to already-committed AC files
+
+AC files committed in prior stages (i.e. files whose stage commit already
+ran and succeeded) are **not deleted or reverted**.  They remain on the
+authoring branch exactly as committed.  From git's perspective, the branch
+is in a valid intermediate state — committed stages are durable, and the
+next run will detect them via §CR (crash-resume) and skip re-authoring them.
+
+These committed files are also **not present on `main`** at this point, because
+`deliverAuthoringBranch()` (which pushes the branch and opens the PR) was
+never called.
+
+### §C.3 — What happens to the current stage's draft files
+
+AC files written by the cancelled stage but not yet committed remain on disk
+as uncommitted working-tree files.  On the next invocation of `/plan-feature`
+or `/create-ac`, the §PRR pre-flight will detect them as orphaned drafts and
+prompt the user to commit, discard, or abort before starting new work.
+
+### §C.4 — Resume path
+
+The user can resume the authoring session later by re-running `/plan-feature`
+(or `/create-ac`) with the same session slug.  The §CR skip logic detects
+stages already committed on the authoring branch and fast-forwards past them,
+dispatching only the stage that had not yet completed.  This satisfies
+AC BO-1500b-2 (crash-resume).
+
+### §C.5 — Interaction with §D (delivery)
+
+§D (delivery: push + PR) runs **only** after the user gives final approval
+at the IT PO v3 gate **and** the final `commitStageOutput()` call succeeds.
+A cancel at any prior gate prevents the code from reaching the `deliverAuthoringBranch()`
+call entirely — the return statement exits the pipeline loop before §D executes.
+
+This behavior is implemented at two sites in `plan-feature.js`:
+
+| Site | Gate | Comment tag |
+|---|---|---|
+| Mid-pipeline cancel (lines ~1239–1248 plus comment) | Any gate before IT PO final | `AC BO-1500c-1-i — NO-PR GUARANTEE (mid-pipeline cancel)` |
+| Final-gate cancel (lines ~1325–1333 plus comment) | IT PO v3 final gate | `AC BO-1500c-1-i — NO-PR GUARANTEE (final-gate cancel)` |
+
+Both sites return `{ status: "ok", committed_acs, acs_as_drafts }` without
+invoking `deliverAuthoringBranch()`.
+
+---
+
 ## §E — Error Handling Summary
 
 | Step | Error condition | Behaviour |
@@ -588,6 +654,20 @@ silently swallowed — each produces a user-visible warning or error.
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-24 [EPIC-SafeAcAuthoring/11/python-coder]: Implemented AC BO-1500c-1-i
+  (cancelling before final approval leaves draft ACs on the branch and opens no
+  PR). Added §C (Cancel Behavior) section between §D and §E documenting the
+  no-PR guarantee: §C.1 explains what cancel means at any gate; §C.2 explains
+  that prior-stage committed ACs remain on the authoring branch intact; §C.3
+  covers current-stage draft files left on disk for §PRR to surface; §C.4
+  documents the resume path via §CR (AC BO-1500b-2); §C.5 cross-references
+  the two cancel sites in plan-feature.js that implement the guarantee.
+  Added inline JSDoc comments at both cancel return sites in plan-feature.js
+  (mid-pipeline ~line 1239 and final-gate ~line 1325) with tag
+  "AC BO-1500c-1-i — NO-PR GUARANTEE" explaining that deliverAuthoringBranch()
+  is not called, no push/PR happens, and committed AC files from prior stages
+  are preserved on the authoring branch for later resume.
+  (#EPIC-SafeAcAuthoring/11)
 - 2026-06-24 [EPIC-SafeAcAuthoring/08/llm-expert]: Implemented AC BO-1500b-3
   (partial-run recovery pre-flight inspects authoring worktree, not original
   checkout, and reports no false orphans for already-committed AC files).
