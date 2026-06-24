@@ -16,7 +16,6 @@ ARCHITECTURE: Tests mock subprocess.run to control the MERGE_HEAD return code
 from __future__ import annotations
 
 import importlib.util
-import sys
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
