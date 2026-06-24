@@ -484,6 +484,78 @@ the commit is scoped to that stage's files only.)
 
 ---
 
+## §D — Delivery: Push Branch and Open PR (AC BO-1500c-1)
+
+**This step runs automatically after the final-stage commit succeeds.**  The
+user is NOT asked to push the branch or open the pull request by hand.
+
+### §D.1 — Trigger condition
+
+Delivery runs when:
+
+1. The authoring pipeline completed all stages (strategic, behavioral, or
+   technical route).
+2. The user gave final approval at the final gate (`§1–§3`, IT PO v3 stage).
+3. The final `commitStageOutput()` call succeeded (exit 0).
+
+If any earlier step failed (commit error, user cancel, user defer), delivery
+does NOT run.
+
+### §D.2 — Delivery mechanism
+
+Delivery is implemented by `deliverAuthoringBranch()` in
+`scripts/workflows/plan-feature.js`.  It:
+
+1. **Reuses the `pull-request` agent** — dispatches `agentType: "pull-request"`
+   with the authoring branch name, worktree path, AC IDs, and a pre-constructed
+   PR title/body.  The user already gave final approval at the pipeline gate;
+   the agent is instructed to proceed without an additional confirmation prompt.
+2. **Pushes the authoring branch** to origin:
+   ```
+   git -C <AUTHORING_WORKTREE_PATH> push --set-upstream origin <authoring-branch>
+   ```
+3. **Opens a pull request** whose base is `main` and whose head is the
+   authoring branch:
+   ```
+   gh pr create --base main --head <authoring-branch> --title "..." --body "..."
+   ```
+   The PR title follows the pattern:
+   `chore(ac): <component> — AC authoring session approved (N ACs)`
+
+### §D.3 — Failure tolerance
+
+If the delivery step fails (e.g. no network, remote push rejected, `gh pr create`
+error):
+
+- The AC files are already committed on the authoring branch — the session
+  work is NOT lost.
+- The return payload includes `delivery_status: "error"` and a human-readable
+  `message` explaining what failed, including the branch name so the user can
+  push and open a PR manually.
+- The overall workflow status is still `"ok"` (the approval was recorded;
+  only delivery failed).
+
+### §D.4 — Output contract
+
+On success, the workflow return payload includes:
+
+```json
+{
+  "status":          "ok",
+  "acs_approved":    ["<AC-ID-1>", "..."],
+  "priority":        "<priority>",
+  "route":           "<route>",
+  "authoring_branch": "ac-authoring/<session-slug>",
+  "pr_url":          "<URL returned by gh pr create>",
+  "delivery_status": "ok"
+}
+```
+
+On delivery failure, `pr_url` is `null` and `delivery_status` is `"error"`.
+The `message` field includes a manual recovery instruction.
+
+---
+
 ## §E — Error Handling Summary
 
 | Step | Error condition | Behaviour |

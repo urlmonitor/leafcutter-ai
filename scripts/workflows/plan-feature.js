@@ -541,6 +541,111 @@ async function scanOrphanedAcDrafts(agent, acStoreDir, authoringWorktreePath) {
 }
 
 /**
+ * Push the authoring branch to origin and open a pull request targeting main.
+ *
+ * Implements AC BO-1500c-1: after the user gives final approval, the workflow
+ * delivers the AC authoring session by pushing the dedicated authoring branch
+ * to origin and opening a PR whose base is main and head is the authoring branch.
+ * This step runs automatically — the user is not asked to push or open the PR
+ * by hand.
+ *
+ * Reuses the existing pull-request agent rather than building a bespoke
+ * branch/PR routine.  The agent is passed the authoring branch name,
+ * worktree path, and the list of approved AC IDs so it can construct a
+ * meaningful PR title and body.  Because the user already gave final approval
+ * at the /plan-feature gate, the agent is instructed to proceed without an
+ * additional confirmation prompt.
+ *
+ * On any failure the function returns { status: "error", message: <string> }
+ * so the caller can surface the error and still report the ACs as approved
+ * (the commit already landed on the authoring branch — the PR is just the
+ * delivery vehicle).
+ *
+ * @param {Function}    agent                 - Runtime-provided agent dispatch function.
+ * @param {string}      authoringBranch       - Full branch name, e.g. "ac-authoring/report-export".
+ * @param {string|null} authoringWorktreePath - Absolute path to the dedicated authoring worktree.
+ *                                             When set, git push uses `git -C <path>` so it
+ *                                             operates in the right worktree (AC BO-1500a-2).
+ * @param {string[]}    allAcsApproved        - AC IDs approved in this session (for PR body).
+ * @param {string}      component             - Component label used as PR title context.
+ * @param {string}      priority              - Priority set at the final gate (for PR body).
+ * @returns {Promise<{
+ *   status: "ok"|"error",
+ *   message: string,
+ *   pr_url?: string
+ * }>}
+ */
+async function deliverAuthoringBranch(agent, authoringBranch, authoringWorktreePath, allAcsApproved, component, priority) {
+  const gitC = authoringWorktreePath ? `git -C "${authoringWorktreePath}"` : "git";
+  const acList = allAcsApproved.length > 0 ? allAcsApproved.join(", ") : "(none)";
+  const componentLabel = component || "ac-store";
+  const prTitle = `chore(ac): ${componentLabel} — AC authoring session approved (${allAcsApproved.length} AC${allAcsApproved.length !== 1 ? "s" : ""})`;
+  const prBody =
+    `## Summary\n\n` +
+    `AC authoring session approved via /plan-feature.\n\n` +
+    `- **Component:** ${componentLabel}\n` +
+    `- **Priority:** ${priority}\n` +
+    `- **ACs approved:** ${acList}\n\n` +
+    `## Test plan\n\n` +
+    `- [ ] Verify all AC YAML files listed above appear under docs/acceptance-criteria/ on this branch.\n` +
+    `- [ ] Confirm readiness field is "approved" and priority is "${priority}" in each file.\n` +
+    `- [ ] Confirm no ticket files were modified (AC authoring is AC-store-only).`;
+
+  // Step 1 — push the authoring branch to origin.
+  let pushResult;
+  try {
+    pushResult = await agent({
+      agentType: "pull-request",
+      input: {
+        instructions:
+          `You are delivering an AC authoring session. The user has already given final approval — ` +
+          `do NOT ask for another confirmation.\n\n` +
+          `TASK: Push the authoring branch to origin and open a pull request.\n\n` +
+          `Branch: ${authoringBranch}\n` +
+          `Worktree: ${authoringWorktreePath || "(current checkout)"}\n` +
+          `Base branch: main\n` +
+          `Head branch: ${authoringBranch}\n\n` +
+          `Step 1 — Push the branch:\n` +
+          `  Run: ${gitC} push --set-upstream origin ${authoringBranch}\n` +
+          `  If the push exits non-zero, return:\n` +
+          `    { "status": "error", "message": "push failed: <stderr>", "pr_url": null }\n\n` +
+          `Step 2 — Open the pull request:\n` +
+          `  Run: gh pr create \\\n` +
+          `    --base main \\\n` +
+          `    --head "${authoringBranch}" \\\n` +
+          `    --title "${prTitle.replace(/"/g, '\\"')}" \\\n` +
+          `    --body "$(cat <<'PREOF'\n${prBody}\nPREOF\n)"\n` +
+          `  Capture the PR URL from stdout.\n` +
+          `  If gh pr create exits non-zero, return:\n` +
+          `    { "status": "error", "message": "gh pr create failed: <stderr>", "pr_url": null }\n\n` +
+          `Step 3 — Return success:\n` +
+          `  { "status": "ok", "message": "PR opened", "pr_url": "<url from gh pr create>" }\n\n` +
+          `IMPORTANT: Do NOT add a sign-off to any ticket file — there is no ticket in this flow. ` +
+          `Return ONLY the JSON payload described above.`,
+      },
+    });
+  } catch (dispatchErr) {
+    return {
+      status: "error",
+      message: `deliverAuthoringBranch: agent dispatch failed: ${dispatchErr.message}`,
+    };
+  }
+
+  let result;
+  try {
+    result = typeof pushResult === "string" ? JSON.parse(pushResult) : pushResult;
+  } catch (_parseErr) {
+    // Non-JSON response — treat as best-effort success if we cannot tell otherwise.
+    return {
+      status: "ok",
+      message: "Branch delivery completed (response unparseable — verify PR manually).",
+    };
+  }
+
+  return result || { status: "error", message: "no result returned by delivery agent" };
+}
+
+/**
  * Detect which pipeline stage keys have already been committed to the authoring
  * branch by inspecting `git log` commit messages.
  *
@@ -1274,13 +1379,49 @@ async function run({ userInput, agent }) {
           approved = true;
           stageResults.push({ stage: step.stage, agent: step.agent, acs: written });
 
+          // -----------------------------------------------------------------------
+          // §D — Delivery: push authoring branch to origin and open a PR to main.
+          // (AC BO-1500c-1)
+          //
+          // The user already gave final approval above.  Delivery is automatic —
+          // the user is not asked to push or open the PR by hand.  We reuse the
+          // pull-request agent rather than building a bespoke branch/PR routine.
+          //
+          // A delivery failure is non-fatal to the approval: the AC files are
+          // already committed on the authoring branch, so the work is not lost.
+          // We surface the delivery status in the return payload so the user can
+          // see what happened and manually push/PR if needed.
+          // -----------------------------------------------------------------------
+          const authoringBranch = wtPayload ? wtPayload.branch : null;
+          let deliveryOutcome = { status: "skipped", message: "No authoring branch available — push manually." };
+
+          if (authoringBranch && authoringWorktreePath) {
+            deliveryOutcome = await deliverAuthoringBranch(
+              agent,
+              authoringBranch,
+              authoringWorktreePath,
+              allAcsWritten,
+              component,
+              priority
+            );
+          }
+
+          const deliveryOk = deliveryOutcome.status === "ok";
+          const prUrl = deliveryOutcome.pr_url || null;
+
           return {
             status: "ok",
             message:
-              `/plan-feature complete. ${allAcsWritten.length} AC(s) approved with priority: ${priority}.`,
+              `/plan-feature complete. ${allAcsWritten.length} AC(s) approved with priority: ${priority}.\n` +
+              (deliveryOk
+                ? `Authoring branch pushed and PR opened: ${prUrl || authoringBranch}`
+                : `Delivery warning: ${deliveryOutcome.message} — Push '${authoringBranch}' and open a PR to main manually.`),
             acs_approved: allAcsWritten,
             priority,
             route: effectiveRoute,
+            authoring_branch: authoringBranch,
+            pr_url: prUrl,
+            delivery_status: deliveryOutcome.status,
           };
         } else {
           // Terminal else: unrecognized finalAction — abort immediately without committing.

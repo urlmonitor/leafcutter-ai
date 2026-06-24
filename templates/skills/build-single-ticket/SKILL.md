@@ -395,6 +395,14 @@ Do not add any other preamble or summary text.
   or branch, the next invocation detects the pre-existing state and reuses it
   rather than failing with "worktree already exists" or "branch already exists".
   Existing AC YAML files committed on the branch are never deleted or overwritten.
+- **Does not push the AC-authoring branch or open the AC-authoring PR.** After
+  the user gives final approval in `/plan-feature`, the `deliverAuthoringBranch()`
+  function in `scripts/workflows/plan-feature.js` automatically pushes the
+  authoring branch to origin and opens a PR whose base is `main` and head is
+  the authoring branch (AC BO-1500c-1). This delivery step reuses the
+  `pull-request` agent and runs without asking the user to intervene by hand.
+  This skill has no role in that push/PR flow — it operates exclusively on
+  implementation worktrees and ticket phase agents.
 - **Does not enforce the per-stage AC commit invariant.** The commit-before-next-stage
   invariant (AC BO-1500b-1) is owned by the `/create-ac` skill
   (`templates/skills/create-ac/SKILL.md §1–§3`) and enforced mechanically by the
