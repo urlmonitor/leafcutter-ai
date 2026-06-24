@@ -21,9 +21,11 @@ requires_adr: true
 
 In order to make `/finalize-feature` reliably executable end-to-end on every
 supported Claude Code install, we need to fix the two bugs that currently leave
-it with no working execution path, retire its non-functional fallback, and close
-the surrounding environmental and process gaps — so that finishing a feature is
-a one-command operation again instead of a manual `git -C` drive.
+it with no working execution path, retire its non-functional fallback, close
+the surrounding environmental and process gaps, and close the AC-first build
+loop by marking shipped ACs done — so that finishing a feature is a one-command
+operation again instead of a manual `git -C` drive, and the AC store stays
+truthful after every merge.
 
 ## Context
 
@@ -120,13 +122,21 @@ analysis agents diagnosed root causes and proper fixes; this epic captures them.
 | 07 | [07_bootstrap_dep_manager.md](./07_bootstrap_dep_manager.md) | Detect dependency manager (poetry vs pip) and make bootstrap non-fatal in setup_ticket_worktree.py | `[ ]` |
 | 08 | [08_fix_dead_auto_ticketing.md](./08_fix_dead_auto_ticketing.md) | Fix Step 6a auto-ticketing (or honestly report it disabled); stop the false success message | `[ ]` |
 | 09 | [09_finalize_p2_hygiene.md](./09_finalize_p2_hygiene.md) | P2 hygiene: baseline-worktree cleanup, pre-commit config probe, doc/code step-number drift, JSON.parse contracts | `[ ]` |
+| 10 | [10_close_acs_on_finalize.md](./10_close_acs_on_finalize.md) | Close tickets (`status: done`) + source ACs (`work_status: done`) on the feature branch **before** the PR merge, so closure rides the PR to origin/main (no unpushable local-`main` write; no second PR). Closes the AC-first build loop | `[ ]` |
 
 ## Risk & Safety
 
 - **Parallelism**: 01 is the unblocking P0 and should land first (or alongside 02).
-  02 depends on 01 (the gate must pass once 01 is clean). 03, 04, 05, 06, 07, 08, 09
-  are independent of each other and of 01/02 (different files/concerns) and can run
-  in parallel once authored.
+  02 depends on 01 (the gate must pass once 01 is clean). 03, 05, 06, 07, 09 are
+  independent of each other and of 01/02 (different files/concerns) and can run in
+  parallel once authored.
+- **finalize-feature.js serialization chain**: tickets 10, 04, and 08 all edit
+  `templates/workflows-js/finalize-feature.js` (and its step-map doc), so they must
+  run **serially**, not in the same parallel batch. Logical order: **10 → 04 → 08**.
+  10 establishes pre-merge closure (ticket `status` + AC `work_status` on the feature
+  branch); 04 then removes the now-redundant main-side moves/commits (`depends_on: 10`);
+  08 fixes the dead Step 6a auto-ticketing. Each rebases on the prior to avoid
+  same-file conflicts.
 - Touches money? No.
 - Touches data? No — workflow/agent/build tooling only. Ticket 04 changes how ticket
   files are (not) moved on main, but `status:` is already authoritative.
