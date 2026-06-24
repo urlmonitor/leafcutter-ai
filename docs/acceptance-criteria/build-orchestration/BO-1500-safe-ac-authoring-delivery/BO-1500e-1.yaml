@@ -53,4 +53,5 @@ created: 2026-06-24
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SafeAcAuthoring/17_TICKET-20260624-BO-1500e-1.md
