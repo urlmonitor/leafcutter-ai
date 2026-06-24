@@ -90,12 +90,18 @@ def test_guard_exits_1_on_broken_ref(tmp_path: Path) -> None:
     """
     # Build a minimal synthetic package root with:
     #   templates/agents/synthetic_broken.md  — references scripts/does_not_exist.py
-    # No scripts/commit_guardian/, scripts/feedback/, etc. are needed because the
-    # guard only checks whether referenced paths are DEPLOYABLE (derived from source)
-    # not whether they are actually installed.
+    #   templates/scripts/feedback/dummy.py   — required by _manifest_feedback_scripts()
+    #     which raises RuntimeError when templates/scripts/feedback/ is absent.
+    #     The guard test only needs the directory to exist (not to contain real scripts).
     synthetic_root = tmp_path / "synthetic_pkg"
     agents_dir = synthetic_root / "templates" / "agents"
     agents_dir.mkdir(parents=True)
+
+    # Seed templates/scripts/feedback/ so _manifest_feedback_scripts() does not
+    # raise RuntimeError (it raises loudly when the tracked source dir is absent).
+    feedback_src = synthetic_root / "templates" / "scripts" / "feedback"
+    feedback_src.mkdir(parents=True)
+    (feedback_src / "dummy.py").write_text("# dummy\n", encoding="utf-8")
 
     # Write a template that invokes the nonexistent script via python3 — this
     # matches the _PYTHON_INVOKE_RE pattern in build_referential_integrity.

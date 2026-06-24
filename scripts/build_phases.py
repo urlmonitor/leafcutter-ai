@@ -1087,9 +1087,15 @@ def build_feedback(target_root: Path, config: dict[str, Any],
                    dry_run: bool, force: bool) -> int:
     """Deploy feedback scripts and config to ``<target_root>/scripts/feedback/`` and ``<target_root>/config/``.
 
-    Copies the write-path scripts (submit_feedback.py, emit_hook_finding.py,
-    list_tags.py) and feedback_categories.yaml so the signoff skill's feedback
-    emission actually works from a deployed consumer project.
+    Sources scripts from ``templates/scripts/feedback/`` (the tracked templates
+    mirror), mirroring the ``build_commit_guardian`` pattern. The gitignored
+    ``scripts/feedback/`` working-tree directory is intentionally ignored — on a
+    fresh checkout only the tracked mirror contains committed source files
+    (AC BP-1000a-5).
+
+    Raises ``RuntimeError`` when the tracked source directory is absent so the
+    build fails loudly rather than silently deploying an empty feedback set
+    (Error Handling Policy Rule 3).
 
     Args:
         target_root: Absolute path to the target project root directory.
@@ -1099,29 +1105,28 @@ def build_feedback(target_root: Path, config: dict[str, Any],
 
     Returns:
         Count of files written (or that would be written in dry-run mode).
+
+    Raises:
+        RuntimeError: When ``templates/scripts/feedback/`` is absent.
     """
-    feedback_src = PACKAGE_ROOT / "scripts" / "feedback"
+    feedback_src = TEMPLATES_DIR / "scripts" / "feedback"
     config_src = PACKAGE_ROOT / "config" / "feedback_categories.yaml"
     if not feedback_src.exists():
-        return 0
+        raise RuntimeError(
+            f"build_feedback: tracked source directory '{feedback_src}' is absent. "
+            "Restore templates/scripts/feedback/ from git history — "
+            "the build must not silently deploy an empty feedback set."
+        )
 
     output_dir = target_root / "scripts" / "feedback"
     written = 0
 
-    deploy_scripts = [
-        "submit_feedback.py",
-        "emit_hook_finding.py",
-        "list_tags.py",
-        # Class B resolution: aggregate.py and resolve_feedback.py are referenced in
-        # templates (retrospective-agent.md, feedback-review/SKILL.md, ticket-wiring/SKILL.md)
-        # but were not deployed by this phase. Added to close the deploy gap.
-        "aggregate.py",
-        "resolve_feedback.py",
-    ]
-    for script_name in deploy_scripts:
-        src_file = feedback_src / script_name
-        if not src_file.is_file():
+    # Deploy all .py files found in the tracked templates mirror — dynamic
+    # discovery eliminates the hardcoded name list that caused deploy gaps.
+    for src_file in sorted(feedback_src.iterdir()):
+        if not src_file.is_file() or src_file.suffix != ".py":
             continue
+        script_name = src_file.name
         output_path = output_dir / script_name
         text = inject_config(src_file.read_text(encoding="utf-8"), config)
         if _write(output_path, text, dry_run, force):

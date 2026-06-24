@@ -365,22 +365,36 @@ def _manifest_commit_guardian_scripts(package_root: Path) -> set[str]:
 def _manifest_feedback_scripts(package_root: Path) -> set[str]:
     """Return ``scripts/feedback/<name>`` entries for all source .py files.
 
-    Scans ``package_root/scripts/feedback/`` dynamically, eliminating the
-    previous hardcoded three-name list that caused Class A false positives for
-    ``aggregate.py`` and ``resolve_feedback.py``.
+    Scans ``package_root/templates/scripts/feedback/`` (the tracked templates
+    mirror) dynamically, mirroring the ``_manifest_commit_guardian_scripts``
+    pattern. The gitignored ``scripts/feedback/`` working-tree directory is
+    intentionally ignored — on a fresh checkout only the tracked mirror exists.
+
+    Raises ``RuntimeError`` when the tracked source directory is absent or
+    contains no ``.py`` files, so the build fails loudly rather than silently
+    deploying an empty feedback set (Error Handling Policy Rule 1 / Rule 3).
 
     Args:
         package_root: Absolute path to the leafcutter package root.
 
     Returns:
-        Set of ``scripts/feedback/<name>`` strings, or empty set when absent.
+        Set of ``scripts/feedback/<name>`` strings (non-empty).
+
+    Raises:
+        RuntimeError: When ``templates/scripts/feedback/`` is absent or empty.
     """
     result: set[str] = set()
-    src = package_root / "scripts" / "feedback"
+    src = package_root / "templates" / "scripts" / "feedback"
     if src.is_dir():
         for f in src.iterdir():
             if f.is_file() and f.suffix == ".py":
                 result.add(f"scripts/feedback/{f.name}")
+    if not result:
+        raise RuntimeError(
+            f"_manifest_feedback_scripts: tracked source directory "
+            f"'{src}' is absent or contains no .py files. "
+            "Restore templates/scripts/feedback/ from git history."
+        )
     return result
 
 
