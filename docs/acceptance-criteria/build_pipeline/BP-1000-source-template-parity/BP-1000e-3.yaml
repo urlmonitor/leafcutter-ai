@@ -1,0 +1,38 @@
+id: BP-1000e-3
+readiness: draft
+priority: medium
+title: "When every workflow mirror matches its source, the merge proceeds"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000e.yaml"
+criteria: |
+  Given every mirrored workflow-script pair (templates/workflows-js/<name>.js and
+    its scripts/workflows/<name>.js mirror) is byte-identical
+  When the workflow-script parity check runs at the merge gate
+  Then the verdict reports ok with no drifted pair
+  And the parity check does not block the merge gate
+depends_on:
+  - BP-1000e
+  - BP-1000e-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000e.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-1000e-1
+  contract: "The per-pair workflow-script parity verdict; this behavior is the pass outcome when all mirrored pairs are identical."
+origin_agent: business-analyst-v3
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

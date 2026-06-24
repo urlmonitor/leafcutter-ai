@@ -1,0 +1,50 @@
+id: BO-1600a-3
+readiness: draft
+priority: medium
+title: "Concurrent commits no longer produce a zero-byte object or a broken index"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600a.yaml"
+criteria: |
+  Given many ticket-supervisors commit into one shared worktree with their commit
+    phases overlapping repeatedly under the git write serialization
+  When every commit in the run has completed
+  Then the repository's object store contains no zero-byte (truncated) loose object
+  And every loose object written during the run has a content hash that matches its
+    object name (no half-written object)
+  And the index is readable and consistent (a fresh status/read of the worktree
+    succeeds without an index-corruption error)
+  And running a git object-integrity check over the repository reports no corruption
+depends_on:
+  - BO-1600a
+  - BO-1600a-1
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build-orchestration/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-1600a-1
+  contract: "The git-write serialization guard whose presence is what makes the no-corruption invariant hold; this behavior is the regression test for the original KI-1 failure."
+origin_agent: business-analyst-v3
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  This is the direct regression reproduction of EPIC-FinalizeFeatureHardening
+  KI-1 (zero-byte loose object + broken index from concurrent commits). It
+  asserts the observable end-state invariant the serialization (BO-1600a-1)
+  guarantees, rather than re-testing the lock mechanics.

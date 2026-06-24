@@ -1,0 +1,56 @@
+id: BO-1600a-1
+readiness: draft
+priority: medium
+title: "Commit phases of concurrent supervisors are serialized at the git layer"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600a.yaml"
+criteria: |
+  Given two ticket-supervisors are driving two different tickets in parallel
+    inside one shared git worktree
+  And both reach their commit phase at overlapping times
+  When each supervisor performs the git write portion of its commit (writing loose
+    objects and updating the index/refs)
+  Then the two git write portions are serialized so that only one supervisor is
+    inside the git write portion at any instant
+  And the second supervisor's git write portion does not begin until the first
+    supervisor's git write portion has fully completed
+  And neither supervisor's non-git work (planning, editing files, running tests)
+    is serialized — only the git write portion is mutually exclusive
+depends_on:
+  - BO-1600a
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build-orchestration/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: describes
+    status: exists
+  - path: "templates/skills/building-epics/SKILL.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A serialization primitive (a single named mutual-exclusion guard scoped to the shared worktree's git write portion) that every supervisor's commit phase acquires before writing git objects/index/refs and releases after. This guard is the single load-bearing primitive consumed by the wait-then-proceed behavior (BO-1600a-2) and the no-corruption guarantee (BO-1600a-3). Distinct from BO-100c (pre-dispatch file-conflict scheduling) and BO-200 (single-ticket atomic commit)."
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Origin: EPIC-FinalizeFeatureHardening retrospective KI-1 — parallel
+  ticket-supervisors committing into one shared worktree produced a zero-byte
+  loose object that corrupted the index. PREVENTION-ONLY per the BO-1600 goal
+  and PROJECT_CONTEXT (no detect-and-recover sibling authored here; detection
+  lives separately under BO-1600c). Serialization is scoped to the git write
+  portion only so parallelism of the non-git work is preserved.

@@ -1,0 +1,61 @@
+id: BP-1000e-1
+readiness: draft
+priority: medium
+title: "Any diff between a workflow source script and its shipped mirror blocks the merge"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000e.yaml"
+criteria: |
+  Given an epic branch is being finalized for merge
+  And a workflow script exists as a canonical source copy and a shipped mirror copy
+    (for example templates/workflows-js/finalize-feature.js mirrored by
+    scripts/workflows/finalize-feature.js)
+  And the parity check compares every such mirrored workflow-script pair by name,
+    byte-for-byte
+  When the parity check runs as part of the merge gate
+  And at least one mirrored workflow-script pair is NOT byte-identical (the
+    comparison reports any difference at all -- content, added line, removed line,
+    or whitespace)
+  Then the parity check fails the merge gate
+  And the merge is blocked until every mirrored workflow-script pair is
+    byte-identical again
+depends_on:
+  - BP-1000e
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000e.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000a-1.yaml"
+    relationship: relates-to
+    status: exists
+  - path: "templates/workflows-js/finalize-feature.js"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A per-pair parity verdict object over the workflow-script mirror set: { ok: bool, pairs: [ { source_path: str, mirror_path: str, identical: bool, diff: str|null } ] } where paths are repo-root-relative POSIX paths, identical=false carries a non-null unified diff (source vs shipped mirror), and ok=true iff every mirrored workflow-script pair is identical. This is the single load-bearing primitive consumed by the block outcome (BP-1000e-2), the pass outcome (BP-1000e-3), the scope filter (BP-1000e-4), and the failure reporter (BP-1000e-5). Same mechanism shape as BP-1000a-1 applied to the templates/workflows-js/ <-> scripts/workflows/ mirror set."
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Origin: EPIC-FinalizeFeatureHardening retrospective KI-3. Concrete failure:
+  a ticket updated the workflow template (templates/workflows-js/<name>.js) but
+  not the committed mirror (scripts/workflows/<name>.js), so a deploy-SHA test
+  failed post-merge. Per BO PROJECT_CONTEXT this is the SAME byte-parity
+  mechanism as BP-1000a (source <-> shipped) applied to the workflow-script
+  mirror pair set, landed as a sibling L1 under BP-1000, not a new BO goal.
+  Distinct from BP-100k (compiled-workflow-output drift via hash manifests at
+  pre-commit on .claude/workflows/): this is source<->mirror byte diff at the
+  merge gate. Reuse, do not re-invent, the BP-1000a-1 diff-runner approach.

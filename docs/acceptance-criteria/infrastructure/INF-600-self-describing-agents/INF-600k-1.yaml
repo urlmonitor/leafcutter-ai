@@ -1,0 +1,49 @@
+id: INF-600k-1
+readiness: draft
+priority: medium
+title: "A workflow filename in spawned_by passes registry validation as an external caller"
+component: infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600k.yaml"
+criteria: |
+  Given an agent's registry entry lists a workflow filename (for example
+    "finalize-feature.js") in its spawned_by array
+  And that workflow filename is not the name of any agent in the registry
+  When the build validates the agent registry
+  Then validation recognizes the workflow filename as a legitimate external caller
+  And validation does NOT report it as an "unknown agent" error
+  And the build does not fail on account of that spawned_by entry
+depends_on:
+  - INF-600k
+doc_links:
+  - path: "docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600k.yaml"
+    relationship: parent
+    status: exists
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+  - path: docs/agents/README.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: "The registry validator's spawned_by-entry classification: an entry that is not a known agent is checked against the recognized-external-caller set (workflow filenames and the literal external triggers) before being treated as an unknown agent. This classification is the single load-bearing primitive consumed by the user-caller behavior (INF-600k-2) and the genuine-unknown-rejection behavior (INF-600k-3)."
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "scripts/registry_validator.py"
+notes: |
+  Origin: EPIC-FinalizeFeatureHardening retrospective KI-4. Already implemented
+  in scripts/registry_validator.py via the _EXTERNAL_CALLERS set (per the task
+  brief). This AC documents and locks the behavior so the relaxation is
+  traceable and regression-protected. Per BO PROJECT_CONTEXT this refines the
+  INF-600g registry-validation family rather than landing under build-orchestration.

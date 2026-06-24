@@ -1,0 +1,45 @@
+id: INF-600k-3
+readiness: draft
+priority: medium
+title: "A genuinely unknown agent in spawned_by is still rejected"
+component: infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600k.yaml"
+criteria: |
+  Given an agent's registry entry lists a name in its spawned_by array that is
+    neither a known agent in the registry nor a recognized external caller (not a
+    workflow filename and not the literal "user")
+  When the build validates the agent registry
+  Then validation reports that entry as an unknown agent and the build fails
+  And the relaxation that accepts workflow filenames and "user" does NOT suppress
+    this genuine unknown-agent error
+depends_on:
+  - INF-600k
+  - INF-600k-1
+doc_links:
+  - path: "docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600k.yaml"
+    relationship: parent
+    status: exists
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: INF-600k-1
+  contract: "The spawned_by-entry external-caller classification; this behavior pins the negative guarantee that an entry outside both the known-agent set and the recognized-external-caller set is still rejected."
+origin_agent: business-analyst-v3
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "scripts/registry_validator.py"
+notes: |
+  Negative-guarantee AC: prevents the relaxation from becoming a blanket
+  acceptance that masks a real typo or a reference to a deleted agent. Keeps the
+  original INF-600g validation strength intact for true unknown agents.

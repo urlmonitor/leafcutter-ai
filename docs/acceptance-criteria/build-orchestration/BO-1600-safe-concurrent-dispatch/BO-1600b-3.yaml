@@ -1,0 +1,43 @@
+id: BO-1600b-3
+readiness: draft
+priority: medium
+title: "The next delivery commits cleanly into a worktree left by a failed one"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600b.yaml"
+criteria: |
+  Given a previous supervisor was interrupted or failed mid-commit and its cleanup
+    has run, leaving the shared worktree with no truncated object, a readable index,
+    no stale index lock, and a released serialization guard
+  When the next supervisor reaches its commit phase and acquires the git-write guard
+  Then it completes its commit successfully without encountering debris from the
+    failed commit (no truncated object, no stale lock, no poisoned index)
+  And its commit is present in the repository history afterward
+depends_on:
+  - BO-1600b
+  - BO-1600b-1
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600b.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build-orchestration/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-1600b-1
+  contract: "The interrupted-commit cleanup routine that returns the worktree to a usable state; this behavior verifies a subsequent commit succeeds against that recovered state."
+origin_agent: business-analyst-v3
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

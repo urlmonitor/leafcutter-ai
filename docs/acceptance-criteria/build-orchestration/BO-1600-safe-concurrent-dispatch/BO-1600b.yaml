@@ -22,7 +22,11 @@ origin_agent: product-owner-v3
 created: 2026-06-24
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - BO-1600b-1
+  - BO-1600b-2
+  - BO-1600b-3
+  - BO-1600b-4
 implemented_by: []
 documentation_triggers:
   - state-diagram

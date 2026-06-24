@@ -1,0 +1,48 @@
+id: BO-1600c-1
+readiness: draft
+priority: medium
+title: "Detected repository corruption halts the drive before the next commit"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600c.yaml"
+criteria: |
+  Given a parallel drive is running into one shared worktree
+  And an integrity check finds the shared repository in a damaged state (for example
+    a zero-byte loose object, an object whose content hash does not match its name,
+    or an unreadable index)
+  When the corruption is detected
+  Then the drive halts immediately and no further ticket commit is started
+  And the halt occurs before any subsequent git write that would touch the damaged
+    object store or index
+depends_on:
+  - BO-1600c
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600c.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build-orchestration/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A repository-integrity probe plus a halt signal that the drive orchestration consumes: the probe returns a determinate corrupt/clean verdict for the shared worktree, and a corrupt verdict aborts the drive. The verdict is the single load-bearing primitive consumed by the actionable-message behavior (BO-1600c-2) and the do-not-continue behavior (BO-1600c-3)."
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  BO-1600c is the DETECT-AND-HALT capability the user explicitly requested as a
+  sibling of the BO-1600a prevention guarantee (per PROJECT_CONTEXT, recovery is
+  not in scope — this halts, it does not repair). The probe is the spine the
+  message and the no-continue guarantee both consume.

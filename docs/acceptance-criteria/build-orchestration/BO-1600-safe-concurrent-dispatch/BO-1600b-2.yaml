@@ -1,0 +1,50 @@
+id: BO-1600b-2
+readiness: draft
+priority: medium
+title: "An interrupted commit leaves no poisoned index or stranded lock"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600b.yaml"
+criteria: |
+  Given a supervisor is interrupted or fails while updating the shared worktree's
+    index or while holding the git-write serialization guard
+  When the interrupted supervisor has stopped
+  Then the worktree's index is left in a consistent, readable state (a fresh
+    status/read succeeds with no index-corruption error)
+  And no stale index lock file remains that would block a later commit from
+    acquiring the index
+  And the git-write serialization guard the interrupted supervisor held is released
+    rather than stranded, so a waiting supervisor is not blocked indefinitely
+depends_on:
+  - BO-1600b
+  - BO-1600b-1
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600b.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build-orchestration/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-1600b-1
+  contract: "The interrupted-commit cleanup routine; this behavior extends it to index-lock and serialization-guard release."
+origin_agent: business-analyst-v3
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The stranded-guard release clause closes the deadlock risk that the BO-1600a-1
+  serialization guard would otherwise introduce if a holder dies mid-commit —
+  recording the cross-reference so the IT-PO wires guard ownership to the
+  cleanup routine.

@@ -1,0 +1,49 @@
+id: BO-1600c-3
+readiness: draft
+priority: medium
+title: "The drive never presses on against a repository known to be corrupted"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600c.yaml"
+criteria: |
+  Given the integrity probe has returned a corrupt verdict for the shared
+    repository during a parallel drive
+  When the drive orchestration decides whether to continue
+  Then it does NOT start, retry, or queue any further ticket commit against the
+    corrupted repository
+  And the drive exits with a failure outcome (a non-success result the caller can
+    detect) rather than reporting partial success
+  And a clean integrity verdict is required before any later drive may begin writing
+    to that shared repository again
+depends_on:
+  - BO-1600c
+  - BO-1600c-1
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600c.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build-orchestration/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-1600c-1
+  contract: "The corruption verdict whose corrupt result must hard-stop the drive; this behavior pins the negative guarantee that no further commit is attempted."
+origin_agent: business-analyst-v3
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Negative-guarantee AC: the original failure compounded damage by continuing on
+  a broken store. This pins "stop and stay stopped" so a coder cannot reduce the
+  halt to a warning the drive ignores.
