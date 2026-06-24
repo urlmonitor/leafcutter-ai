@@ -368,6 +368,11 @@ Do not add any other preamble or summary text.
   (AC BO-1500a-1). This skill creates implementation worktrees (branched
   from local `main`) for ticket execution — a separate concern from AC
   authoring.
+  The `create-ac-worktree` subcommand is **idempotent and reuse-safe** (AC
+  BO-1500a-1-i): if a prior authoring run crashed and left behind a worktree
+  or branch, the next invocation detects the pre-existing state and reuses it
+  rather than failing with "worktree already exists" or "branch already exists".
+  Existing AC YAML files committed on the branch are never deleted or overwritten.
 
 ## Contrast: this skill vs. `/quick-fix`
 

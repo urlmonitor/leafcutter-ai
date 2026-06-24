@@ -99,10 +99,12 @@ def _worktree_exists(branch: str) -> tuple[bool, Path | None]:
     """Check whether a worktree for *branch* already exists.
 
     Parses ``git worktree list --porcelain`` to find a matching branch line.
-    Both ``feature/<branch>`` and ``ticket/<branch>`` prefixes are recognised.
+    The ``feature/<branch>``, ``ticket/<branch>``, and
+    ``ac-authoring/<branch>`` prefixes are all recognised.
 
     Args:
-        branch: The branch slug (without the feature/ or ticket/ prefix).
+        branch: The branch slug (without the feature/, ticket/, or
+            ac-authoring/ prefix).
 
     Returns:
         A tuple (exists, worktree_path_or_None) where exists is True when a
@@ -127,11 +129,53 @@ def _worktree_exists(branch: str) -> tuple[bool, Path | None]:
             current_worktree_path = Path(line[len("worktree "):])
         elif line.startswith("branch "):
             refs_branch = line[len("branch "):].strip()
-            # refs_branch is like refs/heads/feature/my-slug or refs/heads/ticket/my-slug
-            for prefix in (f"refs/heads/feature/{branch}", f"refs/heads/ticket/{branch}"):
+            # refs_branch is like refs/heads/feature/my-slug,
+            # refs/heads/ticket/my-slug, or refs/heads/ac-authoring/my-slug
+            for prefix in (
+                f"refs/heads/feature/{branch}",
+                f"refs/heads/ticket/{branch}",
+                f"refs/heads/ac-authoring/{branch}",
+            ):
                 if refs_branch == prefix:
                     return True, current_worktree_path
     return False, None
+
+
+def _branch_exists(full_branch: str, repo_root: Path) -> bool:
+    """Check whether a local branch with the exact name *full_branch* exists.
+
+    Runs ``git -C <repo_root> branch --list <full_branch>`` and returns
+    ``True`` when the output is non-empty (git prints the branch name when it
+    exists, empty output when it does not).
+
+    This is used by ``_create_ac_worktree`` to detect the
+    *branch-without-worktree* scenario: the branch was created in a prior run
+    but its worktree was later pruned or removed.  In that scenario
+    ``git worktree add -b <branch>`` would fail with "branch already exists";
+    by detecting the condition first we can fall back to
+    ``git worktree add <path> <branch>`` (checkout-only, no new branch).
+
+    Args:
+        full_branch: The fully-qualified branch name including any prefix
+            (e.g. ``"ac-authoring/report-export"``).
+        repo_root: Absolute Path to the repository root used as the ``-C``
+            anchor for the git command.
+
+    Returns:
+        ``True`` if the branch exists locally; ``False`` otherwise.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(repo_root), "branch", "--list", full_branch],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        raise subprocess.SubprocessError(  # noqa: TRY003
+            f"Failed to check branch existence for '{full_branch}': {exc}"
+        ) from exc
+    return bool(result.stdout.strip())
 
 
 def _create_worktree(slug: str, worktrees_dir: Path) -> Path:
@@ -204,18 +248,27 @@ def _fetch_origin(anchor: Path) -> None:
 
 
 def _create_ac_worktree(branch_name: str, worktrees_dir: Path, repo_root: Path) -> Path:
-    """Create a new AC-authoring worktree branched from ``origin/main``.
+    """Create (or reconnect) an AC-authoring worktree from ``origin/main``.
 
     Unlike ``_create_worktree`` (which branches from local ``main``), this
-    function always roots the new branch at ``origin/main`` so that no local
+    function always roots a *new* branch at ``origin/main`` so that no local
     in-flight changes on ``main`` contaminate the AC authoring session.  This
     implements AC ``BO-1500a-1``: every AC authoring worktree starts from the
     current tip of ``origin/main``.
 
-    The worktree is created at *worktrees_dir*/*branch_name* on a new branch
+    The worktree is created at *worktrees_dir*/*branch_name* on a branch
     named ``ac-authoring/<branch_name>``.  The ``ac-authoring/`` prefix makes
     these worktrees visually distinct from ``feature/`` and ``ticket/`` worktrees
     in ``git worktree list`` output.
+
+    **Branch-without-worktree resilience (AC BO-1500a-1-i):** if the branch
+    ``ac-authoring/<branch_name>`` already exists locally (e.g. it was created
+    in a prior run whose worktree was later pruned or removed by ``git worktree
+    prune``), this function uses ``git worktree add <path> <branch>`` instead of
+    ``git worktree add -b <branch> <path> origin/main``.  The checkout-only form
+    reuses the existing branch (and therefore any commits already on it) rather
+    than failing with "branch already exists".  Existing AC YAML files committed
+    on that branch are preserved intact.
 
     Args:
         branch_name: Short slug for the authoring session (e.g.
@@ -228,35 +281,72 @@ def _create_ac_worktree(branch_name: str, worktrees_dir: Path, repo_root: Path) 
             regardless of the process CWD.
 
     Returns:
-        Absolute Path to the newly created worktree directory.
+        Absolute Path to the newly created (or reconnected) worktree directory.
 
     Raises:
         subprocess.SubprocessError: If the ``git worktree add`` call exits
-            non-zero (e.g. branch already exists, or ``origin/main`` is not
-            a valid ref).
+            non-zero (e.g. ``origin/main`` is not a valid ref when creating
+            fresh, or the worktree directory is already occupied).
     """
     worktree_path = worktrees_dir / branch_name
     full_branch = f"ac-authoring/{branch_name}"
-    try:
-        subprocess.run(
-            [
-                "git",
-                "-C",
-                str(repo_root),
-                "worktree",
-                "add",
-                "-b",
-                full_branch,
-                str(worktree_path),
-                "origin/main",
-            ],
-            check=True,
+
+    # Detect the branch-without-worktree scenario: branch exists locally but
+    # no worktree is registered for it.  In this case we must not pass "-b"
+    # (which would try to create a new branch and fail) — instead we use the
+    # checkout-only form that puts an existing branch into a new worktree
+    # directory.
+    branch_already_exists = _branch_exists(full_branch, repo_root)
+
+    if branch_already_exists:
+        # Reuse the existing branch — checkout-only, no new branch creation.
+        # The existing commits (including AC YAML files) are preserved.
+        try:
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(repo_root),
+                    "worktree",
+                    "add",
+                    str(worktree_path),
+                    full_branch,
+                ],
+                check=True,
+            )
+        except (subprocess.CalledProcessError, OSError) as exc:
+            raise subprocess.SubprocessError(  # noqa: TRY003
+                f"Failed to add AC-authoring git worktree at {worktree_path} "
+                f"reusing existing branch '{full_branch}': {exc}"
+            ) from exc
+        print(
+            f"INFO: Reusing existing branch '{full_branch}' in new worktree "
+            f"at {worktree_path}. Existing AC YAML files are preserved.",
+            file=sys.stderr,
         )
-    except (subprocess.CalledProcessError, OSError) as exc:
-        raise subprocess.SubprocessError(  # noqa: TRY003
-            f"Failed to add AC-authoring git worktree at {worktree_path} "
-            f"from origin/main: {exc}"
-        ) from exc
+    else:
+        # Fresh path — create a new branch rooted at origin/main.
+        try:
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(repo_root),
+                    "worktree",
+                    "add",
+                    "-b",
+                    full_branch,
+                    str(worktree_path),
+                    "origin/main",
+                ],
+                check=True,
+            )
+        except (subprocess.CalledProcessError, OSError) as exc:
+            raise subprocess.SubprocessError(  # noqa: TRY003
+                f"Failed to add AC-authoring git worktree at {worktree_path} "
+                f"from origin/main: {exc}"
+            ) from exc
+
     return worktree_path
 
 
@@ -651,21 +741,33 @@ def cmd_create_only(args: argparse.Namespace) -> None:
 
 
 def cmd_create_ac_worktree(args: argparse.Namespace) -> None:
-    """Create a dedicated AC-authoring worktree branched from ``origin/main``.
+    """Create (or reuse) a dedicated AC-authoring worktree.
 
-    Implements AC ``BO-1500a-1``: the starting point of the new branch is the
-    current tip of ``origin/main``, ensuring the AC authoring session begins
-    from a clean, well-defined base that is independent of any local in-flight
-    commits on ``main``.
+    Implements AC ``BO-1500a-1`` and ``BO-1500a-1-i``:
+
+    - AC ``BO-1500a-1``: the new branch is rooted at ``origin/main`` so the
+      AC authoring session starts from a clean, well-defined base independent
+      of any local in-flight commits on ``main``.
+    - AC ``BO-1500a-1-i``: if a prior run left an authoring worktree or branch
+      on disk, the command detects and reuses it rather than failing.  Three
+      scenarios are handled:
+
+      1. **Worktree registered and reachable**: ``_worktree_exists`` returns
+         the existing path; no ``git worktree add`` is called.
+      2. **Branch exists but worktree was pruned**: ``_branch_exists`` detects
+         the branch; ``_create_ac_worktree`` uses ``git worktree add <path>
+         <branch>`` (checkout-only) so existing AC YAML commits are preserved.
+      3. **No prior state**: fresh branch created at ``origin/main`` as before.
 
     Flow:
     1. Resolve the main repository root.
     2. Fetch ``origin`` so the local ``origin/main`` ref is current.
     3. Derive a timestamped worktree directory name if not supplied.
     4. Check whether the worktree already exists (idempotent on re-run).
-    5. Create and bootstrap the worktree.
-    6. Install drift and pre-commit hook shims.
-    7. Print a JSON payload containing ``worktree_path``, ``branch``, and
+    5. Create or reuse the worktree.
+    6. Bootstrap (only on fresh creation).
+    7. Install drift and pre-commit hook shims.
+    8. Print a JSON payload containing ``worktree_path``, ``branch``, and
        ``ac_store_path`` (the absolute path to ``docs/acceptance-criteria/``
        inside the new worktree) so callers know exactly where to write AC YAML
        files.
@@ -695,35 +797,27 @@ def cmd_create_ac_worktree(args: argparse.Namespace) -> None:
     worktrees_dir = main_repo.parent / "worktrees"
     worktrees_dir.mkdir(parents=True, exist_ok=True)
 
+    # Canonical full branch name — used in the JSON payload and log messages.
     full_branch = f"ac-authoring/{session_name}"
-    # Re-use _worktree_exists via a prefix check — the function checks
-    # feature/<slug> and ticket/<slug>; for ac-authoring we check directly.
-    existing_worktree_path: Path | None = None
+
+    # Scenario 1 — worktree already registered: _worktree_exists now recognises
+    # the ac-authoring/<slug> prefix in addition to feature/ and ticket/.
+    # CWD is main_repo (set above by os.chdir), so _worktree_exists does not
+    # need an explicit -C anchor.
     try:
-        result = subprocess.run(
-            ["git", "-C", str(main_repo), "worktree", "list", "--porcelain"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-    except (subprocess.SubprocessError, OSError) as exc:
+        worktree_registered, existing_worktree_path = _worktree_exists(session_name)
+    except subprocess.SubprocessError as exc:
         print(f"ERROR: cannot list worktrees: {exc}", file=sys.stderr)
         sys.exit(1)
 
-    current_worktree_path: Path | None = None
-    for line in result.stdout.splitlines():
-        if line.startswith("worktree "):
-            current_worktree_path = Path(line[len("worktree "):])
-        elif line.startswith("branch "):
-            refs_branch = line[len("branch "):].strip()
-            if refs_branch == f"refs/heads/{full_branch}":
-                existing_worktree_path = current_worktree_path
-                break
-
-    if existing_worktree_path is not None:
+    if worktree_registered and existing_worktree_path is not None:
+        # Reuse the registered worktree — no worktree-add needed.
         worktree_path = existing_worktree_path
         created = False
     else:
+        # Scenarios 2 & 3 — branch may or may not exist.
+        # _create_ac_worktree handles both: it calls _branch_exists internally
+        # and selects the checkout-only form when the branch already exists.
         worktree_path = _create_ac_worktree(session_name, worktrees_dir, main_repo)
         _bootstrap(main_repo, worktree_path)
         created = True
@@ -890,6 +984,17 @@ DECISION HISTORY
   instead of into the user's original checkout. Module docstring updated
   to reflect the three-subcommand architecture and the two-policy branching
   strategy. Added to DECISION HISTORY.
+- 2026-06-24 [EPIC-SafeAcAuthoring/02/python-coder]: Implemented AC BO-1500a-1-i
+  (worktree/branch reuse). Added ``_branch_exists()`` helper that runs
+  ``git branch --list <full_branch>`` to detect the branch-without-worktree
+  scenario (branch created in a prior run, worktree later pruned). Extended
+  ``_worktree_exists()`` to recognise the ``ac-authoring/`` prefix (previously
+  only ``feature/`` and ``ticket/`` were checked). Refactored
+  ``cmd_create_ac_worktree`` to use ``_worktree_exists()`` (eliminates the
+  inline duplicate worktree-list parser). Updated ``_create_ac_worktree()``
+  to select checkout-only ``git worktree add <path> <branch>`` when the branch
+  already exists, preserving all AC YAML commits. Updated SKILL.md to document
+  the idempotent/reuse guarantee.
 - 2026-05-12 10:15 [Claude/ticket-supervisor]: Initial implementation.
   Consolidated fragile multi-step worktree bootstrap from three call
   sites (build-single-ticket/SKILL.md, feature/SKILL.md,
