@@ -362,6 +362,12 @@ Do not add any other preamble or summary text.
 - **Does not bypass user escalation.** When the supervisor surfaces
   a `(status: question)` or a `failed` payload, this skill is a
   passthrough — it does not try to answer on the user's behalf.
+- **Does not create AC-authoring worktrees.** The dedicated AC-authoring
+  worktree (branched from `origin/main`) is created by `/create-ac` and
+  `/plan-feature` via `scripts/setup_ticket_worktree.py create-ac-worktree`
+  (AC BO-1500a-1). This skill creates implementation worktrees (branched
+  from local `main`) for ticket execution — a separate concern from AC
+  authoring.
 
 ## Contrast: this skill vs. `/quick-fix`
 

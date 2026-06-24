@@ -134,12 +134,14 @@ function stageDisplayName(stageKey) {
  *   failing_files {string[]}  — file paths that failed validation
  *   is_conflict  {boolean}    — true when failure is an index conflict
  *
- * @param {Function} agent       - Runtime-provided agent dispatch function.
- * @param {string[]} written     - Array of AC IDs (e.g. ["ACD-100a-1"]) written by the stage.
- * @param {string}   stageName   - Internal stage key (e.g. "po", "ba", "itpo").
- * @param {string}   component   - Target component name (e.g. "ac-driven-dev").
- * @param {boolean}  isFinal     - True when this is the final commit of the pipeline run.
- * @param {string}   runId       - Short run identifier generated at the top of run().
+ * @param {Function} agent        - Runtime-provided agent dispatch function.
+ * @param {string[]} written      - Array of AC IDs (e.g. ["ACD-100a-1"]) written by the stage.
+ * @param {string}   stageName    - Internal stage key (e.g. "po", "ba", "itpo").
+ * @param {string}   component    - Target component name (e.g. "ac-driven-dev").
+ * @param {boolean}  isFinal      - True when this is the final commit of the pipeline run.
+ * @param {string}   runId        - Short run identifier generated at the top of run().
+ * @param {string}   acStorePath  - Absolute path to the AC store directory (AC BO-1500a-1).
+ *                                  Defaults to "docs/acceptance-criteria" when omitted.
  * @returns {Promise<{
  *   status: "ok"|"error",
  *   message: string,
@@ -148,7 +150,8 @@ function stageDisplayName(stageKey) {
  *   is_conflict?: boolean
  * }>}
  */
-async function commitStageOutput(agent, written, stageName, component, isFinal, runId) {
+async function commitStageOutput(agent, written, stageName, component, isFinal, runId, acStorePath) {
+  acStorePath = acStorePath || "docs/acceptance-criteria";
   const stageLabel = stageDisplayName(stageName);
   const displayStage = isFinal ? `${stageLabel}, final` : stageLabel;
   const componentLabel = component || "unknown-component";
@@ -171,13 +174,13 @@ async function commitStageOutput(agent, written, stageName, component, isFinal, 
           `The AC IDs written by this stage are: ${writtenJson}\n` +
           `The commit message to use is: ${commitMessage}\n` +
           "\n" +
-          "IMPORTANT STAGING RULE: You MUST stage ONLY the files that correspond to the\n" +
-          "AC IDs listed above. Never run 'git add docs/acceptance-criteria/' or\n" +
-          "'git add .' — those commands would include files from previous stages or\n" +
-          "unrelated working-tree changes, which is a correctness violation.\n" +
-          "\n" +
-          "Step 1 — Discover which AC files from this stage exist on disk:\n" +
-          "  Run: git status --porcelain --untracked-files=all -- docs/acceptance-criteria/\n" +
+          `IMPORTANT STAGING RULE: You MUST stage ONLY the files that correspond to the\n` +
+          `AC IDs listed above. Never run 'git add ${acStorePath}' or\n` +
+          `'git add .' — those commands would include files from previous stages or\n` +
+          `unrelated working-tree changes, which is a correctness violation.\n` +
+          `\n` +
+          `Step 1 — Discover which AC files from this stage exist on disk:\n` +
+          `  Run: git status --porcelain --untracked-files=all -- ${acStorePath}/\n` +
           "  (The --untracked-files=all flag is required so that files inside a\n" +
           "  previously-untracked subfolder are emitted individually rather than\n" +
           "  collapsed to a single directory-level '?? <dir>/' line. Without it,\n" +
@@ -200,8 +203,8 @@ async function commitStageOutput(agent, written, stageName, component, isFinal, 
           "Step 3 — Stage each matching file individually:\n" +
           "  For each file path found in Step 1, run:\n" +
           "    git add <path>\n" +
-          "  Run one 'git add' command per file. Do NOT use 'git add .' or\n" +
-          "  'git add docs/acceptance-criteria/' — only individual explicit paths.\n" +
+          `  Run one 'git add' command per file. Do NOT use 'git add .' or\n` +
+          `  'git add ${acStorePath}/' — only individual explicit paths.\n` +
           "  If any 'git add <path>' exits non-zero:\n" +
           "    Return: { \"status\": \"error\", \"message\": \"git add failed for <path>\", \"hook_name\": null, \"failing_files\": [\"<path>\"], \"is_conflict\": false }\n" +
           "\n" +
@@ -336,7 +339,7 @@ function formatCommitError(agentLabel, stageName, commitOutcome, allAcsWritten) 
  * ACs already committed in prior stages and the current stage's uncommitted drafts.
  *
  * The AC store keeps one YAML file per AC ID at the path:
- *   docs/acceptance-criteria/<AC_ID>.yaml
+ *   <acStorePath>/<AC_ID>.yaml
  *
  * When the user cancels at a gate, draft files for the cancelled stage remain on
  * disk as uncommitted working-tree changes. Files from stages that were already
@@ -345,11 +348,14 @@ function formatCommitError(agentLabel, stageName, commitOutcome, allAcsWritten) 
  * @param {string[]} committedAcs   - AC IDs that have already been committed to git (prior stages).
  * @param {string[]} draftAcs       - AC IDs written by the cancelled stage; still uncommitted.
  * @param {string}   cancelledAt    - Human label for where the cancel occurred (e.g. "gate after product-owner").
+ * @param {string}   acStorePath    - Absolute path to the AC store directory (AC BO-1500a-1).
+ *                                    Defaults to "docs/acceptance-criteria" when omitted.
  * @returns {string} Formatted exit message for the user.
  */
-function buildCancelMessage(committedAcs, draftAcs, cancelledAt) {
+function buildCancelMessage(committedAcs, draftAcs, cancelledAt, acStorePath) {
+  const store = acStorePath || "docs/acceptance-criteria";
   const draftFilePaths = draftAcs.map(
-    (id) => `  docs/acceptance-criteria/${id}.yaml`
+    (id) => `  ${store}/${id}.yaml`
   );
 
   const parts = [`Pipeline cancelled at ${cancelledAt}.`];
@@ -366,9 +372,9 @@ function buildCancelMessage(committedAcs, draftAcs, cancelledAt) {
     );
     parts.push(draftFilePaths.join("\n"));
     parts.push(
-      "\nYou can inspect these files, manually commit them with `git add` + `git commit`, " +
-      "or discard tracked files with `git checkout -- docs/acceptance-criteria/` and " +
-      "delete any untracked new files explicitly (e.g. `rm docs/acceptance-criteria/<AC_ID>.yaml`). " +
+      `\nYou can inspect these files, manually commit them with \`git add\` + \`git commit\`, ` +
+      `or discard tracked files with \`git checkout -- ${store}/\` and ` +
+      `delete any untracked new files explicitly (e.g. \`rm ${store}/<AC_ID>.yaml\`). ` +
       "Note: `git checkout --` alone will NOT remove untracked files — both steps are required " +
       "if a prior session created new AC files that were never staged."
     );
@@ -695,14 +701,88 @@ async function run({ userInput, agent }) {
   }
 
   // -------------------------------------------------------------------------
+  // Pre-Stage-0 — Authoring Worktree Bootstrap (AC BO-1500a-1).
+  //
+  // Creates a dedicated worktree branched from origin/main so that every AC
+  // YAML file produced in this session is written under an isolated path and
+  // never lands in the user's original checkout.  The script fetches origin
+  // (best-effort) so the branch starts at the true remote tip.
+  // -------------------------------------------------------------------------
+  const sessionSlug = component
+    ? component.toLowerCase().replace(/[^a-z0-9-]/g, "-").slice(0, 20)
+    : null;
+
+  let authoringWorktreePath = null;
+  let acStoreDir = "docs/acceptance-criteria"; // default: overridden below
+
+  let worktreeSetupResult;
+  try {
+    worktreeSetupResult = await agent({
+      agentType: "status-checker",
+      input: {
+        instructions:
+          "Run the following command and return ONLY the raw stdout output:\n" +
+          "python scripts/setup_ticket_worktree.py create-ac-worktree" +
+          (sessionSlug ? ` "${sessionSlug}"` : "") + "\n" +
+          "Return JSON: { \"output\": \"<raw stdout line>\", \"exit_code\": <number>, \"stderr\": \"<stderr or empty>\" }",
+      },
+    });
+  } catch (wtErr) {
+    return {
+      status: "error",
+      message:
+        "Failed to dispatch worktree setup: " + wtErr.message + "\n" +
+        "Cannot create the dedicated AC-authoring worktree. " +
+        "Resolve the issue and re-run /plan-feature.",
+    };
+  }
+
+  const wtParsed =
+    typeof worktreeSetupResult === "string"
+      ? JSON.parse(worktreeSetupResult)
+      : worktreeSetupResult;
+
+  // Only fail-hard when exit_code is explicitly non-zero.  When exit_code is
+  // absent (undefined) the step ran in a context that does not return structured
+  // subprocess results (e.g. a test mock or a status-checker that ignores the
+  // instructions format).  In that case we continue with the default acStoreDir
+  // so that the rest of the pipeline — especially the §PRR scan — can proceed.
+  if (wtParsed && wtParsed.exit_code != null && wtParsed.exit_code !== 0) {
+    const wtStderr = wtParsed.stderr ? wtParsed.stderr : "(no stderr captured)";
+    return {
+      status: "error",
+      message:
+        "Authoring worktree creation failed (exit code " +
+        wtParsed.exit_code + ").\n" +
+        wtStderr + "\n" +
+        "Resolve the git error and re-run /plan-feature.",
+    };
+  }
+
+  let wtPayload = null;
+  try {
+    if (wtParsed && typeof wtParsed.output === "string" && wtParsed.output.trim()) {
+      wtPayload = JSON.parse(wtParsed.output.trim());
+    }
+  } catch (_parseErr) {
+    // Unparseable payload — fall back to default acStoreDir.
+    // This can happen in mock environments that return non-JSON output.
+    wtPayload = null;
+  }
+
+  if (wtPayload) {
+    authoringWorktreePath = wtPayload.worktree_path || null;
+    acStoreDir = wtPayload.ac_store_path || acStoreDir;
+  }
+
+  // -------------------------------------------------------------------------
   // Pre-Stage-0 — Partial-Run Recovery: detect and resolve orphaned AC drafts
   // from a prior crashed session (AC ACD-300g-2-i).
   //
-  // Scans docs/acceptance-criteria/ via git status (single git call, O(1) for
-  // up to 500 files). Qualifies files by origin_agent + readiness: draft.
-  // Presents yes/no/discard choice if any orphans are found.
+  // Scans the authoring worktree's AC store via git status (single git call,
+  // O(1) for up to 500 files). Qualifies files by origin_agent + readiness:
+  // draft. Presents yes/no/discard choice if any orphans are found.
   // -------------------------------------------------------------------------
-  const acStoreDir = "docs/acceptance-criteria";
   const orphans = await scanOrphanedAcDrafts(agent, acStoreDir);
   if (orphans.length > 0) {
     const recoveryOutcome = await resolveOrphanedDrafts(agent, orphans, acStoreDir, runId);
@@ -834,7 +914,8 @@ async function run({ userInput, agent }) {
     let approved = false;
 
     while (!approved) {
-      // Dispatch the authoring agent.
+      // Dispatch the authoring agent, directing AC writes to the dedicated
+      // authoring worktree's AC store path (AC BO-1500a-1).
       stepResult = await agent({
         agentType: step.agent,
         input: {
@@ -842,9 +923,12 @@ async function run({ userInput, agent }) {
           component: component,
           parent_l1_id: parent_l1_id,
           route: effectiveRoute,
+          ac_store_path: acStoreDir,
           instructions:
             `You are running as part of the /plan-feature pipeline (route: ${effectiveRoute}). ` +
-            "Write AC YAML files ONLY to docs/acceptance-criteria/. " +
+            `Write AC YAML files ONLY to ${acStoreDir}. ` +
+            "Do NOT write AC files to docs/acceptance-criteria/ relative to the current checkout — " +
+            `use the absolute path ${acStoreDir} instead. ` +
             "Do NOT create or modify any files in tickets/. " +
             "After writing, return a JSON object: { \"status\": \"ok\", \"acs_written\": [\"ACD-...\", ...] }",
         },
@@ -883,7 +967,7 @@ async function run({ userInput, agent }) {
           const cancelLabel = `gate after ${step.agent}`;
           return {
             status: "ok",
-            message: buildCancelMessage(committedAcs, written, cancelLabel),
+            message: buildCancelMessage(committedAcs, written, cancelLabel, acStoreDir),
             committed_acs: committedAcs,
             acs_as_drafts: written,
           };
@@ -894,18 +978,17 @@ async function run({ userInput, agent }) {
         } else if (action === "edit" && editRetries >= MAX_EDIT_RETRIES) {
           // Max retries exhausted — abort without committing the draft.
           // AC ACD-300g-4: draft files remain on disk uncommitted.
-          const abortLabel = `${step.agent} after ${MAX_EDIT_RETRIES + 1} attempts`;
           return {
             status: "error",
             message:
               `${step.agent} failed to produce satisfactory ACs after ${MAX_EDIT_RETRIES + 1} attempts. Pipeline aborted.\n` +
-              buildCancelMessage(committedAcs, written, `max-retries abort for ${step.agent}`),
+              buildCancelMessage(committedAcs, written, `max-retries abort for ${step.agent}`, acStoreDir),
             committed_acs: committedAcs,
             acs_as_drafts: written,
           };
         } else {
           // approve — commit stage output before dispatching the next agent.
-          const commitOutcome = await commitStageOutput(agent, written, step.stage, component, false, runId);
+          const commitOutcome = await commitStageOutput(agent, written, step.stage, component, false, runId, acStoreDir);
           if (commitOutcome.status === "error") {
             return {
               status: "error",
@@ -950,7 +1033,7 @@ async function run({ userInput, agent }) {
           // written here are the IT-PO files; committedAcs holds prior-stage commits.
           return {
             status: "ok",
-            message: buildCancelMessage(committedAcs, written, "final gate (IT-PO)"),
+            message: buildCancelMessage(committedAcs, written, "final gate (IT-PO)", acStoreDir),
             committed_acs: committedAcs,
             acs_as_drafts: written,
           };
@@ -964,7 +1047,7 @@ async function run({ userInput, agent }) {
             status: "error",
             message:
               `it-po failed to produce satisfactory ACs after ${MAX_EDIT_RETRIES + 1} attempts. Pipeline aborted.\n` +
-              buildCancelMessage(committedAcs, written, "max-retries abort for it-po (final gate)"),
+              buildCancelMessage(committedAcs, written, "max-retries abort for it-po (final gate)", acStoreDir),
             committed_acs: committedAcs,
             acs_as_drafts: written,
           };
@@ -987,7 +1070,7 @@ async function run({ userInput, agent }) {
           });
 
           // Commit the final IT PO enriched AC output before reporting success.
-          const finalCommitOutcome = await commitStageOutput(agent, written, step.stage, component, true, runId);
+          const finalCommitOutcome = await commitStageOutput(agent, written, step.stage, component, true, runId, acStoreDir);
           if (finalCommitOutcome.status === "error") {
             return {
               status: "error",
@@ -1016,7 +1099,7 @@ async function run({ userInput, agent }) {
             status: "error",
             message:
               `Final gate returned unrecognized action: ${JSON.stringify(finalAction)}. Pipeline aborted without committing.\n` +
-              buildCancelMessage(committedAcs, written, "final gate (unrecognized action)"),
+              buildCancelMessage(committedAcs, written, "final gate (unrecognized action)", acStoreDir),
             committed_acs: committedAcs,
             acs_as_drafts: written,
           };

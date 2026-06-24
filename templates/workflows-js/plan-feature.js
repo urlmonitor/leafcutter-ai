@@ -134,12 +134,14 @@ function stageDisplayName(stageKey) {
  *   failing_files {string[]}  — file paths that failed validation
  *   is_conflict  {boolean}    — true when failure is an index conflict
  *
- * @param {Function} agent       - Runtime-provided agent dispatch function.
- * @param {string[]} written     - Array of AC IDs (e.g. ["ACD-100a-1"]) written by the stage.
- * @param {string}   stageName   - Internal stage key (e.g. "po", "ba", "itpo").
- * @param {string}   component   - Target component name (e.g. "ac-driven-dev").
- * @param {boolean}  isFinal     - True when this is the final commit of the pipeline run.
- * @param {string}   runId       - Short run identifier generated at the top of run().
+ * @param {Function} agent        - Runtime-provided agent dispatch function.
+ * @param {string[]} written      - Array of AC IDs (e.g. ["ACD-100a-1"]) written by the stage.
+ * @param {string}   stageName    - Internal stage key (e.g. "po", "ba", "itpo").
+ * @param {string}   component    - Target component name (e.g. "ac-driven-dev").
+ * @param {boolean}  isFinal      - True when this is the final commit of the pipeline run.
+ * @param {string}   runId        - Short run identifier generated at the top of run().
+ * @param {string}   acStorePath  - Absolute path to the AC store directory (AC BO-1500a-1).
+ *                                  Defaults to "docs/acceptance-criteria" when omitted.
  * @returns {Promise<{
  *   status: "ok"|"error",
  *   message: string,
@@ -148,7 +150,8 @@ function stageDisplayName(stageKey) {
  *   is_conflict?: boolean
  * }>}
  */
-async function commitStageOutput(agent, written, stageName, component, isFinal, runId) {
+async function commitStageOutput(agent, written, stageName, component, isFinal, runId, acStorePath) {
+  acStorePath = acStorePath || "docs/acceptance-criteria";
   const stageLabel = stageDisplayName(stageName);
   const displayStage = isFinal ? `${stageLabel}, final` : stageLabel;
   const componentLabel = component || "unknown-component";
@@ -171,13 +174,13 @@ async function commitStageOutput(agent, written, stageName, component, isFinal, 
           `The AC IDs written by this stage are: ${writtenJson}\n` +
           `The commit message to use is: ${commitMessage}\n` +
           "\n" +
-          "IMPORTANT STAGING RULE: You MUST stage ONLY the files that correspond to the\n" +
-          "AC IDs listed above. Never run 'git add docs/acceptance-criteria/' or\n" +
-          "'git add .' — those commands would include files from previous stages or\n" +
-          "unrelated working-tree changes, which is a correctness violation.\n" +
-          "\n" +
-          "Step 1 — Discover which AC files from this stage exist on disk:\n" +
-          "  Run: git status --porcelain --untracked-files=all -- docs/acceptance-criteria/\n" +
+          `IMPORTANT STAGING RULE: You MUST stage ONLY the files that correspond to the\n` +
+          `AC IDs listed above. Never run 'git add ${acStorePath}' or\n` +
+          `'git add .' — those commands would include files from previous stages or\n` +
+          `unrelated working-tree changes, which is a correctness violation.\n` +
+          `\n` +
+          `Step 1 — Discover which AC files from this stage exist on disk:\n` +
+          `  Run: git status --porcelain --untracked-files=all -- ${acStorePath}/\n` +
           "  (The --untracked-files=all flag is required so that files inside a\n" +
           "  previously-untracked subfolder are emitted individually rather than\n" +
           "  collapsed to a single directory-level '?? <dir>/' line. Without it,\n" +
@@ -200,8 +203,8 @@ async function commitStageOutput(agent, written, stageName, component, isFinal, 
           "Step 3 — Stage each matching file individually:\n" +
           "  For each file path found in Step 1, run:\n" +
           "    git add <path>\n" +
-          "  Run one 'git add' command per file. Do NOT use 'git add .' or\n" +
-          "  'git add docs/acceptance-criteria/' — only individual explicit paths.\n" +
+          `  Run one 'git add' command per file. Do NOT use 'git add .' or\n` +
+          `  'git add ${acStorePath}/' — only individual explicit paths.\n` +
           "  If any 'git add <path>' exits non-zero:\n" +
           "    Return: { \"status\": \"error\", \"message\": \"git add failed for <path>\", \"hook_name\": null, \"failing_files\": [\"<path>\"], \"is_conflict\": false }\n" +
           "\n" +
@@ -336,7 +339,7 @@ function formatCommitError(agentLabel, stageName, commitOutcome, allAcsWritten) 
  * ACs already committed in prior stages and the current stage's uncommitted drafts.
  *
  * The AC store keeps one YAML file per AC ID at the path:
- *   docs/acceptance-criteria/<AC_ID>.yaml
+ *   <acStorePath>/<AC_ID>.yaml
  *
  * When the user cancels at a gate, draft files for the cancelled stage remain on
  * disk as uncommitted working-tree changes. Files from stages that were already
@@ -345,11 +348,14 @@ function formatCommitError(agentLabel, stageName, commitOutcome, allAcsWritten) 
  * @param {string[]} committedAcs   - AC IDs that have already been committed to git (prior stages).
  * @param {string[]} draftAcs       - AC IDs written by the cancelled stage; still uncommitted.
  * @param {string}   cancelledAt    - Human label for where the cancel occurred (e.g. "gate after product-owner").
+ * @param {string}   acStorePath    - Absolute path to the AC store directory (AC BO-1500a-1).
+ *                                    Defaults to "docs/acceptance-criteria" when omitted.
  * @returns {string} Formatted exit message for the user.
  */
-function buildCancelMessage(committedAcs, draftAcs, cancelledAt) {
+function buildCancelMessage(committedAcs, draftAcs, cancelledAt, acStorePath) {
+  const store = acStorePath || "docs/acceptance-criteria";
   const draftFilePaths = draftAcs.map(
-    (id) => `  docs/acceptance-criteria/${id}.yaml`
+    (id) => `  ${store}/${id}.yaml`
   );
 
   const parts = [`Pipeline cancelled at ${cancelledAt}.`];
@@ -366,9 +372,9 @@ function buildCancelMessage(committedAcs, draftAcs, cancelledAt) {
     );
     parts.push(draftFilePaths.join("\n"));
     parts.push(
-      "\nYou can inspect these files, manually commit them with `git add` + `git commit`, " +
-      "or discard tracked files with `git checkout -- docs/acceptance-criteria/` and " +
-      "delete any untracked new files explicitly (e.g. `rm docs/acceptance-criteria/<AC_ID>.yaml`). " +
+      `\nYou can inspect these files, manually commit them with \`git add\` + \`git commit\`, ` +
+      `or discard tracked files with \`git checkout -- ${store}/\` and ` +
+      `delete any untracked new files explicitly (e.g. \`rm ${store}/<AC_ID>.yaml\`). ` +
       "Note: `git checkout --` alone will NOT remove untracked files — both steps are required " +
       "if a prior session created new AC files that were never staged."
     );

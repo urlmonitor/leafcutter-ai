@@ -1,26 +1,32 @@
 """
 MODULE: setup_ticket_worktree.py
 GOAL: Canonical script for creating and bootstrapping a git worktree for a
-    standalone ticket or a free-form feature branch.
+    standalone ticket, a free-form feature branch, or a dedicated AC-authoring
+    session.
 BUSINESS CONTEXT: Eliminates fragile multi-step worktree setup duplicated across
     build-single-ticket/SKILL.md, feature/SKILL.md, and worktree-agent.md. All
     three call sites delegate to this script so there is one place to fix when
     the bootstrap recipe changes (Windows path-with-spaces quoting, .env symlink
     policy, poetry --no-root flag, etc.).
 ARCHITECTURE: Pure stdlib (pathlib, subprocess, shutil, json, argparse, re,
-    sys). Two subcommands: ``setup-ticket`` (full flow: validate + slug + worktree
-    + bootstrap) and ``create-only`` (worktree + bootstrap, no ticket). Ticket
-    files are never moved by this script; folder reconciliation on main is handled
-    by ``finalize-feature.js`` after the branch merges. Outputs a single-line JSON
-    payload to stdout so callers can parse it with any JSON tool. All subprocess
-    calls use check=True to propagate non-zero exits as Python exceptions, which
-    are caught and printed to stderr before sys.exit(1). No file output to project
-    directories — the script itself is idempotent and safe to re-run.
-BRANCHING POLICY: New worktrees are branched from local ``main`` HEAD (not
-    ``origin/main``).  This ensures that unpushed commits on local ``main`` —
-    most commonly the ticket-creation commit produced by ``/create-ticket`` — are
-    always present in the new worktree.  When local ``main`` is in sync with
-    ``origin/main`` (the dominant code path) there is no observable difference.
+    sys). Three subcommands: ``setup-ticket`` (full flow: validate + slug +
+    worktree + bootstrap), ``create-only`` (worktree + bootstrap, no ticket),
+    and ``create-ac-worktree`` (AC-authoring worktree branched from
+    ``origin/main``). Ticket files are never moved by this script; folder
+    reconciliation on main is handled by ``finalize-feature.js`` after the
+    branch merges. Outputs a single-line JSON payload to stdout so callers can
+    parse it with any JSON tool. All subprocess calls use check=True to
+    propagate non-zero exits as Python exceptions, which are caught and printed
+    to stderr before sys.exit(1). No file output to project directories — the
+    script itself is idempotent and safe to re-run.
+BRANCHING POLICY: New ticket/feature worktrees are branched from local ``main``
+    HEAD (not ``origin/main``).  This ensures that unpushed commits on local
+    ``main`` — most commonly the ticket-creation commit produced by
+    ``/create-ticket`` — are always present in the new worktree.  When local
+    ``main`` is in sync with ``origin/main`` (the dominant code path) there is
+    no observable difference.  AC-authoring worktrees (``create-ac-worktree``
+    subcommand) are branched from ``origin/main`` instead so that no local
+    in-flight work contaminates the clean authoring branch (AC BO-1500a-1).
 HOOK SHIM INSTALL: After worktree creation both subcommands invoke
     ``install_pre_commit_shims.install_shims(main_repo)`` to idempotently write
     any missing pre-commit hook shims (post-commit, post-checkout, etc.) into
@@ -166,6 +172,90 @@ def _create_worktree(slug: str, worktrees_dir: Path) -> Path:
     except OSError as exc:
         raise subprocess.SubprocessError(  # noqa: TRY003
             f"Failed to add git worktree at {worktree_path}: {exc}"
+        ) from exc
+    return worktree_path
+
+
+def _fetch_origin(anchor: Path) -> None:
+    """Fetch the latest state of ``origin`` so ``origin/main`` is up-to-date.
+
+    Runs ``git fetch origin`` anchored to *anchor* (the repository root).  The
+    call is best-effort: a fetch failure (e.g. no network, no remote) prints a
+    warning to stderr but does not abort the caller — the caller will still
+    attempt to create the worktree from the locally-cached ``origin/main`` ref,
+    which is acceptable when the local cache is recent.
+
+    Args:
+        anchor: Absolute Path to the repository root used as the git working
+            directory for the fetch call.
+    """
+    try:
+        subprocess.run(
+            ["git", "-C", str(anchor), "fetch", "origin"],
+            check=True,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        print(
+            f"WARNING: git fetch origin failed ({exc}); "
+            "proceeding with cached origin/main ref. "
+            "The AC authoring worktree may not reflect the very latest remote state.",
+            file=sys.stderr,
+        )
+
+
+def _create_ac_worktree(branch_name: str, worktrees_dir: Path, repo_root: Path) -> Path:
+    """Create a new AC-authoring worktree branched from ``origin/main``.
+
+    Unlike ``_create_worktree`` (which branches from local ``main``), this
+    function always roots the new branch at ``origin/main`` so that no local
+    in-flight changes on ``main`` contaminate the AC authoring session.  This
+    implements AC ``BO-1500a-1``: every AC authoring worktree starts from the
+    current tip of ``origin/main``.
+
+    The worktree is created at *worktrees_dir*/*branch_name* on a new branch
+    named ``ac-authoring/<branch_name>``.  The ``ac-authoring/`` prefix makes
+    these worktrees visually distinct from ``feature/`` and ``ticket/`` worktrees
+    in ``git worktree list`` output.
+
+    Args:
+        branch_name: Short slug for the authoring session (e.g.
+            ``"20260624-report-export"``).  Combined with the ``ac-authoring/``
+            prefix to form the full branch name.
+        worktrees_dir: Parent directory under which the new worktree directory
+            is created.
+        repo_root: Absolute Path to the main repository root — used as the
+            ``-C`` anchor for the ``git worktree add`` call so the command works
+            regardless of the process CWD.
+
+    Returns:
+        Absolute Path to the newly created worktree directory.
+
+    Raises:
+        subprocess.SubprocessError: If the ``git worktree add`` call exits
+            non-zero (e.g. branch already exists, or ``origin/main`` is not
+            a valid ref).
+    """
+    worktree_path = worktrees_dir / branch_name
+    full_branch = f"ac-authoring/{branch_name}"
+    try:
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repo_root),
+                "worktree",
+                "add",
+                "-b",
+                full_branch,
+                str(worktree_path),
+                "origin/main",
+            ],
+            check=True,
+        )
+    except (subprocess.CalledProcessError, OSError) as exc:
+        raise subprocess.SubprocessError(  # noqa: TRY003
+            f"Failed to add AC-authoring git worktree at {worktree_path} "
+            f"from origin/main: {exc}"
         ) from exc
     return worktree_path
 
@@ -560,6 +650,104 @@ def cmd_create_only(args: argparse.Namespace) -> None:
     print(json.dumps(payload))
 
 
+def cmd_create_ac_worktree(args: argparse.Namespace) -> None:
+    """Create a dedicated AC-authoring worktree branched from ``origin/main``.
+
+    Implements AC ``BO-1500a-1``: the starting point of the new branch is the
+    current tip of ``origin/main``, ensuring the AC authoring session begins
+    from a clean, well-defined base that is independent of any local in-flight
+    commits on ``main``.
+
+    Flow:
+    1. Resolve the main repository root.
+    2. Fetch ``origin`` so the local ``origin/main`` ref is current.
+    3. Derive a timestamped worktree directory name if not supplied.
+    4. Check whether the worktree already exists (idempotent on re-run).
+    5. Create and bootstrap the worktree.
+    6. Install drift and pre-commit hook shims.
+    7. Print a JSON payload containing ``worktree_path``, ``branch``, and
+       ``ac_store_path`` (the absolute path to ``docs/acceptance-criteria/``
+       inside the new worktree) so callers know exactly where to write AC YAML
+       files.
+
+    Prints a single-line JSON payload to stdout on success and exits 0.
+    Exits 1 on any subprocess failure.
+
+    Args:
+        args: Parsed argparse namespace.  Expected attribute: ``session_name``
+            (str or None).  If omitted, a name is derived from the current UTC
+            date so that ``create-ac-worktree`` is idempotent when called twice
+            in the same day.
+    """
+    import datetime
+
+    main_repo = _git_toplevel()
+    os.chdir(main_repo)
+
+    # Fetch origin so origin/main is fresh (best-effort — warning on failure).
+    _fetch_origin(main_repo)
+
+    # Derive the session name: caller-supplied slug, or today's UTC date.
+    session_name = args.session_name
+    if not session_name:
+        session_name = datetime.datetime.utcnow().strftime("ac-%Y%m%d")
+
+    worktrees_dir = main_repo.parent / "worktrees"
+    worktrees_dir.mkdir(parents=True, exist_ok=True)
+
+    full_branch = f"ac-authoring/{session_name}"
+    # Re-use _worktree_exists via a prefix check — the function checks
+    # feature/<slug> and ticket/<slug>; for ac-authoring we check directly.
+    existing_worktree_path: Path | None = None
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(main_repo), "worktree", "list", "--porcelain"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        print(f"ERROR: cannot list worktrees: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    current_worktree_path: Path | None = None
+    for line in result.stdout.splitlines():
+        if line.startswith("worktree "):
+            current_worktree_path = Path(line[len("worktree "):])
+        elif line.startswith("branch "):
+            refs_branch = line[len("branch "):].strip()
+            if refs_branch == f"refs/heads/{full_branch}":
+                existing_worktree_path = current_worktree_path
+                break
+
+    if existing_worktree_path is not None:
+        worktree_path = existing_worktree_path
+        created = False
+    else:
+        worktree_path = _create_ac_worktree(session_name, worktrees_dir, main_repo)
+        _bootstrap(main_repo, worktree_path)
+        created = True
+
+    # Install post-checkout drift hook on both the new worktree and main.
+    _install_drift_hook(worktree_path, main_repo)
+    _install_drift_hook(main_repo, main_repo)
+
+    # Idempotently install any missing pre-commit hook shims.
+    _install_pre_commit_shims(main_repo)
+
+    # Compute the absolute path to the AC store inside the new worktree so
+    # callers can redirect AC YAML writes there without re-deriving it.
+    ac_store_path = str(worktree_path / "docs" / "acceptance-criteria")
+
+    payload = {
+        "worktree_path": str(worktree_path),
+        "branch": full_branch,
+        "ac_store_path": ac_store_path,
+        "created": created,
+    }
+    print(json.dumps(payload))
+
+
 # ---------------------------------------------------------------------------
 # CLI entry point
 # ---------------------------------------------------------------------------
@@ -570,9 +758,10 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="setup_ticket_worktree.py",
         description=(
-            "Canonical worktree bootstrap script. Two subcommands:\n"
-            "  setup-ticket  Full flow: validate ticket, create worktree, bootstrap.\n"
-            "  create-only   Worktree + bootstrap only (no ticket)."
+            "Canonical worktree bootstrap script. Three subcommands:\n"
+            "  setup-ticket       Full flow: validate ticket, create worktree, bootstrap.\n"
+            "  create-only        Worktree + bootstrap only (no ticket).\n"
+            "  create-ac-worktree Dedicated AC-authoring worktree from origin/main."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -604,6 +793,26 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Branch name (without the feature/ prefix).",
     )
     p_create.set_defaults(func=cmd_create_only)
+
+    # create-ac-worktree subcommand
+    p_ac = subparsers.add_parser(
+        "create-ac-worktree",
+        help=(
+            "Create a dedicated AC-authoring worktree branched from origin/main "
+            "(AC BO-1500a-1). The new branch is named ac-authoring/<session_name>. "
+            "Outputs JSON with worktree_path, branch, and ac_store_path."
+        ),
+    )
+    p_ac.add_argument(
+        "session_name",
+        nargs="?",
+        default=None,
+        help=(
+            "Short slug for the authoring session (e.g. 'report-export'). "
+            "Defaults to 'ac-YYYYMMDD' based on the current UTC date."
+        ),
+    )
+    p_ac.set_defaults(func=cmd_create_ac_worktree)
 
     return parser
 
@@ -668,6 +877,19 @@ DECISION HISTORY
   new worktree AND on the main worktree at the end of both subcommands.
   Idempotent: skips if hook file already has the correct content.
   Handles linked-worktree .git-file detection vs main .git-directory.
+- 2026-06-24 [EPIC-SafeAcAuthoring/01/python-coder]: Added ``create-ac-worktree``
+  subcommand (AC BO-1500a-1). Introduces two new helpers: ``_fetch_origin()``
+  (best-effort ``git fetch origin`` so the locally-cached ``origin/main`` ref
+  is fresh) and ``_create_ac_worktree()`` (creates the worktree branched from
+  ``origin/main`` rather than local ``main``, using the ``ac-authoring/``
+  branch prefix). The new ``cmd_create_ac_worktree`` handler assembles the
+  full flow (resolve repo, fetch, check existing, create, bootstrap, hooks)
+  and emits a JSON payload that includes ``ac_store_path`` — the absolute
+  path to ``docs/acceptance-criteria/`` inside the new worktree — so
+  callers (/create-ac, /plan-feature) can redirect AC YAML writes there
+  instead of into the user's original checkout. Module docstring updated
+  to reflect the three-subcommand architecture and the two-policy branching
+  strategy. Added to DECISION HISTORY.
 - 2026-05-12 10:15 [Claude/ticket-supervisor]: Initial implementation.
   Consolidated fragile multi-step worktree bootstrap from three call
   sites (build-single-ticket/SKILL.md, feature/SKILL.md,

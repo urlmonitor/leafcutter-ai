@@ -212,9 +212,92 @@ the user's responsibility and are not touched by this pre-flight.
 
 ---
 
+## §WT — Authoring Worktree Bootstrap (AC BO-1500a-1)
+
+**This section runs AFTER §PRR and BEFORE §0.** It creates the dedicated
+AC-authoring worktree in which all subsequent AC YAML file writes will land.
+Every AC YAML file produced in this session MUST be written under the
+worktree path returned by this step — no AC file may be written under the
+user's original checkout.
+
+### §WT.1 — Why a dedicated worktree
+
+AC authoring sessions that share the user's main checkout can lose work when
+concurrent finalize flows reset or branch-delete the current branch mid-session
+(MEMORY: `feedback_ac_authoring_needs_isolated_worktree.md`). A dedicated
+worktree on a fresh branch cut from `origin/main` isolates the authoring session
+from both in-flight implementation work and from any local uncommitted commits
+that happen to be on `main`.
+
+### §WT.2 — Create or reuse the authoring worktree
+
+Call `scripts/setup_ticket_worktree.py create-ac-worktree` with an optional
+session name derived from the user's request (kebab-case, ≤ 20 characters):
+
+```bash
+python scripts/setup_ticket_worktree.py create-ac-worktree "<session-slug>"
+```
+
+If no session slug is provided, the script defaults to `ac-YYYYMMDD`.
+
+The script:
+1. Fetches `origin` (best-effort — warns on failure; continues on cached ref).
+2. Creates a new branch `ac-authoring/<session-slug>` starting from `origin/main`.
+3. Bootstraps the worktree (`.env` symlink, `.mcp.json` copy, `build.py` run).
+4. Outputs a single-line JSON payload:
+   ```json
+   {
+     "worktree_path": "<absolute path to the new worktree>",
+     "branch":        "ac-authoring/<session-slug>",
+     "ac_store_path": "<absolute path to docs/acceptance-criteria/ inside the worktree>",
+     "created":       true
+   }
+   ```
+   When the worktree already exists (idempotent re-run), `"created"` is `false`
+   and the existing worktree path is returned.
+
+**On non-zero exit:** surface the stderr verbatim to the user and abort the
+workflow. Do NOT fall through to authoring in the original checkout — writing
+AC files outside the dedicated worktree violates AC BO-1500a-1.
+
+### §WT.3 — Override the AC store path for this session
+
+After parsing the JSON payload from §WT.2:
+
+- Store `worktree_path` → `AUTHORING_WORKTREE_PATH` for the session.
+- Store `ac_store_path` → `AC_STORE_PATH` for the session.  **All subsequent
+  agent dispatches in §0–§3 must pass `AC_STORE_PATH` as the AC store
+  directory**, overriding the default `docs/acceptance-criteria/` that the
+  authoring agents would otherwise derive from `skills_config.json` in the
+  current checkout.
+
+In practice this means every authoring agent call in §0–§3 receives an
+additional instruction field:
+
+```
+"ac_store_path": "<AC_STORE_PATH>",
+```
+
+And the `git` commands in §PRR.2 and §1–§3 stage/commit calls must use
+`AUTHORING_WORKTREE_PATH` as the `-C` anchor rather than the current
+project root.
+
+### §WT.4 — Scope and isolation invariant
+
+The invariant is: **no AC YAML file produced by this `/create-ac` session
+may appear under a path that is outside `AC_STORE_PATH`**.
+
+The §PRR scan (§PRR.2) should be re-run with `AC_STORE_PATH` as its target
+directory after §WT completes, so that orphan detection covers the correct
+location.  The §PRR scan that ran before §WT (targeting the original checkout)
+covered the user's checkout; the scan after §WT covers the authoring worktree.
+
+---
+
 ## §0 — Stage 0: Triage
 
-After the Partial-Run Recovery pre-flight passes (or passes with no orphans),
+After the authoring worktree has been set up (§WT) and the Partial-Run Recovery
+pre-flight passes (or passes with no orphans) in the authoring worktree,
 dispatch `ac-triage` to classify the user's request:
 
 ```
@@ -282,6 +365,15 @@ silently swallowed — each produces a user-visible warning or error.
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-24 [EPIC-SafeAcAuthoring/01/python-coder]: Added §WT (Authoring
+  Worktree Bootstrap) implementing AC BO-1500a-1. The new section inserts
+  between §PRR and §0 and mandates that a dedicated worktree (branched from
+  origin/main via `setup_ticket_worktree.py create-ac-worktree`) is created
+  before any authoring agent is dispatched. §WT.3 documents how callers must
+  override the default ac_store_path for every subsequent agent dispatch so
+  AC YAML files land inside the authoring worktree rather than in the user's
+  original checkout. §WT.4 states the isolation invariant. The §0 heading was
+  updated to reference §WT as a prerequisite.
 - 2026-06-18 [04_TICKET-20260618-ACD-300g-2-i/python-coder]: Initial authoring.
   Created templates/skills/create-ac/SKILL.md to implement AC ACD-300g-2-i.
   Added §PRR (Partial-Run Recovery Pre-flight) as the mandatory first step
