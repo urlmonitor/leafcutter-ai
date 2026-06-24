@@ -1,6 +1,6 @@
 ---
 title: "Stop physical folder moves on PR-only main in finalize Step 6c"
-status: in_progress
+status: done
 components:
   - ticket_lifecycle
   - build_pipeline
@@ -23,7 +23,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 04: Stop physical folder moves on PR-only main in finalize Step 6c
@@ -104,7 +104,7 @@ finalize performs **no writes on `main`** at all.
 - [x] test-runner — 2026-06-24 05:00
 - [x] pr-reviewer — 2026-06-24 06:00
 - [x] commit — 2026-06-24 09:15
-- [ ] pull-request
+- [x] pull-request — 2026-06-24 10:00
 
 ## Comments
 
@@ -171,6 +171,16 @@ completion_manifest:
       Registry must be updated so agents listing spawned_by: finalize-feature.js resolve correctly.
       This is a separate defect, not introduced by this ticket. The 909 other tests pass cleanly.
   failure_report_structured: true
+
+### 2026-06-24 10:00 — pull-request (status: ok)
+feedback-id: fb_2026-06-24_ae6ccd16
+
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+
+Branch pushed to origin/EPIC-FinalizeFeatureHardening (b3f276b..c38d76c). Existing PR #158 verified open: https://github.com/urlmonitor/leafcutter-ai/pull/158. Ticket 04 commits are included on the shared epic PR. Status flipped to done (pull-request was the last needed agent).
 
 ### 2026-06-24 09:15 — commit (status: ok)
 feedback-id: fb_2026-06-24_a935e040
