@@ -45,7 +45,7 @@ export const meta = {
     "step-3.5: pre-merge AC closure — reset test-merge, set ticket status: done + mark source ACs done, commit on feature branch",
     "step-4: merge PR to main — only if tests pass (prompt gate + pull-request agent)",
     "step-5: sync local main (status-checker shell)",
-    "step-6: create_pre_existing_tickets + close tickets / archive epic (status-checker)",
+    "step-6: create_pre_existing_tickets + scope-detection / close tickets / archive epic (status-checker — no writes on main)",
     "step-7: remove worktree (worktree-agent — gate delegated)",
   ],
 };
@@ -877,18 +877,22 @@ async function run({ userInput, agent, parallel, prompt }) {
 
   // -------------------------------------------------------------------------
   // Step 6 — Create tracking tickets for pre-existing / flaky failures,
-  //          then close tickets / archive epic (resumable)
+  //          then detect scope (scope-detection only — no writes on main)
   //
   // Sub-step 6a: create inbox tracking tickets for pre_existing/flaky triage entries.
   //   Failure policy: ticket creation failure is non-fatal. Log and continue.
   //   Only runs when triageReport is non-null (tests had failures in step 3).
   //
-  // Sub-step 6b: detect scope and close tickets / archive epic.
-  //
-  // Sub-step 6c: reconcile folder positions for any ticket file whose physical
-  //   folder does not match its frontmatter `status:` after merge.
-  //   This is necessary because worktree branches no longer perform git mv —
-  //   the move-on-main-only pattern defers all moves to this post-merge step.
+  // Sub-step 6b: scope-detection only — detect whether this was a single-ticket
+  //   or epic-scoped branch, and what tickets were in scope.
+  //   NO git writes on main. Ticket closure (status: done) and AC closure already
+  //   happened in step 3.5 on the feature branch (pre-merge). Since main is PR-only
+  //   (ruff gate blocks direct push), any commit on local main would be:
+  //   - Unmergeable: blocked by branch protection
+  //   - Local-only divergence: never reaches origin/main
+  //   Step 6c (folder reconciliation via git mv + commit on main) was removed
+  //   (ticket 04, EPIC-FinalizeFeatureHardening). status: frontmatter is the
+  //   sole source of truth for ticket lifecycle (BO-400a-3/4/5, BO-400c-1/2).
   // -------------------------------------------------------------------------
 
   // Sub-step 6a: create tracking tickets for pre-existing / flaky triage entries.
@@ -939,37 +943,30 @@ async function run({ userInput, agent, parallel, prompt }) {
     }
   }
 
-  // Sub-step 6b: ticket closing / epic archival
+  // Sub-step 6b: scope-detection only (no git writes on main)
+  //
+  // Ticket closure (status: done) already happened in step 3.5 on the feature
+  // branch. This sub-step is purely informational: detect what kind of branch
+  // was merged (single-ticket vs epic-scoped) and which tickets were in scope.
+  // NO git mv, NO status flip, NO commits on main.
   const closeResult = await agent({
     agentType: "status-checker",
     input: {
       branch: BRANCH,
       instructions:
-        "Detect branch scope and close completed tickets:\n" +
+        "Detect branch scope and report what tickets were touched (informational only — no writes):\n" +
         `1. Run: git log --oneline main..${BRANCH} 2>/dev/null || git log --oneline -20\n` +
-        "2. Search tickets/ tree for ticket files referencing this branch or with status != done.\n" +
+        "2. Search tickets/ tree for ticket files referencing this branch.\n" +
         "3. Determine if any ticket path is inside an EPIC-*/ folder — if so, this is epic-scoped.\n" +
-        "4. For single-ticket branches: check if ticket status is already 'done'; if not, " +
-        "   move the ticket file to tickets/99_done/ and flip status: todo → status: done.\n" +
-        "5. For epic-scoped branches: before moving the epic folder, run the\n" +
-        "   finalize-feature-archive-check skill:\n" +
-        "   a. Find all *.md files under <epic_folder>/done/ (excluding Master_Plan.md).\n" +
-        "   b. For each file, parse the YAML frontmatter and read the `status:` field.\n" +
-        "   c. Build two lists: ok_tickets (status: done) and missing_tickets (any other value).\n" +
-        "   d. If missing_tickets is non-empty, surface the list to the user and ask:\n" +
-        "      'Auto-fix: set status: done in frontmatter for all listed tickets and commit? (yes / no)'\n" +
-        "   e. On 'yes': edit each missing ticket's frontmatter, git add, commit with message\n" +
-        "      'chore(tickets): fix frontmatter status on archived sub-tickets', then re-scan.\n" +
-        "   f. On 'no': HALT — return { status: 'halted', scope: 'epic',\n" +
-        "      reason: 'user declined archive status fix — epic folder move blocked',\n" +
-        "      missing_tickets: [...] }. Do NOT proceed to git mv.\n" +
-        "   g. Only when all sub-tickets have status: done: run the epic archival gate\n" +
-        "      (verify all sub-tickets are signed_off or not_needed), then\n" +
-        "      git mv the epic folder to tickets/99_done/EPIC-<Name>/.\n" +
-        "6. Return a JSON object: " +
+        "4. For each in-scope ticket: read its frontmatter `status:` field.\n" +
+        "   NOTE: Do NOT flip status or move files. Ticket closure already happened in\n" +
+        "   step 3.5 (pre-merge closure commit on the feature branch). status: frontmatter\n" +
+        "   is the sole source of truth (BO-400a-3/4/5, BO-400c-1/2).\n" +
+        "5. Return a JSON object: " +
         '{ "scope": "single-ticket"|"epic"|"unknown", ' +
-        '"tickets_closed": ["<path>", ...], ' +
-        '"already_done": ["<path>", ...], ' +
+        '"tickets_in_scope": ["<path>", ...], ' +
+        '"tickets_done": ["<path — status: done>", ...], ' +
+        '"tickets_not_done": ["<path — status: other>", ...], ' +
         '"skipped": false|true }',
     },
   });
@@ -979,89 +976,19 @@ async function run({ userInput, agent, parallel, prompt }) {
     closeInfo =
       typeof closeResult === "string" ? JSON.parse(closeResult) : closeResult;
   } catch (_err) {
-    closeInfo = { tickets_closed: [], already_done: [], skipped: false };
+    closeInfo = { tickets_in_scope: [], tickets_done: [], tickets_not_done: [], skipped: false };
   }
 
-  if (closeInfo.tickets_closed) {
-    ticketsClosed.push(...closeInfo.tickets_closed);
+  // Step 6b is informational only — no ticket files were moved or written.
+  // Tickets already closed in step 3.5 (pre-merge closure on feature branch).
+  if (closeInfo.tickets_done && Array.isArray(closeInfo.tickets_done)) {
+    ticketsClosed.push(...closeInfo.tickets_done);
   }
 
   if (closeInfo.skipped) {
-    skippedSteps.push({ step: 6, reason: "All tickets already done — skipping step 6" });
+    skippedSteps.push({ step: 6, reason: "Scope detection skipped — no in-scope tickets found" });
   } else {
     completedSteps.push(6);
-  }
-
-  // Sub-step 6c: folder reconciliation (EPIC-MoveOnMainOnly/03)
-  //
-  // After tickets 01 and 02 land, worktree branches no longer perform git mv.
-  // Ticket files arrive on main in whatever folder the branch had them in
-  // (typically 00_inbox/ for new tickets). This sub-step reconciles each
-  // ticket file's physical folder position against its frontmatter `status:`.
-  //
-  // Status → target folder mapping (from ticket_lifecycle.json):
-  //   done, deferred  → tickets/99_done/
-  //   todo, in_progress, blocked → tickets/01_todo/
-  //   (epic sub-tickets with status: done → tickets/01_todo/EPIC-*/done/)
-  //
-  // Single-writer guarantee: this git mv runs on main inside finalize-feature.js,
-  // which is only invoked after the feature branch has been merged. No concurrent
-  // worktrees are active on the same ticket at this point.
-  const reconcileResult = await agent({
-    agentType: "status-checker",
-    input: {
-      instructions:
-        // Resumability probe: skip entire sub-step if reconciliation commit exists.
-        "1. Run: git log --oneline --grep 'reconcile folder positions' | head -1\n" +
-        "   If output is non-empty, the reconciliation commit already exists.\n" +
-        "   Log: 'Reconciliation commit already present — skipping.'\n" +
-        "   Return: { \"tickets_reconciled\": [], \"skipped\": true }\n" +
-        "\n" +
-        "2. Otherwise, read ticket_lifecycle.json from the repo root.\n" +
-        "   Build the status→folder map:\n" +
-        "   - done, deferred → tickets/99_done/\n" +
-        "   - todo, in_progress, blocked → tickets/01_todo/\n" +
-        "\n" +
-        "3. Find all ticket files in the repo (find tickets/ -name '*.md' -not -name 'Master_Plan.md').\n" +
-        "   For each ticket file:\n" +
-        "   a. Parse the frontmatter `status:` value (read lines between first and second '---' markers).\n" +
-        "   b. Determine the current folder (dirname of the file path).\n" +
-        "   c. Compute the target folder from the status→folder map.\n" +
-        "      - For epic sub-tickets (path contains /EPIC-*/): status: done → tickets/01_todo/EPIC-*/done/\n" +
-        "   d. If current folder == target folder: skip (already in correct position).\n" +
-        "   e. GUARD: if a file already exists at <target_folder>/<basename>, skip and log a warning:\n" +
-        "      'WARNING: target path <target_path> already exists — skipping to avoid collision.\n" +
-        "       Run the duplicate cleanup tool (EPIC-MoveOnMainOnly/06) to resolve.'\n" +
-        "   f. If current folder != target folder AND no collision: run git mv <current_path> <target_folder>/<basename>.\n" +
-        "      Accumulate the moved path in reconciled_paths.\n" +
-        "\n" +
-        "4. If any files were moved (reconciled_paths is non-empty):\n" +
-        "   Run: git add tickets/\n" +
-        "   Run: git commit -m 'chore(tickets): reconcile folder positions after merge'\n" +
-        "   Verify the commit contains only R (rename) entries — no A/D pairs.\n" +
-        "   Log: 'Folder reconciliation complete — <N> file(s) moved.'\n" +
-        "\n" +
-        "5. If no files needed moving:\n" +
-        "   Log: 'Folder positions already correct — skipping reconciliation commit.'\n" +
-        "\n" +
-        "6. Return a JSON object:\n" +
-        '{ "tickets_reconciled": ["<path1>", ...], "skipped": false|true, "warnings": ["<w1>", ...] }',
-    },
-  });
-
-  let reconcileInfo;
-  const ticketsReconciled = [];
-  try {
-    reconcileInfo =
-      typeof reconcileResult === "string"
-        ? JSON.parse(reconcileResult)
-        : reconcileResult;
-  } catch (_err) {
-    reconcileInfo = { tickets_reconciled: [], skipped: false, warnings: [] };
-  }
-
-  if (reconcileInfo.tickets_reconciled) {
-    ticketsReconciled.push(...reconcileInfo.tickets_reconciled);
   }
 
   // -------------------------------------------------------------------------
@@ -1162,7 +1089,6 @@ async function run({ userInput, agent, parallel, prompt }) {
     // Tracking tickets created in step 6a for pre_existing and flaky triage entries.
     // Each entry is the ticket_path returned by create-ticket, or null on failure.
     created_tracking_tickets: createdTrackingTickets,
-    tickets_reconciled: ticketsReconciled,
     worktree_removed: worktreeRemoved,
     completed_steps: completedSteps,
     skipped_steps: skippedSteps,
@@ -1183,9 +1109,6 @@ async function run({ userInput, agent, parallel, prompt }) {
         : "") +
       (createdTrackingTickets.length > 0
         ? `Tracking tickets created for pre-existing failures: ${createdTrackingTickets.filter(Boolean).length}. `
-        : "") +
-      (ticketsReconciled.length > 0
-        ? `Tickets folder-reconciled: ${ticketsReconciled.length}.`
         : ""),
   };
 }
