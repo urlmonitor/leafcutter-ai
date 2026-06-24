@@ -1,0 +1,49 @@
+id: BP-900f-2
+title: "Build fails non-zero and names every untracked deployable-script source"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: not_started
+readiness: approved
+priority: high
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900f.yaml"
+criteria: |
+  Given the tracked-source guard has classified the deployable-script source set
+    and found two scripts whose source is untracked:
+    scripts/feedback/submit_feedback.py and scripts/feedback/aggregate.py
+  When the guard completes during the build
+  Then the build exits with a non-zero exit code
+  And the build does not produce a successful output and writes no partial
+    deployment to the target
+  And the failure report names each untracked source path
+    (scripts/feedback/submit_feedback.py and scripts/feedback/aggregate.py)
+  And the report is written to stderr
+  And when the deployable-script source set contains no untracked source, the
+    guard does not affect the exit code and the build proceeds
+depends_on:
+  - BP-900f
+  - BP-900f-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900f.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/build.py
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Fail-fast before any deployment is written to the target when any untracked deployable-script source is present — no partial deployment."
+  - "Integrate with the existing build.py exit-code conventions and the existing deployment-completeness failure-reporting style (stderr, one finding per line)."
+  - "An empty untracked list must be a no-op: the guard must not change the exit code or block an otherwise-clean build."
+delivers_to: null
+expects_from:
+  ac_id: BP-900f-1
+  contract: "list[dict] of untracked deployable scripts (non-empty list triggers non-zero exit); each entry has a repo-root-relative 'script_path'."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

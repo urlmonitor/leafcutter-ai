@@ -1,0 +1,70 @@
+id: BP-900f
+title: "Build catches deployable scripts whose source is present on disk but not tracked in git"
+component: build-pipeline
+level: L1
+status: active
+req_status: active
+work_status: not_started
+readiness: approved
+priority: high
+criteria: |
+  Given the build determines the set of deployable scripts it must ship from the
+    scripts that templates reference (the deployable-script source set produced by
+    the existing source-resolution step),
+  When a tracked-source guard runs as part of the build,
+  Then it verifies that every script path in that set resolves to a file that is
+    tracked in git (committed to version control), not merely present in the
+    working tree,
+  And if any deployable script's source is present on disk but untracked, the
+    guard fails the build with a non-zero exit and names each untracked source,
+  And the guard never fails for a deployable script whose source is tracked,
+  And the guard's verdict is reproducible on a fresh clone, so it cannot pass
+    only because leftover untracked working-tree files happen to be present.
+
+  This L1 owns the TRACKED-IN-GIT axis of deployment completeness: a deployable
+  script whose source exists on disk but is not committed. It is the deliberate
+  complement of BP-900b (build PREFLIGHT that a template-referenced script is in
+  the deployable manifest at all), of BP-900e (a registered/referenced script has
+  NO template counterpart at all), and of BP-1000a (byte-equality of scripts that
+  exist in BOTH source and template). BP-900f checks the orthogonal question:
+  does each deployable script's source actually live in version control, so a
+  fresh clone / CI has it. The feedback directory (gitignored without relocating
+  its source) is the live regression that motivates this guard, but the guard is
+  general — it covers any directory that drifts into the untracked-source trap.
+depends_on: [BP-900]
+doc_links:
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+  - path: scripts/build_phases.py
+    relationship: describes
+    status: exists
+  - path: scripts/build_propagation_audit.py
+    relationship: extends
+    status: exists
+  - path: docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-24
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: [BP-900f-1, BP-900f-2, BP-900f-3]
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: >
+  No new user-facing surface, command, or interaction flow is introduced. This
+  L1 adds one more class of finding (untracked deployable-script source) to the
+  build's existing deployment-completeness guard family, whose timing and
+  reporting conventions are already documented by BP-900b/BP-900c and the
+  PROJECT_CONTEXT boundary map. The seam against BP-900b / BP-900e / BP-1000a is
+  captured in this AC body and the child AC bodies, which are the authoritative
+  specification for the implementing agent.

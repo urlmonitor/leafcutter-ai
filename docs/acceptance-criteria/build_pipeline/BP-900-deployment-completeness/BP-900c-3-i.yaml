@@ -1,0 +1,48 @@
+id: BP-900c-3-i
+title: "When the source directory itself is absent, the suggested action still points to a deploy phase, not to committing source"
+component: build_pipeline
+level: L3
+status: active
+req_status: active
+work_status: not_started
+readiness: approved
+priority: high
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900c-3.yaml"
+criteria: |
+  Given the build-time broken-reference guard has detected a broken reference to
+    scripts/brandnewtool/run.py
+  And neither the source directory scripts/brandnewtool/ nor any deploy phase that
+    ships it exists in the build
+  When the guard emits the error report entry for this reference
+  Then the suggested_action tells the author to add a deploy phase for the new
+    directory (the genuinely-new-capability case)
+  And the suggested_action does NOT use the missing-or-untracked-source text,
+    because that text applies only when the source directory and its deploy phase
+    already exist
+  And a separate broken reference whose source directory and deploy phase already
+    exist still receives the missing-or-untracked-source action in the same report,
+    so the two states are distinguished entry by entry
+depends_on:
+  - BP-900c-3
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900c-3.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/build_propagation_audit.py
+    relationship: extends
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The state-based selector must default to the add-a-deploy-phase action when the source directory (and its deploy phase) does not exist, so genuinely-new capabilities are not misdiagnosed as untracked-source problems."
+  - "Selection is per-entry: a single report may contain both action types, each chosen from the state of its own broken reference."
+delivers_to: null
+expects_from:
+  ac_id: BP-900c-3
+  contract: "The state-based suggested-action selection rule; this edge case pins the complementary branch (source directory absent -> add-a-deploy-phase) and asserts both branches coexist in one report."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

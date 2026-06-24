@@ -1,0 +1,51 @@
+id: BP-900f-1
+title: "Guard classifies every deployable-script source path as tracked or untracked in git"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: not_started
+readiness: approved
+priority: high
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900f.yaml"
+criteria: |
+  Given the build has resolved the deployable-script source set (every script
+    path the build will ship, as produced by the existing source-resolution step)
+  And one path in that set, scripts/feedback/submit_feedback.py, is present in the
+    working tree but has not been committed to git (untracked)
+  And another path in that set, scripts/commit_guardian/check_ac_schema.py, is
+    committed to git (tracked)
+  When the tracked-source guard inspects the deployable-script source set
+  Then it marks scripts/feedback/submit_feedback.py as untracked
+  And it marks scripts/commit_guardian/check_ac_schema.py as tracked
+  And it produces a list of zero or more deployable scripts whose source is
+    untracked, derived from the git index, not from mere presence on disk
+depends_on:
+  - BP-900f
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900f.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/build.py
+    relationship: extends
+    status: exists
+  - path: scripts/build_phases.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Determine the deployable-script source set from the build's existing source-resolution step (the function that enumerates every script path the build will ship); do not maintain a separate hardcoded list."
+  - "Tracked-ness must be determined from the git index (e.g. git ls-files), not from filesystem presence; an on-disk-but-untracked file must classify as untracked."
+  - "Resolve paths relative to the repository root so the classification is stable regardless of the build's working directory."
+  - "Wrap the git query and any file access per the project error-handling policy (CLAUDE.md Rules 1-3): specific exception types, log at WARNING or higher, and surface a failure to determine tracked-ness as a determinate guard error rather than silently passing."
+delivers_to:
+  agent: python-coder
+  contract: "list[dict] — list of deployable scripts whose source is untracked, each { script_path: str (repo-root-relative POSIX), tracked: false }; empty list means every deployable script source is tracked. Consumed by the build-fail step BP-900f-2 and the fresh-clone reproducibility assertion BP-900f-3."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
