@@ -1,0 +1,28 @@
+id: BP-1200c
+title: "The test check can't be skipped or overridden"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  The test gate is enforced on the main branch so no one can merge around it.
+
+  The passing-tests check is a hard requirement for merging into main — a pull
+  request cannot be merged while the check is failing, and the requirement cannot
+  be quietly bypassed.
+depends_on:
+  - BP-1200
+doc_links: []
+documentation_triggers: []
+documentation_rationale: "Branch-protection enforcement is a one-time repository setting, not a user-facing command or workflow; a reference note in the ADR suffices and no standalone doc artifact adds value."
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1200c-1
+implemented_by: []

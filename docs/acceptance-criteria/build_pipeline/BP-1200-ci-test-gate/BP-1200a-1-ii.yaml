@@ -1,0 +1,69 @@
+id: BP-1200a-1-ii
+title: "No test fails at collection time because a build-generated dependency is missing from the fresh clone"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a brand-new checkout in which the locally-generated build outputs are not
+    present (the kind of generated tooling directories that a plain clone omits),
+  When the documented CI test command is followed through to running the full
+    suite,
+  Then no test is reported as an error during collection or startup due to a
+    module or file it imports or opens being absent
+  And every test that previously failed only because such a generated dependency
+    was missing now runs and reports a pass
+  And the count of tests that error before they can execute is zero.
+depends_on:
+  - BP-1200a-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-004-consolidated-output-root.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-016-ci-fresh-clone-test-dependencies.md
+    relationship: depends-on
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "DECIDED DIRECTION (final gate, recorded in ADR-016): APPROACH 1 — CI build step + install_shims shim_map extension bridging .leafcutter/scripts/... -> scripts/... for scripts/commit_guardian, scripts/doc_compliance, scripts/feedback. This edge case pins the specific failure class — collection-time import/file-open errors for the ~36 tests that depend on those gitignored directories — that Approach 1 must eliminate by running build.py and bridging the shim."
+  - "Acceptance is measured at pytest COLLECTION/startup: the count of tests erroring before execution due to a missing build-generated module or file must be exactly zero on a fresh clone after the documented build+shim prepare step."
+  - "SHARED-CONTRACT VALIDATION (retained): the shim that makes .leafcutter/scripts/ resolvable at scripts/ is a SHARED CONTRACT with consumer-project installs; validate the zero-collection-error outcome against a consumer install as well as the self-build before sign-off."
+  - "Must not regress the import resolution for tests that already pass on a fresh clone (no broadening of sys.path or shim scope that masks genuinely missing modules — the shim bridges exactly the three known build-output directories, not a blanket path catch-all)."
+  - "Must respect the ADR-001/ADR-004 self-hosting boundary: Approach 1 bridges via shim; do not resolve the gap by committing generated outputs into source control."
+delivers_to: null
+expects_from:
+  ac_id: BP-1200a-1
+  contract: "The fresh-clone green run; this edge case pins the specific failure class (missing generated dependency at collection) that the prerequisite must eliminate — zero collection-time errors of the missing-build-output class."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Added it_requirements (ADR-016 hard-prerequisite, zero-collection-error acceptance measure, consumer-install validation, no-import-broadening, ADR-001/004 boundary), and architecture + ADR doc_links. Criteria and expects_from unchanged."
+    by: it-po
+  - reason: "final-gate-decision-applied"
+    entry: "Set readiness: approved and priority: high per the final user gate. Recorded the DECIDED ADR-016 direction = Approach 1 (CI build step + install_shims shim_map extension) in the it_requirements, replacing the open-mechanism language; retained the consumer-install validation and ADR-001/004 boundary constraints. Criteria unchanged."
+    by: it-po
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Root cause being guarded: ~36 tests fail at import/file-open on a clean
+  checkout because they depend on gitignored build outputs
+  (scripts/commit_guardian/, scripts/doc_compliance/, scripts/feedback/) that a
+  plain clone does not contain. DECIDED (final gate): Approach 1 closes the gap
+  via a CI build step plus an install_shims shim_map extension bridging
+  .leafcutter/scripts/ -> scripts/.
