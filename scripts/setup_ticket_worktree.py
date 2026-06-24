@@ -40,6 +40,19 @@ PORTABILITY: ``_install_drift_hook`` writes a post-checkout hook that invokes
     origin), so the installer early-returns when the target script is missing.
     Projects that ship the drift checker get the hook automatically; projects
     that do not are unaffected.
+INSTALLED-COPY PATH RESOLUTION: ``_resolve_installed_layout()`` detects whether
+    the script is running from the dev layout (leafcutter-ai/ is the top-level git
+    root whose parent is a plain workspace directory) or a consumer/installed layout
+    (leafcutter-ai/ is a subdirectory of a consumer project that is itself a git
+    repo).  It returns ``(repo_root, worktrees_base)`` where all worktree directories
+    are created at ``worktrees_base / "worktrees"``.  In the dev layout
+    ``worktrees_base`` is the workspace parent — identical to the former sibling
+    convention.  In the consumer layout both ``repo_root`` and ``worktrees_base`` are
+    the consumer project root, so worktrees appear at ``<consumer_root>/worktrees/``
+    and the AC store resolves to
+    ``<consumer_root>/worktrees/<session>/docs/acceptance-criteria/``.  This means
+    ``/create-ac`` and ``/plan-feature`` work correctly when leafcutter-ai is
+    installed as a subdirectory of a consumer project (AC BO-1500e-2).
 """
 
 from __future__ import annotations
@@ -93,6 +106,88 @@ def _git_toplevel(anchor: Path | None = None) -> Path:
             f"Failed to resolve git toplevel from {anchor}: {exc}"
         ) from exc
     return Path(result.stdout.strip())
+
+
+def _resolve_installed_layout(leafcutter_repo: Path) -> tuple[Path, Path]:
+    """Resolve the effective repository root and worktrees base for the current layout.
+
+    Distinguishes between two supported layouts and returns a pair
+    ``(repo_root, worktrees_base)`` where ``worktrees_base / "worktrees"``
+    is the canonical directory for all git worktrees created by this script.
+
+    **Dev layout** (self-hosting / leafcutter-ai development):
+
+    .. code-block:: text
+
+        leafcutter/               <- workspace directory (NOT a git repo)
+          leafcutter-ai/          <- THIS repo root (= leafcutter_repo)
+          worktrees/              <- sibling to leafcutter-ai/
+
+    ``leafcutter_repo.parent`` is *not* a git repository, so:
+
+    - ``repo_root`` = ``leafcutter_repo``
+    - ``worktrees_base`` = ``leafcutter_repo.parent`` (the workspace directory)
+
+    Worktrees are created at ``workspace/worktrees/<slug>`` — identical to the
+    former ``main_repo.parent / "worktrees"`` behaviour.
+
+    **Consumer / installed layout** (leafcutter-ai installed as a submodule):
+
+    .. code-block:: text
+
+        my-project/               <- consumer project root (its own git repo)
+          leafcutter-ai/          <- leafcutter submodule (= leafcutter_repo)
+          tickets/                <- tickets live at the consumer root
+          worktrees/              <- worktrees should also be here
+
+    ``leafcutter_repo.parent`` *is* a git repository
+    (``git rev-parse --show-toplevel`` succeeds and returns a path different
+    from ``leafcutter_repo``), so:
+
+    - ``repo_root`` = consumer project root
+    - ``worktrees_base`` = consumer project root
+
+    Worktrees are created at ``<consumer_root>/worktrees/<slug>`` and the AC
+    store resolves to ``<consumer_root>/worktrees/<session>/docs/
+    acceptance-criteria/``.
+
+    The detection is intentionally conservative: if probing the parent with
+    ``git rev-parse --show-toplevel`` raises any error, or if the returned
+    path equals ``leafcutter_repo`` (same repo boundary), the function silently
+    falls back to the dev layout pair.
+
+    Args:
+        leafcutter_repo: Absolute Path to the leafcutter-ai git root as
+            resolved by ``_git_toplevel()``.
+
+    Returns:
+        A ``(repo_root, worktrees_base)`` tuple.  ``repo_root`` is used as
+        the git anchor for all worktree and hook operations; ``worktrees_base``
+        is used to compute ``worktrees_dir = worktrees_base / "worktrees"``.
+    """
+    parent = leafcutter_repo.parent
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(parent), "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (subprocess.SubprocessError, OSError):
+        # Parent is not a git repo — dev layout.
+        return leafcutter_repo, parent
+    parent_toplevel = Path(result.stdout.strip())
+    if parent_toplevel != leafcutter_repo:
+        # Parent is a distinct git repo — consumer/installed layout.
+        print(
+            f"INFO: Detected consumer/installed layout. "
+            f"Consumer project root: {parent_toplevel}. "
+            f"Worktrees and AC store will be placed relative to the consumer root.",
+            file=sys.stderr,
+        )
+        return parent_toplevel, parent_toplevel
+    # The parent git root resolves to the same directory — still the dev layout.
+    return leafcutter_repo, parent
 
 
 def _worktree_exists(branch: str) -> tuple[bool, Path | None]:
@@ -802,11 +897,16 @@ def cmd_setup_ticket(args: argparse.Namespace) -> None:
     if args.branch:
         slug = args.branch
 
-    main_repo = _git_toplevel(ticket_path.parent)
+    leafcutter_repo = _git_toplevel(ticket_path.parent)
+    # Resolve the effective repo root and worktrees base.  In the dev layout
+    # worktrees_base is the workspace parent (a sibling to leafcutter-ai/);
+    # in the consumer/installed layout both main_repo and worktrees_base are
+    # the consumer project root.  See _resolve_installed_layout() for details.
+    main_repo, worktrees_base = _resolve_installed_layout(leafcutter_repo)
     # Anchor all subsequent CWD-relative git calls to the repo root so the
     # script works when launched from a non-repo parent workspace.
     os.chdir(main_repo)
-    worktrees_dir = main_repo.parent / "worktrees"
+    worktrees_dir = worktrees_base / "worktrees"
     worktrees_dir.mkdir(parents=True, exist_ok=True)
 
     exists, existing_path = _worktree_exists(slug)
@@ -845,11 +945,14 @@ def cmd_create_only(args: argparse.Namespace) -> None:
     """
     branch_name = args.branch_name
 
-    main_repo = _git_toplevel()
+    leafcutter_repo = _git_toplevel()
+    # Resolve the effective repo root and worktrees base.  See
+    # _resolve_installed_layout() for the dev vs consumer layout detection.
+    main_repo, worktrees_base = _resolve_installed_layout(leafcutter_repo)
     # Anchor all subsequent CWD-relative git calls to the repo root so the
     # script works when launched from a non-repo parent workspace.
     os.chdir(main_repo)
-    worktrees_dir = main_repo.parent / "worktrees"
+    worktrees_dir = worktrees_base / "worktrees"
     worktrees_dir.mkdir(parents=True, exist_ok=True)
 
     exists, existing_path = _worktree_exists(branch_name)
@@ -919,7 +1022,14 @@ def cmd_create_ac_worktree(args: argparse.Namespace) -> None:
     """
     import datetime
 
-    main_repo = _git_toplevel()
+    leafcutter_repo = _git_toplevel()
+    # Resolve the effective repo root and worktrees base.  In the consumer/
+    # installed layout the AC store path emitted in the JSON payload points
+    # into the authoring worktree rooted at the consumer project, so callers
+    # see AC files at
+    # ``<consumer_root>/worktrees/<session>/docs/acceptance-criteria/``.
+    # See _resolve_installed_layout() for the dev vs consumer detection logic.
+    main_repo, worktrees_base = _resolve_installed_layout(leafcutter_repo)
     os.chdir(main_repo)
 
     # Fetch origin so origin/main is fresh (best-effort — warning on failure).
@@ -930,7 +1040,7 @@ def cmd_create_ac_worktree(args: argparse.Namespace) -> None:
     if not session_name:
         session_name = datetime.datetime.utcnow().strftime("ac-%Y%m%d")
 
-    worktrees_dir = main_repo.parent / "worktrees"
+    worktrees_dir = worktrees_base / "worktrees"
     worktrees_dir.mkdir(parents=True, exist_ok=True)
 
     # Canonical full branch name — used in the JSON payload and log messages.
@@ -1152,5 +1262,23 @@ DECISION HISTORY
   in --help output and to avoid ambiguous flag combinations.
   Uses pathlib.Path throughout to avoid Windows path-with-spaces
   quoting issues that surfaced during a /build-feature run.
+- 2026-06-24 [EPIC-SafeAcAuthoring/18/python-coder]: Implemented AC BO-1500e-2
+  (authoring works from a deployed/installed copy). Added
+  ``_resolve_installed_layout()`` helper that returns a ``(repo_root,
+  worktrees_base)`` tuple distinguishing the dev layout (parent directory of
+  the leafcutter-ai git root is NOT a git repo → worktrees_base is the
+  workspace parent, preserving the former sibling convention) from the
+  consumer/installed layout (parent IS its own git repo → both repo_root and
+  worktrees_base are the consumer project root). Updated all three subcommand
+  handlers (``cmd_setup_ticket``, ``cmd_create_only``,
+  ``cmd_create_ac_worktree``) to call ``_resolve_installed_layout()`` and
+  compute ``worktrees_dir = worktrees_base / "worktrees"``.  Dev layout
+  behaviour is fully preserved: ``worktrees_base`` is the workspace directory
+  (parent of leafcutter-ai/), so ``worktrees_base / "worktrees"`` resolves to
+  the same path as the former ``main_repo.parent / "worktrees"``.  Consumer
+  layout: worktrees are now placed at ``<consumer_root>/worktrees/`` instead
+  of inside ``<consumer_root>/leafcutter-ai/worktrees/``, and the AC store
+  path resolves to
+  ``<consumer_root>/worktrees/<session>/docs/acceptance-criteria/``.
 ====================================================================
 """

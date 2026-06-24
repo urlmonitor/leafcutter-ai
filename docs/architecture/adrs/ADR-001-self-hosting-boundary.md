@@ -52,6 +52,29 @@ We did NOT implement a `--self` flag (as originally proposed). Instead, the conf
 - `.agents/agents/*/PROJECT_CONTEXT.md` files are user-owned and are never written by `build.py`. Projects that customise a `design_system` key in `frontend-coder/PROJECT_CONTEXT.md` (e.g. `primary_colour: "#E11D48"`, `font_heading: "Montserrat"`) will see those values preserved on every upgrade run. The unified `frontend-coder` agent reads the file at runtime and applies the custom brand values above the embedded design defaults.
 - The legacy `frontend-design` skill has been deprecated (marked `deprecated: true` in its `SKILL.md` frontmatter). Its design principles are now embedded directly in the `frontend-coder` agent template. `build.py` skips deprecated skills entirely and will not deploy `.claude/skills/frontend-design/` on fresh installs or upgrades.
 
+## Installed-Layout Path Resolution (AC BO-1500e-2)
+
+When leafcutter-ai is cloned into a consumer project as a subdirectory
+(`my-project/leafcutter-ai/`), `setup_ticket_worktree.py` must resolve the
+repository root and the AC store location from the actual installed layout rather
+than assuming the dev workspace layout.
+
+The resolution is performed by `_resolve_installed_layout()` in
+`scripts/setup_ticket_worktree.py`. It probes the parent of the leafcutter-ai git
+root with `git rev-parse --show-toplevel`:
+
+- If the parent is **not** a git repository (dev layout): `worktrees_base` is the
+  workspace parent, preserving the existing sibling-worktrees convention.
+- If the parent **is** a git repository with a different toplevel (consumer layout):
+  `repo_root` and `worktrees_base` are both set to the consumer project root.
+  Worktrees are then created at `<consumer_root>/worktrees/<slug>` and the AC store
+  at `<consumer_root>/worktrees/<session>/docs/acceptance-criteria/`.
+
+This means `/create-ac` and `/plan-feature` function correctly in both layouts
+without any user configuration. See
+[Agent Delivery Workflows §9](../agent_delivery_workflows.md#9-installed-copy-path-resolution-bo-1500e-2)
+for the full detection flowchart and directory tree examples.
+
 ## Alternatives
 
 The `--self` flag approach was rejected because it adds a special code path that only leafcutter uses. Config-driven paths are more general and testable.
