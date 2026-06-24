@@ -15,6 +15,18 @@ ARCHITECTURE: This module is the pure-logic layer called by conftest.py.
             └── build_ac_work_status_cache(ac_store_root) → cache dict
             └── classify_by_work_status(ac_id, cache) → "informational" | "enforced"
             └── extract_covers_tag(source_lines) → AC-ID | None
+
+    Session-caching contract (TQ-100b-1-iii):
+        This module is **stateless and pure**. It does NOT cache anything between
+        calls. Session-level caching — reading the AC store once per pytest process
+        and reusing the resulting dict for every subsequent test — is exclusively the
+        responsibility of the plugin layer (``scripts.ac_store.pytest_ac_enforcement``).
+        That plugin uses module-level ``_ac_cache`` / ``_cache_built`` globals guarded
+        by ``_get_ac_cache()`` to ensure ``build_ac_work_status_cache`` is called at
+        most once per process.  Because *this* module is stateless, the enforced/
+        informational partition produced by repeated calls to ``build_ac_work_status_cache``
+        on the same unchanged store is guaranteed to be identical across runs —
+        determinism is a property of the pure functions here, not of any cache state.
 """
 
 from __future__ import annotations

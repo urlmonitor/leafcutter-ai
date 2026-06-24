@@ -676,5 +676,321 @@ class TestCollectUnresolvedTags(unittest.TestCase):
         )
 
 
+class TestAcStoreReadOncePerSession(unittest.TestCase):
+    """AC TQ-100b-1-iii: The AC store is read once per pytest session and the
+    classification is cached, not re-read per test.
+
+    Exercises the ``_get_ac_cache()`` function in
+    ``scripts.ac_store.pytest_ac_enforcement`` directly (unit-level) to
+    confirm that:
+      - the underlying ``build_ac_work_status_cache`` builder is called exactly
+        once no matter how many times ``_get_ac_cache()`` is called.
+      - subsequent calls return the same (cached) dict without re-invoking the
+        builder.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        """Import the plugin module — raises ImportError when absent (red state).
+
+        The plugin module is ``scripts.ac_store.pytest_ac_enforcement``.  It
+        is expected to expose two module-level globals (``_ac_cache`` and
+        ``_cache_built``) and a ``_get_ac_cache()`` function.
+        """
+        # covers: TQ-100b-1-iii
+        try:
+            import scripts.ac_store.pytest_ac_enforcement as plugin  # noqa: PLC0415
+            cls.plugin = plugin
+        except ImportError as exc:
+            raise ImportError(
+                "scripts.ac_store.pytest_ac_enforcement does not exist yet — "
+                "python-coder must create it to make this test green. "
+                f"Original error: {exc}"
+            ) from exc
+
+    def setUp(self):
+        """Reset the plugin's session globals before each test.
+
+        ``_get_ac_cache()`` guards behind ``_cache_built``; resetting it here
+        lets each test case start from a clean (un-built) state so the
+        call-count assertion is accurate.
+        """
+        self.plugin._ac_cache = None  # noqa: SLF001
+        self.plugin._cache_built = False  # noqa: SLF001
+
+    def test_ac_store_read_once_per_session(self):
+        # covers: TQ-100b-1-iii
+        """AC TQ-100b-1-iii: The AC store is read once per pytest session
+        (the _cache_built flag prevents re-reads on subsequent calls to
+        _get_ac_cache).
+
+        What must be implemented to make this test green:
+          - ``scripts/ac_store/pytest_ac_enforcement.py`` must expose:
+              _ac_cache: dict | None (module global)
+              _cache_built: bool (module global)
+              _get_ac_cache() -> dict
+          - ``_get_ac_cache()`` must call ``build_ac_work_status_cache`` on
+            the first invocation and NOT on any subsequent call within the
+            same session.
+
+        This test is currently RED if:
+          - scripts/ac_store/pytest_ac_enforcement.py does not exist (ImportError).
+          - The ``_get_ac_cache()`` function does not expose the ``_cache_built``
+            guard, or ``build_ac_work_status_cache`` is called more than once.
+
+        The test monkeypatches ``build_ac_work_status_cache`` on the
+        ``test_enforcement`` module that the plugin references.  It then calls
+        ``_get_ac_cache()`` three times and asserts that the patched function
+        was called exactly once.
+        """
+        plugin = self.plugin
+
+        # Verify the module exposes the expected globals.
+        self.assertTrue(
+            hasattr(plugin, "_cache_built"),
+            msg=(
+                "Expected scripts.ac_store.pytest_ac_enforcement to expose "
+                "a module-level '_cache_built' bool. It is absent."
+            ),
+        )
+        self.assertTrue(
+            hasattr(plugin, "_ac_cache"),
+            msg=(
+                "Expected scripts.ac_store.pytest_ac_enforcement to expose "
+                "a module-level '_ac_cache' dict (or None). It is absent."
+            ),
+        )
+
+        # Verify the guard starts in the un-built state (setUp reset it).
+        self.assertFalse(
+            plugin._cache_built,  # noqa: SLF001
+            msg="Expected _cache_built to be False after setUp reset.",
+        )
+
+        # Monkeypatch: replace build_ac_work_status_cache on the test_enforcement
+        # module that the plugin imports.  Track call count via a list (mutable
+        # closure — avoids relying on unittest.mock to keep imports minimal).
+        try:
+            from scripts.ac_store import test_enforcement  # noqa: PLC0415
+        except ImportError as exc:
+            self.skipTest(
+                f"scripts.ac_store.test_enforcement unavailable — skipping: {exc}"
+            )
+
+        call_count: list[int] = [0]
+        original_builder = test_enforcement.build_ac_work_status_cache
+
+        def _mock_builder(ac_store_root):  # noqa: ANN001
+            """Mock that counts calls and returns an empty dict."""
+            call_count[0] += 1
+            return {"MOCK-001": "todo"}
+
+        test_enforcement.build_ac_work_status_cache = _mock_builder
+        try:
+            # Call _get_ac_cache() three times.
+            result_1 = plugin._get_ac_cache()  # noqa: SLF001
+            result_2 = plugin._get_ac_cache()  # noqa: SLF001
+            result_3 = plugin._get_ac_cache()  # noqa: SLF001
+
+            # Builder should have been called exactly once.
+            self.assertEqual(
+                call_count[0],
+                1,
+                msg=(
+                    "Expected build_ac_work_status_cache to be called exactly ONCE "
+                    "across three calls to _get_ac_cache() — the session cache should "
+                    f"prevent re-reads. Actual call count: {call_count[0]}."
+                ),
+            )
+
+            # All three calls must return the same dict (or equal dicts).
+            self.assertEqual(
+                result_1,
+                result_2,
+                msg="Expected _get_ac_cache() to return the same dict on repeated calls.",
+            )
+            self.assertEqual(
+                result_2,
+                result_3,
+                msg="Expected _get_ac_cache() to return the same dict on repeated calls.",
+            )
+
+            # The _cache_built flag must be True after the first call.
+            self.assertTrue(
+                plugin._cache_built,  # noqa: SLF001
+                msg=(
+                    "Expected _cache_built to be True after the first call to "
+                    "_get_ac_cache() (the guard should flip to prevent re-reads)."
+                ),
+            )
+        finally:
+            # Restore the original builder regardless of test outcome.
+            test_enforcement.build_ac_work_status_cache = original_builder
+            # Also reset plugin globals so other tests start clean.
+            plugin._ac_cache = None  # noqa: SLF001
+            plugin._cache_built = False  # noqa: SLF001
+
+
+class TestEnforcedSetStableAcrossRuns(unittest.TestCase):
+    """AC TQ-100b-1-iii: The enforced/informational partition is identical
+    across repeated runs of the same store and suite.
+
+    Verifies that calling ``build_ac_work_status_cache()`` twice on the same
+    AC store returns identical dicts — determinism guarantees that the
+    enforced-vs-informational classification is stable across repeated pytest
+    sessions even when test ordering varies.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        """Import the enforcement module — raises ImportError when absent (red state)."""
+        # covers: TQ-100b-1-iii
+        try:
+            from scripts.ac_store import test_enforcement  # noqa: PLC0415
+            cls.enforcement = test_enforcement
+        except ImportError as exc:
+            raise ImportError(
+                "scripts.ac_store.test_enforcement does not exist yet — "
+                "python-coder must create it to make this test green. "
+                f"Original error: {exc}"
+            ) from exc
+
+    def _build_multi_ac_store(self, ac_store_root: Path) -> None:
+        """Create a minimal AC store with a mix of done and not-done ACs.
+
+        Args:
+            ac_store_root: Temporary directory that will act as the AC store root.
+        """
+        domain_dir = ac_store_root / "stability-domain"
+        domain_dir.mkdir(parents=True)
+        acs = [
+            ("ST-001", "todo"),
+            ("ST-002", "done"),
+            ("ST-003", "in_progress"),
+            ("ST-004", "done"),
+            ("ST-005", "todo"),
+        ]
+        for ac_id, work_status in acs:
+            ac_yaml = domain_dir / f"{ac_id}.yaml"
+            ac_yaml.write_text(
+                textwrap.dedent(
+                    f"""\
+                    id: {ac_id}
+                    title: "Stability AC {ac_id}"
+                    component: stability-domain
+                    level: L2
+                    status: active
+                    work_status: {work_status}
+                    readiness: approved
+                    priority: medium
+                    criteria: |
+                      A stub AC used to verify classification stability.
+                    """
+                ),
+                encoding="utf-8",
+            )
+
+    def test_enforced_set_stable_across_runs(self):
+        # covers: TQ-100b-1-iii
+        """AC TQ-100b-1-iii: build_ac_work_status_cache() is deterministic —
+        calling it twice on the same fixed AC store returns identical dicts,
+        guaranteeing the enforced/informational partition is stable across
+        repeated runs.
+
+        What must remain true to keep this test green (and likely already is):
+          - ``build_ac_work_status_cache`` must walk the store consistently
+            (no random ordering of results, no non-deterministic state).
+          - ``classify_by_work_status`` must be a pure function of the cache dict.
+
+        This test is expected to be GREEN immediately (since build_ac_work_status_cache
+        is already deterministic), but it documents and locks in that property.
+        """
+        enforcement = self.enforcement
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ac_store_root = Path(tmpdir) / "ac_store"
+            ac_store_root.mkdir()
+            self._build_multi_ac_store(ac_store_root)
+
+            # Call build_ac_work_status_cache twice on the same store.
+            cache_run_1 = enforcement.build_ac_work_status_cache(ac_store_root)
+            cache_run_2 = enforcement.build_ac_work_status_cache(ac_store_root)
+
+            # Both calls must return identical dicts.
+            self.assertEqual(
+                cache_run_1,
+                cache_run_2,
+                msg=(
+                    "Expected build_ac_work_status_cache() to be deterministic — "
+                    "two calls on the same unchanged AC store must return identical "
+                    f"dicts. Run 1: {cache_run_1!r}. Run 2: {cache_run_2!r}."
+                ),
+            )
+
+            # Verify the expected ACs are present with correct work_status values.
+            expected = {
+                "ST-001": "todo",
+                "ST-002": "done",
+                "ST-003": "in_progress",
+                "ST-004": "done",
+                "ST-005": "todo",
+            }
+            self.assertEqual(
+                cache_run_1,
+                expected,
+                msg=(
+                    "Expected cache to contain exactly the ACs written to the store "
+                    f"with their work_status values. Expected: {expected!r}. "
+                    f"Got: {cache_run_1!r}."
+                ),
+            )
+
+            # Verify that the classify_by_work_status partition is identical
+            # across both runs (derived from identical caches).
+            ac_ids = list(expected.keys())
+            classifications_run_1 = {
+                ac_id: enforcement.classify_by_work_status(ac_id, cache_run_1)
+                for ac_id in ac_ids
+            }
+            classifications_run_2 = {
+                ac_id: enforcement.classify_by_work_status(ac_id, cache_run_2)
+                for ac_id in ac_ids
+            }
+            self.assertEqual(
+                classifications_run_1,
+                classifications_run_2,
+                msg=(
+                    "Expected the enforced/informational partition to be identical "
+                    "across two runs of classify_by_work_status on identical caches. "
+                    f"Run 1: {classifications_run_1!r}. "
+                    f"Run 2: {classifications_run_2!r}."
+                ),
+            )
+
+            # Spot-check: done ACs must be enforced, not-done ACs must be
+            # informational (this validates the expected content is correctly
+            # classified, not just stable-but-wrong).
+            self.assertEqual(
+                classifications_run_1["ST-002"],
+                "enforced",
+                msg="Expected 'enforced' for work_status='done' (ST-002).",
+            )
+            self.assertEqual(
+                classifications_run_1["ST-004"],
+                "enforced",
+                msg="Expected 'enforced' for work_status='done' (ST-004).",
+            )
+            self.assertEqual(
+                classifications_run_1["ST-001"],
+                "informational",
+                msg="Expected 'informational' for work_status='todo' (ST-001).",
+            )
+            self.assertEqual(
+                classifications_run_1["ST-003"],
+                "informational",
+                msg="Expected 'informational' for work_status='in_progress' (ST-003).",
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
