@@ -1405,6 +1405,7 @@ def main(argv: list[str] | None = None) -> int:
             "  knowledge_query.py --format json\n"
             "  knowledge_query.py --edges\n"
             "  knowledge_query.py --project-root /path/to/project\n"
+            "  knowledge_query.py --list-surfaces\n"
         ),
     )
     parser.add_argument(
@@ -1438,12 +1439,39 @@ def main(argv: list[str] | None = None) -> int:
         metavar="DIR",
         help="Root of the project to scan. Defaults to the current working directory.",
     )
+    parser.add_argument(
+        "--list-surfaces",
+        action="store_true",
+        help="List the knowledge surfaces declared in config/paths.json and exit.",
+    )
     args = parser.parse_args(argv)
 
     project_root = (
         Path(args.project_root).resolve() if args.project_root else Path.cwd()
     )
     paths_json = project_root / "config" / "paths.json"
+
+    if args.list_surfaces:
+        if not paths_json.exists():
+            print(
+                f"ERROR: {paths_json.name} not found at {paths_json}.",
+                file=sys.stderr,
+            )
+            return 1
+        try:
+            raw = paths_json.read_text(encoding="utf-8")
+        except OSError as exc:
+            print(f"ERROR: Cannot read {paths_json}: {exc}", file=sys.stderr)
+            return 1
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            print(f"ERROR: {paths_json.name} is not valid JSON: {exc}", file=sys.stderr)
+            return 1
+        surfaces_cfg = data.get("surfaces", {})
+        for name in surfaces_cfg:
+            print(name)
+        return 0
 
     nodes, edges = _collect_all(project_root, paths_json, surface_filter=args.surface)
 

@@ -1095,3 +1095,117 @@ class TestSurfaceContributionCompleteness:
             "Every declared surface must contribute nodes; "
             "assertion is against declared set, not a fixed count (KM-KGS-100c-1)"
         )
+
+
+# ---------------------------------------------------------------------------
+# KM-KQS-041: --list-surfaces flag lists declared surface names then exits 0
+# These tests are RED until python-coder adds the --list-surfaces argument to
+# main()'s argparse parser in scripts/knowledge_query.py.
+# ---------------------------------------------------------------------------
+
+
+class TestListSurfaces:
+    """KM-KQS-041: knowledge_query CLI --list-surfaces flag.
+
+    The --list-surfaces flag must:
+      (a) be accepted by argparse without raising SystemExit(2)
+      (b) print each declared surface name (one per line) to stdout
+      (c) exit with return code 0
+      (d) NOT run the full node+edge traversal (so it works without a
+          populated surface directory, as long as paths.json is present)
+
+    Before implementation, argparse raises SystemExit(2) with
+    "unrecognized arguments: --list-surfaces".  That is the expected RED state.
+    """
+
+    def test_ac_km_kqs_041_list_surfaces_exit_zero(self, tmp_path):
+        # covers: KM-KQS-041
+        """KM-KQS-041: --list-surfaces exits 0 when paths.json declares surfaces."""
+        config_dir = tmp_path / "config"
+        config_dir.mkdir(parents=True)
+        # Minimal paths.json: two surfaces so we can verify both names appear.
+        # Surface directories/files do NOT need to exist — --list-surfaces must
+        # not run the traversal.
+        paths_data = {
+            "surfaces": {
+                "agents": {
+                    "path": "config/agent_registry.json",
+                    "edge_fields": ["spawn_allowlist", "spawned_by", "skills_used"],
+                },
+                "skills": {
+                    "path": "templates/skills/",
+                    "edge_fields": ["dependencies"],
+                    "_optional": True,
+                },
+            }
+        }
+        (config_dir / "paths.json").write_text(
+            __import__("json").dumps(paths_data), encoding="utf-8"
+        )
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(_SCRIPTS_DIR / "knowledge_query.py"),
+                "--list-surfaces",
+                "--project-root", str(tmp_path),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        assert result.returncode == 0, (
+            f"--list-surfaces must exit 0; returncode={result.returncode}; "
+            f"stderr: {result.stderr!r}; stdout: {result.stdout!r} "
+            f"(KM-KQS-041 — flag likely missing from argparse parser)"
+        )
+
+    def test_ac_km_kqs_041_list_surfaces_prints_declared_names(self, tmp_path):
+        # covers: KM-KQS-041
+        """KM-KQS-041: --list-surfaces prints each declared surface name to stdout."""
+        import json as _json
+
+        config_dir = tmp_path / "config"
+        config_dir.mkdir(parents=True)
+        declared_surfaces = ["agents", "skills"]
+        paths_data = {
+            "surfaces": {
+                "agents": {
+                    "path": "config/agent_registry.json",
+                    "edge_fields": ["spawn_allowlist"],
+                    "_optional": True,
+                },
+                "skills": {
+                    "path": "templates/skills/",
+                    "edge_fields": ["dependencies"],
+                    "_optional": True,
+                },
+            }
+        }
+        (config_dir / "paths.json").write_text(
+            _json.dumps(paths_data), encoding="utf-8"
+        )
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(_SCRIPTS_DIR / "knowledge_query.py"),
+                "--list-surfaces",
+                "--project-root", str(tmp_path),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        # If the flag is not recognised argparse emits returncode=2; we assert
+        # both exit-0 AND content here so coders see both failures at once.
+        assert result.returncode == 0, (
+            f"--list-surfaces must exit 0; returncode={result.returncode}; "
+            f"stderr: {result.stderr!r} (KM-KQS-041)"
+        )
+        stdout_lines = result.stdout.splitlines()
+        for name in declared_surfaces:
+            assert any(name in line for line in stdout_lines), (
+                f"Surface name '{name}' not found in --list-surfaces stdout; "
+                f"got: {result.stdout!r} (KM-KQS-041)"
+            )
