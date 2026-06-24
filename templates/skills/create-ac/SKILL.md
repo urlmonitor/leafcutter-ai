@@ -54,30 +54,50 @@ non-destructive on the happy path (no orphans found → silent proceed).
 
 ### §PRR.2 — Detection Algorithm
 
+The detection algorithm is implemented in
+`scripts/ac_store/scan_ac_orphans.py` (function
+`scan_draft_orphans_in_worktree`, AC BO-1500b-3). The steps below describe
+the algorithm that function executes; they also apply to any direct caller
+that replicates the logic inline (e.g. `plan-feature.js`
+`scanOrphanedAcDrafts`).
+
 1. **Determine the AC store directory.** Read `docs/acceptance-criteria/` as
    the default path. If `skills_config.json` overrides `ac_store_path`, use
    that value instead.
 
-2. **Run `git status --porcelain` on the AC store directory** to get a list of
-   all YAML files with uncommitted changes (modified, added, or untracked):
+2. **Run `git status --porcelain` on the AC store directory inside the
+   authoring worktree** to get a list of all YAML files with uncommitted
+   changes (modified, added, or untracked).  The scan MUST target the
+   authoring worktree; it must NOT scan the user's original checkout:
 
    ```bash
-   git -C <project-root> status --porcelain docs/acceptance-criteria/
+   git -C AUTHORING_WORKTREE_PATH status --porcelain --untracked-files=all docs/acceptance-criteria/
    ```
 
-   **Important — ordering with §WT:** The §PRR pre-flight runs TWICE in the
-   full `/create-ac` workflow: once BEFORE §WT (targeting the original
-   checkout) and once AFTER §WT (targeting the authoring worktree).  When
-   §WT has already run and `AUTHORING_WORKTREE_PATH` is set, replace
-   `<project-root>` with `AUTHORING_WORKTREE_PATH` in the command above so
-   the git status targets the authoring worktree, not the original checkout
-   (AC BO-1500a-2):
+   **Committed-file exclusion guarantee (AC BO-1500b-3):** `git status`
+   reports only uncommitted working-tree changes.  AC YAML files that are
+   already committed on the authoring branch do NOT appear in this output.
+   Therefore the scan never produces false orphan reports for files that
+   were successfully committed in a prior (partial) session.  No additional
+   filtering step is needed to exclude committed files.
 
+   **Ordering with §WT:** The §PRR pre-flight runs TWICE in the full
+   `/create-ac` workflow: once BEFORE §WT (targeting the original checkout)
+   and once AFTER §WT (targeting the authoring worktree).  After §WT has
+   run and `AUTHORING_WORKTREE_PATH` is set, the command above is the only
+   valid form.  The original-checkout scan that ran before §WT is
+   superseded by this authoring-worktree scan (AC BO-1500a-2).
+
+   **Standalone invocation via the Python script:**
    ```bash
-   git -C AUTHORING_WORKTREE_PATH status --porcelain docs/acceptance-criteria/
+   python3 scripts/ac_store/scan_ac_orphans.py draft-orphans \
+       --worktree AUTHORING_WORKTREE_PATH \
+       [--ac-root-rel docs/acceptance-criteria]
    ```
+   The script emits a JSON array of `{"file_path": "...", "ac_id": "..."}`
+   objects to stdout (exit code 0 regardless of whether orphans are found).
 
-   Parse each output line:
+   Parse each `git status` output line:
    - Column 1 (`X`) = index (staged) status; column 2 (`Y`) = worktree status.
    - Relevant status codes: `M` (modified), `A` (added), `?` (untracked).
    - Include a file if: `X` or `Y` is one of `M`, `A`, `?`.
@@ -99,9 +119,9 @@ non-destructive on the happy path (no orphans found → silent proceed).
       otherwise read raw lines for field extraction).
 
    b. Check the `origin_agent` field. Accept only:
-      - `product-owner-v3`
-      - `business-analyst-v3`
-      - `it-po-v3`
+      - `product-owner`
+      - `business-analyst`
+      - `it-po`
 
    c. Check the `readiness` field. Accept only: `draft`.
 
@@ -496,6 +516,18 @@ silently swallowed — each produces a user-visible warning or error.
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-24 [EPIC-SafeAcAuthoring/08/llm-expert]: Implemented AC BO-1500b-3
+  (partial-run recovery pre-flight inspects authoring worktree, not original
+  checkout, and reports no false orphans for already-committed AC files).
+  Updated §PRR.2 to: (a) reference the new scan_draft_orphans_in_worktree()
+  function in scripts/ac_store/scan_ac_orphans.py as the canonical
+  implementation; (b) document the committed-file exclusion guarantee (git
+  status naturally excludes committed files, so no additional filtering is
+  needed); (c) clarify that after §WT runs the authoring-worktree scan is the
+  only valid form; (d) show the standalone Python script invocation using the
+  new draft-orphans subcommand. The --untracked-files=all flag was added to
+  the example git command to match the plan-feature.js implementation.
+  (#EPIC-SafeAcAuthoring/08)
 - 2026-06-24 [EPIC-SafeAcAuthoring/07/python-coder]: Implemented AC BO-1500b-2
   (crash mid-pipeline leaves completed stages committed and resumable).
   Added §CR (Crash-Resume) section documenting the scanCommittedStages()

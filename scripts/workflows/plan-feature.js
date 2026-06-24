@@ -407,17 +407,27 @@ function buildCancelMessage(committedAcs, draftAcs, cancelledAt, acStorePath, au
 /**
  * Scan the AC store directory for orphaned AC draft files from a prior session.
  *
- * Uses `git status --porcelain --untracked-files=all` to find all modified or
- * untracked YAML files in the AC store directory. For each candidate, reads the
- * YAML content and qualifies it as an orphan iff:
+ * Uses `git status --porcelain --untracked-files=all` scoped to the authoring
+ * worktree's AC store to find all modified or untracked YAML files (AC BO-1500b-3).
+ * For each candidate, reads the YAML content and qualifies it as an orphan iff:
  *   - `origin_agent` is in {product-owner, business-analyst, it-po}
  *   - `readiness` is "draft"
+ *
+ * Committed-file exclusion guarantee (AC BO-1500b-3):
+ *   `git status` reports only uncommitted working-tree changes.  AC YAML files
+ *   that are already committed on the authoring branch do NOT appear in the
+ *   output.  Therefore this scan never reports false orphans for files committed
+ *   in a prior partial session — no additional filtering step is needed.
+ *
+ * The scan targets the authoring worktree (via `git -C <authoringWorktreePath>`),
+ * not the user's original checkout (AC BO-1500a-2).  The equivalent Python
+ * implementation is `scripts/ac_store/scan_ac_orphans.py draft-orphans`.
  *
  * The scan uses a single `git status` invocation — it is O(1) relative to the
  * number of YAML files and completes in under 2 seconds for stores up to 500 files.
  *
  * @param {Function} agent                  - Runtime-provided agent dispatch function.
- * @param {string}   acStoreDir              - Path to the AC store directory (e.g. "docs/acceptance-criteria").
+ * @param {string}   acStoreDir              - Absolute path to the AC store directory inside the authoring worktree.
  * @param {string|null} authoringWorktreePath - Absolute path to the dedicated authoring worktree.
  *                                             When set, all git commands use `git -C <authoringWorktreePath>`
  *                                             so they never affect the original checkout (AC BO-1500a-2).
