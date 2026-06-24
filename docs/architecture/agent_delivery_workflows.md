@@ -1661,6 +1661,77 @@ Parent: [Agent Code Delivery Workflows](agent_delivery_workflows.md#4-detail-vie
 
 ---
 
+## 7. Detail View: Resumable Per-Stage Authoring Lifecycle (`BO-1500b-4`)
+
+The durable, resumable authoring pipeline advances through three authoring stages — **PO**
+(Product Owner, L0/L1 ACs), **BA** (Business Analyst, L2/L3 decomposition), and **IT-PO**
+(IT Product Owner, technical enrichment) — before reaching the terminal `delivered` state.
+Each stage is modelled as a pair of states: a `pending` state (work in progress, nothing
+durably persisted yet) and a `committed` state (the stage's output has been committed to the
+isolated authoring worktree and is therefore durable on disk).
+
+The state machine below makes two durability guarantees explicit:
+
+1. **Crash durability of committed stages.** Each `committed` state carries a self-loop
+   labelled `crash → restored`. A crash that occurs while the workflow is in a `committed`
+   state returns to that same `committed` state on restart — the persisted output is not
+   lost. The committed work survives the crash.
+
+2. **Resume to the first not-yet-committed stage.** An interruption (crash or manual halt)
+   while a stage is `pending` discards only that in-flight, uncommitted work and, on resume,
+   re-enters the **first stage whose commit has not yet landed**. Because earlier stages are
+   already `committed` (and durable per guarantee 1), resume never re-runs completed stages —
+   it always lands on the earliest `pending` stage, which is the first not-yet-committed stage.
+
+```mermaid
+stateDiagram-v2
+    [*] --> PO_pending : start authoring
+
+    PO_pending --> PO_committed : PO commits L0/L1 ACs
+    PO_committed --> BA_pending : advance to BA
+
+    BA_pending --> BA_committed : BA commits L2/L3 ACs
+    BA_committed --> ITPO_pending : advance to IT-PO
+
+    ITPO_pending --> ITPO_committed : IT-PO commits enrichment
+    ITPO_committed --> delivered : finalise delivery
+
+    delivered --> [*]
+
+    %% --- Crash durability of committed stages ---
+    %% A crash while in a committed state restores to the SAME committed state.
+    PO_committed --> PO_committed : crash → restored (durable)
+    BA_committed --> BA_committed : crash → restored (durable)
+    ITPO_committed --> ITPO_committed : crash → restored (durable)
+
+    %% --- Interruption returns to the first not-yet-committed stage on resume ---
+    %% Uncommitted in-flight work is discarded; resume re-enters the earliest
+    %% stage whose commit has not yet landed.
+    PO_pending --> PO_pending : interrupt → resume at first uncommitted (PO)
+    BA_pending --> BA_pending : interrupt → resume at first uncommitted (BA)
+    ITPO_pending --> ITPO_pending : interrupt → resume at first uncommitted (IT-PO)
+
+    state "PO pending" as PO_pending
+    state "PO committed" as PO_committed
+    state "BA pending" as BA_pending
+    state "BA committed" as BA_committed
+    state "IT-PO pending" as ITPO_pending
+    state "IT-PO committed" as ITPO_committed
+    state "delivered" as delivered
+```
+
+Parent: [Agent Code Delivery Workflows](agent_delivery_workflows.md#6-detail-view-isolated-authoring-worktree-lifecycle-bo-1500a-3)
+
+> [!IMPORTANT]
+> **Resume semantics.** On resume after any interruption, the workflow inspects which stage
+> commits have landed in the isolated authoring worktree and re-enters the **first**
+> `pending` stage whose `committed` state has not been reached. If PO is committed but BA is
+> not, resume lands in `BA pending`; if no stage is committed, resume lands in `PO pending`.
+> A `committed` stage is durable across a crash — its output persists on disk, so resume
+> never re-runs a stage that already committed.
+
+---
+
 ## Key Design Principles
 
 1. **Self-Documenting State:** The `epic-supervisor` determines what phase a ticket is in by parsing the structured `agents:` YAML map in the ticket's frontmatter. It never reads the conversational history.
@@ -1681,6 +1752,7 @@ Parent: [Agent Code Delivery Workflows](agent_delivery_workflows.md#4-detail-vie
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-24 [architecture-diagram-author]: Added §7 resumable per-stage authoring lifecycle state diagram (stateDiagram-v2) showing the seven authoring states (PO pending/committed, BA pending/committed, IT-PO pending/committed, delivered) and their transitions, crash-durability self-loops on each committed state, and interruption→resume self-loops on each pending state documenting that resume re-enters the first not-yet-committed stage. (#EPIC-SafeAcAuthoring/09 BO-1500b-4)
 - 2026-06-24 [architecture-diagram-author]: Added §6 isolated-authoring worktree lifecycle sequence diagram showing the five participants (User, Authoring Workflow, git, origin/main, Authoring Worktree), the ordered interactions from workflow start through worktree+branch creation off origin/main to the first authoring stage writing into the isolated worktree, and an explicit isolation-invariant note that no interaction targets the user's original checkout or a concurrent worktree. (#EPIC-SafeAcAuthoring/04 BO-1500a-3)
 - 2026-06-10 14:05 [BrainCandy]: Added §5 frontend-coder dispatch topology showing unified agent at priority 8, PROJECT_CONTEXT.md design system override relationship, and optional webapp-testing skill detection. Updated §4 phase-agent dispatch order to include frontend-coder. Removed frontend-design as a separate topology node (design principles are now embedded in the agent template per ADR-005). (#EPIC-Oneagenthandlesboththelookandthecodefor/05)
 - 2026-06-08 [llm-expert]: Added AC BP-600d-4 quick-fix close phase section: Gherkin contract, push contract, PR update contract, ticket lifecycle close contract, ordering invariant, push failure halt message, depth-0 rationale, and contrast table with build-single-ticket Step 4b. (#EPIC-QuickFixWorkflow/13)
