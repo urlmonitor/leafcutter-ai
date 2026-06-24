@@ -18,7 +18,7 @@
  *   Step 3: run post-merge tests + triage; HALT if regressions detected
  *   Step 4: merge PR to main — only if tests pass (confirmation-gated)
  *   Step 5: sync local main (git checkout main && git pull)
- *   Step 6: create tracking tickets + close tickets / archive epic
+ *   Step 6: report untracked pre-existing/flaky failures (auto-ticketing disabled) + scope-detection
  *   Step 7: probe worktree list; dispatch worktree-agent remove if worktree exists
  *
  * Resumability: each step probes observable state before dispatching. Re-running
@@ -45,7 +45,7 @@ export const meta = {
     "step-3.5: pre-merge AC closure — reset test-merge, set ticket status: done + mark source ACs done, commit on feature branch",
     "step-4: merge PR to main — only if tests pass (prompt gate + pull-request agent)",
     "step-5: sync local main (status-checker shell)",
-    "step-6: create_pre_existing_tickets + scope-detection / close tickets / archive epic (status-checker — no writes on main)",
+    "step-6: report untracked pre-existing/flaky failures (auto-ticketing disabled) + scope-detection (status-checker — no writes on main)",
     "step-7: remove worktree (worktree-agent — gate delegated)",
   ],
 };
@@ -111,7 +111,9 @@ async function run({ userInput, agent, parallel, prompt }) {
   let mergeResult = null;
   let testResult = null;
   const ticketsClosed = [];
-  const createdTrackingTickets = [];
+  // Failures that could not be auto-ticketed (create-ticket is a workflow, not an agent).
+  // Populated by step 6a; never confused with actually-created tickets.
+  const untrackedFailures = [];
   let worktreeRemoved = false;
   // Triage report from step 3; null means tests passed (no triage needed).
   let triageReport = null;
@@ -876,11 +878,15 @@ async function run({ userInput, agent, parallel, prompt }) {
   completedSteps.push(5);
 
   // -------------------------------------------------------------------------
-  // Step 6 — Create tracking tickets for pre-existing / flaky failures,
-  //          then detect scope (scope-detection only — no writes on main)
+  // Step 6 — Report untracked pre-existing/flaky failures, then detect scope
+  //          (scope-detection only — no writes on main)
   //
-  // Sub-step 6a: create inbox tracking tickets for pre_existing/flaky triage entries.
-  //   Failure policy: ticket creation failure is non-fatal. Log and continue.
+  // Sub-step 6a: emit an accurate report of pre_existing/flaky triage entries.
+  //   Auto-ticketing is disabled: create-ticket is a workflow (slash command),
+  //   not a registered agent, and cannot be dispatched via agent(). The step
+  //   emits a structured console.log listing all untracked failures and instructs
+  //   the operator to run /create-ticket manually. No null entries are pushed
+  //   into any array — untrackedFailures[] is never conflated with created tickets.
   //   Only runs when triageReport is non-null (tests had failures in step 3).
   //
   // Sub-step 6b: scope-detection only — detect whether this was a single-ticket
@@ -895,7 +901,14 @@ async function run({ userInput, agent, parallel, prompt }) {
   //   sole source of truth for ticket lifecycle (BO-400a-3/4/5, BO-400c-1/2).
   // -------------------------------------------------------------------------
 
-  // Sub-step 6a: create tracking tickets for pre-existing / flaky triage entries.
+  // Sub-step 6a: report pre-existing / flaky failures that require manual tracking.
+  //
+  // Auto-ticketing via create-ticket is disabled: create-ticket is a workflow
+  // (slash command), not a registered agent, and cannot be dispatched via agent().
+  // It was removed from the agent registry in EPIC-AcPipelineConsolidation v2.0.0.
+  // Rather than silently ignoring these failures or falsely claiming tickets were
+  // created, step 6a now emits an accurate structured report listing each failure
+  // so the operator can decide whether to run /create-ticket manually.
   if (triageReport !== null) {
     const triageEntries = Array.isArray(triageReport.triage_report)
       ? triageReport.triage_report
@@ -906,39 +919,31 @@ async function run({ userInput, agent, parallel, prompt }) {
         entry.category === "pre_existing" || entry.category === "flaky"
     );
 
-    for (const entry of preExistingEntries) {
-      const testId = entry.test_id || "<unknown test>";
-      const category = entry.category || "pre_existing";
-
-      let requestText =
-        `Tracked pre-existing test failure: ${testId}. ` +
-        `Failing on main at SHA ${baselineSha || "unknown"}. ` +
-        `Triage category: ${category}. ` +
-        `See finalize-feature triage report from ${baselineRunAt || new Date().toISOString()}.`;
-
-      if (category === "flaky") {
-        requestText +=
-          " Intermittent failure detected. Failing in some runs but not others." +
-          " Needs investigation to determine root cause before adding a known-flaky marker.";
-      }
-
-      // create-ticket is a workflow (slash command), not a registered agent,
-      // and was removed from the agent registry in EPIC-AcPipelineConsolidation
-      // v2.0.0. Dispatching it via agent() fails at runtime.
-      // Log the request so the user can create the ticket manually via
-      // /create-ticket.
-      console.warn(
-        `[finalize-feature] step 6a: automatic ticket creation skipped — ` +
-        `create-ticket is a workflow, not an agent. ` +
-        `To track this failure, run /create-ticket manually with the following request:\n` +
-        requestText
-      );
-      createdTrackingTickets.push(null);
-    }
-
     if (preExistingEntries.length === 0) {
       console.log(
-        "[finalize-feature] step 6a: no pre_existing or flaky entries in triage report — skipping create-ticket sub-step"
+        "[finalize-feature] step 6a: no pre_existing or flaky entries in triage report — no tracking tickets needed"
+      );
+    } else {
+      // Collect untracked failures so the final summary is accurate.
+      for (const entry of preExistingEntries) {
+        const testId = entry.test_id || "<unknown test>";
+        const category = entry.category || "pre_existing";
+        untrackedFailures.push({ testId, category });
+      }
+
+      // Emit one structured report listing all untracked failures.
+      const failureLines = untrackedFailures
+        .map(
+          ({ testId, category }) =>
+            `  - [${category}] ${testId} (failing on main at SHA ${baselineSha || "unknown"})`
+        )
+        .join("\n");
+
+      console.log(
+        `[finalize-feature] step 6a: ${untrackedFailures.length} pre-existing/flaky failure(s) detected.\n` +
+        `Auto-ticketing is disabled (create-ticket is a workflow, not an agent).\n` +
+        `No tracking tickets were created. To track these failures, run /create-ticket for each:\n` +
+        failureLines
       );
     }
   }
@@ -1086,9 +1091,10 @@ async function run({ userInput, agent, parallel, prompt }) {
     tickets_closed_pre_merge: ticketsClosedPreMerge,
     acs_closed: acsClosed,
     acs_skipped: acsSkipped,
-    // Tracking tickets created in step 6a for pre_existing and flaky triage entries.
-    // Each entry is the ticket_path returned by create-ticket, or null on failure.
-    created_tracking_tickets: createdTrackingTickets,
+    // Untracked failures from step 6a: pre_existing/flaky triage entries for which
+    // no tracking ticket was created (auto-ticketing is disabled — create-ticket is a
+    // workflow, not an agent). Operators should run /create-ticket manually for each.
+    untracked_failures: untrackedFailures,
     worktree_removed: worktreeRemoved,
     completed_steps: completedSteps,
     skipped_steps: skippedSteps,
@@ -1107,8 +1113,8 @@ async function run({ userInput, agent, parallel, prompt }) {
       (ticketsClosed.length > 0
         ? `Tickets closed total: ${ticketsClosed.length}. `
         : "") +
-      (createdTrackingTickets.length > 0
-        ? `Tracking tickets created for pre-existing failures: ${createdTrackingTickets.filter(Boolean).length}. `
+      (untrackedFailures.length > 0
+        ? `${untrackedFailures.length} pre-existing/flaky failure(s) not auto-ticketed (auto-ticketing disabled) — run /create-ticket manually to track them. `
         : ""),
   };
 }
