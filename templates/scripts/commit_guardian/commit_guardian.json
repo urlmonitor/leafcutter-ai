@@ -772,6 +772,18 @@
                 "_comment": "GE-101a: Verifies changed lines in staged files have adequate test coverage using diff-cover. Disabled by default (diff_coverage.enabled: false). Fails open when diff-cover is not installed or coverage.xml is absent — emits advisory to stderr and exits 0. Set strict: true to block commits below min_coverage_percent threshold."
             },
             {
+                "id": "check-workflow-meta",
+                "name": "Check Workflow Meta Pure-Literal Contract",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_workflow_meta.py",
+                "language": "system",
+                "files": "^templates/workflows-js/.*\\.js$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "EPIC-FinalizeFeatureHardening/02: Blocks commits when any templates/workflows-js/*.js file contains a non-literal value (string concatenation, template-literal substitution, spread operator, call expression, or bare identifier) in its `export const meta` block. The Workflow runtime requires pure literals; any deviation causes a silent runtime failure. See docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md addendum (pure-literal meta contract)."
+            },
+            {
                 "id": "check-ac-schema",
                 "tier": "judgment",
                 "name": "Check AC Store Schema, Binding Completeness, and Field Preservation (ACS-500f-1)",

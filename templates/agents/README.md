@@ -93,8 +93,6 @@ whose primary entry point is a user-facing slash command.
 | `create-ticket` | `/create-ticket` | Scaffolds a new ticket via business-analyst + refinement. | `create-ticket.md` |
 | `create-epic` | `/create-epic` | Scaffolds a new epic with a Master_Plan and sub-tickets. | `create-epic.md` |
 | `workflow-architect` | `/workflow-architect` | Meta-agent owning the leafcutter package surface. | `workflow-architect.md` |
-| `finalize-feature` | `/finalize-feature` | Orchestrates the 6-step post-merge finalization sequence (PR, merge, test, ticket-close, worktree-remove). | `finalize-feature.md` |
-
 ## See Also
 
 - [ADR-025: Portable Agent PROJECT_CONTEXT Layout](../../docs/architecture/adrs/ADR-025-portable-agent-project-context-layout.md)

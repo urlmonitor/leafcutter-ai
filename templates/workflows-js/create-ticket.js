@@ -51,9 +51,7 @@
 export const meta = {
   name: "create-ticket",
   description:
-    "Create a well-formed ticket by sequentially running business-analyst, " +
-    "optionally surfacing open questions, then running architect-review — " +
-    "all at depth 1.",
+    "Create a well-formed ticket by sequentially running business-analyst, optionally surfacing open questions, then running architect-review — all at depth 1.",
   phases: [
     "business-analyst",
     "user-prompt (conditional)",

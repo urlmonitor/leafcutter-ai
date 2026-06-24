@@ -107,7 +107,7 @@ function extractStep3InstructionsLiteral(src) {
 // ---------------------------------------------------------------------------
 
 function extractStep6aBlock(src) {
-  const marker = "Sub-step 6a: create tracking tickets";
+  const marker = "Sub-step 6a: report pre-existing / flaky failures";
   const start = src.indexOf(marker);
   if (start === -1) return null;
   return src.slice(start, start + 3000);
