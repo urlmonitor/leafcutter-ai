@@ -1,0 +1,43 @@
+id: BO-570
+title: "Render and lint defects are caught locally at sign-off, before the PR or CI"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Local pre-PR verification gates catch the defect classes that only surface at run time.
+
+  When an agent signs off on a change, the build system runs the same checks that
+  CI would run -- a real render of any changed user-facing surface and the
+  repository's own lint over any changed code -- right there at sign-off. A
+  render-time-only failure or a lint violation is surfaced and blocks the sign-off
+  locally, so it never escapes to the pull request or to CI for the first time.
+depends_on: [BO-510, BO-610]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-24
+amended_by:
+  - reason: "split: BO-530 -> BO-530 + BO-570 (Pattern C intermediate), 2026-06-24"
+    note: "New sibling L1 created to house the local pre-PR/CI verification-gate behaviors (dev-render smoke + repo-ruff) that were mis-parented under BO-530 (a TDD-framed L1). The four gate L2s and their five L3s moved here. BO-530's title is about tests-written-first (TDD); these are a distinct flavor -- local verification gates -- so they earn their own L1. Motivated by two real escapes: an ssr:false render-time-only bug and ruff lint failures that only appeared in CI (worktree pre-commit gap)."
+superseded_by: null
+covered_by: [BO-570-1, BO-570-2, BO-570-3, BO-570-4]
+implemented_by: []
+notes: |
+  Sibling of BO-530 under the BO-500 quality-gates tree. depends_on follows the
+  sibling-chain convention observed across BO-510..BO-560 (BO-530 chains via
+  [BO-510, BO-610]; BO-560 via [BO-510, BO-610]) -- L1 siblings chain through the
+  trait registry (BO-510) and change-type taxonomy (BO-610) rather than pointing
+  at the BO-500 L0 directly. The hook (check_ac_limits) counts L0->L1 children by
+  id-derivation; a root-form BO-NNN id derives to no parent, so this L1 (like its
+  siblings) is not attributed to BO-500 by the hook and cannot breach the L0 cap.
+
+  Pattern C note: the four moved L2s were RENAMED (BO-530-4a/4b/5a/5b ->
+  BO-570-1/2/3/4) and their five L3s renamed transitively. Renaming is mandatory
+  because check_ac_limits attributes children by id-derivation, not depends_on --
+  keeping the old BO-530-* ids would leave BO-530 at 7 L2 children and the commit
+  would still be blocked. See the ac-tree-split skill, Pattern C step 6.

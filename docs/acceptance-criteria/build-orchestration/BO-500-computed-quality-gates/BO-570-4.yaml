@@ -1,0 +1,75 @@
+id: BO-570-4
+title: "Python sign-off gate blocks on lint failure using the repo-ruff verdict"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+created_by: docs/acceptance-criteria/build-orchestration/BO-500-computed-quality-gates/BO-570.yaml
+criteria: |
+  Given a ticket whose changed surface includes one or more Python files,
+    and python-coder has finished its implementation work,
+  When python-coder evaluates its sign-off for the ticket,
+  Then it runs the repository's ruff lint check against the new and changed
+    Python files for that ticket,
+  And a lint violation in those files — for example a violation that the
+    project's error-handling Ruff rules forbid — is detected locally,
+  And on a ruff failure the sign-off is recorded as failed (status: failed),
+    with the lint violations surfaced as the blocking reason,
+  And python-coder does NOT sign off "ok" while the changed Python files have
+    outstanding ruff violations.
+
+  Given the changed Python files have no ruff violations when checked locally,
+  When python-coder evaluates its sign-off,
+  Then the ruff check passes,
+  And the sign-off may proceed to "ok" on this criterion,
+  And the lint failures are caught before the change reaches commit, the PR,
+    or CI, rather than surfacing for the first time in CI.
+depends_on: [BO-570, BO-570-3]
+doc_links:
+  - path: templates/agents/python-coder.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "The sign-off-gate behavior lives in the python-coder template + signoff skill prose; it invokes the repo-ruff runner (BO-570-3) and gates on its verdict — it must NOT re-implement the ruff invocation in prose."
+  - "On a violations verdict the sign-off MUST be failed/blocked, never advisory — lint violations cannot be downgraded to a warning that still allows an 'ok' sign-off."
+  - "python-coder must invoke the ruff check as part of its sign-off and must not reach an 'ok' verdict on a Python surface whose ruff verdict is anything other than clean; this gate must not rely on the worktree pre-commit hooks firing."
+delivers_to: null
+expects_from:
+  ac_id: BO-570-3
+  contract: |
+    The repo-ruff runner verdict object
+    { check: "repo-ruff", outcome: clean | violations | tooling-unavailable,
+      files, reason }. violations => sign-off failed; tooling-unavailable =>
+    inconclusive (see BO-570-4-ii); clean => may proceed to "ok" on this
+    criterion.
+origin_agent: it-po-v3
+created: 2026-06-24
+amended_by:
+  - reason: "re-parent + rename after Pattern C split of BO-530 -> BO-530 + BO-570, 2026-06-24"
+    note: "Was BO-530-5b (split from BO-530-5 by it-po-v3). Moved out of BO-530 (TDD-framed L1) to the new local-verification-gate sibling L1 BO-570. RENAMED BO-530-5b -> BO-570-4 (check_ac_limits attributes children by id-derivation). Producer->consumer edge preserved: depends_on [BO-570, BO-570-3] and expects_from BO-570-3 (the renamed runner, was BO-530-5a). covered_by L3s renamed BO-530-5-i/ii -> BO-570-4-i/ii. id/criteria/contracts otherwise preserved verbatim."
+superseded_by: null
+covered_by: [BO-570-4-i, BO-570-4-ii]
+implemented_by: []
+notes: |
+  Originally BO-530-5b, created by IT-PO v3 from BO-530-5 (split). This child owns
+  the sign-off-gate BEHAVIOR (llm-expert: python-coder template + signoff skill
+  prose) that consumes the deterministic repo-ruff runner verdict produced by
+  sibling BO-570-3 (was BO-530-5a, python-coder). Criteria text is preserved
+  verbatim from the original BO-530-5 behavioral spec (BA's domain — unchanged).
+  User-originated (BrainCandy) process fix: motivated by a real escape, ruff
+  lint failures on new files where pre-commit did not run repo-ruff (the
+  worktree pre-commit gap), so the lint errors only appeared in CI. This gate
+  moves that detection into the python sign-off, independent of pre-commit.
+  Re-parented + renamed to BO-570-4 in the Pattern C split that moved the local
+  verification gates out of BO-530 into the new sibling L1 BO-570.

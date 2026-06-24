@@ -1,13 +1,13 @@
-id: BO-530-4-i
+id: BO-570-2-i
 title: "No frontend files changed -- dev-render smoke check is skipped, not failed"
 component: build-orchestration
 level: L3
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
-created_by: docs/acceptance-criteria/build-orchestration/BO-500-computed-quality-gates/BO-530-4.yaml
+created_by: docs/acceptance-criteria/build-orchestration/BO-500-computed-quality-gates/BO-570.yaml
 criteria: |
   Given a ticket whose changed surface contains no frontend files
     (e.g. it changes only Python files, configuration, or documentation),
@@ -17,7 +17,7 @@ criteria: |
     not as a pass and not as a failure,
   And the absence of a frontend render does NOT block the sign-off,
   And the sign-off can proceed on its other criteria.
-depends_on: [BO-530-4]
+depends_on: [BO-570-2]
 doc_links:
   - path: templates/agents/frontend-coder.md
     relationship: describes
@@ -32,11 +32,15 @@ it_requirements:
   - "A skipped smoke check must be distinguishable in the sign-off record from a passed one, so an auditor can tell 'rendered clean' apart from 'nothing to render'."
 delivers_to: null
 expects_from:
-  ac_id: BO-530-4
-  contract: "The dev-render smoke-check gate that this edge case scopes to the no-frontend-files case"
+  ac_id: BO-570-2
+  contract: "The dev-render smoke-check sign-off gate that this edge case scopes to the no-frontend-files case"
 origin_agent: business-analyst-v3
 created: 2026-06-24
-amended_by: []
+amended_by:
+  - reason: "it-po-v3 re-point after parent split"
+    note: "Parent BO-530-4 was split; depends_on/expects_from re-pointed from the superseded BO-530-4 to the surviving sign-off-gate-behavior child BO-530-4b (llm-expert). Skip/applicability logic is gate behavior, so the consumer child is the correct upstream."
+  - reason: "transitive rename after Pattern C split of BO-530 -> BO-530 + BO-570, 2026-06-24"
+    note: "Was BO-530-4-i. Moved transitively with its parent gate (was BO-530-4b, now BO-570-2) into the new local-verification-gate L1 BO-570. RENAMED BO-530-4-i -> BO-570-2-i (check_ac_limits attributes children by id-derivation). depends_on/expects_from re-pointed to the renamed parent BO-570-2; criteria unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

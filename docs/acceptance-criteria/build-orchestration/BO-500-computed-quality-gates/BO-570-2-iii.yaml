@@ -1,0 +1,68 @@
+id: BO-570-2-iii
+title: "A locally-passing render or ruff check records auditable evidence in the sign-off"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+created_by: docs/acceptance-criteria/build-orchestration/BO-500-computed-quality-gates/BO-570.yaml
+criteria: |
+  Given the dev-render smoke check (BO-570-2) or the python ruff check
+    (BO-570-4) ran locally and passed for a ticket,
+  When the agent records its sign-off,
+  Then the sign-off captures evidence that the check actually ran and what it
+    found, including:
+    - which check ran (dev-render smoke check or repo-ruff check),
+    - the surface or file set it was run against (the changed frontend surface,
+      or the changed Python files),
+    - the outcome (passed),
+  And an auditor reading the sign-off afterwards can tell that the check was
+    genuinely executed, not merely asserted,
+  And a sign-off that claims a passed check WITHOUT recording this evidence is
+    not acceptable for these two gates.
+
+  Given a check was skipped (no applicable files) or inconclusive
+    (tooling unavailable),
+  When the sign-off is recorded,
+  Then the evidence distinguishes skipped and inconclusive from passed,
+  And the recorded reason makes the non-pass outcome auditable.
+depends_on: [BO-570-2, BO-570-4]
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/frontend-coder.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/python-coder.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Both new gates (the dev-render gate BO-570-2 and the ruff gate BO-570-4) must record machine- and human-readable evidence in the sign-off when they pass, so the gate is auditable and a passing claim can be distinguished from an unrun check."
+  - "Evidence must encode the outcome state (passed / skipped / inconclusive) and the surface or file set checked, so audit can separate 'ran clean' from 'nothing to check' from 'could not check'."
+  - "The evidence is derived from the runner verdict objects (BO-570-1 render-smoke verdict, BO-570-3 repo-ruff verdict) — the gate records the verdict's outcome, surface/files, and reason rather than re-deriving them in prose."
+delivers_to: null
+expects_from:
+  ac_id: BO-570-2
+  contract: "The dev-render sign-off gate (and, via depends_on, the BO-570-4 ruff sign-off gate) whose passing/skipped/inconclusive outcomes this AC requires to be evidenced and audited; evidence fields mirror the BO-570-1 / BO-570-3 runner verdict shapes"
+origin_agent: business-analyst-v3
+created: 2026-06-24
+amended_by:
+  - reason: "it-po-v3 re-point after parent split"
+    note: "Parent BO-530-4 was split; depends_on re-pointed from the superseded BO-530-4 to the two surviving sign-off-gate-behavior children BO-530-4b and BO-530-5b (this L3 spans BOTH gates). expects_from keeps BO-530-4b as the single primary upstream per the single-valued convention; BO-530-5b is captured in depends_on and it_requirements."
+  - reason: "transitive rename after Pattern C split of BO-530 -> BO-530 + BO-570, 2026-06-24"
+    note: "Was BO-530-4-iii. Moved transitively into the new local-verification-gate L1 BO-570. RENAMED BO-530-4-iii -> BO-570-2-iii. depends_on re-pointed to both renamed gate behaviors [BO-570-2, BO-570-4]; expects_from to BO-570-2; in-criteria/in-prose id labels updated (BO-530-4/-5 -> BO-570-2/-4, BO-530-4a/-5a -> BO-570-1/-3). Behavioral meaning unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Evidence requirement spans BOTH new gates. Filed as a single L3 (rather than
+  duplicated under each gate) to avoid duplicate coverage; criteria reference
+  both gates explicitly. depends_on lists both surviving gate-behavior children
+  (BO-570-2, BO-570-4) after the IT-PO split + Pattern C rename; expects_from
+  keeps BO-570-2 as the single primary upstream (single-valued expects_from
+  convention). Structurally this L3 is a child of BO-570-2 by id-derivation.
