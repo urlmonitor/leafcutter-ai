@@ -42,6 +42,7 @@ export const meta = {
     "step-1: open PR if missing (pull-request agent)",
     "step-2: merge origin/main into worktree --no-commit --no-ff (HALT on conflict)",
     "step-3: run post-merge tests + triage (test-runner + test-failure-triage — HALT on regressions)",
+    "step-3.5: pre-merge AC closure — reset test-merge, set ticket status: done + mark source ACs done, commit on feature branch",
     "step-4: merge PR to main — only if tests pass (prompt gate + pull-request agent)",
     "step-5: sync local main (status-checker shell)",
     "step-6: create_pre_existing_tickets + close tickets / archive epic (status-checker)",
@@ -114,6 +115,10 @@ async function run({ userInput, agent, parallel, prompt }) {
   let worktreeRemoved = false;
   // Triage report from step 3; null means tests passed (no triage needed).
   let triageReport = null;
+  // Closure counts from step 3.5 (pre-merge AC closure).
+  let ticketsClosedPreMerge = 0;
+  let acsClosed = 0;
+  let acsSkipped = 0;
 
   // Baseline state (populated by step 0; forwarded to step 3 triage).
   // null means the baseline run did not complete — triage treats all failures
@@ -537,6 +542,232 @@ async function run({ userInput, agent, parallel, prompt }) {
   }
 
   // -------------------------------------------------------------------------
+  // Step 3.5 — Pre-merge AC closure (runs on the feature branch, before Step 4)
+  //
+  // This step MUST run before the PR merge (step 4) so that ticket status and
+  // source AC work_status are committed on the feature branch. The PR then
+  // carries that closure commit to origin/main atomically. Writing closure on
+  // local main is not possible because main is PR-only (branch protection).
+  //
+  // Sub-steps:
+  //   A. Reset the Step 2 test-merge. Step 2 left a staged merge in the index
+  //      (git merge --no-commit --no-ff). We MUST discard it before editing
+  //      ticket files, or the closure commit will drag premature origin/main
+  //      merge content into the PR.
+  //   B. Detect in-scope tickets with status != done.
+  //   C. Set frontmatter `status: done` for each ticket.
+  //   D. Invoke mark_ac_done.py for each ticket (non-fatal on non-zero exit).
+  //   E. Commit the closure on the feature branch.
+  //
+  // Idempotency / resumability:
+  //   - If the PR is already merged (detected at step 4 time), the closure
+  //     commit is moot. Detect via closureProbe and skip if already done.
+  //   - Already-closed tickets and ACs are no-ops (mark_ac_done.py is
+  //     idempotent; a ticket already status: done is skipped).
+  //   - If the closure commit already exists on the branch, skip entirely.
+  // -------------------------------------------------------------------------
+
+  // Probe: check whether a closure commit already exists on the branch.
+  // This makes step 3.5 safely re-entrant when finalize is re-run after a
+  // partial run that completed the closure commit but crashed before step 4.
+  const closureProbeResult = await agent({
+    agentType: "status-checker",
+    input: {
+      instructions:
+        "Run: git log --oneline --grep 'chore(tickets): close tickets and source ACs' -1\n" +
+        "If the output is non-empty (a closure commit already exists on this branch):\n" +
+        "  Return: { \"already_committed\": true }\n" +
+        "Otherwise:\n" +
+        "  Return: { \"already_committed\": false }",
+    },
+  });
+
+  let closureAlreadyCommitted = false;
+  try {
+    const closureProbe =
+      typeof closureProbeResult === "string"
+        ? JSON.parse(closureProbeResult)
+        : closureProbeResult;
+    closureAlreadyCommitted = closureProbe.already_committed === true;
+  } catch (_err) {
+    closureAlreadyCommitted = false;
+  }
+
+  if (closureAlreadyCommitted) {
+    skippedSteps.push({
+      step: "3.5",
+      reason: "Pre-merge closure commit already present — skipping step 3.5",
+    });
+  } else {
+    // Also check: if the PR is already merged, the pre-merge closure step is moot.
+    // In that case skip gracefully rather than attempting a write on a merged branch.
+    let prAlreadyMergedAtClosure = false;
+    if (prNumber !== null) {
+      const prClosureStateResult = await agent({
+        agentType: "status-checker",
+        input: {
+          instructions:
+            `Run: gh pr view ${prNumber} --json state --jq '.state'\n` +
+            "Return ONLY a JSON object: { \"state\": \"OPEN\"|\"MERGED\"|\"CLOSED\" }",
+        },
+      });
+      try {
+        const prClosureState =
+          typeof prClosureStateResult === "string"
+            ? JSON.parse(prClosureStateResult)
+            : prClosureStateResult;
+        prAlreadyMergedAtClosure =
+          (prClosureState.state || "").toUpperCase() === "MERGED";
+      } catch (_err) {
+        prAlreadyMergedAtClosure = false;
+      }
+    }
+
+    if (prAlreadyMergedAtClosure) {
+      skippedSteps.push({
+        step: "3.5",
+        reason: "PR already merged — pre-merge closure step skipped (AC-5 idempotency)",
+      });
+    } else {
+      // -----------------------------------------------------------------------
+      // Sub-step A: Reset the Step 2 test-merge.
+      //
+      // Step 2 ran `git merge origin/main --no-commit --no-ff`. This leaves a
+      // staged merge in the index. We must discard it before editing ticket
+      // files so the closure commit contains only ticket/AC changes.
+      //
+      // Strategy: `git merge --abort` is only valid when a merge is in
+      // progress (MERGE_HEAD exists). If no merge is in progress (already_up_to_date
+      // path in step 2), `git reset --hard HEAD` achieves the same clean state.
+      // -----------------------------------------------------------------------
+      const resetMergeResult = await agent({
+        agentType: "status-checker",
+        input: {
+          instructions:
+            "Reset any staged test-merge left by step 2 before editing ticket files.\n" +
+            "\n" +
+            "1. Check if a merge is in progress:\n" +
+            "   Run: git rev-parse --verify MERGE_HEAD 2>/dev/null\n" +
+            "   Capture the exit code.\n" +
+            "\n" +
+            "2. If exit code is 0 (MERGE_HEAD exists — merge in progress):\n" +
+            "   Run: git merge --abort\n" +
+            "   Log: 'Step 2 test-merge aborted — clean feature-branch state restored.'\n" +
+            "   Return: { \"status\": \"aborted\" }\n" +
+            "\n" +
+            "3. If exit code is non-zero (no merge in progress):\n" +
+            "   Run: git reset --hard HEAD\n" +
+            "   Log: 'No merge in progress — reset to feature-branch HEAD.'\n" +
+            "   Return: { \"status\": \"reset\" }",
+        },
+      });
+
+      // Sub-step B + C + D + E: find in-scope tickets, close them, close ACs, commit.
+      //
+      // Delegate to status-checker in a single agent call for atomicity.
+      // The agent:
+      //   B. Finds ticket files on this branch with status != done.
+      //   C. Edits each ticket's frontmatter to set status: done.
+      //   D. For each ticket, invokes mark_ac_done.py (non-zero exit = WARNING, not fatal).
+      //   E. If any tickets were closed, commits on the feature branch.
+      // Returns structured counts.
+      const closureResult = await agent({
+        agentType: "status-checker",
+        input: {
+          branch: BRANCH,
+          worktree_root: WORKTREE_ROOT,
+          instructions:
+            "Close in-scope tickets and their source ACs on the feature branch.\n" +
+            "\n" +
+            "=== CONTEXT ===\n" +
+            `Feature branch: ${BRANCH}\n` +
+            `Worktree root: ${WORKTREE_ROOT}\n` +
+            "\n" +
+            "=== SUB-STEP B: FIND IN-SCOPE TICKETS ===\n" +
+            "Find all ticket .md files that this branch introduced or modified:\n" +
+            `  Run: git diff --name-only origin/main HEAD -- 'tickets/**/*.md'\n` +
+            "  Also include any ticket file in the worktree that has status != done:\n" +
+            `  Run: git log --oneline origin/main..${BRANCH} --name-only --diff-filter=A -- 'tickets/**/*.md'\n` +
+            "  Combine both lists; deduplicate. Exclude Master_Plan.md.\n" +
+            "  For each file, read its frontmatter `status:` field.\n" +
+            "  Collect only files where status != 'done' (skip already-done tickets — AC-5 idempotency).\n" +
+            "  Call this list OPEN_TICKETS.\n" +
+            "  If OPEN_TICKETS is empty: log 'No open tickets to close.' and skip to REPORTING.\n" +
+            "\n" +
+            "=== SUB-STEP C: SET status: done ===\n" +
+            "For each ticket in OPEN_TICKETS:\n" +
+            "  Read the file content.\n" +
+            "  Replace the `status: <value>` line in the YAML frontmatter with `status: done`.\n" +
+            "  Write the updated content back to the file.\n" +
+            "  Log: 'Set status: done on <ticket_path>'\n" +
+            "\n" +
+            "=== SUB-STEP D: CLOSE SOURCE ACs ===\n" +
+            "For each ticket in OPEN_TICKETS:\n" +
+            "  Read the ticket frontmatter and look for a `source_ac:` field.\n" +
+            "  If `source_ac` is absent or empty: log 'No source_ac on <ticket_path> — skipping AC closure.' and skip (AC-3 no-op).\n" +
+            "  If `source_ac` is present:\n" +
+            `    Run: python3 ${WORKTREE_ROOT}/scripts/ac_store/mark_ac_done.py --ticket <ticket_path> --ac-root ${WORKTREE_ROOT}/docs/acceptance-criteria/\n` +
+            "    Capture the exit code.\n" +
+            "    If exit code is 0: increment acs_closed counter.\n" +
+            "    If exit code is non-zero: log 'WARNING: mark_ac_done.py exited <code> for <ticket_path> — skipping AC closure (non-fatal).' and increment acs_skipped counter. DO NOT fail finalize. (AC-4 non-fatal)\n" +
+            "\n" +
+            "=== SUB-STEP E: COMMIT ON FEATURE BRANCH ===\n" +
+            "If OPEN_TICKETS was non-empty (any edits were made):\n" +
+            `  Run: git -C ${WORKTREE_ROOT} add tickets/\n` +
+            `  Run: git -C ${WORKTREE_ROOT} add docs/acceptance-criteria/ 2>/dev/null || true\n` +
+            `  Run: git -C ${WORKTREE_ROOT} diff --cached --name-only\n` +
+            "  If staged files exist:\n" +
+            `    Run: git -C ${WORKTREE_ROOT} commit -m 'chore(tickets): close tickets and source ACs'\n` +
+            "    Log: 'Closure commit created on feature branch.'\n" +
+            "  Else:\n" +
+            "    Log: 'Nothing staged after edits — all tickets were already done.'\n" +
+            "\n" +
+            "=== REPORTING ===\n" +
+            "Return a JSON object:\n" +
+            "{\n" +
+            '  "tickets_closed": ["<path1>", ...],\n' +
+            '  "acs_closed": <integer>,\n' +
+            '  "acs_skipped": <integer>,\n' +
+            '  "commit_made": true|false\n' +
+            "}",
+        },
+      });
+
+      let closureInfo;
+      try {
+        closureInfo =
+          typeof closureResult === "string"
+            ? JSON.parse(closureResult)
+            : closureResult;
+      } catch (_err) {
+        closureInfo = {
+          tickets_closed: [],
+          acs_closed: 0,
+          acs_skipped: 0,
+          commit_made: false,
+        };
+      }
+
+      // Accumulate counts into workflow-level variables.
+      if (Array.isArray(closureInfo.tickets_closed)) {
+        ticketsClosedPreMerge = closureInfo.tickets_closed.length;
+        // Merge into the broader ticketsClosed list for the final summary.
+        ticketsClosed.push(...closureInfo.tickets_closed);
+      }
+      acsClosed = typeof closureInfo.acs_closed === "number" ? closureInfo.acs_closed : 0;
+      acsSkipped = typeof closureInfo.acs_skipped === "number" ? closureInfo.acs_skipped : 0;
+
+      completedSteps.push("3.5");
+
+      console.log(
+        `[finalize-feature] step 3.5 closure: tickets_closed=${ticketsClosedPreMerge} ` +
+          `acs_closed=${acsClosed} acs_skipped=${acsSkipped} ` +
+          `commit_made=${closureInfo.commit_made}`
+      );
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // Step 4 — Merge PR to main (destructive — prompt gate required)
   //
   // This step runs AFTER the worktree merge (step 2) and test + triage (step 3).
@@ -924,6 +1155,10 @@ async function run({ userInput, agent, parallel, prompt }) {
     // Triage report from step 3; null means tests passed (no triage needed).
     triage_report: triageReport,
     tickets_closed: ticketsClosed,
+    // Pre-merge closure counts from step 3.5.
+    tickets_closed_pre_merge: ticketsClosedPreMerge,
+    acs_closed: acsClosed,
+    acs_skipped: acsSkipped,
     // Tracking tickets created in step 6a for pre_existing and flaky triage entries.
     // Each entry is the ticket_path returned by create-ticket, or null on failure.
     created_tracking_tickets: createdTrackingTickets,
@@ -940,8 +1175,11 @@ async function run({ userInput, agent, parallel, prompt }) {
       (baselineFailures !== null
         ? `Baseline captured at ${baselineSha} (${baselineFailures.length} pre-existing failure(s)). `
         : "Baseline capture failed — regression triage used conservative classification. ") +
+      (ticketsClosedPreMerge > 0
+        ? `Pre-merge closure: ${ticketsClosedPreMerge} ticket(s) closed, ${acsClosed} AC(s) closed, ${acsSkipped} AC(s) skipped. `
+        : "No pre-merge ticket/AC closure. ") +
       (ticketsClosed.length > 0
-        ? `Tickets closed: ${ticketsClosed.length}. `
+        ? `Tickets closed total: ${ticketsClosed.length}. `
         : "") +
       (createdTrackingTickets.length > 0
         ? `Tracking tickets created for pre-existing failures: ${createdTrackingTickets.filter(Boolean).length}. `
