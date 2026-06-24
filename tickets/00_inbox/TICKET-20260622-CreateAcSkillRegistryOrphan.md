@@ -1,6 +1,6 @@
 ---
 title: "Register create-ac skill in skill_registry.json (orphaned directory)"
-status: in_progress
+status: done
 components:
   - skill_registry
   - testing_quality
