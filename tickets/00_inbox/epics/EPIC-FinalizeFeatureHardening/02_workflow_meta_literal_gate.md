@@ -1,6 +1,6 @@
 ---
 title: "Add a pure-literal meta validation gate for workflow scripts"
-status: in_progress
+status: done
 components:
   - build_pipeline
   - precommit_hooks
