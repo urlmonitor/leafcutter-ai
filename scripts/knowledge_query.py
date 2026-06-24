@@ -18,12 +18,17 @@ ARCHITECTURE: Seven public functions (load_surfaces, load_surfaces_with_meta,
     surface produces only the edge relationship kinds it declares in paths.json
     — the check is fully data-driven, so adding or removing a surface in
     paths.json changes the validated set without any code edit.
-    validate_edges_integrity() verifies that every edge in a KnowledgeMap has
-    both a source node and a target node present in the full node set; the
-    exempt edge types (those pointing to file paths rather than node IDs) are
-    derived purely from ``file_path_fields`` entries in paths.json — no
-    hardcoded allow-list of target IDs or edge types is consulted. Surface
-    discovery driven by paths.json; no surface path, edge_fields list, or
+    validate_edges_integrity() validates edges in a KnowledgeMap using a
+    two-tier policy (AC KM-KGS-100d-2-i): edges whose target node is absent
+    are silently **dropped** (logged at DEBUG; recorded in
+    ``EdgeIntegrityResult.dropped_edges``) rather than flagged as integrity
+    violations — the build must not fail solely because a relationship named
+    a missing target.  Only edges whose source node is absent are treated as
+    true integrity failures.  Exempt edge types (those pointing to file paths
+    rather than node IDs) are derived purely from ``file_path_fields`` entries
+    in paths.json — no hardcoded allow-list of target IDs or edge types is
+    consulted. Surface discovery driven by paths.json; no surface path,
+    edge_fields list, or
     phantom-filter-exempt field name is hardcoded — adding a new surface only
     requires a new entry in paths.json. Surfaces that declare edge fields
     pointing to file paths (not node IDs) use the optional ``file_path_fields``
@@ -677,12 +682,28 @@ def validate_knowledge_map(
 class EdgeIntegrityResult(NamedTuple):
     """Result of edge integrity validation for a knowledge map.
 
+    Edges whose target_id is absent from the node set are **silently dropped**
+    (see ``dropped_edges``) rather than flagged as integrity failures.  Only
+    edges whose source_id is absent are treated as true integrity violations and
+    appear in ``invalid_edges``.  This satisfies AC KM-KGS-100d-2-i: a
+    relationship naming a missing target is dropped, not rendered as a dead end,
+    and does not cause the build to fail.
+
     Attributes:
-        valid: ``True`` when every non-exempt edge has both its source_id and
-            target_id present in the full node set.
+        valid: ``True`` when every non-exempt, non-dropped edge has its
+            source_id present in the full node set.  A missing target alone
+            does not set this to ``False`` — those edges are dropped instead.
         invalid_edges: List of ``(EdgeRecord, reason)`` tuples for every edge
-            that fails the node-existence check.  Empty when ``valid`` is
-            ``True``.
+            whose *source* node is absent from the node set.  Empty when
+            ``valid`` is ``True``.
+        dropped_edges: List of ``EdgeRecord`` instances that were silently
+            dropped because their target_id was absent from the node set.
+            Callers may inspect this field for diagnostic purposes.  The build
+            must not fail solely because this list is non-empty.
+        validated_edges: The subset of the input edges that survived validation
+            — i.e. edges in the original map minus those in ``dropped_edges``
+            and minus those in ``invalid_edges``.  Exempt edges (file-path
+            targets) are included as-is.
         node_ids: The full node-ID set derived from
             ``knowledge_map.nodes`` and used for the validation.
         exempt_edge_types: The set of edge types that are exempt from the
@@ -694,6 +715,8 @@ class EdgeIntegrityResult(NamedTuple):
 
     valid: bool
     invalid_edges: list
+    dropped_edges: list
+    validated_edges: list
     node_ids: frozenset
     exempt_edge_types: frozenset
 
@@ -703,11 +726,20 @@ def validate_edges_integrity(
     project_root: Path,
     paths_json: Path,
 ) -> "EdgeIntegrityResult":
-    """Validate that every edge's source and target exist in the full node set.
+    """Validate edges, dropping those whose target node is absent from the map.
 
     For every edge in ``knowledge_map.edges`` this function checks that both
     ``source_id`` and ``target_id`` are present in the set of node IDs derived
-    from ``knowledge_map.nodes``.
+    from ``knowledge_map.nodes``, with the following two-tier policy:
+
+    * **Missing target** (AC KM-KGS-100d-2-i): an edge whose ``target_id``
+      is not in the node set is **dropped silently** — logged at DEBUG level
+      and recorded in ``result.dropped_edges``, but NOT added to
+      ``invalid_edges`` and does NOT cause ``valid`` to be ``False``.  The
+      build must not fail solely because a relationship named a missing target.
+    * **Missing source**: an edge whose ``source_id`` is not in the node set
+      is treated as a true integrity violation — it IS added to
+      ``invalid_edges`` and causes ``valid`` to be ``False``.
 
     Edges whose ``edge_type`` appears in the ``file_path_fields`` list of any
     surface in paths.json are **exempt** from the check because those edges
@@ -732,9 +764,10 @@ def validate_edges_integrity(
 
     Returns:
         An :class:`EdgeIntegrityResult` whose ``valid`` field is ``True`` when
-        every non-exempt edge has both source and target in the node set.
-        When ``valid`` is ``False``, ``invalid_edges`` lists every violating
-        ``(EdgeRecord, reason)`` pair.
+        no non-exempt edge has a missing source node.  Edges with missing
+        target nodes are dropped (see ``dropped_edges``) rather than causing
+        ``valid`` to be ``False``.  ``validated_edges`` contains the surviving
+        edge set after drops are applied.
 
     Raises:
         SystemExit: With exit code 1 when paths.json is absent or invalid JSON
@@ -754,23 +787,45 @@ def validate_edges_integrity(
             exempt_types.add(fpf)
     exempt_edge_types: frozenset[str] = frozenset(exempt_types)
 
-    # Validate each edge against the full node set.
+    # Classify each edge using the two-tier policy:
+    #   - exempt edge types: pass through unchanged.
+    #   - missing source: true integrity violation → invalid_edges.
+    #   - missing target: silently drop → dropped_edges (AC KM-KGS-100d-2-i).
+    #   - both present: survives → validated_edges.
     invalid_edges: list[tuple[EdgeRecord, str]] = []
+    dropped_edges: list[EdgeRecord] = []
+    validated_edges: list[EdgeRecord] = []
+
     for edge in knowledge_map.edges:
         if edge.edge_type in exempt_edge_types:
+            # File-path edges are always preserved in the validated set.
+            validated_edges.append(edge)
             continue
         if edge.source_id not in node_ids:
             invalid_edges.append(
                 (edge, f"source_id '{edge.source_id}' not in node set")
             )
         elif edge.target_id not in node_ids:
-            invalid_edges.append(
-                (edge, f"target_id '{edge.target_id}' not in node set")
+            # AC KM-KGS-100d-2-i: drop the edge; do NOT set valid=False.
+            # Log at DEBUG so the information is observable without being
+            # noisy in normal operation.  The build must not fail solely
+            # because a relationship named a missing target.
+            logger.debug(
+                "Edge dropped: %s -[%s]-> %s — target node '%s' not in map",
+                edge.source_id,
+                edge.edge_type,
+                edge.target_id,
+                edge.target_id,
             )
+            dropped_edges.append(edge)
+        else:
+            validated_edges.append(edge)
 
     return EdgeIntegrityResult(
         valid=len(invalid_edges) == 0,
         invalid_edges=invalid_edges,
+        dropped_edges=dropped_edges,
+        validated_edges=validated_edges,
         node_ids=node_ids,
         exempt_edge_types=exempt_edge_types,
     )
@@ -1192,15 +1247,29 @@ def _collect_all(
     # merged with the legacy _PHANTOM_FILTER_EXEMPT_EDGE_TYPES constant).
     # Exempt edge types point to file-path targets that are intentionally not
     # knowledge-graph nodes and must not be dropped by the phantom-edge check.
+    # Per AC KM-KGS-100d-2-i: a relationship whose target is absent is dropped
+    # (not rendered as a dead end) and logged at DEBUG level so the drop is
+    # observable without causing a build failure.
     node_ids = existing_ids
-    filtered_edges = [
-        e for e in all_edges
-        if e.source_id in node_ids
-        and (
-            e.target_id in node_ids
-            or e.edge_type in effective_exempt
-        )
-    ]
+    filtered_edges: list[EdgeRecord] = []
+    for e in all_edges:
+        if e.source_id not in node_ids:
+            logger.debug(
+                "Edge dropped (missing source): %s -[%s]-> %s",
+                e.source_id,
+                e.edge_type,
+                e.target_id,
+            )
+            continue
+        if e.target_id not in node_ids and e.edge_type not in effective_exempt:
+            logger.debug(
+                "Edge dropped (missing target): %s -[%s]-> %s",
+                e.source_id,
+                e.edge_type,
+                e.target_id,
+            )
+            continue
+        filtered_edges.append(e)
 
     return all_nodes, filtered_edges
 
@@ -1476,5 +1545,18 @@ DECISION HISTORY
   allowed_types so the validation accounts for the canonical edge-type rename
   applied by extract_edges(). Updated module docstring ARCHITECTURE field to list
   six public functions (validate_knowledge_map added).
+- 2026-06-24 [15_TICKET-20260622-KM-KGS-100d-2-i]: Drop missing-target edges in validate_edges_integrity; log dropped edges in _collect_all. (#15_TICKET-20260622-KM-KGS-100d-2-i)
+  Satisfies AC KM-KGS-100d-2-i: "a relationship pointing at a missing target is
+  dropped, not rendered as a dead end." Updated EdgeIntegrityResult NamedTuple to
+  add two new fields: dropped_edges (list of EdgeRecords silently dropped because
+  their target node was absent) and validated_edges (the surviving edge set after
+  drops). Changed validate_edges_integrity() to use a two-tier policy: missing-
+  target edges are dropped (logged at DEBUG) rather than flagged as valid=False;
+  only missing-source edges trigger valid=False. Updated _collect_all() phantom-
+  edge filter from a list comprehension to an explicit loop that emits a
+  logger.debug() for each dropped edge (missing source or missing target), so
+  drops are observable without being noisy. Updated module docstring ARCHITECTURE
+  to describe the two-tier policy. The build does not fail solely because a
+  relationship named a missing target (Gherkin clause 3 of the AC).
 ====================================================================
 """
