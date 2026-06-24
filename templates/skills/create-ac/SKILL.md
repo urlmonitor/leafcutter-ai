@@ -556,6 +556,84 @@ The `message` field includes a manual recovery instruction.
 
 ---
 
+## §NM — No-Main-Commit Invariant (AC BO-1500c-3)
+
+No commit produced by `/create-ac` or `/plan-feature` is ever placed directly
+on the `main` branch.  This section documents the invariant, its mechanism, and
+the defensive guard that enforces it at runtime.
+
+### §NM.1 — The invariant
+
+> Every AC YAML commit produced by the authoring workflow MUST land on the
+> dedicated authoring branch (`ac-authoring/<slug>`).  The `main` branch is
+> updated ONLY when a maintainer merges the authoring pull request opened by
+> `deliverAuthoringBranch()` (§D).  No git command inside the workflow — not
+> `git add`, not `git commit` — may execute against the `main` branch.
+
+This invariant holds for both `/create-ac` and `/plan-feature`, across all
+stages (PO, BA, IT-PO), including orphan-recovery commits (§PRR) and
+crash-resume partial commits (§CR).
+
+### §NM.2 — Mechanism: authoring branch isolation
+
+The invariant is enforced structurally by the authoring worktree bootstrap (§WT):
+
+1. **Dedicated worktree**: `scripts/setup_ticket_worktree.py create-ac-worktree`
+   creates a new git worktree branched from `origin/main` to a fresh
+   `ac-authoring/<slug>` branch.  The worktree path is stored as
+   `AUTHORING_WORKTREE_PATH`.
+
+2. **All commits use `-C AUTHORING_WORKTREE_PATH`**: every `git add` and
+   `git commit` in the workflow is executed with `git -C AUTHORING_WORKTREE_PATH`
+   (AC BO-1500a-2).  Because the authoring worktree's HEAD is on
+   `ac-authoring/<slug>`, all commits land on that branch — not on `main` in
+   the original checkout.
+
+3. **`main` is reached only via PR merge**: after the user gives final approval,
+   `deliverAuthoringBranch()` (§D) pushes the authoring branch to origin and
+   opens a pull request whose base is `main`.  The `main` branch is updated
+   only when that PR is merged by a maintainer, not by the workflow itself.
+
+### §NM.3 — Defensive guard in `commitStageOutput()`
+
+In addition to the structural isolation above, `commitStageOutput()` in
+`scripts/workflows/plan-feature.js` includes a runtime check before every
+commit:
+
+1. If `authoringWorktreePath` is set, it runs:
+   ```bash
+   git -C "<authoringWorktreePath>" branch --show-current
+   ```
+
+2. If the current branch is `main` (case-insensitive), the commit is
+   **aborted** immediately and the function returns:
+   ```json
+   {
+     "status": "error",
+     "message": "safety: refusing to commit AC files to main — authoring branch invariant violated (AC BO-1500c-3)"
+   }
+   ```
+   No `git add` or `git commit` is executed.
+
+3. If the branch check itself fails (e.g. git unavailable, worktree not yet
+   initialised), a warning is logged to `console.warn` and the commit proceeds
+   (**fail-open**).  Infrastructure failure must not block the authoring session;
+   the structural isolation described in §NM.2 is still in place.
+
+### §NM.4 — Scope and limitations
+
+The no-main guard applies only when `authoringWorktreePath` is set (i.e. after
+§WT has run and returned a valid worktree path).  In degraded environments where
+§WT returns no worktree path (e.g. mock or test contexts), the guard is skipped
+— the structural isolation is also absent in those contexts, which is acceptable
+for non-production runs.
+
+The guard does **not** prevent a user from manually committing to `main` outside
+the workflow.  It is a workflow-internal safety net, not a repository-level
+branch protection rule.
+
+---
+
 ## §C — Cancel Behavior: No PR, Branch Preserved (AC BO-1500c-1-i)
 
 **This section applies whenever the user cancels at any mid-pipeline or
@@ -649,11 +727,31 @@ silently swallowed — each produces a user-visible warning or error.
 - `docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md` — the authoring
   pipeline sequence diagram, updated to reflect the Partial-Run Recovery step.
 - `scripts/ac_store/validate_ac_schema.py` — AC YAML schema validator.
+- `§NM` — No-Main-Commit Invariant (AC BO-1500c-3): guarantees that no commit
+  produced by `/create-ac` or `/plan-feature` lands on `main`; enforced
+  structurally by the authoring worktree (§WT) and defensively by the branch
+  check in `commitStageOutput()` in `scripts/workflows/plan-feature.js`.
 
 <!--
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-24 [EPIC-SafeAcAuthoring/13/python-coder]: Implemented AC BO-1500c-3
+  (no AC-authoring commit ever lands directly on main). Added §NM (No-Main-Commit
+  Invariant) section between §D and §C. §NM.1 states the invariant: every AC
+  YAML commit lands on the authoring branch; main is only reached via PR merge.
+  §NM.2 documents the structural enforcement mechanism: the dedicated worktree
+  (§WT) and the git -C anchor (AC BO-1500a-2) prevent commits from reaching
+  main's checkout. §NM.3 documents the defensive runtime guard added to
+  commitStageOutput() in plan-feature.js: before any git add/commit, the function
+  runs git branch --show-current on the authoring worktree; if the result is
+  "main" (case-insensitive), the commit is aborted with a structured error (AC
+  BO-1500c-3); if the check itself fails, a warning is logged and the commit
+  proceeds (fail-open). §NM.4 notes the scope and limitations of the guard.
+  Updated the Related section to cross-reference §NM. Also added the JSDoc
+  NO-MAIN-COMMIT INVARIANT comment block to the deliverAuthoringBranch() function
+  in plan-feature.js documenting that approved AC files reach main only via PR.
+  (#EPIC-SafeAcAuthoring/13)
 - 2026-06-24 [EPIC-SafeAcAuthoring/11/python-coder]: Implemented AC BO-1500c-1-i
   (cancelling before final approval leaves draft ACs on the branch and opens no
   PR). Added §C (Cancel Behavior) section between §D and §E documenting the

@@ -160,6 +160,66 @@ async function commitStageOutput(agent, written, stageName, component, isFinal, 
   // Build the git -C anchor for all git operations in this function. (AC BO-1500a-2)
   const gitC = authoringWorktreePath ? `-C "${authoringWorktreePath}"` : "";
   const stageLabel = stageDisplayName(stageName);
+
+  // ---------------------------------------------------------------------------
+  // AC BO-1500c-3 — NO-MAIN-COMMIT DEFENSIVE GUARD
+  //
+  // Before staging or committing anything, verify that the authoring worktree is
+  // NOT on the main branch.  The authoring worktree should always be on a
+  // dedicated ac-authoring/<slug> branch; committing directly to main would
+  // violate the invariant that approved AC files reach main ONLY via PR merge
+  // (deliverAuthoringBranch()).
+  //
+  // Fail-open: if the git branch check itself fails (e.g. git unavailable,
+  // worktree not set up yet), we log a warning and proceed — infrastructure
+  // failure must not block authoring.  Fail-closed: if the branch IS main,
+  // we abort immediately with a clear error and the commit never runs.
+  // ---------------------------------------------------------------------------
+  if (authoringWorktreePath) {
+    try {
+      const branchCheckResult = await agent({
+        agentType: "status-checker",
+        input: {
+          instructions:
+            `Run the following command and return its raw stdout output:\n` +
+            `git -C "${authoringWorktreePath}" branch --show-current\n` +
+            `Return JSON: { "output": "<raw stdout line>", "exit_code": <number> }`,
+        },
+      });
+      const branchParsed =
+        typeof branchCheckResult === "string"
+          ? JSON.parse(branchCheckResult)
+          : branchCheckResult;
+
+      if (branchParsed && branchParsed.exit_code === 0) {
+        const currentBranch = (branchParsed.output || "").trim();
+        if (currentBranch.toLowerCase() === "main") {
+          return {
+            status: "error",
+            message:
+              "safety: refusing to commit AC files to main — authoring branch invariant violated (AC BO-1500c-3)",
+            hook_name: null,
+            failing_files: [],
+            is_conflict: false,
+          };
+        }
+      } else {
+        // git branch --show-current failed — warn and proceed (fail-open).
+        console.warn(
+          "commitStageOutput: could not verify authoring branch (git branch --show-current failed). " +
+          "Proceeding without branch guard (AC BO-1500c-3)."
+        );
+      }
+    } catch (branchCheckErr) {
+      // Agent dispatch failure — warn and proceed (fail-open).
+      console.warn(
+        "commitStageOutput: branch check dispatch failed: " + branchCheckErr.message + ". " +
+        "Proceeding without branch guard (AC BO-1500c-3)."
+      );
+    }
+  }
+  // ---------------------------------------------------------------------------
+
   const displayStage = isFinal ? `${stageLabel}, final` : stageLabel;
   const componentLabel = component || "unknown-component";
   const acIdList = written.length > 0 ? written.join(", ") : "(none)";
@@ -548,6 +608,13 @@ async function scanOrphanedAcDrafts(agent, acStoreDir, authoringWorktreePath) {
  * to origin and opening a PR whose base is main and head is the authoring branch.
  * This step runs automatically — the user is not asked to push or open the PR
  * by hand.
+ *
+ * NO-MAIN-COMMIT INVARIANT (AC BO-1500c-3):
+ * Approved AC files reach main ONLY via the pull request opened here — never
+ * via a direct commit.  All AC YAML commits produced by this workflow land on
+ * the authoring branch (ac-authoring/<slug>) through commitStageOutput(), which
+ * enforces the branch-is-not-main guard before staging anything.  The main branch
+ * is updated exclusively when a maintainer merges the PR created by this function.
  *
  * Reuses the existing pull-request agent rather than building a bespoke
  * branch/PR routine.  The agent is passed the authoring branch name,
