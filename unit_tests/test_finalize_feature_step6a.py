@@ -12,8 +12,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _JS_PATH = _REPO_ROOT / "templates" / "workflows-js" / "finalize-feature.js"
 _MD_PATH = _REPO_ROOT / "templates" / "workflows" / "finalize-feature.md"

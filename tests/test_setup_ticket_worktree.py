@@ -385,7 +385,6 @@ class TestBootstrapRunsBuildPy(unittest.TestCase):
 
 def _load_scripts_setup_module():
     """Load setup_ticket_worktree from scripts/ (the canonical source, not templates/)."""
-    scripts_dir = str(_REPO_ROOT / "scripts")
     module_name = "setup_ticket_worktree_scripts"
     spec = importlib.util.spec_from_file_location(
         module_name, _SCRIPTS_SETUP_SCRIPT
