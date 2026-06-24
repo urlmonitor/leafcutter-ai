@@ -1032,13 +1032,70 @@ async function run({ userInput, agent }) {
   }
 
   // -------------------------------------------------------------------------
-  // Pre-Stage-0 — Authoring Worktree Bootstrap (AC BO-1500a-1).
+  // Pre-Stage-0 — Authoring Worktree Bootstrap (AC BO-1500a-1, BO-1500e-1).
   //
   // Creates a dedicated worktree branched from origin/main so that every AC
   // YAML file produced in this session is written under an isolated path and
   // never lands in the user's original checkout.  The script fetches origin
   // (best-effort) so the branch starts at the true remote tip.
+  //
+  // MAIN-BRANCH INVOCATION (AC BO-1500e-1):
+  // It is safe and supported to invoke /create-ac or /plan-feature while the
+  // user's current checkout is on the protected main branch.  The dedicated
+  // authoring worktree is ALWAYS branched from origin/main by
+  // setup_ticket_worktree.py — it is independent of the user's current branch.
+  // This means:
+  //   1. No AC files are ever written to the user's main checkout.
+  //   2. No commits are ever placed on the user's main checkout.
+  //   3. The user does NOT need to switch off main before running /plan-feature.
+  //
+  // If the user IS on main, detect it early and log a reassuring diagnostic so
+  // they can see that the workflow is proceeding into an isolated worktree, not
+  // committing to their main branch.
   // -------------------------------------------------------------------------
+
+  // Detect whether the user's current checkout is on main (best-effort — does
+  // not block the workflow on failure).  Uses a simple git branch --show-current
+  // query against the process CWD (the user's original checkout), NOT the
+  // authoring worktree (which does not exist yet at this point).
+  //
+  // Result is used only to emit a diagnostic; the worktree creation path is
+  // identical regardless of the current branch.
+  let userIsOnMain = false;
+  try {
+    const currentBranchResult = await agent({
+      agentType: "status-checker",
+      input: {
+        instructions:
+          "Run the following command and return ONLY the raw stdout:\n" +
+          "git branch --show-current\n" +
+          "Return JSON: { \"output\": \"<raw stdout line>\", \"exit_code\": <number> }",
+      },
+    });
+    const cbParsed =
+      typeof currentBranchResult === "string"
+        ? JSON.parse(currentBranchResult)
+        : currentBranchResult;
+    if (cbParsed && cbParsed.exit_code === 0) {
+      const currentBranch = (cbParsed.output || "").trim();
+      if (currentBranch.toLowerCase() === "main") {
+        userIsOnMain = true;
+        // Emit a clear diagnostic: the user is on main, but /plan-feature will
+        // create an isolated worktree — no commits will land on main.
+        // (AC BO-1500e-1: workflow proceeds normally without requiring a branch switch.)
+        console.log(
+          "[plan-feature] Detected: current checkout is on protected main branch.\n" +
+          "[plan-feature] The AC-authoring worktree will be created from origin/main " +
+          "on a dedicated ac-authoring/ branch — your main branch will not be modified.\n" +
+          "[plan-feature] No branch switch is required. Proceeding with worktree setup."
+        );
+      }
+    }
+  } catch (_branchDetectErr) {
+    // Cannot determine current branch — proceed normally.  The worktree creation
+    // path does not depend on this detection; the diagnostic is best-effort only.
+  }
+
   const sessionSlug = component
     ? component.toLowerCase().replace(/[^a-z0-9-]/g, "-").slice(0, 20)
     : null;

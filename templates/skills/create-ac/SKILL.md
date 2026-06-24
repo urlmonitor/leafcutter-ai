@@ -649,6 +649,87 @@ branch protection rule.
 
 ---
 
+## §MP — Main-Branch Invocation: No Branch Switch Required (AC BO-1500e-1)
+
+This section documents the supported — and common — case where the user invokes
+`/create-ac` or `/plan-feature` while their current checkout is on the protected
+`main` branch.
+
+### §MP.1 — Why invocation from main is safe
+
+The AC-authoring pipeline is structurally isolated from the user's current
+checkout.  The dedicated authoring worktree (§WT) is **always** branched from
+`origin/main` by `scripts/setup_ticket_worktree.py create-ac-worktree`, regardless
+of which branch the user currently has checked out.  This means:
+
+1. **The authoring worktree is independent of the user's current branch.**
+   Whether the user is on `main`, a feature branch, or a detached HEAD, the
+   authoring worktree always starts from the true remote tip of `origin/main`.
+
+2. **No AC files are written to the user's main checkout.**
+   All AC YAML files produced during the session land under
+   `<AUTHORING_WORKTREE_PATH>/docs/acceptance-criteria/` — never under the
+   user's original checkout.
+
+3. **No commits are placed on the user's main branch.**
+   The `-C AUTHORING_WORKTREE_PATH` git anchor (§WT.4, AC BO-1500a-2) ensures
+   every `git add` and `git commit` targets the authoring worktree's branch
+   (`ac-authoring/<slug>`), not the user's main checkout.
+
+4. **The delivery PR is opened against main — not committed to main.**
+   `deliverAuthoringBranch()` (§D) opens a pull request whose base is `main`
+   and whose head is the authoring branch.  Approved AC files reach `main` only
+   after a maintainer merges the PR — the workflow never pushes directly to
+   `main` (§NM, AC BO-1500c-3).
+
+### §MP.2 — User experience when invoked from main
+
+The workflow proceeds identically whether the user is on `main` or any other
+branch.  No manual branch switch is required before running `/create-ac` or
+`/plan-feature`.
+
+`plan-feature.js` detects the user's current branch at the start of the `run()`
+function (before the worktree is created) and emits a brief informational log
+when the user is on `main`:
+
+```
+[plan-feature] Detected: current checkout is on protected main branch.
+[plan-feature] The AC-authoring worktree will be created from origin/main
+on a dedicated ac-authoring/ branch — your main branch will not be modified.
+[plan-feature] No branch switch is required. Proceeding with worktree setup.
+```
+
+This message appears in the workflow output before any authoring agent is
+dispatched.  After this point the workflow continues normally: the authoring
+worktree is created (§WT), partial-run recovery runs (§PRR), committed stages
+are detected (§CR), and the pipeline proceeds through triage and the stage
+agents.
+
+### §MP.3 — Interaction with the no-main guard (§NM)
+
+The `commitStageOutput()` function includes a runtime guard (§NM.3) that
+aborts any commit if the authoring worktree's HEAD is on `main`.  This guard
+is a safety net for misconfiguration — it should never fire when the workflow
+runs normally, because the authoring worktree's branch is always
+`ac-authoring/<slug>`, not `main`.
+
+When the user is on `main` in their original checkout, the guard still operates
+correctly: it checks `AUTHORING_WORKTREE_PATH`'s current branch (not the
+user's checkout), which is `ac-authoring/<slug>` — so the guard passes and the
+commit proceeds normally.
+
+### §MP.4 — Branch detection is best-effort
+
+The current-branch detection in `plan-feature.js` (used only for the
+informational log) is best-effort.  If `git branch --show-current` fails (e.g.
+the tool is unavailable, or the git environment is unusual), the detection is
+skipped silently and the workflow continues without the diagnostic log.  The
+authoring worktree is created regardless — the safety properties described in
+§MP.1 are structural (enforced by the worktree isolation) and do not depend on
+the branch detection succeeding.
+
+---
+
 ## §C — Cancel Behavior: No PR, Branch Preserved (AC BO-1500c-1-i)
 
 **This section applies whenever the user cancels at any mid-pipeline or
@@ -751,6 +832,23 @@ silently swallowed — each produces a user-visible warning or error.
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-24 [EPIC-SafeAcAuthoring/17/python-coder]: Implemented AC BO-1500e-1
+  (authoring works when invoked while checked out on protected main). Added §MP
+  (Main-Branch Invocation) section documenting that /create-ac and /plan-feature
+  proceed normally when the user's current checkout is on main: the dedicated
+  authoring worktree is always branched from origin/main regardless of the user's
+  current branch, so no branch switch is required. §MP.1 enumerates the four
+  structural isolation properties that make this safe. §MP.2 documents the
+  informational log emitted by plan-feature.js when the user is on main. §MP.3
+  clarifies how the no-main guard (§NM.3) interacts correctly with main-branch
+  invocation (it checks AUTHORING_WORKTREE_PATH's branch, not the user's
+  checkout). §MP.4 notes that branch detection is best-effort. Also updated
+  build-single-ticket/SKILL.md to note AC BO-1500e-1 in the "Does not create
+  AC-authoring worktrees" paragraph. In plan-feature.js: added early branch
+  detection (git branch --show-current on the user's checkout) in run() before
+  the worktree setup, with an informational log when on main and best-effort
+  failure tolerance. Added AC BO-1500e-1 tag to the worktree bootstrap comment.
+  (#EPIC-SafeAcAuthoring/17)
 - 2026-06-24 [EPIC-SafeAcAuthoring/16/python-coder]: Implemented AC BO-1500d-1
   (PR number and URL are reported back to the user the moment the PR is opened).
   Added extractPrNumber() helper to plan-feature.js — a pure function that

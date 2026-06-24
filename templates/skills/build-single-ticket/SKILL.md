@@ -395,6 +395,15 @@ Do not add any other preamble or summary text.
   or branch, the next invocation detects the pre-existing state and reuses it
   rather than failing with "worktree already exists" or "branch already exists".
   Existing AC YAML files committed on the branch are never deleted or overwritten.
+  **Main-branch invocation is supported (AC BO-1500e-1):** if the user is on
+  the protected `main` branch when they run `/create-ac` or `/plan-feature`,
+  the AC-authoring workflow still proceeds normally — it creates the authoring
+  worktree from `origin/main` regardless of the user's current checkout.  No
+  branch switch is required.  This skill's implementation worktrees use the same
+  structural isolation principle but branch from local `main` rather than
+  `origin/main` (see `scripts/setup_ticket_worktree.py` for the distinction).
+  See `templates/skills/create-ac/SKILL.md §MP` for the full specification of
+  main-branch invocation behaviour for the AC-authoring workflows.
 - **Does not push the AC-authoring branch or open the AC-authoring PR.** After
   the user gives final approval in `/plan-feature`, the `deliverAuthoringBranch()`
   function in `scripts/workflows/plan-feature.js` automatically pushes the
