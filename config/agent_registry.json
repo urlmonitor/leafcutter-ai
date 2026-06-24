@@ -2901,7 +2901,19 @@
             "invocation_surface": [
                 "/build-ac"
             ],
-            "produces": "orchestration"
+            "produces": "orchestration",
+            "category": "supervisor",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (ac_prioritizer.py, generate_ticket_from_ac.py, build_ac_mode_detection.py, goal_to_epic.py)"
+                }
+            ]
         },
         {
             "id": "ac-triage",
@@ -2921,7 +2933,23 @@
             "model": "haiku",
             "skills_used": [],
             "description": "Haiku-pinned AC store triage agent. Stage 0 of the /plan-feature workflow. Reads active ACs for the relevant component, classifies the user's request as strategic / behavioral / technical / covered, and returns a structured JSON routing decision. Read-only \u2014 never writes files. Must complete in < 3s for \u2264200 ACs.",
-            "produces": "analysis"
+            "produces": "analysis",
+            "category": "research",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "AC YAML files read from docs/acceptance-criteria/"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (ls docs/acceptance-criteria/)"
+                }
+            ]
         },
         {
             "id": "knowledge-harvester",
