@@ -1,6 +1,6 @@
 id: BO-1500d
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "You see the pull request the moment it is ready"
 component: build-orchestration
 level: L1

@@ -1,6 +1,6 @@
 id: BO-1500
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "Authoring requirements never disturbs your work and always lands safely on main"
 component: build-orchestration
 level: L0

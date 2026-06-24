@@ -1,7 +1,7 @@
 id: BO-1500c-5
-readiness: draft
-priority: medium
-title: "Sequence diagram of the approval-to-PR delivery flow"
+readiness: approved
+priority: high
+title: Sequence diagram of the approval-to-PR delivery flow
 component: build-orchestration
 level: L2
 status: active
@@ -17,20 +17,23 @@ criteria: |
     main, the required CI checks running, and the PR reference returning to the
     user,
   And the diagram shows that no step commits AC files directly onto main.
-depends_on: [BO-1500c-1, BO-1500c-2]
+depends_on:
+- BO-1500c-1
+- BO-1500c-2
 doc_links:
-  - path: docs/architecture/agent_delivery_workflows.md
-    relationship: extends
-    status: exists
+- path: docs/architecture/agent_delivery_workflows.md
+  relationship: extends
+  status: exists
 assigned_agent: architecture-diagram-author
 estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: BO-1500c-1
-  contract: "The implemented push+PR delivery flow this diagram documents"
+  contract: The implemented push+PR delivery flow this diagram documents
 origin_agent: business-analyst
 created: 2026-06-24
 amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by: []
+it_requirements: []

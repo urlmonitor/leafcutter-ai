@@ -1,7 +1,7 @@
 id: BO-1500c-1-i
-readiness: draft
-priority: medium
-title: "Cancelling before final approval leaves draft ACs on the branch and opens no PR"
+readiness: approved
+priority: high
+title: Cancelling before final approval leaves draft ACs on the branch and opens no PR
 component: build-orchestration
 level: L3
 status: active
@@ -18,21 +18,33 @@ criteria: |
   And those AC files are not present on main,
   And the user can resume the run later (per BO-1500b-2) to reach approval and
     delivery.
-depends_on: [BO-1500c-1]
+depends_on:
+- BO-1500c-1
 doc_links:
-  - path: templates/skills/create-ac/SKILL.md
-    relationship: modifies
-    status: exists
-  - path: scripts/workflows/plan-feature.js
-    relationship: modifies
-    status: exists
+- path: templates/skills/create-ac/SKILL.md
+  relationship: modifies
+  status: exists
+- path: scripts/workflows/plan-feature.js
+  relationship: modifies
+  status: exists
 assigned_agent: python-coder
 estimated_complexity: S
-it_requirements: |
-  PR creation is gated strictly on the final-approval signal. Cancellation must be
-  a clean exit that preserves committed branch state and triggers no push/PR.
+it_requirements:
+- PR creation is gated strictly on the final-approval signal. Cancellation must be a clean exit that preserves
+  committed branch state and triggers no push/PR; committed AC files remain on the branch and are absent
+  from main.
+- This behavior must be implemented in BOTH surfaces -- /create-ac (templates/skills/create-ac/SKILL.md
+  prose) and /plan-feature (scripts/workflows/plan-feature.js) -- preferably via a shared worktree/PR
+  helper reused from build-single-ticket (scripts/setup_ticket_worktree.py) and the pull-request machinery;
+  keep the two surfaces in sync. The create-ac prose edits are an llm-expert follow-on within the same
+  ticket.
+- 'Follow the project Error Handling Policy (CLAUDE.md): wrap all external I/O (git subprocess, gh CLI/REST
+  calls) in explicit error handling; no bare except; surface a user-visible warning/error rather than
+  silently swallowing.'
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: BO-1500c-1
+  contract: The final-approval-gated push+PR step whose cancellation path this edge case constrains
 origin_agent: business-analyst
 created: 2026-06-24
 amended_by: []

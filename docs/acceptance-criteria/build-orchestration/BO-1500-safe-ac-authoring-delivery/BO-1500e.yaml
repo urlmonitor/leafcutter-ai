@@ -1,6 +1,6 @@
 id: BO-1500e
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "It works even when you start from the protected main line or an installed copy"
 component: build-orchestration
 level: L1

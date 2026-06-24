@@ -1,7 +1,7 @@
 id: BO-1500c-4
-readiness: draft
-priority: medium
-title: "How-to guide for delivering approved ACs via the reviewed PR path"
+readiness: approved
+priority: high
+title: How-to guide for delivering approved ACs via the reviewed PR path
 component: build-orchestration
 level: L2
 status: active
@@ -17,20 +17,22 @@ criteria: |
   And the guide states that the user does not hand-build a branch or open the PR,
   And the guide explains what happens if they cancel before approval (draft ACs
     remain, no PR) and how to resume.
-depends_on: [BO-1500c-1]
+depends_on:
+- BO-1500c-1
 doc_links:
-  - path: docs/how-to/ac-traceability-store.md
-    relationship: extends
-    status: exists
+- path: docs/how-to/ac-traceability-store.md
+  relationship: extends
+  status: exists
 assigned_agent: documentation-expert
 estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: BO-1500c-1
-  contract: "The implemented delivery flow this guide documents"
+  contract: The implemented approval-to-PR delivery flow this guide documents
 origin_agent: business-analyst
 created: 2026-06-24
 amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by: []
+it_requirements: []

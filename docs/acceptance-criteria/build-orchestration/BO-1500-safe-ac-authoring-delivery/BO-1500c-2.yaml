@@ -1,7 +1,7 @@
 id: BO-1500c-2
-readiness: draft
-priority: medium
-title: "The authoring PR passes the same CI gates as any other change"
+readiness: approved
+priority: high
+title: The authoring PR passes the same CI gates as any other change
 component: build-orchestration
 level: L2
 status: active
@@ -16,20 +16,26 @@ criteria: |
   And the pull request cannot be merged until those required checks pass,
   And no path exists by which the approved AC files reach main while bypassing
     those checks.
-depends_on: [BO-1500c, BO-1500c-1]
+depends_on:
+- BO-1500c
+- BO-1500c-1
 doc_links:
-  - path: templates/skills/build-single-ticket/SKILL.md
-    relationship: models
-    status: exists
+- path: templates/skills/build-single-ticket/SKILL.md
+  relationship: models
+  status: exists
 assigned_agent: python-coder
 estimated_complexity: S
-it_requirements: |
-  Delivery must rely on main's existing branch-protection required checks (ruff
-  lint + AC schema). Do not add a bypass; the PR is an ordinary protected-main PR.
+it_requirements:
+- Delivery must rely on main's existing branch-protection required checks (ruff lint + AC schema/diff
+  validation); do not add any bypass path.
+- The authoring PR is an ordinary protected-main PR -- no privileged merge, no direct push to main.
+- 'Follow the project Error Handling Policy (CLAUDE.md): wrap all external I/O (git subprocess, gh CLI/REST
+  calls) in explicit error handling; no bare except; surface a user-visible warning/error rather than
+  silently swallowing.'
 delivers_to: null
 expects_from:
   ac_id: BO-1500c-1
-  contract: "An opened PR to main whose checks this AC requires to pass"
+  contract: An opened PR to main whose required checks this AC requires to pass
 origin_agent: business-analyst
 created: 2026-06-24
 amended_by: []

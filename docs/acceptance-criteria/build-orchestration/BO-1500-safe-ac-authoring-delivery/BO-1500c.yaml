@@ -1,6 +1,6 @@
 id: BO-1500c
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "Approved requirements reach main through a reviewed pull request"
 component: build-orchestration
 level: L1

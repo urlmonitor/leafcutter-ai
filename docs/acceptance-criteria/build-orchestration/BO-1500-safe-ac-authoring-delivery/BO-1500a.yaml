@@ -1,6 +1,6 @@
 id: BO-1500a
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "Your current work is never disturbed while you author requirements"
 component: build-orchestration
 level: L1
