@@ -1,9 +1,26 @@
 # Continuous-integration gate for leafcutter-ai.
 #
-# Runs on every push to main and every PR targeting main. Two jobs:
+# Runs on every push to main and every PR targeting main. Three jobs:
 #
 #   lint       — ruff check over scripts/, tests/, unit_tests/ (config: ruff.toml).
 #                BLOCKING. The templates/ source tree is excluded (see ruff.toml).
+#
+#   test       — full pytest suite over tests/ and unit_tests/. INFORMATIONAL
+#                ONLY (continue-on-error) FOR NOW. The build step
+#                (python scripts/build.py --target-dir .) runs before pytest
+#                because build.py's install_shims() creates symlinks at
+#                scripts/commit_guardian/, scripts/doc_compliance/, and
+#                scripts/feedback/ pointing into .leafcutter/scripts/. Tests
+#                import from those paths at startup; without the build step they
+#                fail at import on a fresh clone (ADR-016). The shim fix (this
+#                job's reason for existing) is complete, but the suite is NOT yet
+#                green on a fresh checkout: ~4 collection errors (test files for
+#                unbuilt modules: check_test_fixture_bloat, link_feedback,
+#                transform_decision_history, known_failing_tests) plus pre-existing
+#                failures keep it red. Until those are resolved, this job runs
+#                informationally so it surfaces results without blocking merges.
+#                Promote to BLOCKING (drop continue-on-error) once the suite is
+#                green — that is the BP-1200b deliverable, tracked separately.
 #
 #   typecheck  — mypy over the .py files changed in a PR (non-strict,
 #                --ignore-missing-imports, since the codebase has no type config
@@ -13,16 +30,6 @@
 #                findings on changed files without blocking the merge. Promote
 #                to blocking once the codebase is annotated. On direct pushes
 #                there is no diff base, so it is a no-op.
-#
-# NO test job (yet). The pytest suite cannot run green on a fresh clone: tests
-# under tests/commit_guardian/ and others import from scripts/commit_guardian/,
-# scripts/doc_compliance/, scripts/feedback/ — which are GITIGNORED build
-# outputs. A CI runner clones without them, and the current consolidated build
-# (build.py) writes those outputs into .leafcutter/ rather than the scripts/
-# paths the tests read, so ~36 tests fail at import on a clean checkout. Adding
-# a blocking test gate is tracked as a prerequisite ticket
-# (TICKET-20260617-CITestGateBuildOutputDependency.md). Until that is resolved,
-# CI enforces lint only.
 #
 # Dependencies are pinned in requirements-dev.txt.
 
@@ -54,6 +61,34 @@ jobs:
 
       - name: Ruff check
         run: ruff check scripts tests unit_tests
+
+  test:
+    name: Test suite (pytest)
+    runs-on: ubuntu-latest
+    # INFORMATIONAL ONLY until the suite is green on a fresh checkout — see the
+    # header note. Drop continue-on-error to make this a blocking gate (BP-1200b)
+    # once the pre-existing collection errors and failures are resolved.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Build — run install_shims to create scripts/ symlinks
+        # Required before pytest: install_shims() creates symlinks at
+        # scripts/commit_guardian/, scripts/doc_compliance/, and
+        # scripts/feedback/ pointing into .leafcutter/scripts/. Tests
+        # add those paths to sys.path at import time (ADR-016).
+        run: python scripts/build.py --target-dir .
+
+      - name: Run test suite
+        run: python -m pytest tests/ unit_tests/ -x -q
 
   typecheck:
     name: Type-check changed files (mypy, informational)
