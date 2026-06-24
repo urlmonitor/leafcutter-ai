@@ -1,6 +1,6 @@
 ---
 title: "Detect dependency manager and make worktree bootstrap non-fatal"
-status: in_progress
+status: done
 components:
   - worktree_manager
 created: 2026-06-24
@@ -22,7 +22,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 07: Detect dependency manager and make worktree bootstrap non-fatal
@@ -80,7 +80,7 @@ catch-warn-continue pattern; the dependency-install step should match.
 - [x] test-runner — 2026-06-24 15:00
 - [x] pr-reviewer — 2026-06-24 16:00
 - [x] commit — 2026-06-24 17:30
-- [ ] pull-request
+- [x] pull-request — 2026-06-24 17:45
 
 ## Comments
 
@@ -130,6 +130,14 @@ completion_manifest:
   no_silent_swallow: true
   no_try_except_on_pure_functions: true
 All 4 ACs satisfied. AC-1: manifest-detection priority chain (pyproject.toml → poetry; requirements-dev.txt → pip; requirements.txt → pip; else → skip) implemented identically in both copies. AC-2: install failure caught as (subprocess.SubprocessError, OSError), WARNING printed to stderr via print(..., file=sys.stderr), no re-raise — bootstrap continues to build.py. AC-3: requirements-dev.txt path correctly selected on this repo; confirmed by test-runner (all 15 green). AC-4: templates/scripts/ diff is structurally identical. Error Handling Policy followed on all four rules: named exception types, WARNING logged, no silent swallow, no try/except on pure functions. No high-confidence blockers found.
+
+### 2026-06-24 17:45 — pull-request (status: ok)
+feedback-id: fb_2026-06-24_83f0727c
+completion_manifest:
+  branch_pushed: true
+  pr_exists_verified: true
+  no_new_pr_needed: true
+Pushed commits to existing PR #158 (https://github.com/urlmonitor/leafcutter-ai/pull/158) for EPIC-FinalizeFeatureHardening. Branch fast-forwarded to include commits: 350ca9a (ticket 07 commit sign-off), f207b00 (ticket 03 implementation), 466861e (ticket 03 pull-request sign-off). Ticket 07 implementation is live on the epic branch.
 
 ### 2026-06-24 17:30 — commit (status: ok)
 feedback-id: fb_2026-06-24_commit07
