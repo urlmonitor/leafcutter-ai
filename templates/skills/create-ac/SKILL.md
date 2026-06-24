@@ -65,6 +65,18 @@ non-destructive on the happy path (no orphans found → silent proceed).
    git -C <project-root> status --porcelain docs/acceptance-criteria/
    ```
 
+   **Important — ordering with §WT:** The §PRR pre-flight runs TWICE in the
+   full `/create-ac` workflow: once BEFORE §WT (targeting the original
+   checkout) and once AFTER §WT (targeting the authoring worktree).  When
+   §WT has already run and `AUTHORING_WORKTREE_PATH` is set, replace
+   `<project-root>` with `AUTHORING_WORKTREE_PATH` in the command above so
+   the git status targets the authoring worktree, not the original checkout
+   (AC BO-1500a-2):
+
+   ```bash
+   git -C AUTHORING_WORKTREE_PATH status --porcelain docs/acceptance-criteria/
+   ```
+
    Parse each output line:
    - Column 1 (`X`) = index (staged) status; column 2 (`Y`) = worktree status.
    - Relevant status codes: `M` (modified), `A` (added), `?` (untracked).
@@ -127,14 +139,16 @@ accept `y`, `n`, `d` as shorthand).
 
 #### yes — Commit orphaned files
 
-1. Stage the orphaned AC files:
+1. Stage the orphaned AC files.  After §WT runs, replace `<project-root>`
+   with `AUTHORING_WORKTREE_PATH` so the add operates in the authoring
+   worktree, not the original checkout (AC BO-1500a-2):
    ```bash
-   git -C <project-root> add <file1> <file2> ...
+   git -C AUTHORING_WORKTREE_PATH add <file1> <file2> ...
    ```
 
-2. Commit them with a fixed message:
+2. Commit them with a fixed message (same `-C` anchor):
    ```bash
-   git -C <project-root> commit -m "chore: commit orphaned AC files from prior session"
+   git -C AUTHORING_WORKTREE_PATH commit -m "chore: commit orphaned AC files from prior session"
    ```
 
    **Error handling:** If `git add` or `git commit` exits non-zero, emit:
@@ -162,17 +176,19 @@ Abort the workflow. Do not dispatch any authoring agent.
 
 1. For each orphaned AC file:
    - If the file is **tracked** (status `M` or `A` in the staged or worktree
-     column): run `git restore` to discard working-tree changes:
+     column): run `git restore` to discard working-tree changes.  After §WT
+     runs, replace `<project-root>` with `AUTHORING_WORKTREE_PATH` so the
+     restore operates in the authoring worktree (AC BO-1500a-2):
      ```bash
-     git -C <project-root> restore <file>
+     git -C AUTHORING_WORKTREE_PATH restore <file>
      ```
      If the file was staged (status `A` in index column): first unstage it:
      ```bash
-     git -C <project-root> restore --staged <file>
+     git -C AUTHORING_WORKTREE_PATH restore --staged <file>
      ```
      Then restore it:
      ```bash
-     git -C <project-root> restore <file>
+     git -C AUTHORING_WORKTREE_PATH restore <file>
      ```
    - If the file is **untracked** (status `??`): delete it:
      ```bash
@@ -278,14 +294,24 @@ additional instruction field:
 "ac_store_path": "<AC_STORE_PATH>",
 ```
 
-And the `git` commands in §PRR.2 and §1–§3 stage/commit calls must use
-`AUTHORING_WORKTREE_PATH` as the `-C` anchor rather than the current
-project root.
+The `-C` anchor for **ALL** git operations executed by this workflow —
+`git status`, `git add`, `git commit`, `git restore`, `git restore --staged`
+— MUST be `AUTHORING_WORKTREE_PATH`.  This applies to the §PRR scan, the
+§1–§3 stage/commit calls, and the discard-path restore calls.  No git
+command may run without the `-C AUTHORING_WORKTREE_PATH` flag after §WT.3
+completes (AC BO-1500a-2).
 
 ### §WT.4 — Scope and isolation invariant
 
-The invariant is: **no AC YAML file produced by this `/create-ac` session
-may appear under a path that is outside `AC_STORE_PATH`**.
+**File invariant:** No AC YAML file produced by this `/create-ac` session
+may appear under a path that is outside `AC_STORE_PATH`.
+
+**Git operation invariant (AC BO-1500a-2):** All git commands executed by
+this workflow (`git status`, `git add`, `git commit`, `git restore`,
+`git restore --staged`) MUST use `git -C AUTHORING_WORKTREE_PATH` so that
+no operation touches the original checkout or any concurrent worktree.
+Using bare `git` commands (without `-C`) or `git -C <project-root>` after
+§WT.3 completes is a violation of this invariant.
 
 The §PRR scan (§PRR.2) should be re-run with `AC_STORE_PATH` as its target
 directory after §WT completes, so that orphan detection covers the correct
@@ -365,6 +391,17 @@ silently swallowed — each produces a user-visible warning or error.
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-24 [EPIC-SafeAcAuthoring/03/python-coder]: Implemented AC BO-1500a-2
+  (original checkout and concurrent worktrees left untouched). Updated §PRR.2
+  to clarify that after §WT runs, `<project-root>` must be replaced with
+  `AUTHORING_WORKTREE_PATH` in the git status command so orphan detection
+  targets the authoring worktree, not the original checkout. Updated §PRR.4
+  yes-branch git add/commit commands and discard-branch git restore commands
+  to carry the same `-C AUTHORING_WORKTREE_PATH` anchor. Strengthened §WT.3
+  with an explicit statement that the `-C` anchor for ALL git operations in
+  the workflow is `AUTHORING_WORKTREE_PATH`. Added the Git operation invariant
+  to §WT.4: all git commands must use `git -C AUTHORING_WORKTREE_PATH`; bare
+  git or `-C <project-root>` after §WT.3 is a protocol violation.
 - 2026-06-24 [EPIC-SafeAcAuthoring/01/python-coder]: Added §WT (Authoring
   Worktree Bootstrap) implementing AC BO-1500a-1. The new section inserts
   between §PRR and §0 and mandates that a dedicated worktree (branched from
