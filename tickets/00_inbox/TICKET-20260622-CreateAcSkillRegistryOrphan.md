@@ -25,7 +25,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   adr-author: not_needed
   architecture-diagram-author: not_needed
 ---
@@ -92,7 +92,7 @@ covered by `TICKET-20260617-TrackMissingTransformHookScripts.md`,
 - [x] test-runner — 2026-06-24 11:30
 - [x] pr-reviewer — 2026-06-24 12:00
 - [x] commit — 2026-06-24 13:00
-- [ ] pull-request
+- [x] pull-request — 2026-06-24 14:00
 
 ## Comments
 
@@ -124,6 +124,12 @@ Reviewed the working diff and config/skill_registry.json. The diff is limited to
 ### 2026-06-24 13:00 — commit (status: ok)
 feedback-id: none
 Committed skill registry create-ac fix. Pre-commit hooks all passed (29 checks, 0 failures). Commit sha: 63e748a on branch feature/createacskillregistryorphan. Three-place parity: frontmatter commit: signed_off, Sign-offs [x] commit — 2026-06-24 13:00, Comments entry appended.
+
+### 2026-06-24 14:00 — pull-request (status: ok)
+feedback-id: none
+PR opened: https://github.com/urlmonitor/leafcutter-ai/pull/155
+Title: fix(registry): add create-ac skill entry to skill_registry.json
+Branch pushed to origin/feature/createacskillregistryorphan. Three-place parity: frontmatter pull-request: signed_off, Sign-offs [x] pull-request — 2026-06-24 14:00, Comments entry appended.
 
 ## Implementation Tasks
 
