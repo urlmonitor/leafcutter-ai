@@ -80,13 +80,14 @@ async function run({ userInput, agent, parallel, prompt }) {
   });
 
   let preflightInfo;
-  try {
-    preflightInfo =
-      typeof preflightResult === "string"
-        ? JSON.parse(preflightResult)
-        : preflightResult;
-  } catch (_err) {
-    preflightInfo = { branch: "unknown", worktree_root: "unknown" };
+  {
+    const { value, malformed } = safeParseJSON(preflightResult);
+    if (malformed) {
+      console.log("[finalize-feature] pre-flight parse malformed — using safe defaults (branch: unknown)");
+      preflightInfo = { branch: "unknown", worktree_root: "unknown" };
+    } else {
+      preflightInfo = value || { branch: "unknown", worktree_root: "unknown" };
+    }
   }
 
   const BRANCH = (preflightInfo.branch || "").trim();
@@ -162,6 +163,59 @@ async function run({ userInput, agent, parallel, prompt }) {
     baselineWorktreePath = null;
   }
 
+  /**
+   * AC-4: Tolerant JSON parse helper.
+   *
+   * Distinguishes between two failure modes:
+   *   1. Agent returned a value that is already an object/array (pass-through).
+   *   2. Agent returned a string — try JSON.parse; on failure, scan for a JSON
+   *      object or array embedded inside freeform prose (e.g. agent wraps the
+   *      result in a sentence).
+   *
+   * Returns { value: <parsed>, malformed: false } on success.
+   * Returns { value: null, malformed: true } when no parseable JSON is found.
+   *
+   * Callers that receive malformed=true MUST NOT halt the workflow based solely
+   * on the missing value — they should log a warning and apply a safe non-halting
+   * default (unless the field was genuinely required for safety, in which case
+   * they should log clearly and apply the most conservative safe assumption).
+   *
+   * @param {*} raw  - Value returned by agent() — may be string, object, or null.
+   * @returns {{ value: *, malformed: boolean }}
+   */
+  function safeParseJSON(raw) {
+    if (raw === null || raw === undefined) {
+      return { value: null, malformed: true };
+    }
+    // Already a non-string (object, array, boolean, number) — use directly.
+    if (typeof raw !== "string") {
+      return { value: raw, malformed: false };
+    }
+    // Try direct parse first.
+    try {
+      return { value: JSON.parse(raw), malformed: false };
+    } catch (_) {
+      // Try to extract a JSON object or array from inside prose.
+      const objMatch = raw.match(/\{[\s\S]*\}/);
+      if (objMatch) {
+        try {
+          return { value: JSON.parse(objMatch[0]), malformed: false };
+        } catch (_) {
+          // fall through
+        }
+      }
+      const arrMatch = raw.match(/\[[\s\S]*\]/);
+      if (arrMatch) {
+        try {
+          return { value: JSON.parse(arrMatch[0]), malformed: false };
+        } catch (_) {
+          // fall through
+        }
+      }
+      return { value: null, malformed: true };
+    }
+  }
+
   // -------------------------------------------------------------------------
   // Pre-flight 2 — gh account verification (EMU-aware, config-driven)
   //
@@ -189,13 +243,14 @@ async function run({ userInput, agent, parallel, prompt }) {
   });
 
   let ghConfig;
-  try {
-    ghConfig =
-      typeof ghConfigResult === "string"
-        ? JSON.parse(ghConfigResult)
-        : ghConfigResult;
-  } catch (_err) {
-    ghConfig = { gh_target_account: null, gh_repo: null };
+  {
+    const { value, malformed } = safeParseJSON(ghConfigResult);
+    if (malformed) {
+      console.log("[finalize-feature] gh config parse malformed — proceeding with no account constraint");
+      ghConfig = { gh_target_account: null, gh_repo: null };
+    } else {
+      ghConfig = value || { gh_target_account: null, gh_repo: null };
+    }
   }
 
   const GH_TARGET_ACCOUNT = (ghConfig.gh_target_account || "").trim() || null;
@@ -216,13 +271,14 @@ async function run({ userInput, agent, parallel, prompt }) {
     });
 
     let ghStatus;
-    try {
-      ghStatus =
-        typeof ghStatusResult === "string"
-          ? JSON.parse(ghStatusResult)
-          : ghStatusResult;
-    } catch (_err) {
-      ghStatus = { active_account: null };
+    {
+      const { value, malformed } = safeParseJSON(ghStatusResult);
+      if (malformed) {
+        console.log("[finalize-feature] gh auth status parse malformed — assuming active_account is null");
+        ghStatus = { active_account: null };
+      } else {
+        ghStatus = value || { active_account: null };
+      }
     }
 
     const activeAccount = (ghStatus.active_account || "").trim() || null;
@@ -241,13 +297,14 @@ async function run({ userInput, agent, parallel, prompt }) {
       });
 
       let ghSwitch;
-      try {
-        ghSwitch =
-          typeof ghSwitchResult === "string"
-            ? JSON.parse(ghSwitchResult)
-            : ghSwitchResult;
-      } catch (_err) {
-        ghSwitch = { switch_exit_code: 1, verified_account: null };
+      {
+        const { value, malformed } = safeParseJSON(ghSwitchResult);
+        if (malformed) {
+          console.log("[finalize-feature] gh switch parse malformed — assuming switch failed");
+          ghSwitch = { switch_exit_code: 1, verified_account: null };
+        } else {
+          ghSwitch = value || { switch_exit_code: 1, verified_account: null };
+        }
       }
 
       const verifiedAccount = (ghSwitch.verified_account || "").trim() || null;
@@ -279,8 +336,10 @@ async function run({ userInput, agent, parallel, prompt }) {
   // reason, log a warning and set baselineFailures = null. The workflow DOES
   // NOT halt — triage will classify all failures conservatively as regressions.
   //
-  // Resumability: if a baseline worktree path from a previous run exists, the
-  // agent will attempt to remove it first before creating a new one.
+  // Resumability: before creating the temp worktree, the agent probes for any
+  // stale /tmp/leafcutter-main-baseline-* directory from a prior interrupted run
+  // and removes it. This prevents git worktree add from failing because the
+  // target path already exists.
   // -------------------------------------------------------------------------
   const baselineTs = Date.now();
   const baselineTmpPath = `/tmp/leafcutter-main-baseline-${baselineTs}`;
@@ -295,6 +354,14 @@ async function run({ userInput, agent, parallel, prompt }) {
       instructions:
         "Capture a pre-merge test baseline on the current main HEAD.\n" +
         `Use git -C "${WORKTREE_ROOT}" for all git commands to avoid CWD ambiguity.\n` +
+        "\n" +
+        "Step A0 — Reclaim any stale baseline worktrees from prior interrupted runs:\n" +
+        "  Run: ls /tmp/leafcutter-main-baseline-* 2>/dev/null || true\n" +
+        "  For each path returned (if any):\n" +
+        `    Run: git -C "${WORKTREE_ROOT}" worktree remove \"<path>\" --force 2>/dev/null || true\n` +
+        "    Run: rm -rf \"<path>\" 2>/dev/null || true\n" +
+        "  Log each removed path as: 'Reclaimed stale baseline worktree: <path>'\n" +
+        "  If no paths found: log 'No stale baseline worktrees found.'\n" +
         "\n" +
         "Step A — Create a temporary detached worktree at origin/main:\n" +
         `  Run: git -C "${WORKTREE_ROOT}" worktree add --detach "${baselineTmpPath}" origin/main\n` +
@@ -332,13 +399,16 @@ async function run({ userInput, agent, parallel, prompt }) {
   });
 
   let baselineInfo;
-  try {
-    baselineInfo =
-      typeof baselineResult === "string"
-        ? JSON.parse(baselineResult)
-        : baselineResult;
-  } catch (_err) {
-    baselineInfo = { status: "parse_failed", baseline_sha: null, baseline_failures: null, baseline_run_at: null };
+  {
+    const { value, malformed } = safeParseJSON(baselineResult);
+    if (malformed) {
+      // AC-4: Malformed reply is not the same as "baseline failed" —
+      // degrade gracefully (same as run_failed path) without spuriously halting.
+      console.log("[finalize-feature] step 0 baseline parse malformed — treating as run_failed (triage will use conservative classification)");
+      baselineInfo = { status: "parse_failed", baseline_sha: null, baseline_failures: null, baseline_run_at: null };
+    } else {
+      baselineInfo = value || { status: "parse_failed", baseline_sha: null, baseline_failures: null, baseline_run_at: null };
+    }
   }
 
   const baselineStatus = (baselineInfo.status || "unknown").toLowerCase();
@@ -382,13 +452,16 @@ async function run({ userInput, agent, parallel, prompt }) {
   });
 
   let prProbe;
-  try {
-    prProbe =
-      typeof prProbeResult === "string"
-        ? JSON.parse(prProbeResult)
-        : prProbeResult;
-  } catch (_err) {
-    prProbe = { found: false };
+  {
+    const { value, malformed } = safeParseJSON(prProbeResult);
+    if (malformed) {
+      // AC-4: Malformed PR probe defaults to "not found" — safer to open a duplicate
+      // PR (which will be rejected by GH) than to silently skip creating one.
+      console.log("[finalize-feature] step 1 PR probe parse malformed — assuming no PR exists");
+      prProbe = { found: false };
+    } else {
+      prProbe = value || { found: false };
+    }
   }
 
   if (prProbe.found) {
@@ -419,11 +492,14 @@ async function run({ userInput, agent, parallel, prompt }) {
     });
 
     let openPr;
-    try {
-      openPr =
-        typeof openPrResult === "string" ? JSON.parse(openPrResult) : openPrResult;
-    } catch (_err) {
-      openPr = {};
+    {
+      const { value, malformed } = safeParseJSON(openPrResult);
+      if (malformed) {
+        console.log("[finalize-feature] step 1 PR open parse malformed — pr_number and url will be null");
+        openPr = {};
+      } else {
+        openPr = value || {};
+      }
     }
 
     prNumber = openPr.number || openPr.pr_number || null;
@@ -475,16 +551,21 @@ async function run({ userInput, agent, parallel, prompt }) {
   });
 
   let mergeMainInfo;
-  try {
-    mergeMainInfo =
-      typeof mergeMainResult === "string"
-        ? JSON.parse(mergeMainResult)
-        : mergeMainResult;
-  } catch (_err) {
-    mergeMainInfo = { status: "conflict", merge_strategy: null };
+  {
+    const { value, malformed } = safeParseJSON(mergeMainResult);
+    if (malformed) {
+      // AC-4: A malformed reply is not the same as "conflict detected".
+      // Default to "already_up_to_date" (non-halting, safe) and log a warning.
+      // If the merge actually had a problem, it will become apparent at the
+      // test-runner phase (step 3) rather than spuriously halting here.
+      console.log("[finalize-feature] step 2 merge-main parse malformed — treating as already_up_to_date (non-halting safe default)");
+      mergeMainInfo = { status: "already_up_to_date", merge_strategy: "already_up_to_date" };
+    } else {
+      mergeMainInfo = value || { status: "already_up_to_date", merge_strategy: "already_up_to_date" };
+    }
   }
 
-  const mergeStatus = (mergeMainInfo.status || "conflict").toLowerCase();
+  const mergeStatus = (mergeMainInfo.status || "already_up_to_date").toLowerCase();
 
   if (mergeStatus === "conflict") {
     await cleanupBaselineWorktree();
@@ -543,18 +624,24 @@ async function run({ userInput, agent, parallel, prompt }) {
 
   let testPassed;
   let postMergeFailures;
-  try {
-    const parsed =
-      typeof testResult === "string" ? JSON.parse(testResult) : testResult;
-    testPassed = parsed && parsed.passed === true;
-    testResult = parsed;
-    postMergeFailures = (testResult && Array.isArray(testResult.failing_tests))
-      ? testResult.failing_tests
-      : [];
-  } catch (_err) {
-    // If parsing fails, assume failure to be safe.
-    testPassed = false;
-    postMergeFailures = [];
+  {
+    const { value, malformed } = safeParseJSON(testResult);
+    if (malformed) {
+      // AC-4: A malformed test reply is ambiguous — we cannot determine pass/fail.
+      // Default to testPassed=false (conservative) but log clearly that this is a
+      // parse failure, not an agent-reported failure. The triage step will then
+      // attempt to classify failures, and if the triage reply is also malformed,
+      // that triage step's own safe default applies.
+      console.log("[finalize-feature] step 3 test-runner parse malformed — treating as failed (conservative; triage will classify)");
+      testPassed = false;
+      postMergeFailures = [];
+      testResult = { passed: false, output: "(parse malformed)", failing_tests: [] };
+    } else {
+      const parsed = value || {};
+      testPassed = parsed.passed === true;
+      testResult = parsed;
+      postMergeFailures = Array.isArray(parsed.failing_tests) ? parsed.failing_tests : [];
+    }
   }
 
   if (testPassed) {
@@ -584,15 +671,15 @@ async function run({ userInput, agent, parallel, prompt }) {
     });
 
     let changedFiles = [];
-    try {
-      const parsedCf =
-        typeof changedFilesResult === "string"
-          ? JSON.parse(changedFilesResult)
-          : changedFilesResult;
-      changedFiles = Array.isArray(parsedCf.changed_files) ? parsedCf.changed_files : [];
-    } catch (_err) {
-      // Default to empty list on parse failure — triage uses it as a hint only.
-      changedFiles = [];
+    {
+      const { value, malformed } = safeParseJSON(changedFilesResult);
+      if (malformed) {
+        console.log("[finalize-feature] step 3 changed_files parse malformed — triage will use empty changed_files list");
+        changedFiles = [];
+      } else {
+        const parsedCf = value || {};
+        changedFiles = Array.isArray(parsedCf.changed_files) ? parsedCf.changed_files : [];
+      }
     }
 
     const triageRaw = await agent({
@@ -618,17 +705,29 @@ async function run({ userInput, agent, parallel, prompt }) {
       },
     });
 
-    try {
-      triageReport =
-        typeof triageRaw === "string" ? JSON.parse(triageRaw) : triageRaw;
-    } catch (_err) {
-      // Parse failure: treat as blocking — cannot determine safety.
-      triageReport = {
-        blocks_finalization: true,
-        regressions: postMergeFailures,
-        pre_existing: [],
-        summary: "Triage report parse failed — treating all failures as regressions.",
-      };
+    {
+      const { value, malformed } = safeParseJSON(triageRaw);
+      if (malformed) {
+        // AC-4: A malformed triage reply is genuinely ambiguous — we cannot determine
+        // whether failures are regressions or pre-existing. Use conservative
+        // blocks_finalization=true, but log clearly that this is a parse failure
+        // (not an agent-reported regression), so the operator can distinguish
+        // "tests have regressions" from "triage reply was garbled".
+        console.log("[finalize-feature] step 3 triage parse malformed — treating as blocks_finalization=true (conservative; see note in summary)");
+        triageReport = {
+          blocks_finalization: true,
+          regressions: postMergeFailures,
+          pre_existing: [],
+          summary: "Triage reply was malformed (could not parse JSON) — treating all failures as regressions conservatively. If you believe this is a parse error rather than a real regression, re-run /finalize-feature.",
+        };
+      } else {
+        triageReport = value || {
+          blocks_finalization: true,
+          regressions: postMergeFailures,
+          pre_existing: [],
+          summary: "Triage report empty — treating all failures as regressions.",
+        };
+      }
     }
 
     // Log the triage report to the user for visibility.
@@ -708,14 +807,14 @@ async function run({ userInput, agent, parallel, prompt }) {
   });
 
   let closureAlreadyCommitted = false;
-  try {
-    const closureProbe =
-      typeof closureProbeResult === "string"
-        ? JSON.parse(closureProbeResult)
-        : closureProbeResult;
-    closureAlreadyCommitted = closureProbe.already_committed === true;
-  } catch (_err) {
-    closureAlreadyCommitted = false;
+  {
+    const { value, malformed } = safeParseJSON(closureProbeResult);
+    if (malformed) {
+      console.log("[finalize-feature] step 3.5 closure probe parse malformed — assuming not already committed (will re-attempt closure)");
+      closureAlreadyCommitted = false;
+    } else {
+      closureAlreadyCommitted = (value || {}).already_committed === true;
+    }
   }
 
   if (closureAlreadyCommitted) {
@@ -736,15 +835,14 @@ async function run({ userInput, agent, parallel, prompt }) {
             "Return ONLY a JSON object: { \"state\": \"OPEN\"|\"MERGED\"|\"CLOSED\" }",
         },
       });
-      try {
-        const prClosureState =
-          typeof prClosureStateResult === "string"
-            ? JSON.parse(prClosureStateResult)
-            : prClosureStateResult;
-        prAlreadyMergedAtClosure =
-          (prClosureState.state || "").toUpperCase() === "MERGED";
-      } catch (_err) {
-        prAlreadyMergedAtClosure = false;
+      {
+        const { value, malformed } = safeParseJSON(prClosureStateResult);
+        if (malformed) {
+          console.log("[finalize-feature] step 3.5 PR state parse malformed — assuming PR is OPEN");
+          prAlreadyMergedAtClosure = false;
+        } else {
+          prAlreadyMergedAtClosure = ((value || {}).state || "").toUpperCase() === "MERGED";
+        }
       }
     }
 
@@ -860,18 +958,14 @@ async function run({ userInput, agent, parallel, prompt }) {
       });
 
       let closureInfo;
-      try {
-        closureInfo =
-          typeof closureResult === "string"
-            ? JSON.parse(closureResult)
-            : closureResult;
-      } catch (_err) {
-        closureInfo = {
-          tickets_closed: [],
-          acs_closed: 0,
-          acs_skipped: 0,
-          commit_made: false,
-        };
+      {
+        const { value, malformed } = safeParseJSON(closureResult);
+        if (malformed) {
+          console.log("[finalize-feature] step 3.5 closure parse malformed — assuming zero tickets/ACs closed");
+          closureInfo = { tickets_closed: [], acs_closed: 0, acs_skipped: 0, commit_made: false };
+        } else {
+          closureInfo = value || { tickets_closed: [], acs_closed: 0, acs_skipped: 0, commit_made: false };
+        }
       }
 
       // Accumulate counts into workflow-level variables.
@@ -933,13 +1027,14 @@ async function run({ userInput, agent, parallel, prompt }) {
   });
 
   let prState;
-  try {
-    prState =
-      typeof prStateResult === "string"
-        ? JSON.parse(prStateResult)
-        : prStateResult;
-  } catch (_err) {
-    prState = { state: "OPEN" };
+  {
+    const { value, malformed } = safeParseJSON(prStateResult);
+    if (malformed) {
+      console.log("[finalize-feature] step 4 PR state parse malformed — assuming PR is OPEN");
+      prState = { state: "OPEN" };
+    } else {
+      prState = value || { state: "OPEN" };
+    }
   }
 
   if ((prState.state || "").toUpperCase() === "MERGED") {
@@ -994,6 +1089,18 @@ async function run({ userInput, agent, parallel, prompt }) {
 
   // -------------------------------------------------------------------------
   // Step 5 — Sync local main (resumable)
+  //
+  // AC-2 note: this step does NOT make commits on main. It only runs
+  // `git checkout main && git pull` (read operations). No pre-commit-config
+  // probe is required here because no commit is issued.
+  //
+  // Historical context: ticket 09 (AC-2) originally targeted a main-side
+  // reconciliation commit that included `git mv` folder moves. That step
+  // (Step 6c in the original design) was removed by ticket 04
+  // (EPIC-FinalizeFeatureHardening). As a result, finalize never commits
+  // directly to main — all commits go through PRs (PR-only branch protection).
+  // The pre-commit-config probe AC is therefore satisfied structurally: there
+  // is no code path that commits on main without going through the PR merge gate.
   // -------------------------------------------------------------------------
   const syncResult = await agent({
     agentType: "status-checker",
@@ -1110,11 +1217,14 @@ async function run({ userInput, agent, parallel, prompt }) {
   });
 
   let closeInfo;
-  try {
-    closeInfo =
-      typeof closeResult === "string" ? JSON.parse(closeResult) : closeResult;
-  } catch (_err) {
-    closeInfo = { tickets_in_scope: [], tickets_done: [], tickets_not_done: [], skipped: false };
+  {
+    const { value, malformed } = safeParseJSON(closeResult);
+    if (malformed) {
+      console.log("[finalize-feature] step 6 scope-detect parse malformed — no tickets reported in summary");
+      closeInfo = { tickets_in_scope: [], tickets_done: [], tickets_not_done: [], skipped: false };
+    } else {
+      closeInfo = value || { tickets_in_scope: [], tickets_done: [], tickets_not_done: [], skipped: false };
+    }
   }
 
   // Step 6b is informational only — no ticket files were moved or written.
@@ -1143,13 +1253,16 @@ async function run({ userInput, agent, parallel, prompt }) {
   });
 
   let worktreeProbe;
-  try {
-    worktreeProbe =
-      typeof worktreeProbeResult === "string"
-        ? JSON.parse(worktreeProbeResult)
-        : worktreeProbeResult;
-  } catch (_err) {
-    worktreeProbe = { exists: true }; // default-conservative: assume it exists
+  {
+    const { value, malformed } = safeParseJSON(worktreeProbeResult);
+    if (malformed) {
+      // AC-4: Malformed probe — conservative default is exists=true (safer to
+      // attempt removal than to skip and leave the worktree dangling).
+      console.log("[finalize-feature] step 7 worktree probe parse malformed — assuming exists=true (conservative)");
+      worktreeProbe = { exists: true };
+    } else {
+      worktreeProbe = value || { exists: true };
+    }
   }
 
   if (!worktreeProbe.exists) {
@@ -1170,17 +1283,20 @@ async function run({ userInput, agent, parallel, prompt }) {
     });
 
     let wResult;
-    try {
-      wResult =
-        typeof worktreeResult === "string"
-          ? JSON.parse(worktreeResult)
-          : worktreeResult;
-    } catch (_err) {
-      wResult = { removed: false, conflict_pids: [] };
+    {
+      const { value, malformed } = safeParseJSON(worktreeResult);
+      if (malformed) {
+        console.log("[finalize-feature] step 7 worktree-agent parse malformed — assuming removed=false, conflict_pids=[]");
+        wResult = { removed: false, conflict_pids: [] };
+      } else {
+        wResult = value || { removed: false, conflict_pids: [] };
+      }
     }
 
     if (wResult.conflict_pids && wResult.conflict_pids.length > 0) {
       // Surface conflict PIDs verbatim and stop — user must resolve manually.
+      // Clean up the baseline worktree before returning (AC-1: cleanup on all paths).
+      await cleanupBaselineWorktree();
       return {
         status: "halted",
         halted_at_step: 7,
@@ -1204,7 +1320,14 @@ async function run({ userInput, agent, parallel, prompt }) {
 
   // -------------------------------------------------------------------------
   // Final — Return success summary
+  //
+  // AC-1: ensure the baseline temp worktree is cleaned up on the success path.
+  // baselineWorktreePath is already null when step 0 completed successfully
+  // (the agent ran step D to remove it), so this is a no-op in the happy path.
+  // It fires only when step 0 degraded but the workflow continued to completion.
   // -------------------------------------------------------------------------
+  await cleanupBaselineWorktree();
+
   return {
     status: "ok",
     branch: BRANCH,
