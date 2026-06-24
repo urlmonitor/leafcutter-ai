@@ -24,7 +24,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 06: Replace CWD-trusting git detection with explicit repo-root anchoring
@@ -83,7 +83,7 @@ repository.
 - [x] test-runner — 2026-06-24 11:30
 - [x] pr-reviewer — 2026-06-24 12:00
 - [x] commit — 2026-06-24 12:30
-- [ ] pull-request
+- [x] pull-request — 2026-06-24 12:55
 
 ## Comments
 
@@ -124,6 +124,10 @@ completion_manifest:
   error_handling_correct: true
   no_high_confidence_blockers: true
 Reviewed all staged changes against the four ACs. AC-1: `--repo-root PATH` argument present in top-level parser of both Python files; `_git_toplevel()` accepts `repo_root: Path | None = None` and inserts `-C <repo_root>` when provided. AC-2: CWD fallback intact — `repo_root=None` leaves the command as `["git", "rev-parse", "--show-toplevel"]` unchanged; `getattr(args, "repo_root", None)` safely returns None for callers that predate the arg. AC-3: All bare `git ...` calls in `finalize-feature.js` step instruction strings replaced with `git -C "${WORKTREE_ROOT}" ...`; cleanup function uses a safe anchor fallback (`WORKTREE_ROOT || baselineWorktreePath`). AC-4: Additive optional argument; 909 existing tests still pass. Error handling: `_git_toplevel()` wraps `subprocess.run` with `except (subprocess.SubprocessError, OSError)`; no bare except; re-raises with typed exception. No high-confidence issues found.
+
+### 2026-06-24 12:55 — pull-request (status: ok)
+feedback-id: fb_2026-06-24_28c91717
+Branch EPIC-FinalizeFeatureHardening pushed to origin (2dbc94b..87c6a77). PR #158 updated — no new PR opened (shared epic PR). All prior phase sign-offs confirmed green.
 
 ## Implementation Tasks
 - [x] Add `--repo-root` to setup_ticket_worktree.py; route `_git_toplevel()` through `git -C`.
