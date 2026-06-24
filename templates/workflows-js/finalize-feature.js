@@ -28,18 +28,14 @@
  * Ticket: tickets/00_inbox/TICKET-20260602-FinalizeFeatureJSWorkflow.md
  *
  * Minimum Claude Code version: 2.1.154 (workflow script support)
- * Fallback: for older installs, templates/agents/finalize-feature.md is used instead.
+ * No fallback: the legacy LLM agent (finalize-feature.md) has been removed. Older
+ * installs receive an explicit error from the slash command.
  */
 
 export const meta = {
   name: "finalize-feature",
   description:
-    "Post-merge feature finalization: capture pre-merge test baseline on main, " +
-    "open PR if missing, merge origin/main into worktree, run post-merge tests " +
-    "(with triage baseline), merge PR to main only when tests pass, " +
-    "sync local main, close tickets/archive epic, remove worktree. " +
-    "Prompt gates on all destructive steps. HALT on test regression before PR merge. " +
-    "Returns { status: ok } with per-step summary on full success.",
+    "Post-merge feature finalization: capture pre-merge test baseline on main, open PR if missing, merge origin/main into worktree, run post-merge tests (with triage baseline), merge PR to main only when tests pass, sync local main, close tickets/archive epic, remove worktree. Prompt gates on all destructive steps. HALT on test regression before PR merge. Returns { status: ok } with per-step summary on full success.",
   phases: [
     "pre-flight (status-checker reads branch + worktree root)",
     "step-0: capture baseline test run on main HEAD (test-runner — graceful on failure)",

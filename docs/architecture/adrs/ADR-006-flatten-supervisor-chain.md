@@ -4,7 +4,7 @@ description: "Architectural decision to flatten the supervisor chain so ticket-s
 type: "adr"
 status: "accepted"
 created: "2026-05-29"
-last_updated: "2026-06-08"
+last_updated: "2026-06-24"
 components:
   - build_pipeline
 ---
@@ -833,6 +833,82 @@ See `docs/architecture/agent_delivery_workflows.md` §5 "AC BP-600d-4 — Quick-
 pushes to origin and closes the ticket lifecycle" for the full push contract, PR update
 contract, ticket lifecycle close contract, ordering invariant, push failure halt message,
 and contrast table with `build-single-ticket` Step 4b.
+
+---
+
+## Addendum: `finalize-feature` agent removed — JS workflow is the sole depth-0 path (EPIC-FinalizeFeatureHardening, 2026-06-24)
+
+### Context
+
+The `finalize-feature` LLM agent (`templates/agents/finalize-feature.md`) was
+designated `tier: supervisor` in the agent registry and was advertised as a
+fallback for Claude Code installs older than 2.1.154. Its dispatch chain was:
+
+```
+/finalize-feature (slash command, depth 0)
+  └── finalize-feature agent  (depth 1)
+        └── pull-request, status-checker, worktree-agent, test-runner,
+            test-failure-triage  (depth 2 — SILENTLY DROPPED)
+```
+
+This chain was non-functional on every Claude Code version: the depth-1 limit
+applied unconditionally, so all sub-agent dispatches by `finalize-feature` were
+silently dropped. The workflow loop reported success while no actual finalization
+work occurred (PR never merged, tickets never closed).
+
+Unlike `epic-supervisor` — which received an explicit deprecation window —
+`finalize-feature` was never migrated when this ADR was first accepted. It
+continued to be listed as an active user-invocable supervisor in
+`agent_registry.json` and was cross-referenced as a live fallback in both
+the slash-command surface (`templates/workflows/finalize-feature.md`) and the
+how-to doc (`docs/how-to/finalize-feature.md`).
+
+### Decision
+
+`finalize-feature` joins `epic-supervisor` as a **removed supervisor**:
+
+1. **`templates/agents/finalize-feature.md` is deleted** (via `git rm`). No
+   deprecation window is provided because the agent was not merely superseded —
+   it was non-functional on every install.
+
+2. **`config/agent_registry.json`** no longer contains a `finalize-feature` entry.
+   The five agents that listed it in their `spawned_by` field (`pull-request`,
+   `status-checker`, `worktree-agent`, `test-runner`, `test-failure-triage`) now
+   reference `finalize-feature.js` instead.
+
+3. **`templates/workflows/finalize-feature.js`** (Claude Code Workflow script)
+   is the **sole depth-0 path** for feature finalization. It dispatches all
+   specialist agents at depth 1 and is the only implementation that satisfies
+   the depth-1 constraint.
+
+4. **The slash-command surface** (`templates/workflows/finalize-feature.md`) emits
+   a hard error on older installs rather than dispatching the removed agent:
+
+   > "requires Claude Code >= 2.1.154; the legacy agent fallback was removed
+   > because the depth-1 limit makes it non-functional — please upgrade."
+
+### Updated depth diagram (finalize-feature)
+
+```
+/finalize-feature (slash command — workflow runtime, depth 0)
+  ├── status-checker         (depth 1, Agent tool)
+  ├── pull-request           (depth 1, Agent tool)
+  ├── test-runner            (depth 1, Agent tool)
+  ├── test-failure-triage    (depth 1, Agent tool)
+  └── worktree-agent         (depth 1, Agent tool)
+```
+
+All Agent-tool dispatches from `finalize-feature.js` are flat depth-1 calls,
+consistent with the flattened topology this ADR specifies.
+
+### Rationale
+
+The `finalize-feature` agent was removed (not deprecated) for the same reason
+that drove the original flattening decision in this ADR: a supervisor running at
+depth 1 cannot dispatch phase agents. The "fallback for older versions" framing
+was incorrect from the outset — there is no Claude Code version where a depth-2
+dispatch succeeds. Retaining the agent with a deprecation flag would preserve a
+non-functional artefact that could mislead future maintainers.
 
 ---
 
