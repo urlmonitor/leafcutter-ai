@@ -60,7 +60,8 @@ amended_by:
     note: "Was BO-530-5b (split from BO-530-5 by it-po-v3). Moved out of BO-530 (TDD-framed L1) to the new local-verification-gate sibling L1 BO-570. RENAMED BO-530-5b -> BO-570-4 (check_ac_limits attributes children by id-derivation). Producer->consumer edge preserved: depends_on [BO-570, BO-570-3] and expects_from BO-570-3 (the renamed runner, was BO-530-5a). covered_by L3s renamed BO-530-5-i/ii -> BO-570-4-i/ii. id/criteria/contracts otherwise preserved verbatim."
 superseded_by: null
 covered_by: [BO-570-4-i, BO-570-4-ii]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-LocalSignoffGates/06_TICKET-20260624-BO-570-4.md
 notes: |
   Originally BO-530-5b, created by IT-PO v3 from BO-530-5 (split). This child owns
   the sign-off-gate BEHAVIOR (llm-expert: python-coder template + signoff skill

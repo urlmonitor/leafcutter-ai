@@ -62,7 +62,8 @@ amended_by:
     note: "Was BO-530-5a (split from BO-530-5 by it-po-v3). Moved out of BO-530 (TDD-framed L1) to the new local-verification-gate sibling L1 BO-570. RENAMED BO-530-5a -> BO-570-3 (check_ac_limits attributes children by id-derivation). id, criteria, delivers_to/expects_from preserved verbatim; only id/created_by/depends_on re-pointed to BO-570."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-LocalSignoffGates/05_TICKET-20260624-BO-570-3.md
 notes: |
   Originally BO-530-5a, created by IT-PO v3 from BO-530-5 (split). BO-530-5 mixed
   a deterministic helper-script surface (python-coder) with the sign-off-gate
