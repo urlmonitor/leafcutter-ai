@@ -54,6 +54,30 @@ const MAX_EDIT_RETRIES = 1;
 const VALID_PRIORITIES = ["critical", "high", "medium", "low"];
 
 /**
+ * Extract the pull request number from a GitHub PR URL.
+ *
+ * GitHub PR URLs follow the pattern:
+ *   https://github.com/<owner>/<repo>/pull/<number>
+ *
+ * Returns the number as a string (e.g. "42"), or null when the URL is absent,
+ * malformed, or does not contain a numeric pull-request segment.
+ *
+ * This is a pure function with no I/O — no try/except is warranted per the
+ * project Error Handling Policy (Rule 4).
+ *
+ * @param {string|null} prUrl - The PR URL returned by `gh pr create`.
+ * @returns {string|null} The PR number string, or null if not extractable.
+ */
+function extractPrNumber(prUrl) {
+  if (!prUrl || typeof prUrl !== "string") {
+    return null;
+  }
+  const trimmed = prUrl.trim().replace(/\/$/, "");
+  const lastSegment = trimmed.split("/").pop();
+  return /^\d+$/.test(lastSegment) ? lastSegment : null;
+}
+
+/**
  * Parse $ARGUMENTS into workflow inputs.
  *
  * Expected format (all optional):
@@ -1494,18 +1518,27 @@ async function run({ userInput, agent }) {
           const deliveryOk = deliveryOutcome.status === "ok";
           const prUrl = deliveryOutcome.pr_url || null;
 
+          // AC BO-1500d-1: Extract the PR number from the URL so both the
+          // number and the clickable URL are surfaced to the user immediately
+          // after the PR is opened — no separate command needed.
+          const prNumber = extractPrNumber(prUrl);
+          const prSummary = deliveryOk
+            ? (prNumber && prUrl
+                ? `Pull request opened: PR #${prNumber}\n${prUrl}`
+                : `Authoring branch pushed and PR opened: ${prUrl || authoringBranch}`)
+            : `Delivery warning: ${deliveryOutcome.message} — Push '${authoringBranch}' and open a PR to main manually.`;
+
           return {
             status: "ok",
             message:
               `/plan-feature complete. ${allAcsWritten.length} AC(s) approved with priority: ${priority}.\n` +
-              (deliveryOk
-                ? `Authoring branch pushed and PR opened: ${prUrl || authoringBranch}`
-                : `Delivery warning: ${deliveryOutcome.message} — Push '${authoringBranch}' and open a PR to main manually.`),
+              prSummary,
             acs_approved: allAcsWritten,
             priority,
             route: effectiveRoute,
             authoring_branch: authoringBranch,
             pr_url: prUrl,
+            pr_number: prNumber,
             delivery_status: deliveryOutcome.status,
           };
         } else {

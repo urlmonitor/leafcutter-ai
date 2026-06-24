@@ -547,12 +547,27 @@ On success, the workflow return payload includes:
   "route":           "<route>",
   "authoring_branch": "ac-authoring/<session-slug>",
   "pr_url":          "<URL returned by gh pr create>",
+  "pr_number":       "<PR number extracted from pr_url, e.g. \"42\">",
   "delivery_status": "ok"
 }
 ```
 
-On delivery failure, `pr_url` is `null` and `delivery_status` is `"error"`.
-The `message` field includes a manual recovery instruction.
+The `message` field on a successful delivery includes both the PR number and the
+clickable URL on separate lines so the user sees them immediately without running
+a separate command (AC BO-1500d-1):
+
+```
+/plan-feature complete. N AC(s) approved with priority: <priority>.
+Pull request opened: PR #<number>
+<url>
+```
+
+`pr_number` is a string (e.g. `"42"`) extracted from the last path segment of
+`pr_url`.  It is `null` when `pr_url` is absent or not a GitHub pull URL.
+
+On delivery failure, `pr_url` and `pr_number` are both `null` and
+`delivery_status` is `"error"`. The `message` field includes a manual recovery
+instruction.
 
 ---
 
@@ -736,6 +751,18 @@ silently swallowed — each produces a user-visible warning or error.
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-24 [EPIC-SafeAcAuthoring/16/python-coder]: Implemented AC BO-1500d-1
+  (PR number and URL are reported back to the user the moment the PR is opened).
+  Added extractPrNumber() helper to plan-feature.js — a pure function that
+  extracts the numeric PR number from the GitHub PR URL returned by gh pr create
+  (last path segment of the URL, validated as digits-only). On the success path,
+  the workflow message now shows "Pull request opened: PR #<number>\n<url>" so
+  both the number and the clickable URL appear immediately in the final output
+  without requiring a separate gh pr list command. Added pr_number to the return
+  payload. Updated §D.4 Output contract in this SKILL.md to document pr_number
+  and the new message format. Fallback: when pr_url is absent or non-numeric last
+  segment, prNumber is null and the message falls back to the prior branch-name form.
+  (#EPIC-SafeAcAuthoring/16)
 - 2026-06-24 [EPIC-SafeAcAuthoring/13/python-coder]: Implemented AC BO-1500c-3
   (no AC-authoring commit ever lands directly on main). Added §NM (No-Main-Commit
   Invariant) section between §D and §C. §NM.1 states the invariant: every AC
