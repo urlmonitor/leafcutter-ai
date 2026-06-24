@@ -1,0 +1,51 @@
+id: TQ-100d-1-ii
+title: "An allowlisted test that has started passing is flagged so the stale entry is removed"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100d.yaml
+criteria: |
+  Given a known-failing-tests allowlist entry (valid and unexpired) for a test
+    that is now passing,
+  When the allowlist check runs,
+  Then the now-passing allowlisted entry is flagged with a message naming the
+    entry and its test
+  And the flag indicates the stale exemption should be removed
+  And the check signals this as a violation (so a now-passing test cannot keep a
+    permanent exemption).
+depends_on:
+  - TQ-100d-1
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100d.yaml
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "DESIGN DECISION (settled): a now-passing allowlisted entry is a HARD violation that fails the check (non-zero), not a non-blocking warning — per the 'list can't quietly rot' intent, a recovered test must force its stale exemption to be removed."
+  - "The now-passing detection is outcome-based (the named test passed this run) and distinct from the time-based expiry of TQ-100d-1-i; both reuse the same known_failing_tests module."
+  - "The flag message must name the entry and its test and indicate the exemption should be removed."
+delivers_to: null
+expects_from:
+  ac_id: TQ-100d-1
+  contract: "The allowlist mechanism; this edge case asserts a now-passing allowlisted test is flagged so its stale exemption is removed promptly."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "TQ-100 it-po-enrichment"
+    by: it-po
+    at: 2026-06-24
+    note: "Settled BA flag #3 (second half): now-passing-but-allowlisted is a HARD violation (fails the check), not a warning. Added it_requirements (hard-fail; outcome-based vs the time-based expiry of -i; named message). Confirmed python-coder / S."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The second anti-rot direction: an exemption for a test that recovered must not
+  linger. Distinct from -i (time-based expiry); this is outcome-based staleness.
+  RESOLVED (IT-PO): now-passing-but-allowlisted is a failing violation (hard),
+  not a warning.

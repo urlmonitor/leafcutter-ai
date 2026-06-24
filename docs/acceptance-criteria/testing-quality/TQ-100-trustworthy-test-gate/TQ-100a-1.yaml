@@ -1,0 +1,69 @@
+id: TQ-100a-1
+title: "The suite runs every loadable test even when one file fails to load"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100a.yaml
+criteria: |
+  Given a test suite that contains many test files, exactly one of which cannot
+    be loaded during the collection phase (for example because it imports a
+    module that does not exist in the checkout),
+  When the suite is run with collection-error isolation enabled (pytest invoked
+    with --continue-on-collection-errors),
+  Then the run does not abort at the point the unloadable file is encountered
+  And every other test file is collected and executed to completion
+  And the run reports an individual result for each test in every loadable file
+  And the one unloadable file is reported as a single collection error rather
+    than terminating the session before the other files run.
+depends_on:
+  - TQ-100a
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100a.yaml
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-016-ci-fresh-clone-test-dependencies.md
+    relationship: relates-to
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The collection-error isolation must apply to the canonical CI test invocation (the `test` job in .github/workflows/ci.yml runs `python -m pytest tests/ unit_tests/`); prefer a durable config home (pytest ini addopts or a conftest hook) over a hand-typed CLI flag so the isolation cannot be lost when pytest is invoked without the flag."
+  - "Must not measurably slow a clean run — collection-error isolation adds only per-file collection-time handling, never a per-test cost."
+  - "Must handle the uncollectable-file case per the project error handling policy (CLAUDE.md Rules 1-4): the collection error is reported, never silently swallowed."
+  - "If the isolation logic lives in deployable conftest/plugin code, the templates/ package source and the deployed copy must be edited together and kept in parity via the build.py round-trip (ADR-001 self-hosting boundary)."
+  - "Must be deterministic under pytest-randomly: the partition of collectable vs uncollectable files must not depend on test ordering or seed."
+delivers_to:
+  agent: test-runner
+  contract: "A test-run invocation that isolates per-file collection errors (--continue-on-collection-errors) so a single uncollectable file never aborts the session; the rest of the suite collects, runs, and reports."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "TQ-100 it-po-enrichment"
+    by: it-po
+    at: 2026-06-24
+    note: "Added it_requirements (CI-invocation parity, determinism under pytest-randomly, ADR-001 template/deploy parity for any conftest/plugin code). Confirmed python-coder + delivers_to test-runner; added ADR-016 doc_link (this family is what lets BP-1200b's CI test job drop continue-on-error and become blocking)."
+superseded_by: null
+covered_by:
+  - TQ-100a-1-i
+  - TQ-100a-1-ii
+  - TQ-100a-1-iii
+implemented_by: []
+notes: |
+  Mechanism (settled design): pytest --continue-on-collection-errors. The
+  load-bearing behavior is "one un-collectable file does not abort the others";
+  the flag is the agreed means. This L2 is the foundation TQ-100a-1-i/-ii/-iii
+  stress with specific failure modes.
+  IT-PO note: durable home for the flag is pytest ini addopts (config) so the CI
+  invocation `python -m pytest tests/ unit_tests/` inherits it without editing
+  the workflow YAML. ADR-016 already mandates `python scripts/build.py
+  --target-dir .` runs before pytest in CI, so any deployed conftest/plugin is
+  present at test time.

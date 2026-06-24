@@ -1,0 +1,37 @@
+id: TQ-100
+title: "Your test suite only blocks main for failures that actually matter"
+component: testing-quality
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  A trustworthy gate: tests for unbuilt features never block you, regressions in
+  shipped features always do.
+
+  Today the test gate is all-or-nothing — a single test written for a feature
+  that has not been built yet can abort the whole suite and block every pull
+  request, while there is no guarantee that a regression in a feature that HAS
+  shipped is caught. After this goal, the gate enforces exactly the tests that
+  matter: tests tied to a feature that is done are always enforced, tests for
+  features still in flight watch quietly until their feature ships, and nobody
+  can quietly remove a test's protection. This refines the BP-1200 CI test gate
+  (which guarantees a gate runs on every PR and cannot be bypassed) by defining
+  WHICH tests that gate enforces.
+depends_on:
+  - BP-1200
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-100a
+  - TQ-100b
+  - TQ-100c
+  - TQ-100d
+  - TQ-100e
+implemented_by: []

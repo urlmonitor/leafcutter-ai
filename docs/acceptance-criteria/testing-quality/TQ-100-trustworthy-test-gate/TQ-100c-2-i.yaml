@@ -1,0 +1,53 @@
+id: TQ-100c-2-i
+title: "An AC marked done with zero covering tests is flagged by the integrity check"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100c.yaml
+criteria: |
+  Given an AC whose work_status is done and for which no test in the suite
+    carries a "# covers:" tag naming that AC,
+  When the pre-pytest integrity check runs,
+  Then it flags the done AC as having zero covering tests (a done feature with no
+    protecting test) and fails loudly with a message naming the AC
+  And a done feature is not allowed to silently exist with no enforcing test
+  And the flag is distinct from a normal test failure (it is a coverage-gap
+    integrity violation, not an assertion failure).
+depends_on:
+  - TQ-100c-2
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100c.yaml
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "DESIGN DECISION (settled): a done AC with zero covering tests is a HARD failure of the pre-pytest integrity check (non-zero exit), NOT a non-blocking warning — scoped strictly to ACs whose work_status is done ('a shipped feature must have a protecting test')."
+  - "DESIGN DECISION (settled): there is currently NO check_ac_coverage.py in this repo. Build the zero-coverage detection as a violation class of the TQ-100c-2 integrity check (one module). IF a check_ac_coverage.py is later introduced, EXTEND/REUSE its reverse-direction coverage scan rather than duplicating logic — the done-scoped hard-fail is an added severity tier, not a second coverage walker."
+  - "Coverage is determined by scanning test bodies for the `# covers: <AC-ID>` tag (the established convention) — an AC is covered iff at least one collected/known test names it."
+  - "The violation message must name the offending AC id; the violation class must be reported distinctly from an assertion failure."
+delivers_to: null
+expects_from:
+  ac_id: TQ-100c-2
+  contract: "The pre-pytest linkage-integrity check surface; this edge case adds the zero-covering-tests-on-a-done-AC violation class (hard failure, done-scoped)."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "TQ-100 it-po-enrichment"
+    by: it-po
+    at: 2026-06-24
+    note: "Settled BA flag #2: HARD failure (not warning) for a done AC with zero covering tests, done-scoped. Recorded that check_ac_coverage.py does NOT exist today — build as a violation class of the TQ-100c-2 integrity check; reuse/extend check_ac_coverage.py only if/when it appears. Re-pointed expects_from contract wording to the integrity-check surface. Confirmed python-coder / S."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Here it is a loud failure scoped to DONE ACs (a shipped feature must have a
+  protecting test), not a non-blocking store-wide warning.
+  RESOLVED (IT-PO): hard failure, done-scoped. check_ac_coverage.py does not
+  currently exist; build the detection inside the TQ-100c-2 integrity module and
+  reuse/extend any future check_ac_coverage.py rather than duplicating.

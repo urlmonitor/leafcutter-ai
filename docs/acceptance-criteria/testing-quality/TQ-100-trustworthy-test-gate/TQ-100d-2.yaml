@@ -1,0 +1,55 @@
+id: TQ-100d-2
+title: "State diagram of an allowlist entry's added-tracked-flagged lifecycle"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100d.yaml
+criteria: |
+  Given the allowlist behavior defined by TQ-100d-1 (valid entry exempts) and its
+    edge cases (expired, now-passing, missing required fields),
+  When a state diagram is authored for an allowlist entry's lifecycle,
+  Then the diagram shows the states an entry can occupy (at least: tracked/valid,
+    expired, now-passing, and rejected/invalid)
+  And it shows the transitions and triggers (expiry date passing, the named test
+    starting to pass, a required field being absent)
+  And a maintainer can read from the diagram exactly when an entry stops
+    exempting its test and gets flagged for removal.
+depends_on:
+  - TQ-100d
+  - TQ-100d-1
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100d.yaml
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "Must be a Mermaid stateDiagram (repo convention; subject to check-mermaid-* commit hooks for drift/complexity/naming/parent-link) — author it to pass those hooks."
+  - "Must cover the full anti-rot lifecycle: tracked/valid -> (expiry passes) expired-flagged; tracked/valid -> (named test starts passing) now-passing-flagged; and the rejected/invalid state for an entry missing ticket_ref or expiry."
+  - "Transition triggers must name the actual mechanism: expiry date passing, the named test starting to pass, and a required field being absent."
+  - "Place the diagram where a fresh consumer install can reach it if it is a deliverable doc (ADR-001) — under docs/, not a build-output-only path."
+delivers_to: null
+expects_from:
+  ac_id: TQ-100d-1
+  contract: "The allowlist behavior and its edge cases whose entry lifecycle this state diagram documents."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "TQ-100 it-po-enrichment"
+    by: it-po
+    at: 2026-06-24
+    note: "Added it_requirements (Mermaid stateDiagram passing check-mermaid-* hooks; full anti-rot lifecycle incl. rejected/invalid; name real transition triggers; deliverable doc placement). Confirmed architecture-diagram-author / S — satisfies parent L1 documentation_triggers: [state-diagram]."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies the parent L1 documentation_triggers: [state-diagram]. Covers the
+  full anti-rot lifecycle (added -> tracked -> expired/now-passing -> flagged) so
+  the self-expiring behavior is unambiguous. ID-derived parent is TQ-100d (the L1
+  carrying the documentation_trigger); the behavioral L2 it documents (TQ-100d-1)
+  is retained in depends_on.

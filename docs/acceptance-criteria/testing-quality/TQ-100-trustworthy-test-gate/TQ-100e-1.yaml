@@ -1,0 +1,61 @@
+id: TQ-100e-1
+title: "Enforcement mode is one of three values selected by explicit configuration"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100e.yaml
+criteria: |
+  Given an explicit configuration value that selects the enforcement mode,
+  When the suite is run,
+  Then the active enforcement mode is exactly one of: report-only,
+    exclude-unbuilt, or blocking
+  And the active mode is determined solely by that explicit configuration value
+    (not by the current date and not by an implicit hardcoded default chosen at
+    runtime)
+  And an unrecognized configuration value is rejected with a message naming the
+    three valid modes rather than silently falling back to blocking.
+depends_on:
+  - TQ-100e
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100e.yaml
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "DESIGN DECISION (settled): the enforcement-mode setting lives in a dedicated key in the existing commit_guardian.json (canonical source templates/scripts/commit_guardian/commit_guardian.json, deployed copy is a build output per ADR-001), e.g. a `testing_quality` config section with an `enforcement_mode` key. Edit both copies together and keep parity via build.py."
+  - "DESIGN DECISION (settled): an environment-variable override (e.g. LEAFCUTTER_TEST_ENFORCEMENT_MODE) takes precedence over the config file so CI can select a mode without editing committed config; the env override accepts the same three values and is validated identically."
+  - "Valid modes are exactly: report-only, exclude-unbuilt, blocking. An unrecognized value (config or env) is REJECTED with a message naming the three valid modes — it must NOT silently fall back to blocking (or to any mode)."
+  - "Mode must be derived solely from explicit config/env, never from the current date and never from an implicit runtime default chosen mid-run; the only no-config behavior is the safe default settled in TQ-100e-1-ii (report-only)."
+  - "The mode governs the TQ-100b-1 linkage results (surface-only vs exclude unbuilt-feature tests vs block); reuse that component's classification rather than re-deriving linkage."
+delivers_to:
+  agent: test-runner
+  contract: "A config-selected enforcement mode (report-only | exclude-unbuilt | blocking) sourced from a `testing_quality.enforcement_mode` key in commit_guardian.json with an env-var override (LEAFCUTTER_TEST_ENFORCEMENT_MODE), that drives whether the AC-status-gated linkage results surface only, exclude unbuilt-feature tests, or block the run."
+expects_from:
+  ac_id: TQ-100b-1
+  contract: "The session-scoped linkage component whose results this mode setting governs (surface-only vs exclude vs block)."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "TQ-100 it-po-enrichment"
+    by: it-po
+    at: 2026-06-24
+    note: "Settled BA flag #4: mode config home = a dedicated `testing_quality.enforcement_mode` key in commit_guardian.json (templates/scripts/commit_guardian source + deployed copy, ADR-001 parity) PLUS an env override LEAFCUTTER_TEST_ENFORCEMENT_MODE for CI. Tightened delivers_to to name the config key + env var. Added it_requirements (reject unrecognized value, never silent fallback; mode from explicit config/env only; reuse TQ-100b-1 linkage). Confirmed python-coder / M."
+superseded_by: null
+covered_by:
+  - TQ-100e-1-i
+  - TQ-100e-1-ii
+  - TQ-100e-1-iii
+implemented_by: []
+notes: |
+  Mechanism (settled): staged rollout via an explicit config flag with three
+  modes.
+  RESOLVED (IT-PO): config home = `testing_quality.enforcement_mode` key in
+  commit_guardian.json (canonical source templates/scripts/commit_guardian/
+  commit_guardian.json) with an env-var override LEAFCUTTER_TEST_ENFORCEMENT_MODE
+  for CI. Unrecognized value => rejected, never silent fallback.
