@@ -5,6 +5,8 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
+readiness: draft
+priority: medium
 criteria: |
   When the change type implies production code, tests are mandatory and automatic.
 
@@ -22,5 +24,5 @@ origin_agent: product-owner-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: [BO-530-1, BO-530-2, BO-530-3]
+covered_by: [BO-530-1, BO-530-2, BO-530-3, BO-530-4, BO-530-5]
 implemented_by: []

@@ -1,0 +1,42 @@
+id: BO-530-4-i
+title: "No frontend files changed -- dev-render smoke check is skipped, not failed"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+created_by: docs/acceptance-criteria/build-orchestration/BO-500-computed-quality-gates/BO-530-4.yaml
+criteria: |
+  Given a ticket whose changed surface contains no frontend files
+    (e.g. it changes only Python files, configuration, or documentation),
+  When the sign-off gate evaluates whether the dev-render smoke check applies,
+  Then the dev-render smoke check is skipped as not-applicable,
+  And the skip is recorded as "skipped" (no frontend surface to render),
+    not as a pass and not as a failure,
+  And the absence of a frontend render does NOT block the sign-off,
+  And the sign-off can proceed on its other criteria.
+depends_on: [BO-530-4]
+doc_links:
+  - path: templates/agents/frontend-coder.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Applicability is determined by whether the ticket's changed-file set includes any frontend surface; an empty frontend set yields a skipped (not failed, not passed) outcome."
+  - "A skipped smoke check must be distinguishable in the sign-off record from a passed one, so an auditor can tell 'rendered clean' apart from 'nothing to render'."
+delivers_to: null
+expects_from:
+  ac_id: BO-530-4
+  contract: "The dev-render smoke-check gate that this edge case scopes to the no-frontend-files case"
+origin_agent: business-analyst-v3
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

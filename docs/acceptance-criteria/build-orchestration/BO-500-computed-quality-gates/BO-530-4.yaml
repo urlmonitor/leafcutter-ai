@@ -1,0 +1,64 @@
+id: BO-530-4
+title: "Frontend sign-off runs a dev-render smoke check that blocks on render failure"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+created_by: docs/acceptance-criteria/build-orchestration/BO-500-computed-quality-gates/BO-530.yaml
+criteria: |
+  Given a ticket whose changed surface includes one or more frontend files
+    (e.g. a route/page or component the user can see),
+    and frontend-coder has finished its implementation work,
+  When frontend-coder evaluates its sign-off for the ticket,
+  Then it actually renders the changed frontend surface locally
+    (a dev/route render of the affected page, not a static or lint check alone),
+  And a render-time-only defect — such as a component configured with
+    server-side rendering disabled that only throws at route render time —
+    is detected during this local render,
+  And on a render failure the sign-off is recorded as failed (status: failed),
+    with the render failure surfaced as the blocking reason,
+  And frontend-coder does NOT sign off "ok" while the changed surface fails
+    to render.
+
+  Given the changed frontend surface renders successfully end to end
+    when exercised locally,
+  When frontend-coder evaluates its sign-off,
+  Then the dev-render smoke check passes,
+  And the sign-off may proceed to "ok" on this criterion,
+  And the render-time-only defect class is caught before the change reaches
+    commit, the PR, or CI.
+depends_on: [BO-530]
+doc_links:
+  - path: templates/agents/frontend-coder.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/webapp-testing/SKILL.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "The smoke check must exercise a real render of the changed surface (dev/route render), not a static/type/lint check — render-time-only misconfiguration (e.g. ssr:false) must be reachable by the check."
+  - "On render failure the sign-off MUST be failed/blocked, never advisory — a render failure cannot be downgraded to a warning that still allows an 'ok' sign-off."
+  - "The deterministic render-and-capture helper (launch dev render, exercise the changed route, classify success vs render error) is a python-coder/webapp-testing surface; this AC owns the sign-off-gate behavior in the frontend-coder template + signoff skill."
+delivers_to:
+  agent: python-coder
+  contract: "A render-smoke helper that performs a dev/route render of the changed frontend surface and returns a render-success vs render-error verdict the sign-off gate consumes"
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: [BO-530-4-i, BO-530-4-ii, BO-530-4-iii]
+implemented_by: []
+notes: |
+  User-originated (BrainCandy) process fix. Motivated by a real escape: an
+  ssr:false render bug that only fails at route render time — static and lint
+  checks passed, local sign-off marked the ticket done, and the defect reached
+  PR/CI. This gate moves that detection LOCAL, before sign-off.

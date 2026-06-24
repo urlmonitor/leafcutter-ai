@@ -1,0 +1,42 @@
+id: BO-530-5-i
+title: "No Python files changed -- repo-ruff check is skipped, not failed"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+created_by: docs/acceptance-criteria/build-orchestration/BO-500-computed-quality-gates/BO-530-5.yaml
+criteria: |
+  Given a ticket whose changed surface contains no Python files
+    (e.g. it changes only frontend files, configuration, or documentation),
+  When the sign-off gate evaluates whether the repo-ruff check applies,
+  Then the ruff check is skipped as not-applicable,
+  And the skip is recorded as "skipped" (no Python files to lint),
+    not as a pass and not as a failure,
+  And the absence of Python changes does NOT block the sign-off,
+  And the sign-off can proceed on its other criteria.
+depends_on: [BO-530-5]
+doc_links:
+  - path: templates/agents/python-coder.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Applicability is determined by whether the ticket's changed-file set includes any Python files; an empty Python set yields a skipped (not failed, not passed) outcome."
+  - "A skipped ruff check must be distinguishable in the sign-off record from a passed one, so an auditor can tell 'linted clean' apart from 'nothing to lint'."
+delivers_to: null
+expects_from:
+  ac_id: BO-530-5
+  contract: "The repo-ruff sign-off gate that this edge case scopes to the no-python-files case"
+origin_agent: business-analyst-v3
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
