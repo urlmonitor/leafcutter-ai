@@ -25,12 +25,7 @@
 export const meta = {
   name: "build-ticket",
   description:
-    "Drive a single ticket's phase agents from needed to fully signed-off. " +
-    "Uses a planner agent to read ticket frontmatter and return the ordered " +
-    "phase list, then dispatches each needed phase as a flat depth-1 agent() " +
-    "call. Handles failure adjudication via failure-classifier: mechanical " +
-    "failures are retried; cross-agent blockers are skipped; design/halt " +
-    "blockers surface a structured error to the user.",
+    "Drive a single ticket's phase agents from needed to fully signed-off. Uses a planner agent to read ticket frontmatter and return the ordered phase list, then dispatches each needed phase as a flat depth-1 agent() call. Handles failure adjudication via failure-classifier: mechanical failures are retried; cross-agent blockers are skipped; design/halt blockers surface a structured error to the user.",
   phases: [
     "status-checker (reads ticket frontmatter → ordered_phases)",
     "phase agents (sequential, depth 1)",

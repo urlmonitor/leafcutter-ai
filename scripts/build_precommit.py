@@ -316,10 +316,6 @@ def build_precommit_config(target_root: Path, config: dict[str, Any],
     cg_dir = TEMPLATES_DIR / "scripts" / "commit_guardian"
     manifest_path = cg_dir / "commit_guardian.json"
     if not manifest_path.exists():
-        # Fall back to legacy path for backward compatibility
-        cg_dir = TEMPLATES_DIR / "commit-guardian"
-        manifest_path = cg_dir / "commit_guardian.json"
-    if not manifest_path.exists():
         _log.warning(
             "commit_guardian.json not found at %s; skipping pre-commit config generation.",
             manifest_path,

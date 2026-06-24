@@ -1,0 +1,43 @@
+id: BP-1100b-2
+title: "Test-writer produces an executing behavioral-replay test for modified workflow JavaScript"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given test-writer is dispatched for a ticket that modifies a function in a .js file
+  under scripts/workflows/ (for example commitStageOutput in plan-feature.js),
+  When test-writer authors the tests for that function,
+  Then at least one test loads the modified function and executes it in a mocked
+  context (mocked agent dispatcher and mocked git subprocess),
+  And the test asserts the function's runtime outcome — such as the agent type the
+  function dispatches, that an unparseable result maps to a failure status rather than
+  a success status, and that the staging step uses the required untracked-files flag —
+  And no test substitutes a plain text-presence scan of the source file for executing
+  the function.
+depends_on:
+  - BP-1100b
+doc_links:
+  - path: docs/retrospectives/EPIC-CommitAcOutputPerStage.md
+    relationship: describes
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: M
+it_requirements:
+  - "Tests must execute the target function (e.g. via a sandboxed evaluation of the extracted function body), not assert on the raw source text."
+  - "Tests must assert at least one runtime property: dispatched agent type, fail-closed result coercion, or presence of a required runtime flag/argument."
+  - "A text-only scan (grep / substring assertion over the source file) does not satisfy this criterion and must not be the only test for a modified workflow function."
+delivers_to: null
+expects_from:
+  ac_id: BP-1100b-1
+  contract: "Test-writer is dispatched (not skipped) for any ticket touching a workflow .js file"
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

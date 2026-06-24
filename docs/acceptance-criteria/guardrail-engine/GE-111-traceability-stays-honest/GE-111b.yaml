@@ -1,0 +1,81 @@
+id: GE-111b
+readiness: approved
+priority: high
+title: "Catch broken links whether the file moved or just the function moved"
+component: guardrail-engine
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Drift is detected at the level of the actual thing the requirement points to.
+
+  A link is recognised as broken not only when the whole file disappears, but
+  also when the specific function or symbol the criterion names is moved out,
+  renamed, or removed while the file itself survives — so a refactor that shuffles
+  code between files can no longer pass a check that only looked at file paths.
+depends_on: [GE-111]
+doc_links:
+  - path: "docs/reference/ac-schema.md"
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-111b-1
+  - GE-111b-1-i
+  - GE-111b-2
+  - GE-111b-2-i
+  - GE-111b-3
+  - GE-111b-4
+implemented_by: []
+documentation_triggers: [reference-doc]
+notes: |
+  PO authoring note (for the BA) — THIS L1 CARRIES THE KEY DESIGN QUESTION.
+
+  Granularity tradeoff to be DECIDED within this AC tree's decomposition, not
+  assumed by the PO. Two candidate detection granularities:
+    (1) FILE-PATH ONLY — a link breaks only when the file in implemented_by no
+        longer exists. Simple, zero new dependencies, but a moved/renamed
+        FUNCTION inside a surviving file passes silently (the exact "goes stale
+        on refactor" failure the user wants closed).
+    (2) SYMBOL / FUNCTION LEVEL via the repo's existing jcodemunch tooling
+        (blast-radius, find-references, symbol search — per research-agent's
+        tool list). implemented_by already permits an optional `#symbol` anchor
+        that is currently NOT parsed; symbol-level resolution would start parsing
+        it and use jcodemunch to confirm the named symbol still exists / locate
+        where it moved, reporting a move as drift rather than passing on a stale
+        path.
+
+  User's stated direction: leverage jcodemunch for symbol-level resolution
+  "where possible" so a moved/renamed function is detected as drift. The user did
+  NOT mandate symbol-level for every case — the explicit instruction is to surface
+  the tradeoff as a design question, which this AC does. Recommended decomposition
+  for the BA / IT-PO to resolve at L2:
+    - L2: file-path existence drift detection (the always-on floor; no jcodemunch
+      dependency; covers move/rename/delete of a whole file).
+    - L2: symbol-level drift detection when an implemented_by entry carries a
+      `#symbol` anchor — parse the anchor, resolve via jcodemunch, treat a
+      missing/relocated symbol as drift. OPEN QUESTION for IT-PO: graceful
+      degradation / fail-open when jcodemunch is unavailable or the language is
+      unsupported (mirror GE-100's "fails open when the binary is missing"
+      pattern) so the symbol tier never hard-blocks where it cannot resolve.
+    - L2 (optional): when a symbol is found to have MOVED rather than vanished,
+      surface the new location as a suggested reconciliation (feeds GE-111d).
+  documentation_triggers [reference-doc] — the file-vs-symbol resolution model and
+  the `#symbol` anchor parsing contract belong in the AC-schema / hook reference,
+  not a user how-to (the user-facing how-to lives on GE-111a).
+
+  BA decomposition resolution (2026-06-22): the design question is resolved as a
+  TIERED design encoded across distinct L2/L3 children:
+    - GE-111b-1 (L2) — TIER 1 file-path floor (always on, no tooling).
+    - GE-111b-1-i (L3) — anchorless entries stay file-path-only (non-breaking).
+    - GE-111b-2 (L2) — TIER 2 symbol tier via #symbol anchor + jcodemunch.
+    - GE-111b-2-i (L3) — graceful fail-open of the symbol tier; file-path floor
+      still applies. OPEN QUESTION surfaced for the IT-PO.
+    - GE-111b-3 (L2) — TIER 3 suggest-new-location when a moved symbol is found.
+    - GE-111b-4 (L2) — reference-doc satisfying documentation_triggers.

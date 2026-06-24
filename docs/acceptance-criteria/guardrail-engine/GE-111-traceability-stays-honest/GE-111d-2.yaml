@@ -1,0 +1,79 @@
+id: GE-111d-2
+readiness: approved
+priority: high
+title: "Reconcile by confirming the code still satisfies the criterion"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111d.yaml"
+criteria: |
+  Given the traceability reconciliation check has flagged criterion AC-X because
+    a structural change moved the source AC-X points to
+  And the developer records a durable confirmation against AC-X that the existing
+    code still satisfies AC-X despite the structural change
+  And the confirmation records which version of the source it affirms (so a later
+    change to that source can tell the confirmation is stale)
+  When the traceability reconciliation check runs again at pre-commit time
+  Then the check produces a clean verdict for AC-X
+  And the same commit is allowed to proceed
+
+  Given AC-X carries a confirmation affirming source version V1
+  And a later commit changes that source from version V1 to version V2
+  When the traceability reconciliation check runs on that later commit
+  Then the stored confirmation no longer clears AC-X
+  And AC-X is flagged again for re-reconciliation
+depends_on:
+  - GE-111d
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111d.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/reference/ac-schema.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+it_requirements:
+  - "DURABLE RECORD MECHANISM (IT-PO resolution of open question #2): store the confirmation as a STRUCTURED amended_by entry on the AC YAML. The schema (config/ac_store_schema.json) already allows object items in amended_by, and ACS-400 governance (check_ac_governance.py) lists amended_by as an implementation-agent-writable field — so this collides with NO write-lock. Do NOT introduce a new top-level AC field."
+  - "Confirmation entry shape: { reason: 'ge111-confirm', entry: '<the implemented_by value being confirmed>', source_fingerprint: '<sha256 hex of the confirmed source>', confirmed_at: '<ISO-8601>', confirmed_by: '<git user.name/email or agent id>' }. The 'entry' key makes the confirmation PER-LINK (keyed to one implemented_by entry), so confirming one link never masks drift in a sibling link."
+  - "VERSION-AWARENESS (the re-flag mechanism): source_fingerprint is the sha256 of the confirmed source content read from the STAGED blob — at file tier, the whole staged file blob; at symbol tier, the source span of the named symbol (e.g. ast.get_source_segment of the symbol node). A confirmation clears AC-X for an entry iff its stored source_fingerprint EQUALS the freshly recomputed fingerprint of that entry's current staged source. When the source later changes (V1 -> V2), the recomputed fingerprint differs, the stored confirmation no longer matches, and AC-X re-flags (criteria scenario 2). No expiry/TTL — staleness is content-driven, not time-driven."
+  - "Fingerprint must be computed the SAME way at confirm-time (when written) and at check-time (when matched) — mandate ONE shared pure helper for fingerprinting (file-blob vs symbol-span) used by both the write path and the verify path, so the two never drift (recurring leafcutter pattern: shared deterministic derivation must be one helper)."
+  - "A confirmation only suppresses the SYMBOL-tier 'moved/renamed' drift for a SURVIVING file. It must NOT be able to clear a file-path-floor 'deleted' verdict (you cannot confirm code still satisfies an AC when the file is gone) — confirm is meaningless against a vanished file and must be rejected/ignored in that case."
+  - "Must follow the project error handling policy (CLAUDE.md Rules 1-4); reading/parsing amended_by and computing the fingerprint must wrap I/O and fail open (treat as no-confirmation => normal drift handling) on unexpected error."
+  - "The deployed hook and packaged template source must round-trip in parity via build.py (ADR-001) if any config (e.g. the reason token) is added to commit_guardian.json."
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to: null
+expects_from:
+  ac_id: GE-111b-2
+  contract: "The symbol-tier drift verdict (and the symbol source span) for the surviving-file moved/renamed case that a confirmation may clear; the staged source the fingerprint is computed over"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Reconciliation route 2 (CONFIRM the code still satisfies the criterion). OPEN
+  QUESTION the PO left for the BA/IT-PO.
+
+  IT-PO RESOLUTION (2026-06-22) of open question #2 — the durable, version-aware
+  confirmation record:
+    - STORAGE: a structured amended_by entry (schema already permits object items;
+      ACS-400b-2 / check_ac_governance permits implementation agents to write
+      amended_by, so no write-lock collision). No new top-level field.
+    - SHAPE: { reason: 'ge111-confirm', entry: <implemented_by value>,
+      source_fingerprint: <sha256 of confirmed source>, confirmed_at: <ISO-8601>,
+      confirmed_by: <identity> }. Per-link via the 'entry' key.
+    - VERSION-AWARENESS: source_fingerprint = sha256 of the staged source
+      (whole-file blob at file tier; symbol source span at symbol tier). Clears
+      the block iff stored fingerprint == freshly recomputed fingerprint; a later
+      source change makes them differ, so the AC re-flags automatically. Content-
+      driven staleness, no TTL. ONE shared fingerprint helper used by both the
+      write path and the verify path so they cannot drift.
+    - BOUNDARY: a confirmation can clear a symbol-tier moved/renamed drift on a
+      SURVIVING file only; it can NEVER clear a file-path-floor 'deleted' verdict.
+  This is the field/format choice the BA explicitly deferred to the IT-PO.

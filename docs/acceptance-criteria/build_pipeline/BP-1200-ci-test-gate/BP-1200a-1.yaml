@@ -1,0 +1,79 @@
+id: BP-1200a-1
+title: "Full test suite passes on a fresh clone using the documented CI test command"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a brand-new checkout of the project obtained by cloning the repository
+    into an empty directory (no pre-existing local build outputs, caches, or
+    artifacts from prior local work are present),
+  When an operator follows the documented CI test command exactly as published
+    (install the development dependencies, perform any preparation step the
+    documented procedure prescribes, then run the full test suite over both the
+    integration test directory and the unit test directory),
+  Then every test in the full suite reports a passing result
+  And the run completes with a non-failing overall outcome
+  And no test fails because a file or module it needs to load is absent from the
+    fresh checkout.
+depends_on:
+  - BP-1200a
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-004-consolidated-output-root.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-016-ci-fresh-clone-test-dependencies.md
+    relationship: depends-on
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "DECIDED DIRECTION (final gate, to be recorded in ADR-016 authored during the build): APPROACH 1 — CI runs the build step AND install_shims' shim_map is EXTENDED to bridge .leafcutter/scripts/... -> scripts/... for scripts/commit_guardian, scripts/doc_compliance, and scripts/feedback. Implement this approach; do NOT implement the rejected alternatives (Approach 2 repoint-tests, Approach 3 stop-gitignoring which conflicts with ADR-001). The ADR-016 doc is still authored during the build to record the rationale, but the design direction is fixed."
+  - "The fresh-clone state to satisfy is the absence of the gitignored build-output directories scripts/commit_guardian/, scripts/doc_compliance/, and scripts/feedback/, which ~36 tests import from and which a plain clone omits (per ADR-004 these are written under .leafcutter/scripts/ by build.py, not the scripts/ paths the tests read). Approach 1 closes the gap by running build.py in CI and bridging the shim."
+  - "SHARED-CONTRACT VALIDATION (retained): install_shims shim_map and the build output layout are consumed by CONSUMER-project installs, not just the self-build. The shim_map extension MUST be validated against a consumer install (build.py --target-dir into a clean external project), not only against the leafcutter self-build, before sign-off. A change that fixes the self-build but breaks consumer installs is a regression."
+  - "Must preserve ADR-001/ADR-004 self-hosting boundary: scripts/commit_guardian/, scripts/doc_compliance/, scripts/feedback/ remain build outputs (gitignored); Approach 1 bridges via shim, it does NOT commit generated outputs into source control."
+  - "Must complete the prepare-then-test sequence deterministically: a repeated fresh-clone run with the same documented command (build step + shim + suite) produces the same green outcome (idempotent build/shim step)."
+  - "Must keep parity between the deployed shim/build behavior and its templates/scripts/ package source per ADR-001 (build.py round-trip) where the fix edits any deployed/templated script — never edit one side only. install_shims.py and its shim_map change are part of this parity surface."
+  - "Errors during the build/shim preparation step must surface clearly (fail loudly, non-zero exit) rather than leaving a partially-prepared tree that produces misleading test collection errors, per the project error-handling policy."
+delivers_to: null
+expects_from:
+  ac_id: BP-1200a-2
+  contract: "The single authoritative documented CI test command sequence (install dev deps -> build step + install_shims shim bridge -> run full suite over the integration + unit test directories) that this AC asserts runs green on a fresh clone, per the decided Approach 1."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Added it_requirements (ADR-016 hard-prerequisite, consumer-install validation of shim_map, ADR-001/004 boundary preservation), architecture + ADR doc_links, and repointed expects_from to BP-1200a-2 (the documented-command producer). Criteria unchanged."
+    by: it-po
+  - reason: "final-gate-decision-applied"
+    entry: "Set readiness: approved and priority: high per the final user gate. Recorded the DECIDED ADR-016 direction = Approach 1 (CI build step + install_shims shim_map extension bridging .leafcutter/scripts/ -> scripts/ for commit_guardian/doc_compliance/feedback). Replaced the open-mechanism prerequisite with the fixed direction; retained the consumer-install validation requirement and ADR-001/004 boundary constraints; kept the planned ADR-016 doc_link. Criteria unchanged."
+    by: it-po
+superseded_by: null
+covered_by:
+  - BP-1200a-1-i
+  - BP-1200a-1-ii
+implemented_by:
+- tickets/00_inbox/TICKET-20260624-BP-1200a-1.md
+notes: |
+  DECIDED MECHANISM (final gate): Approach 1 — CI build step + install_shims
+  shim_map extension to bridge .leafcutter/scripts/... -> scripts/... for
+  scripts/commit_guardian, scripts/doc_compliance, scripts/feedback. The ADR-016
+  doc (docs/architecture/adrs/ADR-016-ci-fresh-clone-test-dependencies.md) is
+  authored during the build to record this; the direction itself is no longer
+  open. ADR-001 (self-hosting boundary) and ADR-004 (consolidated output root)
+  are the constraints the mechanism respects.
+  IT-PO note: the prior expects_from was null even though BP-1200a-2 explicitly
+  delivers_to this AC; repointed for contract continuity.

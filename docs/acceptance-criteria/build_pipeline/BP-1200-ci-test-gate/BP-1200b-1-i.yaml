@@ -1,0 +1,46 @@
+id: BP-1200b-1-i
+title: "A pull request containing a deliberately failing test is blocked from merging"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a pull request whose changes include a test that deliberately fails,
+  When the test check runs on that pull request,
+  Then the test check reports a failing result
+  And the pull request is reported as not mergeable while that check is failing.
+depends_on:
+  - BP-1200b-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Exercises the FAILING path of the blocking test job added in BP-1200b-1: a PR introducing a deliberately-failing test must drive the test check to a failing (red) conclusion, and the check failure must mark the PR not-mergeable. This is the negative acceptance scenario for the ci.yml test job, not a permanent test added to the suite."
+  - "The deliberately-failing test must be transient/scoped to the verification (e.g. a throwaway PR or a temporary test removed before merge) so it does not become a standing red in the suite — the AC verifies the GATE blocks, it does not ship a failing test."
+  - "Not-mergeable enforcement here assumes BP-1200c-1 branch protection (settings-as-code, decided) requires this check; the blocking outcome of THIS AC is the check reporting failure, with merge-blocking provided by the required-status-check wiring."
+delivers_to: null
+expects_from:
+  ac_id: BP-1200b-1
+  contract: "The blocking test check (named ci.yml test job) whose failing path this case exercises"
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Confirmed python-coder (exercises the ci.yml test job the python-coder builds). Added it_requirements (failing-path acceptance scenario, transient failing test must not become a standing red, merge-block depends on BP-1200c-1 wiring) and a ci.yml doc_link. Criteria and expects_from unchanged."
+    by: it-po
+  - reason: "final-gate-decision-applied"
+    entry: "Set readiness: approved and priority: high per the final user gate. Noted the BP-1200c-1 branch-protection approach is now decided = settings-as-code. Criteria unchanged."
+    by: it-po
+superseded_by: null
+covered_by: []
+implemented_by: []

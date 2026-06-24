@@ -1,0 +1,37 @@
+id: BP-1000
+title: "Get the exact behavior the maintainers tested — never a silently downgraded copy"
+component: build-pipeline
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  What you install behaves identically to what the team validated — guaranteed before any release lands.
+
+  Because the package ships its deployed copies to you rather than its source,
+  a shipped copy can quietly fall behind the version the maintainers actually
+  tested — and you would receive a weaker, broken, or stale behavior without
+  anyone noticing. This goal closes that gap: before any work is allowed to
+  merge, the build proves that every shipped script still matches its tested
+  source exactly. No drifted copy ever reaches a consumer. This is distinct
+  from compiled-output drift detection (BP-100k), which guards generated
+  workflow files against manual edits at commit time — this goal guards
+  source-to-shipped parity of scripts at the merge gate.
+depends_on: []
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1000a
+  - BP-1000b
+  - BP-1000c
+  - BP-1000d
+  - BP-1000e
+implemented_by: []

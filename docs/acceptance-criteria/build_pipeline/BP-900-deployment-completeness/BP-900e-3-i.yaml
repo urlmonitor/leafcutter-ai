@@ -1,0 +1,56 @@
+id: BP-900e-3-i
+readiness: approved
+priority: high
+title: "Allowlisted external scripts are exempt from the registry-completeness check"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: not_started
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900e-3.yaml"
+criteria: |
+  Given a script path is promised (registered in commit_guardian.json or
+    referenced by a deployable template) but has no copy under templates/scripts/
+  And that script path is listed in the external-dependency allowlist
+    (build_propagation_audit.EXTERNAL_DEPENDENCY_ALLOWLIST), consistent with the
+    allowlist seam BP-900b-1-1 already honors
+  When the registry-completeness check runs at the finalize merge gate
+  Then the allowlisted script is treated as resolved
+  And it does NOT appear in the promised-but-undeployed list
+  And it does not fail the merge gate
+  And the merge gate passes (assuming no other completeness violations exist)
+depends_on:
+  - BP-900e-3
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900e-3.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900b-1-1.yaml"
+    relationship: describes
+    status: exists
+  - path: scripts/build_propagation_audit.py
+    relationship: extends
+    status: exists
+  - path: "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Read the allowlist from build_propagation_audit.EXTERNAL_DEPENDENCY_ALLOWLIST (the same source BP-900b-1-1 honors) rather than a new, divergent allowlist — one allowlist, both surfaces."
+  - "Apply the allowlist as the final exemption step: a promised script whose path matches an allowlist entry is removed from the promised-but-undeployed list before the verdict is finalized."
+  - "Handle a missing or malformed allowlist gracefully (treat as empty) and fail-open per the project error-handling policy."
+delivers_to: null
+expects_from:
+  ac_id: BP-900e-1
+  contract: "The promised-but-undeployed verdict items, from which entries whose script_path matches an allowlist entry are removed before ok and the final item list are computed."
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RegistryCompletenessGate/05_TICKET-20260622-BP-900e-3-i.md

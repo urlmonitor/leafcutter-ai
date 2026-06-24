@@ -1,0 +1,30 @@
+id: BP-1200b
+title: "A pull request with failing tests is automatically stopped"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  A required check fails any pull request whose tests fail, so regressions cannot
+  merge.
+
+  When a pull request is opened, the test suite runs automatically and the
+  request is marked as failing the moment any test fails, giving the author a
+  fast, clear signal that the change broke something before it can be merged.
+depends_on:
+  - BP-1200
+doc_links: []
+documentation_triggers:
+  - sequence-diagram
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1200b-1
+  - BP-1200b-2
+implemented_by: []

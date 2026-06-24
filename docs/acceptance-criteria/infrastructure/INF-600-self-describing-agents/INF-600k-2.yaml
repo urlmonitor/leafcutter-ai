@@ -1,0 +1,44 @@
+id: INF-600k-2
+readiness: approved
+priority: medium
+title: "A direct user trigger in spawned_by passes registry validation as an external caller"
+component: infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600k.yaml"
+criteria: |
+  Given an agent's registry entry lists the literal external trigger "user" in its
+    spawned_by array (the agent is started directly by a person, not another agent)
+  When the build validates the agent registry
+  Then validation recognizes "user" as a legitimate external caller
+  And validation does NOT report it as an "unknown agent" error
+  And the build does not fail on account of that spawned_by entry
+depends_on:
+  - INF-600k
+  - INF-600k-1
+doc_links:
+  - path: "docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600k.yaml"
+    relationship: parent
+    status: exists
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Behavior is ALREADY SHIPPED (the literal 'user' is in scripts/registry_validator.py's _EXTERNAL_CALLERS); this AC locks it via test coverage rather than a new build."
+  - "The literal external trigger 'user' in spawned_by must be recognized as a legitimate external caller, must not raise 'unknown agent', and must not fail the build."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
+delivers_to: null
+expects_from:
+  ac_id: INF-600k-1
+  contract: "The spawned_by-entry external-caller classification; this behavior asserts the literal 'user' trigger is in the recognized-external-caller set."
+origin_agent: business-analyst-v3
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "scripts/registry_validator.py"

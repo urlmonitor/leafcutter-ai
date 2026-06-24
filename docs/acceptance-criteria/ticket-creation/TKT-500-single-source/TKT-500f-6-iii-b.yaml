@@ -1,0 +1,59 @@
+id: TKT-500f-6-iii-b
+readiness: approved
+priority: high
+title: "ticket-supervisor halts (not silently skips) when Test Requirements is absent but an implementation .py is in scope"
+component: ticket-creation
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f-6-iii.yaml"
+criteria: |
+  Given a generated ticket whose files_touched list contains an implementation
+    .py file (for example "scripts/ac_store/generate_ticket_from_ac.py"),
+  And that ticket body contains no section headed "## Test Requirements",
+  When the ticket-supervisor decides whether to run the test-writer phase,
+  Then the ticket-supervisor does NOT skip the test-writer phase,
+  And it halts with a structured error stating that an implementation file is in
+    scope but the ticket carries no Test Requirements section,
+  And the error names the implementation file and the ticket.
+
+  Given a generated ticket whose files_touched list contains only docs,
+    .yaml, .json, or tickets-path files and no implementation .py file,
+  And that ticket body contains no section headed "## Test Requirements",
+  When the ticket-supervisor decides whether to run the test-writer phase,
+  Then the ticket-supervisor skips the test-writer phase,
+  And it records that the skip was a legitimate docs-or-config-only skip.
+depends_on: [TKT-500f-6-iii, TKT-500f-6-iii-a, TKT-500b-1]
+doc_links:
+  - path: templates/agents/ticket-supervisor.md
+    relationship: constrains
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: constrains
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "The surface is the ticket-supervisor template prose at templates/agents/ticket-supervisor.md, section 'Docs-only / config-only test-writer skip rule'. Today that rule treats an ABSENT '## Test Requirements' block as a blanket skip-for-everyone — that is the silent-skip defect this AC fixes."
+  - "Rewrite the skip rule so the absent-section branch is conditional on files_touched: when the section is absent AND files_touched contains a qualifying implementation .py, the supervisor must HALT with a structured error rather than marking test-writer signed_off — the error must name the implementation file and the ticket."
+  - "When the section is absent AND files_touched is docs/config/tickets-only, the supervisor still skips test-writer and records the legitimate docs/config-only skip reason; this path must not halt."
+  - "The supervisor template cannot import the generator's Python helper. Mirror the implementation-.py classification rule by SPEC PARITY against the single normative definition in docs/reference/ac-schema.md (the same rule TKT-500f-6-iii-a publishes) so the supervisor's notion of 'implementation .py in scope' cannot drift from the generator's."
+  - "Per ADR-006, the test-writer decision stays in the ticket-supervisor's existing depth-1 dispatch; the new halt path must surface the structured error through the normal blocker-escalation channel and must NOT chain a sub-supervisor inline."
+delivers_to: null
+expects_from:
+  ac_id: TKT-500f-6-iii-a
+  contract: "(1) A generated ticket whose '## Test Requirements' section presence/absence is the authoritative test-writer-required signal; (2) the normative implementation-.py classification rule published in docs/reference/ac-schema.md that this template mirrors by spec parity"
+origin_agent: it-po
+created: 2026-06-22
+amended_by:
+  - reason: "it-po split 2026-06-22: TKT-500f-6-iii crossed a .py/.md owner boundary; this child carries the ticket-supervisor template skip-rule change (llm-expert prose). Sibling TKT-500f-6-iii-a carries the python-coder generator + shared classification-helper portion."
+superseded_by: null
+covered_by: []
+implemented_by: []

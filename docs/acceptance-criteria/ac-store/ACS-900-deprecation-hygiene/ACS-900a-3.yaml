@@ -1,0 +1,59 @@
+id: ACS-900a-3
+readiness: approved
+priority: high
+title: "How-to guide and sequence diagram for the retirement-detection trigger"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the deprecation-hygiene detection trigger (ACS-900a-1) and the
+    implemented_by inspection (ACS-900a-2) are implemented,
+  When a contributor needs to understand when and why the check fires,
+  Then a how-to guide documents the status transitions that arm the check
+    (active to deprecated / superseded_by / superseded), states that an
+    unchanged retired status and a brand-new retired file do not arm it, and
+    explains how the implemented_by list is inspected,
+  And a sequence diagram shows the ordered interaction at commit time:
+    staged diff read, HEAD status compared, retired-transition detected,
+    implemented_by entries inspected, verdict produced.
+depends_on: [ACS-900a-1, ACS-900a-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/how-to/ac-traceability-store.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "The how-to guide and its embedded Mermaid sequenceDiagram satisfy BOTH documentation_triggers on the parent L1 ACS-900a ([how-to, sequence-diagram]); the sequence diagram is an embedded Mermaid block inside the how-to, not a separate architecture diagram file — see notes for the no-split rationale."
+  - "The how-to MUST document all three retired-status forms (deprecated, superseded_by, superseded) as arming triggers, and the two non-arming cases (unchanged retired status; brand-new retired file) so the reader's mental model matches ACS-900a-1 / ACS-900a-1-i exactly."
+  - "Doc frontmatter MUST satisfy check_doc_frontmatter.py for docs/**: title, type (how-to), status, created, last_updated, components — or extend the existing docs/how-to/ac-traceability-store.md rather than creating a new file, to avoid frontmatter drift."
+  - "The sequence diagram MUST stay within mermaid_complexity limits (<=8 participants, <=25 interactions) so check-mermaid-complexity does not warn; the commit-time interaction has well under that many steps."
+  - "Documentation MUST be authored against the IMPLEMENTED behavior (depends_on ACS-900a-1 and ACS-900a-2) — do not document speculative behavior ahead of the code."
+delivers_to: null
+expects_from:
+  ac_id: ACS-900a-1
+  contract: "The implemented detection-trigger behavior (status-transition arming + implemented_by inspection) that the how-to and embedded sequence diagram document"
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC for the how-to and sequence-diagram triggers declared on
+  ACS-900a. The sequence-diagram portion may be split to architecture-diagram-author
+  by the IT PO; authored here as a single documentation deliverable describing
+  both required artifacts so neither trigger is dropped.
+
+  IT-PO decision (2026-06-22): NOT split. Kept as one documentation-expert AC.
+  The sequence diagram is an embedded Mermaid sequenceDiagram block inside the
+  how-to guide (documentation-expert authors Mermaid in how-tos routinely);
+  splitting would create a trivial architecture-diagram-author AC for a single
+  embedded diagram and fragment one coherent deliverable. Both documentation_triggers
+  on ACS-900a ([how-to, sequence-diagram]) are satisfied by this single AC — S7b
+  documentation gate PASSES for ACS-900a.

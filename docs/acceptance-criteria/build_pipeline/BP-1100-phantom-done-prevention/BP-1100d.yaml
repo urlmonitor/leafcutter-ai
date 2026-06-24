@@ -1,0 +1,37 @@
+id: BP-1100d
+title: "Workflow code that commits dispatches the commit agent, never raw git commit"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given workflow JavaScript under scripts/workflows/ or templates/workflows-js/
+  needs to perform a git commit,
+  When that workflow code is reviewed and committed,
+  Then it dispatches the commit agent (agentType "commit", or runs under
+  COMMIT_AGENT_MODE=1) and never instructs another agent (such as status-checker)
+  to run a raw git commit,
+  And the prohibited pattern — a non-commit agentType paired with a git commit
+  instruction in the same workflow step — is caught automatically rather than
+  surfacing only as a runtime hook block.
+depends_on:
+  - BP-1100
+doc_links:
+  - path: docs/retrospectives/EPIC-CommitAcOutputPerStage.md
+    relationship: describes
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1100d-1
+  - BP-1100d-2
+implemented_by: []

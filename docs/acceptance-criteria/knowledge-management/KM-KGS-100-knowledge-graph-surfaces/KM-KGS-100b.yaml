@@ -1,0 +1,40 @@
+id: KM-KGS-100b
+readiness: approved
+priority: high
+title: "Jump from a requirement straight to the code and tests that deliver it"
+component: knowledge-management
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Follow a requirement to everything connected to it.
+
+  Standing on any acceptance criterion, you can follow it to the files that
+  implement it, the tests that prove it, the other requirements it depends on,
+  and the part of the product it belongs to — answering "which AC is delivered
+  by which code file?" directly.
+depends_on:
+  - KM-KGS-100
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+documentation_triggers:
+  - how-to
+  - sequence-diagram
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - KM-KGS-100b-1
+  - KM-KGS-100b-2
+  - KM-KGS-100b-3
+  - KM-KGS-100b-4
+implemented_by: []

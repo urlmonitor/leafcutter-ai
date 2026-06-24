@@ -1,0 +1,48 @@
+id: KM-KGS-100a-1
+readiness: approved
+priority: high
+title: "The acceptance-criteria store is a declared surface in the surfaces config"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100a.yaml"
+criteria: |
+  Given the surfaces configuration in config/paths.json
+  When the configuration is loaded
+  Then it contains a surface entry keyed "acs"
+  And that entry's "path" value resolves to docs/acceptance-criteria/
+  And that entry's "edge_fields" value lists implemented_by, covered_by,
+    depends_on, and components
+  And the entry sits alongside the other declared surfaces under the same
+    top-level "surfaces" key, with no surface added to or removed from any
+    hard-coded list elsewhere
+depends_on:
+  - KM-KGS-100a
+doc_links:
+  - path: config/paths.json
+    relationship: specifies
+    status: exists
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "config/paths.json must remain valid JSON and must continue to load cleanly via load_surfaces() — no existing surface entry may be broken or reordered into an invalid shape"
+  - "The 'acs' entry's path must use the project-relative POSIX directory form with a trailing slash (docs/acceptance-criteria/), per the trailing-slash-for-directories convention stated in the paths.json _comment"
+  - "edge_fields must be the literal list [implemented_by, covered_by, depends_on, components] in the config, treated as the single source of truth the loader reads — it must not be duplicated into a hard-coded structure in code"
+  - "Do not add an _optional marker: the acceptance-criteria directory exists in this repo, so the surface is non-optional"
+delivers_to:
+  agent: python-coder
+  contract: "An 'acs' surface entry in config/paths.json of shape { path: 'docs/acceptance-criteria/', edge_fields: ['implemented_by','covered_by','depends_on','components'] } under the top-level 'surfaces' key, consumed by the surface loader alongside every other declared surface"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-ACCodeTraceabilityGraph/01_TICKET-20260622-KM-KGS-100a-1.md

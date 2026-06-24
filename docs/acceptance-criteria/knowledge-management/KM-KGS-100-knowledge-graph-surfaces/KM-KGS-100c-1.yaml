@@ -1,0 +1,45 @@
+id: KM-KGS-100c-1
+readiness: approved
+priority: high
+title: "Every surface declared in the config is ingested, however many there are"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100c.yaml"
+criteria: |
+  Given a surfaces configuration that declares some set of surface entries, each
+    with a path and edge_fields
+  When the knowledge map is built
+  Then every declared surface whose path exists contributes its nodes to the map
+  And the set of surfaces that contributed is exactly the set declared in the
+    configuration (minus any declared surface marked optional whose path is absent)
+  And no surface is read that was not declared in the configuration
+  And the build asserts this against the declared set itself, not against any
+    fixed expected number of surfaces
+depends_on:
+  - KM-KGS-100c
+doc_links:
+  - path: config/paths.json
+    relationship: specifies
+    status: exists
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The set of surfaces ingested must be derived solely from the paths.json 'surfaces' map (via load_surfaces) — no surface name may be enumerated in a hard-coded list, count check, or fixed expected set anywhere in the builder; the existing hard-coded _SURFACE_EDGE_FIELDS dict is the chief anti-pattern this AC closes"
+  - "Optional surfaces (_optional: true) whose path is absent must be silently skipped (existing behavior); non-optional declared surfaces must be attempted, and a missing path must be handled gracefully per the error-handling policy rather than aborting the whole build"
+  - "Any equality assertion the build makes about contributing surfaces must compare against the declared set itself (computed from config), never against a magic number, so adding or removing a surface needs no code edit"
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-ACCodeTraceabilityGraph/10_TICKET-20260622-KM-KGS-100c-1.md

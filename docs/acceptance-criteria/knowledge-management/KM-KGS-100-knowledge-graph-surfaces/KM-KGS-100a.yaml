@@ -1,0 +1,39 @@
+id: KM-KGS-100a
+readiness: approved
+priority: high
+title: "Your acceptance criteria join the knowledge map"
+component: knowledge-management
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Acceptance criteria appear in the knowledge map as first-class items.
+
+  When you search or view the knowledge map, every acceptance criterion shows up
+  alongside the agents, tickets, docs, and code it relates to — so requirements
+  are no longer an island the rest of the project cannot see.
+depends_on:
+  - KM-KGS-100
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+documentation_triggers:
+  - component-diagram
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - KM-KGS-100a-1
+  - KM-KGS-100a-2
+  - KM-KGS-100a-2-i
+  - KM-KGS-100a-3
+  - KM-KGS-100a-4
+implemented_by: []

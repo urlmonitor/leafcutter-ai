@@ -1,0 +1,58 @@
+id: GE-111d-4
+readiness: approved
+priority: high
+title: "How-to guide: the two routes to reconcile a flagged AC link"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111d.yaml"
+criteria: |
+  Given a developer faces a blocked commit and wants to reconcile the flagged link
+  When the developer opens the reconciliation how-to guide
+  Then the guide gives step-by-step instructions for the update route, including
+    how to apply a suggested new location when one is offered
+  And the guide gives step-by-step instructions for the confirm route, including
+    how to record the durable confirmation and that it is tied to the current
+    source version
+  And the guide states that either route, completed in the same commit, unblocks
+    the commit
+  And the guide explains when to prefer each route (update when the code moved;
+    confirm when the structural change does not change what the code does)
+depends_on:
+  - GE-111d
+  - GE-111d-1
+  - GE-111d-2
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111d.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: related
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+it_requirements:
+  - "Author as a Diataxis how-to under docs/how-to/ with frontmatter required by check_doc_frontmatter.py (title, type: how-to, status, created, last_updated, components, description)."
+  - "The confirm-route steps MUST match the GE-111d-2 mechanism exactly: a structured amended_by entry { reason: 'ge111-confirm', entry, source_fingerprint, confirmed_at, confirmed_by }, tied to the current source version, that re-flags when the source changes again. Do not document a hand-edited free-text confirmation."
+  - "The update-route steps MUST show applying a GE-111b-3 suggested location verbatim ('path#symbol'). Keep consistent with GE-111a-3 (which covers the overall experience) without duplicating it — this guide is the detailed per-route procedure."
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-111d-1
+  contract: "The update and confirm route behaviors the how-to documents"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC satisfying GE-111d documentation_triggers [how-to, ...].
+
+  IT-PO enrichment (2026-06-22): documentation-expert retained. it_requirements
+  bind the confirm-route documentation to the GE-111d-2 amended_by mechanism so
+  the docs cannot drift from the implementation.

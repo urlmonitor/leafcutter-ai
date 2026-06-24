@@ -1,0 +1,28 @@
+id: KM-VIS-014
+status: active
+component: knowledge-management
+level: L2
+title: "visualise_knowledge_graph unit tests mock the current _collect_all assembly boundary"
+origin_agent: BrainCandy
+criteria: |
+  Given the visualise_knowledge_graph tests stub the knowledge_query module
+  When _assemble_graph() obtains nodes and edges
+  Then the test double provides knowledge_query._collect_all(project_root,
+    paths_json, surface_filter) returning a (nodes, edges) tuple, matching the
+    production call site, and honouring a single-surface filter
+  And the --project-root flag assertion verifies the value reaches
+    _collect_all (the current boundary), not the removed direct load_surfaces call
+  And the bug symptom ("the mock configures only the granular
+    load_surfaces/extract_nodes/extract_edges API, so _collect_all returns an
+    unconfigured MagicMock and _assemble_graph raises ValueError: not enough
+    values to unpack (expected 2, got 0)") must not occur
+notes: |
+  Authored by /quick-fix. Root cause: visualise_knowledge_graph.py:_assemble_graph
+  was refactored to delegate node/edge collection to knowledge_query._collect_all
+  (which internally calls load_surfaces/extract_nodes/extract_edges and performs
+  synthetic-hub + phantom-edge post-processing). The unit-test mock factory
+  _make_mock_kq still stubbed only the old granular API and never configured
+  _collect_all, so 8 tests failed at the tuple-unpack. The real end-to-end test
+  (TestVisualisationProducesGraph) passed throughout, confirming production is
+  correct. The fix updates the test mocks to the current contract; production
+  code is unchanged.

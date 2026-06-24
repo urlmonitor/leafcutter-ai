@@ -2,8 +2,10 @@ id: KM-KQS-017
 title: "knowledge_query.py produces at least one node per surface against the real repository"
 component: knowledge-management
 level: L2
-status: active
+status: superseded_by
 work_status: todo
+readiness: reviewed
+priority: low
 criteria: |
   Given the repository with the "surfaces" section present in config/paths.json
   When running knowledge_query.py with --format json and no other flags
@@ -34,7 +36,7 @@ doc_links:
     status: exists
 origin_agent: "business-analyst-v3"
 created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/04a_surfaces_config_wiring.md"
-superseded_by: null
+superseded_by: KM-KGS-100a
 amended_by: []
 covered_by: []
 implemented_by: []

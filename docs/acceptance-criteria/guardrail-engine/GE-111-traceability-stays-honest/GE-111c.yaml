@@ -1,0 +1,44 @@
+id: GE-111c
+readiness: approved
+priority: high
+title: "Only get stopped for links your commit actually touched"
+component: guardrail-engine
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  The check fires on the code you are changing, not the whole history.
+
+  Only links affected by the source files in the current commit are evaluated,
+  so a pre-existing broken link elsewhere in the project never blocks an unrelated
+  change — you are asked to fix exactly what this commit broke and nothing more.
+depends_on: [GE-111]
+doc_links:
+  - path: "docs/reference/ac-schema.md"
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-111c-1
+  - GE-111c-1-i
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Internal scoping rule of an existing commit-time guardrail; no new user-facing surface or command — the user-facing behavior is documented on GE-111a."
+notes: |
+  PO authoring note (for the BA). This mirrors the well-established
+  staged-files-only scoping that other guardrail hooks already follow
+  (check_ac_circular_deps only reports cycles involving a STAGED AC;
+  check_ac_schema Phase 2 inspects diff-filter M staged files; ACS-400e-2
+  "only staged AC YAML files are inspected"). Decompose against that precedent:
+  the trigger set is the source files in the commit, and the ACs to evaluate are
+  those whose implemented_by references one of those files (or, at symbol level,
+  a symbol within one of them). A broken link whose source file is NOT in the
+  commit is out of scope for THIS commit (it should be surfaced by a separate
+  store-wide scan, not the pre-commit gate — note for IT-PO, do not conflate the
+  two). Pairs with the fail-open precedent in GE-107 / GE-100.

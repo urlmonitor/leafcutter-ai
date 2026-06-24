@@ -26,14 +26,16 @@ from pathlib import Path
 HOOK_SCRIPT = (
     Path(__file__).parent.parent.parent
     / "templates"
-    / "commit-guardian"
+    / "scripts"
+    / "commit_guardian"
     / "check_test_ac_tags.py"
 )
 
 CONFIG_PATH = (
     Path(__file__).parent.parent.parent
     / "templates"
-    / "commit-guardian"
+    / "scripts"
+    / "commit_guardian"
     / "commit_guardian.json"
 )
 

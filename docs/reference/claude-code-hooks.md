@@ -242,8 +242,8 @@ except Exception as exc:
 > pattern: an `if __name__ == "__main__":` block wraps `main()` in a
 > `try/except Exception` and exits 0 on unexpected errors, writing a diagnostic
 > prefixed with the hook name (e.g. `[check-ac-schema]`) to stderr. See
-> `templates/commit-guardian/check_ac_schema.py` and
-> `scripts/commit_guardian/hooks_docs.md` for the pre-commit hook reference.
+> `templates/scripts/commit_guardian/check_ac_schema.py` and
+> `templates/scripts/commit_guardian/README.md` for the pre-commit hook reference.
 
 ---
 

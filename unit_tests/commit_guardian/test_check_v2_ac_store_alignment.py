@@ -23,7 +23,7 @@ import pathlib as _pl
 
 _REPO_ROOT = _pl.Path(__file__).resolve().parent.parent.parent
 _HOOK_PATH = (
-    _REPO_ROOT / "templates" / "commit-guardian" / "check_v2_ac_store_alignment.py"
+    _REPO_ROOT / "templates" / "scripts" / "commit_guardian" / "check_v2_ac_store_alignment.py"
 )
 
 # ---------------------------------------------------------------------------

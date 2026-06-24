@@ -1,0 +1,34 @@
+id: BO-1500
+readiness: approved
+priority: high
+title: "Authoring requirements never disturbs your work and always lands safely on main"
+component: build-orchestration
+level: L0
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Writing requirements is safe from start to finish -- it stays out of your way and lands the right way.
+
+  When you author acceptance criteria, the work happens in its own private space
+  that never touches whatever you are currently working on and never collides
+  with anyone else working at the same time. Your progress is safe even if
+  something interrupts you partway through. When you approve the result, it
+  reaches the shared, protected main line the same trustworthy way every other
+  change does -- through a reviewed pull request that passes the project's
+  quality checks -- with that request handed straight back to you. You never
+  have to clean up stray files or stitch together a delivery by hand afterward.
+depends_on: []
+doc_links:
+  - docs/architecture/agent_delivery_workflows.md
+  - templates/skills/build-single-ticket/SKILL.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: [BO-1500a, BO-1500b, BO-1500c, BO-1500d, BO-1500e]
+implemented_by: []

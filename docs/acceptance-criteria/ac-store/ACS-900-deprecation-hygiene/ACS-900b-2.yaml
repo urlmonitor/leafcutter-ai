@@ -1,0 +1,60 @@
+id: ACS-900b-2
+readiness: approved
+priority: high
+title: "The deprecation-hygiene hook is wired into the commit_guardian framework"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the deprecation-hygiene check is implemented as a new hook script under
+    scripts/commit_guardian/,
+  When the commit guardian configuration is built,
+  Then config/commit_guardian.json registers the hook in hooks_manifest.hooks
+    with a stable id, a run_hook.py invocation entry, and a files scope of
+    "^docs/acceptance-criteria/.*\\.yaml$",
+  And the hook runs at the pre-commit stage alongside the other check_ac_*.py
+    hooks,
+  And the hook is invoked only on commits that stage at least one AC YAML file
+    under docs/acceptance-criteria/.
+depends_on: [ACS-900b, ACS-900b-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: config/commit_guardian.json
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The hooks_manifest entry MUST follow the shape of the sibling check-ac-governance / check-ac-schema entries: keys id, tier ('judgment'), name, entry ('python scripts/commit_guardian/run_hook.py scripts/commit_guardian/<new-hook>.py'), language ('system'), files ('^docs/acceptance-criteria/.*\\\\.yaml$'), stages (['pre-commit']), pass_filenames (false), plus an explanatory _comment naming ACS-900."
+  - "The canonical source of the manifest is the PACKAGE template templates/commit-guardian/commit_guardian.json; the consumer-facing config/commit_guardian.json is a build output. The entry MUST be added to the template and round-tripped via build.py so both land in parity (ADR-001) — editing only the deployed config/commit_guardian.json is a deploy gap (BO-1400 fresh-install reachability)."
+  - "The hook script itself MUST live in templates/commit-guardian/check_<name>.py (package source) and deploy to scripts/commit_guardian/check_<name>.py via build.py; do not author it only under scripts/."
+  - "The files scope MUST restrict the hook to AC YAML files so it is a no-op on commits that stage no AC YAML (the manifest files pattern + the hook's own staged-file guard both enforce this)."
+  - "Register the hook so it runs at the pre-commit stage alongside the other check_ac_*.py hooks; do not place it in post_merge or post-commit."
+  - "After wiring, the build.py round-trip MUST be verified (check_build_drift / check_output_drift must pass) so the deployed .pre-commit-config.yaml and config mirror the template manifest."
+delivers_to: null
+expects_from:
+  ac_id: ACS-900b-1
+  contract: "The implemented hook script (filename under scripts/commit_guardian/ and its templates/commit-guardian/ source) whose stable id this wiring registers in the hooks_manifest"
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Wiring AC. The block decision (ACS-900b-1) is useless unless the hook is
+  registered; this AC pins the commit_guardian.json hooks_manifest entry and
+  the AC-store-scoped files pattern, consistent with check-ac-governance and
+  check-ac-schema entries already in the manifest.
+
+  IT-PO enrichment (2026-06-22): clarified the load-bearing deploy-path fact —
+  the manifest's canonical source is templates/commit-guardian/commit_guardian.json
+  (config/commit_guardian.json is a build output), and the hook script's source is
+  templates/commit-guardian/. Pinned the exact entry key shape incl. tier:'judgment'
+  matching the package-managed siblings, and the build.py drift-guard verification
+  (ADR-001 + BO-1400 fresh-install reachability). The criteria's reference to
+  config/commit_guardian.json is preserved verbatim (consumer-facing view).

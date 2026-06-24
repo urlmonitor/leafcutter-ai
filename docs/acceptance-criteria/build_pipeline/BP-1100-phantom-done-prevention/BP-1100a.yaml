@@ -1,0 +1,33 @@
+id: BP-1100a
+title: "Behavior tickets name the executable integration point in files_touched"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket implements an AC whose acceptance criterion describes runtime
+  behavior (a function is called, a workflow step executes, an error is surfaced),
+  When the ticket is prepared for a drive,
+  Then files_touched includes the executable file that runs the behavior (e.g. a
+  script under scripts/workflows/), not only documentation, skill prose, or
+  architecture diagrams,
+  And a ticket whose files_touched lists only documentation surfaces for a
+  behavioral AC is flagged before any coder is dispatched.
+depends_on:
+  - BP-1100
+doc_links:
+  - path: docs/retrospectives/EPIC-CommitAcOutputPerStage.md
+    relationship: describes
+    status: exists
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1100a-1
+  - BP-1100a-2
+implemented_by: []

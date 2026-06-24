@@ -1,0 +1,33 @@
+id: BO-1600a
+title: "Concurrent commits never corrupt the shared repository"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Deliveries that land at the same time stay out of each other's way at the git layer.
+
+  When several tickets are driven in parallel inside one shared workspace, their
+  commits are serialized where it matters so the repository's object store and
+  index are never written by two deliveries at once -- the corruption that
+  produced a zero-byte object and a broken index can no longer happen.
+depends_on: [BO-1600]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1600a-1
+  - BO-1600a-2
+  - BO-1600a-3
+  - BO-1600a-4
+implemented_by: []
+documentation_triggers:
+  - sequence-diagram

@@ -1,0 +1,49 @@
+id: TKT-500f-6
+readiness: approved
+priority: high
+title: "Generated ticket carries Test Requirements when an implementation .py is in scope"
+component: ticket-creation
+level: L2
+status: active
+req_status: active
+work_status: todo
+created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f.yaml"
+criteria: |
+  Given a leaf AC whose files_touched list contains at least one path that
+    ends in ".py", is NOT under a docs/ directory, is NOT a .yaml or .json
+    configuration file, and is NOT under a tickets/ directory
+    (for example "scripts/ac_store/generate_ticket_from_ac.py"),
+  When a ticket is generated from that AC by an AC-to-ticket generator,
+  Then the generated ticket body contains a section headed "## Test Requirements",
+  And that section contains at least one test stub entry describing a test to be
+    written for the qualifying implementation file,
+  And the test stub entry names the implementation file it applies to.
+depends_on: [TKT-500f]
+doc_links:
+  - path: scripts/goal_to_epic.py
+    relationship: constrains
+    status: exists
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Classify each files_touched entry: a path qualifies as an implementation .py when it ends in .py AND is not under docs/ AND is not a .yaml/.json file AND is not under tickets/ AND its basename does NOT match test_*.py or *_test.py. The Test Requirements section is emitted when one or more qualifying entries exist."
+  - "Emit the '## Test Requirements' heading and at least one stub line per qualifying implementation file. Implement the classification + emission in a SINGLE shared helper used by BOTH scripts/goal_to_epic.py and scripts/ac_store/generate_ticket_from_ac.py so the two generators cannot drift — do not inline or duplicate the predicate in either generator."
+  - "The stub entry text must name the implementation file path so a downstream reader (the ticket-supervisor test-writer gate) can map the requirement to the file in scope."
+  - "The classification predicate has no portable code path into the ticket-supervisor template (the supervisor is markdown prose, not Python). Reconcile the generator's predicate and the supervisor's notion of 'implementation .py in scope' by SPEC PARITY: state the rule once normatively (ac-schema.md) and keep both sides matching it — never assume a shared import across the .py/.md boundary."
+delivers_to:
+  agent: ticket-supervisor
+  contract: "A generated ticket whose presence-or-absence of a '## Test Requirements' section is the authoritative signal for whether the test-writer phase is required (read by the ticket-supervisor test-writer skip rule, templates/agents/ticket-supervisor.md)"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by:
+  - reason: "it-po technical enrichment 2026-06-22: repointed delivers_to from non-existent 'ac-supervisor' to the real gating agent 'ticket-supervisor' (no agent named ac-supervisor exists in config/agent_registry.json). NOTE FOR FINAL-GATE REVIEWER: the criteria PROSE elsewhere in this cluster still says 'ac-supervisor' (see TKT-500f-6-iii) and should be corrected to 'ticket-supervisor' in a follow-up BA edit — criteria left unchanged here per role boundary."
+superseded_by: null
+covered_by: [TKT-500f-6-i, TKT-500f-6-ii, TKT-500f-6-iii]
+implemented_by: []

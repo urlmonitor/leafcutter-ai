@@ -1,0 +1,46 @@
+id: ACD-1200c-3-i
+readiness: approved
+priority: high
+title: "The store-wide cycle warning lists the full cycle path and the scan still exits 0 when the cycle is outside the requested scope"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the AC store contains exactly one dependency cycle, confined to one subtree,
+    formed by BO-1100a-3 -> BO-1100d-1 -> BO-1100a-3,
+  And every other AC in the store is acyclic and otherwise rankable,
+  When the store-wide scan / ready-AC ranking runs,
+  Then it emits a single warning whose text lists the full cycle path so the user
+    can locate and fix the offending depends_on edge,
+    for example: "WARNING: dependency cycle detected (skipped from ranking): BO-1100a-3 -> BO-1100d-1 -> BO-1100a-3",
+  And the warning names every AC id that participates in the cycle (not a generic
+    "a cycle was detected" message),
+  And the scan still ranks and emits the acyclic remainder,
+  And the process exit code is 0, because the cycle lies outside the requested
+    ranking scope and is therefore a warning, not a fatal error.
+depends_on: [ACD-1200c-3]
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: specifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The store-wide cycle warning must include the full ordered cycle path (every participating AC id, closing back to the start), reusing the same cycle-path extraction the scoped sort uses for its error message — not a generic notice."
+  - "Exit code for the store-wide scan must be 0 when the sole problem is an out-of-scope cycle; the acyclic remainder must still be ranked and emitted in the same run."
+  - "The warning must be written to stderr (or the scan's diagnostic channel) so it is visible without corrupting the ranked output on stdout / the JSON payload consumed by /build-ac."
+delivers_to: null
+expects_from:
+  ac_id: ACD-1200c-3
+  contract: "The warn-and-continue store-wide behavior; this edge case fixes the exact warning content (full cycle path, all participant ids) and the exit-0 contract for an out-of-scope cycle"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

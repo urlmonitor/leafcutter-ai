@@ -333,6 +333,15 @@ def install_shims(
         (".claude/hooks", "hooks"),
         (".claude/workflows", "workflows"),
         (".gemini", "gemini"),
+        # Bridge pre-consolidation scripts/ paths to .leafcutter/scripts/ so that
+        # tests and hooks that reference scripts/commit_guardian/,
+        # scripts/doc_compliance/, and scripts/feedback/ still resolve after the
+        # ADR-004 consolidation moved those directories under .leafcutter/scripts/.
+        # Required for CI (fresh-clone) and for any test suite that adds these
+        # directories to sys.path at the old location (ADR-016).
+        ("scripts/commit_guardian", "scripts/commit_guardian"),
+        ("scripts/doc_compliance", "scripts/doc_compliance"),
+        ("scripts/feedback", "scripts/feedback"),
     ]
 
     results: list[dict[str, str]] = []

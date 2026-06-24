@@ -5,6 +5,7 @@ title: "Complete component coverage in the registry"
 component: ac-store
 level: L1
 status: active
+child_limit_override: 8
 req_status: active
 work_status: todo
 criteria: |
@@ -59,4 +60,6 @@ covered_by:
   - ACS-300g-4a
   - ACS-300g-4b
   - ACS-300g-4
+  - ACS-300g-5
+  - ACS-300g-6
 implemented_by: []

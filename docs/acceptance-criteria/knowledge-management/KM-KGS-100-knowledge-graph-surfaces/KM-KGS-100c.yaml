@@ -1,0 +1,38 @@
+id: KM-KGS-100c
+readiness: approved
+priority: high
+title: "The map grows with you — add a new knowledge source without rewriting the rules"
+component: knowledge-management
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  New knowledge sources are declared, not hard-coded.
+
+  Whoever maintains the project can declare a new source of knowledge and have
+  it join the map immediately — however many sources exist, with no fixed count
+  baked in. The acceptance-criteria store is simply one declared source among
+  the rest.
+depends_on:
+  - KM-KGS-100
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+documentation_triggers:
+  - how-to
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - KM-KGS-100c-1
+  - KM-KGS-100c-2
+  - KM-KGS-100c-3
+implemented_by: []

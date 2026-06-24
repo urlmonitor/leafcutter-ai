@@ -1,0 +1,62 @@
+id: BP-900e-3
+readiness: approved
+priority: high
+title: "A source-only script that is neither registered nor referenced is never flagged"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: not_started
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900e.yaml"
+criteria: |
+  Given the source tree contains package-development-only scripts such as
+    scripts/build.py and scripts/epic_lock.py
+  And neither script is registered in the commit-guardian hook registry
+  And neither script is referenced by any deployable agent or skill template
+  And neither script has a copy under templates/scripts/
+  When the registry-completeness check runs at the finalize merge gate
+  Then neither scripts/build.py nor scripts/epic_lock.py appears in the
+    promised-but-undeployed list
+  And the check does not fail the merge gate on account of these source-only
+    scripts
+  And the only scripts ever evaluated by this check are those that are
+    registered in the hook registry OR referenced by a deployable template —
+    a script that is promised by neither source is out of scope and is never
+    flagged
+depends_on:
+  - BP-900e
+  - BP-900e-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900e.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000d-1.yaml"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The candidate set is derived ENTIRELY from the union of (a) scripts resolved from registered hook entries and (b) script paths extracted from deployable templates. A script that appears in neither source is never a candidate — do not enumerate scripts/ and then subtract; build the promised set first."
+  - "This is the critical no-false-positive class: legitimate package-dev-only tooling (build.py, epic_lock.py, and the source-only directories enumerated in BP-1000d-1: agent-health/, ci/, workflows/, worktree/, etc.) must never be flagged. A regression test must pin that at least build.py and epic_lock.py stay out of the verdict."
+  - "Aligns with BP-1000d-1's stance that source-only tooling is legitimately exempt — but where BP-1000d-1 excludes by 'has no template counterpart', THIS check excludes by 'is not promised by registry or template reference'. The exclusion criteria differ; keep both stated distinctly."
+delivers_to: null
+expects_from:
+  ac_id: BP-900e-1
+  contract: "The promised-set derivation (registered hooks union template references) underlying the verdict items; this AC asserts the candidate set excludes anything not in that union."
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-900e-3-i
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RegistryCompletenessGate/04_TICKET-20260622-BP-900e-3.md

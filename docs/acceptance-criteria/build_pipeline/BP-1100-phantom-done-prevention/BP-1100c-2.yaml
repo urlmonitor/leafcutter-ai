@@ -1,0 +1,42 @@
+id: BP-1100c-2
+title: "Spot-check findings are recorded in the retrospective and defects open remediation tickets before close"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the post-epic angle-testing spot-check phase has produced findings for a
+  behavioral epic,
+  When finalization processes those findings,
+  Then every spot-check finding is written into the epic's retrospective document
+  before the epic merges,
+  And for each finding classified as a defect, a remediation ticket is created before
+  the epic is marked closed,
+  And the epic is not closed while a spot-check defect has no corresponding remediation
+  ticket.
+depends_on:
+  - BP-1100c
+doc_links:
+  - path: docs/retrospectives/EPIC-CommitAcOutputPerStage.md
+    relationship: describes
+    status: exists
+assigned_agent: workflow-architect
+estimated_complexity: M
+it_requirements:
+  - "Spot-check findings must be appended to the epic retrospective (the same artifact produced by the retrospective-agent) before the merge step completes."
+  - "Each defect-classified finding must be turned into a remediation ticket; the close step must verify that no defect finding is left without a ticket."
+  - "If a defect finding has no remediation ticket, finalization must block the close and surface which finding is unaddressed."
+delivers_to: null
+expects_from:
+  ac_id: BP-1100c-1
+  contract: "Spot-check findings produced by the >=2 angle-testing agents dispatched during finalization"
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

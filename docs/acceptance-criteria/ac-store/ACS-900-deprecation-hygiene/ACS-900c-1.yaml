@@ -1,0 +1,62 @@
+id: ACS-900c-1
+readiness: approved
+priority: high
+title: "Block message names the retired AC, the surviving files, and the two remedies"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the deprecation-hygiene hook blocks a commit because a retired AC still
+    has surviving implemented_by entries,
+  When the hook emits its block message,
+  Then the message includes:
+    - the id of the retired AC,
+    - the new retired status it transitioned into,
+    - the specific source file path(s) still claiming to implement it
+      (one line per surviving implemented_by entry),
+    - a statement of the violated rule
+      (retired AC must not leave live implementing code behind),
+    - the two remedies: (a) remove the orphaned code, or
+      (b) re-point implemented_by to the successor AC,
+  And the message is written to stdout (not only stderr) so the committing
+    agent receives it as feedback.
+depends_on: [ACS-900c, ACS-900b-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/acceptance-criteria/ac-store/ACS-400-ac-governance/ACS-400e-1.yaml
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The block message MUST be written to STDOUT (not only stderr) so the committing agent receives it as feedback, following the ACS-400e-1 house style and the check_ac_governance.py _emit_block_decision pattern (structured/decision payload to stdout; human-readable diagnostics may additionally go to stderr)."
+  - "The message MUST name every required element: the retired AC id, the new retired status, one line per surviving implemented_by entry (the specific path, anchor included where present), the violated rule, and the remedy(ies). No 'cycle detected'-style terse message — the fix must be obvious without forensic investigation."
+  - "Remedy selection MUST be driven by the retired status: a deprecated AC offers only remedy (a) remove-the-code; a superseded_by AC offers both (a) and (b) re-point-to-successor. The exact per-status wording is refined in ACS-900c-1-i — keep that branch a single source of truth, do not duplicate the logic."
+  - "When multiple retired ACs each have surviving entries in one commit, the message MUST report all of them (group by AC id), not just the first — the committing agent should see the full set of fixes needed in one pass."
+  - "Message formatting is a pure transform of the block-decision records (no I/O); it MUST be a pure function so it stays out of the fail-open try/except and is unit-testable in isolation per the project error-handling policy."
+  - "Deployed and packaged-template copies of the hook MUST stay in parity (ADR-001)."
+delivers_to: null
+expects_from:
+  ac_id: ACS-900b-1
+  contract: "The block-decision records [{retired_ac_id, status, superseded_by, surviving_entries: [str]}] for each blocked retired AC, which this AC formats into the user-facing stdout message"
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: [ACS-900c-1-i]
+implemented_by: []
+notes: |
+  Message-quality AC modeled on the ACS-400e-1 house style (name the AC id, the
+  offending file path(s), the violated rule, and the remedy; write to stdout).
+  Distinguishes the two remedies per ACS-900c notes. The successor-specific
+  remedy wording is refined in ACS-900c-1-i.
+
+  IT-PO enrichment (2026-06-22): pinned the stdout channel + ACS-400e-1 house
+  style, the status-driven remedy selection (single source of truth shared with
+  ACS-900c-1-i), the multi-AC grouping, and the pure-function formatting constraint
+  (keeps it testable and outside the fail-open wrapper). expects_from aligned to
+  ACS-900b-1's refined block-decision record shape (carries status + superseded_by).

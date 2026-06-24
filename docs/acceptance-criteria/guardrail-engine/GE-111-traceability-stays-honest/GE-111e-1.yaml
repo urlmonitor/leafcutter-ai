@@ -1,0 +1,71 @@
+id: GE-111e-1
+readiness: approved
+priority: high
+title: "The block message names the criterion, the broken link, what changed, and the fix options"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111e.yaml"
+criteria: |
+  Given the traceability reconciliation check blocks a commit because criterion
+    AC-X with implemented_by entry "src/foo.py#process_order" points at a symbol
+    that moved to "src/orders/foo.py"
+  When the check emits its block message
+  Then the message names the affected criterion id "AC-X"
+  And the message names the broken implemented_by entry "src/foo.py#process_order"
+  And the message names the change kind (moved)
+  And the message names the symbol "process_order" and its located new location
+    "src/orders/foo.py"
+  And the message points the developer to the reconciliation options (update or confirm)
+
+  Given the check blocks a commit because criterion AC-Y with implemented_by entry
+    "src/gone.py" points at a file that was deleted
+  When the check emits its block message
+  Then the message names "AC-Y", the broken entry "src/gone.py", and the change
+    kind (deleted)
+  And the message points the developer to the reconciliation options
+depends_on:
+  - GE-111e
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111e.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/reference/ac-schema.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Message is a pure renderer over the verdict object {ac_id, entry, tier, verdict, change_kind, symbol, suggested_location} (GE-111b-1 spine, extended by GE-111b-2/b-3) plus the applicable-routes content {update: {suggested_location}, confirm: bool} from GE-111d-3. It MUST NOT recompute drift or re-resolve symbols — render only."
+  - "Must include all four load-bearing fields per the GE-111e PO note: (a) AC id, (b) broken implemented_by entry, (c) change kind (deleted/moved/renamed/removed; plus symbol name and located new location at symbol tier), (d) pointer to GE-111d reconciliation options. Mirror the ACS-400e-1 'clear, actionable error message' bar for this hook."
+  - "Emit to stderr with a consistent [check-ac-traceability] prefix (commit-guardian convention) so it surfaces in the pre-commit failure output."
+  - "When multiple ACs drift in one commit, the message must list each affected AC with its own fields (no silent truncation to the first)."
+  - "Pure formatting over already-computed inputs — per CLAUDE.md Rule 4 this renderer must NOT be wrapped in try/except; let it propagate (the outer hook owns the I/O boundary and fail-open)."
+delivers_to: null
+expects_from:
+  ac_id: GE-111b-1
+  contract: "The drift verdict object {ac_id, entry, tier, verdict, change_kind, symbol, suggested_location} the message renders (file-tier spine; symbol name and located new location supplied at symbol tier by GE-111b-2/b-3; applicable-routes content supplied by GE-111d-3)"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Mirrors ACS-400e-1 ("Blocked commit produces a clear, actionable error
+  message") for this hook. Load-bearing message contents (per PO note): (a) the
+  AC id, (b) the implemented_by entry that broke, (c) the kind of change
+  (moved / renamed / deleted; and at symbol level the symbol name and its new
+  location), and (d) a pointer to the GE-111d reconciliation options (the
+  applicable-routes content comes from GE-111d-3).
+
+  IT-PO enrichment (2026-06-22): GE-111e-1 consumes TWO upstreams — the verdict
+  object (primary expects_from: GE-111b-1, extended by GE-111b-2/b-3) and the
+  applicable-routes content (GE-111d-3). Since expects_from is single-valued, the
+  routes-content dependency is captured in it_requirements (per the IT-PO
+  expects_from-is-single-valued convention). Renderer-only; no recomputation.

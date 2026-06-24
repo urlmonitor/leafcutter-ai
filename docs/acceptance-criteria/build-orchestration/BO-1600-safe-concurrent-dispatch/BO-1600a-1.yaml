@@ -1,0 +1,64 @@
+id: BO-1600a-1
+readiness: approved
+priority: medium
+title: "Commit phases of concurrent supervisors are serialized at the git layer"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600a.yaml"
+criteria: |
+  Given two ticket-supervisors are driving two different tickets in parallel
+    inside one shared git worktree
+  And both reach their commit phase at overlapping times
+  When each supervisor performs the git write portion of its commit (writing loose
+    objects and updating the index/refs)
+  Then the two git write portions are serialized so that only one supervisor is
+    inside the git write portion at any instant
+  And the second supervisor's git write portion does not begin until the first
+    supervisor's git write portion has fully completed
+  And neither supervisor's non-git work (planning, editing files, running tests)
+    is serialized — only the git write portion is mutually exclusive
+depends_on:
+  - BO-1600a
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build-orchestration/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: describes
+    status: exists
+  - path: "templates/skills/building-epics/SKILL.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The serialization guard must be scoped to the git write portion of the commit only (writing loose objects, updating the index/refs); non-git work of each supervisor must remain free to run in parallel and must not be held behind the guard."
+  - "Acquire/release must be safe across separate OS processes (concurrent ticket-supervisors are independent processes sharing one worktree), not merely across threads in one process."
+  - "The guard must guarantee mutual exclusion under contention: at no instant may two holders be inside the git write portion concurrently."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3): wrap filesystem/OS calls that acquire or release the guard in try/except with a specific exception type and log at WARNING or higher; never swallow an acquisition failure silently."
+  - "The guard must be released on every exit path of the git write portion, including error and exception paths, so a failing commit does not strand the guard (the stranded-guard release path is exercised by BO-1600b-2)."
+  - "Acquiring an uncontended guard must add negligible latency to a commit (well under 100ms) so serialization does not materially slow a drive."
+  - "Must be discoverable/invokable from the epic build-orchestration layer where supervisor commit phases are dispatched (see templates/skills/building-epics/SKILL.md and the templates/workflows-js/build-epic.js Step-0 worktree-guard precedent, BO-100d); do not bury the primitive where only one call site can reach it."
+delivers_to:
+  agent: python-coder
+  contract: "A serialization primitive (a single named mutual-exclusion guard scoped to the shared worktree's git write portion) that every supervisor's commit phase acquires before writing git objects/index/refs and releases after. This guard is the single load-bearing primitive consumed by the wait-then-proceed behavior (BO-1600a-2) and the no-corruption guarantee (BO-1600a-3). Distinct from BO-100c (pre-dispatch file-conflict scheduling) and BO-200 (single-ticket atomic commit)."
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Origin: EPIC-FinalizeFeatureHardening retrospective KI-1 — parallel
+  ticket-supervisors committing into one shared worktree produced a zero-byte
+  loose object that corrupted the index. PREVENTION-ONLY per the BO-1600 goal
+  and PROJECT_CONTEXT (no detect-and-recover sibling authored here; detection
+  lives separately under BO-1600c). Serialization is scoped to the git write
+  portion only so parallelism of the non-git work is preserved.

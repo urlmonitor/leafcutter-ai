@@ -1,0 +1,43 @@
+id: KM-KGS-100d-2-i
+readiness: approved
+priority: high
+title: "A relationship pointing at a missing target is dropped, not rendered as a dead end"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100d.yaml"
+criteria: |
+  Given an acceptance criterion KM-EX-020 whose depends_on names KM-EX-999, an id
+    that has no corresponding node in the map
+  When the knowledge map's edges are validated
+  Then the candidate edge from KM-EX-020 to KM-EX-999 is not present in the validated
+    edge set
+  And the map still contains every edge of KM-EX-020 whose target does resolve to a
+    real node
+  And the build does not fail solely because one relationship named a missing target
+depends_on:
+  - KM-KGS-100d-2
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "A single unresolved edge target must cause only that one edge to be dropped (fail-soft per edge); it must never raise or abort the build — the surviving edges of the same source node must all remain"
+  - "Dropping must be deterministic and idempotent: the same node/edge inputs always yield the same validated edge set across runs"
+  - "The drop must happen via the same full-node-set membership filter used in KM-KGS-100d-2, not via a special-case for depends_on or for the acs surface"
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100d-2
+  contract: "Edge validation that keeps only edges whose source and target both resolve to real nodes in the full node set"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-ACCodeTraceabilityGraph/15_TICKET-20260622-KM-KGS-100d-2-i.md

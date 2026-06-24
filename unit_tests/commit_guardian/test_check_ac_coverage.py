@@ -16,13 +16,13 @@ import textwrap
 import unittest
 
 
-# Import the module under test from templates/commit-guardian/.
+# Import the module under test from templates/scripts/commit_guardian/.
 # We add the module's parent to sys.path so Python can find it.
 import importlib.util as _ilu
 import pathlib as _pl
 
 _REPO_ROOT = _pl.Path(__file__).resolve().parent.parent.parent
-_HOOK_PATH = _REPO_ROOT / "templates" / "commit-guardian" / "check_ac_coverage.py"
+_HOOK_PATH = _REPO_ROOT / "templates" / "scripts" / "commit_guardian" / "check_ac_coverage.py"
 
 try:
     _spec = _ilu.spec_from_file_location("check_ac_coverage", _HOOK_PATH)
@@ -278,7 +278,7 @@ class TestEndToEndCheckAcCoverage(unittest.TestCase):
         repo_root = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "..", "..")
         )
-        hook_path = os.path.join(repo_root, "templates", "commit-guardian", "check_ac_coverage.py")
+        hook_path = os.path.join(repo_root, "templates", "scripts", "commit_guardian", "check_ac_coverage.py")
         result = subprocess.run(
             [sys.executable, hook_path, "--ac-dir", ac_dir, "--test-dir", test_dir],
             capture_output=True,

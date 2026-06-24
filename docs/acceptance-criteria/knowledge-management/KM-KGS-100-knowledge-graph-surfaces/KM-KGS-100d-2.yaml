@@ -1,0 +1,42 @@
+id: KM-KGS-100d-2
+readiness: approved
+priority: high
+title: "Every edge points to a node that actually exists"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100d.yaml"
+criteria: |
+  Given a knowledge map built from all declared surfaces, including the acs surface
+  When the map's edges are validated
+  Then every edge has both a source node and a target node that exist in the node set
+  And no edge points to a target that is not a real node (no dead-end connections)
+  And this holds for edges contributed by any declared surface, checked against the
+    full node set rather than a hand-maintained allow-list of target ids
+depends_on:
+  - KM-KGS-100d
+  - KM-KGS-100d-1
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Edge validation must check both source_id and target_id against the full node-id set (including synthetic component hub nodes created during _collect_all), exactly as the existing phantom-edge filter does — no hand-maintained allow-list of target ids may be introduced"
+  - "Component-membership edges target synthetic hub nodes that are created before the filter runs; the validation ordering must preserve that hubs exist in the node set at filter time so legitimate component edges are not dropped as dead ends"
+  - "Validation must apply uniformly to edges from every declared surface, including the new acs surface, with no surface-specific exemption"
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100d-1
+  contract: "Per-declared-surface edge validation that checks each surface's edges against the full node set"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: [KM-KGS-100d-2-i]
+implemented_by:
+- tickets/00_inbox/epics/EPIC-ACCodeTraceabilityGraph/14_TICKET-20260622-KM-KGS-100d-2.md

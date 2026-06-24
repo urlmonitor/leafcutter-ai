@@ -1,0 +1,53 @@
+id: GE-111d-5
+readiness: approved
+priority: high
+title: "Sequence diagram: developer reconciles via update or confirm and re-commits"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111d.yaml"
+criteria: |
+  Given the reconciliation interaction spans the developer, the guardrail, and
+    the AC store
+  When a sequence diagram of reconciliation is produced
+  Then the diagram shows the initial blocked commit with the applicable routes
+  And it shows the update branch: developer edits implemented_by, re-stages, the
+    guardrail re-checks and returns a clean verdict, the commit proceeds
+  And it shows the confirm branch: developer records the durable confirmation, the
+    guardrail re-checks against the confirmation and returns a clean verdict, the
+    commit proceeds
+depends_on:
+  - GE-111d
+  - GE-111d-1
+  - GE-111d-2
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111d.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+it_requirements:
+  - "Author as a mermaid sequenceDiagram in a docs/architecture/ markdown file following the c{level}-{seq}-{slug} diagram naming and frontmatter conventions (diagram_type: sequence) enforced by check_diagram_naming.py / check_doc_frontmatter.py."
+  - "Stay within the mermaid complexity budget (check_mermaid_complexity.py: max_participants 8, max_interactions 25); model the two branches (update / confirm) with an alt fragment, not duplicated participants."
+  - "Include a parent-link back to the component doc per check_mermaid_parent_link.py. The confirm branch must depict re-check against the stored amended_by confirmation fingerprint per GE-111d-2."
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-111d-2
+  contract: "The two reconciliation branches the sequence diagram depicts"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC satisfying GE-111d documentation_triggers [..., sequence-diagram].
+
+  IT-PO enrichment (2026-06-22): architecture-diagram-author retained.
+  it_requirements pin the mermaid/diagram commit-guardian conventions and that
+  the confirm branch reflect the GE-111d-2 fingerprint re-check.

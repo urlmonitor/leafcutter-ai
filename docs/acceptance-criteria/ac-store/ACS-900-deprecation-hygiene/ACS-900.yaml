@@ -1,0 +1,67 @@
+id: ACS-900
+readiness: approved
+priority: high
+title: "When you retire a requirement, the code it claimed can't quietly stay behind"
+component: ac-store
+level: L0
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Retire a requirement and trust the work it tracked is truly gone — no orphaned code lingering.
+
+  Today, when a requirement is marked deprecated or superseded, nothing checks
+  whether the code that requirement claimed to implement was ever removed. The
+  source files quietly stay behind, still in the product, no longer tied to any
+  live requirement — and nobody notices until much later. This goal closes that
+  gap. The moment a requirement is retired, the system verifies that the source
+  it listed as its implementation has been removed or correctly reconciled. If
+  live code is still hiding behind a retired requirement, you find out right then,
+  with a clear message telling you exactly what to remove. The result is
+  traceability you can trust in both directions: a retired requirement guarantees
+  retired code, so dead code can never silently outlive the requirement it served.
+depends_on: []
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: [ACS-900a, ACS-900b, ACS-900c, ACS-900d, ACS-900e]
+implemented_by: []
+notes: |
+  User-confirmed enforcement decision: this is a BLOCKING pre-commit hook, NOT
+  audit-only. The blocking posture was decided up front (not a default the IT-PO
+  may relax to warn). The IT-PO should still apply the standard fail-open-on-
+  script-error convention (a hook crash, parse error, or git failure must exit 0
+  with a stderr warning so a script bug never hard-blocks an unrelated commit) —
+  fail-open on internal error is orthogonal to the always-block-on-real-violation
+  product decision.
+
+  SCOPE / COMPLEMENT (load-bearing through decomposition — see ACS-900e): this is
+  the lifecycle-ENFORCEMENT complement to the existing audit-only tooling. Today
+  scripts/ac_store/cross_reference_audit.py can BACKFILL implemented_by links but
+  cannot DETECT stale code left behind when an AC is retired. ACS-900 adds the
+  detection-at-commit-time half. Do NOT re-implement backfill here, and do NOT
+  duplicate cross_reference_audit.py's traversal — ACS-900e exists specifically to
+  scope this work against that existing tool so the two are complementary, not
+  overlapping.
+
+  PLACEMENT rationale (reuse the ACS-800 precedent): minted as a NEW root L0
+  (ACS-900 = next free hundred; 100-800 are taken) rather than an L1 under ACS-200
+  (automated-verification) or ACS-400 (ac-governance). ACS-400 governs WHO may
+  edit a requirement's definition (criteria-field authorship). ACS-200 governs
+  test COVERAGE of LIVE ACs. Neither covers the code-side lifecycle of a RETIRED
+  AC. Distinct concern => sibling L0, consistent with the ac-tree-split
+  horizontal-split guidance and the ACS-800 placement note.
+
+  "deprecated" vs "superseded" status forms: the schema accepts status: deprecated,
+  superseded_by (canonical), and superseded (older alias). The enforcement must
+  treat ALL THREE retired-status forms as triggers (per ac-schema.md Status
+  Lifecycle). For superseded_by, "reconciled" legitimately includes re-pointing
+  implemented_by to the successor AC named in the superseded_by field, not only
+  outright code deletion — see ACS-900d.

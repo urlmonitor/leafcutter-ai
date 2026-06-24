@@ -2,8 +2,10 @@ id: KM-KQS-015
 title: "paths.json contains a surfaces top-level key with all eight surface entries"
 component: knowledge-management
 level: L2
-status: active
+status: superseded_by
 work_status: todo
+readiness: reviewed
+priority: low
 criteria: |
   Given config/paths.json in the repository
   When the file is parsed as JSON
@@ -33,7 +35,7 @@ doc_links:
     status: exists
 origin_agent: "business-analyst-v3"
 created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/04a_surfaces_config_wiring.md"
-superseded_by: null
+superseded_by: KM-KGS-100c
 amended_by: []
 covered_by: []
 implemented_by: []

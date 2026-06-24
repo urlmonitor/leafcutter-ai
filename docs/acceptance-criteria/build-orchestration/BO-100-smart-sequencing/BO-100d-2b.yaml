@@ -1,0 +1,45 @@
+id: BO-100d-2b
+readiness: approved
+priority: high
+title: "build-feature.md prose lets the drive proceed when the telemetry sink is reachable"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given /build-feature is invoked for an epic that has at least one ready ticket,
+  And the pre-drive feedback-sink reachability probe appends one probe line to
+    the telemetry sink at debugging/logs/agent_telemetry.jsonl,
+  When the probe returns a successful (zero) result,
+  Then the drive proceeds past the pre-dispatch stage and dispatches
+    ticket-supervisors according to the normal sequencing rules,
+  And no pre-drive sink error is shown to the operator,
+  And the only content the probe added to the sink is its single probe line.
+depends_on: [BO-100d-2, BO-100d-1a]
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "In templates/workflows/build-feature.md, on a successful probe the prose must proceed from the new pre-dispatch gate to Step B (dispatch) unchanged, with no sink error printed — the gate adds a guard, not a sequencing change."
+  - "The prose must invoke the SAME shared probe semantics from BO-100d-1a so the success path matches the build-epic.js success path (dual-surface parity, the KI-3 lesson)."
+  - "Deployed/template parity (ADR-001 self-hosting): edit the build-feature.md package source and verify the deployed slash-command copy via the build.py round-trip — never edit only one side."
+  - "Apply the Prompt-Quality Checklist: keep any bash probe snippet single-command per the shell convention; do not introduce inline implementation work blocked by inline_work_guard.py."
+delivers_to: null
+expects_from:
+  ac_id: BO-100d-1a
+  contract: "The shared pre-drive sink probe helper's success (exit-0) path. The build-feature.md prose gate proceeds to Step B dispatch only when this pass result is returned, ensuring identical proceed-on-success behavior across both surfaces."
+origin_agent: it-po
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Split from BO-100d-2 by it-po. Command-prose surface
+  (templates/workflows/build-feature.md) success path. Sibling BO-100d-2a owns
+  the build-epic.js success path; both reuse the BO-100d-1a probe helper.
+  Lineage: TICKET-20260527-FeedbackSinkPreDriveCheck.

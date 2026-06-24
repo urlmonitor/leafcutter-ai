@@ -1,0 +1,39 @@
+id: INF-1100b-1-i
+title: "A hand-off path that already agrees with config is used unchanged and raises no contradiction"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a hand-off names a test location of "tests/etl/test_pipeline.py",
+  And the project configuration resolves the test for that area to the same
+    location "tests/etl/test_pipeline.py",
+  When an agent acts on the hand-off to place the test,
+  Then the test is placed at "tests/etl/test_pipeline.py",
+  And no contradiction is reported because the hand-off and the configuration agree.
+depends_on:
+  - INF-1100b-1
+doc_links:
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Surface is the test-authoring agent template prose: when the hand-off path equals the config-resolved path, the agent uses it unchanged and emits NO contradiction report — the override and the report must both be conditional on an actual disagreement."
+  - "Path comparison must be robust to trivial formatting differences (e.g. trailing slash) so an equivalent path is not mistaken for a contradiction; state the WHAT (no false-positive contradictions), let llm-expert pick the comparison wording."
+delivers_to: null
+expects_from:
+  ac_id: INF-1100b-1
+  contract: "The same override/compare logic from INF-1100b-1; this edge case exercises the agreeing branch where no override and no report occur."
+origin_agent: business-analyst-v3
+created: 2026-06-23
+amended_by:
+  - reason: "it-po-v3 technical enrichment: llm-expert (template prose, no-false-positive edge). Criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Edge case: the override must not raise spurious contradictions when the hand-off is already correct."

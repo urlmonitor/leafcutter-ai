@@ -4,7 +4,7 @@ GOAL: Unit tests for assemble_epic_folder() in goal_to_epic.py.
       Verifies EPIC folder creation, naming, numeric prefixes,
       and the zero-leaf error guard.
 TICKET: EPIC-GoalToEpic/01_tree-traversal-ticket-generation.md
-COVERS: ACD-1200a-3, ACD-1200a-3-i
+COVERS: ACD-1200a-3, ACD-1200a-3-i, ACD-1200a-9-i
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _SCRIPTS_DIR = _REPO_ROOT / "scripts"
 sys.path.insert(0, str(_SCRIPTS_DIR))
 
-from goal_to_epic import assemble_epic_folder, ZeroLeafError, EpicFolderConflictError  # noqa: E402
+from goal_to_epic import assemble_epic_folder, ZeroLeafError  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -112,22 +112,32 @@ class TestAssembleEpicFolder:
             f"Expected EPIC-GoalToEpicPipeline, got {result_path.name}"
         )
 
-    def test_ac3_conflict_existing_folder_raises(self, tmp_path: Path) -> None:
-        # covers: ACD-1200a-3
-        """ACD-1200a-3: If EPIC folder already exists, raise ConflictError (not overwrite)."""
+    def test_ac3_existing_folder_is_reused_in_place(self, tmp_path: Path) -> None:
+        # covers: ACD-1200a-9-i
+        """ACD-1200a-9-i: An existing EPIC folder is reused/overwritten in place,
+        not raised on and not renamed to a sibling.
+
+        This supersedes the original ACD-1200a-3 "raise on conflict" contract:
+        assemble_epic_folder now mkdir(exist_ok=True)s the target folder and
+        writes the ticket files inside it (EPIC-GoalToEpicBugfixes/02). The
+        EpicFolderConflictError symbol is retained for import compat but is no
+        longer raised by this function.
+        """
         inbox_dir = tmp_path / "tickets" / "00_inbox"
-        # Use a space-separated title so PascalCase conversion produces "Test Feature"
-        # -> "EPIC-TestFeature" (one word per space-split token, each capitalised)
-        (inbox_dir / "epics" / "EPIC-TestFeature").mkdir(parents=True, exist_ok=True)
+        # Space-separated title -> "EPIC-TestFeature", matching the pre-created folder.
+        existing = inbox_dir / "epics" / "EPIC-TestFeature"
+        existing.mkdir(parents=True, exist_ok=True)
         tickets = [_make_ticket(tmp_path, "ticket_1.md")]
 
-        with pytest.raises((EpicFolderConflictError, FileExistsError, OSError)) as exc_info:
-            assemble_epic_folder(tickets, "test feature", inbox_dir)
+        # Must NOT raise — the pre-existing folder is reused in place.
+        result_path = assemble_epic_folder(tickets, "test feature", inbox_dir)
 
-        # Should raise some kind of conflict exception, not silently overwrite
-        error_msg = str(exc_info.value).lower()
-        assert "conflict" in error_msg or "exists" in error_msg or "already" in error_msg, (
-            f"Expected conflict error message, got: {exc_info.value}"
+        assert result_path == existing, (
+            f"Expected the existing folder to be reused in place, got {result_path}"
+        )
+        placed_files = sorted(result_path.glob("*.md"))
+        assert len(placed_files) == 1, (
+            f"Expected the ticket to be written into the reused folder, got {placed_files}"
         )
 
 

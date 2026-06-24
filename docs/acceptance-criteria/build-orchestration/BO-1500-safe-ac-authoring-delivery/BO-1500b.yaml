@@ -1,0 +1,29 @@
+id: BO-1500b
+readiness: approved
+priority: high
+title: "An interruption mid-authoring never loses your work"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Your authoring progress is saved durably as you go, so a crash or interruption
+  never costs you the work you have already done.
+
+  If something stops the workflow partway through, what you completed up to that
+  point is preserved and recoverable -- you pick up where you left off instead of
+  starting over.
+depends_on: [BO-1500]
+documentation_triggers: [state-diagram]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: [BO-1500b-1, BO-1500b-2, BO-1500b-3, BO-1500b-4]
+implemented_by: []

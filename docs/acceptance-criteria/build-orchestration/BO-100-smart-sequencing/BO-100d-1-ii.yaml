@@ -1,0 +1,45 @@
+id: BO-100d-1-ii
+readiness: approved
+priority: high
+title: "Only a genuine write failure after remediation hard-blocks the drive"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given /build-feature is invoked for an epic with at least one ready ticket,
+  And the pre-drive feedback-sink reachability probe has already attempted its
+    directory-creation remediation for debugging/logs/,
+  When a retried append to debugging/logs/agent_telemetry.jsonl still returns a
+    non-zero result for a reason other than the directory being absent
+    (for example the path exists but is not writable, or is a directory, or the
+    filesystem is read-only),
+  Then the drive is hard-blocked at the pre-dispatch stage,
+  And no ticket-supervisor is dispatched,
+  And the operator message names the sink path debugging/logs/agent_telemetry.jsonl
+    and describes the genuine write failure that remediation could not resolve.
+depends_on: [BO-100d-1a]
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "After the mkdir-and-reprobe remediation, a still-failing append for any non-directory-absent cause (not-writable / path-is-a-directory / read-only filesystem) must hard-block the drive at the pre-dispatch stage with no dispatch."
+  - "The genuine-failure classification distinguishes these causes from directory-absence; only directory-absence is auto-remediated (BO-100d-1-i) — everything else hard-blocks here. This classification lives in the single shared probe helper (BO-100d-1a), not duplicated per surface."
+  - "The operator message must name debugging/logs/agent_telemetry.jsonl and describe the specific genuine failure remediation could not resolve, so the operator can fix it before re-running."
+  - "Handle the probe I/O gracefully per the project error handling policy (CLAUDE.md Rules 1-3): catch the specific OS/IO exceptions, log at WARNING, surface the operator message rather than swallowing — do not let the hard-block path mask the underlying cause."
+  - "Dual-surface parity (the KI-3 lesson): the genuine-write-failure hard-block must fire identically whether the drive enters via build-epic.js or via the build-feature.md prose gate."
+delivers_to: null
+expects_from:
+  ac_id: BO-100d-1a
+  contract: "The shared pre-drive sink probe helper exposing the post-remediation re-probe and its genuine-write-failure classification (not-writable / is-a-directory / read-only FS, distinct from directory-absent), returning the typed blocked result with sink_path + remediation. This L3 specifies the genuine-failure hard-block branch of that helper."
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by:
+  - reason: "it-po enrichment: re-pointed depends_on from the now-superseded BO-100d-1 to the surviving BO-100d-1a (the shared probe helper); added expects_from contract, it_requirements, and doc_links."
+superseded_by: null
+covered_by: []
+implemented_by: []

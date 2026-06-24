@@ -1,0 +1,82 @@
+id: ACS-100h-7
+title: "Epic scaffolding validates AC-tree limits before generating any ticket stub"
+component: ac-store
+level: L2
+status: superseded_by
+req_status: active
+work_status: todo
+criteria: |
+  Given an author triggers /create-epic to scaffold a new epic whose deliverables
+    would add ACs (or ticket stubs deriving from ACs) under a target AC subtree,
+  When the scaffold step runs, BEFORE any Master_Plan or ticket stub file is written,
+  Then it evaluates the AC-tree structure limits for the target subtree using the
+    same ID-derived parent child-counting rule the check-ac-tree-limits pre-commit
+    hook applies (max direct L1 children under an L0, max direct L2 children under
+    an L1; honouring any child_limit_override on the parent),
+  And if a limit violation exists, no ticket stub file is generated and the
+    scaffold is blocked with an error directing the author to split the AC tree
+    first (via the ac-tree-split procedure),
+  And if no violation exists, scaffolding proceeds to stub generation as normal.
+
+  This prevents mid-drive structural renames (e.g. GE-100d/e/f -> GE-101a/b/c)
+  that would force renaming YAML files and updating implemented_by / depends_on /
+  covered_by references across downstream tickets after stubs already exist.
+depends_on: [ACS-100h]
+doc_links:
+  - path: templates/agents/create-epic.md
+    relationship: specifies
+    status: exists
+  - path: templates/skills/ac-tree-split/SKILL.md
+    relationship: related
+    status: exists
+  - path: templates/scripts/commit_guardian/check_ac_limits.py
+    relationship: describes
+    status: exists
+  - path: scripts/ac_store/ac_parent_id.py
+    relationship: related
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+assigned_agent: null
+estimated_complexity: M
+it_requirements:
+  - "The scaffold-time check MUST reuse the same ID-derived parent child-counting logic as the check-ac-tree-limits pre-commit hook (check_ac_limits.py + derive_parent_id), so the two enforcement points never drift"
+  - "The check MUST run before any Master_Plan or ticket stub file is written; on violation, zero scaffold files are created (no partial scaffold left behind)"
+  - "The check MUST honour child_limit_override on the parent when computing the effective limit"
+delivers_to: null
+expects_from: null
+readiness: approved
+priority: high
+origin_agent: it-po
+created: 2026-06-22
+amended_by: []
+superseded_by:
+  - ACS-100h-7a
+  - ACS-100h-7b
+covered_by:
+  - ACS-100h-7a
+  - ACS-100h-7b
+  - ACS-100h-7-i
+implemented_by: []
+notes: |
+  Retrospective finding EPIC-CodeQualityHooks KI-4 (technical route). Authored
+  directly by the IT-PO as a technical-constraint AC under ACS-100h.
+
+  Split into ACS-100h-7a (python-coder — the reusable scaffold-time limit check,
+  a .py callable shared with the check-ac-tree-limits hook) and ACS-100h-7b
+  (llm-expert — wiring /create-epic to run the check before stub generation and
+  block on violation). The L3 edge ACS-100h-7-i covers the tree-already-at-limit /
+  cannot-auto-split case. Split rationale: the constraint crosses two owned
+  surfaces (Python check logic + create-epic agent-template prose); create-epic is
+  is_ticket_phase: false (supervisor tier) so it is NOT a dispatchable ticket-phase
+  agent — editing its template body is llm-expert work.
+
+  STOPGAP LINEAGE: This AC was authored while the ACS-100h tree was ITSELF over the
+  L1 child limit (6 ID-derived L2 children, h-1..h-6, against the limit of 5).
+  Landing ACS-100h-7 raised that to 7, handled via child_limit_override: 7 on
+  ACS-100h (the documented escape hatch — see ACS-100h-6 scenario 3). The
+  tree-saturation hit here is itself an instance of the very problem ACS-100h-7
+  prevents at scaffold time. Per the ac-store PROJECT_CONTEXT (ACS-800), this
+  override is a TEMPORARY stopgap to be RETIRED once ACS-800e lands (tooling counts
+  children from metadata, not ID strings) — do not let it become permanent.

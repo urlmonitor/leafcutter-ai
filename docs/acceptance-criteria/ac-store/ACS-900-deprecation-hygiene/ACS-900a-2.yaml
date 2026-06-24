@@ -1,0 +1,64 @@
+id: ACS-900a-2
+readiness: approved
+priority: high
+title: "Orphaned-code check inspects the retired AC's implemented_by file list"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given an AC has transitioned to a retired state in the staged diff,
+    And that AC's implemented_by list names two source paths,
+    one with a "#anchor" suffix and one without,
+  When the deprecation-hygiene hook evaluates whether the claimed code is gone,
+  Then it treats each implemented_by entry as a target to inspect,
+  And an entry without an anchor is considered "still present" when the named
+    file still exists in the staged tree,
+  And an entry with a "#anchor" suffix is considered "still present" when the
+    named file exists in the staged tree AND the anchor (function/section name)
+    is still found in that file,
+  And an entry is considered "gone" when its file is absent from the staged tree
+    (deleted in the same commit) or, for an anchored entry, when the anchor is
+    no longer found in the surviving file.
+depends_on: [ACS-900a]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: scripts/ac_store/cross_reference_audit.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Each implemented_by entry MUST be parsed into (file_path, optional #anchor). The anchor split is on the first '#'; an entry with no '#' is a bare file target. This anchor parsing is NEW — cross_reference_audit.py reads implemented_by but does not parse the #anchor suffix today."
+  - "Presence MUST be evaluated against the STAGED tree (the post-commit state), so a file deleted in the same commit is correctly seen as absent. Read the staged blob (e.g. git show :<path> / index), not the working-tree-only or HEAD-only copy, so the verdict matches what the commit will actually contain."
+  - "Anchor presence is a substring/identifier search for the anchor token within the surviving file's staged content; the check MUST NOT attempt language-aware symbol resolution (no parser/AST dependency) — file existence + anchor-token-found is the floor, keeping the hook dependency-free and portable."
+  - "Path resolution MUST treat implemented_by paths as repo-root-relative (as stored), resolving against the project root the same way the existing AC-store tooling does; an unresolvable or malformed path is an internal error and MUST fail open (WARNING + treat as inconclusive), never a silent block."
+  - "Must produce a deterministic per-entry verdict (present / gone) given the same staged tree — no dependence on filesystem iteration order or environment."
+  - "Must log read failures at WARNING per the project error-handling policy and fail open (a file that cannot be read is inconclusive, not a block)."
+delivers_to:
+  agent: python-coder
+  contract: "Per-implemented_by-entry presence verdict as a mapping {entry_string -> 'present'|'gone'} for the retired AC, consumed by the block decision (ACS-900b-1) and the clean-pass rules (ACS-900d-1/d-2)"
+expects_from:
+  ac_id: ACS-900a-1
+  contract: "The retired AC record (id + status + implemented_by list) whose status transitioned active->retired in this commit"
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Defines what "the claimed code is gone" means against the implemented_by file
+  list. "No longer references the retired behavior" from ACS-900a is operationalized
+  as: file absent, or anchored entry whose anchor is gone. The legitimate-pass
+  cases (deletion, empty list, re-point to successor) are owned by ACS-900d.
+
+  IT-PO enrichment (2026-06-22): the #anchor parsing is the one genuinely NEW
+  resolution step beyond cross_reference_audit.py (which reads implemented_by but
+  never splits the anchor). Pinned the staged-tree evaluation surface and the
+  dependency-free floor (substring search, no AST) in it_requirements so the
+  python-coder does not reach for jcodemunch/parsing. delivers_to refined to a
+  concrete verdict-map shape.

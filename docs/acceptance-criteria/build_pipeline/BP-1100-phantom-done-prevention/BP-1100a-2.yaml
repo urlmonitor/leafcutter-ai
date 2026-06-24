@@ -1,0 +1,45 @@
+id: BP-1100a-2
+title: "Ticket-supervisor pre-dispatch read halts a behavior ticket with only documentation in files_touched"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket whose acceptance criterion describes runtime behavior and whose
+  files_touched lists only documentation surfaces (SKILL.md and ADRs) with no file
+  under scripts/workflows/ or templates/workflows-js/,
+  When ticket-supervisor performs its read-ticket step before dispatching the first
+  coder,
+  Then ticket-supervisor surfaces a structured blocker that names the ticket and
+  states the behavioral criterion has no executable file in files_touched,
+  And the first coder phase is not dispatched until files_touched is corrected to
+  include the executable surface.
+depends_on:
+  - BP-1100a
+doc_links:
+  - path: docs/retrospectives/EPIC-CommitAcOutputPerStage.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: workflow-architect
+estimated_complexity: M
+it_requirements:
+  - "Ticket-supervisor's read-ticket step must apply the same behavioral-vs-documentation classification of acceptance criteria used by the refinement lens (BP-1100a-1)."
+  - "When a behavioral criterion has no executable surface in files_touched, ticket-supervisor must emit a blocker (named ticket + reason) and must not advance to the coder phase."
+  - "This is a second, independent enforcement point from BP-1100a-1 so a ticket that bypassed refinement is still caught at drive time."
+delivers_to: null
+expects_from:
+  ac_id: BP-1100a-1
+  contract: "Behavioral-vs-documentation criterion classification rule applied at refinement time, reused at the supervisor read step"
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

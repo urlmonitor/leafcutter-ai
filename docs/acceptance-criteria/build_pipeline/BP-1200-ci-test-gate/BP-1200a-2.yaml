@@ -1,0 +1,69 @@
+id: BP-1200a-2
+title: "The CI test command is documented as the single authoritative way to run the suite from a clean checkout"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the project documentation,
+  When a person who has never set up the project locally looks for how to run
+    the test suite,
+  Then there is a single documented command sequence that, starting from a clean
+    checkout, installs the development dependencies, performs any required
+    preparation step, and runs the full suite over both the integration and unit
+    test directories
+  And that documented sequence is the same sequence the continuous-integration
+    check executes, so following it locally reproduces the CI result
+  And the documentation does not assume the reader already has any locally
+    generated build output present.
+depends_on:
+  - BP-1200a
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-016-ci-fresh-clone-test-dependencies.md
+    relationship: depends-on
+    status: planned
+  - path: .github/workflows/ci.yml
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "The documented command sequence MUST be byte-for-byte reproducible from the steps the CI test job in .github/workflows/ci.yml actually runs (install dev deps from requirements-dev.txt -> the build step + install_shims shim bridge -> pytest over the integration + unit test directories). The doc and the workflow must not drift: state the command once and have the doc reflect the workflow, treating the workflow as the source of truth for the executed steps."
+  - "Must be written for a reader on a brand-new clone with NO local build outputs present — every prerequisite must be explicit; do not assume scripts/commit_guardian/ or other gitignored build outputs already exist (they are produced by the documented build+shim step, per the decided Approach 1)."
+  - "The preparation step is DECIDED (final gate): the documented sequence includes the build step that produces .leafcutter/scripts/ plus the install_shims shim bridge to scripts/. Document that step explicitly rather than leaving it abstract."
+  - "Place the canonical command where a newcomer looks first (project README / CONTRIBUTING / the build-pipeline reference doc) and cross-link it so there is exactly ONE authoritative location, not duplicated divergent copies."
+delivers_to:
+  ac_id: BP-1200a-1
+  contract: "The single authoritative documented command sequence (install dev deps -> build step + install_shims shim bridge -> run full suite over the integration + unit test directories) that BP-1200a-1 asserts runs green on a fresh clone, mirroring the steps in .github/workflows/ci.yml"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Re-routed assigned_agent python-coder -> documentation-expert (this AC's surface is docs/**/*.md prose, not source code — it documents the command, it does not implement it; documentation-expert owns docs and is is_ticket_phase: true). Added it_requirements (doc-mirrors-ci.yml no-drift, fresh-clone audience, single authoritative location), an architecture doc_link and a describes-link to ci.yml, and the planned-ADR link. Criteria and delivers_to unchanged."
+    by: it-po
+  - reason: "final-gate-decision-applied"
+    entry: "Set readiness: approved and priority: high per the final user gate. Made the prepare step concrete (build step + install_shims shim bridge, per decided Approach 1) in the it_requirements and the delivers_to contract; the prepare step is no longer described as open/optional. Criteria unchanged."
+    by: it-po
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DECIDED (final gate): the documented sequence includes a build step + shim
+  bridge (Approach 1). The criterion requires that whatever CI runs is documented
+  and identical to what CI runs.
+  IT-PO note: the BA assigned python-coder, but the criteria are entirely about
+  documentation existing and matching CI — there is no code change here. The
+  authoritative command lives in .github/workflows/ci.yml (the CI job edited by
+  BP-1200b-1); this AC's job is to DOCUMENT that command in prose. Surface =
+  docs -> documentation-expert.

@@ -2,8 +2,10 @@ id: KM-KQS-016
 title: "Each surface path in paths.json resolves to an existing directory or file"
 component: knowledge-management
 level: L2
-status: active
+status: superseded_by
 work_status: todo
+readiness: reviewed
+priority: low
 criteria: |
   Given config/paths.json contains the "surfaces" section with eight entries
   When each surface entry's "path" value is resolved relative to the project root
@@ -29,7 +31,7 @@ doc_links:
     status: exists
 origin_agent: "business-analyst-v3"
 created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/04a_surfaces_config_wiring.md"
-superseded_by: null
+superseded_by: [KM-KGS-100c, KM-KGS-100d]
 amended_by: []
 covered_by: []
 implemented_by: []

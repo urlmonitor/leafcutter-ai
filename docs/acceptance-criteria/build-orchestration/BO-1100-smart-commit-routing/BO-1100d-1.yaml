@@ -20,7 +20,7 @@ criteria: |
   And the log entry is appended to a persistent shape-tracking store
     (not lost when the agent invocation ends),
   And the log entry includes a timestamp for the occurrence.
-depends_on: [BO-1100d, BO-1100a-3]
+depends_on: [BO-1100d]
 doc_links:
   - path: templates/commit-guardian/commit_guardian.json
     relationship: describes

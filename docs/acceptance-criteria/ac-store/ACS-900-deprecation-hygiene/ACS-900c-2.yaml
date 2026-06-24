@@ -1,0 +1,48 @@
+id: ACS-900c-2
+readiness: approved
+priority: high
+title: "How-to guide documents the block message and how to act on it"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the actionable block message (ACS-900c-1) is implemented,
+  When a contributor reads the documentation after hitting the block,
+  Then a how-to guide shows an example block message, explains each element
+    (retired AC id, new status, surviving file paths, violated rule, the two
+    remedies), and gives step-by-step instructions for each remedy: removing
+    the orphaned code, or re-pointing implemented_by to the named successor AC.
+depends_on: [ACS-900c-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/how-to/ac-traceability-store.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Satisfies the [how-to] documentation_trigger on parent L1 ACS-900c. The guide MUST include a verbatim example of the actual block message (copied from the implemented ACS-900c-1 output, not paraphrased) so the reader recognises it when they hit it."
+  - "MUST give concrete step-by-step instructions for BOTH remedies: (a) remove the orphaned code (delete the file or drop the implemented_by entry), and (b) for a superseded_by retirement, re-point implemented_by to the successor AC named in superseded_by — noting that implemented_by is an OPEN field any agent may edit (per ACS-400b), so re-pointing is not blocked by AC governance."
+  - "Doc frontmatter MUST satisfy check_doc_frontmatter.py for docs/** (title, type how-to, status, created, last_updated, components); prefer extending docs/how-to/ac-traceability-store.md and coordinating with ACS-900a-3 / ACS-900b-3 / ACS-900d-3 so the deprecation-hygiene how-to material reads as one coherent guide."
+  - "Documentation MUST track the IMPLEMENTED message format (depends_on ACS-900c-1) — keep the example in sync with the real output."
+delivers_to: null
+expects_from:
+  ac_id: ACS-900c-1
+  contract: "The implemented stdout block-message format (with the two status-driven remedies) that the how-to guide documents verbatim"
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC for ACS-900c's how-to trigger.
+
+  IT-PO enrichment (2026-06-22): pinned the verbatim-example requirement, the
+  open-field note (re-pointing implemented_by is permitted by ACS-400b governance),
+  and the frontmatter/coherence constraint shared with the other ac-store how-to
+  ACs. Satisfies ACS-900c documentation_triggers [how-to] — S7b gate PASSES for ACS-900c.

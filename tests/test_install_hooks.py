@@ -258,7 +258,14 @@ class TestInstallHooksPrecommitFailureIsNonfatal(unittest.TestCase):
     """When pre-commit install raises CalledProcessError, install_hooks returns 'failed' without raising."""
 
     def test_install_hooks_precommit_failure_is_nonfatal(self):
+        # covers: BP-007
         """pre-commit install failure must be caught and return 'failed', not propagate.
+
+        Exercises BP-007's loud-failure clause: when target_root IS a git repo
+        and 'pre-commit install' genuinely fails, install_hooks returns 'failed'.
+        The mock therefore reports the target as a git repo (rev-parse --git-dir
+        exits 0) so execution reaches the pre-commit step rather than being
+        short-circuited by the not-a-git-repo guard.
 
         Must implement:
             - pre-commit install raises subprocess.CalledProcessError
@@ -274,6 +281,10 @@ class TestInstallHooksPrecommitFailureIsNonfatal(unittest.TestCase):
                 if isinstance(cmd, list) and "config" in cmd and "--get" in cmd and "core.hooksPath" in cmd:
                     result.returncode = 1  # key absent
                     result.stdout = ""
+                    return result
+                if isinstance(cmd, list) and "rev-parse" in cmd and "--git-dir" in cmd:
+                    result.returncode = 0  # target IS a git repo (BP-007 guard passes)
+                    result.stdout = ".git"
                     return result
                 elif isinstance(cmd, list) and len(cmd) > 0 and cmd[0] == "pre-commit":
                     raise subprocess.CalledProcessError(

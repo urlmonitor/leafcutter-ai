@@ -1,0 +1,37 @@
+id: ACS-900a
+readiness: approved
+priority: high
+title: "Retiring a requirement triggers a check that its claimed code is gone"
+component: ac-store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Change a requirement to retired and the system checks its implementing code is gone.
+
+  When an AC's status changes to deprecated or superseded, the system inspects
+  the source files that AC listed as its implementation and determines whether
+  that code has been removed or no longer references the retired behavior.
+depends_on: [ACS-900]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: [ACS-900a-1, ACS-900a-2, ACS-900a-1-i, ACS-900a-3]
+implemented_by: []
+documentation_triggers: [how-to, sequence-diagram]
+notes: |
+  This is the DETECTION trigger half. The status-transition (active -> deprecated /
+  superseded / superseded_by) is what arms the check; the targets to inspect are
+  the paths in that AC's implemented_by list. BA: treat all three retired-status
+  forms as triggers. "No longer references the retired behavior" is deliberately
+  broader than "file deleted" — the BA/IT-PO define at L2/L3 what counts as the
+  code being gone (file absent, anchor absent, or path no longer present), but
+  ACS-900d owns the legitimate-reconciliation cases.

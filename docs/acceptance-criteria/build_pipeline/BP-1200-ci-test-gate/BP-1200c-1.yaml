@@ -1,0 +1,60 @@
+id: BP-1200c-1
+title: "Branch protection on main requires both the lint check and the new test check"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the branch-protection settings for the main branch,
+  When the set of required status checks for merging into main is inspected,
+  Then the list of required checks includes the existing lint check
+  And the list of required checks also includes the new test check defined in
+    BP-1200b-1
+  And a pull request targeting main cannot be merged unless both required checks
+    have reported a passing result.
+depends_on:
+  - BP-1200c
+  - BP-1200b-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-016-ci-fresh-clone-test-dependencies.md
+    relationship: depends-on
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "DECIDED (final gate): branch protection is implemented as SETTINGS-AS-CODE via the GitHub branch-protection API (REST/GraphQL), with a DOCUMENTED MANUAL FALLBACK runbook for environments where the API path is unavailable. python-coder authors the script/config that calls the branch-protection API; the manual fallback is documented (a documentation-expert follow-up may own the runbook prose, but the primary deliverable is the settings-as-code script)."
+  - "The settings-as-code change MUST add BOTH the existing lint check name AND the new test check name (from BP-1200b-1) to the required-status-checks list for main. The check names MUST match the exact ci.yml job names verbatim — a mismatched name silently fails to enforce."
+  - "Required checks MUST include BOTH the existing lint check (the current blocking ruff job) AND the new test check from BP-1200b-1 — adding the test check must not drop the existing lint requirement."
+  - "EMU/account constraint (CLAUDE.md): branch-protection API calls require the non-EMU urlmonitor account. The settings-as-code script must run under (or document switching to) `gh auth switch --user urlmonitor`; verify with `gh auth status` before invoking the API. An EMU-account run will be blocked."
+  - "The script must be idempotent: re-running it against already-correct branch protection makes no destructive change and converges to the same required-checks set (does not duplicate or drop checks)."
+delivers_to: null
+expects_from:
+  ac_id: BP-1200b-1
+  contract: "A named, blocking test check (the exact ci.yml test job name) whose name is added verbatim to the main branch's required-status-checks list"
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Kept assigned_agent python-coder as nominal (one-agent rule) but recorded the OPEN DESIGN DECISION in it_requirements: branch protection is a repo SETTING implementable as a manual repo-admin ops step OR as settings-as-code (branch-protection API / committed ruleset). Added it_requirements (both-checks-required, exact-name parity with BP-1200b-1, EMU account constraint) and the planned-ADR doc_link. Flagged as a caveat for the final user gate. Criteria and expects_from unchanged."
+    by: it-po
+  - reason: "final-gate-decision-applied"
+    entry: "Set readiness: approved and priority: high per the final user gate. RESOLVED the open manual-vs-settings-as-code decision: DECIDED = settings-as-code via the GitHub branch-protection API with a documented manual fallback. Removed the open-decision language; python-coder is now a substantive (not merely nominal) assignment because there is a real script artifact. Added an idempotency it_requirement and sharpened the EMU/urlmonitor account requirement. Criteria and expects_from unchanged."
+    by: it-po
+superseded_by: null
+covered_by:
+  - BP-1200c-1-i
+implemented_by: []
+notes: |
+  DECIDED (final gate): branch protection on main is enforced via SETTINGS-AS-CODE
+  (GitHub branch-protection API) with a documented manual-settings fallback.
+  python-coder authors the API script (adding both the lint and test check names
+  to the required-status-checks list for main); a documentation-expert follow-up
+  may own the manual fallback runbook. Requires the non-EMU urlmonitor account
+  for the API calls.

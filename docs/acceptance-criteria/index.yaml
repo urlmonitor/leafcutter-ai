@@ -30,6 +30,13 @@ components:
       - "scripts/build_phases.py"
       - "scripts/build_precommit.py"
       - "leafcutter/scripts/build*.py"
+  - id: build-orchestration
+    prefix: BO
+    description: "ACs for build orchestration: pre-dispatch sequencing gates, dependency-cycle detection, parallelism limits, file-conflict isolation, and pre-drive reachability checks (e.g. telemetry sink)"
+    owner: build_pipeline
+    directory_patterns:
+      - "templates/workflows/build-feature.md"
+      - "templates/workflows-js/build-epic.js"
   - id: infrastructure
     prefix: INF
     description: "ACs for cross-cutting infrastructure: agent context injection, pre-commit hooks, and project conventions"
@@ -57,6 +64,22 @@ components:
     directory_patterns:
       - "scripts/commit_guardian/check_*.py"
       - "templates/commit-guardian/check_*.py"
+  - id: knowledge-management
+    prefix: KM
+    description: "ACs for the cross-surface knowledge graph: surface ingestion from paths.json, node/edge derivation, AC-to-code traceability, query layer, and graph visualisation"
+    owner: null
+    directory_patterns:
+      - "scripts/knowledge_query.py"
+      - "scripts/visualise_knowledge_graph.py"
+      - "config/paths.json"
+  - id: testing-quality
+    prefix: TQ
+    description: "ACs for test-suite trustworthiness: which tests gate main, how unbuilt/in-flight features are tolerated, accepted-failure tracking, and staged enforcement rollout"
+    owner: null
+    directory_patterns:
+      - "conftest.py"
+      - "tests/conftest.py"
+      - "unit_tests/conftest.py"
 
 # Composite Pattern AC Example (AC ACS-500e-1)
 #

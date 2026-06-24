@@ -1,0 +1,73 @@
+id: BP-1200c-1-i
+title: "The test gate cannot be bypassed — a missing or failing test check leaves the PR un-mergeable"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given branch protection on main requires the lint check and the test check,
+    and the protection exempts administrators (an emergency override is allowed),
+  When a normal (non-administrator) pull request targeting main has not reported
+    a passing test check — whether because the check is failing or because the
+    check has not run at all,
+  Then the pull request remains not mergeable on the normal path
+  And no normal-path actor can merge it while the required lint or test check is
+    absent or failing — the checks are hard-blocking for every non-administrator merge.
+
+  Given the same pull request with a failing or missing required test check,
+  When an administrator invokes the emergency override path,
+  Then the administrator is permitted to force the merge through
+  And this override is an administrator-only emergency exception, not a capability
+    available on the normal merge path.
+depends_on:
+  - BP-1200c-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-016-ci-fresh-clone-test-dependencies.md
+    relationship: depends-on
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "DECIDED POLICY (final gate): ADMIN OVERRIDE IS ALLOWED as an emergency path. Branch protection does NOT enable the GitHub 'Do not allow bypassing the above settings' / 'include administrators' option, so an administrator may perform an emergency admin-merge. For NORMAL (non-admin) merges the test check AND the lint check remain hard-required and cannot be bypassed."
+  - "Settings-as-code implication: the branch-protection script from BP-1200c-1 must set enforce_admins = false (admins exempt) while keeping the required-status-checks (lint + test) strict for everyone else. This is the configuration this AC verifies."
+  - "The not-mergeable outcome for NON-ADMIN actors must hold for BOTH absence (check never ran) AND failure (check ran red) — a required-but-not-reported check must leave the PR un-mergeable for normal merges, not auto-pass."
+  - "Verification of the enforcement property is an inspection/exercise of the branch-protection configuration produced by BP-1200c-1 (settings-as-code); confirm enforce_admins=false and required-status-checks strict via the GitHub API."
+  - "EMU/account caveat: verifying merge-blocking via the API requires the non-EMU urlmonitor account (gh auth switch --user urlmonitor; verify with gh auth status)."
+  - "CAVEAT — CRITERIA/POLICY MISMATCH (IT-PO cannot resolve): the criteria prose still asserts that an administrative merge does NOT succeed (no-bypass INCLUDING admins). The decided policy permits an emergency admin override. The criteria text must be amended by the Business Analyst to permit emergency admin-merge while keeping checks hard-required for normal merges. IT-PO does not edit the criteria field; this mismatch is flagged for BA follow-up before implementation begins."
+delivers_to: null
+expects_from:
+  ac_id: BP-1200c-1
+  contract: "The branch-protection configuration (required-status-checks = lint + test, strict for non-admins; enforce_admins=false to allow emergency admin override) whose enforcement this case exercises"
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Kept python-coder as nominal (inherits BP-1200c-1's open manual-vs-settings-as-code decision). Recorded the OPEN POLICY DECISION on whether no-bypass includes administrators (include-administrators option), plus it_requirements for absence-vs-failure both leaving PR un-mergeable and the EMU account caveat, and the planned-ADR doc_link. Flagged at the final gate. Criteria and expects_from unchanged."
+    by: it-po
+  - reason: "final-gate-decision-applied"
+    entry: "Set readiness: approved and priority: high per the final user gate. RESOLVED the open admin-bypass policy: DECIDED = admin override IS allowed (emergency path); branch protection does NOT include administrators (enforce_admins=false), while lint+test stay hard-required for normal merges. Updated it_requirements and the expects_from contract to specify enforce_admins=false. NOTE: I did NOT edit the criteria field — modifying BA-authored criteria is outside the IT-PO role, and a coordinator-relayed approval is not user authority. The criteria still assert no-bypass-including-admins; this is flagged as a CAVEAT in it_requirements and below for BA amendment so the prose matches the decided policy."
+    by: it-po
+  - reason: "final-gate-admin-override-policy"
+    entry: "Rewrote the criteria to match the user-confirmed final-gate decision: an administrator emergency-merge override IS allowed (branch protection exempts admins / enforce_admins=false), while the required lint + test checks remain hard-blocking for all normal (non-administrator) merges. Replaced the prior prose that asserted an administrative merge does NOT succeed (no-bypass-including-admins), which contradicted the decided policy and was flagged by IT-PO for BA follow-up. The Gherkin now splits into two scenarios: (1) a deliberately-failing/missing-check PR is blocked on the normal path for every non-admin actor; (2) an administrator may force the merge via the emergency override path. Only the criteria field was changed — it_requirements, doc_links, assigned_agent, expects_from, readiness (approved) and priority (high) are untouched."
+    by: business-analyst
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DECIDED POLICY (final gate): admin override is allowed as an emergency path —
+  branch protection does NOT include administrators (enforce_admins=false), so an
+  admin may emergency-merge; lint + test remain hard-required for normal merges.
+  OUTSTANDING CAVEAT (BA action required): the criteria prose above still asserts
+  that an administrative merge does NOT succeed. That now contradicts the decided
+  policy. The IT-PO does not rewrite BA criteria — the Business Analyst must amend
+  the criteria to permit an emergency admin-merge override while keeping the
+  test+lint checks required for normal merges. Until that BA amendment lands, the
+  criteria and the it_requirements/expects_from are intentionally inconsistent and
+  this AC should not be driven to implementation.

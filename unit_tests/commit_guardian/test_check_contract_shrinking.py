@@ -17,8 +17,7 @@ import textwrap
 import unittest
 from pathlib import Path
 
-# Try the canonical path first (templates/scripts/commit_guardian/)
-# Fall back to legacy (templates/commit-guardian/) for backward compat.
+# Import the module under test from the canonical tree.
 _CANONICAL = (
     Path(__file__).parent.parent.parent
     / "templates"
@@ -26,26 +25,19 @@ _CANONICAL = (
     / "commit_guardian"
     / "check_contract_shrinking.py"
 )
-_LEGACY = (
-    Path(__file__).parent.parent.parent
-    / "templates"
-    / "commit-guardian"
-    / "check_contract_shrinking.py"
-)
 
-# Dynamically import the module from whichever path exists
+# Dynamically import the module from the canonical path
 import importlib.util as _ilu
 
 def _load_module():
-    for candidate in [_CANONICAL, _LEGACY]:
-        if candidate.exists():
-            spec = _ilu.spec_from_file_location("check_contract_shrinking", candidate)
-            mod = _ilu.module_from_spec(spec)
-            # Must register in sys.modules BEFORE exec_module so @dataclass
-            # can resolve the module's __dict__ via sys.modules[cls.__module__].
-            sys.modules["check_contract_shrinking"] = mod
-            spec.loader.exec_module(mod)
-            return mod
+    if _CANONICAL.exists():
+        spec = _ilu.spec_from_file_location("check_contract_shrinking", _CANONICAL)
+        mod = _ilu.module_from_spec(spec)
+        # Must register in sys.modules BEFORE exec_module so @dataclass
+        # can resolve the module's __dict__ via sys.modules[cls.__module__].
+        sys.modules["check_contract_shrinking"] = mod
+        spec.loader.exec_module(mod)
+        return mod
     return None
 
 
@@ -65,8 +57,8 @@ class TestContractShrinkingExcludesCommitGuardianPaths(unittest.TestCase):
         if _mod is None:
             self.fail(
                 "ImportError: check_contract_shrinking.py not found at canonical "
-                f"path {_CANONICAL} or legacy path {_LEGACY}. "
-                "python-coder must create the canonical template file as part of AC-3."
+                f"path {_CANONICAL}. "
+                "Ensure the canonical template file exists at templates/scripts/commit_guardian/."
             )
 
         if not hasattr(_mod, "_scan_diff"):

@@ -70,7 +70,7 @@ Single source of truth for all agents. Every agent has: `id`, `name`, `tier`,
 `selection_criteria` (ADR-018 two-tier format), `template_path`, `model`,
 `skills_used`.
 
-**Hook registry** — `leafcutter/templates/commit-guardian/commit_guardian.json`  
+**Hook registry** — `leafcutter/templates/scripts/commit_guardian/commit_guardian.json`  
 The `hooks_manifest.hooks` array drives `.pre-commit-config.yaml` generation.
 Each hook entry: `id`, `name`, `entry`, `language`, `stages`, optional
 `types`, `types_or`, `files`, `pass_filenames`, `always_run`. The build phase

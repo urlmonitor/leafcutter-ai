@@ -381,7 +381,7 @@
       "primary_code": [
         "scripts/commit_guardian/",
         ".claude/hooks/",
-        "templates/commit-guardian/"
+        "templates/scripts/commit_guardian/"
       ]
     },
     "llm_authoring": {

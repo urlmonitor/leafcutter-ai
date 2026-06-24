@@ -1,0 +1,53 @@
+id: ACS-300g-6
+title: "Component integrity hook resolves REPO_ROOT to the actual repository top-level"
+component: ac-store
+level: L2
+status: active
+readiness: approved
+priority: high
+req_status: active
+work_status: done
+criteria: |
+  Given check_components_integrity.py is invoked through the `.leafcutter`
+    symlink install path (so that
+    `Path(__file__).resolve().parents[2]` resolves to
+    `<repo>/.leafcutter` rather than the real repository root),
+  And a component entry in docs/components.json has a detail_ref pointing
+    at an existing file under `<repo>/docs/...`,
+  When the hook resolves the project root in order to validate that
+    detail_ref's existence,
+  Then REPO_ROOT must equal the actual repository top-level as reported by
+    `git rev-parse --show-toplevel`,
+  And the detail_ref existence check resolves against
+    `<repo>/docs/...` (where the file exists) rather than
+    `<repo>/.leafcutter/docs/...`,
+  And a detail_ref pointing at an existing `<repo>/docs/...` file passes
+    instead of false-failing as "detail_ref file does not exist".
+depends_on: []
+doc_links:
+  - path: scripts/commit_guardian/check_components_integrity.py
+    relationship: governs
+    status: exists
+  - path: docs/components.json
+    relationship: governs
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Derive REPO_ROOT from `git rev-parse --show-toplevel`, not `Path(__file__).resolve().parents[N]`"
+  - "Must resolve correctly whether the hook is invoked via the `.leafcutter` symlink or directly from the package source tree"
+  - "Must handle errors gracefully per the project error handling policy (wrap the git subprocess call, no bare except)"
+  - "Must not regress detail_ref validation for components whose detail_ref is null"
+  - "Must complete the root-resolution call in <100ms"
+delivers_to:
+  agent: python-coder
+  contract: "REPO_ROOT in check_components_integrity.py derived from the stripped stdout of `git rev-parse --show-toplevel`, used as the base path for resolving every component detail_ref existence check"
+expects_from: null
+origin_agent: it-po-v3
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- templates/scripts/commit_guardian/check_components_integrity.py
+- unit_tests/commit_guardian/test_check_components_integrity.py

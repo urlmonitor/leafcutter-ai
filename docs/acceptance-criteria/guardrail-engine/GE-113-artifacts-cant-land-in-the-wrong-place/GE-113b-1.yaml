@@ -1,0 +1,46 @@
+id: GE-113b-1
+title: "A structural-change bypass does not suppress the misplaced-test block"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the configured test location is "tests/",
+  And a commit stages a test file at "unit_tests/etl/test_pipeline.py" outside the
+    configured test location,
+  And the commit carries the structural-change bypass token [NO-ARCH-UPDATE]
+    that acknowledges an intentional structural change,
+  When the pre-commit guards run,
+  Then the misplaced-test guard still blocks the commit,
+  And the bypass token does not suppress the misplaced-test block.
+depends_on:
+  - GE-113b
+doc_links:
+  - path: scripts/commit_guardian/check_structural_change.py
+    relationship: describes
+    status: exists
+  - path: scripts/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Surface is the new misplaced-test guard (GE-113a-1) and its relationship to check_structural_change.py: the [NO-ARCH-UPDATE] bypass token (config: structural_change.bypass_token in commit_guardian.json) governs ONLY the structural-change check and MUST NOT be read or honored by the misplaced-test guard."
+  - "The misplaced-test guard must run and block independently of the bypass token's presence — it must not consult the commit message for [NO-ARCH-UPDATE]. This reproduces the root-cause: [NO-ARCH-UPDATE] excused a new unit_tests package as 'test-only', waving the misplaced test through."
+  - "Keep the two guards' responsibilities orthogonal: do not couple the misplaced-test block to the structural-change check's bypass evaluation (no shared bypass gate)."
+  - "Deployed/template parity (ADR-001) on any touched hook + manifest."
+delivers_to: null
+expects_from:
+  ac_id: GE-113a-1
+  contract: "The misplaced-test verdict { blocked, offending_files, configured_test_root } from GE-113a-1; this AC asserts that verdict's blocked=true outcome is NOT overridden when [NO-ARCH-UPDATE] is present on the commit."
+origin_agent: business-analyst-v3
+created: 2026-06-23
+amended_by:
+  - reason: "it-po-v3 technical enrichment: python-coder; pinned that the bypass token governs only the structural-change check and the misplaced-test guard must not consult it. expects_from wired to the a-1 verdict producer. Criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Root-cause of the incident: [NO-ARCH-UPDATE] excused the new unit_tests package as 'test-only', waving the misplaced test through."

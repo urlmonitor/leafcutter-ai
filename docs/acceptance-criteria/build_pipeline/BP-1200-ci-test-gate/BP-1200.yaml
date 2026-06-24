@@ -1,0 +1,30 @@
+id: BP-1200
+title: "Every pull request gets trustworthy proof it didn't break the test suite"
+component: build-pipeline
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  A green test suite you can actually trust — broken changes never reach main.
+
+  Today a pull request can merge even when it breaks tests, because there is no
+  check that fails the request on a broken suite. Worse, the suite only passes
+  for people who already have the project set up a certain way — a brand-new copy
+  of the project cannot even get the tests to start. After this goal, opening a
+  pull request gives the author fast, dependable confirmation that their change
+  kept everything working, and a broken change simply cannot be merged.
+depends_on: []
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1200a
+  - BP-1200b
+  - BP-1200c
+implemented_by: []

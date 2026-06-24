@@ -16,6 +16,7 @@ criteria: |
   addition to the configuration. The system gets smarter with use without
   requiring manual rule authoring.
 depends_on: [BO-1100c]
+child_limit_override: 6
 doc_links: []
 assigned_agent: null
 estimated_complexity: L

@@ -264,7 +264,7 @@ EPIC-FeedbackCollection retro KI.
 ### Hook-to-config sync discipline
 
 When migrating an existing pre-commit hook from `scripts/commit_guardian/` into
-`leafcutter/templates/commit-guardian/`, the same commit MUST also
+`leafcutter/templates/scripts/commit_guardian/`, the same commit MUST also
 add every constant the hook imports from `config.py` to the **template** copy
 of `config.py`. The live copy already has the constants; the template usually
 does not. A missing constant causes `ImportError` at startup in every consumer
@@ -275,11 +275,11 @@ The `create-hook` skill (Step 5a) enforces this for newly-scaffolded hooks.
 For migrations, run:
 
 ```bash
-grep -E "^from config import" leafcutter/templates/commit-guardian/<hook_name>.py
+grep -E "^from config import" leafcutter/templates/scripts/commit_guardian/<hook_name>.py
 ```
 
 and confirm every imported name has a matching `<NAME>: <type> = _get(...)`
-line in `leafcutter/templates/commit-guardian/config.py`.
+line in `leafcutter/templates/scripts/commit_guardian/config.py`.
 
 ## Maintenance
 
@@ -310,7 +310,7 @@ line in `leafcutter/templates/commit-guardian/config.py`.
 - Code quality: `complexity-reduction`, `doc-enforcer`, `code-analysis`, `import-scanner`
 - Commit: `precommit-autofix`, `ship`
 
-### Generic-Portable Commit-Guardian Hooks (go into templates/commit-guardian/)
+### Generic-Portable Commit-Guardian Hooks (go into templates/scripts/commit_guardian/)
 
 These 10 hooks are fully config-driven and contain no project-specific paths.
 All bybit-trader defaults are encoded in `commit_guardian.json` and overridable

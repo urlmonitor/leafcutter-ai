@@ -1,0 +1,62 @@
+id: BO-100d-1a
+readiness: approved
+priority: high
+title: "build-epic.js hard-blocks the drive before dispatch when the telemetry sink is unreachable"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given /build-feature is invoked for an epic that has at least one ready ticket,
+  And the pre-drive feedback-sink reachability probe attempts to append one probe
+    line to the telemetry sink at debugging/logs/agent_telemetry.jsonl,
+  When the probe returns a non-zero result (the append fails — for example the
+    path is not writable),
+  Then no ticket-supervisor is dispatched for the epic,
+  And the drive halts immediately at the pre-dispatch stage,
+  And the operator is shown an actionable message that names the failing sink
+    path (debugging/logs/agent_telemetry.jsonl),
+  And that message states the remediation needed to make the sink writable,
+  And no epic tickets are transitioned to in_progress.
+depends_on: [BO-100d-1]
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The gate must run before any ticket-supervisor / parallel() dispatch in build-epic.js, never after — place it in the pre-dispatch sequence (the same position as the existing Step 0 worktree guard), so a failing probe blocks the whole batch loop."
+  - "On a failing probe the workflow must return a typed blocked result mirroring the worktree-guard shape, carrying the sink path and the remediation text (e.g. { status: 'blocked', sink_unreachable: true, sink_path, remediation }); the caller surfaces it and no batch is dispatched."
+  - "Factor the probe as ONE shared reusable helper (append-one-line, mkdir-and-retry remediation, genuine-write-failure classification) so build-epic.js and the build-feature.md prose gate exercise identical semantics — do not inline the probe logic in only one surface."
+  - "Dual-surface parity (the KI-3 lesson): the deterministic build-epic.js gate and the build-feature.md prose gate must BOTH hard-block; a gate that blocks in one path but not the other silently reintroduces the original warn-only bug."
+  - "The probe must be idempotent: a probe run appends exactly one probe line and must not corrupt or duplicate prior sink content."
+  - "Handle the probe's external I/O (filesystem append, mkdir) gracefully per the project error handling policy (CLAUDE.md Rules 1-3): wrap the I/O in typed except, log at WARNING, and surface a clear operator message rather than swallowing the failure."
+  - "Deployed/template parity (ADR-001 self-hosting): build-epic.js is a package source; if a probe helper is added as a script, edit the package source and verify the deployed copy via the build.py round-trip — never edit only one side."
+delivers_to:
+  agent: python-coder
+  contract: "A shared pre-drive sink probe helper plus the build-epic.js pre-dispatch gate that consumes it. The helper exposes: (1) first-probe append of one line to debugging/logs/agent_telemetry.jsonl; (2) mkdir-and-reprobe remediation when the only failure cause is the absent parent directory; (3) genuine-write-failure classification (not-writable / is-a-directory / read-only FS) distinct from directory-absence; returning a typed pass/fail result. On fail the gate blocks all parallel() dispatch and returns { status: 'blocked', sink_unreachable: true, sink_path: 'debugging/logs/agent_telemetry.jsonl', remediation: <string> }."
+expects_from: null
+origin_agent: it-po
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Split from BO-100d-1 by it-po. This child owns the deterministic enforcement
+  surface (templates/workflows-js/build-epic.js, the JS workflow that
+  build-feature.md Step B delegates to) and the shared probe helper. Sibling
+  BO-100d-1b owns the build-feature.md command-prose parity gate.
+
+  Lineage: repeat of TICKET-20260527-FeedbackSinkPreDriveCheck — warn-only was
+  insufficient (23 silent submit-failed events, impossible retrospective), so
+  the gate is promoted to a hard block. The build-epic.js Step 0 worktree guard
+  is the precedent shape for a blocking pre-dispatch gate.

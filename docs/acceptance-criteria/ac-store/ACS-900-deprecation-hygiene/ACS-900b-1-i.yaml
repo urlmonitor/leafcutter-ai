@@ -1,0 +1,56 @@
+id: ACS-900b-1-i
+readiness: approved
+priority: high
+title: "An internal hook error fails open and never hard-blocks the commit"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the deprecation-hygiene hook encounters an unexpected internal error
+    during execution (e.g. a staged AC YAML file has invalid YAML that raises a
+    parse exception, the git command used to read the HEAD version fails, or an
+    implemented_by path cannot be read),
+  When the hook catches the exception,
+  Then it exits with code 0 (fail-open per project convention),
+  And the commit is NOT blocked by the deprecation-hygiene hook,
+  And a diagnostic message is printed to stderr that names the hook and the
+    nature of the error,
+  And no block decision is emitted to stdout for that error.
+depends_on: [ACS-900b-1]
+doc_links:
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+  - path: scripts/commit_guardian/check_ac_governance.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Fail-open on INTERNAL error is orthogonal to the always-block-on-real-violation decision (ACS-900b-1): the entry point MUST be wrapped so that ANY unexpected exception results in exit 0, NOT exit 1. A script bug must never hard-block an unrelated commit."
+  - "Mirror the check_ac_governance.py tail exactly: `if __name__ == '__main__': try: sys.exit(main()) except Exception as exc: print('[<hook-prefix>] unexpected error (fail-open): ...', file=sys.stderr); sys.exit(0)` with a `# noqa: BLE001` on the broad catch (this is the one sanctioned blind-except in the codebase, justified by the fail-open contract)."
+  - "Localized internal failures (one unparseable staged YAML, one unreadable implemented_by path, a failing `git show HEAD:`) MUST be caught at their I/O boundary, logged at WARNING to stderr with the hook prefix, and treated as inconclusive (not a block) — consistent with check_ac_governance.py's _load_yaml_safe / _load_head_content returning None on failure."
+  - "On any fail-open path the hook MUST NOT emit a block decision to stdout (stdout carries only real block decisions; diagnostics go to stderr) — so a downstream parser never mistakes an internal error for a violation."
+  - "Deployed and packaged-template copies of the hook MUST stay in parity (ADR-001), including the fail-open tail."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Load-bearing distinction (ACS-900 + ACS-900b notes): fail-open on INTERNAL
+  error is orthogonal to the always-block-on-real-violation product decision.
+  Mirrors ACS-400e-1-i and the fail-open behavior at the bottom of
+  check_ac_governance.py (wrap main() in try/except, stderr warning, exit 0).
+
+  IT-PO enrichment (2026-06-22): this is THE AC where the BA flagged the
+  block-vs-fail-open invariant. Pinned the exact check_ac_governance.py tail
+  pattern (try/except Exception + noqa BLE001 + exit 0 + stderr prefix) and the
+  per-I/O-boundary localized fail-open (return-None-on-failure) so the python-coder
+  reproduces the sanctioned pattern rather than improvising. stdout-clean-on-error
+  pinned so an internal error is never mistaken for a violation downstream.

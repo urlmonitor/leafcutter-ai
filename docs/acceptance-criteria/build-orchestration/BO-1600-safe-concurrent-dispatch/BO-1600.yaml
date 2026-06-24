@@ -1,0 +1,37 @@
+id: BO-1600
+title: "Run many tickets at once without corrupting your repository"
+component: build-orchestration
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Parallel delivery never leaves your git state broken -- no manual corruption recovery, ever.
+
+  When an epic drive works on several tickets at the same time inside one
+  shared workspace, the deliveries never trip over each other at the storage
+  layer. Your repository's history and working state stay intact from the first
+  ticket to the last, even when commits happen close together. If anything ever
+  does go wrong, the drive stops and tells you clearly instead of continuing on
+  a damaged repository. You never have to hand-repair a broken git store after
+  an epic finishes. This is distinct from BO-100c (which separates tickets that
+  touch the same files before they run) and BO-200 (which makes a single
+  ticket's commit atomic) -- this goal protects the shared git store itself when
+  multiple deliveries land concurrently.
+depends_on: []
+doc_links:
+  - docs/architecture/agent_delivery_workflows.md
+  - templates/skills/building-epics/SKILL.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: [BO-1600a, BO-1600b, BO-1600c]
+implemented_by: []

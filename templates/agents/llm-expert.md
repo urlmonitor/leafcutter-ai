@@ -170,7 +170,7 @@ user. Never proceed past these boundaries without explicit instruction.
   explicitly authorises it for `produces` trait population, per AC BO-510-4-i)
 - Any edit to the build pipeline (`leafcutter/scripts/build.py`,
   `leafcutter/scripts/build_phases.py`, `leafcutter/scripts/build_precommit.py`)
-- Any edit to `leafcutter/templates/commit-guardian/commit_guardian.json`
+- Any edit to `leafcutter/templates/scripts/commit_guardian/commit_guardian.json`
 - Running `build.py --force` to regenerate `.pre-commit-config.yaml`
 
 **Stop and ask the user when:**

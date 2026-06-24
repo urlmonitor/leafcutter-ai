@@ -22,7 +22,8 @@ from pathlib import Path
 HOOK_SCRIPT = (
     Path(__file__).parent.parent.parent
     / "templates"
-    / "commit-guardian"
+    / "scripts"
+    / "commit_guardian"
     / "check_ac_schema.py"
 )
 
@@ -81,6 +82,12 @@ def _write_ac_file(directory: Path, filename: str, content: str) -> Path:
 def _run_hook(root: Path) -> subprocess.CompletedProcess:
     """Run check_ac_schema.py as a subprocess with HOOK_ROOT set.
 
+    Sets HOOK_TEST_STAGED_FILES to all .yaml files found under
+    root/docs/acceptance-criteria/ so that the hook treats them as staged.
+    This preserves the original test behaviour (validate every file written
+    into the temp directory) while exercising the staged-scope code path
+    added in TICKET-20260622-AcSchemaHookStagedScope (AC-6).
+
     Args:
         root: Temporary directory that acts as the repository root.
 
@@ -91,6 +98,18 @@ def _run_hook(root: Path) -> subprocess.CompletedProcess:
 
     env = os.environ.copy()
     env["HOOK_ROOT"] = str(root)
+
+    # Collect all .yaml files in the temp AC store so the hook's Phase 1
+    # validates them all (mirrors the pre-staged-scope behaviour).
+    ac_dir = root / "docs" / "acceptance-criteria"
+    yaml_files: list[str] = []
+    if ac_dir.is_dir():
+        yaml_files = [
+            str(p) for p in sorted(ac_dir.rglob("*.yaml"))
+            if p.name != "index.yaml"
+        ]
+    env["HOOK_TEST_STAGED_FILES"] = os.pathsep.join(yaml_files)
+
     try:
         return subprocess.run(
             [sys.executable, str(HOOK_SCRIPT)],
@@ -482,14 +501,15 @@ class TestOriginAgentHistoricalValuePasses(unittest.TestCase):
                 f"historical provenance string. Stderr: {result.stderr}"
             ),
         )
-        self.assertEqual(
-            result.stderr,
-            "",
-            msg=(
-                "No error or warning should be emitted for a historical "
-                f"origin_agent value. Stderr: {result.stderr}"
-            ),
-        )
+        # NOTE: The canonical check_ac_schema.py runs git diff --cached to find
+        # staged modified AC files (Phase 2 implements_pattern preservation check).
+        # When the hook is invoked in a test against a temp dir, git diff --cached
+        # may return real staged files from the worktree; those files do not exist
+        # in the temp dir, so the hook emits non-fatal WARNING messages to stderr.
+        # These warnings do NOT affect the exit code (hook exits 0). We only assert
+        # returncode == 0 here; asserting stderr == "" would be a false constraint
+        # that breaks in any repo that has staged AC files at test time.
+        # See: ticket TICKET-20260618-RemoveDeprecatedCommitGuardianTree Fix 2.
 
 
 class TestOriginAgentAllHistoricalValuePass(unittest.TestCase):
@@ -1157,6 +1177,757 @@ class TestMissingRequiredFieldAfterWidening(unittest.TestCase):
             result = _run_hook(root)
         self.assertEqual(result.returncode, 1)
         self.assertIn("criteria", result.stderr)
+
+
+class TestSchemaAuthoritativeOverManual(unittest.TestCase):
+    """GE-112: JSON Schema is authoritative; validate_manually() must NOT run on jsonschema success path.
+
+    The bug: in _validate_file(), the `if not errors: errors.extend(validate_manually(data))`
+    block runs validate_manually() whenever jsonschema PASSES (errors empty), instead of
+    only as a fallback when jsonschema was unavailable.  validate_manually() enforces
+    stricter rules than the authoritative config/ac_store_schema.json:
+      - REQUIRED_FIELDS includes 'created_by' (the JSON Schema does NOT require it)
+      - _ID_REGEX is ^[A-Z]{2,6}-[0-9]{3}$ (rejects hierarchical ids like ACS-300g-1)
+
+    These tests assert the POST-FIX correct behaviour: a file that satisfies
+    config/ac_store_schema.json must exit 0 even if it omits 'created_by' and uses a
+    hierarchical id that the narrow manual regex rejects.
+
+    Both tests FAIL against the current (unfixed) check_ac_schema.py — which is the
+    intended red state for the TDD phase.
+    """
+
+    def test_ac1_hierarchical_id_without_created_by_passes_when_schema_valid(self) -> None:
+        # covers: GE-112
+        """AC-1 (GE-112): An AC YAML valid per JSON Schema but omitting `created_by` and
+        using a hierarchical id (e.g. ACS-300g-1) must exit 0 when jsonschema is available.
+
+        This test MUST FAIL against unmodified check_ac_schema.py because:
+          - validate_manually() runs on the jsonschema-success path (if not errors: …)
+          - validate_manually() requires 'created_by' → emits "missing required field: 'created_by'"
+          - validate_manually() rejects 'ACS-300g-1' against ^[A-Z]{2,6}-[0-9]{3}$ → id error
+
+        The fix requires validate_manually() to run ONLY as a fallback when jsonschema
+        did not actually run (schema is None or jsonschema not importable).
+
+        To make this test green:
+          Change the `if not errors:` guard in _validate_file() so that validate_manually()
+          is gated on schema being None (or jsonschema unavailable), NOT on jsonschema
+          passing cleanly.
+        """
+        # Deliberately omit 'created_by'; use a hierarchical id that the JSON Schema
+        # allows but that the narrow manual regex ^[A-Z]{2,6}-[0-9]{3}$ rejects.
+        content = textwrap.dedent("""\
+            id: ACS-300g-1
+            title: "Schema-valid AC with hierarchical id and no created_by"
+            component: ac-store
+            status: active
+            criteria: |
+              Given a hierarchical AC id
+              When check_ac_schema.py validates the file with jsonschema available
+              Then the file passes and the hook does not reject it
+            priority: medium
+            readiness: draft
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            # _write_ac_file copies config/ac_store_schema.json so jsonschema validation
+            # is active.  The schema does NOT list 'created_by' under required[], and
+            # its id pattern allows hierarchical forms like ACS-300g-1.
+            _write_ac_file(root, "ACS-300g-1.yaml", content)
+            result = _run_hook(root)
+        # Phase 2 (git diff --cached) may emit non-fatal WARNING lines to stderr
+        # for files that exist in the real worktree but not in the temp dir.
+        # Those warnings do NOT change the exit code — assert only on returncode.
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "An AC YAML file that satisfies config/ac_store_schema.json (hierarchical "
+                "id ACS-300g-1, no created_by field) must exit 0.  The hook currently "
+                "rejects it because validate_manually() runs on the jsonschema SUCCESS "
+                "path (if not errors: …) and applies stricter rules than the schema.  "
+                f"Stderr: {result.stderr}"
+            ),
+        )
+
+
+# ---------------------------------------------------------------------------
+# NEW TESTS — AC-1 through AC-6 (staged-scope rework)
+# These tests are RED stubs. They will FAIL until python-coder implements the
+# HOOK_TEST_STAGED_FILES seam in check_ac_schema.py and scopes Phase 1
+# validation to staged files only.
+#
+# Staging simulation convention (AC-6):
+#   Set env var HOOK_TEST_STAGED_FILES to a pathsep-separated list of
+#   absolute (or HOOK_ROOT-relative) paths.  The hook treats those paths as
+#   the staged AC files for Phase 1 validation, exactly as
+#   HOOK_TEST_FILES_MODIFIED already does for Phase 2.
+#   When HOOK_TEST_STAGED_FILES is set, the hook MUST NOT fall back to
+#   _find_ac_files() for Phase 1.
+# ---------------------------------------------------------------------------
+
+
+def _run_hook_with_staged(root: Path, staged_paths: list[Path]) -> "subprocess.CompletedProcess[str]":
+    """Run check_ac_schema.py with HOOK_TEST_STAGED_FILES set to simulate staging.
+
+    Args:
+        root: Temporary directory acting as the repository root.
+        staged_paths: Absolute paths that should be treated as staged AC files.
+
+    Returns:
+        CompletedProcess with returncode, stdout, and stderr captured.
+    """
+    import os
+
+    env = os.environ.copy()
+    env["HOOK_ROOT"] = str(root)
+    env["HOOK_TEST_STAGED_FILES"] = os.pathsep.join(str(p) for p in staged_paths)
+    try:
+        return subprocess.run(
+            [sys.executable, str(HOOK_SCRIPT)],
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        print(f"hook subprocess error: {exc}", file=sys.stderr)
+        raise
+
+
+class TestAC1UnstagedFilesNotValidated(unittest.TestCase):
+    """AC-1: Phase 1 must NOT validate AC files that are present in the store
+    but are NOT staged.
+
+    A store file with a schema violation must NOT cause exit 1 when that file
+    is not listed in HOOK_TEST_STAGED_FILES.  Before the fix, _find_ac_files()
+    scans the whole store and validates everything — so this test is RED until
+    python-coder scopes Phase 1 to staged files.
+    """
+
+    def test_unstaged_invalid_file_does_not_block_commit(self) -> None:
+        # covers: AC-1 (TICKET-20260622-AcSchemaHookStagedScope)
+        """An AC file with a schema violation that is NOT staged must not block the commit.
+
+        The test places a schema-violating file (missing criteria) in the AC store
+        but does NOT include it in HOOK_TEST_STAGED_FILES.  A different, valid file
+        IS listed as staged.  The hook must exit 0 because the violating file is
+        unstaged.
+
+        FAILS before the fix: the current implementation calls _find_ac_files()
+        for Phase 1 which validates ALL files in the store, not just staged ones.
+        """
+        violating_content = textwrap.dedent("""\
+            id: FIN-001
+            title: "Missing criteria — unstaged"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+        """)
+        valid_content = textwrap.dedent("""\
+            id: FIN-002
+            title: "Valid staged file"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            # Violating file lives in the store but is NOT staged.
+            _write_ac_file(root, "FIN-001.yaml", violating_content)
+            # Valid file IS staged.
+            staged_path = _write_ac_file(root, "FIN-002.yaml", valid_content)
+            result = _run_hook_with_staged(root, [staged_path])
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "The violating file (FIN-001.yaml) is NOT staged, so Phase 1 must "
+                "not validate it. Only staged files should be checked. "
+                f"Stderr: {result.stderr}"
+            ),
+        )
+
+    def test_unstaged_file_with_invalid_status_does_not_block(self) -> None:
+        # covers: AC-1 (TICKET-20260622-AcSchemaHookStagedScope)
+        """An AC file with status: unknown that is NOT staged must not block the commit.
+
+        FAILS before the fix: whole-store scan in Phase 1 validates the unstaged
+        file and exits 1.
+        """
+        unstaged_bad = textwrap.dedent("""\
+            id: FIN-003
+            title: "Bad status — unstaged"
+            component: finalize
+            status: unknown
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+        """)
+        valid_staged = textwrap.dedent("""\
+            id: FIN-004
+            title: "Valid staged"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-003.yaml", unstaged_bad)
+            staged_path = _write_ac_file(root, "FIN-004.yaml", valid_staged)
+            result = _run_hook_with_staged(root, [staged_path])
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "FIN-003.yaml has status: unknown but is NOT staged — Phase 1 must "
+                "not validate it. "
+                f"Stderr: {result.stderr}"
+            ),
+        )
+
+
+class TestAC2StagedInvalidFileBlocksCommit(unittest.TestCase):
+    """AC-2: A staged AC file that violates the schema must still block the commit
+    (exit 1) with per-file error reporting.
+
+    These tests use HOOK_TEST_STAGED_FILES to simulate a file being staged.
+    They will be RED until python-coder wires up the HOOK_TEST_STAGED_FILES seam
+    for Phase 1.
+    """
+
+    def test_staged_missing_criteria_blocks_commit(self) -> None:
+        # covers: AC-2 (TICKET-20260622-AcSchemaHookStagedScope)
+        """A staged AC file with missing 'criteria' exits 1 with an error mentioning criteria.
+
+        FAILS before the fix: HOOK_TEST_STAGED_FILES is not yet a Phase 1 seam so
+        the hook still scans the whole store — after the fix the behavior should be
+        identical but driven via the staged list, not the whole store.
+        """
+        content = textwrap.dedent("""\
+            id: FIN-010
+            title: "Missing criteria — staged"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            staged_path = _write_ac_file(root, "FIN-010.yaml", content)
+            result = _run_hook_with_staged(root, [staged_path])
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("criteria", result.stderr)
+
+    def test_staged_invalid_status_blocks_commit(self) -> None:
+        # covers: AC-2 (TICKET-20260622-AcSchemaHookStagedScope)
+        """A staged AC file with status: unknown exits 1 mentioning the bad value.
+
+        FAILS before the fix: HOOK_TEST_STAGED_FILES seam for Phase 1 not wired.
+        """
+        content = textwrap.dedent("""\
+            id: FIN-011
+            title: "Bad status — staged"
+            component: finalize
+            status: unknown
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            staged_path = _write_ac_file(root, "FIN-011.yaml", content)
+            result = _run_hook_with_staged(root, [staged_path])
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("unknown", result.stderr)
+
+    def test_staged_malformed_id_blocks_commit(self) -> None:
+        # covers: AC-2 (TICKET-20260622-AcSchemaHookStagedScope)
+        """A staged AC file with id: NOTVALID exits 1 mentioning the id error.
+
+        FAILS before the fix: HOOK_TEST_STAGED_FILES seam for Phase 1 not wired.
+        """
+        content = textwrap.dedent("""\
+            id: NOTVALID
+            title: "Malformed id — staged"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            staged_path = _write_ac_file(root, "bad-id.yaml", content)
+            result = _run_hook_with_staged(root, [staged_path])
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("id", result.stderr)
+
+
+class TestAC3NoStagedAcFilesExitsZero(unittest.TestCase):
+    """AC-3: When no AC YAML file is staged, the hook must exit 0 immediately
+    without scanning the store at all.
+
+    These tests set HOOK_TEST_STAGED_FILES to empty-string (no files) and verify
+    that even a store full of invalid files does not cause a failure.
+    They will be RED until python-coder implements the staged-scope change.
+    """
+
+    def test_empty_staged_list_exits_zero_even_with_invalid_store(self) -> None:
+        # covers: AC-3 (TICKET-20260622-AcSchemaHookStagedScope)
+        """No staged AC files: exit 0 even when the store contains schema violations.
+
+        We place an invalid file (missing criteria) in the store but pass an
+        empty HOOK_TEST_STAGED_FILES.  The hook must exit 0.
+
+        FAILS before the fix: the current hook scans the whole store regardless
+        of what is staged (HOOK_TEST_STAGED_FILES is not yet a Phase 1 seam).
+        """
+        import os
+
+        invalid_content = textwrap.dedent("""\
+            id: FIN-020
+            title: "Invalid — not staged"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-020.yaml", invalid_content)
+            env = os.environ.copy()
+            env["HOOK_ROOT"] = str(root)
+            # Explicit empty string = no staged files.
+            env["HOOK_TEST_STAGED_FILES"] = ""
+            result = subprocess.run(
+                [sys.executable, str(HOOK_SCRIPT)],
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "No AC YAML files are staged (HOOK_TEST_STAGED_FILES='').  "
+                "The hook must exit 0 without scanning the store. "
+                f"Stderr: {result.stderr}"
+            ),
+        )
+
+    def test_hook_test_staged_files_unset_falls_back_to_git(self) -> None:
+        # covers: AC-3 (TICKET-20260622-AcSchemaHookStagedScope — production path)
+        """When HOOK_TEST_STAGED_FILES is absent, the hook queries git diff --cached.
+
+        In a temp dir with no git repo the git call will fail gracefully and the
+        hook must still exit 0 (no staged files found = no Phase 1 validation).
+        This verifies AC-3 on the real git path and AC-5 (fail-open on git error).
+
+        FAILS before the fix: without the staged-scope seam, _find_ac_files() runs
+        unconditionally and validates the whole store.
+        """
+        invalid_content = textwrap.dedent("""\
+            id: FIN-021
+            title: "Invalid — no git repo"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-021.yaml", invalid_content)
+            import os
+
+            env = os.environ.copy()
+            env["HOOK_ROOT"] = str(root)
+            # Do NOT set HOOK_TEST_STAGED_FILES — production path.
+            env.pop("HOOK_TEST_STAGED_FILES", None)
+            # HOOK_NO_GIT skips only the Phase 2 field-preservation path today;
+            # we intentionally do NOT set it here so the test exercises the real
+            # git-diff-cached path failing gracefully.
+            env.pop("HOOK_NO_GIT", None)
+            result = subprocess.run(
+                [sys.executable, str(HOOK_SCRIPT)],
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "In a non-git temp dir, git diff --cached fails gracefully → no "
+                "staged files → Phase 1 must exit 0. "
+                f"Stderr: {result.stderr}"
+            ),
+        )
+
+
+class TestAC4CrossFilePatternChecksUseFullStore(unittest.TestCase):
+    """AC-4: Cross-file pattern checks (deprecated-pattern reference, etc.) must
+    continue to resolve referenced pattern ACs against the full on-disk store
+    even when only a subset of files is staged.
+
+    Only the set of files *validated* in Phase 1 is narrowed — the lookup index
+    used by cross-file checks must NOT be narrowed.
+
+    These tests will be RED until python-coder wires up HOOK_TEST_STAGED_FILES
+    for Phase 1 while keeping the full-store lookup index for cross-file checks.
+    """
+
+    def test_staged_consuming_ac_can_find_unstaged_deprecated_pattern(self) -> None:
+        # covers: AC-4 (TICKET-20260622-AcSchemaHookStagedScope)
+        """A staged consuming AC that implements_pattern a deprecated (unstaged) pattern
+        must still exit 1 with the deprecated-pattern error.
+
+        The pattern AC (PTN-099) lives in the store but is NOT staged.
+        The consuming AC (FIN-099) IS staged.
+        Because the cross-file lookup index covers the full store, the hook must
+        detect the deprecated reference and exit 1.
+
+        FAILS before the fix: with HOOK_TEST_STAGED_FILES wired for Phase 1 but
+        the lookup index correctly spanning the full store, this test should pass.
+        Before that, the hook either exits 0 (does not validate the staged consuming
+        file at all) or exits 1 for the wrong reason (whole-store scan picks up
+        the deprecated reference, but the unit test cannot distinguish the scoping).
+        The test is designed to be RED until both conditions hold simultaneously:
+        (a) Phase 1 validates ONLY the staged consuming file, and
+        (b) the cross-file lookup still resolves the unstaged pattern.
+        """
+        pattern_content = textwrap.dedent("""\
+            id: PTN-099
+            title: "Deprecated pattern — unstaged"
+            component: finalize
+            status: deprecated
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+        """)
+        consuming_content = textwrap.dedent("""\
+            id: FIN-099
+            title: "Consuming AC referencing deprecated pattern — staged"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+            implements_pattern: "PTN-099"
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            # Pattern is NOT staged.
+            _write_ac_file(root, "PTN-099.yaml", pattern_content)
+            # Consuming file IS staged.
+            staged_consuming = _write_ac_file(root, "FIN-099.yaml", consuming_content)
+            result = _run_hook_with_staged(root, [staged_consuming])
+        self.assertEqual(
+            result.returncode,
+            1,
+            msg=(
+                "The staged consuming file (FIN-099.yaml) implements_pattern a "
+                "deprecated (unstaged) pattern. The cross-file lookup index must "
+                "span the full store, so this must exit 1. "
+                f"Stderr: {result.stderr}"
+            ),
+        )
+        self.assertIn(
+            "implements_pattern references deprecated pattern PTN-099",
+            result.stderr,
+            msg=f"Expected deprecated-pattern error in stderr: {result.stderr}",
+        )
+
+    def test_staged_consuming_ac_validates_against_unstaged_active_pattern(self) -> None:
+        # covers: AC-4 (TICKET-20260622-AcSchemaHookStagedScope)
+        """A staged consuming AC referencing an active (unstaged) pattern exits 0.
+
+        The lookup index must find the active pattern even though it is not staged,
+        so no deprecated-pattern error is emitted.
+
+        FAILS before the fix: HOOK_TEST_STAGED_FILES not yet a Phase 1 seam.
+        """
+        pattern_content = textwrap.dedent("""\
+            id: PTN-098
+            title: "Active pattern — unstaged"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+        """)
+        consuming_content = textwrap.dedent("""\
+            id: FIN-098
+            title: "Consuming AC referencing active pattern — staged"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+            implements_pattern: "PTN-098"
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "PTN-098.yaml", pattern_content)
+            staged_consuming = _write_ac_file(root, "FIN-098.yaml", consuming_content)
+            result = _run_hook_with_staged(root, [staged_consuming])
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "Staged consuming AC references an active (unstaged) pattern — "
+                "must exit 0. "
+                f"Stderr: {result.stderr}"
+            ),
+        )
+        self.assertNotIn(
+            "references deprecated pattern",
+            result.stderr,
+        )
+
+
+class TestAC5FailOpenOnGitUnavailable(unittest.TestCase):
+    """AC-5: The hook must remain fail-open when git is unavailable or
+    git diff --cached fails.  A failure to enumerate staged files must
+    NOT hard-block the commit.
+
+    These tests verify that the staged-files lookup failing gracefully means
+    Phase 1 skips (or runs with an empty staged list) rather than crashing.
+
+    These tests will be RED until python-coder wires up the staged-scope
+    change because the current code doesn't call git diff --cached for Phase 1
+    at all — after the change it must fail gracefully when git is absent.
+    """
+
+    def test_hook_no_git_env_makes_phase1_use_empty_staged_list(self) -> None:
+        # covers: AC-5 (TICKET-20260622-AcSchemaHookStagedScope)
+        """When HOOK_NO_GIT is set, the staged-files lookup must return [] for
+        Phase 1 (just as it does for Phase 2), so the hook exits 0 even when
+        an invalid file sits in the store.
+
+        FAILS before the fix: HOOK_NO_GIT currently guards only Phase 2 path;
+        Phase 1 still scans the whole store and would exit 1 for the invalid file.
+        After the fix, Phase 1 also respects HOOK_NO_GIT (or uses the empty staged
+        list returned when git is unavailable).
+        """
+        import os
+
+        invalid_content = textwrap.dedent("""\
+            id: FIN-030
+            title: "Invalid — git unavailable"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-030.yaml", invalid_content)
+            env = os.environ.copy()
+            env["HOOK_ROOT"] = str(root)
+            env["HOOK_NO_GIT"] = "1"
+            # Do NOT set HOOK_TEST_STAGED_FILES — production fail-open path.
+            env.pop("HOOK_TEST_STAGED_FILES", None)
+            result = subprocess.run(
+                [sys.executable, str(HOOK_SCRIPT)],
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "HOOK_NO_GIT=1 simulates git unavailable.  Phase 1 must not "
+                "hard-block: it should use an empty staged list and exit 0. "
+                f"Stderr: {result.stderr}"
+            ),
+        )
+
+
+class TestAC6StagingSeamWiredForExistingExitOneTests(unittest.TestCase):
+    """AC-6: The existing exit-1 schema tests must exercise the staged-files
+    path via HOOK_TEST_STAGED_FILES rather than passing trivially because
+    nothing is staged.
+
+    These tests confirm that HOOK_TEST_STAGED_FILES is wired as a Phase 1 seam:
+    if the seam is working, a file listed there is validated (and can fail the
+    hook).  If the seam is NOT wired, the hook exits 0 trivially (nothing staged
+    → nothing validated) even for a file with a schema violation.
+
+    All tests here are RED until python-coder wires up the HOOK_TEST_STAGED_FILES
+    seam for Phase 1.
+    """
+
+    def test_seam_wired_missing_criteria_exits_one(self) -> None:
+        # covers: AC-6 (TICKET-20260622-AcSchemaHookStagedScope)
+        """HOOK_TEST_STAGED_FILES seam is wired: a file with missing criteria exits 1.
+
+        This test is the canonical AC-6 guard.  It passes ONLY when the seam is
+        wired — i.e. Phase 1 validates the file listed in HOOK_TEST_STAGED_FILES
+        rather than ignoring it (no staging in a temp dir → trivially passes
+        without the seam).
+
+        FAILS before the fix: seam not wired, hook exits 0 (nothing staged in
+        the temp dir's git state).
+        """
+        content = textwrap.dedent("""\
+            id: FIN-040
+            title: "Missing criteria — seam test"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            staged_path = _write_ac_file(root, "FIN-040.yaml", content)
+            result = _run_hook_with_staged(root, [staged_path])
+        self.assertEqual(
+            result.returncode,
+            1,
+            msg=(
+                "HOOK_TEST_STAGED_FILES must be wired as a Phase 1 seam.  "
+                "The file listed there is schema-invalid (missing criteria) so "
+                "the hook must exit 1.  "
+                f"Stderr: {result.stderr}"
+            ),
+        )
+        self.assertIn("criteria", result.stderr)
+
+    def test_seam_wired_valid_file_exits_zero(self) -> None:
+        # covers: AC-6 (TICKET-20260622-AcSchemaHookStagedScope)
+        """HOOK_TEST_STAGED_FILES seam is wired: a valid file listed there exits 0.
+
+        Complement to test_seam_wired_missing_criteria_exits_one: a valid file
+        must still pass.  This guards against a naive implementation that always
+        exits 1 when the seam is set.
+
+        FAILS before the fix: seam not wired; after fix this should pass
+        trivially (valid file → no errors → exit 0).
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            staged_path = _write_ac_file(root, "FIN-041.yaml", _VALID_AC_YAML)
+            result = _run_hook_with_staged(root, [staged_path])
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "A valid file listed in HOOK_TEST_STAGED_FILES must exit 0. "
+                f"Stderr: {result.stderr}"
+            ),
+        )
+
+    def test_seam_empty_string_ignores_store_violations(self) -> None:
+        # covers: AC-6 + AC-3 (TICKET-20260622-AcSchemaHookStagedScope)
+        """HOOK_TEST_STAGED_FILES='' (empty) means no staged files → exit 0.
+
+        Even when an invalid file lives in the store, an empty staged list
+        means no Phase 1 validation runs and the hook exits 0.
+
+        FAILS before the fix: without the seam, Phase 1 still scans the whole
+        store.
+        """
+        import os
+
+        invalid_content = textwrap.dedent("""\
+            id: FIN-042
+            title: "Invalid — staged-files empty string"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-042.yaml", invalid_content)
+            env = os.environ.copy()
+            env["HOOK_ROOT"] = str(root)
+            env["HOOK_TEST_STAGED_FILES"] = ""
+            result = subprocess.run(
+                [sys.executable, str(HOOK_SCRIPT)],
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "HOOK_TEST_STAGED_FILES='' means nothing staged → exit 0 "
+                "even with invalid files in the store. "
+                f"Stderr: {result.stderr}"
+            ),
+        )
+
+    def test_seam_file_not_in_store_is_ignored_gracefully(self) -> None:
+        # covers: AC-6 (TICKET-20260622-AcSchemaHookStagedScope — edge case)
+        """A path in HOOK_TEST_STAGED_FILES that does not exist is skipped gracefully.
+
+        The seam must not raise an exception when a listed path is absent from
+        disk (e.g. a deleted file).  The hook must exit 0 (fail-open).
+
+        FAILS before the fix: the seam is not implemented, so the hook exits 0
+        for the wrong reason (whole-store fallback with empty store).  After the
+        fix, the hook exits 0 for the right reason (missing path skipped
+        gracefully, no violations found).
+        """
+        import os
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            # Create the AC dir so the hook has a root to work with.
+            ac_dir = root / "docs" / "acceptance-criteria"
+            ac_dir.mkdir(parents=True)
+            # Staged path that does NOT exist on disk.
+            missing_path = ac_dir / "DOES-NOT-EXIST.yaml"
+            env = os.environ.copy()
+            env["HOOK_ROOT"] = str(root)
+            env["HOOK_TEST_STAGED_FILES"] = str(missing_path)
+            result = subprocess.run(
+                [sys.executable, str(HOOK_SCRIPT)],
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "A non-existent path in HOOK_TEST_STAGED_FILES must be skipped "
+                "gracefully (fail-open). "
+                f"Stderr: {result.stderr}"
+            ),
+        )
 
 
 if __name__ == "__main__":

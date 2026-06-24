@@ -1,0 +1,47 @@
+id: BP-900d
+title: "Consumer-facing onboarding script is deployable, so build.py preflight does not abort"
+component: build_pipeline
+level: L1
+status: active
+req_status: approved
+readiness: approved
+priority: high
+work_status: in_progress
+criteria: |
+  Given onboard_hook_opt_in.py is referenced by a compiled consumer-facing
+    template (templates/agents/onboard.md instructs end users to run
+    "python scripts/onboard_hook_opt_in.py"),
+  When build.py runs its script-reference preflight guard
+    (_check_script_reference_guard) against the package source,
+  Then "scripts/onboard_hook_opt_in.py" resolves to a deployable script
+    because it exists under templates/scripts/ (the deploy source that
+    build.py copies to consumer projects),
+  And the preflight emits no broken-reference JSONL on stderr,
+  And `python scripts/build.py --target-dir <dir>` exits 0
+  And the symptom (preflight abort with exit 1 on
+    scripts/onboard_hook_opt_in.py) must not occur
+depends_on: [BP-900]
+doc_links:
+  - path: templates/scripts/onboard_hook_opt_in.py
+    relationship: exists
+    status: exists
+  - path: scripts/build.py
+    relationship: enforces
+    status: exists
+  - path: templates/agents/onboard.md
+    relationship: references
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "onboard_hook_opt_in.py must exist under templates/scripts/ so _manifest_template_standalone_scripts lists it as deployable"
+  - "The deployed copy must be byte-identical to the package-dev source scripts/onboard_hook_opt_in.py at promotion time"
+delivers_to: null
+expects_from: null
+origin_agent: debug
+created: 2026-06-22
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,5 +1,6 @@
 ---
 title: "How to deprecate or remove an artifact"
+description: "Step-by-step guide for safely deprecating or deleting agents, skills, hooks, and scripts from the leafcutter package without breaking consumer builds."
 type: how_to
 status: active
 created: 2026-05-28
@@ -225,11 +226,11 @@ Pre-commit hooks are Python scripts in
 `.pre-commit-config.yaml`.
 
 > **Historical note.** An earlier directory `templates/commit-guardian/` was
-> deprecated in EPIC-PortableInstallHardening T03 (2026-05-18). The canonical
-> location is now `templates/scripts/commit_guardian/`. See
-> `templates/commit-guardian/DEPRECATED.md` for the migration note. This
-> real-world deprecation is the motivating example for the deprecation pattern
-> described in §Deprecation below.
+> deprecated in EPIC-PortableInstallHardening T03 (2026-05-18) and fully
+> removed in TICKET-20260618-RemoveDeprecatedCommitGuardianTree. The canonical
+> location is `templates/scripts/commit_guardian/`. This real-world deprecation
+> is the motivating example for the deprecation pattern described in §Deprecation
+> below.
 
 ### Deleting a pre-commit hook
 

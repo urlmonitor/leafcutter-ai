@@ -1,0 +1,47 @@
+id: KM-KGS-100a-2
+readiness: approved
+priority: high
+title: "Each acceptance-criterion file becomes one node in the knowledge map"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100a.yaml"
+criteria: |
+  Given the "acs" surface points at a directory containing three acceptance-criterion
+    YAML files whose id fields are KM-EX-001, KM-EX-002, and KM-EX-003
+  When the knowledge map is built
+  Then the node set contains exactly one node per acceptance-criterion file,
+    with node ids KM-EX-001, KM-EX-002, and KM-EX-003
+  And each such node carries surface "acs"
+  And each node's title is taken from the criterion's title field
+depends_on:
+  - KM-KGS-100a
+  - KM-KGS-100a-1
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+  - path: config/ac_store_schema.json
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "AC store files are .yaml (not .md), so node extraction for the acs surface must read the YAML files under the surface directory recursively — the existing markdown-only directory ingestion (which globs **/*.md) does not cover the acs surface and must be extended to handle the acs surface's file type"
+  - "The node id must be taken from the criterion's id frontmatter field (not the filename stem), so that ids match the KM-EX-NNN form regardless of file name"
+  - "Surface ingestion must stay declaration-driven: the acs surface is discovered from the paths.json surfaces map, with no surface name special-cased in a hard-coded branch beyond what is needed to read its file type"
+  - "Build must remain stdlib-only with no third-party YAML dependency, consistent with the module's stated stdlib-only architecture, or reuse the existing in-repo frontmatter/AC parsing already used by the AC store tooling"
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100a-1
+  contract: "An 'acs' surface entry in config/paths.json resolving to docs/acceptance-criteria/ with edge_fields [implemented_by, covered_by, depends_on, components]"
+origin_agent: business-analyst
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by: [KM-KGS-100a-2-i]
+implemented_by:
+- tickets/00_inbox/epics/EPIC-ACCodeTraceabilityGraph/02_TICKET-20260622-KM-KGS-100a-2.md

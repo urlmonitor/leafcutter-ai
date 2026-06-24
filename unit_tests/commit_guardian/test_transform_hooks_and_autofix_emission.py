@@ -49,11 +49,11 @@ from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _SCRIPTS_DIR = _REPO_ROOT / "scripts" / "commit_guardian"
-_TEMPLATES_DIR = _REPO_ROOT / "templates" / "commit-guardian"
+_TEMPLATES_DIR = _REPO_ROOT / "templates" / "scripts" / "commit_guardian"
 
-_TRANSFORM_DOC_FRONTMATTER = _SCRIPTS_DIR / "transform_doc_frontmatter.py"
-_TRANSFORM_DESCRIPTION_FIELD = _SCRIPTS_DIR / "transform_description_field.py"
-_CHECK_EXCEPTION_HANDLING = _SCRIPTS_DIR / "check_exception_handling.py"
+_TRANSFORM_DOC_FRONTMATTER = _TEMPLATES_DIR / "transform_doc_frontmatter.py"
+_TRANSFORM_DESCRIPTION_FIELD = _TEMPLATES_DIR / "transform_description_field.py"
+_CHECK_EXCEPTION_HANDLING = _TEMPLATES_DIR / "check_exception_handling.py"
 _COMMIT_GUARDIAN_JSON = _SCRIPTS_DIR / "commit_guardian.json"
 
 

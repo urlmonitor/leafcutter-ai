@@ -1,0 +1,48 @@
+id: GE-111a
+readiness: approved
+priority: high
+title: "Get stopped when a refactor breaks a requirement's link to its code"
+component: guardrail-engine
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  A commit that breaks an AC-to-code link is blocked until the link is honest again.
+
+  When a commit moves, renames, or deletes source that an acceptance criterion
+  claims to satisfy, the commit is stopped with a clear, actionable message naming
+  the affected criterion and the link that no longer holds — so a broken link can
+  never silently reach the repository.
+depends_on: [GE-111]
+doc_links:
+  - path: "docs/reference/ac-schema.md"
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-111a-1
+  - GE-111a-2
+  - GE-111a-3
+  - GE-111a-4
+implemented_by: []
+documentation_triggers: [how-to, sequence-diagram]
+notes: |
+  PO authoring note (for the BA). This is the headline guarantee and the
+  user-confirmed enforcement decision: BLOCKING, not audit-only. The user was
+  explicit — "blocking, not audit-only" — so do NOT decompose a warn-only mode
+  as the default behavior at L2. (A configurable warn tier may exist as a
+  separate, deliberately-opted-into behavior, mirroring GE-100's warn-vs-block
+  config, but the default and the headline behavior is BLOCK.)
+
+  Scope boundary vs siblings: GE-111a owns the *block-the-commit* enforcement
+  action and the actionable error message. WHAT counts as "the link is broken"
+  (the detection) is GE-111b. The two reconciliation escape routes are GE-111d.
+  documentation_triggers [how-to, sequence-diagram] because this introduces a
+  new commit-time guardrail behavior the user must understand and a multi-actor
+  commit-time interaction (developer -> hook -> AC store -> commit decision).

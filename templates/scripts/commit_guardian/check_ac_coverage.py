@@ -189,16 +189,16 @@ def _build_parser() -> argparse.ArgumentParser:
 def _repo_root() -> Path:
     """Return a best-effort repo root path.
 
-    Uses this script's parent directory (templates/commit-guardian/) and goes
-    up two levels to reach the repo root. Works when installed as a package
+    Uses this script's parent directory (templates/scripts/commit_guardian/) and goes
+    up three levels to reach the repo root. Works when installed as a package
     template; falls back to the current working directory.
 
     Returns:
         Absolute Path to the repo root.
     """
     script_dir = Path(__file__).resolve().parent
-    # templates/commit-guardian/ → templates/ → repo root
-    candidate = script_dir.parent.parent
+    # templates/scripts/commit_guardian/ → templates/scripts/ → templates/ → repo root
+    candidate = script_dir.parent.parent.parent
     if (candidate / ".git").exists() or (candidate / "templates").is_dir():
         return candidate
     return Path(os.getcwd())
