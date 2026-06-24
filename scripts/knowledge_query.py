@@ -9,15 +9,20 @@ BUSINESS CONTEXT: Gives agents and humans a one-command answer to
     single pass, extracts a one-line description for every node, follows
     cross-surface edges, and dumps a flat index in both human-readable text
     and JSON format.
-ARCHITECTURE: Six public functions (load_surfaces, load_surfaces_with_meta,
-    build_knowledge_map, validate_knowledge_map, extract_nodes, extract_edges)
-    and a CLI entry point.
+ARCHITECTURE: Seven public functions (load_surfaces, load_surfaces_with_meta,
+    build_knowledge_map, validate_knowledge_map, validate_edges_integrity,
+    extract_nodes, extract_edges) and a CLI entry point.
     build_knowledge_map() is the primary API for callers that need both the
     graph data and surface-completeness audit metadata (declared_surfaces,
     contributing_surfaces). validate_knowledge_map() verifies each declared
     surface produces only the edge relationship kinds it declares in paths.json
     — the check is fully data-driven, so adding or removing a surface in
-    paths.json changes the validated set without any code edit. Surface
+    paths.json changes the validated set without any code edit.
+    validate_edges_integrity() verifies that every edge in a KnowledgeMap has
+    both a source node and a target node present in the full node set; the
+    exempt edge types (those pointing to file paths rather than node IDs) are
+    derived purely from ``file_path_fields`` entries in paths.json — no
+    hardcoded allow-list of target IDs or edge types is consulted. Surface
     discovery driven by paths.json; no surface path, edge_fields list, or
     phantom-filter-exempt field name is hardcoded — adding a new surface only
     requires a new entry in paths.json. Surfaces that declare edge fields
@@ -662,6 +667,113 @@ def validate_knowledge_map(
         )
 
     return results
+
+
+# ---------------------------------------------------------------------------
+# Public API: validate_edges_integrity
+# ---------------------------------------------------------------------------
+
+
+class EdgeIntegrityResult(NamedTuple):
+    """Result of edge integrity validation for a knowledge map.
+
+    Attributes:
+        valid: ``True`` when every non-exempt edge has both its source_id and
+            target_id present in the full node set.
+        invalid_edges: List of ``(EdgeRecord, reason)`` tuples for every edge
+            that fails the node-existence check.  Empty when ``valid`` is
+            ``True``.
+        node_ids: The full node-ID set derived from
+            ``knowledge_map.nodes`` and used for the validation.
+        exempt_edge_types: The set of edge types that are exempt from the
+            node-existence check because their targets are file paths rather
+            than knowledge-graph node IDs.  Derived purely from
+            ``file_path_fields`` entries in paths.json — no hardcoded
+            allow-list of edge types is used.
+    """
+
+    valid: bool
+    invalid_edges: list
+    node_ids: frozenset
+    exempt_edge_types: frozenset
+
+
+def validate_edges_integrity(
+    knowledge_map: KnowledgeMap,
+    project_root: Path,
+    paths_json: Path,
+) -> "EdgeIntegrityResult":
+    """Validate that every edge's source and target exist in the full node set.
+
+    For every edge in ``knowledge_map.edges`` this function checks that both
+    ``source_id`` and ``target_id`` are present in the set of node IDs derived
+    from ``knowledge_map.nodes``.
+
+    Edges whose ``edge_type`` appears in the ``file_path_fields`` list of any
+    surface in paths.json are **exempt** from the check because those edges
+    intentionally point to file-path targets (e.g. ``implemented_by`` and
+    ``covered_by`` in the ``acs`` surface).  The exempt set is built
+    data-driven from paths.json — no hardcoded allow-list of edge types or
+    target IDs is used.  This satisfies the AC requirement that the check
+    works "checked against the full node set rather than a hand-maintained
+    allow-list of target ids".
+
+    This function works for edges contributed by any declared surface,
+    including the ``acs`` surface, because it operates on the assembled
+    ``KnowledgeMap`` and consults paths.json only to determine which
+    edge types are file-path edges.
+
+    Args:
+        knowledge_map: A :class:`KnowledgeMap` produced by
+            ``build_knowledge_map()``.
+        project_root: Absolute path to the project root directory (used to
+            locate paths.json).
+        paths_json: Absolute path to the paths.json configuration file.
+
+    Returns:
+        An :class:`EdgeIntegrityResult` whose ``valid`` field is ``True`` when
+        every non-exempt edge has both source and target in the node set.
+        When ``valid`` is ``False``, ``invalid_edges`` lists every violating
+        ``(EdgeRecord, reason)`` pair.
+
+    Raises:
+        SystemExit: With exit code 1 when paths.json is absent or invalid JSON
+            (propagated from ``load_surfaces_with_meta``).
+    """
+    # Build the full node-ID set from the map nodes.
+    node_ids: frozenset[str] = frozenset(n.id for n in knowledge_map.nodes)
+
+    # Build the exempt edge-type set purely from file_path_fields in paths.json.
+    # No hardcoded constant (_PHANTOM_FILTER_EXEMPT_EDGE_TYPES) is consulted here
+    # so that the validation is fully data-driven: any surface can declare its
+    # file-path edge fields in paths.json and they will be automatically exempt.
+    surfaces_meta = load_surfaces_with_meta(project_root, paths_json)
+    exempt_types: set[str] = set()
+    for surface_info in surfaces_meta.values():
+        for fpf in surface_info.get("file_path_fields", []):
+            exempt_types.add(fpf)
+    exempt_edge_types: frozenset[str] = frozenset(exempt_types)
+
+    # Validate each edge against the full node set.
+    invalid_edges: list[tuple[EdgeRecord, str]] = []
+    for edge in knowledge_map.edges:
+        if edge.edge_type in exempt_edge_types:
+            continue
+        if edge.source_id not in node_ids:
+            invalid_edges.append(
+                (edge, f"source_id '{edge.source_id}' not in node set")
+            )
+        elif edge.target_id not in node_ids:
+            invalid_edges.append(
+                (edge, f"target_id '{edge.target_id}' not in node set")
+            )
+
+    return EdgeIntegrityResult(
+        valid=len(invalid_edges) == 0,
+        invalid_edges=invalid_edges,
+        node_ids=node_ids,
+        exempt_edge_types=exempt_edge_types,
+    )
 
 
 # ---------------------------------------------------------------------------
