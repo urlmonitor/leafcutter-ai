@@ -65,7 +65,8 @@ superseded_by: null
 covered_by:
   - BP-1200a-1-i
   - BP-1200a-1-ii
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260624-BP-1200a-1.md
 notes: |
   DECIDED MECHANISM (final gate): Approach 1 — CI build step + install_shims
   shim_map extension to bridge .leafcutter/scripts/... -> scripts/... for
