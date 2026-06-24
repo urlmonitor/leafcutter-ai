@@ -55,18 +55,37 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 
 
-def _git_toplevel() -> Path:
+def _git_toplevel(anchor: Path | None = None) -> Path:
     """Return the absolute path to the main repository root.
+
+    The repository root is resolved with ``git -C <anchor> rev-parse
+    --show-toplevel`` rather than relying on the process working directory.
+    This keeps the script correct when it is invoked from a parent workspace
+    that is not itself a git repository (e.g. the leafcutter dev layout where
+    ``leafcutter-ai/`` is the git root but the script may be launched from its
+    parent). When *anchor* is omitted, the script's own directory is used —
+    the script always lives physically inside the repository it operates on.
+
+    Args:
+        anchor: A path inside the target repository to resolve from. Defaults
+            to the directory containing this script.
 
     Returns:
         Absolute Path to the git toplevel directory.
     """
-    result = subprocess.run(
-        ["git", "rev-parse", "--show-toplevel"],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
+    if anchor is None:
+        anchor = Path(__file__).resolve().parent
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(anchor), "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        raise subprocess.SubprocessError(  # noqa: TRY003
+            f"Failed to resolve git toplevel from {anchor}: {exc}"
+        ) from exc
     return Path(result.stdout.strip())
 
 
@@ -83,12 +102,17 @@ def _worktree_exists(branch: str) -> tuple[bool, Path | None]:
         A tuple (exists, worktree_path_or_None) where exists is True when a
         matching worktree was found and worktree_path_or_None is its Path.
     """
-    result = subprocess.run(
-        ["git", "worktree", "list", "--porcelain"],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
+    try:
+        result = subprocess.run(
+            ["git", "worktree", "list", "--porcelain"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        raise subprocess.SubprocessError(  # noqa: TRY003
+            f"Failed to list git worktrees: {exc}"
+        ) from exc
     # Porcelain format: blocks separated by blank lines.
     # Each block starts with "worktree <path>", then "HEAD ...", then "branch ...".
     current_worktree_path: Path | None = None
@@ -126,18 +150,23 @@ def _create_worktree(slug: str, worktrees_dir: Path) -> Path:
         subprocess.CalledProcessError: If ``git worktree add`` exits non-zero.
     """
     worktree_path = worktrees_dir / slug
-    subprocess.run(
-        [
-            "git",
-            "worktree",
-            "add",
-            "-b",
-            f"feature/{slug}",
-            str(worktree_path),
-            "main",
-        ],
-        check=True,
-    )
+    try:
+        subprocess.run(
+            [
+                "git",
+                "worktree",
+                "add",
+                "-b",
+                f"feature/{slug}",
+                str(worktree_path),
+                "main",
+            ],
+            check=True,
+        )
+    except OSError as exc:
+        raise subprocess.SubprocessError(  # noqa: TRY003
+            f"Failed to add git worktree at {worktree_path}: {exc}"
+        ) from exc
     return worktree_path
 
 
@@ -192,23 +221,59 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
         pass
 
     # Populate submodules (like leafcutter) in the new worktree
-    subprocess.run(
-        ["git", "submodule", "update", "--init"],
-        cwd=worktree_path,
-        check=True,
-    )
+    try:
+        subprocess.run(
+            ["git", "submodule", "update", "--init"],
+            cwd=worktree_path,
+            check=True,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        raise subprocess.SubprocessError(  # noqa: TRY003
+            f"Failed to update submodules in {worktree_path}: {exc}"
+        ) from exc
 
-    subprocess.run(
-        ["poetry", "install", "--no-root"],
-        cwd=worktree_path,
-        check=True,
-    )
+    # Install Python dev dependencies. Detect the project's packaging style
+    # rather than assuming poetry: a poetry/PEP-621 project carries a
+    # pyproject.toml, while this package and many consumers pin dev deps in
+    # requirements-dev.txt (no pyproject.toml). Dependency install is treated
+    # as best-effort — a failure warns and continues, because the deps are
+    # frequently already present in the active environment and a hard failure
+    # here should not block the entire worktree setup.
+    if (worktree_path / "pyproject.toml").exists():
+        dep_cmd = ["poetry", "install", "--no-root"]
+    elif (worktree_path / "requirements-dev.txt").exists():
+        dep_cmd = [sys.executable, "-m", "pip", "install", "-r", "requirements-dev.txt"]
+    else:
+        dep_cmd = None
+        print(
+            "WARNING: no pyproject.toml or requirements-dev.txt found in "
+            f"{worktree_path}; skipping dependency install.",
+            file=sys.stderr,
+        )
+    if dep_cmd is not None:
+        try:
+            subprocess.run(dep_cmd, cwd=worktree_path, check=True)
+        except (subprocess.SubprocessError, OSError) as exc:
+            print(
+                f"WARNING: dependency install ({dep_cmd[0]}) failed in "
+                f"{worktree_path} ({exc}); continuing — deps may already be "
+                "present in the active environment.",
+                file=sys.stderr,
+            )
 
     # Populate .leafcutter/ build outputs so named workflow resolution works.
-    build_script = main_repo / "scripts" / "build.py"
-    if not build_script.exists():
+    # Probe both layouts: the self-hosted package has scripts/build.py at the
+    # repo root, while a consumer install carries leafcutter-ai/scripts/build.py
+    # as a subdirectory.
+    build_candidates = [
+        main_repo / "scripts" / "build.py",
+        main_repo / "leafcutter-ai" / "scripts" / "build.py",
+    ]
+    build_script = next((c for c in build_candidates if c.exists()), None)
+    if build_script is None:
         print(
-            "WARNING: scripts/build.py not found in main_repo; "
+            "WARNING: build.py not found in main_repo (probed "
+            f"{[str(c) for c in build_candidates]}); "
             ".leafcutter/ build outputs will be absent from the worktree.",
             file=sys.stderr,
         )
@@ -417,7 +482,10 @@ def cmd_setup_ticket(args: argparse.Namespace) -> None:
     if args.branch:
         slug = args.branch
 
-    main_repo = _git_toplevel()
+    main_repo = _git_toplevel(ticket_path.parent)
+    # Anchor all subsequent CWD-relative git calls to the repo root so the
+    # script works when launched from a non-repo parent workspace.
+    os.chdir(main_repo)
     worktrees_dir = main_repo.parent / "worktrees"
     worktrees_dir.mkdir(parents=True, exist_ok=True)
 
@@ -458,6 +526,9 @@ def cmd_create_only(args: argparse.Namespace) -> None:
     branch_name = args.branch_name
 
     main_repo = _git_toplevel()
+    # Anchor all subsequent CWD-relative git calls to the repo root so the
+    # script works when launched from a non-repo parent workspace.
+    os.chdir(main_repo)
     worktrees_dir = main_repo.parent / "worktrees"
     worktrees_dir.mkdir(parents=True, exist_ok=True)
 
