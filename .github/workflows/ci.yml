@@ -1,9 +1,17 @@
 # Continuous-integration gate for leafcutter-ai.
 #
-# Runs on every push to main and every PR targeting main. Two jobs:
+# Runs on every push to main and every PR targeting main. Three jobs:
 #
 #   lint       — ruff check over scripts/, tests/, unit_tests/ (config: ruff.toml).
 #                BLOCKING. The templates/ source tree is excluded (see ruff.toml).
+#
+#   test       — full pytest suite over tests/ and unit_tests/. BLOCKING.
+#                Requires the build step (python scripts/build.py --target-dir .)
+#                before pytest because build.py's install_shims() creates symlinks
+#                at scripts/commit_guardian/, scripts/doc_compliance/, and
+#                scripts/feedback/ pointing into .leafcutter/scripts/. Tests
+#                import from those paths at startup; without the build step they
+#                fail at import on a fresh clone (ADR-016).
 #
 #   typecheck  — mypy over the .py files changed in a PR (non-strict,
 #                --ignore-missing-imports, since the codebase has no type config
@@ -13,16 +21,6 @@
 #                findings on changed files without blocking the merge. Promote
 #                to blocking once the codebase is annotated. On direct pushes
 #                there is no diff base, so it is a no-op.
-#
-# NO test job (yet). The pytest suite cannot run green on a fresh clone: tests
-# under tests/commit_guardian/ and others import from scripts/commit_guardian/,
-# scripts/doc_compliance/, scripts/feedback/ — which are GITIGNORED build
-# outputs. A CI runner clones without them, and the current consolidated build
-# (build.py) writes those outputs into .leafcutter/ rather than the scripts/
-# paths the tests read, so ~36 tests fail at import on a clean checkout. Adding
-# a blocking test gate is tracked as a prerequisite ticket
-# (TICKET-20260617-CITestGateBuildOutputDependency.md). Until that is resolved,
-# CI enforces lint only.
 #
 # Dependencies are pinned in requirements-dev.txt.
 
@@ -54,6 +52,30 @@ jobs:
 
       - name: Ruff check
         run: ruff check scripts tests unit_tests
+
+  test:
+    name: Test suite (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Build — run install_shims to create scripts/ symlinks
+        # Required before pytest: install_shims() creates symlinks at
+        # scripts/commit_guardian/, scripts/doc_compliance/, and
+        # scripts/feedback/ pointing into .leafcutter/scripts/. Tests
+        # add those paths to sys.path at import time (ADR-016).
+        run: python scripts/build.py --target-dir .
+
+      - name: Run test suite
+        run: python -m pytest tests/ unit_tests/ -x -q
 
   typecheck:
     name: Type-check changed files (mypy, informational)
