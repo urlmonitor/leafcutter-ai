@@ -25,7 +25,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 02: Add a pure-literal meta validation gate for workflow scripts
@@ -85,7 +85,7 @@ contract as a package invariant.
 - [x] test-runner — 2026-06-24 00:10
 - [x] pr-reviewer — 2026-06-24 14:00
 - [x] commit — 2026-06-24 15:00
-- [ ] pull-request
+- [x] pull-request — 2026-06-24 11:21
 
 ## Comments
 
@@ -138,7 +138,7 @@ completion_manifest:
 10/10 pytest tests passed (exit 0). Standalone run of check_workflow_meta.py against all current workflow scripts also exits 0, confirming AC-2 is satisfied in the actual repo state. Test classes verified: TestCleanMetaLiteral (pure string and nested object), TestStringConcatenationRejected (+ concat, output naming), TestTemplateLiteralSubstitutionRejected (${...} substitution, output naming), TestSpreadOperatorRejected (spread in phases, output naming), TestNoMetaBlockRejected (missing meta block), TestHookScriptExists (hook file present on disk).
 
 ### 2026-06-24 15:00 — commit (status: ok)
-feedback-id: fb_2026-06-24_commit_02
+feedback-id: fb_2026-06-24_f90c0a46
 
 completion_manifest:
 - templates/scripts/commit_guardian/check_workflow_meta.py: committed (true)
@@ -147,4 +147,15 @@ completion_manifest:
 - docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md: committed (true)
 - tickets/00_inbox/epics/EPIC-FinalizeFeatureHardening/02_workflow_meta_literal_gate.md: committed (true)
 
-All 5 ticket-02 implementation files committed. Pre-commit hook check-feedback-id required feedback-id lines to be normalized (moved to immediately after heading, changed feedback_id key to feedback-id) before commit succeeded. Commit SHA recorded after successful git commit.
+All 5 ticket-02 implementation files committed. Pre-commit hook check-feedback-id required feedback-id lines to be normalized (moved to immediately after heading, changed feedback_id key to feedback-id) before commit succeeded. Commit SHA: 4c64e62.
+
+### 2026-06-24 11:21 — pull-request (status: ok)
+feedback-id: fb_2026-06-24_1e5fa945
+
+completion_manifest:
+- pushed: true
+- pr_url: https://github.com/urlmonitor/leafcutter-ai/pull/158
+- branch: EPIC-FinalizeFeatureHardening
+- pushed_sha: 4c64e62
+
+Verified PR #158 (fix(workflows): collapse meta BinaryExpression to pure literals) is open for branch EPIC-FinalizeFeatureHardening. Pushed ticket 02 commit (SHA 4c64e62) to origin, updating the existing epic PR without opening a new one. All five ACs for ticket 02 are implemented and committed: check_workflow_meta.py hook, 10 passing unit tests, commit_guardian.json registration, and ADR-006 addendum.
