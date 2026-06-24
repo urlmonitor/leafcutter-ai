@@ -1,0 +1,29 @@
+id: BO-1500c
+readiness: approved
+priority: high
+title: "Approved requirements reach main through a reviewed pull request"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  When you approve the result, it lands on the shared main line through a pull
+  request that passes the same quality checks as any other change.
+
+  You never have to hand-build a branch or open the request yourself afterward --
+  approval is all it takes to route the finished requirements into the standard,
+  gated delivery path.
+depends_on: [BO-1500]
+documentation_triggers: [how-to, sequence-diagram]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: [BO-1500c-1, BO-1500c-2, BO-1500c-3, BO-1500c-4, BO-1500c-5]
+implemented_by: []

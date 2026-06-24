@@ -55,38 +55,36 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 
 
-def _git_toplevel(repo_root: Path | None = None) -> Path:
+def _git_toplevel(anchor: Path | None = None) -> Path:
     """Return the absolute path to the main repository root.
 
-    When *repo_root* is provided the command runs as
-    ``git -C <repo_root> rev-parse --show-toplevel`` so that callers
-    running from an untracked parent directory (e.g. the self-hosting
-    ``leafcutter/`` workspace whose git root is the child
-    ``leafcutter-ai/``) can anchor on the known repo path instead of
-    trusting the process CWD.  When omitted the behaviour is unchanged
-    (CWD fallback).
+    The repository root is resolved with ``git -C <anchor> rev-parse
+    --show-toplevel`` rather than relying on the process working directory.
+    This keeps the script correct when it is invoked from a parent workspace
+    that is not itself a git repository (e.g. the leafcutter dev layout where
+    ``leafcutter-ai/`` is the git root but the script may be launched from its
+    parent). When *anchor* is omitted, the script's own directory is used —
+    the script always lives physically inside the repository it operates on.
 
     Args:
-        repo_root: Optional absolute path to the repository root to pass
-            as the ``git -C`` argument.  Defaults to None (CWD fallback).
+        anchor: A path inside the target repository to resolve from. Defaults
+            to the directory containing this script.
 
     Returns:
         Absolute Path to the git toplevel directory.
     """
-    cmd = ["git"]
-    if repo_root is not None:
-        cmd += ["-C", str(repo_root)]
-    cmd += ["rev-parse", "--show-toplevel"]
+    if anchor is None:
+        anchor = Path(__file__).resolve().parent
     try:
         result = subprocess.run(
-            cmd,
+            ["git", "-C", str(anchor), "rev-parse", "--show-toplevel"],
             capture_output=True,
             text=True,
             check=True,
         )
     except (subprocess.SubprocessError, OSError) as exc:
         raise subprocess.SubprocessError(  # noqa: TRY003
-            f"Failed to resolve git toplevel: {exc}"
+            f"Failed to resolve git toplevel from {anchor}: {exc}"
         ) from exc
     return Path(result.stdout.strip())
 
@@ -173,7 +171,7 @@ def _create_worktree(slug: str, worktrees_dir: Path) -> Path:
 
 
 def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
-    """Symlink .env and copy .mcp.json into *worktree_path*, then install dependencies.
+    """Symlink .env and copy .mcp.json into *worktree_path*, then run poetry install.
 
     `.env` is created as a symlink so that updates to the main repo's `.env`
     are automatically visible inside every worktree — no manual re-copy needed.
@@ -184,14 +182,6 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
     once at bootstrap time and is not expected to change after worktree creation.
 
     Missing source files are silently skipped (FileNotFoundError → no action).
-
-    The dependency install command is chosen by detecting the repo's manifest:
-    ``pyproject.toml`` → ``poetry install --no-root``;
-    ``requirements-dev.txt`` → ``pip install -r requirements-dev.txt``;
-    ``requirements.txt`` → ``pip install -r requirements.txt``;
-    no manifest → dep install is skipped entirely.
-    A failed dep install is non-fatal: a WARNING is printed to stderr and
-    bootstrap continues (``build.py`` still runs afterwards).
 
     Args:
         main_repo: Absolute Path to the main repository root where source
@@ -242,42 +232,48 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
             f"Failed to update submodules in {worktree_path}: {exc}"
         ) from exc
 
-    # Detect the dependency manager by inspecting manifest files in the worktree.
-    # Priority: pyproject.toml → poetry; requirements-dev.txt → pip;
-    # requirements.txt → pip; nothing found → skip dep install entirely.
+    # Install Python dev dependencies. Detect the project's packaging style
+    # rather than assuming poetry: a poetry/PEP-621 project carries a
+    # pyproject.toml, while this package and many consumers pin dev deps in
+    # requirements-dev.txt (no pyproject.toml). Dependency install is treated
+    # as best-effort — a failure warns and continues, because the deps are
+    # frequently already present in the active environment and a hard failure
+    # here should not block the entire worktree setup.
     if (worktree_path / "pyproject.toml").exists():
         dep_cmd = ["poetry", "install", "--no-root"]
-        dep_label = "poetry install --no-root"
     elif (worktree_path / "requirements-dev.txt").exists():
         dep_cmd = [sys.executable, "-m", "pip", "install", "-r", "requirements-dev.txt"]
-        dep_label = "pip install -r requirements-dev.txt"
-    elif (worktree_path / "requirements.txt").exists():
-        dep_cmd = [sys.executable, "-m", "pip", "install", "-r", "requirements.txt"]
-        dep_label = "pip install -r requirements.txt"
     else:
         dep_cmd = None
-        dep_label = None
-
+        print(
+            "WARNING: no pyproject.toml or requirements-dev.txt found in "
+            f"{worktree_path}; skipping dependency install.",
+            file=sys.stderr,
+        )
     if dep_cmd is not None:
         try:
-            subprocess.run(
-                dep_cmd,
-                cwd=worktree_path,
-                check=True,
-            )
+            subprocess.run(dep_cmd, cwd=worktree_path, check=True)
         except (subprocess.SubprocessError, OSError) as exc:
             print(
-                f"WARNING: dependency install failed ({dep_label}: {exc}); "
-                "bootstrap continues — install dependencies manually if needed.",
+                f"WARNING: dependency install ({dep_cmd[0]}) failed in "
+                f"{worktree_path} ({exc}); continuing — deps may already be "
+                "present in the active environment.",
                 file=sys.stderr,
             )
 
     # Run build.py to materialise .leafcutter/ (workflows, agents, skills, hooks)
     # in the new worktree.  Without this step, named-workflow resolution
     # (`workflow("build-epic")`) fails because .claude/workflows/ is gitignored
-    # and therefore absent from fresh worktrees.
-    build_script = worktree_path / "leafcutter-ai" / "scripts" / "build.py"
-    if build_script.exists():
+    # and therefore absent from fresh worktrees, and the .pre-commit-config
+    # (a .leafcutter shim) is missing so package hooks silently skip.
+    # Probe both layouts: consumer installs carry leafcutter-ai/scripts/build.py
+    # as a subdirectory; the self-hosted package has scripts/build.py at root.
+    build_candidates = [
+        worktree_path / "leafcutter-ai" / "scripts" / "build.py",
+        worktree_path / "scripts" / "build.py",
+    ]
+    build_script = next((c for c in build_candidates if c.exists()), None)
+    if build_script is not None:
         try:
             subprocess.run(
                 [sys.executable, str(build_script), "--target-dir", str(worktree_path)],
@@ -292,9 +288,10 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
             )
     else:
         print(
-            f"WARNING: build.py not found at {build_script}; "
-            "run `python leafcutter-ai/scripts/build.py --target-dir .` "
-            "inside the worktree to materialise .leafcutter/ build outputs.",
+            "WARNING: build.py not found in worktree (probed "
+            f"{[str(c) for c in build_candidates]}); "
+            "run build.py manually inside the worktree to materialise "
+            ".leafcutter/ build outputs.",
             file=sys.stderr,
         )
 
@@ -489,8 +486,10 @@ def cmd_setup_ticket(args: argparse.Namespace) -> None:
     if args.branch:
         slug = args.branch
 
-    repo_root = Path(args.repo_root).resolve() if getattr(args, "repo_root", None) else None
-    main_repo = _git_toplevel(repo_root)
+    main_repo = _git_toplevel(ticket_path.parent)
+    # Anchor all subsequent CWD-relative git calls to the repo root so the
+    # script works when launched from a non-repo parent workspace.
+    os.chdir(main_repo)
     worktrees_dir = main_repo.parent / "worktrees"
     worktrees_dir.mkdir(parents=True, exist_ok=True)
 
@@ -530,8 +529,10 @@ def cmd_create_only(args: argparse.Namespace) -> None:
     """
     branch_name = args.branch_name
 
-    repo_root = Path(args.repo_root).resolve() if getattr(args, "repo_root", None) else None
-    main_repo = _git_toplevel(repo_root)
+    main_repo = _git_toplevel()
+    # Anchor all subsequent CWD-relative git calls to the repo root so the
+    # script works when launched from a non-repo parent workspace.
+    os.chdir(main_repo)
     worktrees_dir = main_repo.parent / "worktrees"
     worktrees_dir.mkdir(parents=True, exist_ok=True)
 
@@ -574,18 +575,6 @@ def _build_parser() -> argparse.ArgumentParser:
             "  create-only   Worktree + bootstrap only (no ticket)."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    parser.add_argument(
-        "--repo-root",
-        default=None,
-        metavar="PATH",
-        help=(
-            "Explicit path to the git repository root. When provided, git commands "
-            "run as 'git -C <PATH> ...' so the script works correctly even when the "
-            "process CWD is an untracked parent directory (e.g. the self-hosting "
-            "leafcutter/ workspace whose git root is the child leafcutter-ai/). "
-            "Defaults to None (CWD fallback)."
-        ),
     )
     subparsers = parser.add_subparsers(dest="subcommand", required=True)
 
@@ -638,23 +627,6 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
-- 2026-06-24 [EPIC-FinalizeFeatureHardening/06]: Added --repo-root argument to
-  the top-level parser and extended _git_toplevel() to accept an optional
-  repo_root: Path | None parameter. When provided, the git command runs as
-  'git -C <repo_root> rev-parse --show-toplevel' so callers operating from
-  an untracked parent directory (e.g. the self-hosting leafcutter/ workspace
-  whose git root is the child leafcutter-ai/) can anchor on the known repo
-  path instead of relying on the process CWD. Both cmd_setup_ticket() and
-  cmd_create_only() derive repo_root from args.repo_root and forward it to
-  _git_toplevel(). The fallback (repo_root=None) preserves existing behaviour
-  for all callers that do not supply --repo-root.
-- 2026-06-24 00:00 [EPIC-FinalizeFeatureHardening/07]: Replaced unconditional
-  `poetry install --no-root` with manifest-detection logic: pyproject.toml →
-  poetry; requirements-dev.txt → pip; requirements.txt → pip; no manifest →
-  skip. Install failure is now non-fatal: caught as (subprocess.SubprocessError,
-  OSError), WARNING printed to stderr, bootstrap continues (build.py still runs).
-  Mirrors the catch-warn-continue pattern already used by the build.py step.
-  Fixes the poetry crash on repos that use requirements-dev.txt (this repo).
 - 2026-06-03 10:02 [EPIC-MoveOnMainOnly/01]: Removed _move_ticket() — branches
   no longer move ticket files; finalize-feature.js reconciles folder
   position on main after merge. The JSON output field was renamed from

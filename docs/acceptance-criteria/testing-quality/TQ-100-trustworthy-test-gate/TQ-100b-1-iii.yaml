@@ -1,0 +1,52 @@
+id: TQ-100b-1-iii
+title: "The AC store is read once per session and the enforced set is stable across repeated runs"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b.yaml
+criteria: |
+  Given a suite of tests tagged "# covers: <AC-ID>" covering a mix of done and
+    not-done ACs, and a fixed AC store that does not change between runs,
+  When the suite is run several times in succession, including runs with
+    different randomized test-ordering seeds,
+  Then the AC store is read once per session (not re-read per test)
+  And the set of tests classified as enforced versus informational is identical
+    across every run regardless of test ordering
+  And the overall pass/fail outcome does not change between runs for an unchanged
+    store.
+depends_on:
+  - TQ-100b-1
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b.yaml
+    relationship: describes
+    status: exists
+assigned_agent: test-runner
+estimated_complexity: S
+it_requirements:
+  - "Verification must run the suite multiple times across DIFFERENT pytest-randomly seeds (e.g. -p randomly with varied --randomly-seed) and assert the enforced/informational partition and the overall outcome are byte-identical across runs for an unchanged store."
+  - "Must assert the AC store is read once per session, not per test — e.g. by observing a single store-read (count/instrumentation) over a multi-test run, mirroring the BP-1200a-1-i determinism guard."
+  - "This is an execution/verification AC (run-N-times-and-compare), not source authoring — it exercises the TQ-100b-1 component, it does not build it."
+delivers_to: null
+expects_from:
+  ac_id: TQ-100b-1
+  contract: "The session-scoped linkage component; this edge case verifies one-read-per-session and a deterministic enforced/informational partition across orderings (pytest-randomly seeds)."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "TQ-100 it-po-enrichment"
+    by: it-po
+    at: 2026-06-24
+    note: "Added it_requirements (multi-seed cross-run comparison; assert single store-read per session; framed as verification not authoring). Confirmed test-runner / S — this is the run-N-times-and-compare leaf, correctly NOT python-coder."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Determinism guard mirroring BP-1200a-1-i: classify-once-per-session and the
+  same enforced set under pytest-randomly. Routed to test-runner because the
+  behavior is "run the suite N times across seeds and compare the partition",
+  i.e. execution/verification, not source authoring.

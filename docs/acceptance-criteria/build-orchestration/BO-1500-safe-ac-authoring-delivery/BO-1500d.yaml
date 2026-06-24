@@ -1,0 +1,29 @@
+id: BO-1500d
+readiness: approved
+priority: high
+title: "You see the pull request the moment it is ready"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  As soon as your approved requirements are routed for delivery, the pull request
+  is surfaced directly to you.
+
+  You get a clear pointer to the request that carries your changes, so you can
+  follow its review and merge without hunting for it.
+depends_on: [BO-1500]
+documentation_triggers: []
+documentation_rationale: "Surfacing the existing PR link to the user is a small visible-output detail of the delivery flow already documented under BO-1500c; no standalone documentation artifact is warranted."
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: [BO-1500d-1]
+implemented_by: []

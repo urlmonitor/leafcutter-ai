@@ -1,0 +1,29 @@
+id: BO-1500a
+readiness: approved
+priority: high
+title: "Your current work is never disturbed while you author requirements"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Authoring happens in its own isolated space -- your live work and a colleague's
+  parallel session are never touched.
+
+  When you start writing acceptance criteria, the workflow sets up a private,
+  separate workspace for the authoring so the files it produces never mix with
+  whatever you currently have open or with another session running at the same time.
+depends_on: [BO-1500]
+documentation_triggers: [sequence-diagram]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: [BO-1500a-1, BO-1500a-2, BO-1500a-3]
+implemented_by: []

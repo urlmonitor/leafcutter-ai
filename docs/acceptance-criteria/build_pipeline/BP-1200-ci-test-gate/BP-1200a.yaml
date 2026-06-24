@@ -1,0 +1,32 @@
+id: BP-1200a
+title: "The whole test suite passes on a brand-new copy of the project, every time"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Tests run green and identically on a fresh checkout, with no leftover local
+  files needed.
+
+  Anyone who takes a clean, untouched copy of the project can run the full test
+  suite and see it pass — the result does not depend on artifacts left behind by
+  earlier local work, and it comes out the same way every time. How the
+  fresh-copy gap is closed is an implementation decision deferred to an ADR and
+  is intentionally not specified here.
+depends_on:
+  - BP-1200
+doc_links: []
+documentation_triggers: []
+documentation_rationale: "Prerequisite reliability outcome with no new user-facing command or workflow — the suite simply runs green on a fresh clone; no how-to or diagram adds value."
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1200a-1
+  - BP-1200a-2
+implemented_by: []

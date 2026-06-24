@@ -1,0 +1,52 @@
+id: TQ-100e-2
+title: "Reference doc for the enforcement rollout stages and their controlling configuration"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100e.yaml
+criteria: |
+  Given the three-stage rollout behavior defined by TQ-100e-1 and its edge cases,
+  When a reference document is authored for the enforcement rollout,
+  Then it lists each enforcement mode (report-only, exclude-unbuilt, blocking)
+    and states precisely what each one does to the run outcome
+  And it documents the controlling configuration (how to set the mode, the valid
+    values, and the no-config safe default of report-only)
+  And a maintainer promoting enforcement can consult it to know exactly which
+    configuration value selects which stage and what changes when they switch.
+depends_on:
+  - TQ-100e
+  - TQ-100e-1
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100e.yaml
+    relationship: describes
+    status: exists
+assigned_agent: reference-author
+estimated_complexity: S
+it_requirements:
+  - "Must document the settled configuration surface concretely: the `testing_quality.enforcement_mode` key in commit_guardian.json AND the LEAFCUTTER_TEST_ENFORCEMENT_MODE env override (env takes precedence), the three valid values (report-only | exclude-unbuilt | blocking), and the no-config safe default of report-only."
+  - "Must state precisely what each mode does to the run outcome (report-only = surface all/block none; exclude-unbuilt = exclude not-done-feature tests; blocking = enforce done-AC and untagged tests), and what happens to a now-failing run when a maintainer switches modes."
+  - "Reference doc (lookup-oriented), authored to pass the repo's doc-frontmatter / doc-length / doc-type commit hooks; place under docs/ where a fresh consumer install can reach it (ADR-001), consistent with the parent L1's reference-doc trigger."
+delivers_to: null
+expects_from:
+  ac_id: TQ-100e-1
+  contract: "The config-selected three-mode behavior and the no-config default that this reference doc describes for maintainers."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "TQ-100 it-po-enrichment"
+    by: it-po
+    at: 2026-06-24
+    note: "Added it_requirements (document the settled config surface: commit_guardian.json testing_quality.enforcement_mode + LEAFCUTTER_TEST_ENFORCEMENT_MODE override + three values + report-only default; per-mode outcome semantics; pass doc hooks; deliverable placement). Confirmed reference-author / S (exists in registry, is_ticket_phase) — satisfies parent L1 documentation_triggers: [reference-doc]."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies the parent L1 documentation_triggers: [reference-doc]. Lookup-oriented
+  (what each stage does, how to set it), consulted at promotion time. ID-derived
+  parent is TQ-100e (the L1 carrying the documentation_trigger); the behavioral L2
+  it documents (TQ-100e-1) is retained in depends_on.

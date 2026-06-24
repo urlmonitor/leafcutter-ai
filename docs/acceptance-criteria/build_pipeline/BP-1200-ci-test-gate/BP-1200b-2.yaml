@@ -1,0 +1,64 @@
+id: BP-1200b-2
+title: "Sequence diagram documents the PR-to-test-check signal flow"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the test gate exists as a blocking check on pull requests,
+  When a contributor or maintainer reads the architecture documentation,
+  Then a sequence diagram shows the ordered flow from a pull request being
+    opened or updated, through the continuous-integration system starting the
+    test check, running the full suite, and reporting a pass or fail result back
+    to the pull request
+  And the diagram shows both the failing path (a failing test surfaces a blocking
+    failure on the pull request) and the passing path (a green suite reports a
+    passing check)
+  And the diagram names the actors and the test check consistently with the
+    behavior described in BP-1200b-1.
+depends_on:
+  - BP-1200b
+  - BP-1200b-1
+doc_links:
+  - path: docs/architecture/diagrams/c2-007-ci-test-gate-pr-flow.md
+    relationship: implements
+    status: planned
+  - path: docs/architecture/diagrams/c2-006-feature-to-merged-pr.md
+    relationship: describes
+    status: exists
+  - path: .github/workflows/ci.yml
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "Author a Mermaid sequenceDiagram under docs/architecture/diagrams/ following the existing c2-NNN naming convention (next free is c2-007; existing run through c2-006). Use the write-c4-diagram skill conventions."
+  - "Actor and check naming MUST match BP-1200b-1: the test check's name in the diagram must be the same stable check name the ci.yml job uses and that BP-1200c-1 requires in branch protection — no divergent labels."
+  - "Both branches must be depicted: failing path (test fails -> blocking failure surfaced on PR -> not mergeable) and passing path (suite green -> passing check -> merge not blocked by this check)."
+  - "Diagram is documentation only — it must not assert behavior beyond what BP-1200b-1 specifies (no invented retry/notification steps)."
+delivers_to: null
+expects_from:
+  ac_id: BP-1200b-1
+  contract: "The blocking test check behavior (named ci.yml test job, failing + passing paths) the diagram must depict, using the same check name"
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Confirmed assigned_agent architecture-diagram-author (correct surface). Resolved the planned docs/architecture/ doc_link to a concrete path docs/architecture/diagrams/c2-007-ci-test-gate-pr-flow.md (next free c2 number), added a describes-link to the existing c2-006 sibling and to ci.yml, and added it_requirements (Mermaid sequenceDiagram, c2-007 naming, check-name parity with BP-1200b-1/BP-1200c-1, both branches). Criteria and expects_from unchanged."
+    by: it-po
+  - reason: "final-gate-decision-applied"
+    entry: "Set readiness: approved and priority: high per the final user gate. Criteria, contracts, and assignment unchanged."
+    by: it-po
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Required by the documentation_triggers: [sequence-diagram] on the parent L1
+  BP-1200b.
+  IT-PO note: the next free C2 diagram number is c2-007 (existing diagrams run
+  c2-001..c2-006). The diagram's test-check name must match the ci.yml job name
+  fixed in BP-1200b-1.

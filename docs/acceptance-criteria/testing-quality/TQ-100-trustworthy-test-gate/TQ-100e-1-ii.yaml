@@ -1,0 +1,50 @@
+id: TQ-100e-1-ii
+title: "With no explicit config, enforcement defaults to the safe non-blocking mode"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100e.yaml
+criteria: |
+  Given a project or consumer install in which no explicit enforcement-mode
+    configuration is present,
+  When the suite is run,
+  Then the active enforcement mode is report-only (the safe non-blocking default)
+  And the run is never blocked solely because the mode was unconfigured
+  And no project is silently promoted to blocking by the absence of explicit
+    configuration.
+depends_on:
+  - TQ-100e-1
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100e.yaml
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "DESIGN DECISION (confirmed): the no-config safe default is report-only — the most conservative of the two non-blocking options. With neither the commit_guardian.json `testing_quality.enforcement_mode` key NOR the LEAFCUTTER_TEST_ENFORCEMENT_MODE env var set, the active mode is report-only."
+  - "A fresh consumer install (no config, no env) must never be blocked nor have any test silently excluded until the project explicitly opts in — absence of config can only ever yield report-only, never exclude-unbuilt and never blocking."
+  - "The default must be the documented constant report-only, not a date-derived or otherwise implicit runtime choice."
+delivers_to: null
+expects_from:
+  ac_id: TQ-100e-1
+  contract: "The config-selected mode; this edge case pins the no-config fallback to a safe non-blocking default."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "TQ-100 it-po-enrichment"
+    by: it-po
+    at: 2026-06-24
+    note: "Confirmed BA flag #5: no-config default = report-only (not exclude-unbuilt). Added it_requirements pinning report-only when neither the commit_guardian.json key nor the env override is set; fresh install never blocked/excluded until opt-in. Confirmed python-coder / S."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DESIGN DECISION CONFIRMED (IT-PO): the no-config default is report-only — the
+  most conservative of the two non-blocking options, guaranteeing a fresh
+  consumer install is never blocked nor has any test silently excluded until the
+  project opts in.

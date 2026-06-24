@@ -1,0 +1,53 @@
+id: TQ-100b-1-i
+title: "When its AC flips to done, the same test transitions from informational to enforced with no test edit"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b.yaml
+criteria: |
+  Given a failing test tagged "# covers: <AC-ID>" whose AC begins with
+    work_status not-done, observed in a first run to be reported informationally
+    (non-blocking),
+  When the AC's work_status is changed to done (for example because its feature
+    merged) and the suite is run again, with no change made to the test file,
+  Then in the second run the same test is enforced and its failure makes the
+    overall run outcome non-passing
+  And the transition from informational to enforced is driven solely by the AC's
+    work_status change, not by any edit to the test or any manual switch.
+depends_on:
+  - TQ-100b-1
+  - TQ-100b-2
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b.yaml
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must drive the transition by mutating ONLY the AC's work_status between two runs (no test-file edit), and assert run 1 = non-blocking, run 2 = blocking — proving work_status is the sole lever."
+  - "Each run reads the AC store fresh at session start, so the second run observes the updated work_status (consistent with the once-per-session read in TQ-100b-1, applied per run)."
+delivers_to: null
+expects_from:
+  ac_id: TQ-100b-2
+  contract: "The done-branch enforcement; this edge case asserts the automatic not-done -> done transition of the very same test with no manual test change."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "TQ-100 it-po-enrichment"
+    by: it-po
+    at: 2026-06-24
+    note: "Added it_requirements (mutate only work_status between two runs; fresh per-session read picks up the change). Confirmed python-coder / S."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The headline promise of TQ-100b: features in flight watch quietly, then start
+  blocking the instant they ship — automatically. This edge case verifies the
+  no-manual-step transition end to end. ID-derived parent is TQ-100b-1 (the
+  informational branch where the transition begins); TQ-100b-2 (enforced branch)
+  is retained in depends_on as the contract continuity for the done end state.

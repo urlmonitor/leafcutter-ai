@@ -20,7 +20,13 @@ from pathlib import Path
 from typing import Any
 
 _SPECIAL_TOKEN = "__ticket_phase_agents__"
-_EXTERNAL_CALLERS = {"user"}
+# External (non-agent) callers permitted in an agent's spawned_by list. These are
+# not themselves registry agents, so they are exempt from the unknown-agent and
+# bidirectional-allowlist checks. "user" is a human invoker; "finalize-feature.js"
+# is the finalization workflow that spawns these agents at depth 0 (the legacy
+# finalize-feature *agent* was removed in ADR-006 — see EPIC-FinalizeFeatureHardening
+# ticket 03 — leaving the .js workflow as the sole, non-agent, spawner).
+_EXTERNAL_CALLERS = {"user", "finalize-feature.js"}
 
 
 def validate_agent_registry(package_root: Path) -> list[str]:

@@ -1,0 +1,64 @@
+id: BO-1500b-1
+readiness: approved
+priority: high
+title: Each authoring stage commits its AC files before the next stage starts
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500b.yaml
+criteria: |
+  Given the authoring pipeline runs its stages in order
+    (product-owner, then business-analyst, then it-po),
+  When a stage finishes producing its AC YAML files and the user approves it,
+  Then those files are committed to the authoring branch before the next stage
+    begins,
+  And after the product-owner stage commits, the authoring branch HEAD contains
+    the L0/L1 files even though the business-analyst stage has not yet started,
+  And each subsequent stage's commit adds that stage's files on top of the
+    prior stage's commit.
+depends_on:
+- BO-1500b
+- BO-1500a-1
+doc_links:
+- path: templates/skills/create-ac/SKILL.md
+  relationship: modifies
+  status: exists
+- path: scripts/workflows/plan-feature.js
+  relationship: modifies
+  status: exists
+- path: templates/skills/build-single-ticket/SKILL.md
+  relationship: models
+  status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+- Commit on the authoring branch via the commit machinery after each approved stage. Stage boundaries
+  are the PO -> BA -> IT-PO gates in /create-ac and the equivalent gates in /plan-feature. Commits land
+  on the isolated branch, never main.
+- Each stage commit adds that stage's files on top of the prior stage's commit, establishing durable per-stage
+  boundaries (consumed by BO-1500b-2).
+- This behavior must be implemented in BOTH surfaces -- /create-ac (templates/skills/create-ac/SKILL.md
+  prose) and /plan-feature (scripts/workflows/plan-feature.js) -- preferably via a shared worktree/PR
+  helper reused from build-single-ticket (scripts/setup_ticket_worktree.py) and the pull-request machinery;
+  keep the two surfaces in sync. The create-ac prose edits are an llm-expert follow-on within the same
+  ticket.
+- 'Follow the project Error Handling Policy (CLAUDE.md): wrap all external I/O (git subprocess, gh CLI/REST
+  calls) in explicit error handling; no bare except; surface a user-visible warning/error rather than
+  silently swallowing.'
+delivers_to:
+  agent: python-coder
+  contract: Per-stage commits on the authoring branch (one per approved PO/BA/IT-PO stage) that mark durable
+    resume boundaries
+expects_from:
+  ac_id: BO-1500a-1
+  contract: An authoring worktree + branch to commit each stage onto
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by:
+- BO-1500b-1-i
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SafeAcAuthoring/05_TICKET-20260624-BO-1500b-1.md

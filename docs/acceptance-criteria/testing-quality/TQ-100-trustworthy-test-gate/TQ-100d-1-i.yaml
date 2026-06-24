@@ -1,0 +1,48 @@
+id: TQ-100d-1-i
+title: "An allowlist entry whose expiry date has passed is flagged and fails the check"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100d.yaml
+criteria: |
+  Given a known-failing-tests allowlist containing an entry whose expiry date is
+    earlier than the current date,
+  When the allowlist check runs,
+  Then the expired entry is flagged with a message naming the entry, its test,
+    and its passed expiry date
+  And the check fails (non-passing outcome) on the presence of the expired entry
+  And the expired entry no longer exempts its named test from blocking the run.
+depends_on:
+  - TQ-100d-1
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100d.yaml
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Expiry comparison must use the current date against the entry's ISO expiry; a past-expiry entry both (a) fails the allowlist check loudly AND (b) stops exempting its named test (so the test reverts to normal enforcement)."
+  - "Date handling must be deterministic and timezone-stable (compare dates, not wall-clock instants) so the same allowlist gives the same verdict regardless of run time-of-day."
+  - "The flag message must name the entry, its test, and the passed expiry date."
+delivers_to: null
+expects_from:
+  ac_id: TQ-100d-1
+  contract: "The allowlist mechanism; this edge case asserts an entry past its expiry is flagged and fails the check, and stops exempting its test."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "TQ-100 it-po-enrichment"
+    by: it-po
+    at: 2026-06-24
+    note: "Added it_requirements (past-expiry => loud fail AND stops exempting; date-stable comparison; named message). Confirmed python-coder / S."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Self-expiry is the anti-rot guarantee: an exemption cannot outlive its declared
+  expiry. Past-expiry => flagged + failing + no longer exempting.

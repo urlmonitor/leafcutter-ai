@@ -1,0 +1,56 @@
+id: TQ-100b-1-ii
+title: "A test tagged with an AC id absent from the store is enforced, not silently skipped"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b.yaml
+criteria: |
+  Given a test function tagged "# covers: <AC-ID>" where <AC-ID> does not match
+    any acceptance-criterion present in the AC store,
+  When the suite is run and that test fails,
+  Then the test is treated as unlinked and is enforced (its failure counts as a
+    real failure and drives the run outcome non-passing)
+  And the test is never treated as informational on the basis of an
+    unresolvable tag
+  And the unresolved tag is surfaced to the linkage-integrity check (TQ-100c) so
+    the dangling reference is flagged.
+depends_on:
+  - TQ-100b-1
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b.yaml
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100c.yaml
+    relationship: relates-to
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Fail-safe direction is mandatory and must NOT be relaxed: a `# covers:` tag that resolves to no AC in the store makes the test ENFORCED (treated as unlinked), never informational — an unknown/typo'd id can never become an accidental off-switch."
+  - "The unresolved-tag set must be exposed to the TQ-100c-2 pre-pytest linkage-integrity check so the dangling reference is flagged there; do not silently drop it inside the pytest session."
+  - "Resolution of a tag to 'absent' must be deterministic under pytest-randomly and based on the same once-per-session AC-store read as TQ-100b-1 (no per-test re-read)."
+delivers_to:
+  agent: python-coder
+  contract: "The set of test ids/paths whose '# covers: <AC-ID>' tag resolves to no AC present in the store, exposed for the TQ-100c-2 pre-pytest linkage-integrity check to flag as a dangling reference. Shape: list of { test_id, covers_tag } repo-root-relative."
+expects_from:
+  ac_id: TQ-100b-1
+  contract: "The session-scoped linkage component; this edge case pins the fail-safe (unresolvable tag => enforced, never silently skipped)."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "TQ-100 it-po-enrichment"
+    by: it-po
+    at: 2026-06-24
+    note: "Added it_requirements (non-relaxable fail-safe: unresolved tag => enforced; expose dangling set to TQ-100c-2; deterministic, same once-per-session read). Tightened delivers_to contract shape to { test_id, covers_tag } so the TQ-100c integrity check has an exact consumer contract. Confirmed python-coder / S."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Fail-safe direction: an unknown/typo'd AC id must never become an accidental
+  off-switch. Unlinked == enforced; the dangling tag is also reported to the
+  integrity check (TQ-100c-2 family) so it gets fixed.
