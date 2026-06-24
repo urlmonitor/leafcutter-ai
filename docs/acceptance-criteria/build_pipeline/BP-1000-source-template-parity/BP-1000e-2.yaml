@@ -1,5 +1,5 @@
 id: BP-1000e-2
-readiness: draft
+readiness: approved
 priority: medium
 title: "A workflow template edited without its mirror is caught and blocked"
 component: build-pipeline
@@ -30,6 +30,10 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "This is the direct KI-3 reproduction: a branch edits templates/workflows-js/<name>.js but not its scripts/workflows/<name>.js mirror; the verdict must report that pair not byte-identical, carry the diff, and FAIL the merge gate."
+  - "The block must be enforced at the merge gate (the gate fails / merge is blocked), consuming the BP-1000e-1 verdict's ok=false — do not re-implement the comparison here."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
 delivers_to: null
 expects_from:
   ac_id: BP-1000e-1

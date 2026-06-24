@@ -1,5 +1,5 @@
 id: BO-1600b-3
-readiness: draft
+readiness: approved
 priority: medium
 title: "The next delivery commits cleanly into a worktree left by a failed one"
 component: build-orchestration
@@ -31,6 +31,10 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "The test must first drive a commit to interruption AND run the BO-1600b-1 cleanup, then assert the NEXT supervisor commits cleanly against the recovered worktree — it must not assume a pristine worktree."
+  - "Success must be asserted by the next commit being present and reachable in history, and by the absence of any encountered debris (no truncated object, no stale lock, no poisoned index), not merely a zero exit code."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
 delivers_to: null
 expects_from:
   ac_id: BO-1600b-1

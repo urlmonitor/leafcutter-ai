@@ -1,5 +1,5 @@
 id: BO-1600a-2
-readiness: draft
+readiness: approved
 priority: medium
 title: "A second supervisor waits for the git write portion, then commits cleanly"
 component: build-orchestration
@@ -33,6 +33,11 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Supervisor B's wait must be a true block on the guard (no busy-spin that pegs a CPU) and must not write any git object or touch the index until the guard is acquired."
+  - "On release by A, exactly one waiter (B) may proceed; the hand-off must not drop or double-grant the guard."
+  - "Both commits must be present and independently reachable in history afterward — neither lost nor overwritten; the test must assert both commit SHAs are reachable, not merely that the command exited zero."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3); a failed acquire must surface as a determinate error, not a silent skip of the commit."
 delivers_to: null
 expects_from:
   ac_id: BO-1600a-1

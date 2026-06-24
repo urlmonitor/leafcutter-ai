@@ -1,5 +1,5 @@
 id: BP-1000e-3
-readiness: draft
+readiness: approved
 priority: medium
 title: "When every workflow mirror matches its source, the merge proceeds"
 component: build-pipeline
@@ -26,6 +26,10 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "When every mirrored workflow-script pair is byte-identical the verdict must report ok with no drifted pair and the gate must NOT block the merge (no false positive on a clean tree)."
+  - "Consume the BP-1000e-1 verdict's ok=true path; do not re-implement the comparison here."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
 delivers_to: null
 expects_from:
   ac_id: BP-1000e-1

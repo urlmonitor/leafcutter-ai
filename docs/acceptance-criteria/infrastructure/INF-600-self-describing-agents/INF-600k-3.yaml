@@ -1,5 +1,5 @@
 id: INF-600k-3
-readiness: draft
+readiness: approved
 priority: medium
 title: "A genuinely unknown agent in spawned_by is still rejected"
 component: infrastructure
@@ -28,6 +28,10 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Negative-guarantee AC over already-shipped scripts/registry_validator.py behavior: an entry that is neither a known agent nor a recognized external caller (not a workflow *.js filename, not 'user') must STILL be reported as an unknown agent and STILL fail the build."
+  - "The _EXTERNAL_CALLERS relaxation must NOT suppress this genuine unknown-agent error — verify the relaxation did not become a blanket acceptance that masks a typo or a reference to a deleted agent."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
 delivers_to: null
 expects_from:
   ac_id: INF-600k-1

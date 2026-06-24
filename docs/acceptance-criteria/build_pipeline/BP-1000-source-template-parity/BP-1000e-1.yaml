@@ -1,5 +1,5 @@
 id: BP-1000e-1
-readiness: draft
+readiness: approved
 priority: medium
 title: "Any diff between a workflow source script and its shipped mirror blocks the merge"
 component: build-pipeline
@@ -39,6 +39,13 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Reuse, do not re-invent, the BP-1000a-1 byte-parity diff-runner approach applied to the templates/workflows-js/ <-> scripts/workflows/ mirror set; the verdict is computed by a standalone, discoverable Python module invokable both from the merge-gate workflow and standalone for local pre-flight (do not inline the comparison only inside the workflow)."
+  - "Comparison is exact byte equality of file contents; do NOT normalize whitespace, line endings, or trailing newlines (whitespace-only drift must fail, per the criteria)."
+  - "Keep this check strictly distinct from BP-100k (compiled-workflow-output drift via hash manifests at pre-commit on .claude/workflows/). This is source<->mirror byte diff at the MERGE GATE, not a pre-commit manifest check — do not reuse or extend the BP-100k mechanism."
+  - "Per the commit_guardian convention this parity gate is a NEW templates/scripts/commit_guardian/ hook; it is not part of scripts/registry_validator.py. Land it as its own hook + verdict producer matching the BP-1000a..d shape."
+  - "Must complete in under 5 seconds for the current workflow-script mirror set; the comparison must be O(files) and must not invoke a subprocess per file."
+  - "Must handle filesystem errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3): wrap file reads in try/except with a specific exception type, log at WARNING or higher, and surface an unreadable file as a determinate failure rather than silently passing."
 delivers_to:
   agent: python-coder
   contract: "A per-pair parity verdict object over the workflow-script mirror set: { ok: bool, pairs: [ { source_path: str, mirror_path: str, identical: bool, diff: str|null } ] } where paths are repo-root-relative POSIX paths, identical=false carries a non-null unified diff (source vs shipped mirror), and ok=true iff every mirrored workflow-script pair is identical. This is the single load-bearing primitive consumed by the block outcome (BP-1000e-2), the pass outcome (BP-1000e-3), the scope filter (BP-1000e-4), and the failure reporter (BP-1000e-5). Same mechanism shape as BP-1000a-1 applied to the templates/workflows-js/ <-> scripts/workflows/ mirror set."

@@ -1,5 +1,5 @@
 id: BO-1600c-4
-readiness: draft
+readiness: approved
 priority: medium
 title: "Sequence diagram of corruption detection halting the drive"
 component: build-orchestration
@@ -33,6 +33,10 @@ doc_links:
     status: exists
 assigned_agent: architecture-diagram-author
 estimated_complexity: S
+it_requirements:
+  - "The sequence diagram must live in the component documentation for this feature and satisfy the BO-1600c documentation_trigger (sequence-diagram); follow the project diagram conventions (see write-c4-diagram skill)."
+  - "The diagram must show the drive running the integrity probe, the probe returning a corrupt verdict, the drive halting before the next commit, and the plain-language actionable report reaching the operator."
+  - "The diagram must make visible that NO further commit is dispatched after the corrupt verdict — the drive stops rather than looping back to the next ticket."
 delivers_to: null
 expects_from:
   ac_id: BO-1600c-1

@@ -1,5 +1,5 @@
 id: BO-1600b-4
-readiness: draft
+readiness: approved
 priority: medium
 title: "State diagram of a commit's lifecycle through interruption and cleanup"
 component: build-orchestration
@@ -34,6 +34,10 @@ doc_links:
     status: exists
 assigned_agent: architecture-diagram-author
 estimated_complexity: S
+it_requirements:
+  - "The state diagram must live in the component documentation for this feature and satisfy the BO-1600b documentation_trigger (state-diagram); follow the project diagram conventions (see write-c4-diagram skill)."
+  - "The diagram must show a commit's normal states (guard acquired, writing objects, updating index, committed) AND the interruption/failure transitions into a cleanup state that releases the guard, removes any truncated object and stale index lock, and returns the worktree to a clean state."
+  - "The diagram must make visible that the clean state is the entry point a subsequent supervisor's commit relies on (ties BO-1600b-3's pre-condition to the cleanup outcome)."
 delivers_to: null
 expects_from:
   ac_id: BO-1600b-1

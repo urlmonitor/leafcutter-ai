@@ -1,5 +1,5 @@
 id: BO-1600b-1
-readiness: draft
+readiness: approved
 priority: medium
 title: "An interrupted commit leaves no half-written object behind"
 component: build-orchestration
@@ -31,6 +31,12 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Any loose object the interrupted commit had begun writing must be left either fully present and content-hash-valid or absent entirely — never a truncated intermediate file (the canonical git mechanism is write-to-temp-then-atomic-rename, but the AC states only the WHAT; the coder chooses the HOW)."
+  - "The cleanup must be safe to run after an abrupt termination (process killed, timeout, mid-write error) — it cannot assume the interrupted commit got a chance to run its own teardown."
+  - "Cleanup must be idempotent: running it more than once against the same worktree must converge to the same clean state without error."
+  - "Cleanup must only remove debris attributable to a failed/incomplete commit; it must never delete or alter a fully-written, content-hash-valid object belonging to a successful commit."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3): wrap filesystem operations in try/except with a specific exception type and log at WARNING or higher; a cleanup that cannot complete must surface a determinate failure rather than silently leaving debris."
 delivers_to:
   agent: python-coder
   contract: "A commit cleanup/recovery routine that runs when a supervisor's commit is interrupted, guaranteeing the shared object store is left with no truncated loose object. This routine is the single load-bearing primitive consumed by the index-cleanliness behavior (BO-1600b-2) and the next-delivery-proceeds behavior (BO-1600b-3)."

@@ -1,5 +1,5 @@
 id: BP-1000e-4
-readiness: draft
+readiness: approved
 priority: medium
 title: "Only workflow scripts that have a shipped mirror are compared"
 component: build-pipeline
@@ -31,6 +31,11 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Pair discovery must be data-driven, not a hardcoded list: the set of compared pairs is derived from which workflow scripts actually exist as a name-matched pair on BOTH sides of templates/workflows-js/ <-> scripts/workflows/ (mirrors the BP-1000d-1 scope behavior)."
+  - "A workflow script present on only one side (no mirror counterpart) must be EXCLUDED from comparison and must never cause a false drift failure on its own."
+  - "The pairing rule (a workflow script becomes in-scope by gaining a name-matched mirror counterpart on the other side) must be pinned concretely in the implementation — see the open question flagged to the final gate before building."
+  - "Must handle filesystem errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
 delivers_to: null
 expects_from:
   ac_id: BP-1000e-1

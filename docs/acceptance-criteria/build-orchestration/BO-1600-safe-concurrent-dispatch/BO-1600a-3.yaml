@@ -1,5 +1,5 @@
 id: BO-1600a-3
-readiness: draft
+readiness: approved
 priority: medium
 title: "Concurrent commits no longer produce a zero-byte object or a broken index"
 component: build-orchestration
@@ -33,6 +33,11 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "This is the direct regression test for EPIC-FinalizeFeatureHardening KI-1; it must reproduce overlapping commit phases of many supervisors into one shared worktree, not a single sequential commit, or it does not guard the original failure."
+  - "The integrity assertion must verify content-hash validity of loose objects (object name matches content) and a readable/consistent index, and must run a git object-integrity check (e.g. fsck-equivalent) reporting no corruption — a plain git status is insufficient."
+  - "The test must be deterministic enough to catch the race reliably (drive sufficient concurrency/iterations); a flaky pass that only sometimes exercises overlap is not acceptable as a regression guard."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3) when shelling out to git integrity tooling: wrap the subprocess call, name the exception type, and treat a non-zero integrity result as a determinate test failure."
 delivers_to: null
 expects_from:
   ac_id: BO-1600a-1

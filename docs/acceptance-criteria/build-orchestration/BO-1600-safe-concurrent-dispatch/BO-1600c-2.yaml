@@ -1,5 +1,5 @@
 id: BO-1600c-2
-readiness: draft
+readiness: approved
 priority: medium
 title: "The halt message names what is wrong and what the operator should do"
 component: build-orchestration
@@ -33,6 +33,10 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "The halt report must name the specific damage from the verdict (which object is zero-byte or hash-mismatched, or that the index is unreadable) — a generic 'corruption detected' message is insufficient."
+  - "The report must state in plain operator terms that the drive was stopped to avoid compounding damage and that the repository needs repair before re-running — it must not imply the drive will self-recover."
+  - "The message must be emitted at an appropriate severity (error level) so it is not lost in routine drive output."
 delivers_to: null
 expects_from:
   ac_id: BO-1600c-1

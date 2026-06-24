@@ -1,5 +1,5 @@
 id: BP-1000e-5
-readiness: draft
+readiness: approved
 priority: medium
 title: "A workflow-mirror drift failure names every drifted file and shows the diff"
 component: build-pipeline
@@ -27,6 +27,10 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "The drift failure report must name the source path AND the mirror path of EVERY drifted pair and show the diff for each — it must list ALL drifted pairs, not only the first found (consume the per-pair verdict's diff strings from BP-1000e-1)."
+  - "Paths in the report must be repo-root-relative POSIX paths, matching the verdict object's path convention."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
 delivers_to: null
 expects_from:
   ac_id: BP-1000e-1

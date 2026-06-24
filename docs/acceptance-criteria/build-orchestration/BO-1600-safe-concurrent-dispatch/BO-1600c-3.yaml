@@ -1,5 +1,5 @@
 id: BO-1600c-3
-readiness: draft
+readiness: approved
 priority: medium
 title: "The drive never presses on against a repository known to be corrupted"
 component: build-orchestration
@@ -33,6 +33,11 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "On a corrupt verdict the drive must NOT start, retry, or queue any further ticket commit against the corrupted repository — this is a hard stop, not a warning the loop ignores."
+  - "The drive must exit with a failure outcome (a non-success result the caller can detect programmatically), never report partial success after a corrupt verdict."
+  - "A clean integrity verdict must be required before any later drive may begin writing to that shared repository again (the corrupt state is sticky until repaired)."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3); the failure exit must be a determinate, typed outcome, not an unhandled crash."
 delivers_to: null
 expects_from:
   ac_id: BO-1600c-1

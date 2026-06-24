@@ -1,5 +1,5 @@
 id: BO-1600b-2
-readiness: draft
+readiness: approved
 priority: medium
 title: "An interrupted commit leaves no poisoned index or stranded lock"
 component: build-orchestration
@@ -33,6 +33,11 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Cleanup must leave the worktree index in a consistent, readable state (a fresh status/read succeeds with no index-corruption error)."
+  - "Any stale index lock left by the interrupted supervisor must be removed so a later commit can acquire the index — but a lock currently held by a still-live commit must not be removed (distinguish stale from live)."
+  - "The git-write serialization guard from BO-1600a-1 held by the interrupted supervisor must be released by cleanup so a waiting supervisor is not blocked indefinitely; this closes the deadlock risk the guard would otherwise introduce."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3) when removing lock files / releasing the guard: name the exception type, log at WARNING or higher, never swallow silently."
 delivers_to: null
 expects_from:
   ac_id: BO-1600b-1

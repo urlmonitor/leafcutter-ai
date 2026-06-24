@@ -1,5 +1,5 @@
 id: INF-600k-2
-readiness: draft
+readiness: approved
 priority: medium
 title: "A direct user trigger in spawned_by passes registry validation as an external caller"
 component: infrastructure
@@ -27,6 +27,10 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Behavior is ALREADY SHIPPED (the literal 'user' is in scripts/registry_validator.py's _EXTERNAL_CALLERS); this AC locks it via test coverage rather than a new build."
+  - "The literal external trigger 'user' in spawned_by must be recognized as a legitimate external caller, must not raise 'unknown agent', and must not fail the build."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
 delivers_to: null
 expects_from:
   ac_id: INF-600k-1

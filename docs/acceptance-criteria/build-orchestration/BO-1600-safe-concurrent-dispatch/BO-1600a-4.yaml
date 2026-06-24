@@ -1,5 +1,5 @@
 id: BO-1600a-4
-readiness: draft
+readiness: approved
 priority: medium
 title: "Sequence diagram of serialized concurrent commits into the shared worktree"
 component: build-orchestration
@@ -34,6 +34,10 @@ doc_links:
     status: exists
 assigned_agent: architecture-diagram-author
 estimated_complexity: S
+it_requirements:
+  - "The sequence diagram must live in the component documentation for this feature and satisfy the BO-1600a documentation_trigger (sequence-diagram); follow the project C4/diagram conventions (see write-c4-diagram skill)."
+  - "The diagram must visibly distinguish this shared-store protection concern from BO-100c (pre-dispatch file-conflict scheduling) and BO-200 (single-ticket atomic commit), per the BO PROJECT_CONTEXT scope boundaries."
+  - "The diagram must depict the second supervisor waiting while the first holds the git-write guard, then proceeding — the serialization must be legible from the diagram alone."
 delivers_to: null
 expects_from:
   ac_id: BO-1600a-1
