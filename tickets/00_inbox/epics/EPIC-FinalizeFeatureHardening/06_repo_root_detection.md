@@ -1,6 +1,6 @@
 ---
 title: "Replace CWD-trusting git detection with explicit repo-root anchoring"
-status: in_progress
+status: done
 components:
   - worktree_manager
   - build_pipeline
