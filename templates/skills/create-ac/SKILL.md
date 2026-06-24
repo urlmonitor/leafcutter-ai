@@ -339,7 +339,7 @@ route: strategic | behavioral | technical | covered
 
 ---
 
-## §1–§3 — Stage Pipeline (abbreviated)
+## §1–§3 — Stage Pipeline
 
 Each authoring stage follows the same pattern:
 
@@ -347,15 +347,51 @@ Each authoring stage follows the same pattern:
 2. Present produced ACs to the user for approval.
 3. On **approve**: commit the AC files produced in this stage only (scoped
    `git add <ac-store-dir>/<files-from-this-stage>` followed by a staged
-   commit). See `ACD-300g-2` for the scoping invariant.
+   commit). See `ACD-300g-2` for the scoping invariant. **The commit MUST
+   succeed before the next stage agent is dispatched.** If the commit fails
+   (pre-commit hook rejection, index conflict, or git error), return an error
+   to the user and abort the pipeline — do NOT invoke the next stage agent
+   with uncommitted files on disk.
 4. On **edit**: re-invoke the stage agent with user feedback (one retry).
 5. On **cancel**: abort. ACs produced so far remain as `readiness: draft`
    (not committed unless a prior stage already committed them).
+
+### §1–§3 Commit-Before-Next-Stage Invariant (AC BO-1500b-1)
+
+This is the **central invariant** of the `/create-ac` staged pipeline:
+
+> After a stage's AC files are approved by the user, those files MUST be
+> committed to the authoring branch (via the `commitStageOutput` path in
+> `plan-feature.js`) **before** the next stage agent is dispatched. No
+> subsequent stage may begin while the prior stage's files remain
+> uncommitted on disk.
+
+The invariant holds across all three stage transitions:
+
+| Transition | What must be committed first |
+|---|---|
+| After PO stage → before BA stage | L0/L1 AC YAML files produced by `product-owner-v3` |
+| After BA stage → before IT PO stage | L2/L3 AC YAML files produced by `business-analyst-v3` |
+| After IT PO stage (final) | All enriched AC YAML files produced by `it-po-v3` |
+
+After each commit, `git log` on the authoring branch MUST show a new commit
+containing only that stage's AC files — this is the verifiable proof that the
+invariant was satisfied before the next stage began.
+
+**What constitutes a commit failure:** if `git commit` exits non-zero for any
+reason (pre-commit hook rejection, index conflict, git lock, etc.), the stage
+output commit has NOT happened and the pipeline MUST NOT proceed to the next
+stage. Surface the error to the user with the hook name and failing files (if
+applicable) so the user can fix the issue and re-run.
 
 The commit message for each stage uses the form:
 ```
 chore(ac): stage <N> — <agent-short-name> ACs for <one-line request summary>
 ```
+
+(In `plan-feature.js` the message format is `plan-feature(<STAGE>): <component>`
+with AC IDs and run-id in the body — both forms satisfy the invariant as long as
+the commit is scoped to that stage's files only.)
 
 ---
 
@@ -391,6 +427,16 @@ silently swallowed — each produces a user-visible warning or error.
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-24 [EPIC-SafeAcAuthoring/05/python-coder]: Implemented AC BO-1500b-1
+  (each authoring stage commits its AC files before the next stage starts).
+  Expanded §1–§3 from an abbreviated description to a full specification:
+  added the Commit-Before-Next-Stage Invariant table (PO→BA, BA→IT PO, IT PO
+  final), defined what constitutes a commit failure, and stated that the
+  pipeline MUST NOT proceed to the next stage if the commit exits non-zero.
+  Also updated build-single-ticket/SKILL.md to document that the per-stage
+  commit invariant is enforced in plan-feature.js/create-ac, not in this skill.
+  The plan-feature.js commitStageOutput() call already satisfied the invariant
+  mechanically; this ticket makes the invariant explicit and verifiable.
 - 2026-06-24 [EPIC-SafeAcAuthoring/03/python-coder]: Implemented AC BO-1500a-2
   (original checkout and concurrent worktrees left untouched). Updated §PRR.2
   to clarify that after §WT runs, `<project-root>` must be replaced with

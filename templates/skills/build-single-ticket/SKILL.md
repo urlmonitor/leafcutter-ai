@@ -373,6 +373,15 @@ Do not add any other preamble or summary text.
   or branch, the next invocation detects the pre-existing state and reuses it
   rather than failing with "worktree already exists" or "branch already exists".
   Existing AC YAML files committed on the branch are never deleted or overwritten.
+- **Does not enforce the per-stage AC commit invariant.** The commit-before-next-stage
+  invariant (AC BO-1500b-1) is owned by the `/create-ac` skill
+  (`templates/skills/create-ac/SKILL.md §1–§3`) and enforced mechanically by the
+  `commitStageOutput()` call in `scripts/workflows/plan-feature.js`. That function
+  commits each stage's AC YAML files (product-owner-v3 → business-analyst-v3 →
+  it-po-v3) to the authoring branch immediately after user approval, blocking the
+  next stage from starting if the commit fails. This skill has no role in that
+  commit sequence — it operates exclusively on implementation worktrees and ticket
+  phase agents, not on the AC authoring pipeline.
 
 ## Contrast: this skill vs. `/quick-fix`
 

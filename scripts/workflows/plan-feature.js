@@ -1031,18 +1031,36 @@ async function run({ userInput, agent }) {
           };
         } else {
           // approve — commit stage output before dispatching the next agent.
+          //
+          // COMMIT-BEFORE-NEXT-STAGE INVARIANT (AC BO-1500b-1):
+          // The commit MUST succeed before the while-loop exits and the outer
+          // for-loop advances to the next pipeline step.  If commitStageOutput
+          // returns status "error", the pipeline aborts HERE — the next stage
+          // agent is NEVER dispatched with uncommitted files on disk.  This
+          // guarantees that after each stage transition, git log on the
+          // authoring branch contains a commit for that stage's AC files before
+          // any subsequent stage begins writing its own files.
+          //
           // Pass authoringWorktreePath so git commands run inside the authoring worktree. (AC BO-1500a-2)
           const commitOutcome = await commitStageOutput(agent, written, step.stage, component, false, runId, acStoreDir, authoringWorktreePath);
           if (commitOutcome.status === "error") {
+            // Commit failed — abort the pipeline immediately.  Do NOT set
+            // approved = true and do NOT advance to the next pipeline stage.
+            // The uncommitted files remain on disk; the user must resolve the
+            // git error and re-run /plan-feature (§PRR will offer to commit them).
             return {
               status: "error",
               message: formatCommitError(step.agent, step.stage, commitOutcome, allAcsWritten),
               acs_as_drafts: allAcsWritten,
             };
           }
-          // Track successfully committed ACs so cancel messages can distinguish
-          // prior-stage commits from the current draft (AC ACD-300g-4).
+          // Commit succeeded — record committed ACs so cancel messages can
+          // distinguish prior-stage commits from the current draft (AC ACD-300g-4).
           committedAcs.push(...written);
+          // approved = true exits the while-loop; the for-loop then advances
+          // to the next pipeline step, which dispatches the next stage agent.
+          // At this point the authoring branch HEAD contains the just-committed
+          // stage files — the next stage begins on a clean, committed base.
           approved = true;
         }
       } else {
