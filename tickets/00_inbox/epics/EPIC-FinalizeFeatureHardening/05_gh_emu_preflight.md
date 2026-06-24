@@ -1,6 +1,6 @@
 ---
 title: "Add gh account pre-flight (EMU switch + verify, REST fallback) to finalize-feature.js"
-status: in_progress
+status: done
 components:
   - git_vcs_operations
   - build_pipeline
@@ -22,7 +22,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 05: Add gh account pre-flight to finalize-feature.js
@@ -101,7 +101,7 @@ Added gh EMU account pre-flight to finalize-feature.js between the WORKTREE_ROOT
 - [x] test-runner — 2026-06-24 14:00
 - [x] pr-reviewer — 2026-06-24 15:00
 - [x] commit — 2026-06-24 16:00
-- [ ] pull-request
+- [x] pull-request — 2026-06-24 16:30
 
 ### 2026-06-24 14:00 — test-runner (status: ok)
 feedback-id: fb_2026-06-24_43a30735
@@ -133,6 +133,14 @@ completion_manifest:
   ac2_halt_on_failure_committed: true
   ac3_emu_rest_fallback_committed: true
   ac4_config_driven_noop_committed: true
+
+### 2026-06-24 16:30 — pull-request (status: ok)
+feedback-id: fb_2026-06-24_2503c853
+completion_manifest:
+  pr_exists: true
+  branch_pushed: true
+  pr_number: 158
+Pushed 2 commits to existing PR #158 (https://github.com/urlmonitor/leafcutter-ai/pull/158) on branch EPIC-FinalizeFeatureHardening. No new PR opened — epic shares one PR per the batch-drive convention.
 
 ## Risk & Safety
 - Touches money? No.
