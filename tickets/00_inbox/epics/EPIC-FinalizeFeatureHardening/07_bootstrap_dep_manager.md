@@ -20,7 +20,7 @@ agents:
   sql-coder: not_needed
   test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   commit: needed
   pull-request: needed
 ---
@@ -78,7 +78,7 @@ catch-warn-continue pattern; the dependency-install step should match.
 - [x] test-writer — 2026-06-24 14:00
 - [x] python-coder — 2026-06-24 00:00
 - [x] test-runner — 2026-06-24 15:00
-- [ ] pr-reviewer
+- [x] pr-reviewer — 2026-06-24 16:00
 - [ ] commit
 - [ ] pull-request
 
@@ -117,6 +117,19 @@ completion_manifest:
   scripts_copy_covered: true
   templates_copy_covered: true
 All 15 tests passed (15/15). All 4 red-baseline tests are now green: TestBootstrapPipRepo::test_bootstrap_uses_pip_when_requirements_dev_txt_present, TestBootstrapNoManifestRepo::test_bootstrap_skips_dep_install_when_no_manifest, TestBootstrapInstallFailureNonFatal::test_bootstrap_install_failure_is_non_fatal, TestTemplateBootstrapInstallFailureNonFatal::test_template_bootstrap_install_failure_is_non_fatal. The manifest-detection logic and non-fatal install-failure wrapping are correctly implemented in both scripts/ and templates/scripts/ copies.
+
+### 2026-06-24 16:00 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-24_7099d8e2
+completion_manifest:
+  ac1_detection_logic_correct: true
+  ac2_non_fatal_failure_correct: true
+  ac3_requirements_dev_txt_path_verified: true
+  ac4_templates_mirror_verified: true
+  error_handling_policy_compliant: true
+  no_bare_except: true
+  no_silent_swallow: true
+  no_try_except_on_pure_functions: true
+All 4 ACs satisfied. AC-1: manifest-detection priority chain (pyproject.toml → poetry; requirements-dev.txt → pip; requirements.txt → pip; else → skip) implemented identically in both copies. AC-2: install failure caught as (subprocess.SubprocessError, OSError), WARNING printed to stderr via print(..., file=sys.stderr), no re-raise — bootstrap continues to build.py. AC-3: requirements-dev.txt path correctly selected on this repo; confirmed by test-runner (all 15 green). AC-4: templates/scripts/ diff is structurally identical. Error Handling Policy followed on all four rules: named exception types, WARNING logged, no silent swallow, no try/except on pure functions. No high-confidence blockers found.
 
 ## Implementation Tasks
 - [x] Add manifest detection + branch the install command.

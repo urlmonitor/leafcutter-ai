@@ -157,7 +157,7 @@ def _create_worktree(slug: str, worktrees_dir: Path) -> Path:
 
 
 def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
-    """Symlink .env and copy .mcp.json into *worktree_path*, then run poetry install.
+    """Symlink .env and copy .mcp.json into *worktree_path*, then install dependencies.
 
     `.env` is created as a symlink so that updates to the main repo's `.env`
     are automatically visible inside every worktree — no manual re-copy needed.
@@ -168,6 +168,14 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
     once at bootstrap time and is not expected to change after worktree creation.
 
     Missing source files are silently skipped (FileNotFoundError → no action).
+
+    The dependency install command is chosen by detecting the repo's manifest:
+    ``pyproject.toml`` → ``poetry install --no-root``;
+    ``requirements-dev.txt`` → ``pip install -r requirements-dev.txt``;
+    ``requirements.txt`` → ``pip install -r requirements.txt``;
+    no manifest → dep install is skipped entirely.
+    A failed dep install is non-fatal: a WARNING is printed to stderr and
+    bootstrap continues (``build.py`` still runs afterwards).
 
     Args:
         main_repo: Absolute Path to the main repository root where source
@@ -218,16 +226,35 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
             f"Failed to update submodules in {worktree_path}: {exc}"
         ) from exc
 
-    try:
-        subprocess.run(
-            ["poetry", "install", "--no-root"],
-            cwd=worktree_path,
-            check=True,
-        )
-    except (subprocess.SubprocessError, OSError) as exc:
-        raise subprocess.SubprocessError(  # noqa: TRY003
-            f"Failed to run poetry install in {worktree_path}: {exc}"
-        ) from exc
+    # Detect the dependency manager by inspecting manifest files in the worktree.
+    # Priority: pyproject.toml → poetry; requirements-dev.txt → pip;
+    # requirements.txt → pip; nothing found → skip dep install entirely.
+    if (worktree_path / "pyproject.toml").exists():
+        dep_cmd = ["poetry", "install", "--no-root"]
+        dep_label = "poetry install --no-root"
+    elif (worktree_path / "requirements-dev.txt").exists():
+        dep_cmd = [sys.executable, "-m", "pip", "install", "-r", "requirements-dev.txt"]
+        dep_label = "pip install -r requirements-dev.txt"
+    elif (worktree_path / "requirements.txt").exists():
+        dep_cmd = [sys.executable, "-m", "pip", "install", "-r", "requirements.txt"]
+        dep_label = "pip install -r requirements.txt"
+    else:
+        dep_cmd = None
+        dep_label = None
+
+    if dep_cmd is not None:
+        try:
+            subprocess.run(
+                dep_cmd,
+                cwd=worktree_path,
+                check=True,
+            )
+        except (subprocess.SubprocessError, OSError) as exc:
+            print(
+                f"WARNING: dependency install failed ({dep_label}: {exc}); "
+                "bootstrap continues — install dependencies manually if needed.",
+                file=sys.stderr,
+            )
 
     # Run build.py to materialise .leafcutter/ (workflows, agents, skills, hooks)
     # in the new worktree.  Without this step, named-workflow resolution
@@ -581,6 +608,13 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-24 00:00 [EPIC-FinalizeFeatureHardening/07]: Replaced unconditional
+  `poetry install --no-root` with manifest-detection logic: pyproject.toml →
+  poetry; requirements-dev.txt → pip; requirements.txt → pip; no manifest →
+  skip. Install failure is now non-fatal: caught as (subprocess.SubprocessError,
+  OSError), WARNING printed to stderr, bootstrap continues (build.py still runs).
+  Mirrors the catch-warn-continue pattern already used by the build.py step.
+  Fixes the poetry crash on repos that use requirements-dev.txt (this repo).
 - 2026-06-03 10:02 [EPIC-MoveOnMainOnly/01]: Removed _move_ticket() — branches
   no longer move ticket files; finalize-feature.js reconciles folder
   position on main after merge. The JSON output field was renamed from

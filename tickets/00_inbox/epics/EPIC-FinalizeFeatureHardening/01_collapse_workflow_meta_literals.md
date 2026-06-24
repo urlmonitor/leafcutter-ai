@@ -25,7 +25,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 01: Collapse non-literal meta to pure literals in all workflow scripts
@@ -92,6 +92,7 @@ ticket 02 adds the validation gate; the verification here is that each script's
 - [x] python-coder — 2026-06-24 15:30
 - [x] pr-reviewer — 2026-06-24 16:00
 - [x] commit — 2026-06-24 16:30
+- [x] pull-request — 2026-06-24 17:00
 
 ## Comments
 
@@ -118,6 +119,13 @@ completion_manifest:
   commit_successful: true
   staged_files_correct: true
 bf6cecb: Committed 5 workflow JS files + ticket sign-off. Pre-commit hook required adding description: field to docs/how-to/finalize-feature.md (also staged); all other hooks passed cleanly.
+
+### 2026-06-24 17:00 — pull-request (status: ok)
+feedback-id: fb_2026-06-24_0cdf4d89
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+PR #158 opened at https://github.com/urlmonitor/leafcutter-ai/pull/158. Branch pushed to origin/EPIC-FinalizeFeatureHardening.
 
 ## Implementation Tasks
 - [x] For each of the 5 scripts, replace the `+`-concatenated `meta.description`

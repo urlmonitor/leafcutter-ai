@@ -11,6 +11,7 @@ Tests use unittest.mock.patch to avoid filesystem or subprocess calls.
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -18,6 +19,7 @@ from unittest.mock import MagicMock, patch
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _SETUP_SCRIPT = _REPO_ROOT / "templates" / "scripts" / "setup_ticket_worktree.py"
+_SCRIPTS_SETUP_SCRIPT = _REPO_ROOT / "scripts" / "setup_ticket_worktree.py"
 
 
 def _load_setup_module():
@@ -378,6 +380,327 @@ class TestBootstrapRunsBuildPy(unittest.TestCase):
             "WARNING",
             warning_output,
             "A WARNING must be printed to stderr when build.py is absent",
+        )
+
+
+def _load_scripts_setup_module():
+    """Load setup_ticket_worktree from scripts/ (the canonical source, not templates/)."""
+    scripts_dir = str(_REPO_ROOT / "scripts")
+    module_name = "setup_ticket_worktree_scripts"
+    spec = importlib.util.spec_from_file_location(
+        module_name, _SCRIPTS_SETUP_SCRIPT
+    )
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+# ---------------------------------------------------------------------------
+# Tests for ticket 07: Detect dependency manager + non-fatal install failures
+# (scripts/setup_ticket_worktree.py — canonical source copy)
+# ---------------------------------------------------------------------------
+
+
+class TestBootstrapPoetryRepo(unittest.TestCase):
+    """_bootstrap() selects 'poetry install --no-root' when pyproject.toml is present (AC-1)."""
+
+    def test_bootstrap_uses_poetry_when_pyproject_toml_present(self):
+        """
+        Given a worktree whose root contains pyproject.toml,
+        When _bootstrap() is called,
+        Then subprocess.run is called with ['poetry', 'install', '--no-root']
+        and pip is NOT invoked.
+
+        STUB — fails until python-coder implements manifest detection.
+        """
+        mod = _load_scripts_setup_module()
+
+        main_repo = Path("/fake/main")
+        worktree = Path("/fake/worktree")
+
+        def fake_exists(self_path):
+            # pyproject.toml present; requirements files absent
+            if "pyproject.toml" in str(self_path):
+                return True
+            if "requirements" in str(self_path):
+                return False
+            return True  # build.py and others exist
+
+        with (
+            patch.object(mod.os, "symlink"),
+            patch.object(mod.shutil, "copy"),
+            patch.object(mod.subprocess, "run") as mock_run,
+            patch.object(mod.Path, "exists", fake_exists),
+        ):
+            mod._bootstrap(main_repo, worktree)
+
+        all_cmds = [str(c) for c in mock_run.call_args_list]
+        poetry_calls = [c for c in all_cmds if "poetry" in c and "install" in c]
+        pip_calls = [c for c in all_cmds if "pip" in c and "install" in c]
+
+        self.assertTrue(
+            len(poetry_calls) > 0,
+            f"Expected subprocess.run with poetry install; calls: {all_cmds}",
+        )
+        self.assertEqual(
+            pip_calls,
+            [],
+            f"pip install must not be called when pyproject.toml is present; calls: {all_cmds}",
+        )
+
+
+class TestBootstrapPipRepo(unittest.TestCase):
+    """_bootstrap() uses 'pip install -r requirements-dev.txt' when that file is present (AC-1)."""
+
+    def test_bootstrap_uses_pip_when_requirements_dev_txt_present(self):
+        """
+        Given a worktree whose root contains requirements-dev.txt but NOT pyproject.toml,
+        When _bootstrap() is called,
+        Then subprocess.run is called with [python, '-m', 'pip', 'install', '-r', ...]
+        and poetry is NOT invoked.
+
+        STUB — fails until python-coder implements manifest detection.
+        """
+        mod = _load_scripts_setup_module()
+
+        main_repo = Path("/fake/main")
+        worktree = Path("/fake/worktree")
+
+        def fake_exists(self_path):
+            path_str = str(self_path)
+            if "pyproject.toml" in path_str:
+                return False
+            if "requirements-dev.txt" in path_str:
+                return True
+            if "requirements.txt" in path_str:
+                return True
+            return True  # build.py and others exist
+
+        with (
+            patch.object(mod.os, "symlink"),
+            patch.object(mod.shutil, "copy"),
+            patch.object(mod.subprocess, "run") as mock_run,
+            patch.object(mod.Path, "exists", fake_exists),
+        ):
+            mod._bootstrap(main_repo, worktree)
+
+        all_cmds = [str(c) for c in mock_run.call_args_list]
+        pip_calls = [c for c in all_cmds if "pip" in c and "install" in c]
+        poetry_calls = [c for c in all_cmds if "poetry" in c]
+
+        self.assertTrue(
+            len(pip_calls) > 0,
+            f"Expected subprocess.run with pip install -r; calls: {all_cmds}",
+        )
+        self.assertEqual(
+            poetry_calls,
+            [],
+            f"poetry must not be called when pyproject.toml is absent; calls: {all_cmds}",
+        )
+
+
+class TestBootstrapNoManifestRepo(unittest.TestCase):
+    """_bootstrap() skips the dep-install step when neither pyproject.toml nor requirements*.txt exist (AC-1)."""
+
+    def test_bootstrap_skips_dep_install_when_no_manifest(self):
+        """
+        Given a worktree with no pyproject.toml and no requirements*.txt,
+        When _bootstrap() is called,
+        Then no subprocess.run call invokes 'poetry' or 'pip install'.
+
+        STUB — fails until python-coder implements manifest detection.
+        """
+        mod = _load_scripts_setup_module()
+
+        main_repo = Path("/fake/main")
+        worktree = Path("/fake/worktree")
+
+        def fake_exists(self_path):
+            path_str = str(self_path)
+            if "pyproject.toml" in path_str:
+                return False
+            if "requirements" in path_str:
+                return False
+            return True  # build.py present
+
+        with (
+            patch.object(mod.os, "symlink"),
+            patch.object(mod.shutil, "copy"),
+            patch.object(mod.subprocess, "run") as mock_run,
+            patch.object(mod.Path, "exists", fake_exists),
+        ):
+            mod._bootstrap(main_repo, worktree)
+
+        all_cmds = [str(c) for c in mock_run.call_args_list]
+        dep_calls = [
+            c for c in all_cmds
+            if ("poetry" in c and "install" in c) or ("pip" in c and "install" in c)
+        ]
+
+        self.assertEqual(
+            dep_calls,
+            [],
+            f"No dep-install call expected when no manifest exists; calls: {all_cmds}",
+        )
+
+
+class TestBootstrapInstallFailureNonFatal(unittest.TestCase):
+    """A dependency install failure must be logged as WARNING and NOT abort bootstrap (AC-2)."""
+
+    def test_bootstrap_install_failure_is_non_fatal(self):
+        """
+        Given the dependency install command exits non-zero (CalledProcessError),
+        When _bootstrap() is called,
+        Then no exception propagates to the caller,
+        AND a WARNING is printed to stderr,
+        AND build.py is still executed afterwards (bootstrap continues).
+
+        STUB — fails until python-coder wraps the install in try/except+warn+continue.
+        """
+        import io
+
+        mod = _load_scripts_setup_module()
+
+        main_repo = Path("/fake/main")
+        worktree = Path("/fake/worktree")
+
+        fake_stderr = io.StringIO()
+
+        def fake_run(cmd, **kwargs):
+            cmd_str = " ".join(str(c) for c in cmd) if isinstance(cmd, list) else str(cmd)
+            if "poetry" in cmd_str and "install" in cmd_str:
+                raise subprocess.CalledProcessError(1, cmd)
+            if "pip" in cmd_str and "install" in cmd_str:
+                raise subprocess.CalledProcessError(1, cmd)
+            # All other calls succeed
+            return MagicMock(returncode=0)
+
+        def fake_exists(self_path):
+            # pyproject.toml present so we trigger poetry path
+            if "pyproject.toml" in str(self_path):
+                return True
+            return True
+
+        with (
+            patch.object(mod.os, "symlink"),
+            patch.object(mod.shutil, "copy"),
+            patch.object(mod.subprocess, "run", side_effect=fake_run),
+            patch.object(mod.Path, "exists", fake_exists),
+            patch("sys.stderr", fake_stderr),
+        ):
+            # Must NOT raise; if the current code re-raises, this will fail
+            try:
+                mod._bootstrap(main_repo, worktree)
+            except (subprocess.SubprocessError, subprocess.CalledProcessError) as exc:
+                self.fail(
+                    f"_bootstrap() must not re-raise a dep-install failure; got: {exc}"
+                )
+
+        warning_output = fake_stderr.getvalue()
+        self.assertIn(
+            "WARNING",
+            warning_output,
+            "A WARNING must be emitted to stderr when dep install fails",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Mirror tests: templates/scripts/setup_ticket_worktree.py must match (AC-4)
+# ---------------------------------------------------------------------------
+
+
+class TestTemplateBootstrapPoetryRepo(unittest.TestCase):
+    """templates/scripts/_bootstrap() also selects poetry when pyproject.toml present (AC-4)."""
+
+    def test_template_bootstrap_uses_poetry_when_pyproject_toml_present(self):
+        """
+        Given pyproject.toml present in templates/ copy,
+        When _bootstrap() is called,
+        Then subprocess.run includes poetry install.
+
+        STUB — fails until the fix is mirrored to templates/scripts/.
+        """
+        mod = _load_setup_module()
+
+        main_repo = Path("/fake/main")
+        worktree = Path("/fake/worktree")
+
+        def fake_exists(self_path):
+            if "pyproject.toml" in str(self_path):
+                return True
+            if "requirements" in str(self_path):
+                return False
+            return True
+
+        with (
+            patch.object(mod.os, "symlink"),
+            patch.object(mod.shutil, "copy"),
+            patch.object(mod.subprocess, "run") as mock_run,
+            patch.object(mod.Path, "exists", fake_exists),
+        ):
+            mod._bootstrap(main_repo, worktree)
+
+        all_cmds = [str(c) for c in mock_run.call_args_list]
+        poetry_calls = [c for c in all_cmds if "poetry" in c and "install" in c]
+        self.assertTrue(
+            len(poetry_calls) > 0,
+            f"templates/ copy must also use poetry when pyproject.toml present; calls: {all_cmds}",
+        )
+
+
+class TestTemplateBootstrapInstallFailureNonFatal(unittest.TestCase):
+    """templates/scripts/_bootstrap() also makes install failures non-fatal (AC-4)."""
+
+    def test_template_bootstrap_install_failure_is_non_fatal(self):
+        """
+        Given the dep install fails in the templates/ copy,
+        When _bootstrap() is called,
+        Then no exception propagates and a WARNING is emitted.
+
+        STUB — fails until the fix is mirrored to templates/scripts/.
+        """
+        import io
+
+        mod = _load_setup_module()
+
+        main_repo = Path("/fake/main")
+        worktree = Path("/fake/worktree")
+
+        fake_stderr = io.StringIO()
+
+        def fake_run(cmd, **kwargs):
+            cmd_str = " ".join(str(c) for c in cmd) if isinstance(cmd, list) else str(cmd)
+            if "poetry" in cmd_str and "install" in cmd_str:
+                raise subprocess.CalledProcessError(1, cmd)
+            if "pip" in cmd_str and "install" in cmd_str:
+                raise subprocess.CalledProcessError(1, cmd)
+            return MagicMock(returncode=0)
+
+        def fake_exists(self_path):
+            if "pyproject.toml" in str(self_path):
+                return True
+            return True
+
+        with (
+            patch.object(mod.os, "symlink"),
+            patch.object(mod.shutil, "copy"),
+            patch.object(mod.subprocess, "run", side_effect=fake_run),
+            patch.object(mod.Path, "exists", fake_exists),
+            patch("sys.stderr", fake_stderr),
+        ):
+            try:
+                mod._bootstrap(main_repo, worktree)
+            except (subprocess.SubprocessError, subprocess.CalledProcessError) as exc:
+                self.fail(
+                    f"templates/_bootstrap() must not re-raise a dep-install failure; got: {exc}"
+                )
+
+        warning_output = fake_stderr.getvalue()
+        self.assertIn(
+            "WARNING",
+            warning_output,
+            "templates/ copy must emit WARNING when dep install fails",
         )
 
 
