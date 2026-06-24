@@ -24,7 +24,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -91,7 +91,7 @@ covered by `TICKET-20260617-TrackMissingTransformHookScripts.md`,
 - [x] python-coder — 2026-06-24 00:00
 - [x] test-runner — 2026-06-24 11:30
 - [x] pr-reviewer — 2026-06-24 12:00
-- [ ] commit
+- [x] commit — 2026-06-24 13:00
 - [ ] pull-request
 
 ## Comments
@@ -120,6 +120,10 @@ completion_manifest:
   AC-4_no_net_new_regressions: true
   diff_clean_no_unintended_changes: true
 Reviewed the working diff and config/skill_registry.json. The diff is limited to ticket file updates (status/agent sign-off state, AC checkboxes, AC coverage table, comments). The create-ac entry in config/skill_registry.json is present and schema-valid with all required fields (id, name, portable, domain, template_path, dependencies, description) matching the sibling pattern of build-ac and plan-feature. All 4 ACs are satisfied per python-coder and test-runner sign-offs (524 passed, 9 pre-existing failures unchanged, test_no_orphaned_directories green). No high-confidence issues found.
+
+### 2026-06-24 13:00 — commit (status: ok)
+feedback-id: none
+Committed skill registry create-ac fix. Pre-commit hooks all passed (29 checks, 0 failures). Commit sha: 63e748a on branch feature/createacskillregistryorphan. Three-place parity: frontmatter commit: signed_off, Sign-offs [x] commit — 2026-06-24 13:00, Comments entry appended.
 
 ## Implementation Tasks
 
