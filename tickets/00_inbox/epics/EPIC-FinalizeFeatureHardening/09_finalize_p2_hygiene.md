@@ -1,6 +1,6 @@
 ---
 title: "Finalize P2 hygiene: baseline-worktree cleanup, pre-commit probe, doc drift, parse contracts"
-status: in_progress
+status: done
 components:
   - build_pipeline
 created: 2026-06-24
@@ -22,7 +22,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 09: Finalize P2 hygiene
@@ -127,6 +127,14 @@ completion_manifest:
   feedback_id_fix_applied: true
 Committed 3 staged files (finalize-feature.js, finalize-feature.md, ticket 09) under SHA 7acc206. Pre-commit hook `check-feedback-id` initially blocked on the ticket-supervisor comment missing a feedback-id; added `feedback-id: (submit-failed)` as a mechanical fix and retried — all hooks passed on the second attempt. All 4 ACs confirmed delivered by pr-reviewer sign-off.
 
+### 2026-06-24 20:00 — pull-request (status: ok)
+feedback-id: fb_2026-06-24_3bacd6b7
+completion_manifest:
+  commits_pushed_to_branch: true
+  pr_exists_detected: true
+  no_new_pr_opened: true
+Pushed ticket-09 commits (7acc206, c9f1153) to existing PR #158 on branch EPIC-FinalizeFeatureHardening. PR already open — no new PR needed. All 4 ACs committed on the feature branch.
+
 ## Implementation Tasks
 - [x] Wire cleanup into success + step-7 paths; add stale-baseline reclaim in Step 0.
 - [x] Add pre-commit config probe before main-side commits.
@@ -141,7 +149,7 @@ Committed 3 staged files (finalize-feature.js, finalize-feature.md, ticket 09) u
 - [x] test-runner — 2026-06-24 17:00
 - [x] pr-reviewer — 2026-06-24 18:00
 - [x] commit — 2026-06-24 19:00
-- [ ] pull-request
+- [x] pull-request — 2026-06-24 20:00
 
 ## Risk & Safety
 - Touches money? No.
