@@ -350,22 +350,151 @@ def _create_ac_worktree(branch_name: str, worktrees_dir: Path, repo_root: Path) 
     return worktree_path
 
 
+def _establish_pre_commit_config(main_repo: Path, worktree_path: Path) -> None:
+    """Ensure the worktree has a working pre-commit configuration so hooks run.
+
+    Git worktrees do not inherit ``.pre-commit-config.yaml`` from the main
+    working tree.  The file is installed by ``build.py`` (via ``install_shims``)
+    as a symlink into ``.leafcutter/``, but when ``build.py`` is absent or
+    fails, a fresh worktree has neither the symlink nor a populated
+    ``.leafcutter/`` directory, causing all package hooks to silently skip.
+
+    This function ensures the pre-commit configuration is always present by
+    applying the following strategy in order (stopping at the first success):
+
+    1. **No-op if already present**: if either ``.leafcutter`` or
+       ``.pre-commit-config.yaml`` already exists in the worktree root
+       (written by a prior ``build.py`` run or a previous bootstrap call),
+       return immediately — the configuration is already active.
+
+    2. **Symlink ``.leafcutter``** (preferred): attempt to create
+       ``<worktree>/.leafcutter -> <main_repo>/.leafcutter``.  On Linux
+       native FS this is fast, always-fresh, and transparent to all
+       hook scripts that resolve paths via the symlink target.
+
+    3. **Copy ``.pre-commit-config.yaml``** (fallback): on Windows or NTFS
+       mounts where ``os.symlink`` raises ``OSError`` / ``EPERM`` /
+       ``WinError 1314``, copy the resolved config file directly.  The copy
+       is a point-in-time snapshot; future changes to the main repo's config
+       require a manual re-copy, but the hooks will not silently skip.
+
+    4. **Warn and continue** if neither the symlink source (``.leafcutter``)
+       nor the copy source (``.pre-commit-config.yaml``) exists in the main
+       repo — the project has not been bootstrapped yet.  Worktree creation
+       continues; the operator must run ``build.py`` manually before the
+       hooks become active.
+
+    The function is **idempotent**: calling it twice on the same worktree is
+    safe — the no-op guard in step 1 prevents duplicate symlink creation or
+    clobber of an existing copy.
+
+    Args:
+        main_repo: Absolute Path to the main repository root (the directory
+            that contains ``.leafcutter/`` or ``.pre-commit-config.yaml``).
+        worktree_path: Absolute Path to the worktree being bootstrapped.
+    """
+    leafcutter_dst = worktree_path / ".leafcutter"
+    pre_commit_dst = worktree_path / ".pre-commit-config.yaml"
+
+    # Step 1 — idempotent no-op: config already present.
+    if leafcutter_dst.exists() or leafcutter_dst.is_symlink():
+        return
+    if pre_commit_dst.exists() or pre_commit_dst.is_symlink():
+        return
+
+    leafcutter_src = main_repo / ".leafcutter"
+
+    # Step 2 — symlink .leafcutter (preferred).
+    if leafcutter_src.exists():
+        try:
+            os.symlink(leafcutter_src, leafcutter_dst)
+        except OSError as exc:
+            print(
+                f"WARNING: os.symlink failed for .leafcutter ({exc}); "
+                "falling back to copying .pre-commit-config.yaml.",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"INFO: created .leafcutter symlink in {worktree_path} "
+                f"-> {leafcutter_src}; pre-commit hooks are active.",
+                file=sys.stderr,
+            )
+            return
+
+    # Step 3 — copy .pre-commit-config.yaml (fallback).
+    # Resolve the source: the main repo may expose it directly as a file or as
+    # a symlink pointing into .leafcutter/.  shutil.copy follows symlinks by
+    # default, so both cases produce a plain file copy in the worktree.
+    pre_commit_src = main_repo / ".pre-commit-config.yaml"
+    if pre_commit_src.exists():
+        try:
+            shutil.copy(pre_commit_src, pre_commit_dst)
+        except OSError as exc:
+            print(
+                f"WARNING: could not copy .pre-commit-config.yaml ({exc}); "
+                "pre-commit hooks may be skipped in this worktree.",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"INFO: copied .pre-commit-config.yaml into {worktree_path}; "
+                "pre-commit hooks are active (point-in-time copy — "
+                "re-run bootstrap if the main repo config changes).",
+                file=sys.stderr,
+            )
+        return
+
+    # Step 4 — neither source exists; warn and continue.
+    print(
+        f"WARNING: neither {leafcutter_src} nor {pre_commit_src} found in "
+        "the main repo.  Run build.py inside the worktree manually to "
+        "materialise the pre-commit configuration before committing.",
+        file=sys.stderr,
+    )
+
+
 def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
-    """Symlink .env and copy .mcp.json into *worktree_path*, then run poetry install.
+    """Bootstrap a fresh worktree with config files, deps, and pre-commit hooks.
 
-    `.env` is created as a symlink so that updates to the main repo's `.env`
-    are automatically visible inside every worktree — no manual re-copy needed.
-    On Windows without symlink privilege (OSError / WinError 1314 / EPERM),
-    the function falls back to ``shutil.copy`` and prints a warning to stderr.
+    Steps performed in order:
 
-    `.mcp.json` is always copied (never symlinked) because its content is set
-    once at bootstrap time and is not expected to change after worktree creation.
+    1. **``.env`` symlink** (copy fallback): symlinks the main repo's ``.env``
+       into the worktree so that environment-variable changes are immediately
+       visible without re-copy.  Falls back to ``shutil.copy`` on Windows or
+       NTFS mounts where ``os.symlink`` is not available.
 
-    Missing source files are silently skipped (FileNotFoundError → no action).
+    2. **``.mcp.json`` copy**: always copies (never symlinks) because its
+       content is fixed at bootstrap time.
+
+    3. **Submodule initialisation**: runs ``git submodule update --init`` in
+       the worktree to populate any registered git submodules (e.g. the
+       ``leafcutter`` submodule in consumer repos).
+
+    4. **Dependency install** (best-effort): detects ``pyproject.toml``
+       (poetry) or ``requirements-dev.txt`` and installs.  A failure prints
+       a warning and continues — deps are often already present in the active
+       environment.
+
+    5. **``build.py`` run**: materialises ``.leafcutter/`` (workflows, agents,
+       skills, hooks, and the pre-commit config shim).  Probes both the
+       consumer layout (``leafcutter-ai/scripts/build.py``) and the
+       self-hosted layout (``scripts/build.py``).
+
+    6. **Pre-commit config safety net** (``_establish_pre_commit_config``):
+       ensures ``.leafcutter`` or ``.pre-commit-config.yaml`` is present in
+       the worktree root even if step 5 was skipped or failed.  This is the
+       authoritative guarantee that pre-commit hooks will not silently skip
+       for this worktree.  See ``_establish_pre_commit_config`` for the
+       symlink-first / copy-fallback policy.
+
+    Missing source files are silently skipped (``FileNotFoundError`` → no
+    action) for steps 1–2.  Steps 3–5 treat failures as warnings so that a
+    single failing step does not prevent the worktree from being usable at all.
 
     Args:
         main_repo: Absolute Path to the main repository root where source
-            ``.env`` and ``.mcp.json`` reside.
+            ``.env``, ``.mcp.json``, and ``.leafcutter/`` reside.
         worktree_path: Absolute Path to the worktree being bootstrapped.
     """
     # --- .env: symlink-first, copy as fallback ---
@@ -474,6 +603,13 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
             ".leafcutter/ build outputs.",
             file=sys.stderr,
         )
+
+    # Safety net: ensure the pre-commit configuration is present in the worktree
+    # regardless of whether build.py ran successfully.  Without this guarantee,
+    # a failed or missing build.py leaves the worktree with no .leafcutter/ and
+    # no .pre-commit-config.yaml, causing all package hooks to silently skip for
+    # the entire drive (AC BO-1500b-1-i).
+    _establish_pre_commit_config(main_repo, worktree_path)
 
 
 def _derive_slug(ticket_path: Path) -> str:
@@ -995,6 +1131,19 @@ DECISION HISTORY
   to select checkout-only ``git worktree add <path> <branch>`` when the branch
   already exists, preserving all AC YAML commits. Updated SKILL.md to document
   the idempotent/reuse guarantee.
+- 2026-06-24 [EPIC-SafeAcAuthoring/06/python-coder]: Implemented AC BO-1500b-1-i
+  (authoring worktree pre-commit config bootstrap). Added
+  ``_establish_pre_commit_config()`` helper that ensures a fresh authoring
+  worktree always has a working pre-commit configuration before the first
+  stage commit.  Strategy: (1) no-op if ``.leafcutter`` or
+  ``.pre-commit-config.yaml`` already present (idempotent); (2) create
+  ``.leafcutter -> <main_repo>/.leafcutter`` symlink (preferred, Linux FS);
+  (3) fall back to copying ``.pre-commit-config.yaml`` when symlink fails
+  (Windows/NTFS ``OSError``/``EPERM``); (4) warn-and-continue when neither
+  source exists (project not yet bootstrapped).  Called as a safety net at
+  the end of ``_bootstrap()`` so the guarantee holds even when ``build.py``
+  was absent or failed.  Updated ``_bootstrap()`` docstring to document the
+  new step 6.
 - 2026-05-12 10:15 [Claude/ticket-supervisor]: Initial implementation.
   Consolidated fragile multi-step worktree bootstrap from three call
   sites (build-single-ticket/SKILL.md, feature/SKILL.md,

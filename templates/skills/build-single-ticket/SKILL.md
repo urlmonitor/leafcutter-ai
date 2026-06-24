@@ -86,6 +86,28 @@ The script creates and bootstraps the worktree. It does NOT move the ticket
 file — folder position is reconciled on main by `finalize-feature.js` after
 merge.
 
+**Pre-commit hook bootstrap (AC BO-1500b-1-i):** `setup_ticket_worktree.py`
+guarantees that the fresh worktree has a working pre-commit configuration
+before the first commit.  At the end of `_bootstrap()`, it calls
+`_establish_pre_commit_config(main_repo, worktree_path)` which:
+
+1. Is a no-op if `.leafcutter` or `.pre-commit-config.yaml` already exists
+   (e.g. was materialised by `build.py`).
+2. Creates a symlink `.leafcutter -> <main_repo>/.leafcutter` (preferred on
+   Linux native FS).
+3. Falls back to copying `.pre-commit-config.yaml` from the main repo when
+   the symlink fails (Windows / NTFS `OSError` / `EPERM`).
+4. Warns and continues if neither source exists (project not yet bootstrapped
+   — operator must run `build.py` manually before committing).
+
+This means **all package hooks are active** in the new worktree from the
+moment `setup_ticket_worktree.py` returns.  A stage commit that would
+violate an AC hook (e.g. `check-ac-schema`, `check-parent-link`) is blocked
+rather than landing unchecked.  If you observe hooks being silently skipped,
+confirm that `_establish_pre_commit_config` ran (check stderr output from
+`setup_ticket_worktree.py`) and that `<worktree>/.leafcutter` resolves to a
+non-empty directory.
+
 Do NOT dispatch `worktree-agent` as a separate Agent tool call.
 
 ## Step 3 — Dispatch `ticket-supervisor`
