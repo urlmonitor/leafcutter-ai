@@ -2,9 +2,9 @@
 description: >
   Orchestrates the hardened post-merge feature finalization sequence with
   a pre-merge test baseline, merge-first step, triage-driven halt gate, and
-  auto-ticketing for pre-existing failures. Primary path: the
-  finalize-feature.js workflow script (Claude Code >= 2.1.154). Fallback
-  path: the finalize-feature LLM agent (older versions, 6-step flow only).
+  auto-ticketing for pre-existing failures. Requires Claude Code >= 2.1.154
+  (workflow script support). The legacy LLM agent fallback was removed — see
+  ADR-006.
 ---
 
 # finalize-feature workflow
@@ -35,8 +35,18 @@ description: >
 
 - How-to guide: `docs/how-to/finalize-feature.md`
 - JS implementation: `templates/workflows-js/finalize-feature.js`
-- Legacy agent (pre-2.1.154): `templates/agents/finalize-feature.md`
 - Triage agent: `templates/agents/test-failure-triage.md`
 
 # v2.1.154+: deterministic JS workflow (leaf workflow — no nested workflow() calls)
-Invoke `finalize-feature.js` (Claude Code >= 2.1.154) or the `finalize-feature` agent (older versions) with: $ARGUMENTS
+
+> **Requires Claude Code >= 2.1.154.** If your install does not support the
+> Workflow tool, you will see this error — do not proceed:
+>
+> ```
+> Error: /finalize-feature requires Claude Code >= 2.1.154.
+> The legacy LLM agent fallback was removed in EPIC-FinalizeFeatureHardening
+> because the depth-1 sub-agent limit made it non-functional (ADR-006).
+> Please upgrade Claude Code and re-run /finalize-feature.
+> ```
+
+Invoke `finalize-feature.js` with: $ARGUMENTS

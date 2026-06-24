@@ -24,8 +24,8 @@ agents:
   test-runner: not_needed
   documentation-expert: signed_off
   llm-expert: signed_off
-  pr-reviewer: needed
-  commit: needed
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -78,18 +78,18 @@ and ADR addendum.
 
 | AC | Test | Implementation | Validated |
 |----|------|----------------|-----------|
-| AC-1 | | Removed templates/agents/finalize-feature.md via git rm | |
-| AC-2 | | Removed finalize-feature entry from agent_registry.json; updated spawned_by in 5 agents to reference finalize-feature.js | |
-| AC-3 | | Updated templates/workflows/finalize-feature.md: removed fallback description and legacy agent cross-reference; added hard-error block with version requirement and ADR-006 note | |
-| AC-4 | | Updated `docs/how-to/finalize-feature.md`: removed fallback reference, added hard-error description and upgrade requirement | |
-| AC-5 | | Appended addendum to `docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md` recording finalize-feature removal and JS workflow as sole path | |
+| AC-1 | | Removed templates/agents/finalize-feature.md via git rm | ok — 2026-06-24 |
+| AC-2 | | Removed finalize-feature entry from agent_registry.json; updated spawned_by in 5 agents to reference finalize-feature.js | ok — 2026-06-24 |
+| AC-3 | | Updated templates/workflows/finalize-feature.md: removed fallback description and legacy agent cross-reference; added hard-error block with version requirement and ADR-006 note | ok — 2026-06-24 |
+| AC-4 | | Updated `docs/how-to/finalize-feature.md`: removed fallback reference, added hard-error description and upgrade requirement | ok — 2026-06-24 |
+| AC-5 | | Appended addendum to `docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md` recording finalize-feature removal and JS workflow as sole path | ok — 2026-06-24 |
 
 ## Sign-offs
 
 - [x] llm-expert — 2026-06-24 12:00
 - [x] documentation-expert — 2026-06-24 14:30
-- [ ] pr-reviewer
-- [ ] commit
+- [x] pr-reviewer — 2026-06-24 17:00
+- [x] commit — 2026-06-24 18:30
 - [ ] pull-request
 
 ## Comments
@@ -110,12 +110,31 @@ completion_manifest:
   js_comment_fixed: true
 AC-4: Updated `docs/how-to/finalize-feature.md` — rewrote the Version Notes section to remove the fallback reference, describe the hard-error behaviour on older installs, and make clear that upgrade to >= 2.1.154 is required. Also updated `last_updated` frontmatter to 2026-06-24. AC-5: Appended a new addendum section to `docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md` (under "finalize-feature agent removed — JS workflow is the sole depth-0 path") recording that `finalize-feature` joins `epic-supervisor` as a removed supervisor, that `finalize-feature.js` is the sole depth-0 path, and the rationale (depth-2 dispatches were silently dropped on every version). Also updated the ADR's `last_updated` frontmatter. JS comment fix: updated `templates/workflows-js/finalize-feature.js` line 31 to remove the stale reference to the removed agent and describe the no-fallback hard-error behaviour instead.
 
+### 2026-06-24 17:00 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-24_361a296b
+completion_manifest:
+  ac1_template_deleted: true
+  ac2_registry_cleaned: true
+  ac3_slash_command_hard_errors: true
+  ac4_how_to_updated: true
+  ac5_adr_addendum_written: true
+All 5 ACs verified against the working tree diff. AC-1: `templates/agents/finalize-feature.md` is deleted (confirmed via `ls` exit 2 and `git status` showing `deleted`). AC-2: `config/agent_registry.json` has no remaining `"finalize-feature"` id entry; all 5 `spawned_by` references updated to `finalize-feature.js`. AC-3: `templates/workflows/finalize-feature.md` no longer references the legacy agent — fallback description removed, hard-error block with version requirement and ADR-006 citation present. AC-4: `docs/how-to/finalize-feature.md` Version Notes section updated — fallback removed, hard-error path documented, upgrade requirement stated. AC-5: ADR-006 addendum appended with full rationale, updated depth diagram, and the statement that `finalize-feature` joins `epic-supervisor` as a removed supervisor. Note: three `## Implementation Tasks` checkboxes remain unchecked (cosmetic — the underlying work is done), but these are not pr-reviewer's responsibility to flip; flagged for the commit agent to address if the parity guard requires it.
+
+### 2026-06-24 18:30 — commit (status: ok)
+feedback-id: fb_2026-06-24_f8e852c1
+completion_manifest:
+  sibling_files_unstaged: true
+  ticket03_files_staged: true
+  implementation_tasks_checked: true
+  commit_succeeded: true
+Unstaged sibling-ticket files (07: setup_ticket_worktree.py, test, ticket file). Flipped three unchecked ## Implementation Tasks checkboxes to [x]. Staged all ticket-03 files (config/agent_registry.json, templates/agents/README.md, deleted templates/agents/finalize-feature.md, templates/workflows/finalize-feature.md, ADR-006 addendum, how-to update, JS comment fix, ticket file). Committed cleanly on EPIC-FinalizeFeatureHardening branch.
+
 ## Implementation Tasks
-- [ ] Decide removal vs deprecation-window (default: removal); apply to template + registry.
-- [ ] Rewrite the slash-command fallback branch to hard-error.
+- [x] Decide removal vs deprecation-window (default: removal); apply to template + registry.
+- [x] Rewrite the slash-command fallback branch to hard-error.
 - [x] Update the how-to version notes.
 - [x] Add the ADR-006 addendum.
-- [ ] Confirm no other surface (build registries, parity tests) still requires the agent.
+- [x] Confirm no other surface (build registries, parity tests) still requires the agent.
 
 ## Risk & Safety
 - Touches money? No.
