@@ -584,5 +584,148 @@ class TestCollectionIsolation(unittest.TestCase):
                 )
 
 
+    def test_genuine_failures_still_reported_with_isolation(self):
+        # covers: TQ-100a-1-iii
+        """AC TQ-100a-1-iii: With collection-error isolation enabled, a genuine
+        assertion failure in a loadable test file is still reported as FAILED
+        and causes the overall run to be non-passing. Isolation must not mask
+        real failures among the collectable tests.
+
+        Gherkin scenario (exact):
+            Given a suite in which one file cannot be collected and, separately,
+              at least one test in a loadable file genuinely fails its assertion,
+            When the suite is run with collection-error isolation enabled,
+            Then the loadable-but-failing test is reported as a failure
+            And the overall run outcome is non-passing (it reflects the genuine
+              failure)
+            And isolating the uncollectable file does not cause the run to
+              report success while a real failure exists among the collectable
+              tests.
+
+        What must be implemented to make this test green:
+          - ``pytest.ini`` must set ``addopts = --continue-on-collection-errors``
+            so that the isolation flag is active. (This was satisfied by tickets
+            01-03, so this test should already be green once written.)
+          - The key invariant being verified here is that isolation ONLY skips
+            uncollectable files; it does NOT suppress assertion failures in files
+            that load successfully.
+        """
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+
+            # File 1 (broken): unimportable — triggers the collection error.
+            broken = tmp_path / "test_broken_collection.py"
+            broken.write_text(
+                textwrap.dedent(
+                    """\
+                    # Intentionally unimportable to produce a collection error.
+                    import _nonexistent_module_tq100a1iii_sentinel  # noqa: F401
+
+                    def test_should_not_run():
+                        pass
+                    """
+                ),
+                encoding="utf-8",
+            )
+
+            # File 2 (failing): loads cleanly but contains a failing assertion.
+            # This file IS collectable — the failure is a genuine test failure,
+            # not a collection error.
+            failing = tmp_path / "test_genuine_failure.py"
+            failing.write_text(
+                textwrap.dedent(
+                    """\
+                    def test_genuine_assertion_failure():
+                        # This assertion is intentionally wrong to simulate a
+                        # real test failure (not a collection error).
+                        assert 1 == 2, "intentional failure for TQ-100a-1-iii"
+                    """
+                ),
+                encoding="utf-8",
+            )
+
+            # File 3 (passing): loads cleanly and passes — confirms the session
+            # ran all collectable tests, not just the failing one.
+            passing = tmp_path / "test_isolation_passing.py"
+            passing.write_text(
+                textwrap.dedent(
+                    """\
+                    def test_isolation_passing():
+                        assert True
+                    """
+                ),
+                encoding="utf-8",
+            )
+
+            result = self._run_pytest(tmp_path)
+            output = result.stdout + result.stderr
+
+            # --- AC assertion 1: the failing test must appear as FAILED ---
+            # The genuine assertion failure must be visible — isolation must not
+            # silently swallow it along with the collection error.
+            self.assertIn(
+                "FAILED",
+                output,
+                msg=(
+                    "Expected 'FAILED' in pytest output — the genuine assertion "
+                    "failure in a loadable file must be reported even when "
+                    "collection-error isolation is active. "
+                    f"Full output:\n{output}"
+                ),
+            )
+
+            # --- AC assertion 2: overall exit code must be non-zero ---
+            # A passing run would have exit code 0; a run with a genuine failure
+            # must have a non-zero exit code.
+            self.assertNotEqual(
+                result.returncode,
+                0,
+                msg=(
+                    "Expected a non-zero pytest exit code — the genuine assertion "
+                    "failure must cause the overall run to be non-passing. "
+                    f"Exit code was: {result.returncode}. Full output:\n{output}"
+                ),
+            )
+
+            # --- AC assertion 3: the failing test name must appear in output ---
+            self.assertIn(
+                "test_genuine_assertion_failure",
+                output,
+                msg=(
+                    "Expected 'test_genuine_assertion_failure' to appear in the "
+                    "pytest output — the specific failing test must be named in "
+                    f"the report. Full output:\n{output}"
+                ),
+            )
+
+            # --- AC assertion 4: session did not abort (some tests ran) ---
+            # "no tests ran" means the session was aborted before running any test.
+            self.assertNotIn(
+                "no tests ran",
+                output.lower(),
+                msg=(
+                    "Session aborted ('no tests ran') — isolation should only skip "
+                    "the uncollectable file, not abort the entire session. "
+                    f"Full output:\n{output}"
+                ),
+            )
+
+            # --- AC assertion 5: run did NOT report clean success ---
+            # If isolation were to mask the genuine failure, pytest might report
+            # only "1 passed" with no failures. We assert that the summary does
+            # NOT indicate a fully-passing run (there must be a 'failed' count).
+            self.assertIn(
+                "failed",
+                output.lower(),
+                msg=(
+                    "Expected 'failed' to appear in the pytest summary — isolation "
+                    "must not cause the run to report success while a real failure "
+                    f"exists among the collectable tests. Full output:\n{output}"
+                ),
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
