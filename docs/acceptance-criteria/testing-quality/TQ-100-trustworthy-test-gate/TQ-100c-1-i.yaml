@@ -1,0 +1,48 @@
+id: TQ-100c-1-i
+title: "Removing a covers tag makes a test unlinked-and-enforced, not informational"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100c.yaml
+criteria: |
+  Given a failing test that was tagged "# covers: <AC-ID>" linking it to a
+    not-done AC, observed in a first run to be reported informationally,
+  When the "# covers:" tag is removed from the test and the suite is run again,
+  Then the now-untagged test is enforced (its failure counts as a real failure
+    and drives the overall outcome non-passing)
+  And removing the tag does not make the test informational
+  And there is no edit to the test that converts an enforced test into an
+    informational one by dropping its link.
+depends_on:
+  - TQ-100c-1
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100c.yaml
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must prove the asymmetry: a not-done link can soften a test (run 1 informational), but removing the link can only ever HARDEN it (run 2 enforced) — there is no test-file edit that silences a test by dropping its link."
+  - "Drive the two runs by editing ONLY the test's `# covers:` tag (present -> removed); the AC store is unchanged between runs."
+delivers_to: null
+expects_from:
+  ac_id: TQ-100c-1
+  contract: "Default-enforce for untagged tests; this edge case proves dropping a tag escalates to enforced rather than relaxing the gate."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "TQ-100 it-po-enrichment"
+    by: it-po
+    at: 2026-06-24
+    note: "Added it_requirements (prove the soften-only-via-link / harden-on-removal asymmetry; mutate only the tag between runs). Confirmed python-coder / S."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The asymmetry is the point: a not-done link can soften a test, but removing the
+  link can only ever harden it. There is no link-edit that silences a test.

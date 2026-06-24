@@ -1,0 +1,34 @@
+id: TQ-100e
+title: "Roll enforcement out in safe stages"
+component: testing-quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Teams move from report-only to excluding-unbuilt to full blocking under their
+  own control, so no project is flipped to blocking unexpectedly.
+
+  The enforcement turns on in deliberate stages: first report-only (results are
+  surfaced but nothing blocks), then excluding tests for unbuilt features, then
+  full blocking. Which stage is active is controlled by explicit configuration,
+  not by a date or an implicit default, so a project — including a consumer
+  install that adopts this package — is never silently promoted to a blocking
+  gate it did not opt into.
+depends_on:
+  - TQ-100
+doc_links: []
+documentation_triggers:
+  - reference-doc
+documentation_rationale: "The rollout stages and their controlling configuration are a lookup-oriented reference (what each stage does, how to set it) that maintainers will consult when promoting enforcement."
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-100e-1
+  - TQ-100e-2
+implemented_by: []

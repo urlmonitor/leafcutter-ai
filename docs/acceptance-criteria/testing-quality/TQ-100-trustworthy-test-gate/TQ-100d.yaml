@@ -1,0 +1,36 @@
+id: TQ-100d
+title: "Known, accepted failures are tracked and expire on their own"
+component: testing-quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Each accepted failure carries a ticket reference and an expiry, and the system
+  flags any entry that has expired or whose test has started passing — the list
+  can't quietly rot.
+
+  When a pre-existing failure has to be tolerated for now, it goes on an explicit
+  allowlist rather than being silently ignored. Every allowlist entry must name
+  the ticket that tracks its fix and a date by which it expires. The system
+  actively pushes back on rot: it flags an entry whose expiry has passed, and it
+  flags an allowlisted test that has started passing again (so stale exemptions
+  are removed promptly). The allowlist cannot grow into a permanent dumping
+  ground that quietly erodes the gate.
+depends_on:
+  - TQ-100
+doc_links: []
+documentation_triggers:
+  - state-diagram
+documentation_rationale: "An allowlist entry has a lifecycle (added -> tracked -> expired/now-passing -> flagged) worth a state diagram so the anti-rot behavior is unambiguous."
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-100d-1
+  - TQ-100d-2
+implemented_by: []

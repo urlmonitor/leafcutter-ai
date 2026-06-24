@@ -1,0 +1,31 @@
+id: TQ-100a
+title: "One broken test can never abort the whole run"
+component: testing-quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  The full suite always finishes and reports, even when a test references a
+  feature that is not built yet.
+
+  When a single test file cannot even be loaded — for example because it imports
+  a module for a feature that has not been written — that one file must not stop
+  every other test from running. The suite collects what it can, runs to
+  completion, and reports results for all the tests that are loadable, so one
+  incomplete or abandoned test never hides the state of the other thousands.
+depends_on:
+  - TQ-100
+doc_links: []
+documentation_triggers: []
+documentation_rationale: "Reliability behavior of the test runner with no new user-facing command or workflow — the suite simply finishes despite one broken file; no how-to or diagram adds value."
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-100a-1
+implemented_by: []

@@ -1,0 +1,52 @@
+id: TQ-100e-1-iii
+title: "Switching enforcement modes changes behavior with no edits to any test"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100e.yaml
+criteria: |
+  Given a fixed suite and a fixed AC store, run once with the enforcement mode
+    configured to report-only and the run observed to be non-blocking,
+  When only the configuration value is changed to blocking and the suite is run
+    again, with no edit made to any test file,
+  Then the second run's enforcement behavior changes accordingly (a failing
+    enforced test now blocks the outcome)
+  And the change in behavior is produced entirely by the configuration change,
+    not by any code or test edit
+  And the same is true when switching among report-only, exclude-unbuilt, and
+    blocking in any order.
+depends_on:
+  - TQ-100e-1
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100e.yaml
+    relationship: describes
+    status: exists
+assigned_agent: test-runner
+estimated_complexity: S
+it_requirements:
+  - "Verification must run the suite once per mode value (and across the three modes in multiple orders), changing ONLY the config/env mode value between runs, and assert enforcement behavior changes accordingly with no test-file or code edit — config is the sole control surface for the rollout stage."
+  - "Drive the mode via the same source the implementation reads (the commit_guardian.json `testing_quality.enforcement_mode` key or the LEAFCUTTER_TEST_ENFORCEMENT_MODE env override); for CI-style verification the env override is the convenient lever."
+  - "This is an execution/verification AC (run-per-mode-and-compare), not source authoring."
+delivers_to: null
+expects_from:
+  ac_id: TQ-100e-1
+  contract: "The config-selected mode; this edge case asserts mode is the only lever — switching it changes enforcement with no test edits."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "TQ-100 it-po-enrichment"
+    by: it-po
+    at: 2026-06-24
+    note: "Added it_requirements (run-per-mode comparison changing only config/env; drive via the settled config key / env override; framed as verification). Confirmed test-runner / S — the run-twice-across-config-values leaf, correctly NOT python-coder."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Verification behavior (run twice across two config values, compare outcomes) =>
+  test-runner, mirroring the determinism edge cases. Confirms config is the sole
+  control surface for the rollout stage.

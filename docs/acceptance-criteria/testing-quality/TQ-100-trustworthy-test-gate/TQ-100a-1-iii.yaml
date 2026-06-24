@@ -1,0 +1,49 @@
+id: TQ-100a-1-iii
+title: "Collection isolation still surfaces genuine failures among the loadable tests"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100a.yaml
+criteria: |
+  Given a suite in which one file cannot be collected and, separately, at least
+    one test in a loadable file genuinely fails its assertion,
+  When the suite is run with collection-error isolation enabled,
+  Then the loadable-but-failing test is reported as a failure
+  And the overall run outcome is non-passing (it reflects the genuine failure)
+  And isolating the uncollectable file does not cause the run to report success
+    while a real failure exists among the collectable tests.
+depends_on:
+  - TQ-100a-1
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100a.yaml
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must assert the process exit status / overall outcome is non-passing when a collectable test genuinely fails, even though a separate file is uncollectable — collection-error tolerance must NOT degrade into tolerance for real regressions."
+  - "Note for the implementer: the CI `test` job invokes pytest with `-x` (stop on first failure); the assertion on overall non-passing outcome must hold under both `-x` and a full-run invocation, so do not couple the trust property to a specific failure-ordering."
+  - "Must be deterministic under pytest-randomly: the genuine failure always drives the run non-passing regardless of seed/order."
+delivers_to: null
+expects_from:
+  ac_id: TQ-100a-1
+  contract: "The collection-error-isolated run; this edge case asserts isolation does not mask genuine failures — the overall outcome still reflects real failures among collectable tests."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "TQ-100 it-po-enrichment"
+    by: it-po
+    at: 2026-06-24
+    note: "Added it_requirements (non-passing exit status when a collectable test fails despite an uncollectable file; hold under both `-x` and full-run since CI uses `-x`; determinism). Confirmed python-coder / S."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Guards the trust property: tolerance for an uncollectable file must NOT degrade
+  into tolerance for real regressions. The exit status must still be non-passing
+  when a collectable test genuinely fails.

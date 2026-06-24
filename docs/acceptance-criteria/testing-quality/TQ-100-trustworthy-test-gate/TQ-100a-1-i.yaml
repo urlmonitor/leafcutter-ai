@@ -1,0 +1,49 @@
+id: TQ-100a-1-i
+title: "A test file importing a nonexistent module does not stop the other files"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100a.yaml
+criteria: |
+  Given a suite of three test files where the first file's top-level import
+    statement names a module that does not exist anywhere on the import path,
+    and the second and third files import only modules that do exist,
+  When the suite is run with collection-error isolation enabled,
+  Then the first file is reported as a single collection error
+  And every test in the second and third files is collected and executed
+  And the results of the second and third files are present in the run report
+  And the run does not stop at the first file.
+depends_on:
+  - TQ-100a-1
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100a.yaml
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must reproduce the exact import-of-a-missing-module failure mode (ModuleNotFoundError at collection time) and assert the other two files still run — verifying the isolation, not just that pytest accepts the flag."
+  - "Must be deterministic under pytest-randomly: the missing-import file is always the single reported collection error regardless of seed/order."
+delivers_to: null
+expects_from:
+  ac_id: TQ-100a-1
+  contract: "The collection-error-isolated run; this edge case pins the import-of-a-missing-module failure mode that must not abort the session."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "TQ-100 it-po-enrichment"
+    by: it-po
+    at: 2026-06-24
+    note: "Added it_requirements (reproduce ModuleNotFoundError at collection time; determinism under pytest-randomly). Confirmed python-coder / S."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  This is the exact symptom that motivated TQ-100a: a single test written for a
+  not-yet-built feature imports its (absent) module and, without isolation,
+  aborts the whole run.

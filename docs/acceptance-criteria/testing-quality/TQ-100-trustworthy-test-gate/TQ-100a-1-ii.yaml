@@ -1,0 +1,50 @@
+id: TQ-100a-1-ii
+title: "A test file that raises at module scope does not stop the other files"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100a.yaml
+criteria: |
+  Given a suite of three test files where the first file raises an exception
+    while it is being imported (for example a call that fails or an explicit
+    failure raised at module top level, executed during collection rather than
+    inside a test function), and the second and third files import cleanly,
+  When the suite is run with collection-error isolation enabled,
+  Then the first file is reported as a single collection error
+  And every test in the second and third files is collected and executed
+  And the results of the second and third files are present in the run report
+  And the run does not stop at the first file.
+depends_on:
+  - TQ-100a-1
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100a.yaml
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Must reproduce the raises-during-import failure mode (an exception executed at module top level during collection, distinct from a missing import) and assert the other two files still run."
+  - "Must be deterministic under pytest-randomly: the raising file is always the single reported collection error regardless of seed/order."
+delivers_to: null
+expects_from:
+  ac_id: TQ-100a-1
+  contract: "The collection-error-isolated run; this edge case pins the raises-during-import (module-scope failure) mode that must not abort the session."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "TQ-100 it-po-enrichment"
+    by: it-po
+    at: 2026-06-24
+    note: "Added it_requirements (reproduce a module-scope raise at collection time, distinct from -i missing-import; determinism under pytest-randomly). Confirmed python-coder / S."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Distinct from -i (missing import): here the module imports a real target but
+  the file's top-level code raises during collection. Both classes of collection
+  failure must be isolated, not just the missing-import class.

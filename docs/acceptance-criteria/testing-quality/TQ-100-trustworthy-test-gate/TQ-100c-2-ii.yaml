@@ -1,0 +1,58 @@
+id: TQ-100c-2-ii
+title: "Downgrading an AC from done to not-done while its test is failing is flagged, not silently relaxed"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100c.yaml
+criteria: |
+  Given an AC whose work_status is done and a covering test that is currently
+    failing,
+  When that AC's work_status is changed from done back to not-done (which would
+    otherwise downgrade the failing test from enforced to informational),
+  Then a pre-pytest integrity check detects the downgrade-while-failing situation
+    and fails loudly (non-passing outcome with a message identifying the AC and
+    its failing covering test)
+  And the gate is not silently relaxed for that test
+  And a real regression in a shipped feature cannot be hidden by flipping its AC
+    back to not-done.
+depends_on:
+  - TQ-100c-2
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100c.yaml
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "DESIGN DECISION (settled): the prior 'was-done' state is detected from the AC YAML file's GIT HISTORY — compare the AC's work_status in the merge-base (or the last committed revision of the AC file) against the working-tree/current value; a done -> not-done transition is the trigger. This is the source-of-truth for 'was done', NOT the live-failing-test signal alone."
+  - "The downgrade-while-failing condition requires BOTH signals to fire: (a) git-history shows work_status went done -> not-done for that AC, AND (b) the covering test is currently failing. Only the conjunction blocks; a clean downgrade of a passing-test AC is allowed."
+  - "Git access must be wrapped per the project error handling policy (CLAUDE.md Rules 1-4): subprocess git calls catch a specific exception, log at WARNING; if git history is genuinely unavailable (e.g. shallow clone, no merge-base), FAIL-SAFE toward enforced — do not silently allow the downgrade."
+  - "Implemented as a violation class of the TQ-100c-2 pre-pytest integrity check (shared loader and entry point), failing loudly and naming the AC and its failing covering test; distinct from an assertion failure."
+  - "If deployed as a commit-time/CI gate, keep templates/ source and deployed copy in parity via build.py (ADR-001)."
+delivers_to: null
+expects_from:
+  ac_id: TQ-100c-2
+  contract: "The pre-pytest linkage-integrity check surface; this edge case adds the done->not-done-while-failing downgrade violation class, keyed on git-history comparison of the AC file's work_status."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "TQ-100 it-po-enrichment"
+    by: it-po
+    at: 2026-06-24
+    note: "Settled BA flag #1: detect prior 'was-done' via the AC YAML's GIT HISTORY (work_status in merge-base / last committed revision vs current), NOT live-failing-signal alone. Block only on the conjunction (git shows done->not-done AND covering test failing). Added it_requirements (git-history mechanism; conjunction; git-unavailable => fail-safe enforced; violation class of the TQ-100c-2 integrity check; ADR-001 parity). Confirmed python-coder / M."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  RESOLVED (IT-PO): the agreed mechanism is a pre-pytest integrity check that
+  detects the done->not-done downgrade via GIT HISTORY of the AC file's
+  work_status (merge-base / last committed value vs current), combined with the
+  covering test currently failing. Not the live failing-signal alone. Git
+  unavailable => fail-safe toward enforced. ID-derived parent is TQ-100c-2 (the
+  AC-side tamper-resistance L2); sibling of the zero-coverage integrity edge case
+  TQ-100c-2-i.

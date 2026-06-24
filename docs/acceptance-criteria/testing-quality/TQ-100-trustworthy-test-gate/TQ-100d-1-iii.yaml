@@ -1,0 +1,50 @@
+id: TQ-100d-1-iii
+title: "An allowlist entry missing its ticket reference or expiry date is rejected"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100d.yaml
+criteria: |
+  Given a known-failing-tests allowlist that contains an entry lacking a ticket
+    reference, or lacking an expiry date, or lacking both,
+  When the allowlist check runs,
+  Then the incomplete entry is rejected with a message naming the entry and the
+    missing required field(s)
+  And the check fails (non-passing outcome) rather than accepting the
+    under-specified entry
+  And an entry can only exempt a test if it carries both a ticket reference and
+    an expiry date.
+depends_on:
+  - TQ-100d-1
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100d.yaml
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Required-fields validation: an entry must carry BOTH ticket_ref and expiry (ISO date) to be valid; missing either (or both) rejects the entry with a message naming the entry and the missing field(s), and fails the check."
+  - "An under-specified entry must NOT exempt its test even transiently — validation runs before any exemption is applied, so a malformed entry never silences a failing test."
+  - "Expiry must parse as a valid ISO date; a present-but-unparseable expiry counts as missing for this check."
+delivers_to: null
+expects_from:
+  ac_id: TQ-100d-1
+  contract: "The allowlist mechanism; this edge case asserts entries missing ticket_ref or expiry are rejected, enforcing the required-fields contract."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "TQ-100 it-po-enrichment"
+    by: it-po
+    at: 2026-06-24
+    note: "Added it_requirements (both ticket_ref+expiry required; malformed entry never exempts; unparseable expiry counts as missing). Confirmed python-coder / S."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Required-fields enforcement keeps every exemption accountable (who tracks the
+  fix, when it expires). No nameless, undated entries.
