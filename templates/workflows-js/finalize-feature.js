@@ -157,6 +157,111 @@ async function run({ userInput, agent, parallel, prompt }) {
   }
 
   // -------------------------------------------------------------------------
+  // Pre-flight 2 — gh account verification (EMU-aware, config-driven)
+  //
+  // Reads `gh_target_account` and `gh_repo` from the worktree's settings.json
+  // (or config/settings.json). If the key is absent the pre-flight is a no-op
+  // so installs with no EMU constraint are unaffected (AC-4).
+  //
+  // When a target account IS configured:
+  //   1. Probe the active gh account via `gh auth status`.
+  //   2. If the active account differs from the target, switch via
+  //      `gh auth switch --user <account>` then re-verify (AC-1).
+  //   3. If the switch fails or re-verify shows the wrong account, return an
+  //      early error with a clear, actionable message (AC-2).
+  // -------------------------------------------------------------------------
+  const ghConfigResult = await agent({
+    agentType: "status-checker",
+    input: {
+      instructions:
+        "Read the gh account config from the worktree settings file.\n" +
+        `Run: cat "${WORKTREE_ROOT}/settings.json" 2>/dev/null || cat "${WORKTREE_ROOT}/config/settings.json" 2>/dev/null || echo 'null'\n` +
+        "Parse the JSON output (if any). Look for a top-level key 'gh_target_account' and 'gh_repo'.\n" +
+        "Return ONLY a JSON object: { \"gh_target_account\": \"<value or null>\", \"gh_repo\": \"<owner/repo or null>\" }\n" +
+        "If the file does not exist or the keys are absent, return: { \"gh_target_account\": null, \"gh_repo\": null }",
+    },
+  });
+
+  let ghConfig;
+  try {
+    ghConfig =
+      typeof ghConfigResult === "string"
+        ? JSON.parse(ghConfigResult)
+        : ghConfigResult;
+  } catch (_err) {
+    ghConfig = { gh_target_account: null, gh_repo: null };
+  }
+
+  const GH_TARGET_ACCOUNT = (ghConfig.gh_target_account || "").trim() || null;
+  const GH_REPO = (ghConfig.gh_repo || "").trim() || null;
+
+  if (GH_TARGET_ACCOUNT) {
+    // Probe current active account.
+    const ghStatusResult = await agent({
+      agentType: "status-checker",
+      input: {
+        instructions:
+          "Run: gh auth status 2>&1\n" +
+          "Parse the output to find which account is currently logged in and active.\n" +
+          "The active account appears on the line containing 'Logged in to' or '✓ Logged in to'.\n" +
+          "The active account username follows 'as ' (e.g. 'Logged in to github.com as urlmonitor').\n" +
+          "Return ONLY a JSON object: { \"active_account\": \"<username or null>\" }",
+      },
+    });
+
+    let ghStatus;
+    try {
+      ghStatus =
+        typeof ghStatusResult === "string"
+          ? JSON.parse(ghStatusResult)
+          : ghStatusResult;
+    } catch (_err) {
+      ghStatus = { active_account: null };
+    }
+
+    const activeAccount = (ghStatus.active_account || "").trim() || null;
+
+    if (activeAccount !== GH_TARGET_ACCOUNT) {
+      // Switch to the configured account.
+      const ghSwitchResult = await agent({
+        agentType: "status-checker",
+        input: {
+          instructions:
+            `Run: gh auth switch --user "${GH_TARGET_ACCOUNT}" 2>&1\n` +
+            "Capture exit code and output.\n" +
+            "Then re-verify: run `gh auth status 2>&1` and extract the active account (see prior step).\n" +
+            "Return ONLY a JSON object: { \"switch_exit_code\": <integer>, \"verified_account\": \"<username or null>\" }",
+        },
+      });
+
+      let ghSwitch;
+      try {
+        ghSwitch =
+          typeof ghSwitchResult === "string"
+            ? JSON.parse(ghSwitchResult)
+            : ghSwitchResult;
+      } catch (_err) {
+        ghSwitch = { switch_exit_code: 1, verified_account: null };
+      }
+
+      const verifiedAccount = (ghSwitch.verified_account || "").trim() || null;
+      const switchFailed =
+        ghSwitch.switch_exit_code !== 0 || verifiedAccount !== GH_TARGET_ACCOUNT;
+
+      if (switchFailed) {
+        return {
+          status: "error",
+          message:
+            `gh account pre-flight failed: could not activate '${GH_TARGET_ACCOUNT}'. ` +
+            `Run: gh auth login --hostname github.com --user ${GH_TARGET_ACCOUNT}`,
+          action_required: "gh_login_required",
+        };
+      }
+    }
+    // Active account is now confirmed to be GH_TARGET_ACCOUNT — proceed.
+  }
+
+  // -------------------------------------------------------------------------
   // Step 0 — Capture pre-merge test baseline on current main HEAD
   //
   // Creates a temporary worktree at origin/main, runs test-runner against it,
@@ -285,6 +390,14 @@ async function run({ userInput, agent, parallel, prompt }) {
     skippedSteps.push({ step: 1, reason: `PR already open (#${prNumber}) — skipping step 1` });
   } else {
     // Dispatch pull-request agent to open the PR.
+    // AC-3 EMU REST fallback: if `gh pr create` fails with the EMU error string
+    // ("createPullRequest" or "Enterprise Managed User"), fall back to the REST API:
+    //   gh api -X POST repos/<org>/<repo>/pulls -f title="..." -f head="..." -f base="main" -f body="..."
+    // GH_REPO (from config) is used for the REST path; omit fallback if GH_REPO is absent.
+    const emuFallbackNote = GH_REPO
+      ? `EMU REST fallback: if gh pr create fails with "createPullRequest" or "Enterprise Managed User" error, ` +
+        `use: gh api -X POST repos/${GH_REPO}/pulls -f title="<title>" -f head="${BRANCH}" -f base="main" -f body="<body>". `
+      : "";
     const openPrResult = await agent({
       agentType: "pull-request",
       input: {
@@ -292,6 +405,8 @@ async function run({ userInput, agent, parallel, prompt }) {
         action: "open",
         instructions:
           "Open a pull request for the current feature branch. " +
+          "First try: gh pr create --base main --head \"" + BRANCH + "\" (standard path). " +
+          emuFallbackNote +
           "Return ONLY a JSON object: { \"number\": <N>, \"url\": \"<url>\" }",
       },
     });
@@ -843,6 +958,14 @@ async function run({ userInput, agent, parallel, prompt }) {
     }
 
     // Dispatch pull-request agent for the merge operation.
+    // AC-3 EMU REST fallback: if `gh pr merge` fails with the EMU error string
+    // ("createPullRequest" or "Enterprise Managed User"), fall back to the REST API:
+    //   gh api -X PUT repos/<org>/<repo>/pulls/<number>/merge -f merge_method="merge"
+    // GH_REPO (from config) is used for the REST path; omit fallback if GH_REPO is absent.
+    const emuMergeFallbackNote = GH_REPO
+      ? `EMU REST fallback: if gh pr merge fails with "createPullRequest" or "Enterprise Managed User" error, ` +
+        `use: gh api -X PUT repos/${GH_REPO}/pulls/${prNumber}/merge -f merge_method="merge". `
+      : "";
     mergeResult = await agent({
       agentType: "pull-request",
       input: {
@@ -851,6 +974,7 @@ async function run({ userInput, agent, parallel, prompt }) {
         action: "merge",
         instructions:
           `Merge PR #${prNumber} to main using: gh pr merge ${prNumber} --merge --auto\n` +
+          emuMergeFallbackNote +
           "Wait for the merge to complete, then return a JSON object: " +
           "{ \"merged\": true, \"sha\": \"<merge-commit-sha>\" }",
       },
