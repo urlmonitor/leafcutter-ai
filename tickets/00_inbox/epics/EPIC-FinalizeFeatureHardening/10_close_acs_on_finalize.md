@@ -24,7 +24,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 10: Close tickets and source ACs on the feature branch BEFORE the PR merge
@@ -161,7 +161,7 @@ merge)**, running inside the feature worktree on the feature branch:
 - [x] test-runner — 2026-06-24 10:50
 - [x] pr-reviewer — 2026-06-24 13:00
 - [x] commit — 2026-06-24 14:00
-- [ ] pull-request
+- [x] pull-request — 2026-06-24 14:30
 
 ## Comments
 
@@ -212,6 +212,13 @@ All 7 ACs verified against the diff. Step 3.5 is correctly inserted between `com
 feedback-id: (submit-failed)
 Committed feat(finalize): close tickets and source ACs pre-merge on feature branch.
 Staged files: templates/workflows-js/finalize-feature.js, templates/workflows/finalize-feature.md, tests/test_finalize_feature_closure.js, tickets/00_inbox/epics/EPIC-FinalizeFeatureHardening/10_close_acs_on_finalize.md.
+
+### 2026-06-24 14:30 — pull-request (status: ok)
+feedback-id: fb_2026-06-24_386b9c7d
+completion_manifest:
+  branch_pushed: true
+  pr_updated: true
+Pushed commit c8bcc93 to branch EPIC-FinalizeFeatureHardening. Epic PR #158 already exists and has been updated with this ticket's changes. No new PR opened (shared-PR convention for this epic).
 
 ## Implementation Tasks
 - [x] Add a closure step to `finalize-feature.js` after Step 3 (test+triage
