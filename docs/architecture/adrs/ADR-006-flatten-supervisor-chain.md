@@ -912,6 +912,104 @@ non-functional artefact that could mislead future maintainers.
 
 ---
 
+---
+
+## Addendum: Pure-literal `meta` contract for workflow scripts (EPIC-FinalizeFeatureHardening ticket 02, 2026-06-24)
+
+### Context
+
+Every `templates/workflows-js/*.js` Workflow script exposes an
+`export const meta = { name, description, phases }` block. The Claude Code
+Workflow runtime parses this block at invocation time. If any value inside
+`meta` is a non-literal expression — a string concatenation (`"a" + b`), a
+template literal with substitution (`` `${expr}` ``), a spread operator
+(`...ident`), a call expression (`fn()`), or a bare identifier reference
+(`key: varName`) — the runtime raises a `meta must be a pure literal` error
+and the workflow silently fails to execute.
+
+This defect class was the root cause of the `finalize-feature` blocking
+incident that triggered EPIC-FinalizeFeatureHardening. Four workflow scripts
+carried latent non-literal values in their `meta` blocks undetected because
+`build_phases.py` byte-copies workflow scripts without parsing them, and no
+pre-commit hook validated the `meta` block.
+
+Ticket 01 collapsed the non-literal values to pure literals in all six current
+workflow scripts. Ticket 02 adds a mechanical gate so the defect can never
+be reintroduced.
+
+### Decision
+
+The pure-literal `meta` block is now a **package invariant** enforced by a
+pre-commit hook.
+
+1. **`check_workflow_meta.py`** is added to `templates/scripts/commit_guardian/`
+   as a pre-commit hook. It extracts the `export const meta = { ... }` block
+   from every staged `templates/workflows-js/*.js` file using a brace-depth
+   counter and scans the block with five regex patterns:
+
+   | Pattern | Regex class | Example violation |
+   |---------|-------------|-------------------|
+   | Template literal substitution | `_TEMPLATE_SUBST_RE` | `` `Drive at ${VERSION}` `` |
+   | String concatenation | `_STRING_CONCAT_RE` | `"prefix" + SUFFIX` |
+   | Spread operator | `_SPREAD_RE` | `...basePhases` |
+   | Call expression | `_CALL_EXPR_RE` | `buildPhases()` |
+   | Bare identifier reference | `_BARE_IDENT_RE` | `description: myVar` |
+
+   The hook exits non-zero with a `FAIL: <file> — <description>` line per
+   violation when any pattern is matched.
+
+2. **The hook is registered** in `commit_guardian.json` as `check-workflow-meta`,
+   scoped to `templates/workflows-js/*.js` staged files, `pass_filenames: false`
+   (consistent with the other commit_guardian hooks that scan for staged files
+   internally).
+
+3. **Standalone mode**: when invoked with no arguments and no staged files match,
+   `check_workflow_meta.py` scans all `*.js` files in `templates/workflows-js/`
+   (useful for CI and ad-hoc validation).
+
+### What counts as a pure literal
+
+A pure literal value is one of:
+
+- A string literal (`"..."`, `'...'`, or a bare backtick string `` `...` ``
+  with **no** `${...}` substitutions).
+- A numeric literal (`42`, `3.14`).
+- A boolean literal (`true`, `false`).
+- `null`, `undefined`, `NaN`, `Infinity`.
+- An array literal whose elements are each pure literals (`["a", "b"]`).
+- An object literal whose values are each pure literals (`{ key: "val" }`).
+
+A pure literal is NOT:
+
+- Any expression that references a variable (`key: varName`).
+- Any expression that concatenates strings (`"a" + b`).
+- Any template literal with a substitution (`` `${expr}` ``).
+- Any call expression (`buildPhases()`).
+- Any spread into an array or object (`...ident`).
+
+### Consequences
+
+- **Zero-cost authoring**: workflow authors use plain string/array literals
+  (already the natural form). The constraint requires no refactoring of
+  well-authored scripts.
+- **Immediate detection**: any commit that introduces a non-literal value in
+  a `meta` block is blocked before it reaches the build or CI pipeline.
+- **Standalone usability**: `python scripts/commit_guardian/check_workflow_meta.py`
+  can be run at any time to audit all workflow scripts, not only staged files.
+- **No false positives on non-workflow files**: the hook is scoped to
+  `templates/workflows-js/*.js` and silently skips files outside that path.
+
+### References
+
+- `templates/scripts/commit_guardian/check_workflow_meta.py` — the hook implementation.
+- `templates/scripts/commit_guardian/commit_guardian.json` — hook registration
+  (`check-workflow-meta` entry).
+- `unit_tests/commit_guardian/test_check_workflow_meta.py` — unit tests.
+- `tickets/00_inbox/epics/EPIC-FinalizeFeatureHardening/02_workflow_meta_literal_gate.md`
+  — the ticket that produced this addendum.
+
+---
+
 ## References
 
 - `tickets/00_inbox/epics/EPIC-FlattenSupervisorChain/Master_Plan.md` — the
