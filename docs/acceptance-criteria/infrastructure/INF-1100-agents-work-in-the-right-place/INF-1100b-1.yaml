@@ -1,0 +1,43 @@
+id: INF-1100b-1
+title: "A hand-off test path that disagrees with config is overridden by the config-resolved path"
+component: infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a hand-off names a test location of "unit_tests/etl/test_pipeline.py",
+  And the project configuration resolves the test for that area to
+    "tests/etl/test_pipeline.py",
+  When an agent acts on the hand-off to place the test,
+  Then the test is placed at the config-resolved location "tests/etl/",
+  And the agent does not write the test to the hand-off's "unit_tests/etl/" path.
+depends_on:
+  - INF-1100b
+doc_links:
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Surface is the test-authoring agent template prose: when a hand-off field (the ticket files_touched / red_baseline 'file' path the agent reads as 'relative path from the repo root to the test file') names a test location that disagrees with the config-resolved location, the agent MUST place the test at the config-resolved location and MUST NOT trust the contradicting hand-off path."
+  - "Config wins is a hard, non-advisory rule — a coder must not soften it to a warning that still writes to the hand-off path. This reproduces the real incident where unit_tests/etl/test_*.py from a ticket files_touched field was trusted over the configured test_root."
+  - "The override applies to the test base location only; the test filename and any nested area subpath are preserved (the override changes the root, not the file identity)."
+  - "Deployed/template parity (ADR-001) via build.py round-trip."
+delivers_to:
+  agent: llm-expert
+  contract: "The same config-resolved test location and the recorded fact that an override occurred (which hand-off path was rejected, which configured path was used), consumed by INF-1100b-2 to build the contradiction report."
+expects_from:
+  ac_id: INF-1100a-1
+  contract: "The config-resolved test base location (test_root joined with area subpath, compiled into the prompt by INF-1100c); this AC compares the hand-off path against that resolved location and writes to the resolved location on disagreement."
+origin_agent: business-analyst-v3
+created: 2026-06-23
+amended_by:
+  - reason: "it-po-v3 technical enrichment: llm-expert (test-writer.md prose); the config-wins rule lives in the agent template that reads the hand-off path. delivers_to wired to the b-2 reporting AC. Criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Reproduces the real incident: a ticket files_touched field carried unit_tests/etl/test_*.py and was trusted over the configured test_root."

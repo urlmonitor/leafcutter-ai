@@ -1,0 +1,46 @@
+id: GE-113b-2
+title: "The structural-change bypass still governs only the structural-change check"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a commit introduces a new top-level package that the structural-change
+    check would flag,
+  And the commit carries the structural-change bypass token [NO-ARCH-UPDATE],
+  And every staged test file is within the configured test location,
+  When the pre-commit guards run,
+  Then the structural-change check is satisfied by the bypass token,
+  And the misplaced-test guard reports no violation because the tests are correctly
+    placed,
+  And the commit proceeds.
+depends_on:
+  - GE-113b
+doc_links:
+  - path: scripts/commit_guardian/check_structural_change.py
+    relationship: describes
+    status: exists
+  - path: scripts/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Regression guard that the bypass tightening does NOT break its legitimate use: with [NO-ARCH-UPDATE] present, the structural-change check must still be satisfied by the token (unchanged behavior), and when all staged tests are correctly placed the misplaced-test guard reports no violation, so the commit proceeds."
+  - "Confirms the two guards remain independently scoped after the GE-113b-1 change: the bypass keeps excusing structural changes; it simply no longer excuses misplaced artifacts."
+  - "Deployed/template parity (ADR-001) on any touched hook + manifest."
+delivers_to: null
+expects_from:
+  ac_id: GE-113a-1
+  contract: "The misplaced-test verdict from GE-113a-1; this AC asserts blocked=false when all staged tests are within configured_test_root, so the only active gate is the (bypass-satisfied) structural-change check."
+origin_agent: business-analyst-v3
+created: 2026-06-23
+amended_by:
+  - reason: "it-po-v3 technical enrichment: python-coder; regression guard that the bypass keeps its legitimate scope. expects_from wired to the a-1 verdict producer. Criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Confirms the bypass keeps its legitimate scope: it acknowledges structural changes but is no longer overloaded to excuse misplaced artifacts."

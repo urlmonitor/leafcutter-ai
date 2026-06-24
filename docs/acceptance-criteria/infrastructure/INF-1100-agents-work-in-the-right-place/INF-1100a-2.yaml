@@ -1,0 +1,42 @@
+id: INF-1100a-2
+title: "Test location mirrors the source subtree under the configured test root"
+component: infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the configured test location is "tests/",
+  And the project keeps sibling tests under a per-area subfolder
+    (for example tests/etl/ holds the tests for the etl area),
+  When an agent resolves where a test for the etl area must go,
+  Then the resolved location is "tests/etl/" — the configured test root
+    joined with the source area's subpath,
+  And the area subpath is taken from the source layout rather than a fixed string.
+depends_on:
+  - INF-1100a
+doc_links:
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "Surface is the test-authoring agent template prose: the agent must compose the test path as join(configured test_root, source-area subpath), deriving the area subpath from the source file's own location rather than a hardcoded segment."
+  - "The mirroring rule must be stated normatively once in the template so the agent never invents an arbitrary subfolder; the real sibling layout in this repo is tests/<area>/ (e.g. tests/etl/)."
+  - "Must remain correct under a non-default configured test_root (the join is config-root + area-subpath, not tests/ + area-subpath); see INF-1100a-2-i."
+  - "Deployed/template parity (ADR-001) via build.py round-trip."
+delivers_to: null
+expects_from:
+  ac_id: INF-1100c-1
+  contract: "The compiled agent instructions carry the resolved test_root (e.g. 'tests/') from {{config.testing_context.test_root}}; the agent joins that resolved root with the source-area subpath to form the final test location."
+origin_agent: business-analyst-v3
+created: 2026-06-23
+amended_by:
+  - reason: "it-po-v3 technical enrichment: surface=test-writer.md prose (llm-expert); the join algorithm is prose/judgment, the resolved root comes from the INF-1100c compiler. Criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Grounded in the real sibling layout: tests live under tests/<subdir>/ (e.g. tests/etl/)."

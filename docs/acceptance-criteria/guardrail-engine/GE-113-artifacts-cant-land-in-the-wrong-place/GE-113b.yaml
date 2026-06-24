@@ -1,0 +1,31 @@
+id: GE-113b
+title: "The structural-change override can't excuse a misplaced artifact"
+component: guardrail-engine
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Waving through unrelated structural changes never silently lets a misplaced artifact slip past.
+
+  The escape hatch used to acknowledge intentional structural changes does not
+  also suppress the misplaced-artifact check, so an artifact that landed in the
+  wrong place is still caught even when the structural-change bypass is in play.
+depends_on:
+  - GE-113
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-113b-1
+  - GE-113b-2
+implemented_by: []
+documentation_triggers:
+  - how-to
+notes: "User-authored intent: BrainCandy. Root-cause miss: the structural-change guard fired but was bypassed as a 'test-only package', letting the misplaced test package through."

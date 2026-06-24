@@ -1,0 +1,41 @@
+id: GE-113b-1-i
+title: "Bypass token present and the artifact correctly placed lets the commit proceed"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the configured test location is "tests/",
+  And a commit stages a test file at "tests/etl/test_pipeline.py" within the
+    configured test location,
+  And the commit carries the structural-change bypass token [NO-ARCH-UPDATE],
+  When the pre-commit guards run,
+  Then the misplaced-test guard reports no violation,
+  And the commit proceeds,
+  And the bypass token is honored for the structural-change check it was meant for.
+depends_on:
+  - GE-113b-1
+doc_links:
+  - path: scripts/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "No false blocker: with [NO-ARCH-UPDATE] present AND a correctly-placed test (within test_root), the misplaced-test guard reports no violation and the commit proceeds; the bypass remains honored for the structural-change check it was meant for."
+  - "Confirms the GE-113b-1 tightening did not turn the misplaced-test guard into a spurious blocker when the artifact is actually placed correctly."
+delivers_to: null
+expects_from:
+  ac_id: GE-113b-1
+  contract: "The bypass-independent misplaced-test behavior from GE-113b-1; this edge exercises the correctly-placed branch where blocked=false even with the bypass token present."
+origin_agent: business-analyst-v3
+created: 2026-06-23
+amended_by:
+  - reason: "it-po-v3 technical enrichment: python-coder (no-false-blocker edge for the tightened bypass). Criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Edge case: tightening the bypass must not turn it into a false blocker when the artifact is actually placed correctly."

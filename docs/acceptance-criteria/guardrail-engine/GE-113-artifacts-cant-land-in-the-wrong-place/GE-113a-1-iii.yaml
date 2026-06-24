@@ -1,0 +1,38 @@
+id: GE-113a-1-iii
+title: "A non-test file outside the test root is not blocked by the test-placement guard"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the configured test location is "tests/",
+  And a commit stages a non-test source file at "scripts/etl/pipeline.py" which is
+    outside the configured test location,
+  When the pre-commit guard for test placement runs,
+  Then the commit is not blocked by the test-placement guard for that file,
+  And no misplaced-test message is emitted for that file.
+depends_on:
+  - GE-113a-1
+doc_links:
+  - path: scripts/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Scope containment: the guard governs TEST files only (test_*.py identification). An ordinary source file outside test_root (e.g. scripts/etl/pipeline.py) must not be blocked or messaged by the test-placement guard — the test-file predicate gates the whole check, so non-test files are out of scope."
+delivers_to: null
+expects_from:
+  ac_id: GE-113a-1
+  contract: "The same test-file predicate from GE-113a-1; this edge exercises the non-test branch where the file is ignored entirely."
+origin_agent: business-analyst-v3
+created: 2026-06-23
+amended_by:
+  - reason: "it-po-v3 technical enrichment: python-coder (test-file-predicate scope edge). Criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Scope-containment edge case: the test guard only governs test files; an ordinary source file outside test_root is none of its business."

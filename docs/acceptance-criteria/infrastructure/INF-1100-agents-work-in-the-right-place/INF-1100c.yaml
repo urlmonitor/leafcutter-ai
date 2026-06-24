@@ -1,0 +1,32 @@
+id: INF-1100c
+title: "Compiled agent instructions carry the right work-location paths"
+component: infrastructure
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  When agent instructions are generated, their work-location paths come out fully resolved — and proven.
+
+  Because each agent's instructions are compiled from templates, the
+  work-location paths inside the compiled instructions are filled in from your
+  configuration with no leftover placeholders, and this resolution is verified by
+  tests so a regression can't quietly reintroduce a wrong or empty path.
+depends_on:
+  - INF-1100
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - INF-1100c-1
+  - INF-1100c-2
+implemented_by: []
+documentation_triggers:
+  - component-diagram
+notes: "User-authored intent: BrainCandy. Explicit user requirement: cover prompt-path resolution with tests."

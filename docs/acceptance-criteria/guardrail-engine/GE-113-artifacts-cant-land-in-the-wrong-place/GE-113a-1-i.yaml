@@ -1,0 +1,39 @@
+id: GE-113a-1-i
+title: "A test inside a nested subfolder of the configured test root is allowed"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the configured test location is "tests/",
+  And a commit stages a test file at "tests/etl/test_pipeline.py" which sits in a
+    nested subfolder of the configured test location,
+  When the pre-commit guard for test placement runs,
+  Then the commit is not blocked by the test-placement guard,
+  And no misplaced-test message is emitted for that file.
+depends_on:
+  - GE-113a-1
+doc_links:
+  - path: scripts/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The guard must treat any path UNDER the configured test_root (at any nesting depth, e.g. tests/etl/) as correctly placed and emit no violation — the containment check is prefix/ancestor-based, not exact-match, so the real sibling layout tests/<area>/ is valid."
+  - "No false positive: a nested-but-contained test must not be blocked."
+delivers_to: null
+expects_from:
+  ac_id: GE-113a-1
+  contract: "The same containment check from GE-113a-1; this edge exercises the contained-nested branch where blocked is false and no message is emitted."
+origin_agent: business-analyst-v3
+created: 2026-06-23
+amended_by:
+  - reason: "it-po-v3 technical enrichment: python-coder (containment edge — prefix-based, not exact-match). Criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Edge case: a nested subdir under test_root (the real sibling layout tests/etl/) is a valid location, not a violation."
