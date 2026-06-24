@@ -263,5 +263,186 @@ class TestCollectionIsolation(unittest.TestCase):
             )
 
 
+    def test_import_of_missing_module_isolated(self):
+        # covers: TQ-100a-1-i
+        """AC TQ-100a-1-i: A test file whose top-level import names a nonexistent
+        module is reported as a single collection error (ModuleNotFoundError) while
+        the remaining two files collect and execute all their tests to completion.
+
+        Gherkin scenario (exact):
+            Given a suite of three test files where the first file's top-level
+              import statement names a module that does not exist anywhere on the
+              import path, and the second and third files import only modules that
+              do exist,
+            When the suite is run with collection-error isolation enabled,
+            Then the first file is reported as a single collection error
+            And every test in the second and third files is collected and executed
+            And the results of the second and third files are present in the run report
+            And the run does not stop at the first file.
+
+        What must be implemented to make this test green:
+          - ``pytest.ini`` (or equivalent) must set
+            ``addopts = --continue-on-collection-errors`` so that the isolation
+            flag is active without any explicit CLI flag in the subprocess call.
+          - The isolation must reproduce the exact ``ModuleNotFoundError`` failure
+            mode: pytest's ERROR output must include the exception class name.
+          - The test tree contains exactly 3 files: 1 broken + 2 good; the good
+            files must produce exactly 2 passing tests in the report.
+          - The ``p.`` (test ID) lines for both good tests must appear in the
+            verbose output, confirming deterministic collection order regardless
+            of pytest-randomly seed.
+        """
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+
+            # --- Build the exact 3-file scenario from the AC ---
+            # File 1 (broken): top-level import of a nonexistent module.
+            broken = tmp_path / "test_broken_missing_import.py"
+            broken.write_text(
+                textwrap.dedent(
+                    """\
+                    # This file intentionally imports a nonexistent module to reproduce
+                    # the ModuleNotFoundError collection-error isolation scenario.
+                    import _nonexistent_module_tq100a1i_sentinel  # noqa: F401
+
+                    def test_should_not_run():
+                        pass
+                    """
+                ),
+                encoding="utf-8",
+            )
+
+            # File 2 (good): imports only stdlib modules.
+            good_a = tmp_path / "test_isolated_good_a.py"
+            good_a.write_text(
+                textwrap.dedent(
+                    """\
+                    import sys
+
+                    def test_good_a_runs():
+                        assert sys.version_info.major == 3
+                    """
+                ),
+                encoding="utf-8",
+            )
+
+            # File 3 (good): no imports, trivially passing.
+            good_b = tmp_path / "test_isolated_good_b.py"
+            good_b.write_text(
+                textwrap.dedent(
+                    """\
+                    def test_good_b_runs():
+                        assert 1 + 1 == 2
+                    """
+                ),
+                encoding="utf-8",
+            )
+
+            result = self._run_pytest(tmp_path)
+            output = result.stdout + result.stderr
+
+            # --- AC assertion 1: the broken file must appear as a collection error ---
+            # pytest output under --continue-on-collection-errors includes
+            # "ERROR collecting <filename>".
+            self.assertIn(
+                broken.name,
+                output,
+                msg=(
+                    f"Expected '{broken.name}' to appear in pytest output as a "
+                    f"collection error. Full output:\n{output}"
+                ),
+            )
+
+            # --- AC assertion 2: ModuleNotFoundError must be named in the error output ---
+            # The it_requirements for TQ-100a-1-i explicitly state:
+            #   "Must reproduce the exact import-of-a-missing-module failure mode
+            #    (ModuleNotFoundError at collection time)"
+            # pytest's collection-error traceback includes the exception class name.
+            self.assertIn(
+                "ModuleNotFoundError",
+                output,
+                msg=(
+                    "Expected 'ModuleNotFoundError' to appear in the collection-error "
+                    "output — the test must reproduce the exact import-of-a-missing-module "
+                    f"failure mode, not a generic error. Full output:\n{output}"
+                ),
+            )
+
+            # --- AC assertion 3: session does not abort before running the good tests ---
+            self.assertNotIn(
+                "no tests ran",
+                output.lower(),
+                msg=(
+                    "Session aborted ('no tests ran') — add --continue-on-collection-errors "
+                    f"to pytest.ini addopts. Full output:\n{output}"
+                ),
+            )
+
+            # --- AC assertion 4: exactly 2 good tests passed ---
+            self.assertIn(
+                "2 passed",
+                output,
+                msg=(
+                    "Expected '2 passed' in the pytest summary — the two good test files "
+                    "must each run their single test to completion. "
+                    f"Full output:\n{output}"
+                ),
+            )
+
+            # --- AC assertion 5: exactly 1 collection error ---
+            self.assertIn(
+                "1 error",
+                output,
+                msg=(
+                    "Expected '1 error' in the pytest summary — the single broken file "
+                    "must produce exactly one collection error, not a session abort. "
+                    f"Full output:\n{output}"
+                ),
+            )
+
+            # --- AC assertion 6: both good test names present in output ---
+            # Confirms results of the second and third files are in the run report.
+            for test_name in ("test_good_a_runs", "test_good_b_runs"):
+                self.assertIn(
+                    test_name,
+                    output,
+                    msg=(
+                        f"Expected '{test_name}' to appear in the verbose output — "
+                        "the result of every good-file test must be present in the report. "
+                        f"Full output:\n{output}"
+                    ),
+                )
+
+            # --- AC assertion 7: pytest.ini addopts is the source of the isolation flag ---
+            # The flag must come from the project's pytest.ini ``addopts``, not from a
+            # manually-passed CLI argument. This assertion verifies that the project
+            # ``pytest.ini`` file exists at the repo root and contains the
+            # ``--continue-on-collection-errors`` flag inside its ``addopts`` setting,
+            # proving that isolation is enforced project-wide (not just in this test's
+            # subprocess invocation).
+            #
+            # This is the assertion that proves the AC is satisfied at the configuration
+            # level, not merely at the CLI level. python-coder must verify that
+            # ``pytest.ini`` at the repo root contains this exact addopts line and then
+            # remove the ``self.fail()`` stub guard below.
+            #
+            # TODO (python-coder): once you have confirmed that pytest.ini at _REPO_ROOT
+            # contains ``--continue-on-collection-errors`` in its addopts, remove the
+            # self.fail() call below and replace it with the actual assertion.
+            pytest_ini = _REPO_ROOT / "pytest.ini"
+            self.assertTrue(
+                pytest_ini.exists(),
+                msg=f"pytest.ini not found at {pytest_ini} — it must exist at the repo root.",
+            )
+            ini_content = pytest_ini.read_text(encoding="utf-8")
+            self.assertIn(
+                "--continue-on-collection-errors",
+                ini_content,
+                msg="pytest.ini addopts must include --continue-on-collection-errors.",
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
