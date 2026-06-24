@@ -55,22 +55,36 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 
 
-def _git_toplevel() -> Path:
+def _git_toplevel(anchor: Path | None = None) -> Path:
     """Return the absolute path to the main repository root.
+
+    The repository root is resolved with ``git -C <anchor> rev-parse
+    --show-toplevel`` rather than relying on the process working directory.
+    This keeps the script correct when it is invoked from a parent workspace
+    that is not itself a git repository (e.g. the leafcutter dev layout where
+    ``leafcutter-ai/`` is the git root but the script may be launched from its
+    parent). When *anchor* is omitted, the script's own directory is used —
+    the script always lives physically inside the repository it operates on.
+
+    Args:
+        anchor: A path inside the target repository to resolve from. Defaults
+            to the directory containing this script.
 
     Returns:
         Absolute Path to the git toplevel directory.
     """
+    if anchor is None:
+        anchor = Path(__file__).resolve().parent
     try:
         result = subprocess.run(
-            ["git", "rev-parse", "--show-toplevel"],
+            ["git", "-C", str(anchor), "rev-parse", "--show-toplevel"],
             capture_output=True,
             text=True,
             check=True,
         )
     except (subprocess.SubprocessError, OSError) as exc:
         raise subprocess.SubprocessError(  # noqa: TRY003
-            f"Failed to resolve git toplevel: {exc}"
+            f"Failed to resolve git toplevel from {anchor}: {exc}"
         ) from exc
     return Path(result.stdout.strip())
 
@@ -218,23 +232,48 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
             f"Failed to update submodules in {worktree_path}: {exc}"
         ) from exc
 
-    try:
-        subprocess.run(
-            ["poetry", "install", "--no-root"],
-            cwd=worktree_path,
-            check=True,
+    # Install Python dev dependencies. Detect the project's packaging style
+    # rather than assuming poetry: a poetry/PEP-621 project carries a
+    # pyproject.toml, while this package and many consumers pin dev deps in
+    # requirements-dev.txt (no pyproject.toml). Dependency install is treated
+    # as best-effort — a failure warns and continues, because the deps are
+    # frequently already present in the active environment and a hard failure
+    # here should not block the entire worktree setup.
+    if (worktree_path / "pyproject.toml").exists():
+        dep_cmd = ["poetry", "install", "--no-root"]
+    elif (worktree_path / "requirements-dev.txt").exists():
+        dep_cmd = [sys.executable, "-m", "pip", "install", "-r", "requirements-dev.txt"]
+    else:
+        dep_cmd = None
+        print(
+            "WARNING: no pyproject.toml or requirements-dev.txt found in "
+            f"{worktree_path}; skipping dependency install.",
+            file=sys.stderr,
         )
-    except (subprocess.SubprocessError, OSError) as exc:
-        raise subprocess.SubprocessError(  # noqa: TRY003
-            f"Failed to run poetry install in {worktree_path}: {exc}"
-        ) from exc
+    if dep_cmd is not None:
+        try:
+            subprocess.run(dep_cmd, cwd=worktree_path, check=True)
+        except (subprocess.SubprocessError, OSError) as exc:
+            print(
+                f"WARNING: dependency install ({dep_cmd[0]}) failed in "
+                f"{worktree_path} ({exc}); continuing — deps may already be "
+                "present in the active environment.",
+                file=sys.stderr,
+            )
 
     # Run build.py to materialise .leafcutter/ (workflows, agents, skills, hooks)
     # in the new worktree.  Without this step, named-workflow resolution
     # (`workflow("build-epic")`) fails because .claude/workflows/ is gitignored
-    # and therefore absent from fresh worktrees.
-    build_script = worktree_path / "leafcutter-ai" / "scripts" / "build.py"
-    if build_script.exists():
+    # and therefore absent from fresh worktrees, and the .pre-commit-config
+    # (a .leafcutter shim) is missing so package hooks silently skip.
+    # Probe both layouts: consumer installs carry leafcutter-ai/scripts/build.py
+    # as a subdirectory; the self-hosted package has scripts/build.py at root.
+    build_candidates = [
+        worktree_path / "leafcutter-ai" / "scripts" / "build.py",
+        worktree_path / "scripts" / "build.py",
+    ]
+    build_script = next((c for c in build_candidates if c.exists()), None)
+    if build_script is not None:
         try:
             subprocess.run(
                 [sys.executable, str(build_script), "--target-dir", str(worktree_path)],
@@ -249,9 +288,10 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
             )
     else:
         print(
-            f"WARNING: build.py not found at {build_script}; "
-            "run `python leafcutter-ai/scripts/build.py --target-dir .` "
-            "inside the worktree to materialise .leafcutter/ build outputs.",
+            "WARNING: build.py not found in worktree (probed "
+            f"{[str(c) for c in build_candidates]}); "
+            "run build.py manually inside the worktree to materialise "
+            ".leafcutter/ build outputs.",
             file=sys.stderr,
         )
 
@@ -446,7 +486,10 @@ def cmd_setup_ticket(args: argparse.Namespace) -> None:
     if args.branch:
         slug = args.branch
 
-    main_repo = _git_toplevel()
+    main_repo = _git_toplevel(ticket_path.parent)
+    # Anchor all subsequent CWD-relative git calls to the repo root so the
+    # script works when launched from a non-repo parent workspace.
+    os.chdir(main_repo)
     worktrees_dir = main_repo.parent / "worktrees"
     worktrees_dir.mkdir(parents=True, exist_ok=True)
 
@@ -487,6 +530,9 @@ def cmd_create_only(args: argparse.Namespace) -> None:
     branch_name = args.branch_name
 
     main_repo = _git_toplevel()
+    # Anchor all subsequent CWD-relative git calls to the repo root so the
+    # script works when launched from a non-repo parent workspace.
+    os.chdir(main_repo)
     worktrees_dir = main_repo.parent / "worktrees"
     worktrees_dir.mkdir(parents=True, exist_ok=True)
 
