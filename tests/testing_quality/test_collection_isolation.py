@@ -444,5 +444,145 @@ class TestCollectionIsolation(unittest.TestCase):
             )
 
 
+    def test_module_scope_exception_isolated(self):
+        # covers: TQ-100a-1-ii
+        """AC TQ-100a-1-ii: A test file that raises an exception at module scope
+        (i.e. during collection, not inside a test function) does not prevent
+        the remaining files from collecting and running.
+
+        Gherkin scenario (exact):
+            Given a suite of three test files where the first file raises an exception
+              while it is being imported (for example a call that fails or an explicit
+              failure raised at module top level, executed during collection rather than
+              inside a test function), and the second and third files import cleanly,
+            When the suite is run with collection-error isolation enabled,
+            Then the first file is reported as a single collection error
+            And every test in the second and third files is collected and executed
+            And the results of the second and third files are present in the run report
+            And the run does not stop at the first file.
+
+        What must be implemented to make this test green:
+          - ``pytest.ini`` (or equivalent) must set
+            ``addopts = --continue-on-collection-errors`` so that the isolation
+            flag is active without any explicit CLI flag in the subprocess call.
+          - The isolation must reproduce the exact module-scope exception failure
+            mode: the broken file raises ``RuntimeError`` unconditionally at top
+            level (not inside a function), causing a collection error rather than
+            a test failure.
+          - The test tree contains exactly 3 files: 1 broken + 2 good; the good
+            files must produce exactly 2 passing tests in the report.
+          - Both good test names must appear in the verbose output, confirming
+            results of the second and third files are present in the run report.
+        """
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+
+            # --- Build the exact 3-file scenario from the AC ---
+            # File 1 (broken): raises RuntimeError unconditionally at module scope.
+            broken = tmp_path / "test_broken_module_scope.py"
+            broken.write_text(
+                textwrap.dedent(
+                    """\
+                    # This file intentionally raises at module scope (during collection,
+                    # not inside a test function) to reproduce the TQ-100a-1-ii scenario.
+                    raise RuntimeError("module scope exception")
+
+                    def test_should_not_run():
+                        pass
+                    """
+                ),
+                encoding="utf-8",
+            )
+
+            # File 2 (good): imports only stdlib modules.
+            good_a = tmp_path / "test_module_scope_good_a.py"
+            good_a.write_text(
+                textwrap.dedent(
+                    """\
+                    import sys
+
+                    def test_module_scope_good_a_runs():
+                        assert sys.version_info.major == 3
+                    """
+                ),
+                encoding="utf-8",
+            )
+
+            # File 3 (good): no imports, trivially passing.
+            good_b = tmp_path / "test_module_scope_good_b.py"
+            good_b.write_text(
+                textwrap.dedent(
+                    """\
+                    def test_module_scope_good_b_runs():
+                        assert 2 + 2 == 4
+                    """
+                ),
+                encoding="utf-8",
+            )
+
+            result = self._run_pytest(tmp_path)
+            output = result.stdout + result.stderr
+
+            # --- AC assertion 1: the broken file must appear as a collection error ---
+            # pytest output under --continue-on-collection-errors includes
+            # "ERROR collecting <filename>".
+            self.assertIn(
+                broken.name,
+                output,
+                msg=(
+                    f"Expected '{broken.name}' to appear in pytest output as a "
+                    f"collection error. Full output:\n{output}"
+                ),
+            )
+
+            # --- AC assertion 2: session does not abort before running the good tests ---
+            # "no tests ran" indicates the session aborted at the broken file.
+            self.assertNotIn(
+                "no tests ran",
+                output.lower(),
+                msg=(
+                    "Session aborted ('no tests ran') — add --continue-on-collection-errors "
+                    f"to pytest.ini addopts. Full output:\n{output}"
+                ),
+            )
+
+            # --- AC assertion 3: exactly 2 good tests passed ---
+            self.assertIn(
+                "2 passed",
+                output,
+                msg=(
+                    "Expected '2 passed' in the pytest summary — the two good test files "
+                    "must each run their single test to completion. "
+                    f"Full output:\n{output}"
+                ),
+            )
+
+            # --- AC assertion 4: exactly 1 collection error ---
+            self.assertIn(
+                "1 error",
+                output,
+                msg=(
+                    "Expected '1 error' in the pytest summary — the single broken file "
+                    "must produce exactly one collection error, not a session abort. "
+                    f"Full output:\n{output}"
+                ),
+            )
+
+            # --- AC assertion 5: both good test names present in output ---
+            # Confirms results of the second and third files are in the run report.
+            for test_name in ("test_module_scope_good_a_runs", "test_module_scope_good_b_runs"):
+                self.assertIn(
+                    test_name,
+                    output,
+                    msg=(
+                        f"Expected '{test_name}' to appear in the verbose output — "
+                        "the result of every good-file test must be present in the report. "
+                        f"Full output:\n{output}"
+                    ),
+                )
+
+
 if __name__ == "__main__":
     unittest.main()
