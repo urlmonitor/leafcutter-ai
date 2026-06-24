@@ -1,6 +1,6 @@
 ---
 title: "Remove the dead finalize-feature agent fallback; slash command hard-errors"
-status: in_progress
+status: done
 components:
   - supervisor_system
   - agent_registry
