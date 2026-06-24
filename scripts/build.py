@@ -21,6 +21,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
+import subprocess
 import sys
 from pathlib import Path
 
@@ -560,6 +562,136 @@ def _check_script_reference_guard(package_root: Path) -> int:
     return 1
 
 
+_log = logging.getLogger(__name__)
+
+
+def _classify_untracked_sources(
+    package_root: Path,
+    source_set: set[str],
+) -> list[str]:
+    """Return every path in source_set that is NOT tracked in the git index.
+
+    Tracked-ness is determined by querying ``git ls-files`` relative to
+    *package_root* — filesystem presence alone is NOT sufficient (AC BP-900f-1).
+    A path that exists on disk but has never been committed is classified as
+    untracked and will appear in the returned list.
+
+    Paths are compared as POSIX strings (forward slashes) against the output of
+    ``git ls-files --full-name``, which always uses forward slashes regardless
+    of OS.  The comparison is exact so partial-path collisions cannot mask an
+    untracked file.
+
+    Args:
+        package_root: Absolute path to the repository root used as the
+            working directory for the ``git ls-files`` call.  Paths in
+            *source_set* must be relative to this root.
+        source_set: Set of ``scripts/<path>`` strings (forward-slash separated)
+            that the build intends to deploy.  Each entry is checked against
+            the git index.
+
+    Returns:
+        List of ``scripts/<path>`` strings from *source_set* whose source is
+        NOT recorded in the git index.  An empty list means every path in
+        *source_set* is tracked.
+
+    Raises:
+        RuntimeError: When the git query fails and tracked-ness cannot be
+            determined — never returns silently when the index is unreadable
+            (Error Handling Policy Rule 3).
+    """
+    try:
+        result = subprocess.run(
+            ["git", "ls-files", "--full-name"],
+            cwd=str(package_root),
+            capture_output=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        _log.warning(
+            "_classify_untracked_sources: 'git ls-files' failed (exit %d): %s",
+            exc.returncode,
+            exc.stderr,
+        )
+        raise RuntimeError(
+            f"Cannot determine tracked-ness: 'git ls-files' exited {exc.returncode}"
+        ) from exc
+    except OSError as exc:
+        _log.warning("_classify_untracked_sources: could not run git: %s", exc)
+        raise RuntimeError(
+            "Cannot determine tracked-ness: git executable not found or not runnable"
+        ) from exc
+
+    tracked: set[str] = set(result.stdout.splitlines())
+    return [path for path in source_set if path not in tracked]
+
+
+def _check_tracked_source_guard(package_root: Path) -> int:
+    """Preflight guard: exit non-zero when any deployable script source is untracked.
+
+    Queries the git index for every path in the deployable-script source set
+    (produced by ``_get_source_deployable_scripts``).  If any source path is
+    present in the working tree but not committed to git, the build must not
+    proceed: a fresh clone would be unable to reproduce the same artefacts.
+
+    Each untracked source path is written to stderr (one per line) so the
+    build operator knows exactly which files must be committed before the build
+    can succeed (AC BP-900f-2).
+
+    The guard contains no per-directory special-casing: every path returned by
+    ``_get_source_deployable_scripts`` is subject to the same tracked-ness
+    check, regardless of which subdirectory it belongs to (AC BP-900f-3).
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.
+
+    Returns:
+        0 if all deployable-script sources are tracked in git (build may
+        continue).
+        1 if one or more sources are untracked (build must abort; untracked
+        paths have been written to stderr).
+    """
+    try:
+        source_set = _get_source_deployable_scripts(package_root)
+    except RuntimeError as exc:
+        _log.warning("_check_tracked_source_guard: cannot resolve source set: %s", exc)
+        print(
+            f"[TRACKED-SOURCE GUARD] ERROR: cannot resolve deployable source set: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+
+    if not source_set:
+        return 0
+
+    try:
+        untracked = _classify_untracked_sources(package_root, source_set)
+    except RuntimeError as exc:
+        _log.warning("_check_tracked_source_guard: git query failed: %s", exc)
+        print(
+            f"[TRACKED-SOURCE GUARD] ERROR: git query failed: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+
+    if not untracked:
+        return 0
+
+    for path in sorted(untracked):
+        print(
+            f"[TRACKED-SOURCE GUARD] UNTRACKED SOURCE: {path}",
+            file=sys.stderr,
+        )
+    print(
+        "[TRACKED-SOURCE GUARD] Build aborted: commit the above sources to git "
+        "before running the build.",
+        file=sys.stderr,
+    )
+    return 1
+
+
 def _read_package_version(package_root: Path) -> str:
     """Read the package version from config/version.json.
 
@@ -1069,10 +1201,14 @@ def main(argv: list[str] | None = None) -> int:
 
     # Script reference guard: exit non-zero and halt before writing any output
     # when templates reference scripts that will not be deployed (BP-900b-3).
-    # Skip under --validate-only since the guard is a deployment preflight, not
-    # a config correctness check.
+    # Tracked-source guard: exit non-zero when any deployable script source is
+    # present on disk but not committed to git (BP-900f-1/f-2/f-3).
+    # Both guards skip under --validate-only since they are deployment preflights,
+    # not config correctness checks.
     if not args.validate_only:
         if _check_script_reference_guard(package_root):
+            return 1
+        if _check_tracked_source_guard(package_root):
             return 1
 
     if args.validate_only:

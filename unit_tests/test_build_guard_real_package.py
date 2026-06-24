@@ -243,9 +243,92 @@ def test_onboard_hook_opt_in_is_deployable() -> None:
     )
 
 
+# ---------------------------------------------------------------------------
+# BP-900f wire-up integration: main() must call _check_tracked_source_guard
+# (pr-reviewer H-1 repair — 2026-06-24)
+# ---------------------------------------------------------------------------
+
+
+def test_main_calls_tracked_source_guard_when_sources_untracked(
+    tmp_path: Path,
+) -> None:
+    """main() must exit 1 when _check_tracked_source_guard() returns 1.
+
+    This test exercises the build entry point (main()) — not the guard function
+    directly — to confirm the wiring added in the pr-reviewer H-1 repair.  It
+    mocks _check_tracked_source_guard to return 1 (simulating untracked sources)
+    and asserts that main() propagates the non-zero exit without writing any
+    output files.
+
+    AC BP-900f-2: build exits non-zero and writes no partial deployment.
+    AC BP-900f-3: the guard runs before any deployment output is written.
+    """
+    # Point --target-dir at a fresh temp directory so no real output is
+    # written even if the mock somehow does not fire.
+    target_dir = tmp_path / "deploy_target"
+    target_dir.mkdir()
+
+    # Patch _check_tracked_source_guard inside the build module so that the
+    # integration test does not require untracked files in the real working
+    # tree (which would vary by developer environment and CI state).
+    with patch.object(_build, "_check_tracked_source_guard", return_value=1):
+        result = _build.main(["--target-dir", str(target_dir)])
+
+    assert result != 0, (
+        "main() returned 0 (success) even though _check_tracked_source_guard() "
+        "returned 1 (untracked sources detected). "
+        "The tracked-source guard must be wired into main() so that a non-zero "
+        "guard return causes main() to propagate the exit code (AC BP-900f-2). "
+        "This test exercises main() — not _check_tracked_source_guard() in "
+        "isolation — to verify the wiring, not just the guard function."
+    )
+
+    # No deployment output must have been written (guard runs before _run_phases).
+    output_files = list(target_dir.rglob("*"))
+    assert not output_files, (
+        f"main() wrote {len(output_files)} output file(s) after the guard returned 1. "
+        "The guard must abort before any deployment output is written (AC BP-900f-3). "
+        f"Unexpected files: {[str(p) for p in output_files[:5]]}"
+    )
+
+
+def test_main_does_not_call_tracked_source_guard_under_validate_only(
+    tmp_path: Path,
+) -> None:
+    """Under --validate-only, main() must NOT invoke _check_tracked_source_guard.
+
+    The guard is a deployment preflight, not a config-correctness check.
+    Running it under --validate-only would produce false-positives on machines
+    that have not checked out all sources.  The guard is skipped by the
+    ``if not args.validate_only:`` block that wraps both preflight guards.
+    """
+    call_count: list[int] = [0]
+
+    def _counting_guard(package_root: Path) -> int:  # noqa: ARG001
+        call_count[0] += 1
+        return 0  # returning 0 so if it IS called it would not abort main
+
+    with patch.object(_build, "_check_tracked_source_guard", side_effect=_counting_guard):
+        _build.main(["--validate-only"])
+
+    assert call_count[0] == 0, (
+        f"_check_tracked_source_guard() was called {call_count[0]} time(s) under "
+        "--validate-only. It must be skipped in --validate-only mode because it is "
+        "a deployment preflight, not a config-correctness check."
+    )
+
+
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-06-24 [python-coder/TICKET-20260624-BP-900f-1/retry]: Added
+#   test_main_calls_tracked_source_guard_when_sources_untracked and
+#   test_main_does_not_call_tracked_source_guard_under_validate_only.
+#   Both tests exercise main() through the build entry point (not the guard
+#   function in isolation) to confirm the wiring added in the pr-reviewer H-1
+#   repair. The positive test mocks _check_tracked_source_guard to return 1
+#   and asserts main() exits non-zero with no output written. The negative test
+#   asserts the guard is not called under --validate-only. (#BP-900f-2, #BP-900f-3)
 # - 2026-06-22 [debug/quick-fix]: Added test_onboard_hook_opt_in_is_deployable
 #   (AC BP-900d). Regression sentinel for the script-promotion gap that made
 #   `build.py --target-dir` abort on the onboard.md reference. Asserts the
