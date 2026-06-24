@@ -23,7 +23,9 @@ origin_agent: product-owner-v3
 created: 2026-06-22
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - INF-1100a-1
+  - INF-1100a-2
 implemented_by: []
 documentation_triggers:
   - reference-doc

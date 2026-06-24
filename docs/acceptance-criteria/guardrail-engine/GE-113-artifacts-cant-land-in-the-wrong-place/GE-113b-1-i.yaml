@@ -1,0 +1,30 @@
+id: GE-113b-1-i
+title: "Bypass token present and the artifact correctly placed lets the commit proceed"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the configured test location is "tests/",
+  And a commit stages a test file at "tests/etl/test_pipeline.py" within the
+    configured test location,
+  And the commit carries the structural-change bypass token [NO-ARCH-UPDATE],
+  When the pre-commit guards run,
+  Then the misplaced-test guard reports no violation,
+  And the commit proceeds,
+  And the bypass token is honored for the structural-change check it was meant for.
+depends_on:
+  - GE-113b-1
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-23
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Edge case: tightening the bypass must not turn it into a false blocker when the artifact is actually placed correctly."

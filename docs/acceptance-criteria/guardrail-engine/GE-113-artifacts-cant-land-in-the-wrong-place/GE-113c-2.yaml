@@ -1,0 +1,30 @@
+id: GE-113c-2
+title: "A guard runs its check against the consumer project tree in the deployed layout"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the guard scripts are installed in the deployed .leafcutter layout of a
+    consumer project,
+  And the consumer project contains the component or test-location data the guard
+    inspects,
+  When the guard runs its check,
+  Then the guard reads the consumer project's tree as the basis for its check,
+  And the guard completes its check rather than reporting nothing-to-check because
+    it looked inside the .leafcutter/ subdirectory.
+depends_on:
+  - GE-113c
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-23
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "The latent gap let a guard quietly fail to complete its check (an orphan component could not be registered) because it scanned the wrong tree."

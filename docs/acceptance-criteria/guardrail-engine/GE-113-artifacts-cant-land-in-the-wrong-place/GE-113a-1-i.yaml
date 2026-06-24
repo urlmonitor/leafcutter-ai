@@ -1,0 +1,28 @@
+id: GE-113a-1-i
+title: "A test inside a nested subfolder of the configured test root is allowed"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the configured test location is "tests/",
+  And a commit stages a test file at "tests/etl/test_pipeline.py" which sits in a
+    nested subfolder of the configured test location,
+  When the pre-commit guard for test placement runs,
+  Then the commit is not blocked by the test-placement guard,
+  And no misplaced-test message is emitted for that file.
+depends_on:
+  - GE-113a-1
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-23
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Edge case: a nested subdir under test_root (the real sibling layout tests/etl/) is a valid location, not a violation."

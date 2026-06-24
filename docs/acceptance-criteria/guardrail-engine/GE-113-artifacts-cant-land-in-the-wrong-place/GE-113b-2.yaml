@@ -1,0 +1,31 @@
+id: GE-113b-2
+title: "The structural-change bypass still governs only the structural-change check"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a commit introduces a new top-level package that the structural-change
+    check would flag,
+  And the commit carries the structural-change bypass token [NO-ARCH-UPDATE],
+  And every staged test file is within the configured test location,
+  When the pre-commit guards run,
+  Then the structural-change check is satisfied by the bypass token,
+  And the misplaced-test guard reports no violation because the tests are correctly
+    placed,
+  And the commit proceeds.
+depends_on:
+  - GE-113b
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-23
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Confirms the bypass keeps its legitimate scope: it acknowledges structural changes but is no longer overloaded to excuse misplaced artifacts."

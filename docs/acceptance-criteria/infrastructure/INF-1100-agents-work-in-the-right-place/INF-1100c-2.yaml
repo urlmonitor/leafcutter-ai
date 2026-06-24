@@ -1,0 +1,30 @@
+id: INF-1100c-2
+title: "An automated test guards compiled prompts against unresolved work-location placeholders"
+component: infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the set of compiled agent instructions produced from templates,
+  When the work-location resolution test runs over those compiled instructions,
+  Then the test passes only when every work-location path is the resolved value
+    from configuration,
+  And the test fails if any compiled instruction still contains a work-location
+    placeholder token or an empty work-location path,
+  And the test fails if a compiled instruction contains a work-location path that
+    does not match the configured value.
+depends_on:
+  - INF-1100c
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-23
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Satisfies the 'proven by tests' part of INF-1100c: a regression that reintroduces a wrong or empty path must fail this test."

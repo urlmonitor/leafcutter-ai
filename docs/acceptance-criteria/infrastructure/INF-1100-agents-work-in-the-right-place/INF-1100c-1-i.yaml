@@ -1,0 +1,30 @@
+id: INF-1100c-1-i
+title: "A work-location placeholder with no configured value fails compilation loudly"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given an agent instruction template references the work-location placeholder
+    for the test root,
+  And the project configuration provides no value and no default applies for that
+    placeholder,
+  When the agent's instructions are compiled from the template,
+  Then compilation fails with an error naming the unresolved placeholder,
+  And no compiled instruction is emitted that contains the raw placeholder token
+    or an empty path in its place.
+depends_on:
+  - INF-1100c-1
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-23
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Edge case: an unresolvable placeholder must fail loudly, never silently ship a raw or empty path into a prompt."

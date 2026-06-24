@@ -1,0 +1,28 @@
+id: GE-113a-1-iii
+title: "A non-test file outside the test root is not blocked by the test-placement guard"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the configured test location is "tests/",
+  And a commit stages a non-test source file at "scripts/etl/pipeline.py" which is
+    outside the configured test location,
+  When the pre-commit guard for test placement runs,
+  Then the commit is not blocked by the test-placement guard for that file,
+  And no misplaced-test message is emitted for that file.
+depends_on:
+  - GE-113a-1
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-23
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Scope-containment edge case: the test guard only governs test files; an ordinary source file outside test_root is none of its business."

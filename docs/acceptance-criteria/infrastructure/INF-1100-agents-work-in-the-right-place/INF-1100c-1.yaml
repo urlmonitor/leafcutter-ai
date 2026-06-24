@@ -1,0 +1,28 @@
+id: INF-1100c-1
+title: "Compiled agent instructions contain the resolved work-location path"
+component: infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given an agent instruction template that references the work-location
+    placeholder for the configured test root,
+  And the project configuration sets that test root to "tests/",
+  When the agent's instructions are compiled from the template,
+  Then the compiled instructions contain the literal resolved path "tests/",
+  And the compiled instructions contain no remaining work-location placeholder token.
+depends_on:
+  - INF-1100c
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-23
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Explicit user requirement (INF-1100c notes): cover prompt-path resolution with tests. This behavior is the assertion under test."

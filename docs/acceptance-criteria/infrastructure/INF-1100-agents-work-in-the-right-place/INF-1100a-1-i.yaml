@@ -1,0 +1,27 @@
+id: INF-1100a-1-i
+title: "Absent test_root configuration falls back to the documented default"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the project configuration does not declare a test location
+    (no test_root key is present in skills_config.json),
+  When an agent resolves where a test file must go,
+  Then it uses the documented default test location of "tests/",
+  And it records that the default was applied because no configured value was found.
+depends_on:
+  - INF-1100a-1
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-23
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Edge case: missing config must degrade to a single documented default, never to an arbitrary guess."

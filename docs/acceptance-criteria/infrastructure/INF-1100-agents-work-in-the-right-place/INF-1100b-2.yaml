@@ -1,0 +1,29 @@
+id: INF-1100b-2
+title: "The config-vs-hand-off contradiction is surfaced, not silently corrected"
+component: infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a hand-off names a test location of "unit_tests/etl/test_pipeline.py"
+    that disagrees with the config-resolved location "tests/etl/test_pipeline.py",
+  When an agent overrides the hand-off with the config-resolved location,
+  Then the agent reports the contradiction in its output,
+  And the report names both the path the hand-off requested and the path the
+    configuration resolved,
+  And the report states that the configured location was used.
+depends_on:
+  - INF-1100b
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-23
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Override alone is not enough — the contradiction must be visible so the stale hand-off field gets fixed at its source."

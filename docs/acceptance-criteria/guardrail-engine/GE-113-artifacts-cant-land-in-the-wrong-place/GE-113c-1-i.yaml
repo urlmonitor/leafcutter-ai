@@ -1,0 +1,28 @@
+id: GE-113c-1-i
+title: "The same guard resolves the project root correctly in the source-repo layout"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the guard scripts run from the source-repo (non-deployed) layout where
+    they live under the repository's own scripts directory,
+  When a guard resolves the project root for its check,
+  Then the resolved project root is the source repository root,
+  And the project-root resolution behaves the same as in the deployed layout
+    rather than regressing for the source-repo case.
+depends_on:
+  - GE-113c-1
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-23
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Edge case: the fix for the deployed layout must not regress the source-repo layout — both must resolve project root correctly."

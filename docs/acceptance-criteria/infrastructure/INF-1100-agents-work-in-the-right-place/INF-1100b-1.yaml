@@ -1,0 +1,28 @@
+id: INF-1100b-1
+title: "A hand-off test path that disagrees with config is overridden by the config-resolved path"
+component: infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a hand-off names a test location of "unit_tests/etl/test_pipeline.py",
+  And the project configuration resolves the test for that area to
+    "tests/etl/test_pipeline.py",
+  When an agent acts on the hand-off to place the test,
+  Then the test is placed at the config-resolved location "tests/etl/",
+  And the agent does not write the test to the hand-off's "unit_tests/etl/" path.
+depends_on:
+  - INF-1100b
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-23
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Reproduces the real incident: a ticket files_touched field carried unit_tests/etl/test_*.py and was trusted over the configured test_root."

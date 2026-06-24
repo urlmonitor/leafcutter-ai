@@ -22,7 +22,9 @@ origin_agent: product-owner-v3
 created: 2026-06-22
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - GE-113b-1
+  - GE-113b-2
 implemented_by: []
 documentation_triggers:
   - how-to

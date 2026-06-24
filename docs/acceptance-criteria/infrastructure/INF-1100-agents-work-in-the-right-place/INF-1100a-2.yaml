@@ -1,0 +1,29 @@
+id: INF-1100a-2
+title: "Test location mirrors the source subtree under the configured test root"
+component: infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the configured test location is "tests/",
+  And the project keeps sibling tests under a per-area subfolder
+    (for example tests/etl/ holds the tests for the etl area),
+  When an agent resolves where a test for the etl area must go,
+  Then the resolved location is "tests/etl/" — the configured test root
+    joined with the source area's subpath,
+  And the area subpath is taken from the source layout rather than a fixed string.
+depends_on:
+  - INF-1100a
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-23
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Grounded in the real sibling layout: tests live under tests/<subdir>/ (e.g. tests/etl/)."

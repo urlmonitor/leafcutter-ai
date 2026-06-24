@@ -1,0 +1,30 @@
+id: GE-113a-1
+title: "A staged test outside the configured test root blocks the commit with a fix-it message"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the configured test location is "tests/",
+  And a commit stages a test file at "unit_tests/etl/test_pipeline.py" which is
+    outside the configured test location,
+  When the pre-commit guard for test placement runs,
+  Then the commit is blocked,
+  And the blocking message names the misplaced test file,
+  And the blocking message points at the configuration that decides the correct
+    test location (the test_root key in skills_config.json).
+depends_on:
+  - GE-113a
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-23
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Core of GE-113a. Reproduces the incident class: test_*.py committed under unit_tests/ instead of the configured tests/."

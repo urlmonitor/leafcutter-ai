@@ -1,0 +1,28 @@
+id: GE-113c-1
+title: "In the deployed .leafcutter layout a guard resolves the project root to the consumer project root"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the guard scripts are installed in the deployed layout under a
+    .leafcutter/ subdirectory of a consumer project,
+  When a guard resolves the project root for its check,
+  Then the resolved project root is the consumer project root,
+  And the resolved project root is not the .leafcutter/ subdirectory the guard
+    runs from.
+depends_on:
+  - GE-113c
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-23
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: "Latent bug class: check-components-integrity resolved REPO_ROOT to the .leafcutter/ subdir in the deployed layout."
