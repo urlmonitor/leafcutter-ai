@@ -1,0 +1,52 @@
+id: BO-1600b-4
+readiness: approved
+priority: medium
+title: "State diagram of a commit's lifecycle through interruption and cleanup"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600b.yaml"
+criteria: |
+  Given the interrupted-commit cleanup behavior described by BO-1600b and its
+    behaviors BO-1600b-1, BO-1600b-2, and BO-1600b-3
+  When a reader opens the component documentation for this feature
+  Then a state diagram shows a commit moving through its states (guard acquired,
+    writing objects, updating index, committed) and the transitions taken on
+    interruption or failure into a cleanup state that releases the guard, removes
+    any truncated object and stale index lock, and returns the worktree to a clean,
+    usable state
+  And the diagram makes visible that the clean state is the entry point a
+    subsequent supervisor's commit relies on
+depends_on:
+  - BO-1600b
+  - BO-1600b-1
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600b.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build-orchestration/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "The state diagram must live in the component documentation for this feature and satisfy the BO-1600b documentation_trigger (state-diagram); follow the project diagram conventions (see write-c4-diagram skill)."
+  - "The diagram must show a commit's normal states (guard acquired, writing objects, updating index, committed) AND the interruption/failure transitions into a cleanup state that releases the guard, removes any truncated object and stale index lock, and returns the worktree to a clean state."
+  - "The diagram must make visible that the clean state is the entry point a subsequent supervisor's commit relies on (ties BO-1600b-3's pre-condition to the cleanup outcome)."
+delivers_to: null
+expects_from:
+  ac_id: BO-1600b-1
+  contract: "The commit-and-cleanup state transitions the diagram depicts."
+origin_agent: business-analyst-v3
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies the BO-1600b L1 documentation_triggers: [state-diagram].

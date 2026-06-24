@@ -1,0 +1,49 @@
+id: BO-1600c-2
+readiness: approved
+priority: medium
+title: "The halt message names what is wrong and what the operator should do"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600c.yaml"
+criteria: |
+  Given the drive has halted because the shared repository was found in a damaged
+    state
+  When the halt is reported to the operator
+  Then the report states in plain terms that the shared repository is corrupted and
+    the drive was stopped to avoid compounding the damage
+  And the report names the specific damage found (for example which object is
+    zero-byte or hash-mismatched, or that the index is unreadable)
+  And the report tells the operator that the repository needs repair before the
+    drive can be re-run, rather than implying the drive will recover on its own
+depends_on:
+  - BO-1600c
+  - BO-1600c-1
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600c.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build-orchestration/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The halt report must name the specific damage from the verdict (which object is zero-byte or hash-mismatched, or that the index is unreadable) — a generic 'corruption detected' message is insufficient."
+  - "The report must state in plain operator terms that the drive was stopped to avoid compounding damage and that the repository needs repair before re-running — it must not imply the drive will self-recover."
+  - "The message must be emitted at an appropriate severity (error level) so it is not lost in routine drive output."
+delivers_to: null
+expects_from:
+  ac_id: BO-1600c-1
+  contract: "The corruption verdict (including which object/index is damaged) that this behavior renders into a plain-language, actionable halt message."
+origin_agent: business-analyst-v3
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

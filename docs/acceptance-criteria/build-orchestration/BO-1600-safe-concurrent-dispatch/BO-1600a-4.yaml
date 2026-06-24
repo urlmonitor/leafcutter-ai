@@ -1,0 +1,52 @@
+id: BO-1600a-4
+readiness: approved
+priority: medium
+title: "Sequence diagram of serialized concurrent commits into the shared worktree"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600a.yaml"
+criteria: |
+  Given the serialized-concurrent-commit behavior described by BO-1600a and its
+    behaviors BO-1600a-1, BO-1600a-2, and BO-1600a-3
+  When a reader opens the component documentation for this feature
+  Then a sequence diagram shows two ticket-supervisors driving in parallel, each
+    reaching its commit phase, acquiring and releasing the shared git-write guard
+    in turn, and writing to the one shared object store/index serially
+  And the diagram makes visible that the second supervisor waits while the first
+    holds the guard, then proceeds
+  And the diagram distinguishes this shared-store protection concern from BO-100c
+    (pre-dispatch file-conflict scheduling) and BO-200 (single-ticket atomic commit)
+depends_on:
+  - BO-1600a
+  - BO-1600a-1
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build-orchestration/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "The sequence diagram must live in the component documentation for this feature and satisfy the BO-1600a documentation_trigger (sequence-diagram); follow the project C4/diagram conventions (see write-c4-diagram skill)."
+  - "The diagram must visibly distinguish this shared-store protection concern from BO-100c (pre-dispatch file-conflict scheduling) and BO-200 (single-ticket atomic commit), per the BO PROJECT_CONTEXT scope boundaries."
+  - "The diagram must depict the second supervisor waiting while the first holds the git-write guard, then proceeding — the serialization must be legible from the diagram alone."
+delivers_to: null
+expects_from:
+  ac_id: BO-1600a-1
+  contract: "The serialization guard acquire/release flow the diagram depicts."
+origin_agent: business-analyst-v3
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies the BO-1600a L1 documentation_triggers: [sequence-diagram].

@@ -1,0 +1,50 @@
+id: BO-1600a-2
+readiness: approved
+priority: medium
+title: "A second supervisor waits for the git write portion, then commits cleanly"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600a.yaml"
+criteria: |
+  Given supervisor A holds the git write guard and is partway through writing its
+    commit's objects and index update
+  And supervisor B reaches its own commit phase and requests the git write guard
+  When supervisor B requests the guard while A still holds it
+  Then supervisor B blocks (waits) without writing any git object or touching the
+    index until A releases the guard
+  And when A releases the guard, B acquires it and performs its full commit
+  And both commits are present in the repository history afterward with neither
+    commit lost nor overwritten
+depends_on:
+  - BO-1600a
+  - BO-1600a-1
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build-orchestration/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Supervisor B's wait must be a true block on the guard (no busy-spin that pegs a CPU) and must not write any git object or touch the index until the guard is acquired."
+  - "On release by A, exactly one waiter (B) may proceed; the hand-off must not drop or double-grant the guard."
+  - "Both commits must be present and independently reachable in history afterward — neither lost nor overwritten; the test must assert both commit SHAs are reachable, not merely that the command exited zero."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3); a failed acquire must surface as a determinate error, not a silent skip of the commit."
+delivers_to: null
+expects_from:
+  ac_id: BO-1600a-1
+  contract: "The git-write serialization guard scoped to the shared worktree; this behavior exercises its blocking acquire/release semantics."
+origin_agent: business-analyst-v3
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
