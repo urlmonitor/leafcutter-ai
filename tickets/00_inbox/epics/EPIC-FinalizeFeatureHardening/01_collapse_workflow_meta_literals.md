@@ -1,6 +1,6 @@
 ---
 title: "Collapse non-literal meta to pure literals in all workflow scripts"
-status: in_progress
+status: done
 components:
   - build_pipeline
 created: 2026-06-24
