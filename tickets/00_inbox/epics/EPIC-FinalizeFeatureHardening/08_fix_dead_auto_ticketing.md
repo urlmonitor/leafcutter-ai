@@ -1,6 +1,6 @@
 ---
 title: "Fix dead Step 6a auto-ticketing and the false success message"
-status: in_progress
+status: done
 components:
   - build_pipeline
   - ticket_lifecycle
@@ -22,8 +22,8 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 08: Fix dead Step 6a auto-ticketing and the false success message
@@ -105,6 +105,20 @@ completion_manifest:
   no_regressions: true
 All 4 ACs verified. Diff correctly removes `createdTrackingTickets` null-accumulator and false "Tracking tickets created" success message; replaces with `untrackedFailures[]` and accurate conditional message. Step-map doc updated. 17 tests green.
 
+### 2026-06-24 09:45 — commit (status: ok)
+feedback-id: fb_2026-06-24_92536c6a
+completion_manifest:
+  commit_created: true
+  files_committed: true
+Commit `49738a4` created on EPIC-FinalizeFeatureHardening branch. 4 files committed: finalize-feature.js, finalize-feature.md, ticket, test file. Pre-commit hook auto-added feedback-id to ticket-supervisor comment (no other hook failures).
+
+### 2026-06-24 09:50 — pull-request (status: ok)
+feedback-id: fb_2026-06-24_5eb45e69
+completion_manifest:
+  branch_pushed: true
+  pr_updated: true
+Pushed commit `49738a4` to origin/EPIC-FinalizeFeatureHardening. Existing PR #158 updated (no new PR opened — epic uses one shared PR per batch-drive convention).
+
 ## Implementation Tasks
 - [x] Decide create-via-workflow vs report-and-prompt (default: report accurately).
 - [x] Fix the success-message construction to reflect the real created count.
@@ -116,8 +130,8 @@ All 4 ACs verified. Diff correctly removes `createdTrackingTickets` null-accumul
 - [x] python-coder — 2026-06-24 09:30
 - [x] test-runner — 2026-06-24 09:35
 - [x] pr-reviewer — 2026-06-24 09:40
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-06-24 09:45
+- [x] pull-request — 2026-06-24 09:50
 
 ## Risk & Safety
 - Touches money? No.
