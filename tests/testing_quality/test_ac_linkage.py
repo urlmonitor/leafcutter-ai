@@ -348,5 +348,333 @@ class TestClassifierReadsWorkStatusFromStore(unittest.TestCase):
             )
 
 
+class TestUnknownAcTagIsEnforced(unittest.TestCase):
+    """AC TQ-100b-1-ii: A failing test tagged with an AC id absent from the store
+    is enforced (fail-safe), not silently skipped.
+
+    Verifies the end-to-end behaviour: run pytest on a minimal tmp suite that
+    contains one failing test tagged ``# covers: MISSING-999`` where MISSING-999
+    does NOT exist in the AC store at all.  The overall pytest exit code must be
+    NON-ZERO (failure is enforced), and the result must NOT be reported as xfail.
+    """
+
+    def _run_pytest_subprocess(self, test_dir: Path, ac_store_dir: Path) -> subprocess.CompletedProcess:
+        """Invoke pytest against *test_dir* with an AC store in *ac_store_dir*.
+
+        Uses the repo's own pytest.ini so that any addopts and conftest plugin
+        are loaded.  The subprocess relies on the project conftest (which must
+        implement the AC-linkage hook) to enforce failures on unknown ACs.
+        """
+        cmd = [
+            sys.executable,
+            "-m",
+            "pytest",
+            str(test_dir),
+            "-v",
+            "--tb=short",
+            "--no-header",
+            f"--rootdir={_REPO_ROOT}",
+            f"--config-file={_REPO_ROOT / 'pytest.ini'}",
+        ]
+        return subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            env={
+                **__import__("os").environ,
+                # Point the conftest to a store that does NOT contain MISSING-999.
+                "LEAFCUTTER_AC_STORE_ROOT": str(ac_store_dir),
+            },
+        )
+
+    def _build_empty_ac_store(self, ac_store_root: Path) -> None:
+        """Create a minimal AC store that contains NO entry for MISSING-999.
+
+        The store has one unrelated AC so the store root is valid and
+        non-empty, but the AC referenced by the test is deliberately absent.
+
+        Args:
+            ac_store_root: Temporary directory that will act as the AC store root.
+        """
+        # covers: TQ-100b-1-ii
+        domain_dir = ac_store_root / "other-domain"
+        domain_dir.mkdir(parents=True)
+        ac_yaml = domain_dir / "OTHER-001.yaml"
+        ac_yaml.write_text(
+            textwrap.dedent(
+                """\
+                id: OTHER-001
+                title: "Unrelated AC — present in store, MISSING-999 is not"
+                component: other-domain
+                level: L2
+                status: active
+                work_status: todo
+                readiness: approved
+                priority: low
+                criteria: |
+                  An AC that exists so the store root is non-empty.
+                """
+            ),
+            encoding="utf-8",
+        )
+
+    def _build_failing_test_tagged_missing(self, test_dir: Path) -> Path:
+        """Write a test file with one failing test that covers a non-existent AC.
+
+        The test is tagged ``# covers: MISSING-999`` which is absent from the
+        AC store — the enforcement plugin must treat it as enforced (fail-safe).
+
+        Args:
+            test_dir: Temporary directory for the test file.
+
+        Returns:
+            Path to the newly created test file.
+        """
+        test_file = test_dir / "test_stub_missing_ac.py"
+        test_file.write_text(
+            textwrap.dedent(
+                """\
+                def test_stub_fails_tagged_with_absent_ac():
+                    # covers: MISSING-999
+                    \"\"\"AC MISSING-999 is absent from the store — this failure must be enforced.\"\"\"
+                    assert False, "this test intentionally fails and must NOT be silenced"
+                """
+            ),
+            encoding="utf-8",
+        )
+        return test_file
+
+    def test_tag_to_unknown_ac_is_enforced(self):
+        # covers: TQ-100b-1-ii
+        """AC TQ-100b-1-ii: A failing test tagged with an AC id absent from the
+        store is enforced (fail-safe), not silently skipped or converted to xfail.
+
+        The enforcement plugin must classify the tag as "enforced" when the
+        referenced AC id is not found in the store (fail-safe behaviour already
+        implemented in classify_by_work_status: absent → "enforced"). This
+        end-to-end test confirms the behaviour propagates through the full pytest
+        session so that the subprocess exit code is non-zero.
+
+        What must remain true to keep this test green:
+          - classify_by_work_status(absent_id, cache) must return "enforced".
+          - The conftest hook must NOT convert the outcome to xfail or skip when
+            the covering AC is absent from the store.
+          - The test failure must appear as a real failure in the output.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            test_dir = tmp / "suite"
+            test_dir.mkdir()
+            ac_store_dir = tmp / "ac_store"
+            ac_store_dir.mkdir()
+
+            self._build_empty_ac_store(ac_store_dir)
+            self._build_failing_test_tagged_missing(test_dir)
+
+            result = self._run_pytest_subprocess(test_dir, ac_store_dir)
+            output = result.stdout + result.stderr
+
+            # The overall run MUST fail (exit code != 0) because the failing test
+            # covers an AC that is absent from the store.  Absent ACs are enforced
+            # (fail-safe) — the failure must never be silently swallowed.
+            self.assertNotEqual(
+                result.returncode,
+                0,
+                msg=(
+                    "Expected pytest exit code != 0 — the failing test covers an "
+                    "AC id (MISSING-999) that is absent from the AC store and must "
+                    "be treated as enforced, not informational. "
+                    f"Exit code: {result.returncode}. Full output:\n{output}"
+                ),
+            )
+
+            # The failure must NOT be reported as xfail/xfailed (that would mean
+            # it was incorrectly treated as informational).
+            silenced_markers = ("xfailed", "XFAIL", "xfail")
+            for marker in silenced_markers:
+                self.assertNotIn(
+                    marker,
+                    output,
+                    msg=(
+                        f"Found '{marker}' in output — the test was silently converted "
+                        "to xfail but it should be a real failure because the covering "
+                        f"AC (MISSING-999) is absent from the store. Full output:\n{output}"
+                    ),
+                )
+
+            # The test failure must appear explicitly in the output.
+            failure_markers = ("FAILED", "AssertionError", "assert False")
+            self.assertTrue(
+                any(m in output for m in failure_markers),
+                msg=(
+                    "Expected an explicit test failure to appear in the output "
+                    f"(one of {failure_markers}), but none were found. "
+                    f"Full output:\n{output}"
+                ),
+            )
+
+
+class TestAbsentAcIsClassifiedEnforced(unittest.TestCase):
+    """AC TQ-100b-1-ii: Unit-level check that classify_by_work_status returns
+    "enforced" when the AC id is not present in the cache at all.
+
+    This is the direct unit test of the fail-safe path in test_enforcement.py.
+    The full end-to-end scenario is covered by TestUnknownAcTagIsEnforced above.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        """Import the enforcement module — raises ImportError when absent (red state)."""
+        # covers: TQ-100b-1-ii
+        try:
+            from scripts.ac_store import test_enforcement  # noqa: PLC0415
+            cls.enforcement = test_enforcement
+        except ImportError as exc:
+            raise ImportError(
+                "scripts.ac_store.test_enforcement does not exist yet — "
+                "python-coder must create it to make this test green. "
+                f"Original error: {exc}"
+            ) from exc
+
+    def test_absent_ac_is_classified_enforced(self):
+        # covers: TQ-100b-1-ii
+        """AC TQ-100b-1-ii: classify_by_work_status returns 'enforced' when the
+        AC id is absent from the cache (empty cache — fail-safe path).
+
+        Directly exercises the classify_by_work_status("NONEXISTENT-ZZZ", {})
+        call to confirm the fail-safe: an absent AC must never be classified as
+        informational.
+        """
+        enforcement = self.enforcement
+
+        result = enforcement.classify_by_work_status("NONEXISTENT-ZZZ", {})
+        self.assertEqual(
+            result,
+            "enforced",
+            msg=(
+                "Expected classify_by_work_status('NONEXISTENT-ZZZ', {}) to return "
+                f"'enforced' (fail-safe for absent AC ids). Got: {result!r}."
+            ),
+        )
+
+        # Also confirm with a non-empty cache that still lacks the specific id.
+        partial_cache = {"OTHER-001": "todo", "ANOTHER-002": "done"}
+        result_partial = enforcement.classify_by_work_status("MISSING-999", partial_cache)
+        self.assertEqual(
+            result_partial,
+            "enforced",
+            msg=(
+                "Expected classify_by_work_status('MISSING-999', partial_cache) to return "
+                "'enforced' when MISSING-999 is not in a non-empty cache. "
+                f"Got: {result_partial!r}. Cache: {partial_cache}"
+            ),
+        )
+
+
+class TestCollectUnresolvedTags(unittest.TestCase):
+    """AC TQ-100b-1-ii: Unit-level check that collect_unresolved_tags surfaces
+    AC IDs absent from the cache so TQ-100c (linkage-integrity check) can flag
+    dangling references.
+
+    The third clause of AC TQ-100b-1-ii states: "And the unresolved tag is
+    surfaced to the linkage-integrity check (TQ-100c) so the dangling reference
+    is flagged."  This class validates that helper.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        """Import the enforcement module."""
+        # covers: TQ-100b-1-ii
+        try:
+            from scripts.ac_store import test_enforcement  # noqa: PLC0415
+            cls.enforcement = test_enforcement
+        except ImportError as exc:
+            raise ImportError(
+                "scripts.ac_store.test_enforcement does not exist yet — "
+                "python-coder must create it to make this test green. "
+                f"Original error: {exc}"
+            ) from exc
+
+    def test_collect_unresolved_tags_returns_absent_ids(self):
+        # covers: TQ-100b-1-ii
+        """collect_unresolved_tags returns AC IDs not present in the cache.
+
+        Verifies:
+          - IDs absent from cache → included in result (dangling references).
+          - IDs present in cache (any work_status) → excluded from result.
+          - Empty input → empty result.
+          - Empty cache → all ids returned (all are unresolved).
+          - Duplicate absent ids → only one occurrence returned (order preserved).
+        """
+        enforcement = self.enforcement
+
+        partial_cache = {"KNOWN-001": "todo", "KNOWN-002": "done"}
+
+        # Case 1: mix of known and unknown ids
+        result = enforcement.collect_unresolved_tags(
+            ["KNOWN-001", "MISSING-999", "KNOWN-002", "GHOST-777"],
+            partial_cache,
+        )
+        self.assertEqual(
+            result,
+            ["MISSING-999", "GHOST-777"],
+            msg=(
+                "Expected only ids absent from the cache to be returned. "
+                f"Got: {result!r}"
+            ),
+        )
+
+        # Case 2: all ids are known — nothing unresolved
+        result_all_known = enforcement.collect_unresolved_tags(
+            ["KNOWN-001", "KNOWN-002"],
+            partial_cache,
+        )
+        self.assertEqual(
+            result_all_known,
+            [],
+            msg=(
+                "Expected empty list when all ids are present in cache. "
+                f"Got: {result_all_known!r}"
+            ),
+        )
+
+        # Case 3: empty input list → empty result
+        result_empty = enforcement.collect_unresolved_tags([], partial_cache)
+        self.assertEqual(
+            result_empty,
+            [],
+            msg=f"Expected empty list for empty input. Got: {result_empty!r}",
+        )
+
+        # Case 4: empty cache → all ids are unresolved
+        result_empty_cache = enforcement.collect_unresolved_tags(
+            ["X-001", "X-002"],
+            {},
+        )
+        self.assertEqual(
+            result_empty_cache,
+            ["X-001", "X-002"],
+            msg=(
+                "Expected all ids to be unresolved when cache is empty. "
+                f"Got: {result_empty_cache!r}"
+            ),
+        )
+
+        # Case 5: duplicate absent ids → only first occurrence returned
+        result_dupes = enforcement.collect_unresolved_tags(
+            ["MISSING-999", "KNOWN-001", "MISSING-999"],
+            partial_cache,
+        )
+        self.assertEqual(
+            result_dupes,
+            ["MISSING-999"],
+            msg=(
+                "Expected duplicate absent ids to appear only once. "
+                f"Got: {result_dupes!r}"
+            ),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

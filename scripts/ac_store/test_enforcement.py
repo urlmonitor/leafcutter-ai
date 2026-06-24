@@ -120,6 +120,40 @@ def classify_by_work_status(ac_id: str, cache: dict[str, str]) -> str:
     return "informational"
 
 
+def collect_unresolved_tags(ac_ids: list[str], cache: dict[str, str]) -> list[str]:
+    """Return any AC IDs in *ac_ids* that are NOT present in *cache*.
+
+    These are "dangling references" — test tags that point at AC IDs
+    absent from the store.  The list returned by this function is what
+    TQ-100c (linkage-integrity check) will use to surface dangling references.
+
+    Classification rules:
+
+    * An AC id is **unresolved** when it is NOT a key in *cache* (i.e. the
+      AC does not exist in the store at all).
+    * An AC id that IS in the cache (regardless of work_status) is NOT
+      unresolved — it is a known AC that may be done, in-progress, or todo.
+
+    Args:
+        ac_ids: A list of AC id strings extracted from test ``# covers:`` tags.
+        cache: Mapping of AC id → work_status built by
+            :func:`build_ac_work_status_cache`.  An empty dict means the store
+            is empty and every id in *ac_ids* is unresolved.
+
+    Returns:
+        A list of AC id strings from *ac_ids* that are absent from *cache*,
+        preserving input order and removing duplicates while keeping first
+        occurrence order.  Returns an empty list when all ids are present.
+    """
+    seen: set[str] = set()
+    unresolved: list[str] = []
+    for ac_id in ac_ids:
+        if ac_id not in cache and ac_id not in seen:
+            unresolved.append(ac_id)
+            seen.add(ac_id)
+    return unresolved
+
+
 def extract_covers_tag(item: object) -> str | None:
     """Extract the AC ID from a ``# covers: <AC-ID>`` comment in *item*'s source.
 
