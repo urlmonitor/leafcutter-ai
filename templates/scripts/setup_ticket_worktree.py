@@ -55,15 +55,31 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 
 
-def _git_toplevel() -> Path:
+def _git_toplevel(repo_root: Path | None = None) -> Path:
     """Return the absolute path to the main repository root.
+
+    When *repo_root* is provided the command runs as
+    ``git -C <repo_root> rev-parse --show-toplevel`` so that callers
+    running from an untracked parent directory (e.g. the self-hosting
+    ``leafcutter/`` workspace whose git root is the child
+    ``leafcutter-ai/``) can anchor on the known repo path instead of
+    trusting the process CWD.  When omitted the behaviour is unchanged
+    (CWD fallback).
+
+    Args:
+        repo_root: Optional absolute path to the repository root to pass
+            as the ``git -C`` argument.  Defaults to None (CWD fallback).
 
     Returns:
         Absolute Path to the git toplevel directory.
     """
+    cmd = ["git"]
+    if repo_root is not None:
+        cmd += ["-C", str(repo_root)]
+    cmd += ["rev-parse", "--show-toplevel"]
     try:
         result = subprocess.run(
-            ["git", "rev-parse", "--show-toplevel"],
+            cmd,
             capture_output=True,
             text=True,
             check=True,
@@ -469,7 +485,8 @@ def cmd_setup_ticket(args: argparse.Namespace) -> None:
     if args.branch:
         slug = args.branch
 
-    main_repo = _git_toplevel()
+    repo_root = Path(args.repo_root).resolve() if getattr(args, "repo_root", None) else None
+    main_repo = _git_toplevel(repo_root)
     worktrees_dir = main_repo.parent / "worktrees"
     worktrees_dir.mkdir(parents=True, exist_ok=True)
 
@@ -509,7 +526,8 @@ def cmd_create_only(args: argparse.Namespace) -> None:
     """
     branch_name = args.branch_name
 
-    main_repo = _git_toplevel()
+    repo_root = Path(args.repo_root).resolve() if getattr(args, "repo_root", None) else None
+    main_repo = _git_toplevel(repo_root)
     worktrees_dir = main_repo.parent / "worktrees"
     worktrees_dir.mkdir(parents=True, exist_ok=True)
 
@@ -552,6 +570,18 @@ def _build_parser() -> argparse.ArgumentParser:
             "  create-only   Worktree + bootstrap only (no ticket)."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--repo-root",
+        default=None,
+        metavar="PATH",
+        help=(
+            "Explicit path to the git repository root. When provided, git commands "
+            "run as 'git -C <PATH> ...' so the script works correctly even when the "
+            "process CWD is an untracked parent directory (e.g. the self-hosting "
+            "leafcutter/ workspace whose git root is the child leafcutter-ai/). "
+            "Defaults to None (CWD fallback)."
+        ),
     )
     subparsers = parser.add_subparsers(dest="subcommand", required=True)
 
@@ -604,6 +634,16 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-24 [EPIC-FinalizeFeatureHardening/06]: Added --repo-root argument to
+  the top-level parser and extended _git_toplevel() to accept an optional
+  repo_root: Path | None parameter. When provided, the git command runs as
+  'git -C <repo_root> rev-parse --show-toplevel' so callers operating from
+  an untracked parent directory (e.g. the self-hosting leafcutter/ workspace
+  whose git root is the child leafcutter-ai/) can anchor on the known repo
+  path instead of relying on the process CWD. Both cmd_setup_ticket() and
+  cmd_create_only() derive repo_root from args.repo_root and forward it to
+  _git_toplevel(). The fallback (repo_root=None) preserves existing behaviour
+  for all callers that do not supply --repo-root.
 - 2026-06-24 00:00 [EPIC-FinalizeFeatureHardening/07]: Replaced unconditional
   `poetry install --no-root` with manifest-detection logic: pyproject.toml →
   poetry; requirements-dev.txt → pip; requirements.txt → pip; no manifest →

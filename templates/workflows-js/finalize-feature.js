@@ -139,13 +139,19 @@ async function run({ userInput, agent, parallel, prompt }) {
    */
   async function cleanupBaselineWorktree() {
     if (!baselineWorktreePath) return;
+    // Use WORKTREE_ROOT for the -C anchor when it is already resolved; fall
+    // back to the baseline path itself (which is a valid git repo checkout) so
+    // the worktree remove still works even if WORKTREE_ROOT is "unknown".
+    const gitAnchor = (WORKTREE_ROOT && WORKTREE_ROOT !== "unknown")
+      ? WORKTREE_ROOT
+      : baselineWorktreePath;
     try {
       await agent({
         agentType: "status-checker",
         input: {
           instructions:
             `Remove the temporary baseline worktree if it still exists:\n` +
-            `Run: git worktree remove "${baselineWorktreePath}" --force 2>/dev/null || true\n` +
+            `Run: git -C "${gitAnchor}" worktree remove "${baselineWorktreePath}" --force 2>/dev/null || true\n` +
             `Run: rm -rf "${baselineWorktreePath}" 2>/dev/null || true\n` +
             `Return: { "removed": true }`,
         },
@@ -288,9 +294,10 @@ async function run({ userInput, agent, parallel, prompt }) {
     input: {
       instructions:
         "Capture a pre-merge test baseline on the current main HEAD.\n" +
+        `Use git -C "${WORKTREE_ROOT}" for all git commands to avoid CWD ambiguity.\n` +
         "\n" +
         "Step A — Create a temporary detached worktree at origin/main:\n" +
-        `  Run: git worktree add --detach "${baselineTmpPath}" origin/main\n` +
+        `  Run: git -C "${WORKTREE_ROOT}" worktree add --detach "${baselineTmpPath}" origin/main\n` +
         "  Capture the exit code.\n" +
         "  If exit code is non-zero:\n" +
         "    Log: 'Baseline worktree creation failed — triage will treat all failures as regressions.'\n" +
@@ -308,7 +315,7 @@ async function run({ userInput, agent, parallel, prompt }) {
         "  Note: a zero-length list means the baseline is clean (all tests pass).\n" +
         "\n" +
         "Step D — Remove the temp worktree:\n" +
-        `  Run: git worktree remove "${baselineTmpPath}" --force\n` +
+        `  Run: git -C "${WORKTREE_ROOT}" worktree remove "${baselineTmpPath}" --force\n` +
         `  Run: rm -rf "${baselineTmpPath}" 2>/dev/null || true\n` +
         "\n" +
         "Step E — Return the baseline result:\n" +
@@ -441,19 +448,20 @@ async function run({ userInput, agent, parallel, prompt }) {
     agentType: "status-checker",
     input: {
       instructions:
-        "Run these commands inside the feature worktree to merge origin/main before tests:\n" +
+        "Run these commands inside the feature worktree to merge origin/main before tests.\n" +
+        `All git commands must use the explicit worktree root: git -C "${WORKTREE_ROOT}"\n` +
         "\n" +
         "1. Check if the branch is already up-to-date with origin/main:\n" +
-        `   Run: git merge-base --is-ancestor origin/main HEAD\n` +
+        `   Run: git -C "${WORKTREE_ROOT}" merge-base --is-ancestor origin/main HEAD\n` +
         "   Exit code 0 means HEAD already contains all commits from origin/main.\n" +
         "   If exit code 0: log 'Already up-to-date with origin/main.' and return\n" +
         "   { \"status\": \"already_up_to_date\", \"merge_strategy\": \"already_up_to_date\" }\n" +
         "\n" +
         "2. If not up-to-date, fetch origin/main to ensure it is current:\n" +
-        "   Run: git fetch origin main\n" +
+        `   Run: git -C "${WORKTREE_ROOT}" fetch origin main\n` +
         "\n" +
         "3. Attempt the merge (no commit, no fast-forward):\n" +
-        "   Run: git merge origin/main --no-commit --no-ff\n" +
+        `   Run: git -C "${WORKTREE_ROOT}" merge origin/main --no-commit --no-ff\n` +
         "   Capture the exit code.\n" +
         "\n" +
         "4. If exit code is 0 (clean merge):\n" +
@@ -461,7 +469,7 @@ async function run({ userInput, agent, parallel, prompt }) {
         "   Return: { \"status\": \"merged\", \"merge_strategy\": \"merged_main\" }\n" +
         "\n" +
         "5. If exit code is non-zero (conflict detected):\n" +
-        "   Run: git merge --abort\n" +
+        `   Run: git -C "${WORKTREE_ROOT}" merge --abort\n` +
         "   Return: { \"status\": \"conflict\", \"merge_strategy\": null }",
     },
   });
@@ -569,7 +577,7 @@ async function run({ userInput, agent, parallel, prompt }) {
       agentType: "status-checker",
       input: {
         instructions:
-          "Run: git diff --name-only origin/main HEAD\n" +
+          `Run: git -C "${WORKTREE_ROOT}" diff --name-only origin/main HEAD\n` +
           "Return ONLY a JSON object: { \"changed_files\": [\"<file1>\", \"<file2>\", ...] }\n" +
           "If the command fails or returns no output, return: { \"changed_files\": [] }",
       },
@@ -691,7 +699,7 @@ async function run({ userInput, agent, parallel, prompt }) {
     agentType: "status-checker",
     input: {
       instructions:
-        "Run: git log --oneline --grep 'chore(tickets): close tickets and source ACs' -1\n" +
+        `Run: git -C "${WORKTREE_ROOT}" log --oneline --grep 'chore(tickets): close tickets and source ACs' -1\n` +
         "If the output is non-empty (a closure commit already exists on this branch):\n" +
         "  Return: { \"already_committed\": true }\n" +
         "Otherwise:\n" +
@@ -762,18 +770,19 @@ async function run({ userInput, agent, parallel, prompt }) {
         input: {
           instructions:
             "Reset any staged test-merge left by step 2 before editing ticket files.\n" +
+            `All git commands use the explicit worktree root: git -C "${WORKTREE_ROOT}"\n` +
             "\n" +
             "1. Check if a merge is in progress:\n" +
-            "   Run: git rev-parse --verify MERGE_HEAD 2>/dev/null\n" +
+            `   Run: git -C "${WORKTREE_ROOT}" rev-parse --verify MERGE_HEAD 2>/dev/null\n` +
             "   Capture the exit code.\n" +
             "\n" +
             "2. If exit code is 0 (MERGE_HEAD exists — merge in progress):\n" +
-            "   Run: git merge --abort\n" +
+            `   Run: git -C "${WORKTREE_ROOT}" merge --abort\n` +
             "   Log: 'Step 2 test-merge aborted — clean feature-branch state restored.'\n" +
             "   Return: { \"status\": \"aborted\" }\n" +
             "\n" +
             "3. If exit code is non-zero (no merge in progress):\n" +
-            "   Run: git reset --hard HEAD\n" +
+            `   Run: git -C "${WORKTREE_ROOT}" reset --hard HEAD\n` +
             "   Log: 'No merge in progress — reset to feature-branch HEAD.'\n" +
             "   Return: { \"status\": \"reset\" }",
         },
@@ -990,10 +999,10 @@ async function run({ userInput, agent, parallel, prompt }) {
     agentType: "status-checker",
     input: {
       instructions:
-        "Run these commands in sequence:\n" +
-        "1. `git checkout main`\n" +
-        "2. `git pull`\n" +
-        "3. `git log -1 --oneline`\n" +
+        "Run these commands in sequence using the explicit repo root to avoid CWD ambiguity:\n" +
+        `1. git -C "${WORKTREE_ROOT}" checkout main\n` +
+        `2. git -C "${WORKTREE_ROOT}" pull\n` +
+        `3. git -C "${WORKTREE_ROOT}" log -1 --oneline\n` +
         "Report the final HEAD SHA and commit message. " +
         "Return a JSON object: { \"head_sha\": \"<sha>\", \"head_message\": \"<message>\" }",
     },
@@ -1084,7 +1093,7 @@ async function run({ userInput, agent, parallel, prompt }) {
       branch: BRANCH,
       instructions:
         "Detect branch scope and report what tickets were touched (informational only — no writes):\n" +
-        `1. Run: git log --oneline main..${BRANCH} 2>/dev/null || git log --oneline -20\n` +
+        `1. Run: git -C "${WORKTREE_ROOT}" log --oneline main..${BRANCH} 2>/dev/null || git -C "${WORKTREE_ROOT}" log --oneline -20\n` +
         "2. Search tickets/ tree for ticket files referencing this branch.\n" +
         "3. Determine if any ticket path is inside an EPIC-*/ folder — if so, this is epic-scoped.\n" +
         "4. For each in-scope ticket: read its frontmatter `status:` field.\n" +
@@ -1127,7 +1136,7 @@ async function run({ userInput, agent, parallel, prompt }) {
     agentType: "status-checker",
     input: {
       instructions:
-        `Run: git worktree list --porcelain\n` +
+        `Run: git -C "${WORKTREE_ROOT}" worktree list --porcelain\n` +
         `Check if a worktree for WORKTREE_ROOT="${WORKTREE_ROOT}" is listed.\n` +
         "Return ONLY a JSON object: { \"exists\": true|false }",
     },
