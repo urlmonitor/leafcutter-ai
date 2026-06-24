@@ -1,0 +1,28 @@
+id: BO-1600c
+title: "You are told if the repository is left in a bad state, and the drive stops"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Detected corruption halts the drive loudly with a clear explanation.
+
+  If the shared repository is ever found in a damaged state during a parallel
+  drive, the drive stops immediately and reports what went wrong in plain terms,
+  instead of pressing on and compounding the damage on a broken git store.
+depends_on: [BO-1600]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - sequence-diagram

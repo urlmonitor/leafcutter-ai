@@ -1,0 +1,33 @@
+id: INF-600k
+title: "External callers like workflows are recognized, not flagged as broken"
+component: infrastructure
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Listing a workflow or "user" as something that triggers an agent passes validation cleanly.
+
+  Agents are not only started by other agents -- some are triggered by workflows
+  or directly by a person. When an agent records such an external caller as one
+  of the things that start it, the registry validation accepts that entry as a
+  legitimate external trigger instead of rejecting it as an unknown agent, so the
+  build no longer fails on a correctly described agent.
+depends_on: [INF-600]
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Internal registry-validation rule refinement -- no user-facing behavior or workflow is introduced; it relaxes a build-time validator to accept legitimate non-agent callers."
