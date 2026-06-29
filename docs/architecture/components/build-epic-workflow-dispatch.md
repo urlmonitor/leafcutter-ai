@@ -1,12 +1,13 @@
 ---
 title: "build-epic.js Workflow Dispatch — Agent Flow"
+description: "Agent dispatch flow inside the build-epic.js workflow script, illustrating how the planner agent produces a dependency-ordered batch array and how tickets are dispatched in parallel within each batch."
 diagram_type: agent_flow
 flight_level: L3-Component
 status: accepted
 components:
   - build_pipeline
 created: 2026-06-01
-last_updated: 2026-06-01
+last_updated: 2026-06-29
 parent: docs/architecture/components/supervisor-spawn-topology.md
 related_diagrams:
   - docs/architecture/components/supervisor-spawn-topology.md
@@ -85,6 +86,14 @@ flowchart TD
 - After `build-epic.js` ships, `/build-feature` becomes a thin wrapper: it
   detects epic vs. single-ticket path and routes to `build-epic.js` or
   `build-ticket.js` respectively.
+- **Package version injection (ACD-1100e-2):** `build.py` reads
+  `config/version.json` and writes a `LEAFCUTTER_VERSION` file to the target
+  directory at build time. This file lets any consumer determine the installed
+  leafcutter version (e.g. `"2.0.0"`) without reading the source package
+  directly. The version string is also printed in the build log as
+  `"Package version: X.Y.Z"`. The `build-epic.js` workflow calls `build.py`
+  underneath; both side-effects (the log message and the file) apply on every
+  full build run.
 
 ## Related
 
