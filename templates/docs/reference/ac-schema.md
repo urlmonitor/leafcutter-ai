@@ -3,7 +3,7 @@ title: "Reference: AC Traceability Store Schema"
 type: reference
 status: active
 created: 2026-06-04
-last_updated: 2026-06-04
+last_updated: 2026-06-29
 components:
   - build_pipeline
 related_docs:
@@ -37,7 +37,7 @@ Each AC file is a single YAML document with the following fields.
 | `amended_by` | list of strings | no | Ticket paths that subsequently amended this criterion. Default: `[]`. |
 | `covered_by` | list of strings | no | Test file paths (optionally with `::test_function`) that verify this criterion. Default: `[]`. |
 | `implemented_by` | list of strings | no | Source file paths (optionally with `#anchor`) that implement this criterion. Default: `[]`. |
-| `origin_agent` | string | no | Identity of the agent or workflow that created this AC file. Common values: `business-analyst`, `debug`, `human`, `ticket-wiring`. |
+| `origin_agent` | string | no | Identity of the agent or workflow that created this AC file. Free-form provenance string — any non-empty value is valid. The field is **not** validated against the current agent registry. Historical agent names (including names of deleted, renamed, or decommissioned agents such as `business-analyst-v2`, `create-ticket`, or `refinement`) remain valid and are never rewritten during schema upgrades. Example values: `business-analyst`, `business-analyst-v2`, `BrainCandy`, `ticket-wiring`. |
 
 ### Full example
 
