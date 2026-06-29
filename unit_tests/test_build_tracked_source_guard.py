@@ -24,12 +24,10 @@ AC mapping:
 from __future__ import annotations
 
 import io
-import json
 import sys
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-import pytest
 
 # ---------------------------------------------------------------------------
 # Path setup — make scripts/ importable regardless of working directory.
@@ -186,11 +184,10 @@ class TestTrackedSourceGuardBuildFail:
 
     def test_ac_bp900f2_build_exits_nonzero_when_untracked(self, tmp_path: Path) -> None:
         # covers: BP-900f-2
-        """_check_script_reference_guard() (or a wiring function) must return 1 /
-        exit non-zero when _classify_untracked_sources() returns a non-empty list.
+        """_check_tracked_source_guard() must return 1 when deployable sources are untracked.
 
-        The implementation does not exist yet; this test will be green once
-        python-coder wires the new guard into the build preflight.
+        Mocks _is_git_repo to True (so the guard does not short-circuit for non-git)
+        and git ls-files to return EMPTY (so all source paths appear untracked).
         """
         pkg = _make_fake_package_root(tmp_path)
         # Seed a minimal templates/agents/ dir so extract_script_path_refs_with_sources
@@ -203,11 +200,13 @@ class TestTrackedSourceGuardBuildFail:
         )
 
         captured_stderr = io.StringIO()
-        # Simulate git ls-files returning EMPTY so ALL scripts appear untracked.
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(returncode=0, stdout="")
-            with patch("sys.stderr", captured_stderr):
-                result = _build._check_tracked_source_guard(pkg)
+        # Simulate git ls-files returning EMPTY so ALL source paths appear untracked.
+        # Also mock _is_git_repo so the guard doesn't short-circuit for non-git dirs.
+        with patch.object(_build, "_is_git_repo", return_value=True):
+            with patch("subprocess.run") as mock_run:
+                mock_run.return_value = MagicMock(returncode=0, stdout="")
+                with patch("sys.stderr", captured_stderr):
+                    result = _build._check_tracked_source_guard(pkg)
 
         assert result != 0, (
             "_check_tracked_source_guard() returned 0 (pass) despite all deployable "
@@ -219,27 +218,29 @@ class TestTrackedSourceGuardBuildFail:
         """The failure report must name each untracked source path on stderr.
 
         After python-coder's implementation, when two scripts are untracked the
-        guard output on stderr must contain both paths.
+        guard output on stderr must contain both SOURCE paths (templates/scripts/feedback/).
         """
         pkg = _make_fake_package_root(tmp_path)
         (pkg / "templates" / "agents").mkdir(parents=True, exist_ok=True)
 
-        untracked_1 = "scripts/feedback/submit_feedback.py"
-        untracked_2 = "scripts/feedback/aggregate.py"
+        # Source paths (templates namespace) — these are what _get_source_paths_for_guard returns.
+        untracked_1 = "templates/scripts/feedback/submit_feedback.py"
+        untracked_2 = "templates/scripts/feedback/aggregate.py"
 
         assert hasattr(_build, "_check_tracked_source_guard"), (
             "_check_tracked_source_guard() not found in build.py (BP-900f-2)."
         )
 
         captured_stderr = io.StringIO()
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(returncode=0, stdout="")
-            with patch("sys.stderr", captured_stderr):
-                _build._check_tracked_source_guard(pkg)
+        with patch.object(_build, "_is_git_repo", return_value=True):
+            with patch("subprocess.run") as mock_run:
+                mock_run.return_value = MagicMock(returncode=0, stdout="")
+                with patch("sys.stderr", captured_stderr):
+                    _build._check_tracked_source_guard(pkg)
 
         stderr_output = captured_stderr.getvalue()
         assert untracked_1 in stderr_output or untracked_2 in stderr_output, (
-            f"stderr does not name the untracked paths. "
+            f"stderr does not name the untracked source paths. "
             f"Expected {untracked_1!r} and/or {untracked_2!r} in stderr output.\n"
             f"Actual stderr: {stderr_output!r}"
         )
@@ -249,6 +250,8 @@ class TestTrackedSourceGuardBuildFail:
         """When all deployable sources are tracked, the guard returns 0 (no-op).
 
         The untracked list is empty → guard does not affect exit code.
+        Uses SOURCE paths (templates/scripts/ namespace) for the git ls-files mock,
+        matching what _get_source_paths_for_guard() returns (H-1 fix).
         """
         pkg = _make_fake_package_root(tmp_path)
         (pkg / "templates" / "agents").mkdir(parents=True, exist_ok=True)
@@ -257,18 +260,22 @@ class TestTrackedSourceGuardBuildFail:
             "_check_tracked_source_guard() not found in build.py (BP-900f-2)."
         )
 
-        # git ls-files returns ALL scripts — every source appears tracked.
-        # Determine the actual script set dynamically so the mock is realistic.
+        # Use SOURCE paths (templates/ namespace) — what _get_source_paths_for_guard returns.
+        # This is the correct namespace after the H-1 fix.
         try:
-            source_set = _build._get_source_deployable_scripts(pkg)
+            source_set = _build._get_source_paths_for_guard(pkg)
         except Exception:  # noqa: BLE001
-            source_set = {"scripts/feedback/submit_feedback.py", "scripts/feedback/aggregate.py"}
+            source_set = {
+                "templates/scripts/feedback/submit_feedback.py",
+                "templates/scripts/feedback/aggregate.py",
+            }
 
         all_tracked_output = "\n".join(sorted(source_set)) + "\n"
 
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(returncode=0, stdout=all_tracked_output)
-            result = _build._check_tracked_source_guard(pkg)
+        with patch.object(_build, "_is_git_repo", return_value=True):
+            with patch("subprocess.run") as mock_run:
+                mock_run.return_value = MagicMock(returncode=0, stdout=all_tracked_output)
+                result = _build._check_tracked_source_guard(pkg)
 
         assert result == 0, (
             f"_check_tracked_source_guard() returned {result!r} when all sources "

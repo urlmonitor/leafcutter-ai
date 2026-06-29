@@ -162,8 +162,8 @@ class TestBuildFeedbackSourcePath:
         written = build_phases.build_feedback(target_root, {}, dry_run=False, force=True)
 
         assert written > 0, (
-            f"build_feedback() wrote 0 files. It requires scripts/feedback/ to be present "
-            f"(it doesn't exist in fixture) instead of reading from templates/scripts/feedback/."
+            "build_feedback() wrote 0 files. It requires scripts/feedback/ to be present "
+            "(it doesn't exist in fixture) instead of reading from templates/scripts/feedback/."
         )
 
     def test_ac_bp1000a5_build_feedback_nonzero_without_gitignored_dir(
