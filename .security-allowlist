@@ -6,6 +6,8 @@ GENERIC_SECRET:scripts/commit_guardian/check_mermaid_drift.py:*
 GENERIC_SECRET:scripts/commit_guardian/check_paths_integrity.py:*
 # False positive: a sentinel string constant (not a credential)
 GENERIC_SECRET:scripts/registry_validator.py:22
+# False positive: second registry_validator sentinel constant for skills_invoked xref check (line 27)
+GENERIC_SECRET:scripts/registry_validator.py:27
 ENTROPY_HIGH:templates/hooks/auto_commit_inbox_ticket.py:8
 ENTROPY_HIGH:docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400a-3.yaml:9
 ENTROPY_HIGH:docs/agents/README.md:429

@@ -11,11 +11,16 @@ ARCHITECTURE: Public function validate_agent_registry(package_root) delegates
     to four private checkers (_check_template_paths, _check_orphan_templates,
     _check_spawn_bidirectionality, _check_self_loops). Each returns a list of
     error strings. Callers decide whether errors are fatal or advisory.
+    check_skills_invoked_xref(package_root) cross-references each agent's
+    skills_invoked registry array against skill references found in its
+    template body, emitting advisory warnings for both directions of mismatch
+    (AC INF-600g-3).
 """
 
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -27,6 +32,41 @@ _SPECIAL_TOKEN = "__ticket_phase_agents__"
 # finalize-feature *agent* was removed in ADR-006 — see EPIC-FinalizeFeatureHardening
 # ticket 03 — leaving the .js workflow as the sole, non-agent, spawner).
 _EXTERNAL_CALLERS = {"user", "finalize-feature.js"}
+
+# ---------------------------------------------------------------------------
+# Skill reference detection patterns (AC INF-600g-3)
+# ---------------------------------------------------------------------------
+#
+# Matches skill-id references in template body text.  Three patterns are used:
+#
+#   1. Path-based:   .claude/skills/<skill-id>/SKILL.md  (runtime load path)
+#   2. Directive:    load the <skill-id> skill            (natural-language directive)
+#   3. Skill tool:   Skill tool invocation referencing <skill-id>  (structured form)
+#
+# The captured group (group 1) is the raw skill-id string extracted from the
+# match.  Leading/trailing whitespace is stripped by the caller.  Hyphens and
+# alphanumeric chars are the only characters used in skill IDs.
+
+_SKILL_PATH_RE = re.compile(
+    r"(?:\.claude/|(?:^|\s))skills/([a-zA-Z0-9_-]+)/SKILL\.md"
+)
+# Common English stop words that appear in "use <word> skill" phrases but are
+# NOT skill IDs.  These are excluded from skill-directive matches to prevent
+# false positives like "Use this skill" (table header) being captured as a
+# reference to a skill named "this".
+_SKILL_DIRECTIVE_STOPWORDS = frozenset({
+    "this", "the", "a", "an", "any", "each", "your", "my", "our", "their",
+    "its", "that", "which", "what", "these", "those", "all", "both", "one",
+})
+
+_SKILL_DIRECTIVE_RE = re.compile(
+    r"(?:load|invoke|run)\s+(?:the\s+)?[`'\"]?([a-zA-Z0-9_-]+)[`'\"]?\s+skill",
+    re.IGNORECASE,
+)
+_SKILL_TOOL_RE = re.compile(
+    r"""Skill\s+tool\s+(?:invocation\s+)?(?:pattern\s+)?referencing\s+[`'\"]([a-zA-Z0-9_-]+)[`'\"]""",
+    re.IGNORECASE,
+)
 
 
 def validate_agent_registry(package_root: Path) -> list[str]:
@@ -79,6 +119,13 @@ def validate_agent_registry(package_root: Path) -> list[str]:
     errors.extend(validate_verification_flags(template_dir))
     errors.extend(validate_produces_field(agents, template_dir))
     _warn_redundant_phase_agents(agents)
+
+    # Cross-reference skills_invoked against template body references (AC INF-600g-3).
+    # Warnings are advisory — not returned as errors — because the extraction patterns
+    # may miss prose-only skill references or implicit skill loads.
+    xref_warnings = check_skills_invoked_xref(package_root)
+    for w in xref_warnings:
+        print(f"  [WARNING] {w}")
 
     # Validate category field values against agent_categories (if present in registry)
     registry_path = package_root / "config" / "agent_registry.json"
@@ -722,6 +769,128 @@ def main_skill_registry() -> None:
     raise SystemExit(1)
 
 
+def _extract_skill_refs_from_template(template_text: str) -> set[str]:
+    """Extract skill IDs referenced in an agent template body.
+
+    Scans the template body text for three classes of skill reference:
+
+    1. Path-based references: ``.claude/skills/<skill-id>/SKILL.md`` or
+       ``skills/<skill-id>/SKILL.md`` (the runtime load path injected by most
+       phase agent templates in their Sign-off section).
+    2. Natural-language directives: ``load the <skill-id> skill``,
+       ``invoke the <skill-id> skill``, etc.  (Used in supervisors and
+       instruction-heavy templates.)
+    3. Skill tool invocation patterns: ``Skill tool invocation pattern
+       referencing "<skill-id>"`` — the prose form used in AC acceptance
+       criteria and onboarding text.
+
+    The function is intentionally liberal: it matches any token that looks
+    like a skill ID (alphanumeric + hyphens/underscores) in a known context
+    phrase, so false positives are possible.  Callers should treat the result
+    as a best-effort hint for the advisory cross-reference check.
+
+    Args:
+        template_text: Full UTF-8 text of an agent template file.
+
+    Returns:
+        Set of skill-id strings found in the template body.  Returns an empty
+        set when no skill references are detected.
+    """
+    found: set[str] = set()
+    for pattern in (_SKILL_PATH_RE, _SKILL_TOOL_RE):
+        for match in pattern.finditer(template_text):
+            found.add(match.group(1).strip())
+    for match in _SKILL_DIRECTIVE_RE.finditer(template_text):
+        candidate = match.group(1).strip()
+        if candidate.lower() not in _SKILL_DIRECTIVE_STOPWORDS:
+            found.add(candidate)
+    return found
+
+
+def check_skills_invoked_xref(package_root: Path) -> list[str]:
+    """Cross-reference each agent's skills_invoked registry array against its template body.
+
+    For every agent in ``agent_registry.json`` that has a non-empty
+    ``skills_invoked`` array *or* whose template body references at least one
+    skill, this function checks both directions:
+
+    **Direction 1 — template → registry:**
+    For every skill ID found in the template body, check that it appears in
+    ``skills_invoked``.  When a template references a skill that is absent
+    from ``skills_invoked``, a warning is emitted:
+
+        "<agent-id>: template references skill '<skill-id>' but skills_invoked
+         does not declare it"
+
+    **Direction 2 — registry → template:**
+    For every ``skill_id`` declared in ``skills_invoked``, check that the
+    skill is referenced somewhere in the template body.  When a declared skill
+    has no corresponding reference in the template, a warning is emitted:
+
+        "<agent-id>: skills_invoked declares '<skill-id>' but no reference
+         found in template body"
+
+    Both warnings are advisory (printed, not returned as hard errors) because
+    skill references may be present as prose that does not match the extraction
+    patterns, or the skill may be loaded implicitly.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root
+            (the directory containing config/, skills/, templates/).
+
+    Returns:
+        List of warning strings, one per mismatch in either direction.  Returns
+        an empty list when no mismatches are found or when no portable agents
+        have non-empty ``skills_invoked`` arrays with readable templates.
+    """
+    warnings: list[str] = []
+    agents, load_errors = _load_agents(package_root)
+    if load_errors:
+        return warnings  # Registry unreadable — skip cross-reference check.
+
+    for agent in agents:
+        if not agent.get("portable", True):
+            continue  # Domain agents may reference project-local skills.
+
+        agent_id = agent.get("id", "<unknown>")
+        skills_invoked_entries: list[dict[str, Any]] = agent.get("skills_invoked") or []
+        declared_ids: set[str] = {
+            e["skill_id"] for e in skills_invoked_entries if "skill_id" in e
+        }
+
+        template_path_str: str = agent.get("template_path") or ""
+        if not template_path_str:
+            continue  # No template — skip.
+
+        tmpl_path = package_root / template_path_str
+        if not tmpl_path.exists():
+            continue  # Missing template already caught by _check_template_paths.
+
+        try:
+            template_text = tmpl_path.read_text(encoding="utf-8")
+        except OSError as exc:
+            print(f"  [WARNING] Could not read template '{template_path_str}': {exc}")
+            continue
+
+        referenced_ids = _extract_skill_refs_from_template(template_text)
+
+        # Direction 1: template references a skill not declared in skills_invoked.
+        for skill_id in sorted(referenced_ids - declared_ids):
+            warnings.append(
+                f"{agent_id}: template references skill '{skill_id}' but "
+                f"skills_invoked does not declare it"
+            )
+
+        # Direction 2: skills_invoked declares a skill with no template reference.
+        for skill_id in sorted(declared_ids - referenced_ids):
+            warnings.append(
+                f"{agent_id}: skills_invoked declares '{skill_id}' but "
+                f"no reference found in template body"
+            )
+
+    return warnings
+
+
 if __name__ == "__main__":
     import sys as _sys
 
@@ -796,4 +965,15 @@ if __name__ == "__main__":
 #   Wired into validate_agent_registry() after validate_produces_field(). The
 #   check is advisory-only (printed as WARNING, not returned as error) because
 #   the registry remains structurally valid; the redundancy is a style issue.
+# - 2026-06-29 [python-coder/EPIC-SelfDescribingAgentsCorrections/03]: Added (#EPIC-SelfDescribingAgentsCorrections/03)
+#   check_skills_invoked_xref() per AC INF-600g-3. Cross-references each agent's
+#   skills_invoked registry array against skill references extracted from its
+#   template body in both directions. Adds _extract_skill_refs_from_template()
+#   helper with three detection patterns: path-based (.claude/skills/<id>/SKILL.md),
+#   natural-language directives (load the <id> skill), and Skill tool invocation
+#   patterns. Wired into validate_agent_registry() as advisory [WARNING] output
+#   (not a hard error) because prose skill references may not match patterns.
+#   Also added knowledge-query reference to research-agent template body (the
+#   canonical AC INF-600g-3 scenario) and architecture context to
+#   docs/architecture/agent_knowledge_plane.md.
 # ====================================================================
