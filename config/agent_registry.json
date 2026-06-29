@@ -142,6 +142,7 @@
             "domain": null,
             "spawn_allowlist": [
                 "__ticket_phase_agents__",
+                "brainstorm-lead",
                 "llm-expert"
             ],
             "spawned_by": [

@@ -976,4 +976,13 @@ if __name__ == "__main__":
 #   Also added knowledge-query reference to research-agent template body (the
 #   canonical AC INF-600g-3 scenario) and architecture context to
 #   docs/architecture/agent_knowledge_plane.md.
+# - 2026-06-29 [python-coder/EPIC-SelfDescribingAgentsCorrections/04]: No code (#EPIC-SelfDescribingAgentsCorrections/04)
+#   change to _warn_redundant_phase_agents() required for AC INF-600g-2-i.
+#   The function already handles the non-phase agent case correctly: it only
+#   warns when child_id is in phase_agent_ids (is_ticket_phase: true). An
+#   agent like brainstorm-lead (is_ticket_phase: false) listed alongside
+#   __ticket_phase_agents__ in ticket-supervisor.spawn_allowlist is valid
+#   and not flagged. Registry change: added brainstorm-lead to
+#   ticket-supervisor.spawn_allowlist alongside __ticket_phase_agents__,
+#   confirming the scenario is structurally supported and warning-free.
 # ====================================================================
