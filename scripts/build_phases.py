@@ -17,12 +17,12 @@ ARCHITECTURE: Eleven public phase functions, one per output category:
     ``build_rules``, ``build_ticket_lifecycle``, ``build_commit_guardian``,
     ``build_precommit_config`` (imported from build_precommit.py),
     ``build_doc_compliance``, ``build_antigravity_instructions``.
-    ``build_ac_store`` deploys the six AC pipeline scripts
+    ``build_ac_store`` deploys the seven AC pipeline scripts
     (scan_ac_store, generate_ticket_from_ac, ac_prioritizer, mark_ac_done,
-    build_ac_mode_detection, goal_to_epic) from their source locations into
-    ``templates/scripts/ac_store/`` and then to
-    ``<target_root>/scripts/ac_store/``, making ``portable: true`` AC-pipeline
-    skills functional on consumer installs (ADR-013).
+    scan_ac_orphans, build_ac_mode_detection, goal_to_epic) from their source
+    locations directly to ``<target_root>/scripts/ac_store/``, making
+    ``portable: true`` AC-pipeline skills functional on consumer installs
+    (ADR-013).
     All functions share the same signature (target_root, config, dry_run, force)
     and return a file-written count. File-write helpers come from build.py's
     ``write_file`` and ``should_overwrite``. The ``force`` parameter defaults
@@ -396,7 +396,7 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
                    dry_run: bool, force: bool) -> int:
     """Deploy AC pipeline scripts to ``<output_root>/scripts/ac_store/``.
 
-    Copies the six AC-pipeline Python scripts from their source locations in
+    Copies the seven AC-pipeline Python scripts from their source locations in
     the package tree and deploys them to ``<output_root>/scripts/ac_store/``
     (i.e. ``.leafcutter/scripts/ac_store/`` on a default consumer build).
     This makes the ``portable: true`` skills ``ac-scanner`` and ``build-ac``
@@ -410,7 +410,7 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
     script paths like ``{{config.output_root}}/scripts/ac_store/<name>.py``
     correctly reference the deployed scripts on consumer installs.
 
-    The six source → destination mappings are:
+    The seven source → destination mappings are:
 
     - ``scripts/ac_store/scan_ac_store.py``
       → ``<output_root>/scripts/ac_store/scan_ac_store.py``
@@ -420,6 +420,8 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
       → ``<output_root>/scripts/ac_store/ac_prioritizer.py``
     - ``scripts/ac_store/mark_ac_done.py``
       → ``<output_root>/scripts/ac_store/mark_ac_done.py``
+    - ``scripts/ac_store/scan_ac_orphans.py``
+      → ``<output_root>/scripts/ac_store/scan_ac_orphans.py``
     - ``scripts/build_ac_mode_detection.py``
       → ``<output_root>/scripts/ac_store/build_ac_mode_detection.py``
     - ``scripts/goal_to_epic.py``
@@ -447,12 +449,13 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
     ac_store_src = PACKAGE_ROOT / "scripts" / "ac_store"
     scripts_src = PACKAGE_ROOT / "scripts"
 
-    # The six files to deploy: (source_path, destination_filename)
+    # The seven files to deploy: (source_path, destination_filename)
     deploy_map = [
         (ac_store_src / "scan_ac_store.py",            "scan_ac_store.py"),
         (ac_store_src / "generate_ticket_from_ac.py",  "generate_ticket_from_ac.py"),
         (ac_store_src / "ac_prioritizer.py",            "ac_prioritizer.py"),
         (ac_store_src / "mark_ac_done.py",              "mark_ac_done.py"),
+        (ac_store_src / "scan_ac_orphans.py",           "scan_ac_orphans.py"),
         (scripts_src / "build_ac_mode_detection.py",    "build_ac_mode_detection.py"),
         (scripts_src / "goal_to_epic.py",               "goal_to_epic.py"),
     ]

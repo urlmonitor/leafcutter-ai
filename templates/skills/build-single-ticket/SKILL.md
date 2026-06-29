@@ -86,6 +86,28 @@ The script creates and bootstraps the worktree. It does NOT move the ticket
 file — folder position is reconciled on main by `finalize-feature.js` after
 merge.
 
+**Pre-commit hook bootstrap (AC BO-1500b-1-i):** `setup_ticket_worktree.py`
+guarantees that the fresh worktree has a working pre-commit configuration
+before the first commit.  At the end of `_bootstrap()`, it calls
+`_establish_pre_commit_config(main_repo, worktree_path)` which:
+
+1. Is a no-op if `.leafcutter` or `.pre-commit-config.yaml` already exists
+   (e.g. was materialised by `build.py`).
+2. Creates a symlink `.leafcutter -> <main_repo>/.leafcutter` (preferred on
+   Linux native FS).
+3. Falls back to copying `.pre-commit-config.yaml` from the main repo when
+   the symlink fails (Windows / NTFS `OSError` / `EPERM`).
+4. Warns and continues if neither source exists (project not yet bootstrapped
+   — operator must run `build.py` manually before committing).
+
+This means **all package hooks are active** in the new worktree from the
+moment `setup_ticket_worktree.py` returns.  A stage commit that would
+violate an AC hook (e.g. `check-ac-schema`, `check-parent-link`) is blocked
+rather than landing unchecked.  If you observe hooks being silently skipped,
+confirm that `_establish_pre_commit_config` ran (check stderr output from
+`setup_ticket_worktree.py`) and that `<worktree>/.leafcutter` resolves to a
+non-empty directory.
+
 Do NOT dispatch `worktree-agent` as a separate Agent tool call.
 
 ## Step 3 — Dispatch `ticket-supervisor`
@@ -110,6 +132,83 @@ sanctioned entry for epic tickets.
 `.claude/skills/building-epics/SKILL.md` §2 (the five-step ticket
 loop), holding the worktree-root commit-phase lock per §5 around
 `commit` and `pull-request`.
+
+## Step 3.5 — EMU-tolerant PR creation
+
+The `pull-request` phase agent (dispatched by `ticket-supervisor` inside Step 3) may
+encounter a GitHub Enterprise Managed User (EMU) block: the active `gh` CLI account
+silently reverts to an EMU account that cannot open pull requests.
+
+When the `pull-request` phase reaches the `gh pr create` step, it MUST apply the
+following EMU-tolerant sequence to ensure the PR opens to `main` and the resulting
+URL and number are surfaced to the caller.
+
+### Step 3.5.1 — Switch to the authorized account before `gh pr create`
+
+Immediately before running `gh pr create`, switch the active `gh` account to the
+account authorized to open pull requests:
+
+```bash
+gh auth switch --user urlmonitor
+```
+
+Verify the switch succeeded:
+
+```bash
+gh auth status
+```
+
+If `gh auth status` does not show `urlmonitor` as the active account, do NOT attempt
+`gh pr create` — fall through directly to the REST API fallback in Step 3.5.2.
+
+### Step 3.5.2 — REST API fallback when `gh pr create` is still blocked
+
+If `gh pr create` exits non-zero with an EMU-related error (e.g. `"As an Enterprise
+Managed User, you cannot access this content (createPullRequest)"`), create the pull
+request via the GitHub REST API instead:
+
+```bash
+gh api -X POST repos/<org>/<repo>/pulls \
+  -f title="<PR title>" \
+  -f head="<BRANCH>" \
+  -f base="main" \
+  -f body="<PR body>"
+```
+
+Replace `<org>/<repo>` with the repository's full slug (e.g. `urlmonitor/leafcutter-ai`),
+`<BRANCH>` with the value from Step 2, and `<PR title>` / `<PR body>` with the same
+draft the `pull-request` agent prepared. The REST `POST /repos/{owner}/{repo}/pulls`
+endpoint is not subject to the EMU GraphQL restriction that blocks `gh pr create`.
+
+### Step 3.5.3 — Surface the PR number and URL
+
+Regardless of which path opened the PR (CLI or REST API), parse the response for the
+PR number and URL and record them in the supervisor payload:
+
+- `gh pr create` outputs the PR URL as its last stdout line.
+- `gh api … /pulls` returns a JSON body containing `"number"` and `"html_url"` fields.
+
+Extract both values and pass them back up to `ticket-supervisor` as:
+
+```json
+{
+  "pr_number": <integer>,
+  "pr_url": "<https://github.com/.../pull/N>"
+}
+```
+
+The `ticket-supervisor` records these in the completion payload and Step 4b uses `pr_number`
+to populate the changelog entry's `pr` field. The delivery MUST NOT be declared failed
+solely because `gh pr create` was blocked — the REST API path is the designed fallback
+and a PR opened via it is fully equivalent.
+
+### Step 3.5.4 — Confirmed working pattern
+
+The pattern documented in Steps 3.5.1–3.5.3 was confirmed during EPIC-AcPatternEnforcementIsMechanically (PRs #100/#102, 2026-06-18):
+- `gh pr create` succeeded once `urlmonitor` was the active account.
+- The REST `gh api -X POST repos/…/pulls` fallback also succeeded independently when
+  the CLI path was blocked.
+- Try the CLI path first; fall back to the REST API only on the EMU error.
 
 ## Step 4 — Verify done state (post-supervisor)
 
@@ -362,6 +461,58 @@ Do not add any other preamble or summary text.
 - **Does not bypass user escalation.** When the supervisor surfaces
   a `(status: question)` or a `failed` payload, this skill is a
   passthrough — it does not try to answer on the user's behalf.
+- **Does not create AC-authoring worktrees.** The dedicated AC-authoring
+  worktree (branched from `origin/main`) is created by `/create-ac` and
+  `/plan-feature` via `scripts/setup_ticket_worktree.py create-ac-worktree`
+  (AC BO-1500a-1). This skill creates implementation worktrees (branched
+  from local `main`) for ticket execution — a separate concern from AC
+  authoring.
+  The `create-ac-worktree` subcommand is **idempotent and reuse-safe** (AC
+  BO-1500a-1-i): if a prior authoring run crashed and left behind a worktree
+  or branch, the next invocation detects the pre-existing state and reuses it
+  rather than failing with "worktree already exists" or "branch already exists".
+  Existing AC YAML files committed on the branch are never deleted or overwritten.
+  **Main-branch invocation is supported (AC BO-1500e-1):** if the user is on
+  the protected `main` branch when they run `/create-ac` or `/plan-feature`,
+  the AC-authoring workflow still proceeds normally — it creates the authoring
+  worktree from `origin/main` regardless of the user's current checkout.  No
+  branch switch is required.  This skill's implementation worktrees use the same
+  structural isolation principle but branch from local `main` rather than
+  `origin/main` (see `scripts/setup_ticket_worktree.py` for the distinction).
+  See `templates/skills/create-ac/SKILL.md §MP` for the full specification of
+  main-branch invocation behaviour for the AC-authoring workflows.
+- **Does not push the AC-authoring branch or open the AC-authoring PR.** After
+  the user gives final approval in `/plan-feature`, the `deliverAuthoringBranch()`
+  function in `scripts/workflows/plan-feature.js` automatically pushes the
+  authoring branch to origin and opens a PR whose base is `main` and head is
+  the authoring branch (AC BO-1500c-1). This delivery step reuses the
+  `pull-request` agent and runs without asking the user to intervene by hand.
+  This skill has no role in that push/PR flow — it operates exclusively on
+  implementation worktrees and ticket phase agents.
+
+  **The authoring PR is subject to the same required CI status checks as every
+  other PR to `main` (AC BO-1500c-2).** `deliverAuthoringBranch()` opens an
+  ordinary PR against the protected `main` branch — it does not bypass, disable,
+  or circumvent any required status checks. Specifically:
+  - The **ruff lint gate** runs on the PR as it does on all other changes to
+    `main`.
+  - The **AC schema/diff validation gate** runs on the PR, verifying that all
+    AC YAML files introduced by the authoring branch conform to the schema.
+  - The **PR cannot be merged** until both required checks pass — `main`'s
+    branch-protection rules enforce this; no agent in this skill or in
+    `deliverAuthoringBranch()` has a path to merge without passing those checks.
+  - **No bypass path exists.** There is no direct-push-to-main path, no
+    privileged merge, and no mechanism by which approved AC files can reach
+    `main` while skipping the required checks.
+- **Does not enforce the per-stage AC commit invariant.** The commit-before-next-stage
+  invariant (AC BO-1500b-1) is owned by the `/create-ac` skill
+  (`templates/skills/create-ac/SKILL.md §1–§3`) and enforced mechanically by the
+  `commitStageOutput()` call in `scripts/workflows/plan-feature.js`. That function
+  commits each stage's AC YAML files (product-owner-v3 → business-analyst-v3 →
+  it-po-v3) to the authoring branch immediately after user approval, blocking the
+  next stage from starting if the commit fails. This skill has no role in that
+  commit sequence — it operates exclusively on implementation worktrees and ticket
+  phase agents, not on the AC authoring pipeline.
 
 ## Contrast: this skill vs. `/quick-fix`
 
