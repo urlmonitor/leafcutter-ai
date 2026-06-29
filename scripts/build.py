@@ -501,6 +501,98 @@ def _get_source_deployable_scripts(package_root: Path) -> set[str]:
     return manifest
 
 
+def _get_source_paths_for_guard(package_root: Path) -> set[str]:
+    """Return the REAL on-disk SOURCE paths (git-tracked) for all deployable scripts.
+
+    This is the single source of truth for the tracked-source guard (H-1 fix).
+    Each deployable script has a SOURCE path (what is committed to git) and a
+    DEPLOY path (where it lands in the target project).  These two namespaces
+    differ for template-sourced scripts:
+
+    * ``ac_store`` scripts: source = ``scripts/ac_store/<name>``  (same namespace)
+    * workflow-tool scripts: source = ``scripts/<name>``           (same namespace)
+    * knowledge scripts: source = ``scripts/knowledge/<name>``     (same namespace)
+    * ``commit_guardian`` scripts: source = ``templates/scripts/commit_guardian/<rel>``
+    * ``feedback`` scripts: source = ``templates/scripts/feedback/<name>``
+    * template-standalone scripts: source = ``templates/scripts/<name>``
+
+    The guard must check SOURCE paths against the git index (``git ls-files``)
+    because deploy paths for template-sourced scripts are never committed — only
+    the template mirror under ``templates/scripts/`` is tracked.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.
+
+    Returns:
+        Set of source-namespace path strings (forward-slash, repo-root-relative)
+        for all scripts this build will deploy. The guard checks this set against
+        the git index.
+
+    Raises:
+        RuntimeError: When ``templates/scripts/feedback/`` is absent or empty
+            (propagated from ``_manifest_feedback_scripts``).
+    """
+    source_paths: set[str] = set()
+
+    # ac_store: source namespace equals deploy namespace.
+    src_ac = package_root / "scripts" / "ac_store"
+    if src_ac.is_dir():
+        for f in src_ac.iterdir():
+            if f.is_file() and f.suffix != ".pyc":
+                source_paths.add(f"scripts/ac_store/{f.name}")
+
+    # commit_guardian: source is under templates/scripts/commit_guardian/.
+    src_cg = package_root / "templates" / "scripts" / "commit_guardian"
+    if src_cg.is_dir():
+        for f in src_cg.rglob("*"):
+            if f.is_file() and f.suffix == ".py":
+                source_paths.add(
+                    f"templates/scripts/commit_guardian/{f.relative_to(src_cg).as_posix()}"
+                )
+
+    # feedback: source is under templates/scripts/feedback/.
+    # _manifest_feedback_scripts raises RuntimeError when the dir is absent/empty
+    # so we re-implement the scan here to use the source path directly.
+    src_fb = package_root / "templates" / "scripts" / "feedback"
+    if src_fb.is_dir():
+        for f in src_fb.iterdir():
+            if f.is_file() and f.suffix == ".py":
+                source_paths.add(f"templates/scripts/feedback/{f.name}")
+    # Mirror the RuntimeError from _manifest_feedback_scripts for consistency.
+    if not any(p.startswith("templates/scripts/feedback/") for p in source_paths):
+        raise RuntimeError(
+            f"_get_source_paths_for_guard: tracked source directory "
+            f"'{src_fb}' is absent or contains no .py files. "
+            "Restore templates/scripts/feedback/ from git history."
+        )
+
+    # workflow-tool scripts: source namespace equals deploy namespace.
+    scripts_src = package_root / "scripts"
+    for fname in (
+        "add_component.py",
+        "knowledge_query.py",
+        "set_ticket_status.py",
+        "ticket_prioritizer.py",
+    ):
+        if (scripts_src / fname).is_file():
+            source_paths.add(f"scripts/{fname}")
+
+    # knowledge scripts: source namespace equals deploy namespace.
+    knowledge_src = package_root / "scripts" / "knowledge"
+    for fname in ("harvest_learnings.py",):
+        if (knowledge_src / fname).is_file():
+            source_paths.add(f"scripts/knowledge/{fname}")
+
+    # template-standalone scripts: source is under templates/scripts/ (top-level .py).
+    templates_scripts = package_root / "templates" / "scripts"
+    if templates_scripts.is_dir():
+        for f in templates_scripts.glob("*.py"):
+            if f.is_file():
+                source_paths.add(f"templates/scripts/{f.name}")
+
+    return source_paths
+
+
 def _check_script_reference_guard(package_root: Path) -> int:
     """Preflight guard: exit non-zero when broken script references are detected.
 
@@ -538,7 +630,16 @@ def _check_script_reference_guard(package_root: Path) -> int:
     if not refs_to_sources:
         return 0
 
-    deployable = _get_source_deployable_scripts(package_root)
+    try:
+        deployable = _get_source_deployable_scripts(package_root)
+    except RuntimeError as exc:
+        _log.warning("_check_script_reference_guard: cannot resolve deployable scripts: %s", exc)
+        print(
+            f"[SCRIPT-REF GUARD] ERROR: cannot resolve deployable script set: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+
     entries = build_broken_ref_report(refs_to_sources, deployable)
 
     if not entries:
@@ -551,6 +652,40 @@ def _check_script_reference_guard(package_root: Path) -> int:
 
 
 _log = logging.getLogger(__name__)
+
+
+def _is_git_repo(package_root: Path) -> bool:
+    """Return True when *package_root* is inside a git work-tree, False otherwise.
+
+    Runs ``git rev-parse --is-inside-work-tree`` with a 5-second timeout.
+    Returns False for all non-zero exits (including exit 128 which git emits
+    when the directory is not a repository) and for any OS-level failure
+    (git not found, permission error, etc.).
+
+    This is used by ``_check_tracked_source_guard`` to no-op gracefully in
+    consumer installs that are not git repositories (H-3 fix: ADR-001
+    requires build.py to work identically for consumers).
+
+    Args:
+        package_root: Absolute path to check for git repository membership.
+
+    Returns:
+        True if the directory is inside a git work-tree; False if it is not a
+        git repo or git is unavailable.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--is-inside-work-tree"],
+            cwd=str(package_root),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=5,
+        )
+        return result.returncode == 0 and result.stdout.strip() == "true"
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        _log.debug("_is_git_repo: git check failed for %s: %s", package_root, exc)
+        return False
 
 
 def _classify_untracked_sources(
@@ -573,25 +708,27 @@ def _classify_untracked_sources(
         package_root: Absolute path to the repository root used as the
             working directory for the ``git ls-files`` call.  Paths in
             *source_set* must be relative to this root.
-        source_set: Set of ``scripts/<path>`` strings (forward-slash separated)
-            that the build intends to deploy.  Each entry is checked against
-            the git index.
+        source_set: Set of repo-root-relative path strings (forward-slash
+            separated) that the build intends to deploy.  Each entry is
+            checked against the git index.  These must be SOURCE paths
+            (e.g. ``templates/scripts/feedback/submit_feedback.py``), not
+            deploy paths.
 
     Returns:
-        List of ``scripts/<path>`` strings from *source_set* whose source is
-        NOT recorded in the git index.  An empty list means every path in
-        *source_set* is tracked.
+        List of path strings from *source_set* whose source is NOT recorded
+        in the git index.  An empty list means every path in *source_set* is
+        tracked.
 
     Raises:
-        RuntimeError: When the git query fails and tracked-ness cannot be
-            determined — never returns silently when the index is unreadable
-            (Error Handling Policy Rule 3).
+        RuntimeError: When the git query fails inside a real repository —
+            never returns silently when the index is unreadable (Error
+            Handling Policy Rule 3).  Callers that need graceful non-git
+            no-op should call ``_is_git_repo`` before this function.
     """
     try:
         result = subprocess.run(
             ["git", "ls-files", "--full-name"],
             cwd=str(package_root),
-            capture_output=False,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -619,30 +756,49 @@ def _classify_untracked_sources(
 def _check_tracked_source_guard(package_root: Path) -> int:
     """Preflight guard: exit non-zero when any deployable script source is untracked.
 
-    Queries the git index for every path in the deployable-script source set
-    (produced by ``_get_source_deployable_scripts``).  If any source path is
-    present in the working tree but not committed to git, the build must not
-    proceed: a fresh clone would be unable to reproduce the same artefacts.
+    Queries the git index for every SOURCE path in the deployable-script set.
+    SOURCE paths differ from deploy paths for template-mirrored scripts:
+    e.g. ``templates/scripts/feedback/submit_feedback.py`` is the source path
+    (tracked in git), while ``scripts/feedback/submit_feedback.py`` is the
+    deploy path (written to the target project).  The guard checks source paths
+    so that it works correctly on a clean checkout where no gitignored deploy
+    copies exist (H-1 fix).
+
+    Non-git installs (tarball/pip/vendored) are gracefully skipped: when
+    ``git rev-parse --is-inside-work-tree`` fails the guard logs at INFO and
+    returns 0 without error.  This preserves ADR-001 consumer-install
+    compatibility (H-3 fix).
 
     Each untracked source path is written to stderr (one per line) so the
     build operator knows exactly which files must be committed before the build
     can succeed (AC BP-900f-2).
 
-    The guard contains no per-directory special-casing: every path returned by
-    ``_get_source_deployable_scripts`` is subject to the same tracked-ness
-    check, regardless of which subdirectory it belongs to (AC BP-900f-3).
+    The guard contains no per-directory special-casing: every source path
+    returned by ``_get_source_paths_for_guard`` is subject to the same
+    tracked-ness check, regardless of which subdirectory it belongs to
+    (AC BP-900f-3).
 
     Args:
         package_root: Absolute path to the leafcutter package root.
 
     Returns:
-        0 if all deployable-script sources are tracked in git (build may
-        continue).
+        0 if all deployable-script sources are tracked in git, or if the
+        package root is not a git repository (consumer install).
         1 if one or more sources are untracked (build must abort; untracked
         paths have been written to stderr).
     """
+    # H-3: no-op gracefully for non-git installs (tarball/pip/vendored).
+    if not _is_git_repo(package_root):
+        _log.info(
+            "_check_tracked_source_guard: %s is not a git repository — "
+            "tracked-source check skipped (consumer install).",
+            package_root,
+        )
+        return 0
+
+    # H-1: use SOURCE paths (git-tracked namespace), not deploy paths.
     try:
-        source_set = _get_source_deployable_scripts(package_root)
+        source_set = _get_source_paths_for_guard(package_root)
     except RuntimeError as exc:
         _log.warning("_check_tracked_source_guard: cannot resolve source set: %s", exc)
         print(
