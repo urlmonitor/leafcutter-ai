@@ -1590,8 +1590,8 @@ async function run({ userInput, agent }) {
               "Present these to the user with their enriched fields (assigned_agent, complexity, contracts).\n" +
               "Ask the user to:\n" +
               "  1. Set a priority: critical / high / medium / low\n" +
-              "  2. Choose an action: approve (set readiness: approved + priority) | edit | defer (leave as reviewed)\n" +
-              "Return ONLY a JSON object: { \"action\": \"approve\" | \"edit\" | \"defer\", \"priority\": \"high\" | \"medium\" | \"low\" | \"critical\" }",
+              "  2. Choose an action: approve (set readiness: approved + priority) | edit | defer (leave as reviewed) | cancel (abort; leave this stage's ACs as uncommitted drafts)\n" +
+              "Return ONLY a JSON object: { \"action\": \"approve\" | \"edit\" | \"defer\" | \"cancel\", \"priority\": \"high\" | \"medium\" | \"low\" | \"critical\" }",
           },
         });
 
