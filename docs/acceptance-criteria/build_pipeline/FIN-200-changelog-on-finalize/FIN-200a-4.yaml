@@ -1,0 +1,51 @@
+id: FIN-200a-4
+title: "How-to guide documents the automatic changelog step"
+component: finalize
+level: L2
+status: active
+readiness: approved
+priority: high
+req_status: draft
+work_status: todo
+parent: FIN-200a
+criteria: |
+  Given the finalize-feature how-to guide
+  When a developer reads the "What the workflow does" step table
+  Then the guide describes the changelog step as a built-in part of finalize
+  And the guide states where the entry is written (the changelogs directory)
+  And the guide states that no separate manual changelog command is required
+  And the guide states the one case where no entry is produced (a branch with no
+    commits beyond main)
+depends_on:
+  - FIN-200a
+  - FIN-200a-1
+  - FIN-200a-3
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements: |
+  - Amend the existing docs/how-to/finalize-feature.md step table to add the
+    changelog step in its actual sequence position (before the merge_pr step 4,
+    alongside the step 3.5 pre-merge closure) — do not author a new standalone doc
+  - The guide must state the destination (the changelogs/ directory) and that the
+    frozen legacy CHANGELOG.md is never touched
+  - The guide must state that no separate manual /changelog command is required
+  - The guide must state the single no-entry case (a branch with no commits beyond
+    main is a successful no-op) and must match the implemented behavior verbatim —
+    do not document behavior the workflow does not yet exhibit
+  - Documentation must follow the project's how-to authoring conventions and only
+    describe shipped behavior (depends on FIN-200a-1/3 being implemented first)
+delivers_to: null
+expects_from:
+  - agent: finalize-feature-workflow
+    contract: "the implemented changelog step whose behavior this guide describes"
+doc_links:
+  - path: "docs/how-to/finalize-feature.md"
+    relationship: amends
+    status: exists
+    relevance: "Add the changelog step to the step table and behavior description"
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

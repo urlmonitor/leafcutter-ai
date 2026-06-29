@@ -1,0 +1,60 @@
+id: FIN-200a-2
+title: "The entry covers the merged work via the correct feature ref range"
+component: finalize
+level: L2
+status: active
+readiness: approved
+priority: high
+req_status: draft
+work_status: todo
+parent: FIN-200a
+criteria: |
+  Given a feature branch contains three commits C1, C2, C3 that are not present
+    on main, and main contains commits the feature branch already has
+  When finalize generates the changelog entry for that branch
+  Then the entry's commit range is the set of commits the feature adds relative
+    to main (the merge-base of the branch and main up to the branch tip)
+  And the entry lists C1, C2, and C3
+  And the entry does not list commits that were already on main before the
+    feature branch diverged
+depends_on:
+  - FIN-200a
+  - FIN-200a-1
+assigned_agent: finalize-feature-workflow
+estimated_complexity: S
+it_requirements: |
+  - The ref range supplied to the changelog capability must be the three-dot
+    merge-base form: merge-base(origin/main, HEAD)..HEAD (equivalently
+    origin/main...HEAD), so commits already on main before divergence are excluded
+  - The range must be computed against origin/main (the integration target), not a
+    deploy tag and not the local stale main — mirror how Step 2
+    (merge_main_into_worktree) establishes the branch-vs-main relationship
+  - The range must be resolved BEFORE Step 2's --no-commit --no-ff test-merge is
+    applied (or after it is reset), so the merge commit itself is not double-counted
+    in the entry
+  - Must follow the project error handling policy for the git ref-resolution
+    boundary (wrap subprocess; log at WARNING or higher on failure; never silently
+    swallow)
+delivers_to:
+  - agent: changelog-agent
+    contract: "supplies an explicit ref range (merge-base(main, HEAD)..HEAD) rather than relying on the last deploy tag"
+expects_from: null
+doc_links:
+  - path: "templates/agents/changelog-agent.md"
+    relationship: describes
+    status: exists
+    relevance: "Step 1 — accepts a custom ref range; Step 2 — collects commits over that range"
+  - path: "templates/workflows/finalize-feature.md"
+    relationship: describes
+    status: exists
+    relevance: "Branch-vs-main relationship established at step 2 (merge_main_into_worktree)"
+  - path: "templates/workflows-js/finalize-feature.js"
+    relationship: describes
+    status: exists
+    relevance: "Where the merge-base ref range is computed and passed to the changelog step"
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,57 @@
+id: FIN-200c-2
+title: "A missing entry is recorded and reported — never silently dropped"
+component: finalize
+level: L2
+status: active
+readiness: approved
+priority: high
+req_status: draft
+work_status: todo
+parent: FIN-200c
+criteria: |
+  Given the changelog step failed to produce an entry for a branch that had
+    commits to record
+  When finalize completes its run
+  Then finalize's final result records that the changelog entry is missing for
+    this finalize run
+  And finalize does not report success as though an entry was written
+  And the missing-entry fact is surfaced to the developer in the finalize output,
+    distinct from a normal successful changelog message
+  And the missing-entry record persists in the finalize result even when finalize
+    proceeded past the failure to merge
+depends_on:
+  - FIN-200c
+  - FIN-200c-1
+assigned_agent: finalize-feature-workflow
+estimated_complexity: S
+it_requirements: |
+  - The finalize return payload must carry an explicit missing-changelog field
+    (mirror the existing untracked_failures reporting convention) recording that no
+    entry was produced for a run that had commits to record
+  - finalize must not report overall success as though an entry was written when
+    the entry is missing — the missing-entry fact must be distinguishable from a
+    normal successful changelog message in the developer-facing output
+  - The missing-entry record must persist in the return payload even on the
+    warn-and-continue path (FIN-200c-1) where finalize proceeded past the failure
+    to merge — so a merged-but-changelog-missing run is auditable after the fact
+  - The empty-range no-op (FIN-200c-1-i) must NOT set the missing-entry field — only
+    a genuine capture failure for a commit-bearing range does
+delivers_to: null
+expects_from:
+  - agent: changelog-agent
+    contract: "reports whether an entry file was written so finalize can record a missing entry"
+doc_links:
+  - path: "templates/workflows/finalize-feature.md"
+    relationship: describes
+    status: exists
+    relevance: "Return payload reporting conventions (e.g. untracked_failures) — add a missing-changelog field"
+  - path: "templates/workflows-js/finalize-feature.js"
+    relationship: describes
+    status: exists
+    relevance: "Return-payload assembly where the missing-changelog field is recorded"
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
