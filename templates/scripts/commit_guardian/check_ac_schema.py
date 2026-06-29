@@ -45,7 +45,10 @@ DECISION HISTORY:
     ``git show HEAD:<path>`` with a single batched ``git cat-file --batch``
     invocation in _fetch_head_yaml_batch(). _load_head_yaml() now accepts an
     optional head_cache dict for O(1) lookups; the single-subprocess fallback
-    is preserved for any direct callers that do not supply the cache.
+    is preserved for any direct callers that do not supply the cache. stdout
+    is read in binary mode for byte-accurate size slicing (multibyte-safe).
+    Removed _assign_fallback_yaml() and all mock-tolerance branches — the
+    parser now handles only real git cat-file protocol output.
 """
 
 from __future__ import annotations
@@ -104,23 +107,23 @@ def _fetch_head_yaml_batch(
     """Fetch HEAD versions of multiple AC YAML files in ONE git cat-file --batch call.
 
     Sends all object specs (``HEAD:<path>``) to ``git cat-file --batch`` via
-    stdin and parses the batch protocol output.  Each entry in the protocol
-    output has the form::
+    stdin as UTF-8 bytes and parses the binary batch protocol output.  Each
+    found entry in the output has the form::
 
-        <oid> <type> <size>\\n
-        <content-bytes>\\n
+        <oid> blob <size>\\n
+        <content — exactly <size> bytes>\\n
 
     A missing object yields::
 
         <spec> missing\\n
 
-    When the stdout cannot be parsed as valid cat-file protocol headers (e.g.
-    in test environments where subprocess.run is mocked and returns a raw YAML
-    blob), the helper falls back to treating the entire stdout as a single YAML
-    value assigned to the first path; the remaining paths receive None.  This
-    preserves fail-open semantics: a path with None suppresses the
-    implements_pattern check for that file rather than producing a false
-    positive.
+    Sizes in the protocol are byte counts, so stdout is read in binary mode and
+    content is sliced by byte position before decoding.  This is correct for
+    any file encoding, including multibyte UTF-8 content.
+
+    Fail-open semantics: if the protocol is genuinely malformed (should never
+    happen with a real git process), a WARNING is printed to stderr and all
+    remaining paths receive None rather than raising or producing false positives.
 
     Args:
         rel_paths: Repo-relative path strings whose HEAD content is needed.
@@ -141,14 +144,15 @@ def _fetch_head_yaml_batch(
     if project_root:
         git_cmd = ["git", "-C", str(project_root)]
 
-    stdin_payload = "\n".join(f"HEAD:{p}" for p in rel_paths) + "\n"
+    # Encode the stdin payload as bytes; sizes in the protocol are byte counts.
+    stdin_bytes = ("\n".join(f"HEAD:{p}" for p in rel_paths) + "\n").encode("utf-8")
 
     try:
         result = subprocess.run(
             [*git_cmd, "cat-file", "--batch"],
-            input=stdin_payload,
+            input=stdin_bytes,
             capture_output=True,
-            text=True,
+            text=False,
             timeout=30,
         )
     except (subprocess.SubprocessError, OSError) as exc:
@@ -161,30 +165,35 @@ def _fetch_head_yaml_batch(
     if result.returncode != 0:
         return result_map
 
-    stdout = result.stdout
+    stdout: bytes = result.stdout
     path_iter = iter(rel_paths)
     pos = 0
 
     while pos < len(stdout):
-        # Read header line.
-        newline_idx = stdout.find("\n", pos)
+        # Read header line (terminated by b"\n").
+        newline_idx = stdout.find(b"\n", pos)
         if newline_idx == -1:
             break
-        header = stdout[pos:newline_idx]
+        header = stdout[pos:newline_idx].decode("utf-8", errors="replace")
         pos = newline_idx + 1
 
-        # Attempt to parse a valid cat-file header: "<oid> <type> <size>"
         header_parts = header.split()
+
         if len(header_parts) == 3 and header_parts[1] == "blob":
+            # Found entry: "<oid> blob <size>\n<content><size bytes>\n"
             try:
                 size = int(header_parts[2])
             except ValueError:
-                # Malformed header — fall back to treating remaining as raw YAML.
-                _assign_fallback_yaml(result_map, path_iter, stdout[pos:])
+                # Malformed size field — protocol error; treat remaining as missing.
+                print(
+                    f"{_HOOK_PREFIX} WARNING: git cat-file --batch returned malformed "
+                    f"size in header '{header}'; treating remaining paths as missing.",
+                    file=sys.stderr,
+                )
                 break
 
-            # Read exactly `size` bytes of content, then skip the trailing "\n".
-            content = stdout[pos:pos + size]
+            # Read exactly <size> bytes of content, then skip the trailing b"\n".
+            content_bytes = stdout[pos:pos + size]
             pos += size + 1  # +1 for the trailing newline after the blob
 
             try:
@@ -192,53 +201,38 @@ def _fetch_head_yaml_batch(
             except StopIteration:
                 break
 
+            try:
+                content_str = content_bytes.decode("utf-8")
+            except UnicodeDecodeError as exc:
+                print(
+                    f"{_HOOK_PREFIX} WARNING: cannot decode HEAD:{rel_path} as UTF-8: "
+                    f"{exc}; treating as missing.",
+                    file=sys.stderr,
+                )
+                # result_map[rel_path] stays None — fail-open.
+                continue
+
             result_map[rel_path] = load_yaml_from_string(
-                content, source_label=f"HEAD:{rel_path}"
+                content_str, source_label=f"HEAD:{rel_path}"
             )
 
         elif len(header_parts) >= 2 and header_parts[-1] == "missing":
-            # "<spec> missing" — object absent at HEAD (new file); consume the path slot.
+            # Missing entry: "<spec> missing\n" — object absent at HEAD (new file).
             try:
                 next(path_iter)
             except StopIteration:
                 break
 
         else:
-            # Unrecognised header format (e.g. mock returning raw YAML).
-            # Treat this line plus remaining stdout as a single YAML blob for the
-            # first remaining path; all others stay None (fail-open).
-            raw_blob = header + "\n" + stdout[pos:]
-            _assign_fallback_yaml(result_map, path_iter, raw_blob)
+            # Genuinely unrecognised header — real git should never produce this.
+            print(
+                f"{_HOOK_PREFIX} WARNING: git cat-file --batch returned unrecognised "
+                f"header '{header}'; treating remaining paths as missing.",
+                file=sys.stderr,
+            )
             break
 
     return result_map
-
-
-def _assign_fallback_yaml(
-    result_map: dict[str, dict | None],
-    path_iter,
-    raw_yaml: str,
-) -> None:
-    """Assign raw_yaml to the next path from path_iter; remaining paths stay None.
-
-    This helper is called when ``git cat-file --batch`` stdout cannot be parsed
-    as proper protocol output (e.g. a test mock returning a plain YAML blob).
-    It assigns the raw text to the first remaining path so at least one entry
-    can be checked, preserving fail-open semantics for the rest.
-
-    Args:
-        result_map: The dict being populated (mutated in-place).
-        path_iter: Iterator over the remaining rel_path strings.
-        raw_yaml: The unparsed stdout fragment to treat as YAML content.
-    """
-    try:
-        rel_path = next(path_iter)
-    except StopIteration:
-        return
-    result_map[rel_path] = load_yaml_from_string(
-        raw_yaml, source_label=f"HEAD:{rel_path} (fallback)"
-    )
-    # Remaining paths implicitly keep None — intentional fail-open.
 
 
 def _load_head_yaml(

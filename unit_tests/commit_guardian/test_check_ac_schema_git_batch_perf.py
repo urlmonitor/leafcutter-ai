@@ -31,13 +31,20 @@ ARCHITECTURE:
         HOOK_NO_GIT            — must be UNSET so the code actually calls git
                                   (intercepted by the patch).
 
+    The mock for subprocess.run emits REAL ``git cat-file --batch`` binary
+    protocol.  When it detects a ``cat-file --batch`` call it reads the
+    ``input=`` kwarg (bytes), parses the ``HEAD:<path>`` specs, and assembles
+    a byte-accurate protocol response: ``<oid> blob <size>\\n<content>\\n``
+    for found entries and ``<spec> missing\\n`` for absent ones.  This makes
+    the mock faithful — the production parser is exercised on real protocol
+    bytes, not a raw YAML blob.
+
     The staged files on disk contain valid YAML *without* implements_pattern so
-    the HEAD comparison can detect a "drop" only when HEAD YAML has it.  To
-    ensure _load_head_yaml is actually exercised (not short-circuited by a
-    None return before the git call), the patched subprocess.run returns a
-    HEAD YAML blob that CONTAINS implements_pattern: "PTN-001".  That makes
+    the HEAD comparison can detect a "drop" only when HEAD YAML has it.  The
+    mock HEAD response CONTAINS implements_pattern: "PTN-001", making
     head_has_it=True, staged_has_it=False → violation detected.  The
-    correctness sub-test verifies the violation is still reported post-fix.
+    correctness sub-tests verify the violation is still reported post-fix and
+    that a file that preserves the field passes cleanly.
 """
 
 from __future__ import annotations
@@ -145,53 +152,96 @@ def _make_ac_files(
     return rel_paths
 
 
-def _make_mock_subprocess_run(head_yaml_tpl: str = _HEAD_AC_YAML_WITH_PATTERN):
-    """Return a mock for subprocess.run that intercepts git-show / cat-file calls.
+def _build_catfile_protocol_response(
+    specs: list[str],
+    content_map: dict[str, bytes],
+    fake_oid: str = "aabbccdd" * 5,
+) -> bytes:
+    """Build a real ``git cat-file --batch`` protocol response for the given specs.
 
-    The mock returns a CompletedProcess with returncode=0 and stdout set to
-    HEAD YAML content for any git call that fetches HEAD AC blob content.
-    All other subprocess.run calls (e.g. git diff --cached) return returncode=1
-    so that the git enumeration paths short-circuit (we control the file list
-    via env seams).
+    For each spec (e.g. ``HEAD:docs/acceptance-criteria/FIN-001.yaml``):
+    - If the spec is present in content_map: emit ``<oid> blob <size>\\n<content>\\n``.
+    - If the spec is absent from content_map:  emit ``<spec> missing\\n``.
+
+    Sizes are computed from the raw bytes (byte-accurate for multibyte content).
 
     Args:
-        head_yaml_tpl: YAML template for the HEAD blob response;
-            ``{ac_id}`` is substituted from the path in the argv.
+        specs: Ordered list of ``HEAD:<path>`` spec strings, one per requested file.
+        content_map: Mapping of repo-relative path (without ``HEAD:`` prefix) to
+            the exact bytes that should be reported as the blob content.
+        fake_oid: Hex OID string to use in the found-entry header (40 hex chars).
 
     Returns:
-        A callable suitable for use as ``subprocess.run`` mock.
+        Concatenated protocol response as a bytes object.
+    """
+    chunks: list[bytes] = []
+    for spec in specs:
+        rel_path = spec[len("HEAD:"):] if spec.startswith("HEAD:") else spec
+        if rel_path in content_map:
+            content = content_map[rel_path]
+            header = f"{fake_oid} blob {len(content)}\n".encode("utf-8")
+            chunks.append(header + content + b"\n")
+        else:
+            chunks.append(f"{spec} missing\n".encode("utf-8"))
+    return b"".join(chunks)
+
+
+def _make_mock_subprocess_run(head_yaml_tpl: str = _HEAD_AC_YAML_WITH_PATTERN):
+    """Return a mock for subprocess.run that emits real git cat-file --batch protocol.
+
+    The mock detects ``git cat-file --batch`` calls by inspecting the argv, then
+    reads the ``input=`` kwarg (bytes) to discover which ``HEAD:<path>`` specs
+    the hook requested, and returns a binary-protocol response built from a
+    per-path YAML content dict derived from the template.
+
+    All other subprocess.run calls (e.g. ``git diff --cached``) return
+    returncode=1 so that git enumeration paths short-circuit (we control the
+    file list via env seams).
+
+    The response is returned as bytes (``stdout: bytes``), matching the hook's
+    ``text=False`` mode so the production parser is exercised faithfully.
+
+    Args:
+        head_yaml_tpl: YAML template for the HEAD blob content;
+            ``{ac_id}`` is substituted using the stem of each requested path.
+
+    Returns:
+        A callable suitable for use as a ``subprocess.run`` side_effect.
     """
     def _run(args, **kwargs):
         mock_result = MagicMock()
         mock_result.returncode = 0
+        mock_result.stderr = b""
 
-        # Detect a HEAD-content-fetch call.
-        # Current code:  ["git", "-C", root, "show", "HEAD:<rel_path>"]
-        # Fixed code:    ["git", "-C", root, "cat-file", "--batch"]
         argv = list(args) if hasattr(args, "__iter__") else []
-        is_head_fetch = any(
-            (isinstance(a, str) and a.startswith("HEAD:")) for a in argv
-        ) or (
-            "cat-file" in argv and "--batch" in argv
-        )
+        is_catfile_batch = "cat-file" in argv and "--batch" in argv
 
-        if is_head_fetch:
-            # Extract ac_id from the path for template substitution.
-            # For "git show HEAD:docs/.../FIN-001.yaml", the HEAD:... token
-            # contains the ac_id.
-            ac_id = "FIN-XXX"
-            for token in argv:
-                if isinstance(token, str) and token.startswith("HEAD:"):
-                    # e.g. HEAD:docs/acceptance-criteria/FIN-001.yaml
-                    ac_id = Path(token.split("HEAD:", 1)[1]).stem
-                    break
-            mock_result.stdout = head_yaml_tpl.format(ac_id=ac_id)
+        if is_catfile_batch:
+            # Parse the input= kwarg to discover which specs were requested.
+            raw_input = kwargs.get("input", b"")
+            if isinstance(raw_input, str):
+                raw_input = raw_input.encode("utf-8")
+            specs = [
+                line.strip()
+                for line in raw_input.decode("utf-8").splitlines()
+                if line.strip()
+            ]
+
+            # Build per-path content map: derive ac_id from the path stem.
+            content_map: dict[str, bytes] = {}
+            for spec in specs:
+                rel_path = spec[len("HEAD:"):] if spec.startswith("HEAD:") else spec
+                ac_id = Path(rel_path).stem
+                yaml_text = head_yaml_tpl.format(ac_id=ac_id)
+                content_map[rel_path] = yaml_text.encode("utf-8")
+
+            # Emit proper cat-file binary protocol in the same order as specs.
+            mock_result.stdout = _build_catfile_protocol_response(specs, content_map)
         else:
-            # Non-HEAD-fetch git calls (e.g. git diff --cached) → no files.
+            # Non-cat-file git calls (e.g. git diff --cached) → short-circuit.
             mock_result.returncode = 1
-            mock_result.stdout = ""
+            mock_result.stdout = b""
 
-        mock_result.stderr = ""
         return mock_result
 
     return _run
