@@ -537,7 +537,17 @@
             "owns_file_extensions": [
                 ".py"
             ],
-            "produces": "production_code"
+            "produces": "production_code",
+            "doc_links": [
+                {
+                    "path": "docs/architecture/agent_knowledge_plane.md",
+                    "label": "Agent Knowledge Plane"
+                },
+                {
+                    "path": "docs/agents/conventions.md",
+                    "label": "Agent Conventions"
+                }
+            ]
         },
         {
             "id": "test-writer",

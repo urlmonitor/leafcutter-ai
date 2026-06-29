@@ -1,9 +1,10 @@
 ---
 agent_id: ac-validator
 title: "Agent Card: ac-validator"
+description: "Final AC coverage gate. Validates all acceptance criteria are actually covered by the implementation before allowing commit. Reads the ticket ACs, the working diff, and test output, then produces a coverage verdict (ok / blocker / question). Use when: ticket-supervisor dispatches this agent at priority 11 (after pr-reviewer, before commit) to verify that every AC listed in the ticket has concrete evidence of both implementation and test coverage before the commit phase locks the worktree."
 type: card
 status: active
-created: 2026-06-05
+created: 2026-06-29
 card_version: "generated"
 ---
 # ac-validator
@@ -30,8 +31,12 @@ Use when: ticket-supervisor dispatches this agent at priority 11 (after pr-revie
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 3 | ticket_path from ticket-supervisor | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
 ---
 
 ## Spawn and Dependency
@@ -52,7 +57,24 @@ flowchart TD
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_path` | file_path | Absolute path to the ticket markdown file |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `sign_off_comment` | sign_off_comment | Sign-off comment with status: ok | blocker | handoff |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_frontmatter_agents_status` | — | Sets agents.ac-validator to signed_off or failed |
+| `sign_offs_checklist` | — | Checks the ac-validator checkbox with timestamp |
 ---
 
 ## Tools Available
@@ -68,7 +90,7 @@ flowchart TD
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `signoff` | — | — |
+| `signoff` | always | — |
 ---
 
 ## Configuration
@@ -78,4 +100,9 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Conditional Behavior | the section is absent or the list is empty | emit `(status: question)`: | `None` |
+| Conditional Behavior | exit code is non-zero | record each ERROR line as a **store-alignment failure** | `None` |

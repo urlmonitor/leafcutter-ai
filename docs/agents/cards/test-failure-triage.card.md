@@ -1,9 +1,10 @@
 ---
 agent_id: test-failure-triage
 title: "Agent Card: test-failure-triage"
+description: "Classifies post-merge test failures into structured categories before any remediation work begins. Receives a post-merge failure list, a baseline failure list, and the set of files changed by the feature branch, then emits a triage report so downstream finalize-feature.js steps can route each failure to the correct handler without re-running LLM reasoning. (internal — spawned by finalize-feature only)"
 type: card
 status: active
-created: 2026-06-05
+created: 2026-06-29
 card_version: "generated"
 ---
 # test-failure-triage
@@ -29,13 +30,16 @@ each failure to the correct handler without re-running LLM reasoning.
 
 ### Spawned By
 
-- `finalize-feature`
+- `finalize-feature.js`
 ---
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
 ---
 
 ## Spawn and Dependency
@@ -47,16 +51,28 @@ flowchart TD
     classDef utility fill:#f3f4f6,stroke:#4b5563,stroke-width:2px
     classDef target fill:#fee2e2,stroke:#dc2626,stroke-width:3px
 
-    finalize_feature["finalize-feature\n(phase tier)"]:::phase
+    finalize_feature.js["finalize-feature.js\n(phase tier)"]:::phase
     test_failure_triage["test-failure-triage\n(utility tier, priority ?)"]:::target
 
-    finalize_feature -->|dispatches| test_failure_triage
+    finalize_feature.js -->|dispatches| test_failure_triage
 ```
 ---
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `triage_report` | structured_response | Output field: triage_report |
+| `test_id` | structured_response | Output field: test_id |
+| `test_file` | structured_response | Output field: test_file |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `none` | — | Read-only agent — no filesystem mutations |
 ---
 
 ## Tools Available
@@ -79,4 +95,9 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Conditional Behavior | absent or `# covers: UNKNOWN` | set `covers_tag` to `null` | `None` |
+| Conditional Behavior | the file does not exist | log a warning and | `None` |

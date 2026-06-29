@@ -1,9 +1,10 @@
 ---
 agent_id: workflow-architect
 title: "Agent Card: workflow-architect"
+description: "Meta-agent that owns the leafcutter package surface area. Manages the agent registry, hook registry, skill registry, and build pipeline. Invokes four skills to extend the package: create-hook (new pre-commit hook),  add-agent-to-package (promote a project-local agent),  add-skill-to-package (promote a project-local skill), and  package-audit (surface package gap analysis). Use when adding new tooling  to the leafcutter package or auditing package boundary drift."
 type: card
 status: active
-created: 2026-06-05
+created: 2026-06-29
 card_version: "generated"
 ---
 # workflow-architect
@@ -35,8 +36,12 @@ to the leafcutter package or auditing package boundary drift.**
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
+| 8 | [PROJECT_CONTEXT.md](../../../templates/skills/signoff/PROJECT_CONTEXT.md) | — | — |
 ---
 
 ## Spawn and Dependency
@@ -57,7 +62,17 @@ flowchart TD
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `completion_report` | structured_response | Structured completion payload or sign-off comment |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `none` | — | Read-only agent — no filesystem mutations |
 ---
 
 ## Tools Available
@@ -75,10 +90,7 @@ flowchart TD
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `create-hook` | — | — |
-| `add-agent-to-package` | — | — |
-| `add-skill-to-package` | — | — |
-| `package-audit` | — | — |
+| `package-audit` | conditional | — |
 ---
 
 ## Configuration
@@ -88,4 +100,11 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Delegation to create-hook | task requiring create-hook capabilities | Delegates to create-hook via Agent tool | `create-hook` |
+| Delegation to add-agent-to-package | task requiring add-agent-to-package capabilities | Delegates to add-agent-to-package via Agent tool | `add-agent-to-package` |
+| Delegation to add-skill-to-package | task requiring add-skill-to-package capabilities | Delegates to add-skill-to-package via Agent tool | `add-skill-to-package` |
+| Conditional Behavior | a new project adopts a portable agent | it provides project-specific knowledge via a | `None` |

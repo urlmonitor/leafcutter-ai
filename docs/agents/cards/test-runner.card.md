@@ -1,10 +1,10 @@
 ---
 agent_id: test-runner
 title: "Agent Card: test-runner"
-description: Test execution agent that picks the right test suite based on what changed and returns a structured failure report.
+description: "Picks the right test suite based on what has changed, runs it, and returns a structured failure report (file, test name, stacktrace excerpt, rerun command) instead of a raw stdout dump. Use when: user types /test; asks \"run the tests\"; asks \"did I break anything?\"; asks \"run the SQL tests\"; or any implementation agent (python-coder, sql-coder) invokes this agent for its inner-loop test cycle."
 type: card
 status: active
-created: 2026-06-05
+created: 2026-06-29
 card_version: "generated"
 ---
 # test-runner
@@ -32,13 +32,19 @@ invokes this agent for its inner-loop test cycle.**
 
 - `ticket-supervisor`
 - `test-writer`
-- `finalize-feature`
+- `finalize-feature.js`
 ---
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 3 | ticket_path from ticket-supervisor | — | — |
+| 4 | pre-flight file reads | — | — |
+| 5 | skills_config.json config_keys | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
 ---
 
 ## Spawn and Dependency
@@ -52,18 +58,35 @@ flowchart TD
 
     ticket_supervisor["ticket-supervisor\n(supervisor tier)"]:::supervisor
     test_writer["test-writer\n(phase tier)"]:::phase
-    finalize_feature["finalize-feature\n(phase tier)"]:::phase
+    finalize_feature.js["finalize-feature.js\n(phase tier)"]:::phase
     test_runner["test-runner\n(phase tier, priority 9)"]:::target
 
     ticket_supervisor -->|dispatches| test_runner
     test_writer -->|dispatches| test_runner
-    finalize_feature -->|dispatches| test_runner
+    finalize_feature.js -->|dispatches| test_runner
 ```
 ---
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_path` | file_path | Absolute path to the ticket markdown file |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `sign_off_comment` | sign_off_comment | Sign-off comment with status: ok | blocker | handoff |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_frontmatter_agents_status` | — | Sets agents.test-runner to signed_off or failed |
+| `sign_offs_checklist` | — | Checks the test-runner checkbox with timestamp |
 ---
 
 ## Tools Available
@@ -78,7 +101,7 @@ flowchart TD
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `signoff` | — | — |
+| `signoff` | always | — |
 ---
 
 ## Configuration
@@ -91,4 +114,9 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Conditional Behavior | invoked by `ticket-supervisor` | first check `git diff --name-only HEAD` | `None` |
+| Conditional Behavior | the user does not specify an action | default to `auto` | `None` |

@@ -1,10 +1,10 @@
 ---
 agent_id: python-coder
 title: "Agent Card: python-coder"
-description: Standards-enforcing Python implementation agent that writes, edits, and refactors Python code.
+description: "Standards-enforcing Python implementation agent. Writes, edits, and refactors Python code while automatically pulling in project conventions and running doc-enforcer + complexity-reduction before declaring the task done. Use when: user asks to implement a ticket in Python; says \"write the code for X\"; asks to refactor or extend a Python module; or any task that produces edited or new Python files (excluding .sql files — defer those to sql-coder)."
 type: card
 status: active
-created: 2026-06-05
+created: 2026-06-29
 card_version: "generated"
 ---
 # python-coder
@@ -38,11 +38,11 @@ new Python files (excluding .sql files — defer those to sql-coder).**
 
 | Channel | Source | Injection Mode | Description |
 |---------|--------|----------------|-------------|
-| 1 | Root CLAUDE.md | always | Project instructions, error handling policy, shell conventions |
-| 2 | Per-folder README.md | on-demand | Module-level context when cwd overlaps edited module folder |
-| 5 | signoff SKILL.md; doc-enforcer SKILL.md; complexity-reduction; collector-enforcer | on-demand | Sign-off protocol, docstring enforcement, complexity scoring, collector pattern enforcement |
+| 1 | [Root CLAUDE.md](../../../CLAUDE.md) | always | Project instructions, error handling policy, shell conventions |
+| 2 | [Per-folder README.md](../../../README.md) | on-demand | Module-level context when cwd overlaps edited module folder |
+| 5 | [signoff SKILL.md](../../../templates/skills/signoff/SKILL.md); [doc-enforcer SKILL.md](../../../templates/skills/doc-enforcer/SKILL.md); complexity-reduction; collector-enforcer | on-demand | Sign-off protocol, docstring enforcement, complexity scoring, collector pattern enforcement |
 | 6 | Agent frontmatter | spawn-scoped | Model: sonnet, tools: Bash/Read/Edit/Write/Agent, signoff: true, config_keys, portable: true |
-| 7 | skills_config.json + settings.json | spawn-scoped | test_command, collector_enforcer_paths, file_size_limit_py |
+| 7 | [skills_config.json + settings.json](../../../templates/settings.json) | spawn-scoped | test_command, collector_enforcer_paths, file_size_limit_py |
 | 8 | Ticket frontmatter | ticket-scoped | Agents map, files_touched, depends_on, ACs, Agent Contracts section |
 | 9 | Auto-memory (memory/*.md) | always | Persistent cross-session learnings |
 | 10 | MCP server prompts + tool descriptions | always | Available tool surface and usage guidance |
@@ -119,8 +119,7 @@ flowchart TD
 |-------|------|-----------|
 | `signoff` | always | — |
 | `doc-enforcer` | always | — |
-| `complexity-reduction` | conditional | when flagged functions exceed complexity threshold |
-| `collector-enforcer` | conditional | when paths under collector/ are edited |
+| `run-tests` | always | — |
 ---
 
 ## Configuration
@@ -147,3 +146,9 @@ flowchart TD
 | Test Delegation | Implementation requires new or updated unit tests | Adds tasks to ### test-writer section and uses (status: handoff) instead of (status: ok) | `test-writer` |
 | File-Size Limit | New .py file would exceed {{config.file_size_limit_py}} lines | Plans module splits upfront using build_phases.py / build_helpers.py precedent | `None` |
 | Research Delegation | Any cross-file or symbol-level question arises during implementation | Delegates to research-agent via Agent tool; never guesses or searches directly | `research-agent` |
+---
+
+## References
+
+- [Agent Knowledge Plane](../../architecture/agent_knowledge_plane.md)
+- [Agent Conventions](../conventions.md)

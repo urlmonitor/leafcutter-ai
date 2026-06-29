@@ -1,9 +1,10 @@
 ---
 agent_id: research-agent
 title: "Agent Card: research-agent"
+description: "Central context-gathering hub. Accepts a structured question from a parent agent, searches the codebase or documentation using the full search toolkit, and returns curated findings: file paths with 1-3 line descriptions each, plus a synthesis paragraph. Owns Grep, Glob, jcodemunch, serena, and context7 — no other coding agent carries these tools. (internal — invoked by parent agents only)"
 type: card
 status: active
-created: 2026-06-05
+created: 2026-06-29
 card_version: "generated"
 ---
 # research-agent
@@ -31,7 +32,6 @@ other coding agent carries these tools.
 
 - `architect-review`
 - `business-analyst`
-- `business-analyst-v3`
 - `python-coder`
 - `documentation-expert`
 - `reference-author`
@@ -45,15 +45,18 @@ other coding agent carries these tools.
 - `sql-index-creator`
 - `sql-view-creator`
 - `test-writer`
-- `product-owner`
 - `frontend-coder`
 - `llm-expert`
 ---
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 3 | ticket_path from ticket-supervisor | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
 ---
 
 ## Spawn and Dependency
@@ -80,7 +83,6 @@ flowchart TD
     sql_index_creator["sql-index-creator\n(phase tier)"]:::phase
     sql_view_creator["sql-view-creator\n(phase tier)"]:::phase
     test_writer["test-writer\n(phase tier)"]:::phase
-    product_owner["product-owner\n(phase tier)"]:::phase
     frontend_coder["frontend-coder\n(phase tier)"]:::phase
     llm_expert["llm-expert\n(phase tier)"]:::phase
     research_agent["research-agent\n(utility tier, priority ?)"]:::target
@@ -100,7 +102,6 @@ flowchart TD
     sql_index_creator -->|dispatches| research_agent
     sql_view_creator -->|dispatches| research_agent
     test_writer -->|dispatches| research_agent
-    product_owner -->|dispatches| research_agent
     frontend_coder -->|dispatches| research_agent
     llm_expert -->|dispatches| research_agent
 ```
@@ -108,7 +109,24 @@ flowchart TD
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_path` | file_path | Absolute path to the ticket markdown file |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `sign_off_comment` | sign_off_comment | Sign-off comment with status: ok | blocker | handoff |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_frontmatter_agents_status` | — | Sets agents.research-agent to signed_off or failed |
+| `sign_offs_checklist` | — | Checks the research-agent checkbox with timestamp |
 ---
 
 ## Tools Available
@@ -143,7 +161,9 @@ flowchart TD
 
 ## Skills Used
 
-*No skills declared.*
+| Skill | Mode | Condition |
+|-------|------|-----------|
+| `signoff` | always | — |
 ---
 
 ## Configuration
@@ -153,4 +173,9 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Conditional Behavior | a search returns more than 10 files | group by directory and summarise the | `None` |
+| Conditional Behavior | a question requires multiple independent sub-searches | run them sequentially within this invocation | `None` |

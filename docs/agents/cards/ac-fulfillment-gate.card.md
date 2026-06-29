@@ -1,9 +1,10 @@
 ---
 agent_id: ac-fulfillment-gate
 title: "Agent Card: ac-fulfillment-gate"
+description: "AC fulfillment gate. Runs at priority 11.7 (after ac-validator at 11.5, before commit at 12). Verifies AC YAML store fields (work_status, implemented_by, covered_by) are accurate and up-to-date before any commit is made. When verification fails but diff evidence exists, auto-fixes the YAML store fields (append-only, idempotent). Returns status: ok if all ACs pass or ac_traceability is absent; status: blocker with per-AC details if any AC fails after auto-fix attempt. Use when: ticket-supervisor dispatches at priority 11.7 for any ticket that has ac_traceability frontmatter referencing L2/L3 AC YAML files. Skips silently for L0/L1 ACs (composite — fulfillment derived from children)."
 type: card
 status: active
-created: 2026-06-05
+created: 2026-06-29
 card_version: "generated"
 ---
 # ac-fulfillment-gate
@@ -29,8 +30,12 @@ card_version: "generated"
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 3 | ticket_path from ticket-supervisor | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
 ---
 
 ## Spawn and Dependency
@@ -51,7 +56,24 @@ flowchart TD
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_path` | file_path | Absolute path to the ticket markdown file |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `sign_off_comment` | sign_off_comment | Sign-off comment with status: ok | blocker | handoff |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_frontmatter_agents_status` | — | Sets agents.ac-fulfillment-gate to signed_off or failed |
+| `sign_offs_checklist` | — | Checks the ac-fulfillment-gate checkbox with timestamp |
 ---
 
 ## Tools Available
@@ -67,7 +89,7 @@ flowchart TD
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `signoff` | — | — |
+| `signoff` | always | — |
 ---
 
 ## Configuration
@@ -77,4 +99,9 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Conditional Behavior | the file is absent | treat as L2/L3 (check it) | `None` |
+| Conditional Behavior | `level` equals `L0` or `L1` | skip this AC entirely | `None` |

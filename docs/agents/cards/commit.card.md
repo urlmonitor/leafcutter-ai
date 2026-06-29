@@ -1,9 +1,10 @@
 ---
 agent_id: commit
 title: "Agent Card: commit"
+description: "Confirmation-gated commit agent. Shows the planned commit message and file list before issuing git commit. On pre-commit hook failure, invokes the precommit-autofix skill (Haiku for mechanical fixes, Sonnet for structural) and retries once. Refuses --no-verify and force-push absent explicit user authorisation per the Git Safety Protocol. Use when: user types /commit; asks to commit staged changes; asks to commit with a specific message."
 type: card
 status: active
-created: 2026-06-05
+created: 2026-06-29
 card_version: "generated"
 ---
 # commit
@@ -35,8 +36,13 @@ with a specific message.**
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 3 | ticket_path from ticket-supervisor | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
+| 9 | agent memory store | — | — |
 ---
 
 ## Spawn and Dependency
@@ -57,7 +63,25 @@ flowchart TD
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_path` | file_path | Absolute path to the ticket markdown file |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `sign_off_comment` | sign_off_comment | Sign-off comment with status: ok | blocker | handoff |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_frontmatter_agents_status` | — | Sets agents.commit to signed_off or failed |
+| `sign_offs_checklist` | — | Checks the commit checkbox with timestamp |
+| `implementation_artifacts` | — | Files created or modified during phase execution |
 ---
 
 ## Tools Available
@@ -75,7 +99,8 @@ flowchart TD
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `signoff` | — | — |
+| `signoff` | conditional | — |
+| `precommit-autofix` | always | — |
 ---
 
 ## Configuration
@@ -85,4 +110,9 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Conditional Behavior | nothing is staged | ask the user what to stage | `None` |
+| Conditional Behavior | you stage Python | SQL, or YAML files that contain a `DECISION HISTORY` | `None` |

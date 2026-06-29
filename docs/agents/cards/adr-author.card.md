@@ -1,9 +1,10 @@
 ---
 agent_id: adr-author
 title: "Agent Card: adr-author"
+description: "Authors a new Architecture Decision Record under docs/architecture/. Loads docs/how-to/documentation/write-adr.md at runtime and lists docs/architecture/ to pick the next free ADR number before writing. Produces a correctly-numbered, correctly-templated ADR with all required sections: Status, Context, Decision, Consequences, Alternatives (internal — invoked by documentation-expert only)."
 type: card
 status: active
-created: 2026-06-05
+created: 2026-06-29
 card_version: "generated"
 ---
 # adr-author
@@ -35,8 +36,13 @@ sections: Status, Context, Decision, Consequences, Alternatives
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 3 | ticket_path from ticket-supervisor | — | — |
+| 4 | pre-flight file reads | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
 ---
 
 ## Spawn and Dependency
@@ -59,7 +65,25 @@ flowchart TD
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_path` | file_path | Absolute path to the ticket markdown file |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `sign_off_comment` | sign_off_comment | Sign-off comment with status: ok | blocker | handoff |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_frontmatter_agents_status` | — | Sets agents.adr-author to signed_off or failed |
+| `sign_offs_checklist` | — | Checks the adr-author checkbox with timestamp |
+| `implementation_artifacts` | — | Files created or modified during phase execution |
 ---
 
 ## Tools Available
@@ -75,7 +99,10 @@ flowchart TD
 
 ## Skills Used
 
-*No skills declared.*
+| Skill | Mode | Condition |
+|-------|------|-----------|
+| `signoff` | always | — |
+| `doc-enforcer` | always | — |
 ---
 
 ## Configuration
@@ -85,4 +112,9 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Conditional Behavior | choosing `components:` values for the ADR frontmatter | **only pick IDs | `None` |
+| Conditional Behavior | uncertain which component applies | pick the closest | `None` |

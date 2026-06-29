@@ -1,9 +1,10 @@
 ---
 agent_id: sql-query
 title: "Agent Card: sql-query"
+description: "Ad-hoc SQL query authoring specialist. Reads PROJECT_CONTEXT.md for project- specific database conventions, past-queries folder, and connection details. Invokes the sql-query-past-queries skill to surface reusable prior queries. Returns reviewed, runnable SQL for human approval before any execution. Use when: user needs to write or refine a query for analysis, debugging, or reporting; does NOT create SQL schema objects (use sql-coder for that)."
 type: card
 status: active
-created: 2026-06-05
+created: 2026-06-29
 card_version: "generated"
 ---
 # sql-query
@@ -35,8 +36,13 @@ reporting; does NOT create SQL schema objects (use sql-coder for that).**
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 4 | pre-flight file reads | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
+| 8 | [PROJECT_CONTEXT.md](../../../templates/skills/signoff/PROJECT_CONTEXT.md) | — | — |
 ---
 
 ## Spawn and Dependency
@@ -61,7 +67,17 @@ flowchart TD
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `completion_report` | structured_response | Structured completion payload or sign-off comment |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `none` | — | Read-only agent — no filesystem mutations |
 ---
 
 ## Tools Available
@@ -79,8 +95,8 @@ flowchart TD
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `signoff` | — | — |
-| `sql-query-past-queries` | — | — |
+| `sql-query-past-queries` | always | — |
+| `signoff` | conditional | — |
 ---
 
 ## Configuration
@@ -90,4 +106,9 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Conditional Behavior | the file is absent | log one debug line: | `None` |
+| Conditional Behavior | any of these are ambiguous | ask before writing | `None` |

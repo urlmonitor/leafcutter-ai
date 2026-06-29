@@ -12,13 +12,16 @@ ARCHITECTURE: Single public entry point `generate_card()` returns a complete
     card section) encapsulate the rendering logic for each block. A top-level
     `build_agent_cards()` function drives the full-tree pass for `build.py`.
     YAML frontmatter is parsed with `yaml.safe_load()`. All file I/O is
-    wrapped in `try/except OSError`.
+    wrapped in `try/except OSError`. Hyperlink helpers convert doc_links and
+    knowledge_channel sources that resolve to real files into relative Markdown
+    links from the card output path.
 """
 
 from __future__ import annotations
 
 import json
 import logging
+import os
 import textwrap
 from datetime import date
 from pathlib import Path
@@ -31,6 +34,13 @@ _log = logging.getLogger(__name__)
 _PACKAGE_ROOT = Path(__file__).resolve().parent.parent
 _TEMPLATES_DIR = _PACKAGE_ROOT / "templates"
 _REGISTRY_PATH = _PACKAGE_ROOT / "config" / "agent_registry.json"
+
+# File extensions and path patterns considered "file-like" sources in
+# knowledge_channels.  A source string matching any of these is a candidate
+# for hyperlink conversion when the file exists on disk.
+_FILE_EXTENSIONS = frozenset(
+    {".md", ".py", ".yaml", ".yml", ".json", ".sh", ".toml", ".txt"}
+)
 
 
 # ---------------------------------------------------------------------------
@@ -85,6 +95,104 @@ def _parse_frontmatter(template_text: str) -> dict[str, Any]:
     return parsed or {}
 
 
+def make_relative_link(
+    from_path: Path,
+    to_path: Path,
+    label: str,
+) -> str:
+    """Return a Markdown hyperlink from *from_path* to *to_path* with *label*.
+
+    Computes a POSIX-style relative path from the directory containing
+    *from_path* to *to_path*.  Both paths should be absolute.
+
+    Args:
+        from_path: Absolute path of the card file that will contain the link.
+        to_path: Absolute path of the target document.
+        label: Human-readable link label.
+
+    Returns:
+        Markdown link string ``[label](relative_path)``.
+    """
+    rel = os.path.relpath(to_path, from_path.parent)
+    # Normalise path separators to POSIX forward-slashes for Markdown.
+    rel_posix = Path(rel).as_posix()
+    return f"[{label}]({rel_posix})"
+
+
+def _resolve_source_to_path(
+    source: str,
+    package_root: Path,
+) -> Path | None:
+    """Attempt to resolve a knowledge-channel source string to a real file.
+
+    Tries the following strategies in order and returns the first match:
+
+    1. Treat *source* as a path relative to *package_root*.
+    2. When the source token has a directory-hinting prefix word (e.g.
+       ``"signoff SKILL.md"``), look for a file at
+       ``<any-dir-containing-prefix-word>/<filename>`` within the package tree.
+    3. Walk the package tree looking for any file whose name matches the
+       filename component of *source* (shallow search — only 4 levels deep).
+
+    Args:
+        source: Raw source string from a knowledge_channels entry, e.g.
+            ``"Root CLAUDE.md"`` or ``"signoff SKILL.md"``.
+        package_root: Absolute path to the package root (repo root).
+
+    Returns:
+        Resolved :class:`~pathlib.Path` if found on disk, else ``None``.
+    """
+    # Strategy 1: direct relative path.
+    candidate = package_root / source
+    if candidate.exists():
+        return candidate
+
+    # Extract filename token (last word that carries a known extension).
+    tokens = source.split()
+    filename: str | None = None
+    filename_idx: int = -1
+    for i, token in reversed(list(enumerate(tokens))):
+        if Path(token).suffix in _FILE_EXTENSIONS:
+            filename = token
+            filename_idx = i
+            break
+
+    if filename is None:
+        return None
+
+    # Strategy 2: directory-hint match.  When there is a word before the
+    # filename token, treat that word as a hint for the parent directory name.
+    if filename_idx > 0:
+        hint = tokens[filename_idx - 1].lower()
+        for root_dir, _dirs, files in os.walk(package_root):
+            root_path = Path(root_dir)
+            try:
+                rel_depth = len(root_path.relative_to(package_root).parts)
+            except ValueError:
+                continue
+            if rel_depth > 5:
+                _dirs.clear()
+                continue
+            # Parent directory name must contain the hint word.
+            if hint in root_path.name.lower() and filename in files:
+                return root_path / filename
+
+    # Strategy 3: filename-only match (first encountered, up to 4 levels deep).
+    for root_dir, _dirs, files in os.walk(package_root):
+        root_path = Path(root_dir)
+        try:
+            rel_depth = len(root_path.relative_to(package_root).parts)
+        except ValueError:
+            continue
+        if rel_depth > 4:
+            _dirs.clear()  # prune deeper subtrees
+            continue
+        if filename in files:
+            return root_path / filename
+
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Section-rendering helpers
 # ---------------------------------------------------------------------------
@@ -120,13 +228,27 @@ def render_when_to_use(registry_entry: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def render_knowledge_flow(registry_entry: dict[str, Any]) -> str:
+def render_knowledge_flow(
+    registry_entry: dict[str, Any],
+    card_path: Path | None = None,
+    package_root: Path | None = None,
+) -> str:
     """Render the '## Knowledge Flow' card section.
 
     Builds a table from the ``knowledge_channels`` array in the registry entry.
+    When *card_path* and *package_root* are supplied, source strings that
+    resolve to concrete file paths on disk are rendered as relative Markdown
+    hyperlinks instead of bare strings.
+
+    A source may name several files separated by ``; `` — each token is
+    converted independently and the results are joined with ``; ``.
 
     Args:
         registry_entry: Registry entry dict for the agent.
+        card_path: Absolute path of the card file being written.  Used to
+            compute relative links.  May be ``None`` (disables hyperlinks).
+        package_root: Absolute path to the package root.  May be ``None``
+            (disables hyperlinks).
 
     Returns:
         Markdown string for the Knowledge Flow section.
@@ -134,6 +256,8 @@ def render_knowledge_flow(registry_entry: dict[str, Any]) -> str:
     channels = registry_entry.get("knowledge_channels", [])
     if not channels:
         return "## Knowledge Flow\n\n*No knowledge channels declared.*\n\n"
+
+    hyperlinks_enabled = card_path is not None and package_root is not None
 
     lines: list[str] = [
         "## Knowledge Flow",
@@ -143,12 +267,50 @@ def render_knowledge_flow(registry_entry: dict[str, Any]) -> str:
     ]
     for ch in channels:
         num = ch.get("channel", "—")
-        source = ch.get("source", "—")
+        raw_source = ch.get("source", "—")
         mode = ch.get("injection_mode", "—")
         desc = ch.get("description", "—")
+
+        if hyperlinks_enabled and raw_source != "—":
+            source = _linkify_source(raw_source, card_path, package_root)
+        else:
+            source = raw_source
+
         lines.append(f"| {num} | {source} | {mode} | {desc} |")
     lines.append("")
     return "\n".join(lines)
+
+
+def _linkify_source(
+    raw_source: str,
+    card_path: Path,
+    package_root: Path,
+) -> str:
+    """Convert file-path tokens within *raw_source* to Markdown hyperlinks.
+
+    Splits *raw_source* on ``; `` to handle multi-file source strings.  For
+    each token, attempts to resolve it to a real file on disk; if successful,
+    wraps it as ``[token](relative_path)``.  Tokens that do not resolve are
+    left as-is.
+
+    Args:
+        raw_source: Source string from a knowledge_channels entry.
+        card_path: Absolute path of the card file (link origin).
+        package_root: Absolute path to the package root (search base).
+
+    Returns:
+        Source string with file-path tokens replaced by Markdown links.
+    """
+    parts = [t.strip() for t in raw_source.split(";")]
+    result_parts: list[str] = []
+    for part in parts:
+        resolved = _resolve_source_to_path(part, package_root)
+        if resolved is not None:
+            label = part
+            result_parts.append(make_relative_link(card_path, resolved, label))
+        else:
+            result_parts.append(part)
+    return "; ".join(result_parts)
 
 
 def render_spawn_diagram(registry_entry: dict[str, Any]) -> str:
@@ -391,6 +553,62 @@ def render_behavioral_patterns(template_frontmatter: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def render_references(
+    registry_entry: dict[str, Any],
+    card_path: Path | None = None,
+    package_root: Path | None = None,
+) -> str:
+    """Render the '## References' card section from ``doc_links`` entries.
+
+    Each entry in the ``doc_links`` list becomes a relative Markdown hyperlink
+    pointing from the card's location to the referenced document.  If the
+    referenced file does not exist on disk, the path is rendered as a code
+    span (no hyperlink) so the card remains valid Markdown even for files that
+    have not yet been created.
+
+    Args:
+        registry_entry: Registry entry dict for the agent.
+        card_path: Absolute path of the card file being written.  Used to
+            compute relative links.  May be ``None`` (disables hyperlinks).
+        package_root: Absolute path to the package root.  May be ``None``
+            (disables hyperlinks).
+
+    Returns:
+        Markdown string for the References section, or empty string when
+        ``doc_links`` is absent or empty.
+    """
+    doc_links = registry_entry.get("doc_links", [])
+    if not doc_links:
+        return ""
+
+    hyperlinks_enabled = card_path is not None and package_root is not None
+
+    lines: list[str] = ["## References", ""]
+    for entry in doc_links:
+        if isinstance(entry, dict):
+            path_str: str = entry.get("path", "")
+            label: str = entry.get("label", path_str)
+        else:
+            path_str = str(entry)
+            label = path_str
+
+        if not path_str:
+            continue
+
+        if hyperlinks_enabled:
+            target = package_root / path_str
+            if target.exists():
+                link = make_relative_link(card_path, target, label)
+                lines.append(f"- {link}")
+                continue
+
+        # File not on disk or hyperlinks disabled: render as code span.
+        lines.append(f"- `{path_str}`")
+
+    lines.append("")
+    return "\n".join(lines)
+
+
 def render_tools(template_frontmatter: dict[str, Any]) -> str:
     """Render the '## Tools Available' card section.
 
@@ -425,6 +643,8 @@ def generate_card(
     agent_id: str,
     template_frontmatter: dict[str, Any],
     registry_entry: dict[str, Any],
+    card_path: Path | None = None,
+    package_root: Path | None = None,
 ) -> str:
     """Generate a complete .card.md string for one agent.
 
@@ -433,12 +653,22 @@ def generate_card(
     handles absent fields gracefully (missing key → omit section or render
     placeholder). No KeyError is raised for pre-Ticket-5 agents.
 
+    When *card_path* and *package_root* are supplied, ``doc_links`` entries are
+    rendered as relative Markdown hyperlinks in a "## References" section, and
+    knowledge_channel source strings that resolve to real files on disk are
+    also rendered as hyperlinks in the Knowledge Flow table.
+
     Args:
         agent_id: Canonical agent identifier (e.g. ``"python-coder"``).
         template_frontmatter: Parsed frontmatter dict from the agent's
             template markdown file.
         registry_entry: Registry entry dict for the agent (from
             ``config/agent_registry.json``).
+        card_path: Absolute path of the card output file.  Used to compute
+            relative hyperlinks.  ``None`` disables link generation.
+        package_root: Absolute path to the package root (repo root).  Used to
+            resolve file paths when generating hyperlinks.  ``None`` disables
+            link generation.
 
     Returns:
         Complete card markdown string, starting with YAML frontmatter.
@@ -484,11 +714,14 @@ def generate_card(
         "\n---\n\n"
     )
 
+    # Render optional References section (non-empty only).
+    references_section = render_references(registry_entry, card_path, package_root)
+
     # Render all sections
-    sections = [
+    sections: list[str] = [
         render_when_to_use(registry_entry),
         "---\n\n",
-        render_knowledge_flow(registry_entry),
+        render_knowledge_flow(registry_entry, card_path, package_root),
         "---\n\n",
         render_spawn_diagram(registry_entry),
         "---\n\n",
@@ -502,6 +735,9 @@ def generate_card(
         "---\n\n",
         render_behavioral_patterns(template_frontmatter),
     ]
+
+    if references_section:
+        sections += ["---\n\n", references_section]
 
     return card_fm + title_block + summary_table + "".join(sections)
 
@@ -568,13 +804,19 @@ def build_agent_cards(
 
         registry_entry = registry_map.get(agent_id, {"id": agent_id})
 
+        card_path = cards_dir / f"{agent_id}.card.md"
+
         try:
-            card_content = generate_card(agent_id, fm, registry_entry)
+            card_content = generate_card(
+                agent_id,
+                fm,
+                registry_entry,
+                card_path=card_path,
+                package_root=target_root,
+            )
         except Exception as exc:  # noqa: BLE001
             _log.warning("Card generation failed for %s: %s", agent_id, exc)
             continue
-
-        card_path = cards_dir / f"{agent_id}.card.md"
 
         if dry_run:
             print(f"  [DRY-RUN] would write docs/agents/cards/{agent_id}.card.md")
@@ -614,4 +856,14 @@ def build_agent_cards(
 #   with compare-before-write guard to skip byte-identical files.
 #   Output path: docs/agents/cards/<agent-id>.card.md.
 #   (#EPIC-SelfDescribingAgents/02)
+#
+# - 2026-06-29 [python-coder/EPIC-SelfDescribingAgentsCorrections/08]:
+#   Added hyperlink generation (INF-600b-1). Three new helpers:
+#   make_relative_link(), _resolve_source_to_path(), _linkify_source().
+#   render_knowledge_flow() now accepts card_path + package_root and
+#   converts resolvable source strings to relative Markdown links.
+#   render_references() renders doc_links as a ## References section.
+#   generate_card() and build_agent_cards() updated to pass card_path
+#   and package_root through the render pipeline.
+#   (#EPIC-SelfDescribingAgentsCorrections/08)
 # ====================================================================

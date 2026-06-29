@@ -1,10 +1,10 @@
 ---
 agent_id: documentation-expert
 title: "Agent Card: documentation-expert"
-description: "Diataxis-routing documentation orchestrator that classifies doc requests by intent and dispatches to specialist sub-agents."
+description: "Diataxis-routing documentation orchestrator. Classifies a \"write or update a doc\" request by intent (do / decide-record / design / look up / understand), dispatches to the matching specialist sub-agent (how-to-author, adr-author, architecture-author, reference-author, explanation-author), and returns a unified payload listing every doc file produced. Use when: user says \"write a doc for X\"; \"document this feature\"; \"add a how-to for Y\"; \"write an ADR for Z\"; \"update the reference for W\"; \"explain why V works this way\"; or asks to \"document this end-to-end\". Auto-triggers on any request whose primary verb is \"document\", \"write a doc\", \"update a doc\", or \"add documentation\"."
 type: card
 status: active
-created: 2026-06-05
+created: 2026-06-29
 card_version: "generated"
 ---
 # documentation-expert
@@ -39,8 +39,13 @@ Auto-triggers on any request whose primary verb is "document", "write a doc",
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 3 | ticket_path from ticket-supervisor | — | — |
+| 4 | pre-flight file reads | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
 ---
 
 ## Spawn and Dependency
@@ -75,7 +80,25 @@ flowchart TD
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_path` | file_path | Absolute path to the ticket markdown file |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `sign_off_comment` | sign_off_comment | Sign-off comment with status: ok | blocker | handoff |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_frontmatter_agents_status` | — | Sets agents.documentation-expert to signed_off or failed |
+| `sign_offs_checklist` | — | Checks the documentation-expert checkbox with timestamp |
+| `implementation_artifacts` | — | Files created or modified during phase execution |
 ---
 
 ## Tools Available
@@ -95,7 +118,7 @@ flowchart TD
 |-------|------|-----------|
 | `route-knowledge` | conditional | — |
 | `signoff` | conditional | — |
-| `direct-write` | conditional | Glossary coverage lint — agent writes directly to docs/glossary.md and docs/glossary_blacklist.md for simple glossary updates, without spawning a specialist |
+| `direct-write` | conditional | glossary coverage lint — agent writes directly to docs/glossary.md and docs/glossary_blacklist.md for simple glossary updates, without spawning a specialist |
 ---
 
 ## Configuration
@@ -103,16 +126,13 @@ flowchart TD
 *No configuration keys declared.*
 ---
 
-## Behavioral Patterns
-
-| Pattern | Trigger | Action | Decision Boundary |
-|---------|---------|--------|-------------------|
-| `delegate-to-specialist` | Request requires a full diataxis-typed document (how-to guide, ADR, C4 diagram, explanation, or reference page), OR the guide exceeds ~5 implementation steps, OR user explicitly names a doc type | Classify intent → dispatch matching specialist via Agent tool | Delegates when: output is a standalone doc requiring diataxis structure; guide > 5 steps; ADR-level record needed; C4 diagram requested |
-| `direct-write` | Simple inline update to an existing doc — add a paragraph, fix a table row, append a short note — AND no new diataxis-structured document is required | Write or edit the file directly using Read/Edit/Write tools; no specialist spawned | Handles directly when: targeting an existing file; no genre routing needed; single-file patch of low structural complexity |
-| `glossary-coverage-lint` | Novel project terms detected in any written output | Spawn `glossary-triage` to classify candidate terms | Always runs post-write as a conditional delegation |
-
----
-
 ## Contributor Notes
 
-This agent has two execution paths: **delegation** (complex docs → specialist sub-agents) and **direct-write** (simple inline edits → own tools). The `spawn_allowlist` lists all specialists that may be delegated to for complex cases. The `behavioral_patterns` table above defines the decision boundary between the two paths.
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Delegation to glossary-triage | task requiring glossary-triage capabilities | Delegates to glossary-triage via Agent tool | `glossary-triage` |
+| Delegation to documentation-expert | task requiring documentation-expert capabilities | Delegates to documentation-expert via Agent tool | `documentation-expert` |
+| Conditional Behavior | intent is genuinely ambiguous between two types | ask one clarifying | `None` |
+| Conditional Behavior | dispatching more than one specialist in a single run | always use this | `None` |

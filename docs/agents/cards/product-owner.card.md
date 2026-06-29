@@ -1,35 +1,34 @@
 ---
-agent_id: sql-table-creator
-title: "Agent Card: sql-table-creator"
-description: "Creates all artifacts required to introduce a new database table: ORM model, migration, model registry, idempotent schema SQL, component registration, and per-table doc. Reads PROJECT_CONTEXT.md for project-specific how-to paths and conventions before writing any file. (internal — invoked by sql-coder only)"
+agent_id: product-owner
+title: "Agent Card: product-owner"
+description: "Product Owner agent for the AC pipeline. Operates at the L0/L1 flight level: translates user requests into customer value propositions (L0) and feature benefit statements (L1). Speaks customer language, never engineering jargon. Owns the \"what\" and \"why\" — never the \"how.\"  Use when: a user describes a product need, a feature idea, or a strategic goal. The PO runs before the BA, framing the request in benefit language so the BA can decompose L1s into testable L2/L3 Gherkin behaviors."
 type: card
 status: active
 created: 2026-06-29
 card_version: "generated"
 ---
-# sql-table-creator
+# product-owner
 
-**Creates all artifacts required to introduce a new database table: ORM model,
-migration, model registry, idempotent schema SQL, component registration, and
-per-table doc. Reads PROJECT_CONTEXT.md for project-specific how-to paths and
-conventions before writing any file.
-(internal — invoked by sql-coder only)**
+**Product Owner agent for the AC pipeline. Operates at the L0/L1 flight level:
+translates user requests into customer value propositions (L0) and feature
+benefit statements (L1). Speaks customer language, never engineering jargon.
+Owns the "what" and "why" — never the "how."
+
+Use when: a user describes a product need, a feature idea, or a strategic
+goal. The PO runs before the BA, framing the request in benefit language
+so the BA can decompose L1s into testable L2/L3 Gherkin behaviors.**
 
 | Field | Value |
 |-------|-------|
-| Model | sonnet |
+| Model | opus |
 | Tier | utility |
 | Priority | — |
-| Portable | No |
+| Portable | Yes |
 | Sign-off capable | No |
 
 ---
 
 ## When to Use
-
-### Spawned By
-
-- `sql-coder`
 ---
 
 ## Knowledge Flow
@@ -52,12 +51,8 @@ flowchart TD
     classDef utility fill:#f3f4f6,stroke:#4b5563,stroke-width:2px
     classDef target fill:#fee2e2,stroke:#dc2626,stroke-width:3px
 
-    sql_coder["sql-coder\n(phase tier)"]:::phase
-    sql_table_creator["sql-table-creator\n(utility tier, priority ?)"]:::target
-    research_agent["research-agent\n(utility tier)"]:::utility
+    product_owner["product-owner\n(utility tier, priority ?)"]:::target
 
-    sql_coder -->|dispatches| sql_table_creator
-    sql_table_creator -->|spawns| research_agent
 ```
 ---
 
@@ -80,11 +75,10 @@ flowchart TD
 
 | Tool |
 |------|
-| `Bash` |
 | `Read` |
-| `Edit` |
 | `Write` |
-| `Agent` |
+| `Bash` |
+| `Skill` |
 ---
 
 ## Skills Used
@@ -105,5 +99,5 @@ flowchart TD
 
 | Pattern | Trigger | Behavior | Related Agent |
 |---------|---------|----------|---------------|
-| Conditional Behavior | the file is absent | log one debug line: | `None` |
-| Conditional Behavior | the work involves hypertables | also load any hypertable-build skill or | `None` |
+| Conditional Behavior | a user request implies a strategic shift (new direction | reprioritization, | `None` |
+| Conditional Behavior | a file is absent | unreadable, binary, or exceeds 50 KB | `None` |

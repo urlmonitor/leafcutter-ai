@@ -1,9 +1,10 @@
 ---
 agent_id: how-to-author
 title: "Agent Card: how-to-author"
+description: "Writes a task-oriented how-to guide for this project following the canonical convention in docs/how-to/documentation/write-how-to.md. Produces the guide file, chooses the correct location per the codified decision rule, and returns a structured payload naming the path and location rationale. (internal — invoked by documentation-expert only)"
 type: card
 status: active
-created: 2026-06-05
+created: 2026-06-29
 card_version: "generated"
 ---
 # how-to-author
@@ -34,8 +35,12 @@ a structured payload naming the path and location rationale.
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 3 | ticket_path from ticket-supervisor | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
 ---
 
 ## Spawn and Dependency
@@ -58,7 +63,25 @@ flowchart TD
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_path` | file_path | Absolute path to the ticket markdown file |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `sign_off_comment` | sign_off_comment | Sign-off comment with status: ok | blocker | handoff |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_frontmatter_agents_status` | — | Sets agents.how-to-author to signed_off or failed |
+| `sign_offs_checklist` | — | Checks the how-to-author checkbox with timestamp |
+| `implementation_artifacts` | — | Files created or modified during phase execution |
 ---
 
 ## Tools Available
@@ -74,7 +97,9 @@ flowchart TD
 
 ## Skills Used
 
-*No skills declared.*
+| Skill | Mode | Condition |
+|-------|------|-----------|
+| `signoff` | conditional | — |
 ---
 
 ## Configuration
@@ -84,4 +109,10 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Stop-and-Ask | condition requiring user decision or out-of-scope action | Do not proceed without doing this. | `None` |
+| Conditional Behavior | a ticket is provided (`ticket_path`) | check whether the ticket body contains | `None` |
+| Conditional Behavior | writing the guide: add required sections | ensure required steps are covered, | `None` |
