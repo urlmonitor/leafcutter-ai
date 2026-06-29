@@ -365,9 +365,11 @@ def _manifest_commit_guardian_scripts(package_root: Path) -> set[str]:
 def _manifest_feedback_scripts(package_root: Path) -> set[str]:
     """Return ``scripts/feedback/<name>`` entries for all source .py files.
 
-    Scans ``package_root/scripts/feedback/`` dynamically, eliminating the
-    previous hardcoded three-name list that caused Class A false positives for
-    ``aggregate.py`` and ``resolve_feedback.py``.
+    Scans ``templates/scripts/feedback/`` (the canonical tracked source
+    introduced in ADR-016) so that the manifest is correct on a fresh clone
+    where ``scripts/feedback/`` (a gitignored build output) does not yet exist.
+    This mirrors ``_manifest_commit_guardian_scripts``, which scans
+    ``templates/scripts/commit_guardian/`` for the same reason.
 
     Args:
         package_root: Absolute path to the leafcutter package root.
@@ -376,11 +378,11 @@ def _manifest_feedback_scripts(package_root: Path) -> set[str]:
         Set of ``scripts/feedback/<name>`` strings, or empty set when absent.
     """
     result: set[str] = set()
-    src = package_root / "scripts" / "feedback"
+    src = package_root / "templates" / "scripts" / "feedback"
     if src.is_dir():
-        for f in src.iterdir():
+        for f in src.rglob("*"):
             if f.is_file() and f.suffix == ".py":
-                result.add(f"scripts/feedback/{f.name}")
+                result.add(f"scripts/feedback/{f.relative_to(src).as_posix()}")
     return result
 
 
