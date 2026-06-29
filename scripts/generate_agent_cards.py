@@ -680,10 +680,13 @@ def generate_card(
         description = description.strip()
 
     # Build YAML frontmatter header
+    # Escape description for YAML: wrap in double quotes, escape internal quotes
+    desc_escaped = description.replace('"', '\\"').replace("\n", " ")
     card_fm = textwrap.dedent(f"""\
         ---
         agent_id: {agent_id}
         title: "Agent Card: {agent_id}"
+        description: "{desc_escaped}"
         type: card
         status: active
         created: {today}
