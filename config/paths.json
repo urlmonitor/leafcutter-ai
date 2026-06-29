@@ -34,6 +34,12 @@
     "glossary": {
       "path": "docs/glossary.md",
       "edge_fields": []
+    },
+    "acs": {
+      "path": "docs/acceptance-criteria/",
+      "edge_fields": ["implemented_by", "covered_by", "depends_on", "components"],
+      "file_path_fields": ["implemented_by", "covered_by"],
+      "_optional": true
     }
   },
   "paths": {

@@ -24,6 +24,53 @@ adopter_notes: |
   Not a ticket phase agent (is_ticket_phase: false in registry).
   Does not manage sub-agents. Calls scripts directly via Bash.
 requires_verification: false
+pre_flight_reads:
+  - source: "{{config.output_root}}/scripts/ac_store/ac_prioritizer.py"
+    required: true
+    condition: "verify script exists before invoking Step 1"
+  - source: "{{config.output_root}}/scripts/ac_store/generate_ticket_from_ac.py"
+    required: true
+    condition: "verify script exists before invoking Step 2"
+  - source: "{{config.output_root}}/scripts/ac_store/build_ac_mode_detection.py"
+    required: true
+    condition: "verify script exists before invoking Step 2a mode detection"
+inputs:
+  - name: arguments
+    type: string
+    required: false
+    description: "$ARGUMENTS string — may contain --ac <id> to bypass prioritizer, or --dry-run to preview without writing"
+outputs:
+  - name: ticket_path
+    type: file_path
+    description: "Path to the generated ticket file (single-ticket path); absent on epic-generation path"
+  - name: epic_path
+    type: file_path
+    description: "Path to the generated epic folder (goal-AC path); absent on single-ticket path"
+  - name: user_prompt
+    type: structured_response
+    description: "Confirmation prompt shown to the user: AC id, title, priority, and build instruction"
+mutates: []
+behavioral_patterns:
+  - name: Explicit-AC Override
+    trigger: "--ac <id> flag present in $ARGUMENTS"
+    behavior: "Bypasses ac_prioritizer.py entirely; goes directly to Step 2 using the provided AC id"
+    related_agent: null
+  - name: Dry-Run Mode
+    trigger: "--dry-run flag present in $ARGUMENTS"
+    behavior: "Runs Steps 1 and 2 with --dry-run; prints proposed ticket body; exits without asking the confirmation prompt"
+    related_agent: null
+  - name: Depth-Cap Constraint
+    trigger: "User or workflow attempts to call /build-feature inline"
+    behavior: "Refuses — outputs the ticket path and instructs the user to invoke /build-feature manually to avoid violating depth-1 sub-agent hard limit (ADR-006)"
+    related_agent: null
+  - name: Skip Loop Guard
+    trigger: "More than 3 consecutive ACs are skipped in a single session"
+    behavior: "Stops looping and asks the user to investigate whether the AC store is in a consistent state"
+    related_agent: null
+  - name: Goal-AC Epic Path
+    trigger: "detect_ac_mode returns mode: goal (covered_by non-empty, level L0/L1)"
+    behavior: "Switches to epic-generation path via goal_to_epic.py; does not call generate_ticket_from_ac.py"
+    related_agent: null
 ---
 
 You are the `build-ac` coordinator. Your job is to find the next most

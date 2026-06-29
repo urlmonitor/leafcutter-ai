@@ -1,0 +1,48 @@
+id: TQ-100e-1-i
+title: "Report-only mode surfaces results but never fails the run"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100e.yaml
+criteria: |
+  Given the enforcement mode is configured to report-only and the suite contains
+    at least one failing test that would otherwise block (for example a failing
+    test covering a done AC),
+  When the suite is run,
+  Then every test result (including the failures) is surfaced in the run report
+  And the overall run outcome is non-failing regardless of those failures
+  And report-only never drives the run to a blocking outcome.
+depends_on:
+  - TQ-100e-1
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100e.yaml
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "In report-only mode the overall run outcome must be non-failing even when a would-otherwise-block test (e.g. a failing test on a done AC) is present — full visibility, zero blocking."
+  - "Results must still be surfaced/reported (the failures are visible), so report-only is informational, not silent."
+  - "Behavior must be deterministic under pytest-randomly: report-only never blocks regardless of seed/order."
+delivers_to: null
+expects_from:
+  ac_id: TQ-100e-1
+  contract: "The config-selected mode; this edge case pins the report-only semantics (surface all, block nothing)."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "TQ-100 it-po-enrichment"
+    by: it-po
+    at: 2026-06-24
+    note: "Added it_requirements (non-failing outcome despite a would-block test; results still surfaced; determinism). Confirmed python-coder / S."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Report-only is the safest stage: full visibility, zero blocking. It is also the
+  chosen no-config default (see TQ-100e-1-ii).

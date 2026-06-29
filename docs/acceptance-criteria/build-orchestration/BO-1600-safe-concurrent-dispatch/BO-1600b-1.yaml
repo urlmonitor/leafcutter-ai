@@ -1,0 +1,55 @@
+id: BO-1600b-1
+readiness: approved
+priority: medium
+title: "An interrupted commit leaves no half-written object behind"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600b.yaml"
+criteria: |
+  Given a supervisor is partway through writing its commit's git objects into the
+    shared worktree
+  When that supervisor is interrupted or fails before its commit completes (the
+    process is killed, times out, or errors mid-write)
+  Then the shared object store contains no zero-byte or partially-written loose
+    object attributable to the interrupted commit
+  And any object the interrupted commit had begun writing is either fully present
+    and content-hash-valid or absent entirely (never a truncated intermediate file)
+depends_on:
+  - BO-1600b
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600b.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build-orchestration/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Any loose object the interrupted commit had begun writing must be left either fully present and content-hash-valid or absent entirely — never a truncated intermediate file (the canonical git mechanism is write-to-temp-then-atomic-rename, but the AC states only the WHAT; the coder chooses the HOW)."
+  - "The cleanup must be safe to run after an abrupt termination (process killed, timeout, mid-write error) — it cannot assume the interrupted commit got a chance to run its own teardown."
+  - "Cleanup must be idempotent: running it more than once against the same worktree must converge to the same clean state without error."
+  - "Cleanup must only remove debris attributable to a failed/incomplete commit; it must never delete or alter a fully-written, content-hash-valid object belonging to a successful commit."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3): wrap filesystem operations in try/except with a specific exception type and log at WARNING or higher; a cleanup that cannot complete must surface a determinate failure rather than silently leaving debris."
+delivers_to:
+  agent: python-coder
+  contract: "A commit cleanup/recovery routine that runs when a supervisor's commit is interrupted, guaranteeing the shared object store is left with no truncated loose object. This routine is the single load-bearing primitive consumed by the index-cleanliness behavior (BO-1600b-2) and the next-delivery-proceeds behavior (BO-1600b-3)."
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Origin: EPIC-FinalizeFeatureHardening KI-1. Cleanup-after-failure is the
+  complement of the prevention guarantee in BO-1600a: even with serialized
+  writes, a commit that dies mid-write must not leave debris for the next
+  supervisor. Atomic-write-then-rename of loose objects is the canonical git
+  mechanism; the AC states the WHAT (no truncated object survives) not the HOW.

@@ -1,0 +1,46 @@
+id: BP-1000e-2
+readiness: approved
+priority: medium
+title: "A workflow template edited without its mirror is caught and blocked"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000e.yaml"
+criteria: |
+  Given a branch updated templates/workflows-js/finalize-feature.js
+  And it did NOT apply the same change to the mirror scripts/workflows/finalize-feature.js
+  When the workflow-script parity check runs at the merge gate
+  Then the verdict reports that pair as not byte-identical and includes the diff
+    between the source and the stale mirror
+  And the merge gate fails, blocking the merge until the mirror is updated to match
+depends_on:
+  - BP-1000e
+  - BP-1000e-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000e.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+  - path: "templates/workflows-js/finalize-feature.js"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "This is the direct KI-3 reproduction: a branch edits templates/workflows-js/<name>.js but not its scripts/workflows/<name>.js mirror; the verdict must report that pair not byte-identical, carry the diff, and FAIL the merge gate."
+  - "The block must be enforced at the merge gate (the gate fails / merge is blocked), consuming the BP-1000e-1 verdict's ok=false — do not re-implement the comparison here."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
+delivers_to: null
+expects_from:
+  ac_id: BP-1000e-1
+  contract: "The per-pair workflow-script parity verdict; this behavior is the block outcome when a mirrored pair drifts (the exact KI-3 reproduction)."
+origin_agent: business-analyst-v3
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

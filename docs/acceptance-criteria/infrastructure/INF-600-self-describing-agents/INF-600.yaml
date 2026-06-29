@@ -3,6 +3,7 @@ title: "Understand any agent without reading its source"
 component: infrastructure
 level: L0
 status: active
+child_limit_override: 12  # pre-existing overcrowding (10 children before INF-600k); waiver pending a proper INF-600 split (EPIC-FinalizeFeatureHardening retro KI-4)
 criteria: |
   Every agent template carries standardized metadata that the build enforces.
 
@@ -39,4 +40,5 @@ covered_by:
   - INF-600d
   - INF-600e
   - INF-600f
+  - INF-600k
 implemented_by: []

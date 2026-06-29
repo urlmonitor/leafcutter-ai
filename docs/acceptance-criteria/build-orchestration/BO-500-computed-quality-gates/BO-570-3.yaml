@@ -1,0 +1,78 @@
+id: BO-570-3
+title: "Deterministic repo-ruff runner helper for the python sign-off gate"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+created_by: docs/acceptance-criteria/build-orchestration/BO-500-computed-quality-gates/BO-570.yaml
+criteria: |
+  Given a ticket whose changed surface includes one or more Python files,
+  When the ruff-runner is invoked against that ticket's new and changed
+    Python files,
+  Then it runs the repository's own ruff configuration against exactly those
+    files (so the result matches what CI enforces, with no divergent local
+    ruleset),
+  And it returns a deterministic verdict that classifies the outcome as one of:
+    clean (no violations), violations (one or more ruff violations found —
+    e.g. a violation that the project's error-handling Ruff rules forbid), or
+    tooling-unavailable (ruff is not installed, or the repository ruff
+    configuration cannot be located from the worktree root),
+  And on violations the verdict carries the violation detail so the sign-off
+    gate that consumes it can record the lint violations as the blocking reason,
+  And on tooling-unavailable the verdict is reported as a distinct third state
+    naming the reason (never collapsed into clean),
+  And the verdict carries the file set it was run against so the consuming
+    sign-off gate can record auditable evidence of what was checked.
+depends_on: [BO-570]
+doc_links:
+  - path: templates/agents/python-coder.md
+    relationship: describes
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The runner must invoke ruff with the REPOSITORY's own ruff configuration over the ticket's new/changed Python file set, so it matches what CI enforces — no divergent local ruleset."
+  - "The verdict must be a deterministic, machine-readable three-state outcome (clean | violations | tooling-unavailable); tooling-unavailable must NEVER be reported as clean."
+  - "The runner must not depend on the worktree pre-commit hooks having fired (worktrees historically lack the .pre-commit-config wiring) — it runs ruff directly, independent of pre-commit."
+  - "The runner must follow the project error-handling policy (CLAUDE.md Rules 1-4): wrap the ruff subprocess I/O in a specific except, log at WARNING or higher, and classify a missing-ruff / unlocatable-config failure as tooling-unavailable rather than swallowing it."
+  - "The verdict must include the changed-Python file set checked and a human-readable reason on the non-clean states, so the consuming sign-off gate can record auditable evidence."
+delivers_to:
+  agent: llm-expert
+  contract: |
+    A repo-ruff runner the python sign-off gate invokes, returning a
+    three-state verdict object:
+    { check: "repo-ruff",
+      outcome: "clean" | "violations" | "tooling-unavailable",
+      files: <the ticket's new/changed Python files the check ran against>,
+      reason: <human-readable detail; required on violations and
+               tooling-unavailable, null on clean> }.
+    violations and tooling-unavailable both forbid an "ok" sign-off on the
+    Python surface; only clean permits "ok" on this criterion.
+expects_from: null
+origin_agent: it-po-v3
+created: 2026-06-24
+amended_by:
+  - reason: "re-parent + rename after Pattern C split of BO-530 -> BO-530 + BO-570, 2026-06-24"
+    note: "Was BO-530-5a (split from BO-530-5 by it-po-v3). Moved out of BO-530 (TDD-framed L1) to the new local-verification-gate sibling L1 BO-570. RENAMED BO-530-5a -> BO-570-3 (check_ac_limits attributes children by id-derivation). id, criteria, delivers_to/expects_from preserved verbatim; only id/created_by/depends_on re-pointed to BO-570."
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-LocalSignoffGates/05_TICKET-20260624-BO-570-3.md
+notes: |
+  Originally BO-530-5a, created by IT-PO v3 from BO-530-5 (split). BO-530-5 mixed
+  a deterministic helper-script surface (python-coder) with the sign-off-gate
+  behavior surface (llm-expert template/skill prose) — a hard owner boundary the
+  .py helper cannot live inside an .md template. This child owns the deterministic
+  ruff-runner (python-coder, producer); sibling BO-570-4 (was BO-530-5b) owns the
+  sign-off-gate behavior that consumes the verdict (llm-expert, consumer).
+  User-originated (BrainCandy) process fix: motivated by a real escape, ruff
+  lint failures on new files where the worktree pre-commit gap meant repo-ruff
+  never ran locally and the errors only appeared in CI. Re-parented + renamed to
+  BO-570-3 in the Pattern C split that moved the local verification gates out of
+  BO-530 into the new sibling L1 BO-570.

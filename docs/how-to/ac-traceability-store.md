@@ -1,6 +1,6 @@
 ---
 title: "How to use the AC Traceability Store"
-description: "How-to guide for delivering approved ACs via the reviewed PR path and for working with the AC traceability store fields."
+description: "How-to guide for delivering approved ACs via the reviewed-PR path, and for creating, amending, deprecating, and tracing acceptance criteria through the AC Traceability Store and knowledge map."
 type: how-to
 status: active
 created: 2026-06-04
@@ -8,12 +8,14 @@ last_updated: 2026-06-24
 components:
   - build_pipeline
   - build-orchestration
+  - knowledge-management
 related_docs:
   - docs/reference/ac-schema.md
   - docs/acceptance-criteria/README.md
   - config/ac_store_schema.json
   - docs/how-to/ac-driven-build-loop.md
   - docs/how-to/approval-gate.md
+  - templates/skills/knowledge-query/SKILL.md
 ---
 
 # How to use the AC Traceability Store
@@ -444,6 +446,102 @@ Then commit with a note referencing the deprecating ticket.
 
 ---
 
+## How do I find the code and tests that fulfil a given acceptance criterion?
+
+Each AC YAML file records two key links once a ticket is built:
+
+| Field | What it points to |
+|-------|------------------|
+| `implemented_by` | The source file (or file + symbol) that delivers the criterion |
+| `covered_by` | The test file (and optional `::function` suffix) that proves it |
+
+The knowledge map exposes these as edges. The procedure below walks you from an AC ID to its code and test files in three steps.
+
+### Step 1: Query the knowledge map for one acceptance criterion
+
+Run `knowledge_query.py` with the title keyword or component prefix of the AC you want to trace. The `--surface acs` flag restricts output to the AC store so the result is focused.
+
+```bash
+python scripts/knowledge_query.py --query "Sparse AC parents" --surface acs
+```
+
+Replace `"Sparse AC parents"` with any word from the AC's `title` field. You can also use part of the AC ID (e.g. `ACS-100c-2`) if you know it exactly — use a few distinctive words from the title rather than the bare ID, because `--query` matches against the title and description fields, not the id field.
+
+Expected output:
+
+```
+# Knowledge Index
+Surfaces: 1   Nodes: 1   Edges: 4
+
+## acs (1)
+  [acs] ACS-100c-2 — (no description)
+    -> implemented_by: scripts/commit_guardian/check_ac_limits.py#_check_limits
+    -> covered_by: unit_tests/commit_guardian/test_check_ac_limits.py::TestCheckLimitsSparseAdvisory
+    -> covered_by: unit_tests/commit_guardian/test_check_ac_limits.py::TestCheckAcLimitsCLI::test_sparse_advisory_exits_zero
+    -> depends_on: ACS-100c
+```
+
+If zero nodes are returned, broaden the keyword or drop `--surface acs` to search across all surfaces.
+
+### Step 2: Read the result
+
+Each `->` line is an outbound edge from the AC node. The two edge types you need are:
+
+**`-> implemented_by: <path>`**
+This is the source file that delivers the criterion. The path may include a `#symbol` suffix pointing to the specific function or class responsible. Open this file and navigate to the symbol to see the implementation.
+
+Example: `-> implemented_by: scripts/commit_guardian/check_ac_limits.py#_check_limits`
+means the `_check_limits` function inside `scripts/commit_guardian/check_ac_limits.py` delivers this criterion.
+
+**`-> covered_by: <path>::<test>`**
+This is the test file (and optional `::TestClass::test_function` suffix) that proves the criterion. Run the indicated test to verify the criterion is satisfied.
+
+Example: `-> covered_by: unit_tests/commit_guardian/test_check_ac_limits.py::TestCheckLimitsSparseAdvisory`
+means the `TestCheckLimitsSparseAdvisory` test class inside `unit_tests/commit_guardian/test_check_ac_limits.py` covers this criterion.
+
+If either list is empty, the AC has not yet been implemented or tested. Check the AC YAML file directly:
+
+```bash
+grep -r "id: <AC-ID>" docs/acceptance-criteria/ -l
+```
+
+then open the file to see its current `work_status` and `readiness` fields.
+
+### Step 3: Open the visualization and locate the criterion
+
+The visualization renders every AC node and its edges as an interactive force-directed graph in the browser.
+
+Generate and open the graph:
+
+```bash
+python scripts/visualise_knowledge_graph.py
+```
+
+To write the file without opening the browser automatically:
+
+```bash
+python scripts/visualise_knowledge_graph.py --no-open
+```
+
+The HTML file is written to `/tmp/leafcutter_knowledge_graph.html` by default. Open it in any browser.
+
+To focus on the AC store only and reduce visual noise:
+
+```bash
+python scripts/visualise_knowledge_graph.py --surface acs
+```
+
+Once the graph is open:
+
+1. Use the browser's **Ctrl+F** search if the graph renders a search box, or zoom and pan to the `acs` cluster.
+2. Hover over a node labelled with the AC ID (e.g. `ACS-100c-2`) to highlight its direct edges.
+3. The `implemented_by` edge leads to a node representing the source file. The `covered_by` edge leads to nodes representing test files.
+4. Click a node to fix it in place and read the tooltip showing the full edge targets.
+
+The same information shown in the CLI output (Step 1) is visible here as graph edges. Use whichever representation is easier for the task at hand.
+
+---
+
 ## Verification
 
 After each operation, confirm the pre-commit hooks exit cleanly:
@@ -467,3 +565,4 @@ All three commands should exit 0 with no error output.
 - `docs/how-to/approval-gate.md` — detailed explanation of the multi-stage approval gate and readiness state machine.
 - `docs/how-to/build-ac-unified.md` — auto-detection logic for leaf vs goal mode; epic-generation path for L0/L1 goal ACs.
 - `docs/README.md` — full documentation index.
+- `templates/skills/knowledge-query/SKILL.md` — full reference for all `knowledge_query.py` flags and output modes.

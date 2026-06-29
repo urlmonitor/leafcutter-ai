@@ -6,7 +6,7 @@ component: build-orchestration
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500b.yaml
 criteria: |
   Given a freshly created authoring worktree that does not yet have the

@@ -4,7 +4,7 @@ description: "Architectural decision to flatten the supervisor chain so ticket-s
 type: "adr"
 status: "accepted"
 created: "2026-05-29"
-last_updated: "2026-06-08"
+last_updated: "2026-06-24"
 components:
   - build_pipeline
 ---
@@ -833,6 +833,180 @@ See `docs/architecture/agent_delivery_workflows.md` §5 "AC BP-600d-4 — Quick-
 pushes to origin and closes the ticket lifecycle" for the full push contract, PR update
 contract, ticket lifecycle close contract, ordering invariant, push failure halt message,
 and contrast table with `build-single-ticket` Step 4b.
+
+---
+
+## Addendum: `finalize-feature` agent removed — JS workflow is the sole depth-0 path (EPIC-FinalizeFeatureHardening, 2026-06-24)
+
+### Context
+
+The `finalize-feature` LLM agent (`templates/agents/finalize-feature.md`) was
+designated `tier: supervisor` in the agent registry and was advertised as a
+fallback for Claude Code installs older than 2.1.154. Its dispatch chain was:
+
+```
+/finalize-feature (slash command, depth 0)
+  └── finalize-feature agent  (depth 1)
+        └── pull-request, status-checker, worktree-agent, test-runner,
+            test-failure-triage  (depth 2 — SILENTLY DROPPED)
+```
+
+This chain was non-functional on every Claude Code version: the depth-1 limit
+applied unconditionally, so all sub-agent dispatches by `finalize-feature` were
+silently dropped. The workflow loop reported success while no actual finalization
+work occurred (PR never merged, tickets never closed).
+
+Unlike `epic-supervisor` — which received an explicit deprecation window —
+`finalize-feature` was never migrated when this ADR was first accepted. It
+continued to be listed as an active user-invocable supervisor in
+`agent_registry.json` and was cross-referenced as a live fallback in both
+the slash-command surface (`templates/workflows/finalize-feature.md`) and the
+how-to doc (`docs/how-to/finalize-feature.md`).
+
+### Decision
+
+`finalize-feature` joins `epic-supervisor` as a **removed supervisor**:
+
+1. **`templates/agents/finalize-feature.md` is deleted** (via `git rm`). No
+   deprecation window is provided because the agent was not merely superseded —
+   it was non-functional on every install.
+
+2. **`config/agent_registry.json`** no longer contains a `finalize-feature` entry.
+   The five agents that listed it in their `spawned_by` field (`pull-request`,
+   `status-checker`, `worktree-agent`, `test-runner`, `test-failure-triage`) now
+   reference `finalize-feature.js` instead.
+
+3. **`templates/workflows/finalize-feature.js`** (Claude Code Workflow script)
+   is the **sole depth-0 path** for feature finalization. It dispatches all
+   specialist agents at depth 1 and is the only implementation that satisfies
+   the depth-1 constraint.
+
+4. **The slash-command surface** (`templates/workflows/finalize-feature.md`) emits
+   a hard error on older installs rather than dispatching the removed agent:
+
+   > "requires Claude Code >= 2.1.154; the legacy agent fallback was removed
+   > because the depth-1 limit makes it non-functional — please upgrade."
+
+### Updated depth diagram (finalize-feature)
+
+```
+/finalize-feature (slash command — workflow runtime, depth 0)
+  ├── status-checker         (depth 1, Agent tool)
+  ├── pull-request           (depth 1, Agent tool)
+  ├── test-runner            (depth 1, Agent tool)
+  ├── test-failure-triage    (depth 1, Agent tool)
+  └── worktree-agent         (depth 1, Agent tool)
+```
+
+All Agent-tool dispatches from `finalize-feature.js` are flat depth-1 calls,
+consistent with the flattened topology this ADR specifies.
+
+### Rationale
+
+The `finalize-feature` agent was removed (not deprecated) for the same reason
+that drove the original flattening decision in this ADR: a supervisor running at
+depth 1 cannot dispatch phase agents. The "fallback for older versions" framing
+was incorrect from the outset — there is no Claude Code version where a depth-2
+dispatch succeeds. Retaining the agent with a deprecation flag would preserve a
+non-functional artefact that could mislead future maintainers.
+
+---
+
+---
+
+## Addendum: Pure-literal `meta` contract for workflow scripts (EPIC-FinalizeFeatureHardening ticket 02, 2026-06-24)
+
+### Context
+
+Every `templates/workflows-js/*.js` Workflow script exposes an
+`export const meta = { name, description, phases }` block. The Claude Code
+Workflow runtime parses this block at invocation time. If any value inside
+`meta` is a non-literal expression — a string concatenation (`"a" + b`), a
+template literal with substitution (`` `${expr}` ``), a spread operator
+(`...ident`), a call expression (`fn()`), or a bare identifier reference
+(`key: varName`) — the runtime raises a `meta must be a pure literal` error
+and the workflow silently fails to execute.
+
+This defect class was the root cause of the `finalize-feature` blocking
+incident that triggered EPIC-FinalizeFeatureHardening. Four workflow scripts
+carried latent non-literal values in their `meta` blocks undetected because
+`build_phases.py` byte-copies workflow scripts without parsing them, and no
+pre-commit hook validated the `meta` block.
+
+Ticket 01 collapsed the non-literal values to pure literals in all six current
+workflow scripts. Ticket 02 adds a mechanical gate so the defect can never
+be reintroduced.
+
+### Decision
+
+The pure-literal `meta` block is now a **package invariant** enforced by a
+pre-commit hook.
+
+1. **`check_workflow_meta.py`** is added to `templates/scripts/commit_guardian/`
+   as a pre-commit hook. It extracts the `export const meta = { ... }` block
+   from every staged `templates/workflows-js/*.js` file using a brace-depth
+   counter and scans the block with five regex patterns:
+
+   | Pattern | Regex class | Example violation |
+   |---------|-------------|-------------------|
+   | Template literal substitution | `_TEMPLATE_SUBST_RE` | `` `Drive at ${VERSION}` `` |
+   | String concatenation | `_STRING_CONCAT_RE` | `"prefix" + SUFFIX` |
+   | Spread operator | `_SPREAD_RE` | `...basePhases` |
+   | Call expression | `_CALL_EXPR_RE` | `buildPhases()` |
+   | Bare identifier reference | `_BARE_IDENT_RE` | `description: myVar` |
+
+   The hook exits non-zero with a `FAIL: <file> — <description>` line per
+   violation when any pattern is matched.
+
+2. **The hook is registered** in `commit_guardian.json` as `check-workflow-meta`,
+   scoped to `templates/workflows-js/*.js` staged files, `pass_filenames: false`
+   (consistent with the other commit_guardian hooks that scan for staged files
+   internally).
+
+3. **Standalone mode**: when invoked with no arguments and no staged files match,
+   `check_workflow_meta.py` scans all `*.js` files in `templates/workflows-js/`
+   (useful for CI and ad-hoc validation).
+
+### What counts as a pure literal
+
+A pure literal value is one of:
+
+- A string literal (`"..."`, `'...'`, or a bare backtick string `` `...` ``
+  with **no** `${...}` substitutions).
+- A numeric literal (`42`, `3.14`).
+- A boolean literal (`true`, `false`).
+- `null`, `undefined`, `NaN`, `Infinity`.
+- An array literal whose elements are each pure literals (`["a", "b"]`).
+- An object literal whose values are each pure literals (`{ key: "val" }`).
+
+A pure literal is NOT:
+
+- Any expression that references a variable (`key: varName`).
+- Any expression that concatenates strings (`"a" + b`).
+- Any template literal with a substitution (`` `${expr}` ``).
+- Any call expression (`buildPhases()`).
+- Any spread into an array or object (`...ident`).
+
+### Consequences
+
+- **Zero-cost authoring**: workflow authors use plain string/array literals
+  (already the natural form). The constraint requires no refactoring of
+  well-authored scripts.
+- **Immediate detection**: any commit that introduces a non-literal value in
+  a `meta` block is blocked before it reaches the build or CI pipeline.
+- **Standalone usability**: `python scripts/commit_guardian/check_workflow_meta.py`
+  can be run at any time to audit all workflow scripts, not only staged files.
+- **No false positives on non-workflow files**: the hook is scoped to
+  `templates/workflows-js/*.js` and silently skips files outside that path.
+
+### References
+
+- `templates/scripts/commit_guardian/check_workflow_meta.py` — the hook implementation.
+- `templates/scripts/commit_guardian/commit_guardian.json` — hook registration
+  (`check-workflow-meta` entry).
+- `unit_tests/commit_guardian/test_check_workflow_meta.py` — unit tests.
+- `tickets/00_inbox/epics/EPIC-FinalizeFeatureHardening/02_workflow_meta_literal_gate.md`
+  — the ticket that produced this addendum.
 
 ---
 

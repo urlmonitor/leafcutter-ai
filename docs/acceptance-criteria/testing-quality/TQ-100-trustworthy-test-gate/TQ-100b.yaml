@@ -1,0 +1,37 @@
+id: TQ-100b
+title: "Tests for unfinished features watch quietly until the feature ships"
+component: testing-quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  A test tied to a not-yet-done feature runs for information only; the moment
+  that feature is marked done, the same test starts blocking — automatically,
+  with no manual step.
+
+  A test that is linked to an acceptance-criterion whose work is not yet
+  complete runs in an informational mode: its result is visible but it never
+  fails a pull request. When that acceptance-criterion is marked done — which,
+  under move-on-main-only, happens when the feature merges — the very same test
+  becomes enforced and will block any pull request that breaks it. No human has
+  to flip a switch or move the test; the transition follows the feature's status
+  by itself.
+depends_on:
+  - TQ-100
+doc_links: []
+documentation_triggers:
+  - state-diagram
+documentation_rationale: "The informational -> enforced transition keyed on AC status is a stateful lifecycle worth a state diagram so maintainers can see exactly when a test starts blocking."
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-100b-1
+  - TQ-100b-2
+  - TQ-100b-3
+implemented_by: []

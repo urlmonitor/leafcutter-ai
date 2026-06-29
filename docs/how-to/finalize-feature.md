@@ -1,6 +1,7 @@
 ---
 title: "How to use /finalize-feature"
-last_updated: 2026-06-04
+description: "Step-by-step guide for running /finalize-feature to merge a feature branch, run post-merge tests, and close tracking tickets."
+last_updated: 2026-06-24
 audience: developers
 ---
 
@@ -157,10 +158,17 @@ the normal backlog process.
 ## Version notes
 
 - **Claude Code >= 2.1.154**: uses `templates/workflows-js/finalize-feature.js`
-  (deterministic JS workflow, full 8-step sequence).
-- **Claude Code < 2.1.154**: falls back to `templates/agents/finalize-feature.md`
-  (LLM agent, original 6-step sequence — no baseline capture, no triage, no
-  merge-into-worktree step).
+  (deterministic JS workflow, full 8-step sequence). This is the only supported path.
+- **Claude Code < 2.1.154**: the Workflow-tool required to run `finalize-feature.js`
+  is not available. The legacy LLM agent fallback (`templates/agents/finalize-feature.md`)
+  has been **removed** as of EPIC-FinalizeFeatureHardening. On older installs, invoking
+  `/finalize-feature` will emit an explicit error:
+
+  > "requires Claude Code >= 2.1.154; the legacy agent fallback was removed because
+  > Claude Code's depth-1 Agent-tool limit made it non-functional — all sub-agent
+  > dispatches were silently dropped. Please upgrade."
+
+  **Action required**: upgrade Claude Code to >= 2.1.154 before using `/finalize-feature`.
 
 ---
 

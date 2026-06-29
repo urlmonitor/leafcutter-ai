@@ -1,0 +1,64 @@
+id: TQ-100c-2
+title: "A done-AC test has no in-test path to downgrade itself to informational"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100c.yaml
+criteria: |
+  Given a test function tagged "# covers: <AC-ID>" whose AC's work_status is done,
+  When the test author attempts to make that test non-blocking by editing only
+    the test (for example adding a skip/xfail marker or otherwise self-declaring
+    it informational),
+  Then the test remains enforced because its covering AC is done
+  And the informational/enforced decision is taken from the covering AC's
+    work_status, never from a marker the test sets on itself
+  And the only sanctioned way to accept a failing done-AC test is the tracked
+    allowlist (TQ-100d), not an in-test downgrade.
+depends_on:
+  - TQ-100c
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100c.yaml
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100d.yaml
+    relationship: relates-to
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The enforced/informational decision for a done AC must be authoritative from the covering AC's work_status and must override any in-test skip/xfail marker — a marker the test sets on itself cannot downgrade a done-AC test to informational."
+  - "This L2 also OWNS the pre-pytest linkage-integrity check surface that TQ-100c-2-i (zero-covering-tests) and TQ-100c-2-ii (done->not-done downgrade) extend; the in-test-downgrade resistance and those two integrity violations are facets of one check, sharing one AC-store loader (reuse scripts/ac_store/scan_ac_store.py's loader, do not copy-paste)."
+  - "The integrity check runs BEFORE the pytest session (it is a linkage/coverage gate, not an assertion check) and fails loudly with a message identifying the offending AC/test; its failure class is distinct from a normal test assertion failure."
+  - "The integrity check's internal errors must be fail-open per the project error handling policy (CLAUDE.md Rules 1-4): an internal exception is caught with a specific type, logged at WARNING, and must not be mistaken for a linkage violation (mirror the check_ac_governance.py fail-open tail); a REAL violation, however, always blocks."
+  - "If the integrity check is a deployable commit-time/CI gate, edit the templates/ package source and the deployed copy together and keep parity via the build.py round-trip (ADR-001)."
+delivers_to:
+  agent: python-coder
+  contract: "A pre-pytest linkage-integrity check (run before the pytest session) that reads the AC store once and detects linkage violations; consumed by TQ-100c-2-i (done AC with zero covering tests) and TQ-100c-2-ii (done->not-done downgrade while failing) and fed the dangling-tag set from TQ-100b-1-ii. Fails loudly (non-zero) naming the offending AC/test."
+expects_from:
+  ac_id: TQ-100b-2
+  contract: "The done-branch enforcement; this AC asserts a done-AC test cannot be self-downgraded to informational from inside the test."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "TQ-100 it-po-enrichment"
+    by: it-po
+    at: 2026-06-24
+    note: "Settled the design: this L2 owns the pre-pytest linkage-integrity check (one check, three facets: in-test-downgrade resistance + c-2-i zero-coverage + c-2-ii downgrade-detection), sharing one AC-store loader (scan_ac_store.py). Added delivers_to naming that integrity-check surface so c-2-i/c-2-ii consume it via expects_from and the b-1-ii dangling-tag set flows in. Added it_requirements (work_status authoritative over in-test markers; fail-open-on-internal-error / always-block-on-real-violation; ADR-001 parity). NOTE: there is currently NO check_ac_coverage.py in the repo (BA assumed one might exist) — build new; if such a script is later introduced, extend/reuse rather than duplicate. Confirmed python-coder / M."
+superseded_by: null
+covered_by:
+  - TQ-100c-2-i
+  - TQ-100c-2-ii
+implemented_by: []
+notes: |
+  Tamper-resistance facet: protection on a shipped feature cannot be quietly
+  removed by editing the test. AC work_status is authoritative; the allowlist
+  (TQ-100d) is the only sanctioned escape and it is tracked and self-expiring.
+  The two integrity-check edge cases (TQ-100c-2-i zero-covering-tests, TQ-100c-2-ii
+  done->not-done downgrade) are ID-derived under this L2.
+  IT-PO note: the integrity check has three violation classes sharing one loader
+  and one pre-pytest entry point — keep them in one module, not three scripts.

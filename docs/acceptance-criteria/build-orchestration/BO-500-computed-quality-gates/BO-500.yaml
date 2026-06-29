@@ -5,6 +5,8 @@ level: L0
 status: active
 req_status: draft
 work_status: todo
+readiness: draft
+priority: medium
 criteria: |
   Declare what kind of change you are making, and the system assembles the full
   team of agents -- reviewers, testers, documenters -- without anyone curating
@@ -22,7 +24,9 @@ delivers_to: null
 expects_from: null
 origin_agent: product-owner-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: "covered_by += BO-570 after Pattern C split of BO-530, 2026-06-24"
+    note: "New sibling L1 BO-570 (local pre-PR/CI verification gates) added to this L0's coverage. BO-570 chains via depends_on [BO-510, BO-610] like its siblings; the L0->L1 link is recorded here per the parent covered_by protocol. readiness/priority added (draft/medium defaults) to satisfy the current schema on this touched file."
 superseded_by: null
-covered_by: [BO-510, BO-530, BO-540, BO-550, BO-560]
+covered_by: [BO-510, BO-530, BO-540, BO-550, BO-560, BO-570]
 implemented_by: []

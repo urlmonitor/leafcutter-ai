@@ -1,0 +1,43 @@
+id: BP-1000e-5
+readiness: approved
+priority: medium
+title: "A workflow-mirror drift failure names every drifted file and shows the diff"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000e.yaml"
+criteria: |
+  Given the workflow-script parity check found one or more mirrored pairs that are
+    not byte-identical
+  When it reports the failure at the merge gate
+  Then the report names the source path and the mirror path of every drifted pair
+  And the report shows the difference for each drifted pair
+  And the report lists ALL drifted pairs, not only the first one found
+depends_on:
+  - BP-1000e
+  - BP-1000e-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000e.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The drift failure report must name the source path AND the mirror path of EVERY drifted pair and show the diff for each — it must list ALL drifted pairs, not only the first found (consume the per-pair verdict's diff strings from BP-1000e-1)."
+  - "Paths in the report must be repo-root-relative POSIX paths, matching the verdict object's path convention."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
+delivers_to: null
+expects_from:
+  ac_id: BP-1000e-1
+  contract: "The per-pair workflow-script parity verdict (including each pair's diff string); this behavior renders the human-readable failure that names every drifted pair."
+origin_agent: business-analyst-v3
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

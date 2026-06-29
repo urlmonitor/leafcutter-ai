@@ -1,0 +1,35 @@
+id: TQ-100c
+title: "Shipped features are always protected, and protection can't be quietly removed"
+component: testing-quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Tests not tied to any feature enforce by default (no mass migration), and a
+  regression in a done feature can never be silenced by dropping or downgrading
+  its link.
+
+  Existing tests that are not yet linked to any acceptance-criterion keep
+  enforcing exactly as they do today — turning this capability on requires no
+  bulk re-tagging of the suite. And the gate is tamper-resistant: a test that
+  covers a done feature is always enforced, so a real regression cannot be
+  hidden by removing the test's link or by downgrading its acceptance-criterion
+  back to not-done. The only sanctioned way to accept a failing test is the
+  tracked allowlist (TQ-100d), never a silent link change.
+depends_on:
+  - TQ-100
+doc_links: []
+documentation_triggers: []
+documentation_rationale: "A default-enforcement policy and tamper-resistance guarantee, not a user-facing command or flow — the protection is invisible-by-design; no how-to or diagram adds value."
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-100c-1
+  - TQ-100c-2
+implemented_by: []

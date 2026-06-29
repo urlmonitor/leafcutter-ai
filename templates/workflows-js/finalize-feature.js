@@ -18,7 +18,7 @@
  *   Step 3: run post-merge tests + triage; HALT if regressions detected
  *   Step 4: merge PR to main — only if tests pass (confirmation-gated)
  *   Step 5: sync local main (git checkout main && git pull)
- *   Step 6: create tracking tickets + close tickets / archive epic
+ *   Step 6: report untracked pre-existing/flaky failures (auto-ticketing disabled) + scope-detection
  *   Step 7: probe worktree list; dispatch worktree-agent remove if worktree exists
  *
  * Resumability: each step probes observable state before dispatching. Re-running
@@ -28,27 +28,24 @@
  * Ticket: tickets/00_inbox/TICKET-20260602-FinalizeFeatureJSWorkflow.md
  *
  * Minimum Claude Code version: 2.1.154 (workflow script support)
- * Fallback: for older installs, templates/agents/finalize-feature.md is used instead.
+ * No fallback: the legacy LLM agent (finalize-feature.md) has been removed. Older
+ * installs receive an explicit error from the slash command.
  */
 
 export const meta = {
   name: "finalize-feature",
   description:
-    "Post-merge feature finalization: capture pre-merge test baseline on main, " +
-    "open PR if missing, merge origin/main into worktree, run post-merge tests " +
-    "(with triage baseline), merge PR to main only when tests pass, " +
-    "sync local main, close tickets/archive epic, remove worktree. " +
-    "Prompt gates on all destructive steps. HALT on test regression before PR merge. " +
-    "Returns { status: ok } with per-step summary on full success.",
+    "Post-merge feature finalization: capture pre-merge test baseline on main, open PR if missing, merge origin/main into worktree, run post-merge tests (with triage baseline), merge PR to main only when tests pass, sync local main, close tickets/archive epic, remove worktree. Prompt gates on all destructive steps. HALT on test regression before PR merge. Returns { status: ok } with per-step summary on full success.",
   phases: [
     "pre-flight (status-checker reads branch + worktree root)",
     "step-0: capture baseline test run on main HEAD (test-runner — graceful on failure)",
     "step-1: open PR if missing (pull-request agent)",
     "step-2: merge origin/main into worktree --no-commit --no-ff (HALT on conflict)",
     "step-3: run post-merge tests + triage (test-runner + test-failure-triage — HALT on regressions)",
+    "step-3.5: pre-merge AC closure — reset test-merge, set ticket status: done + mark source ACs done, commit on feature branch",
     "step-4: merge PR to main — only if tests pass (prompt gate + pull-request agent)",
     "step-5: sync local main (status-checker shell)",
-    "step-6: create_pre_existing_tickets + close tickets / archive epic (status-checker)",
+    "step-6: report untracked pre-existing/flaky failures (auto-ticketing disabled) + scope-detection (status-checker — no writes on main)",
     "step-7: remove worktree (worktree-agent — gate delegated)",
   ],
 };
@@ -83,13 +80,14 @@ async function run({ userInput, agent, parallel, prompt }) {
   });
 
   let preflightInfo;
-  try {
-    preflightInfo =
-      typeof preflightResult === "string"
-        ? JSON.parse(preflightResult)
-        : preflightResult;
-  } catch (_err) {
-    preflightInfo = { branch: "unknown", worktree_root: "unknown" };
+  {
+    const { value, malformed } = safeParseJSON(preflightResult);
+    if (malformed) {
+      console.log("[finalize-feature] pre-flight parse malformed — using safe defaults (branch: unknown)");
+      preflightInfo = { branch: "unknown", worktree_root: "unknown" };
+    } else {
+      preflightInfo = value || { branch: "unknown", worktree_root: "unknown" };
+    }
   }
 
   const BRANCH = (preflightInfo.branch || "").trim();
@@ -114,10 +112,16 @@ async function run({ userInput, agent, parallel, prompt }) {
   let mergeResult = null;
   let testResult = null;
   const ticketsClosed = [];
-  const createdTrackingTickets = [];
+  // Failures that could not be auto-ticketed (create-ticket is a workflow, not an agent).
+  // Populated by step 6a; never confused with actually-created tickets.
+  const untrackedFailures = [];
   let worktreeRemoved = false;
   // Triage report from step 3; null means tests passed (no triage needed).
   let triageReport = null;
+  // Closure counts from step 3.5 (pre-merge AC closure).
+  let ticketsClosedPreMerge = 0;
+  let acsClosed = 0;
+  let acsSkipped = 0;
 
   // Baseline state (populated by step 0; forwarded to step 3 triage).
   // null means the baseline run did not complete — triage treats all failures
@@ -136,13 +140,19 @@ async function run({ userInput, agent, parallel, prompt }) {
    */
   async function cleanupBaselineWorktree() {
     if (!baselineWorktreePath) return;
+    // Use WORKTREE_ROOT for the -C anchor when it is already resolved; fall
+    // back to the baseline path itself (which is a valid git repo checkout) so
+    // the worktree remove still works even if WORKTREE_ROOT is "unknown".
+    const gitAnchor = (WORKTREE_ROOT && WORKTREE_ROOT !== "unknown")
+      ? WORKTREE_ROOT
+      : baselineWorktreePath;
     try {
       await agent({
         agentType: "status-checker",
         input: {
           instructions:
             `Remove the temporary baseline worktree if it still exists:\n` +
-            `Run: git worktree remove "${baselineWorktreePath}" --force 2>/dev/null || true\n` +
+            `Run: git -C "${gitAnchor}" worktree remove "${baselineWorktreePath}" --force 2>/dev/null || true\n` +
             `Run: rm -rf "${baselineWorktreePath}" 2>/dev/null || true\n` +
             `Return: { "removed": true }`,
         },
@@ -151,6 +161,167 @@ async function run({ userInput, agent, parallel, prompt }) {
       // Swallow — cleanup is best-effort.
     }
     baselineWorktreePath = null;
+  }
+
+  /**
+   * AC-4: Tolerant JSON parse helper.
+   *
+   * Distinguishes between two failure modes:
+   *   1. Agent returned a value that is already an object/array (pass-through).
+   *   2. Agent returned a string — try JSON.parse; on failure, scan for a JSON
+   *      object or array embedded inside freeform prose (e.g. agent wraps the
+   *      result in a sentence).
+   *
+   * Returns { value: <parsed>, malformed: false } on success.
+   * Returns { value: null, malformed: true } when no parseable JSON is found.
+   *
+   * Callers that receive malformed=true MUST NOT halt the workflow based solely
+   * on the missing value — they should log a warning and apply a safe non-halting
+   * default (unless the field was genuinely required for safety, in which case
+   * they should log clearly and apply the most conservative safe assumption).
+   *
+   * @param {*} raw  - Value returned by agent() — may be string, object, or null.
+   * @returns {{ value: *, malformed: boolean }}
+   */
+  function safeParseJSON(raw) {
+    if (raw === null || raw === undefined) {
+      return { value: null, malformed: true };
+    }
+    // Already a non-string (object, array, boolean, number) — use directly.
+    if (typeof raw !== "string") {
+      return { value: raw, malformed: false };
+    }
+    // Try direct parse first.
+    try {
+      return { value: JSON.parse(raw), malformed: false };
+    } catch (_) {
+      // Try to extract a JSON object or array from inside prose.
+      const objMatch = raw.match(/\{[\s\S]*\}/);
+      if (objMatch) {
+        try {
+          return { value: JSON.parse(objMatch[0]), malformed: false };
+        } catch (_) {
+          // fall through
+        }
+      }
+      const arrMatch = raw.match(/\[[\s\S]*\]/);
+      if (arrMatch) {
+        try {
+          return { value: JSON.parse(arrMatch[0]), malformed: false };
+        } catch (_) {
+          // fall through
+        }
+      }
+      return { value: null, malformed: true };
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Pre-flight 2 — gh account verification (EMU-aware, config-driven)
+  //
+  // Reads `gh_target_account` and `gh_repo` from the worktree's settings.json
+  // (or config/settings.json). If the key is absent the pre-flight is a no-op
+  // so installs with no EMU constraint are unaffected (AC-4).
+  //
+  // When a target account IS configured:
+  //   1. Probe the active gh account via `gh auth status`.
+  //   2. If the active account differs from the target, switch via
+  //      `gh auth switch --user <account>` then re-verify (AC-1).
+  //   3. If the switch fails or re-verify shows the wrong account, return an
+  //      early error with a clear, actionable message (AC-2).
+  // -------------------------------------------------------------------------
+  const ghConfigResult = await agent({
+    agentType: "status-checker",
+    input: {
+      instructions:
+        "Read the gh account config from the worktree settings file.\n" +
+        `Run: cat "${WORKTREE_ROOT}/settings.json" 2>/dev/null || cat "${WORKTREE_ROOT}/config/settings.json" 2>/dev/null || echo 'null'\n` +
+        "Parse the JSON output (if any). Look for a top-level key 'gh_target_account' and 'gh_repo'.\n" +
+        "Return ONLY a JSON object: { \"gh_target_account\": \"<value or null>\", \"gh_repo\": \"<owner/repo or null>\" }\n" +
+        "If the file does not exist or the keys are absent, return: { \"gh_target_account\": null, \"gh_repo\": null }",
+    },
+  });
+
+  let ghConfig;
+  {
+    const { value, malformed } = safeParseJSON(ghConfigResult);
+    if (malformed) {
+      console.log("[finalize-feature] gh config parse malformed — proceeding with no account constraint");
+      ghConfig = { gh_target_account: null, gh_repo: null };
+    } else {
+      ghConfig = value || { gh_target_account: null, gh_repo: null };
+    }
+  }
+
+  const GH_TARGET_ACCOUNT = (ghConfig.gh_target_account || "").trim() || null;
+  const GH_REPO = (ghConfig.gh_repo || "").trim() || null;
+
+  if (GH_TARGET_ACCOUNT) {
+    // Probe current active account.
+    const ghStatusResult = await agent({
+      agentType: "status-checker",
+      input: {
+        instructions:
+          "Run: gh auth status 2>&1\n" +
+          "Parse the output to find which account is currently logged in and active.\n" +
+          "The active account appears on the line containing 'Logged in to' or '✓ Logged in to'.\n" +
+          "The active account username follows 'as ' (e.g. 'Logged in to github.com as urlmonitor').\n" +
+          "Return ONLY a JSON object: { \"active_account\": \"<username or null>\" }",
+      },
+    });
+
+    let ghStatus;
+    {
+      const { value, malformed } = safeParseJSON(ghStatusResult);
+      if (malformed) {
+        console.log("[finalize-feature] gh auth status parse malformed — assuming active_account is null");
+        ghStatus = { active_account: null };
+      } else {
+        ghStatus = value || { active_account: null };
+      }
+    }
+
+    const activeAccount = (ghStatus.active_account || "").trim() || null;
+
+    if (activeAccount !== GH_TARGET_ACCOUNT) {
+      // Switch to the configured account.
+      const ghSwitchResult = await agent({
+        agentType: "status-checker",
+        input: {
+          instructions:
+            `Run: gh auth switch --user "${GH_TARGET_ACCOUNT}" 2>&1\n` +
+            "Capture exit code and output.\n" +
+            "Then re-verify: run `gh auth status 2>&1` and extract the active account (see prior step).\n" +
+            "Return ONLY a JSON object: { \"switch_exit_code\": <integer>, \"verified_account\": \"<username or null>\" }",
+        },
+      });
+
+      let ghSwitch;
+      {
+        const { value, malformed } = safeParseJSON(ghSwitchResult);
+        if (malformed) {
+          console.log("[finalize-feature] gh switch parse malformed — assuming switch failed");
+          ghSwitch = { switch_exit_code: 1, verified_account: null };
+        } else {
+          ghSwitch = value || { switch_exit_code: 1, verified_account: null };
+        }
+      }
+
+      const verifiedAccount = (ghSwitch.verified_account || "").trim() || null;
+      const switchFailed =
+        ghSwitch.switch_exit_code !== 0 || verifiedAccount !== GH_TARGET_ACCOUNT;
+
+      if (switchFailed) {
+        return {
+          status: "error",
+          message:
+            `gh account pre-flight failed: could not activate '${GH_TARGET_ACCOUNT}'. ` +
+            `Run: gh auth login --hostname github.com --user ${GH_TARGET_ACCOUNT}`,
+          action_required: "gh_login_required",
+        };
+      }
+    }
+    // Active account is now confirmed to be GH_TARGET_ACCOUNT — proceed.
   }
 
   // -------------------------------------------------------------------------
@@ -165,8 +336,10 @@ async function run({ userInput, agent, parallel, prompt }) {
   // reason, log a warning and set baselineFailures = null. The workflow DOES
   // NOT halt — triage will classify all failures conservatively as regressions.
   //
-  // Resumability: if a baseline worktree path from a previous run exists, the
-  // agent will attempt to remove it first before creating a new one.
+  // Resumability: before creating the temp worktree, the agent probes for any
+  // stale /tmp/leafcutter-main-baseline-* directory from a prior interrupted run
+  // and removes it. This prevents git worktree add from failing because the
+  // target path already exists.
   // -------------------------------------------------------------------------
   const baselineTs = Date.now();
   const baselineTmpPath = `/tmp/leafcutter-main-baseline-${baselineTs}`;
@@ -180,9 +353,18 @@ async function run({ userInput, agent, parallel, prompt }) {
     input: {
       instructions:
         "Capture a pre-merge test baseline on the current main HEAD.\n" +
+        `Use git -C "${WORKTREE_ROOT}" for all git commands to avoid CWD ambiguity.\n` +
+        "\n" +
+        "Step A0 — Reclaim any stale baseline worktrees from prior interrupted runs:\n" +
+        "  Run: ls /tmp/leafcutter-main-baseline-* 2>/dev/null || true\n" +
+        "  For each path returned (if any):\n" +
+        `    Run: git -C "${WORKTREE_ROOT}" worktree remove \"<path>\" --force 2>/dev/null || true\n` +
+        "    Run: rm -rf \"<path>\" 2>/dev/null || true\n" +
+        "  Log each removed path as: 'Reclaimed stale baseline worktree: <path>'\n" +
+        "  If no paths found: log 'No stale baseline worktrees found.'\n" +
         "\n" +
         "Step A — Create a temporary detached worktree at origin/main:\n" +
-        `  Run: git worktree add --detach "${baselineTmpPath}" origin/main\n` +
+        `  Run: git -C "${WORKTREE_ROOT}" worktree add --detach "${baselineTmpPath}" origin/main\n` +
         "  Capture the exit code.\n" +
         "  If exit code is non-zero:\n" +
         "    Log: 'Baseline worktree creation failed — triage will treat all failures as regressions.'\n" +
@@ -200,7 +382,7 @@ async function run({ userInput, agent, parallel, prompt }) {
         "  Note: a zero-length list means the baseline is clean (all tests pass).\n" +
         "\n" +
         "Step D — Remove the temp worktree:\n" +
-        `  Run: git worktree remove "${baselineTmpPath}" --force\n` +
+        `  Run: git -C "${WORKTREE_ROOT}" worktree remove "${baselineTmpPath}" --force\n` +
         `  Run: rm -rf "${baselineTmpPath}" 2>/dev/null || true\n` +
         "\n" +
         "Step E — Return the baseline result:\n" +
@@ -217,13 +399,16 @@ async function run({ userInput, agent, parallel, prompt }) {
   });
 
   let baselineInfo;
-  try {
-    baselineInfo =
-      typeof baselineResult === "string"
-        ? JSON.parse(baselineResult)
-        : baselineResult;
-  } catch (_err) {
-    baselineInfo = { status: "parse_failed", baseline_sha: null, baseline_failures: null, baseline_run_at: null };
+  {
+    const { value, malformed } = safeParseJSON(baselineResult);
+    if (malformed) {
+      // AC-4: Malformed reply is not the same as "baseline failed" —
+      // degrade gracefully (same as run_failed path) without spuriously halting.
+      console.log("[finalize-feature] step 0 baseline parse malformed — treating as run_failed (triage will use conservative classification)");
+      baselineInfo = { status: "parse_failed", baseline_sha: null, baseline_failures: null, baseline_run_at: null };
+    } else {
+      baselineInfo = value || { status: "parse_failed", baseline_sha: null, baseline_failures: null, baseline_run_at: null };
+    }
   }
 
   const baselineStatus = (baselineInfo.status || "unknown").toLowerCase();
@@ -267,13 +452,16 @@ async function run({ userInput, agent, parallel, prompt }) {
   });
 
   let prProbe;
-  try {
-    prProbe =
-      typeof prProbeResult === "string"
-        ? JSON.parse(prProbeResult)
-        : prProbeResult;
-  } catch (_err) {
-    prProbe = { found: false };
+  {
+    const { value, malformed } = safeParseJSON(prProbeResult);
+    if (malformed) {
+      // AC-4: Malformed PR probe defaults to "not found" — safer to open a duplicate
+      // PR (which will be rejected by GH) than to silently skip creating one.
+      console.log("[finalize-feature] step 1 PR probe parse malformed — assuming no PR exists");
+      prProbe = { found: false };
+    } else {
+      prProbe = value || { found: false };
+    }
   }
 
   if (prProbe.found) {
@@ -282,6 +470,14 @@ async function run({ userInput, agent, parallel, prompt }) {
     skippedSteps.push({ step: 1, reason: `PR already open (#${prNumber}) — skipping step 1` });
   } else {
     // Dispatch pull-request agent to open the PR.
+    // AC-3 EMU REST fallback: if `gh pr create` fails with the EMU error string
+    // ("createPullRequest" or "Enterprise Managed User"), fall back to the REST API:
+    //   gh api -X POST repos/<org>/<repo>/pulls -f title="..." -f head="..." -f base="main" -f body="..."
+    // GH_REPO (from config) is used for the REST path; omit fallback if GH_REPO is absent.
+    const emuFallbackNote = GH_REPO
+      ? `EMU REST fallback: if gh pr create fails with "createPullRequest" or "Enterprise Managed User" error, ` +
+        `use: gh api -X POST repos/${GH_REPO}/pulls -f title="<title>" -f head="${BRANCH}" -f base="main" -f body="<body>". `
+      : "";
     const openPrResult = await agent({
       agentType: "pull-request",
       input: {
@@ -289,16 +485,21 @@ async function run({ userInput, agent, parallel, prompt }) {
         action: "open",
         instructions:
           "Open a pull request for the current feature branch. " +
+          "First try: gh pr create --base main --head \"" + BRANCH + "\" (standard path). " +
+          emuFallbackNote +
           "Return ONLY a JSON object: { \"number\": <N>, \"url\": \"<url>\" }",
       },
     });
 
     let openPr;
-    try {
-      openPr =
-        typeof openPrResult === "string" ? JSON.parse(openPrResult) : openPrResult;
-    } catch (_err) {
-      openPr = {};
+    {
+      const { value, malformed } = safeParseJSON(openPrResult);
+      if (malformed) {
+        console.log("[finalize-feature] step 1 PR open parse malformed — pr_number and url will be null");
+        openPr = {};
+      } else {
+        openPr = value || {};
+      }
     }
 
     prNumber = openPr.number || openPr.pr_number || null;
@@ -323,19 +524,20 @@ async function run({ userInput, agent, parallel, prompt }) {
     agentType: "status-checker",
     input: {
       instructions:
-        "Run these commands inside the feature worktree to merge origin/main before tests:\n" +
+        "Run these commands inside the feature worktree to merge origin/main before tests.\n" +
+        `All git commands must use the explicit worktree root: git -C "${WORKTREE_ROOT}"\n` +
         "\n" +
         "1. Check if the branch is already up-to-date with origin/main:\n" +
-        `   Run: git merge-base --is-ancestor origin/main HEAD\n` +
+        `   Run: git -C "${WORKTREE_ROOT}" merge-base --is-ancestor origin/main HEAD\n` +
         "   Exit code 0 means HEAD already contains all commits from origin/main.\n" +
         "   If exit code 0: log 'Already up-to-date with origin/main.' and return\n" +
         "   { \"status\": \"already_up_to_date\", \"merge_strategy\": \"already_up_to_date\" }\n" +
         "\n" +
         "2. If not up-to-date, fetch origin/main to ensure it is current:\n" +
-        "   Run: git fetch origin main\n" +
+        `   Run: git -C "${WORKTREE_ROOT}" fetch origin main\n` +
         "\n" +
         "3. Attempt the merge (no commit, no fast-forward):\n" +
-        "   Run: git merge origin/main --no-commit --no-ff\n" +
+        `   Run: git -C "${WORKTREE_ROOT}" merge origin/main --no-commit --no-ff\n` +
         "   Capture the exit code.\n" +
         "\n" +
         "4. If exit code is 0 (clean merge):\n" +
@@ -343,22 +545,27 @@ async function run({ userInput, agent, parallel, prompt }) {
         "   Return: { \"status\": \"merged\", \"merge_strategy\": \"merged_main\" }\n" +
         "\n" +
         "5. If exit code is non-zero (conflict detected):\n" +
-        "   Run: git merge --abort\n" +
+        `   Run: git -C "${WORKTREE_ROOT}" merge --abort\n` +
         "   Return: { \"status\": \"conflict\", \"merge_strategy\": null }",
     },
   });
 
   let mergeMainInfo;
-  try {
-    mergeMainInfo =
-      typeof mergeMainResult === "string"
-        ? JSON.parse(mergeMainResult)
-        : mergeMainResult;
-  } catch (_err) {
-    mergeMainInfo = { status: "conflict", merge_strategy: null };
+  {
+    const { value, malformed } = safeParseJSON(mergeMainResult);
+    if (malformed) {
+      // AC-4: A malformed reply is not the same as "conflict detected".
+      // Default to "already_up_to_date" (non-halting, safe) and log a warning.
+      // If the merge actually had a problem, it will become apparent at the
+      // test-runner phase (step 3) rather than spuriously halting here.
+      console.log("[finalize-feature] step 2 merge-main parse malformed — treating as already_up_to_date (non-halting safe default)");
+      mergeMainInfo = { status: "already_up_to_date", merge_strategy: "already_up_to_date" };
+    } else {
+      mergeMainInfo = value || { status: "already_up_to_date", merge_strategy: "already_up_to_date" };
+    }
   }
 
-  const mergeStatus = (mergeMainInfo.status || "conflict").toLowerCase();
+  const mergeStatus = (mergeMainInfo.status || "already_up_to_date").toLowerCase();
 
   if (mergeStatus === "conflict") {
     await cleanupBaselineWorktree();
@@ -417,18 +624,24 @@ async function run({ userInput, agent, parallel, prompt }) {
 
   let testPassed;
   let postMergeFailures;
-  try {
-    const parsed =
-      typeof testResult === "string" ? JSON.parse(testResult) : testResult;
-    testPassed = parsed && parsed.passed === true;
-    testResult = parsed;
-    postMergeFailures = (testResult && Array.isArray(testResult.failing_tests))
-      ? testResult.failing_tests
-      : [];
-  } catch (_err) {
-    // If parsing fails, assume failure to be safe.
-    testPassed = false;
-    postMergeFailures = [];
+  {
+    const { value, malformed } = safeParseJSON(testResult);
+    if (malformed) {
+      // AC-4: A malformed test reply is ambiguous — we cannot determine pass/fail.
+      // Default to testPassed=false (conservative) but log clearly that this is a
+      // parse failure, not an agent-reported failure. The triage step will then
+      // attempt to classify failures, and if the triage reply is also malformed,
+      // that triage step's own safe default applies.
+      console.log("[finalize-feature] step 3 test-runner parse malformed — treating as failed (conservative; triage will classify)");
+      testPassed = false;
+      postMergeFailures = [];
+      testResult = { passed: false, output: "(parse malformed)", failing_tests: [] };
+    } else {
+      const parsed = value || {};
+      testPassed = parsed.passed === true;
+      testResult = parsed;
+      postMergeFailures = Array.isArray(parsed.failing_tests) ? parsed.failing_tests : [];
+    }
   }
 
   if (testPassed) {
@@ -451,22 +664,22 @@ async function run({ userInput, agent, parallel, prompt }) {
       agentType: "status-checker",
       input: {
         instructions:
-          "Run: git diff --name-only origin/main HEAD\n" +
+          `Run: git -C "${WORKTREE_ROOT}" diff --name-only origin/main HEAD\n` +
           "Return ONLY a JSON object: { \"changed_files\": [\"<file1>\", \"<file2>\", ...] }\n" +
           "If the command fails or returns no output, return: { \"changed_files\": [] }",
       },
     });
 
     let changedFiles = [];
-    try {
-      const parsedCf =
-        typeof changedFilesResult === "string"
-          ? JSON.parse(changedFilesResult)
-          : changedFilesResult;
-      changedFiles = Array.isArray(parsedCf.changed_files) ? parsedCf.changed_files : [];
-    } catch (_err) {
-      // Default to empty list on parse failure — triage uses it as a hint only.
-      changedFiles = [];
+    {
+      const { value, malformed } = safeParseJSON(changedFilesResult);
+      if (malformed) {
+        console.log("[finalize-feature] step 3 changed_files parse malformed — triage will use empty changed_files list");
+        changedFiles = [];
+      } else {
+        const parsedCf = value || {};
+        changedFiles = Array.isArray(parsedCf.changed_files) ? parsedCf.changed_files : [];
+      }
     }
 
     const triageRaw = await agent({
@@ -492,17 +705,29 @@ async function run({ userInput, agent, parallel, prompt }) {
       },
     });
 
-    try {
-      triageReport =
-        typeof triageRaw === "string" ? JSON.parse(triageRaw) : triageRaw;
-    } catch (_err) {
-      // Parse failure: treat as blocking — cannot determine safety.
-      triageReport = {
-        blocks_finalization: true,
-        regressions: postMergeFailures,
-        pre_existing: [],
-        summary: "Triage report parse failed — treating all failures as regressions.",
-      };
+    {
+      const { value, malformed } = safeParseJSON(triageRaw);
+      if (malformed) {
+        // AC-4: A malformed triage reply is genuinely ambiguous — we cannot determine
+        // whether failures are regressions or pre-existing. Use conservative
+        // blocks_finalization=true, but log clearly that this is a parse failure
+        // (not an agent-reported regression), so the operator can distinguish
+        // "tests have regressions" from "triage reply was garbled".
+        console.log("[finalize-feature] step 3 triage parse malformed — treating as blocks_finalization=true (conservative; see note in summary)");
+        triageReport = {
+          blocks_finalization: true,
+          regressions: postMergeFailures,
+          pre_existing: [],
+          summary: "Triage reply was malformed (could not parse JSON) — treating all failures as regressions conservatively. If you believe this is a parse error rather than a real regression, re-run /finalize-feature.",
+        };
+      } else {
+        triageReport = value || {
+          blocks_finalization: true,
+          regressions: postMergeFailures,
+          pre_existing: [],
+          summary: "Triage report empty — treating all failures as regressions.",
+        };
+      }
     }
 
     // Log the triage report to the user for visibility.
@@ -538,6 +763,228 @@ async function run({ userInput, agent, parallel, prompt }) {
     // blocks_finalization is false: all failures are pre-existing.
     // Store triage_report in workflow state and continue to step 4.
     completedSteps.push(3);
+  }
+
+  // -------------------------------------------------------------------------
+  // Step 3.5 — Pre-merge AC closure (runs on the feature branch, before Step 4)
+  //
+  // This step MUST run before the PR merge (step 4) so that ticket status and
+  // source AC work_status are committed on the feature branch. The PR then
+  // carries that closure commit to origin/main atomically. Writing closure on
+  // local main is not possible because main is PR-only (branch protection).
+  //
+  // Sub-steps:
+  //   A. Reset the Step 2 test-merge. Step 2 left a staged merge in the index
+  //      (git merge --no-commit --no-ff). We MUST discard it before editing
+  //      ticket files, or the closure commit will drag premature origin/main
+  //      merge content into the PR.
+  //   B. Detect in-scope tickets with status != done.
+  //   C. Set frontmatter `status: done` for each ticket.
+  //   D. Invoke mark_ac_done.py for each ticket (non-fatal on non-zero exit).
+  //   E. Commit the closure on the feature branch.
+  //
+  // Idempotency / resumability:
+  //   - If the PR is already merged (detected at step 4 time), the closure
+  //     commit is moot. Detect via closureProbe and skip if already done.
+  //   - Already-closed tickets and ACs are no-ops (mark_ac_done.py is
+  //     idempotent; a ticket already status: done is skipped).
+  //   - If the closure commit already exists on the branch, skip entirely.
+  // -------------------------------------------------------------------------
+
+  // Probe: check whether a closure commit already exists on the branch.
+  // This makes step 3.5 safely re-entrant when finalize is re-run after a
+  // partial run that completed the closure commit but crashed before step 4.
+  const closureProbeResult = await agent({
+    agentType: "status-checker",
+    input: {
+      instructions:
+        `Run: git -C "${WORKTREE_ROOT}" log --oneline --grep 'chore(tickets): close tickets and source ACs' -1\n` +
+        "If the output is non-empty (a closure commit already exists on this branch):\n" +
+        "  Return: { \"already_committed\": true }\n" +
+        "Otherwise:\n" +
+        "  Return: { \"already_committed\": false }",
+    },
+  });
+
+  let closureAlreadyCommitted = false;
+  {
+    const { value, malformed } = safeParseJSON(closureProbeResult);
+    if (malformed) {
+      console.log("[finalize-feature] step 3.5 closure probe parse malformed — assuming not already committed (will re-attempt closure)");
+      closureAlreadyCommitted = false;
+    } else {
+      closureAlreadyCommitted = (value || {}).already_committed === true;
+    }
+  }
+
+  if (closureAlreadyCommitted) {
+    skippedSteps.push({
+      step: "3.5",
+      reason: "Pre-merge closure commit already present — skipping step 3.5",
+    });
+  } else {
+    // Also check: if the PR is already merged, the pre-merge closure step is moot.
+    // In that case skip gracefully rather than attempting a write on a merged branch.
+    let prAlreadyMergedAtClosure = false;
+    if (prNumber !== null) {
+      const prClosureStateResult = await agent({
+        agentType: "status-checker",
+        input: {
+          instructions:
+            `Run: gh pr view ${prNumber} --json state --jq '.state'\n` +
+            "Return ONLY a JSON object: { \"state\": \"OPEN\"|\"MERGED\"|\"CLOSED\" }",
+        },
+      });
+      {
+        const { value, malformed } = safeParseJSON(prClosureStateResult);
+        if (malformed) {
+          console.log("[finalize-feature] step 3.5 PR state parse malformed — assuming PR is OPEN");
+          prAlreadyMergedAtClosure = false;
+        } else {
+          prAlreadyMergedAtClosure = ((value || {}).state || "").toUpperCase() === "MERGED";
+        }
+      }
+    }
+
+    if (prAlreadyMergedAtClosure) {
+      skippedSteps.push({
+        step: "3.5",
+        reason: "PR already merged — pre-merge closure step skipped (AC-5 idempotency)",
+      });
+    } else {
+      // -----------------------------------------------------------------------
+      // Sub-step A: Reset the Step 2 test-merge.
+      //
+      // Step 2 ran `git merge origin/main --no-commit --no-ff`. This leaves a
+      // staged merge in the index. We must discard it before editing ticket
+      // files so the closure commit contains only ticket/AC changes.
+      //
+      // Strategy: `git merge --abort` is only valid when a merge is in
+      // progress (MERGE_HEAD exists). If no merge is in progress (already_up_to_date
+      // path in step 2), `git reset --hard HEAD` achieves the same clean state.
+      // -----------------------------------------------------------------------
+      const resetMergeResult = await agent({
+        agentType: "status-checker",
+        input: {
+          instructions:
+            "Reset any staged test-merge left by step 2 before editing ticket files.\n" +
+            `All git commands use the explicit worktree root: git -C "${WORKTREE_ROOT}"\n` +
+            "\n" +
+            "1. Check if a merge is in progress:\n" +
+            `   Run: git -C "${WORKTREE_ROOT}" rev-parse --verify MERGE_HEAD 2>/dev/null\n` +
+            "   Capture the exit code.\n" +
+            "\n" +
+            "2. If exit code is 0 (MERGE_HEAD exists — merge in progress):\n" +
+            `   Run: git -C "${WORKTREE_ROOT}" merge --abort\n` +
+            "   Log: 'Step 2 test-merge aborted — clean feature-branch state restored.'\n" +
+            "   Return: { \"status\": \"aborted\" }\n" +
+            "\n" +
+            "3. If exit code is non-zero (no merge in progress):\n" +
+            `   Run: git -C "${WORKTREE_ROOT}" reset --hard HEAD\n` +
+            "   Log: 'No merge in progress — reset to feature-branch HEAD.'\n" +
+            "   Return: { \"status\": \"reset\" }",
+        },
+      });
+
+      // Sub-step B + C + D + E: find in-scope tickets, close them, close ACs, commit.
+      //
+      // Delegate to status-checker in a single agent call for atomicity.
+      // The agent:
+      //   B. Finds ticket files on this branch with status != done.
+      //   C. Edits each ticket's frontmatter to set status: done.
+      //   D. For each ticket, invokes mark_ac_done.py (non-zero exit = WARNING, not fatal).
+      //   E. If any tickets were closed, commits on the feature branch.
+      // Returns structured counts.
+      const closureResult = await agent({
+        agentType: "status-checker",
+        input: {
+          branch: BRANCH,
+          worktree_root: WORKTREE_ROOT,
+          instructions:
+            "Close in-scope tickets and their source ACs on the feature branch.\n" +
+            "\n" +
+            "=== CONTEXT ===\n" +
+            `Feature branch: ${BRANCH}\n` +
+            `Worktree root: ${WORKTREE_ROOT}\n` +
+            "\n" +
+            "=== SUB-STEP B: FIND IN-SCOPE TICKETS ===\n" +
+            "Find all ticket .md files that this branch introduced or modified:\n" +
+            `  Run: git -C ${WORKTREE_ROOT} diff --name-only origin/main HEAD -- 'tickets/**/*.md'\n` +
+            "  Also include any ticket file in the worktree that has status != done:\n" +
+            `  Run: git -C ${WORKTREE_ROOT} log --oneline origin/main..${BRANCH} --name-only --diff-filter=A -- 'tickets/**/*.md'\n` +
+            "  Combine both lists; deduplicate. Exclude Master_Plan.md.\n" +
+            "  For each file, read its frontmatter `status:` field.\n" +
+            "  Collect only files where status != 'done' (skip already-done tickets — AC-5 idempotency).\n" +
+            "  Call this list OPEN_TICKETS.\n" +
+            "  If OPEN_TICKETS is empty: log 'No open tickets to close.' and skip to REPORTING.\n" +
+            "\n" +
+            "=== SUB-STEP C: SET status: done ===\n" +
+            "For each ticket in OPEN_TICKETS:\n" +
+            "  Read the file content.\n" +
+            "  Replace the `status: <value>` line in the YAML frontmatter with `status: done`.\n" +
+            "  Write the updated content back to the file.\n" +
+            "  Log: 'Set status: done on <ticket_path>'\n" +
+            "\n" +
+            "=== SUB-STEP D: CLOSE SOURCE ACs ===\n" +
+            "For each ticket in OPEN_TICKETS:\n" +
+            "  Read the ticket frontmatter and look for a `source_ac:` field.\n" +
+            "  If `source_ac` is absent or empty: log 'No source_ac on <ticket_path> — skipping AC closure.' and skip (AC-3 no-op).\n" +
+            "  If `source_ac` is present:\n" +
+            `    Run: python3 ${WORKTREE_ROOT}/scripts/ac_store/mark_ac_done.py --ticket <ticket_path> --ac-root ${WORKTREE_ROOT}/docs/acceptance-criteria/\n` +
+            "    Capture the exit code.\n" +
+            "    If exit code is 0: increment acs_closed counter.\n" +
+            "    If exit code is non-zero: log 'WARNING: mark_ac_done.py exited <code> for <ticket_path> — skipping AC closure (non-fatal).' and increment acs_skipped counter. DO NOT fail finalize. (AC-4 non-fatal)\n" +
+            "\n" +
+            "=== SUB-STEP E: COMMIT ON FEATURE BRANCH ===\n" +
+            "If OPEN_TICKETS was non-empty (any edits were made):\n" +
+            `  Run: git -C ${WORKTREE_ROOT} add tickets/\n` +
+            `  Run: git -C ${WORKTREE_ROOT} add docs/acceptance-criteria/ 2>/dev/null || true\n` +
+            `  Run: git -C ${WORKTREE_ROOT} diff --cached --name-only\n` +
+            "  If staged files exist:\n" +
+            `    Run: git -C ${WORKTREE_ROOT} commit -m 'chore(tickets): close tickets and source ACs'\n` +
+            "    Log: 'Closure commit created on feature branch.'\n" +
+            "  Else:\n" +
+            "    Log: 'Nothing staged after edits — all tickets were already done.'\n" +
+            "\n" +
+            "=== REPORTING ===\n" +
+            "Return a JSON object:\n" +
+            "{\n" +
+            '  "tickets_closed": ["<path1>", ...],\n' +
+            '  "acs_closed": <integer>,\n' +
+            '  "acs_skipped": <integer>,\n' +
+            '  "commit_made": true|false\n' +
+            "}",
+        },
+      });
+
+      let closureInfo;
+      {
+        const { value, malformed } = safeParseJSON(closureResult);
+        if (malformed) {
+          console.log("[finalize-feature] step 3.5 closure parse malformed — assuming zero tickets/ACs closed");
+          closureInfo = { tickets_closed: [], acs_closed: 0, acs_skipped: 0, commit_made: false };
+        } else {
+          closureInfo = value || { tickets_closed: [], acs_closed: 0, acs_skipped: 0, commit_made: false };
+        }
+      }
+
+      // Accumulate counts into workflow-level variables.
+      if (Array.isArray(closureInfo.tickets_closed)) {
+        ticketsClosedPreMerge = closureInfo.tickets_closed.length;
+        // Merge into the broader ticketsClosed list for the final summary.
+        ticketsClosed.push(...closureInfo.tickets_closed);
+      }
+      acsClosed = typeof closureInfo.acs_closed === "number" ? closureInfo.acs_closed : 0;
+      acsSkipped = typeof closureInfo.acs_skipped === "number" ? closureInfo.acs_skipped : 0;
+
+      completedSteps.push("3.5");
+
+      console.log(
+        `[finalize-feature] step 3.5 closure: tickets_closed=${ticketsClosedPreMerge} ` +
+          `acs_closed=${acsClosed} acs_skipped=${acsSkipped} ` +
+          `commit_made=${closureInfo.commit_made}`
+      );
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -580,13 +1027,14 @@ async function run({ userInput, agent, parallel, prompt }) {
   });
 
   let prState;
-  try {
-    prState =
-      typeof prStateResult === "string"
-        ? JSON.parse(prStateResult)
-        : prStateResult;
-  } catch (_err) {
-    prState = { state: "OPEN" };
+  {
+    const { value, malformed } = safeParseJSON(prStateResult);
+    if (malformed) {
+      console.log("[finalize-feature] step 4 PR state parse malformed — assuming PR is OPEN");
+      prState = { state: "OPEN" };
+    } else {
+      prState = value || { state: "OPEN" };
+    }
   }
 
   if ((prState.state || "").toUpperCase() === "MERGED") {
@@ -614,6 +1062,14 @@ async function run({ userInput, agent, parallel, prompt }) {
     }
 
     // Dispatch pull-request agent for the merge operation.
+    // AC-3 EMU REST fallback: if `gh pr merge` fails with the EMU error string
+    // ("createPullRequest" or "Enterprise Managed User"), fall back to the REST API:
+    //   gh api -X PUT repos/<org>/<repo>/pulls/<number>/merge -f merge_method="merge"
+    // GH_REPO (from config) is used for the REST path; omit fallback if GH_REPO is absent.
+    const emuMergeFallbackNote = GH_REPO
+      ? `EMU REST fallback: if gh pr merge fails with "createPullRequest" or "Enterprise Managed User" error, ` +
+        `use: gh api -X PUT repos/${GH_REPO}/pulls/${prNumber}/merge -f merge_method="merge". `
+      : "";
     mergeResult = await agent({
       agentType: "pull-request",
       input: {
@@ -622,6 +1078,7 @@ async function run({ userInput, agent, parallel, prompt }) {
         action: "merge",
         instructions:
           `Merge PR #${prNumber} to main using: gh pr merge ${prNumber} --merge --auto\n` +
+          emuMergeFallbackNote +
           "Wait for the merge to complete, then return a JSON object: " +
           "{ \"merged\": true, \"sha\": \"<merge-commit-sha>\" }",
       },
@@ -632,15 +1089,27 @@ async function run({ userInput, agent, parallel, prompt }) {
 
   // -------------------------------------------------------------------------
   // Step 5 — Sync local main (resumable)
+  //
+  // AC-2 note: this step does NOT make commits on main. It only runs
+  // `git checkout main && git pull` (read operations). No pre-commit-config
+  // probe is required here because no commit is issued.
+  //
+  // Historical context: ticket 09 (AC-2) originally targeted a main-side
+  // reconciliation commit that included `git mv` folder moves. That step
+  // (Step 6c in the original design) was removed by ticket 04
+  // (EPIC-FinalizeFeatureHardening). As a result, finalize never commits
+  // directly to main — all commits go through PRs (PR-only branch protection).
+  // The pre-commit-config probe AC is therefore satisfied structurally: there
+  // is no code path that commits on main without going through the PR merge gate.
   // -------------------------------------------------------------------------
   const syncResult = await agent({
     agentType: "status-checker",
     input: {
       instructions:
-        "Run these commands in sequence:\n" +
-        "1. `git checkout main`\n" +
-        "2. `git pull`\n" +
-        "3. `git log -1 --oneline`\n" +
+        "Run these commands in sequence using the explicit repo root to avoid CWD ambiguity:\n" +
+        `1. git -C "${WORKTREE_ROOT}" checkout main\n` +
+        `2. git -C "${WORKTREE_ROOT}" pull\n` +
+        `3. git -C "${WORKTREE_ROOT}" log -1 --oneline\n` +
         "Report the final HEAD SHA and commit message. " +
         "Return a JSON object: { \"head_sha\": \"<sha>\", \"head_message\": \"<message>\" }",
     },
@@ -649,22 +1118,37 @@ async function run({ userInput, agent, parallel, prompt }) {
   completedSteps.push(5);
 
   // -------------------------------------------------------------------------
-  // Step 6 — Create tracking tickets for pre-existing / flaky failures,
-  //          then close tickets / archive epic (resumable)
+  // Step 6 — Report untracked pre-existing/flaky failures, then detect scope
+  //          (scope-detection only — no writes on main)
   //
-  // Sub-step 6a: create inbox tracking tickets for pre_existing/flaky triage entries.
-  //   Failure policy: ticket creation failure is non-fatal. Log and continue.
+  // Sub-step 6a: emit an accurate report of pre_existing/flaky triage entries.
+  //   Auto-ticketing is disabled: create-ticket is a workflow (slash command),
+  //   not a registered agent, and cannot be dispatched via agent(). The step
+  //   emits a structured console.log listing all untracked failures and instructs
+  //   the operator to run /create-ticket manually. No null entries are pushed
+  //   into any array — untrackedFailures[] is never conflated with created tickets.
   //   Only runs when triageReport is non-null (tests had failures in step 3).
   //
-  // Sub-step 6b: detect scope and close tickets / archive epic.
-  //
-  // Sub-step 6c: reconcile folder positions for any ticket file whose physical
-  //   folder does not match its frontmatter `status:` after merge.
-  //   This is necessary because worktree branches no longer perform git mv —
-  //   the move-on-main-only pattern defers all moves to this post-merge step.
+  // Sub-step 6b: scope-detection only — detect whether this was a single-ticket
+  //   or epic-scoped branch, and what tickets were in scope.
+  //   NO git writes on main. Ticket closure (status: done) and AC closure already
+  //   happened in step 3.5 on the feature branch (pre-merge). Since main is PR-only
+  //   (ruff gate blocks direct push), any commit on local main would be:
+  //   - Unmergeable: blocked by branch protection
+  //   - Local-only divergence: never reaches origin/main
+  //   Step 6c (folder reconciliation via git mv + commit on main) was removed
+  //   (ticket 04, EPIC-FinalizeFeatureHardening). status: frontmatter is the
+  //   sole source of truth for ticket lifecycle (BO-400a-3/4/5, BO-400c-1/2).
   // -------------------------------------------------------------------------
 
-  // Sub-step 6a: create tracking tickets for pre-existing / flaky triage entries.
+  // Sub-step 6a: report pre-existing / flaky failures that require manual tracking.
+  //
+  // Auto-ticketing via create-ticket is disabled: create-ticket is a workflow
+  // (slash command), not a registered agent, and cannot be dispatched via agent().
+  // It was removed from the agent registry in EPIC-AcPipelineConsolidation v2.0.0.
+  // Rather than silently ignoring these failures or falsely claiming tickets were
+  // created, step 6a now emits an accurate structured report listing each failure
+  // so the operator can decide whether to run /create-ticket manually.
   if (triageReport !== null) {
     const triageEntries = Array.isArray(triageReport.triage_report)
       ? triageReport.triage_report
@@ -675,166 +1159,84 @@ async function run({ userInput, agent, parallel, prompt }) {
         entry.category === "pre_existing" || entry.category === "flaky"
     );
 
-    for (const entry of preExistingEntries) {
-      const testId = entry.test_id || "<unknown test>";
-      const category = entry.category || "pre_existing";
-
-      let requestText =
-        `Tracked pre-existing test failure: ${testId}. ` +
-        `Failing on main at SHA ${baselineSha || "unknown"}. ` +
-        `Triage category: ${category}. ` +
-        `See finalize-feature triage report from ${baselineRunAt || new Date().toISOString()}.`;
-
-      if (category === "flaky") {
-        requestText +=
-          " Intermittent failure detected. Failing in some runs but not others." +
-          " Needs investigation to determine root cause before adding a known-flaky marker.";
-      }
-
-      // create-ticket is a workflow (slash command), not a registered agent,
-      // and was removed from the agent registry in EPIC-AcPipelineConsolidation
-      // v2.0.0. Dispatching it via agent() fails at runtime.
-      // Log the request so the user can create the ticket manually via
-      // /create-ticket.
-      console.warn(
-        `[finalize-feature] step 6a: automatic ticket creation skipped — ` +
-        `create-ticket is a workflow, not an agent. ` +
-        `To track this failure, run /create-ticket manually with the following request:\n` +
-        requestText
-      );
-      createdTrackingTickets.push(null);
-    }
-
     if (preExistingEntries.length === 0) {
       console.log(
-        "[finalize-feature] step 6a: no pre_existing or flaky entries in triage report — skipping create-ticket sub-step"
+        "[finalize-feature] step 6a: no pre_existing or flaky entries in triage report — no tracking tickets needed"
+      );
+    } else {
+      // Collect untracked failures so the final summary is accurate.
+      for (const entry of preExistingEntries) {
+        const testId = entry.test_id || "<unknown test>";
+        const category = entry.category || "pre_existing";
+        untrackedFailures.push({ testId, category });
+      }
+
+      // Emit one structured report listing all untracked failures.
+      const failureLines = untrackedFailures
+        .map(
+          ({ testId, category }) =>
+            `  - [${category}] ${testId} (failing on main at SHA ${baselineSha || "unknown"})`
+        )
+        .join("\n");
+
+      console.log(
+        `[finalize-feature] step 6a: ${untrackedFailures.length} pre-existing/flaky failure(s) detected.\n` +
+        `Auto-ticketing is disabled (create-ticket is a workflow, not an agent).\n` +
+        `No tracking tickets were created. To track these failures, run /create-ticket for each:\n` +
+        failureLines
       );
     }
   }
 
-  // Sub-step 6b: ticket closing / epic archival
+  // Sub-step 6b: scope-detection only (no git writes on main)
+  //
+  // Ticket closure (status: done) already happened in step 3.5 on the feature
+  // branch. This sub-step is purely informational: detect what kind of branch
+  // was merged (single-ticket vs epic-scoped) and which tickets were in scope.
+  // NO git mv, NO status flip, NO commits on main.
   const closeResult = await agent({
     agentType: "status-checker",
     input: {
       branch: BRANCH,
       instructions:
-        "Detect branch scope and close completed tickets:\n" +
-        `1. Run: git log --oneline main..${BRANCH} 2>/dev/null || git log --oneline -20\n` +
-        "2. Search tickets/ tree for ticket files referencing this branch or with status != done.\n" +
+        "Detect branch scope and report what tickets were touched (informational only — no writes):\n" +
+        `1. Run: git -C "${WORKTREE_ROOT}" log --oneline main..${BRANCH} 2>/dev/null || git -C "${WORKTREE_ROOT}" log --oneline -20\n` +
+        "2. Search tickets/ tree for ticket files referencing this branch.\n" +
         "3. Determine if any ticket path is inside an EPIC-*/ folder — if so, this is epic-scoped.\n" +
-        "4. For single-ticket branches: check if ticket status is already 'done'; if not, " +
-        "   move the ticket file to tickets/99_done/ and flip status: todo → status: done.\n" +
-        "5. For epic-scoped branches: before moving the epic folder, run the\n" +
-        "   finalize-feature-archive-check skill:\n" +
-        "   a. Find all *.md files under <epic_folder>/done/ (excluding Master_Plan.md).\n" +
-        "   b. For each file, parse the YAML frontmatter and read the `status:` field.\n" +
-        "   c. Build two lists: ok_tickets (status: done) and missing_tickets (any other value).\n" +
-        "   d. If missing_tickets is non-empty, surface the list to the user and ask:\n" +
-        "      'Auto-fix: set status: done in frontmatter for all listed tickets and commit? (yes / no)'\n" +
-        "   e. On 'yes': edit each missing ticket's frontmatter, git add, commit with message\n" +
-        "      'chore(tickets): fix frontmatter status on archived sub-tickets', then re-scan.\n" +
-        "   f. On 'no': HALT — return { status: 'halted', scope: 'epic',\n" +
-        "      reason: 'user declined archive status fix — epic folder move blocked',\n" +
-        "      missing_tickets: [...] }. Do NOT proceed to git mv.\n" +
-        "   g. Only when all sub-tickets have status: done: run the epic archival gate\n" +
-        "      (verify all sub-tickets are signed_off or not_needed), then\n" +
-        "      git mv the epic folder to tickets/99_done/EPIC-<Name>/.\n" +
-        "6. Return a JSON object: " +
+        "4. For each in-scope ticket: read its frontmatter `status:` field.\n" +
+        "   NOTE: Do NOT flip status or move files. Ticket closure already happened in\n" +
+        "   step 3.5 (pre-merge closure commit on the feature branch). status: frontmatter\n" +
+        "   is the sole source of truth (BO-400a-3/4/5, BO-400c-1/2).\n" +
+        "5. Return a JSON object: " +
         '{ "scope": "single-ticket"|"epic"|"unknown", ' +
-        '"tickets_closed": ["<path>", ...], ' +
-        '"already_done": ["<path>", ...], ' +
+        '"tickets_in_scope": ["<path>", ...], ' +
+        '"tickets_done": ["<path — status: done>", ...], ' +
+        '"tickets_not_done": ["<path — status: other>", ...], ' +
         '"skipped": false|true }',
     },
   });
 
   let closeInfo;
-  try {
-    closeInfo =
-      typeof closeResult === "string" ? JSON.parse(closeResult) : closeResult;
-  } catch (_err) {
-    closeInfo = { tickets_closed: [], already_done: [], skipped: false };
+  {
+    const { value, malformed } = safeParseJSON(closeResult);
+    if (malformed) {
+      console.log("[finalize-feature] step 6 scope-detect parse malformed — no tickets reported in summary");
+      closeInfo = { tickets_in_scope: [], tickets_done: [], tickets_not_done: [], skipped: false };
+    } else {
+      closeInfo = value || { tickets_in_scope: [], tickets_done: [], tickets_not_done: [], skipped: false };
+    }
   }
 
-  if (closeInfo.tickets_closed) {
-    ticketsClosed.push(...closeInfo.tickets_closed);
+  // Step 6b is informational only — no ticket files were moved or written.
+  // Tickets already closed in step 3.5 (pre-merge closure on feature branch).
+  if (closeInfo.tickets_done && Array.isArray(closeInfo.tickets_done)) {
+    ticketsClosed.push(...closeInfo.tickets_done);
   }
 
   if (closeInfo.skipped) {
-    skippedSteps.push({ step: 6, reason: "All tickets already done — skipping step 6" });
+    skippedSteps.push({ step: 6, reason: "Scope detection skipped — no in-scope tickets found" });
   } else {
     completedSteps.push(6);
-  }
-
-  // Sub-step 6c: folder reconciliation (EPIC-MoveOnMainOnly/03)
-  //
-  // After tickets 01 and 02 land, worktree branches no longer perform git mv.
-  // Ticket files arrive on main in whatever folder the branch had them in
-  // (typically 00_inbox/ for new tickets). This sub-step reconciles each
-  // ticket file's physical folder position against its frontmatter `status:`.
-  //
-  // Status → target folder mapping (from ticket_lifecycle.json):
-  //   done, deferred  → tickets/99_done/
-  //   todo, in_progress, blocked → tickets/01_todo/
-  //   (epic sub-tickets with status: done → tickets/01_todo/EPIC-*/done/)
-  //
-  // Single-writer guarantee: this git mv runs on main inside finalize-feature.js,
-  // which is only invoked after the feature branch has been merged. No concurrent
-  // worktrees are active on the same ticket at this point.
-  const reconcileResult = await agent({
-    agentType: "status-checker",
-    input: {
-      instructions:
-        // Resumability probe: skip entire sub-step if reconciliation commit exists.
-        "1. Run: git log --oneline --grep 'reconcile folder positions' | head -1\n" +
-        "   If output is non-empty, the reconciliation commit already exists.\n" +
-        "   Log: 'Reconciliation commit already present — skipping.'\n" +
-        "   Return: { \"tickets_reconciled\": [], \"skipped\": true }\n" +
-        "\n" +
-        "2. Otherwise, read ticket_lifecycle.json from the repo root.\n" +
-        "   Build the status→folder map:\n" +
-        "   - done, deferred → tickets/99_done/\n" +
-        "   - todo, in_progress, blocked → tickets/01_todo/\n" +
-        "\n" +
-        "3. Find all ticket files in the repo (find tickets/ -name '*.md' -not -name 'Master_Plan.md').\n" +
-        "   For each ticket file:\n" +
-        "   a. Parse the frontmatter `status:` value (read lines between first and second '---' markers).\n" +
-        "   b. Determine the current folder (dirname of the file path).\n" +
-        "   c. Compute the target folder from the status→folder map.\n" +
-        "      - For epic sub-tickets (path contains /EPIC-*/): status: done → tickets/01_todo/EPIC-*/done/\n" +
-        "   d. If current folder == target folder: skip (already in correct position).\n" +
-        "   e. GUARD: if a file already exists at <target_folder>/<basename>, skip and log a warning:\n" +
-        "      'WARNING: target path <target_path> already exists — skipping to avoid collision.\n" +
-        "       Run the duplicate cleanup tool (EPIC-MoveOnMainOnly/06) to resolve.'\n" +
-        "   f. If current folder != target folder AND no collision: run git mv <current_path> <target_folder>/<basename>.\n" +
-        "      Accumulate the moved path in reconciled_paths.\n" +
-        "\n" +
-        "4. If any files were moved (reconciled_paths is non-empty):\n" +
-        "   Run: git add tickets/\n" +
-        "   Run: git commit -m 'chore(tickets): reconcile folder positions after merge'\n" +
-        "   Verify the commit contains only R (rename) entries — no A/D pairs.\n" +
-        "   Log: 'Folder reconciliation complete — <N> file(s) moved.'\n" +
-        "\n" +
-        "5. If no files needed moving:\n" +
-        "   Log: 'Folder positions already correct — skipping reconciliation commit.'\n" +
-        "\n" +
-        "6. Return a JSON object:\n" +
-        '{ "tickets_reconciled": ["<path1>", ...], "skipped": false|true, "warnings": ["<w1>", ...] }',
-    },
-  });
-
-  let reconcileInfo;
-  const ticketsReconciled = [];
-  try {
-    reconcileInfo =
-      typeof reconcileResult === "string"
-        ? JSON.parse(reconcileResult)
-        : reconcileResult;
-  } catch (_err) {
-    reconcileInfo = { tickets_reconciled: [], skipped: false, warnings: [] };
-  }
-
-  if (reconcileInfo.tickets_reconciled) {
-    ticketsReconciled.push(...reconcileInfo.tickets_reconciled);
   }
 
   // -------------------------------------------------------------------------
@@ -844,20 +1246,23 @@ async function run({ userInput, agent, parallel, prompt }) {
     agentType: "status-checker",
     input: {
       instructions:
-        `Run: git worktree list --porcelain\n` +
+        `Run: git -C "${WORKTREE_ROOT}" worktree list --porcelain\n` +
         `Check if a worktree for WORKTREE_ROOT="${WORKTREE_ROOT}" is listed.\n` +
         "Return ONLY a JSON object: { \"exists\": true|false }",
     },
   });
 
   let worktreeProbe;
-  try {
-    worktreeProbe =
-      typeof worktreeProbeResult === "string"
-        ? JSON.parse(worktreeProbeResult)
-        : worktreeProbeResult;
-  } catch (_err) {
-    worktreeProbe = { exists: true }; // default-conservative: assume it exists
+  {
+    const { value, malformed } = safeParseJSON(worktreeProbeResult);
+    if (malformed) {
+      // AC-4: Malformed probe — conservative default is exists=true (safer to
+      // attempt removal than to skip and leave the worktree dangling).
+      console.log("[finalize-feature] step 7 worktree probe parse malformed — assuming exists=true (conservative)");
+      worktreeProbe = { exists: true };
+    } else {
+      worktreeProbe = value || { exists: true };
+    }
   }
 
   if (!worktreeProbe.exists) {
@@ -878,17 +1283,20 @@ async function run({ userInput, agent, parallel, prompt }) {
     });
 
     let wResult;
-    try {
-      wResult =
-        typeof worktreeResult === "string"
-          ? JSON.parse(worktreeResult)
-          : worktreeResult;
-    } catch (_err) {
-      wResult = { removed: false, conflict_pids: [] };
+    {
+      const { value, malformed } = safeParseJSON(worktreeResult);
+      if (malformed) {
+        console.log("[finalize-feature] step 7 worktree-agent parse malformed — assuming removed=false, conflict_pids=[]");
+        wResult = { removed: false, conflict_pids: [] };
+      } else {
+        wResult = value || { removed: false, conflict_pids: [] };
+      }
     }
 
     if (wResult.conflict_pids && wResult.conflict_pids.length > 0) {
       // Surface conflict PIDs verbatim and stop — user must resolve manually.
+      // Clean up the baseline worktree before returning (AC-1: cleanup on all paths).
+      await cleanupBaselineWorktree();
       return {
         status: "halted",
         halted_at_step: 7,
@@ -912,7 +1320,14 @@ async function run({ userInput, agent, parallel, prompt }) {
 
   // -------------------------------------------------------------------------
   // Final — Return success summary
+  //
+  // AC-1: ensure the baseline temp worktree is cleaned up on the success path.
+  // baselineWorktreePath is already null when step 0 completed successfully
+  // (the agent ran step D to remove it), so this is a no-op in the happy path.
+  // It fires only when step 0 degraded but the workflow continued to completion.
   // -------------------------------------------------------------------------
+  await cleanupBaselineWorktree();
+
   return {
     status: "ok",
     branch: BRANCH,
@@ -928,10 +1343,14 @@ async function run({ userInput, agent, parallel, prompt }) {
     // Triage report from step 3; null means tests passed (no triage needed).
     triage_report: triageReport,
     tickets_closed: ticketsClosed,
-    // Tracking tickets created in step 6a for pre_existing and flaky triage entries.
-    // Each entry is the ticket_path returned by create-ticket, or null on failure.
-    created_tracking_tickets: createdTrackingTickets,
-    tickets_reconciled: ticketsReconciled,
+    // Pre-merge closure counts from step 3.5.
+    tickets_closed_pre_merge: ticketsClosedPreMerge,
+    acs_closed: acsClosed,
+    acs_skipped: acsSkipped,
+    // Untracked failures from step 6a: pre_existing/flaky triage entries for which
+    // no tracking ticket was created (auto-ticketing is disabled — create-ticket is a
+    // workflow, not an agent). Operators should run /create-ticket manually for each.
+    untracked_failures: untrackedFailures,
     worktree_removed: worktreeRemoved,
     completed_steps: completedSteps,
     skipped_steps: skippedSteps,
@@ -944,14 +1363,14 @@ async function run({ userInput, agent, parallel, prompt }) {
       (baselineFailures !== null
         ? `Baseline captured at ${baselineSha} (${baselineFailures.length} pre-existing failure(s)). `
         : "Baseline capture failed — regression triage used conservative classification. ") +
+      (ticketsClosedPreMerge > 0
+        ? `Pre-merge closure: ${ticketsClosedPreMerge} ticket(s) closed, ${acsClosed} AC(s) closed, ${acsSkipped} AC(s) skipped. `
+        : "No pre-merge ticket/AC closure. ") +
       (ticketsClosed.length > 0
-        ? `Tickets closed: ${ticketsClosed.length}. `
+        ? `Tickets closed total: ${ticketsClosed.length}. `
         : "") +
-      (createdTrackingTickets.length > 0
-        ? `Tracking tickets created for pre-existing failures: ${createdTrackingTickets.filter(Boolean).length}. `
-        : "") +
-      (ticketsReconciled.length > 0
-        ? `Tickets folder-reconciled: ${ticketsReconciled.length}.`
+      (untrackedFailures.length > 0
+        ? `${untrackedFailures.length} pre-existing/flaky failure(s) not auto-ticketed (auto-ticketing disabled) — run /create-ticket manually to track them. `
         : ""),
   };
 }

@@ -1,0 +1,57 @@
+id: TQ-100b-3
+title: "State diagram of a tagged test's informational-to-enforced lifecycle"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b.yaml
+criteria: |
+  Given the enforcement behavior defined by TQ-100b-1 (informational while the
+    covering AC is not done) and TQ-100b-2 (enforced once the covering AC is
+    done),
+  When a state diagram is authored for a tagged test's enforcement lifecycle,
+  Then the diagram shows the states a tagged test can occupy (at least:
+    informational/non-blocking, enforced/blocking, and unlinked-enforced)
+  And it shows the transitions between them and what triggers each transition
+    (the covering AC's work_status reaching done, and a tag resolving to no AC)
+  And a maintainer can read from the diagram exactly when a test starts blocking
+    the run.
+depends_on:
+  - TQ-100b
+  - TQ-100b-1
+  - TQ-100b-2
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b.yaml
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "Must be a Mermaid stateDiagram (the repo's diagram convention; subject to the check-mermaid-* commit hooks for drift/complexity/naming/parent-link) — author it to pass those hooks."
+  - "Must include the unlinked-enforced state (the TQ-100b-1-ii / TQ-100c fail-safe) so the diagram is complete, not just the two-state informational<->enforced happy path."
+  - "Transition triggers must name the actual mechanism: covering AC work_status reaching `done` (informational -> enforced), and a `# covers:` tag resolving to no AC in the store (-> unlinked-enforced)."
+  - "Place the diagram where a fresh consumer install can reach it if it is a deliverable doc (ADR-001) — under docs/, not a build-output-only path."
+delivers_to: null
+expects_from:
+  ac_id: TQ-100b-1
+  contract: "The informational/enforced classification behavior whose lifecycle this state diagram documents."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "TQ-100 it-po-enrichment"
+    by: it-po
+    at: 2026-06-24
+    note: "Added it_requirements (Mermaid stateDiagram passing check-mermaid-* hooks; include unlinked-enforced state; name real transition triggers; deliverable doc placement). Confirmed architecture-diagram-author / S — satisfies parent L1 documentation_triggers: [state-diagram]."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies the parent L1 documentation_triggers: [state-diagram]. The
+  unlinked-enforced state (TQ-100b-1-ii / TQ-100c) is included so the diagram is
+  complete, not just the two-state happy path. ID-derived parent is TQ-100b (the
+  L1 carrying the documentation_trigger); the behavioral L2s it documents are
+  retained in depends_on.

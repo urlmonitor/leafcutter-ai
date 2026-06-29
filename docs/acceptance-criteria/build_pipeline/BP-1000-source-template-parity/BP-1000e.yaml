@@ -1,0 +1,40 @@
+id: BP-1000e
+title: "Shipped workflow scripts match their tested source too"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Every deployed workflow script is provably identical to the source the maintainers edited.
+
+  Workflow scripts ship as deployed copies alongside their canonical source, so
+  a copy can quietly fall behind the version that was actually tested. This
+  feature extends the source-to-shipped parity guarantee (BP-1000a) to the
+  workflow-script mirror set: the canonical workflow source and its deployed
+  copy must stay byte-for-byte identical, enforced mechanically, so a workflow
+  edit that updates one but not the other is caught before it can ship a stale
+  copy.
+depends_on: [BP-1000]
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md"
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1000e-1
+  - BP-1000e-2
+  - BP-1000e-3
+  - BP-1000e-4
+  - BP-1000e-5
+implemented_by: []
+documentation_triggers:
+  - component-diagram

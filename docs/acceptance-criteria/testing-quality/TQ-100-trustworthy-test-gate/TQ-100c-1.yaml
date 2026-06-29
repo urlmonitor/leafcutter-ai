@@ -1,0 +1,50 @@
+id: TQ-100c-1
+title: "A test with no covers tag is enforced by default, requiring no backfill"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100c.yaml
+criteria: |
+  Given a test function that carries no "# covers: <AC-ID>" tag at all,
+  When the suite is run and that test fails,
+  Then the test is enforced (its failure counts as a real failure and drives the
+    overall run outcome non-passing)
+  And no tag has to be added to the test for it to be enforced
+  And turning the AC-status-gated enforcement on does not require any bulk
+    re-tagging of the existing untagged suite for those tests to keep blocking.
+depends_on:
+  - TQ-100c
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100c.yaml
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Default-enforce is the no-mass-migration guarantee: a test with no `# covers:` tag is ENFORCED by default, with zero backfill required across the ~1746-test suite — only a tag resolving to a not-done AC may soften a test; absence of a tag never softens it."
+  - "Implemented as the default branch of the SAME TQ-100b-1 session-scoped classifier (untagged -> enforced), not a separate code path."
+  - "Must be deterministic under pytest-randomly: an untagged test is always enforced regardless of seed/order."
+delivers_to: null
+expects_from:
+  ac_id: TQ-100b-1
+  contract: "The session-scoped linkage component; this AC pins the default branch for tests it finds with no covers tag (enforced, no backfill)."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "TQ-100 it-po-enrichment"
+    by: it-po
+    at: 2026-06-24
+    note: "Added it_requirements (no-mass-migration default-enforce; default branch of the TQ-100b-1 classifier; determinism). Confirmed python-coder / S."
+superseded_by: null
+covered_by:
+  - TQ-100c-1-i
+implemented_by: []
+notes: |
+  Default-enforce is the no-mass-migration property: existing untagged tests keep
+  blocking exactly as today. Only tagged tests with a not-done AC become
+  informational; everything else stays enforced.

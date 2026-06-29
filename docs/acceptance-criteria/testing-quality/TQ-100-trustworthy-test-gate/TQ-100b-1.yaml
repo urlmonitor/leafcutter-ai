@@ -1,0 +1,68 @@
+id: TQ-100b-1
+title: "A test linked to a not-done AC runs informationally and never fails the run"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b.yaml
+criteria: |
+  Given a test function that declares the acceptance-criterion it covers via the
+    established tag convention (a "# covers: <AC-ID>" comment), and that AC's
+    work_status in the AC store is anything other than done,
+  When the suite is run and that test fails,
+  Then the test's failure is reported informationally (the result is visible,
+    e.g. surfaced as an expected/non-blocking outcome) and does not count as a
+    run failure
+  And the overall run outcome is not driven to non-passing by that test alone
+  And a session-level component reads each tagged test's covering AC's
+    work_status from the AC store to decide that the test is informational.
+depends_on:
+  - TQ-100b
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b.yaml
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The session-scoped component must read the AC store ONCE per pytest session and cache the work_status lookup (not re-read per test) — mirror the BP-1200a-1 classify-once-per-session shape; the lookup keys off the `# covers: <AC-ID>` tag already mandated by templates/agents/test-writer.md."
+  - "Reuse the existing AC-store reader rather than re-implementing YAML walking: scripts/ac_store/scan_ac_store.py already exposes `_load_ac` / work_status access and a worktree-root finder — extract or import a shared loader, do not copy-paste store-walking logic."
+  - "Linkage classification (enforced vs informational) must be deterministic under pytest-randomly: identical store + suite must yield an identical partition across seeds/orderings."
+  - "Must handle AC-store read failures per the project error handling policy (CLAUDE.md Rules 1-4): an unreadable/parse-failing AC file is logged at WARNING and treated fail-safe (the affected test is enforced, never silently made informational)."
+  - "If the linkage component is deployable conftest/plugin code, the templates/ package source and the deployed copy must be edited together and kept in parity via the build.py round-trip (ADR-001)."
+delivers_to:
+  agent: test-runner
+  contract: "A session-scoped conftest/pytest-plugin that, for each test tagged '# covers: <AC-ID>', looks up the AC's work_status and treats a not-done AC's test as informational (xfail/skip-style, non-blocking)."
+expects_from:
+  ac_id: TQ-100a-1
+  contract: "A suite that runs to completion despite individual broken files, so the per-test linkage decision is applied across the whole loadable suite."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "TQ-100 it-po-enrichment"
+    by: it-po
+    at: 2026-06-24
+    note: "Added it_requirements (read-AC-store-once-per-session; reuse scan_ac_store.py loader not copy-paste; deterministic partition under pytest-randomly; fail-safe on unreadable AC => enforced; ADR-001 template/deploy parity). Confirmed python-coder + delivers_to test-runner. This is the core session-scoped linkage component the rest of the b/c/e family consumes via expects_from."
+superseded_by: null
+covered_by:
+  - TQ-100b-1-i
+  - TQ-100b-1-ii
+  - TQ-100b-1-iii
+implemented_by: []
+notes: |
+  Mechanism (settled): the existing '# covers: <AC-ID>' tag (already mandated by
+  the test-writer agent) is the linkage; a conftest/pytest plugin reads the AC
+  store once per session and looks up each tagged test's AC work_status. Not-done
+  => informational (visible, non-blocking).
+  IT-PO note: the AC-store reader to reuse lives at scripts/ac_store/scan_ac_store.py
+  (_load_ac, _find_worktree_root, work_status access). conftest currently exists at
+  tests/conftest.py and unit_tests/agents/conftest.py — the plugin/session hook can
+  live there or as a packaged pytest plugin; in either case keep it deployable so
+  ADR-016's pre-pytest build step makes it present in CI.

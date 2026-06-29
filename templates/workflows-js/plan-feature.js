@@ -29,11 +29,7 @@
 export const meta = {
   name: "plan-feature",
   description:
-    "Triage, orchestrate, and gate AC authoring for a new feature request. " +
-    "Dispatches ac-triage (Haiku) to classify the request as strategic / " +
-    "behavioral / technical / covered, then routes through the correct " +
-    "authoring agents (PO v3, BA v3, IT PO v3) with user gates between stages. " +
-    "All output goes exclusively to the AC store — no ticket files are produced.",
+    "Triage, orchestrate, and gate AC authoring for a new feature request. Dispatches ac-triage (Haiku) to classify the request as strategic / behavioral / technical / covered, then routes through the correct authoring agents (PO v3, BA v3, IT PO v3) with user gates between stages. All output goes exclusively to the AC store — no ticket files are produced.",
   phases: [
     "stage-0: ac-triage (Haiku) — duplicate check + route classification",
     "stage-1: authoring agents per route (PO v3 / BA v3 / IT PO v3)",

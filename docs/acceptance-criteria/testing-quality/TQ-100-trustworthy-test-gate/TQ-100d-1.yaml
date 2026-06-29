@@ -1,0 +1,62 @@
+id: TQ-100d-1
+title: "A failing test on a valid, unexpired allowlist entry does not block the run"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100d.yaml
+criteria: |
+  Given a known-failing-tests allowlist in which an entry names a specific test
+    (by its test id/path) and carries both a ticket reference and an expiry date
+    that has not yet passed, and that named test is currently failing,
+  When the suite is run,
+  Then the named failing test does not count against the overall run outcome
+    while its allowlist entry is valid (present and unexpired)
+  And the run can still report a passing overall outcome despite that test
+    failing
+  And only tests with a matching valid allowlist entry are exempted; every other
+    failing test is treated normally.
+depends_on:
+  - TQ-100d
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100d.yaml
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "DESIGN DECISION (settled): the allowlist lives in a dedicated YAML config file at config/known_failing_tests.yaml, read by a known_failing_tests module under scripts/ (e.g. scripts/ac_store/ or a sibling). Each entry carries: test id/path, ticket_ref, expiry (ISO date). Entry matching is by exact test id/path."
+  - "Only an entry that is present AND unexpired exempts its named failing test; every other failing test is treated normally — the exemption is narrow and per-named-test."
+  - "Building this module ALSO resolves one of the missing-module collection errors that TQ-100a addresses (the absent known_failing_tests import) — this AC and TQ-100a are mutually reinforcing; mention the cross-link in implementation."
+  - "Config read must follow the project error handling policy (CLAUDE.md Rules 1-4): a malformed/unreadable allowlist file is logged at WARNING and treated fail-safe (no test is exempted on a broken allowlist — the gate stays strict, it does not fail-open into exempting everything)."
+  - "If config/known_failing_tests.yaml is consumer-facing, ensure the package ships a source/template copy a fresh install can reach (ADR-001) and that the deployed and template copies stay in parity via build.py."
+  - "Exemption decisions must be deterministic under pytest-randomly: the same allowlist + suite yields the same exempted set across seeds/orderings."
+delivers_to:
+  agent: test-runner
+  contract: "A known_failing_tests allowlist at config/known_failing_tests.yaml (each entry: test id/path + ticket_ref + expiry ISO date), read by a known_failing_tests module under scripts/, consulted during the run so a valid, unexpired entry exempts its named failing test from blocking the outcome."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "TQ-100 it-po-enrichment"
+    by: it-po
+    at: 2026-06-24
+    note: "Settled BA flag #3: allowlist home/format = dedicated config/known_failing_tests.yaml read by a known_failing_tests module under scripts/. Tightened delivers_to to name that file + module + entry fields (test id/path, ticket_ref, expiry ISO date). Added it_requirements (narrow per-test exemption; resolves a TQ-100a collection error; fail-safe-strict on broken allowlist; ADR-001 parity; determinism). Confirmed python-coder / M."
+superseded_by: null
+covered_by:
+  - TQ-100d-1-i
+  - TQ-100d-1-ii
+  - TQ-100d-1-iii
+implemented_by: []
+notes: |
+  Mechanism (settled): build the known_failing_tests allowlist at
+  config/known_failing_tests.yaml, read by a known_failing_tests module under
+  scripts/. NOTE: the missing known_failing_tests module is itself one of the
+  currently-missing modules causing collection errors (per TQ-100a); building
+  this allowlist also resolves that specific collection error.
+  RESOLVED (IT-PO): YAML config home + module under scripts/; required fields per
+  entry = test id/path, ticket_ref, expiry (ISO date).

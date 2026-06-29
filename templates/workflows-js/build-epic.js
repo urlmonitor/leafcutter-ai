@@ -34,13 +34,7 @@
 export const meta = {
   name: "build-epic",
   description:
-    "Drive a full epic from Master_Plan.md through to all tickets completed. " +
-    "Uses a planner agent to read the epic's dependency graph and return " +
-    "dependency-ordered batches. Iterates batches sequentially; within each " +
-    "batch, tickets run via the parallel runtime call — each slot calls the build-ticket " +
-    "workflow logic. Already-done tickets are omitted by the planner, enabling " +
-    "crash-resume. A halt from any ticket in a batch stops the outer loop " +
-    "and surfaces a structured error. No Agent tool nesting exceeds depth 1.",
+    "Drive a full epic from Master_Plan.md through to all tickets completed. Uses a planner agent to read the epic's dependency graph and return dependency-ordered batches. Iterates batches sequentially; within each batch, tickets run via the parallel runtime call — each slot calls the build-ticket workflow logic. Already-done tickets are omitted by the planner, enabling crash-resume. A halt from any ticket in a batch stops the outer loop and surfaces a structured error. No Agent tool nesting exceeds depth 1.",
   phases: [
     "planner agent (depth 1 — reads Master_Plan.md + ticket frontmatter → batches JSON)",
     "sequential batch loop (one batch at a time)",

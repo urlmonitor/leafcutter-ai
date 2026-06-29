@@ -72,6 +72,14 @@ components:
       - "scripts/knowledge_query.py"
       - "scripts/visualise_knowledge_graph.py"
       - "config/paths.json"
+  - id: testing-quality
+    prefix: TQ
+    description: "ACs for test-suite trustworthiness: which tests gate main, how unbuilt/in-flight features are tolerated, accepted-failure tracking, and staged enforcement rollout"
+    owner: null
+    directory_patterns:
+      - "conftest.py"
+      - "tests/conftest.py"
+      - "unit_tests/conftest.py"
 
 # Composite Pattern AC Example (AC ACS-500e-1)
 #
