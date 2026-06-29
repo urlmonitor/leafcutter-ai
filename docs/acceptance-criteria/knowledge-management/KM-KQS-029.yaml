@@ -24,7 +24,7 @@ doc_links:
   - path: templates/skills/knowledge-query/SKILL.md
     relationship: describes
     status: exists
-origin_agent: "business-analyst-v3"
+origin_agent: "business-analyst"
 created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/05a_edge_connectivity_improvements.md"
 superseded_by: null
 amended_by: []

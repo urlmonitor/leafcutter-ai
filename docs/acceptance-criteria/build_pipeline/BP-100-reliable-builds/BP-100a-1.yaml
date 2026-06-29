@@ -32,7 +32,7 @@ delivers_to:
   agent: test-writer
   contract: "A warning-emitting integrity check loop that runs after hook manifest is loaded"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

@@ -32,7 +32,7 @@ delivers_to: null
 expects_from:
   ac_id: INF-400c-2
   contract: "Harvester that processes events sequentially and needs an idempotency mechanism (watermark, offset, or processed-event-ID list) to avoid re-processing"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

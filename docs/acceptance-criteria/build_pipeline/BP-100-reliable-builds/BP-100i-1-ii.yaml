@@ -48,10 +48,10 @@ delivers_to: null
 expects_from:
   ac_id: BP-100i-1
   contract: "The file-filtering function within the parity checker that determines which .py filenames are hook scripts vs utility files, using a naming pattern (e.g. check_*.py, run_hook.py, regenerate_*.py)"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
-  - it-po-v3
+  - it-po
 superseded_by: null
 covered_by: []
 implemented_by: []

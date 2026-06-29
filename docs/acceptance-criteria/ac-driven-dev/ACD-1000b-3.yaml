@@ -9,7 +9,7 @@ req_status: active
 work_status: done
 criteria: |
   Given the user types /it-po followed by a reference to L2/L3 ACs,
-  When the it-po-v3 agent is invoked,
+  When the it-po agent is invoked,
   Then it reads the referenced L2/L3 ACs from the AC store,
   And it enriches each with assigned_agent, estimated_complexity,
     delivers_to/expects_from contracts, and doc_links,
@@ -26,7 +26,8 @@ assigned_agent: llm-expert
 estimated_complexity: S
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by:

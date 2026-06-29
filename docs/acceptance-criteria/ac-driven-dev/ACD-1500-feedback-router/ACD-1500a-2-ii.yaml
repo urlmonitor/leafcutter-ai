@@ -36,7 +36,7 @@ delivers_to: null
 expects_from:
   ac_id: ACD-1500a-2
   contract: "A per-entry classification whose category field determines whether any fix action is warranted"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-17
 amended_by: []
 superseded_by: null

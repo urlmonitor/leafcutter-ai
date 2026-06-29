@@ -34,7 +34,7 @@ delivers_to: null
 expects_from:
   ac_id: BP-900a-1
   contract: "13 ac_store files deployed to {target}/.leafcutter/scripts/ac_store/ including __init__.py, making the directory an importable Python package"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-11
 created_by_ticket: null
 amended_by: []

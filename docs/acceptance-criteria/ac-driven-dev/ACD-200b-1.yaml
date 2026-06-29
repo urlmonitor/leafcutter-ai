@@ -8,7 +8,7 @@ status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given templates/agents/it-po-v3.md is the IT PO v3 agent template,
+  Given templates/agents/it-po.md is the IT PO v3 agent template,
   When the template is read,
   Then it contains a section titled "Documentation Gate" (or equivalent),
   And that section instructs the IT PO to check for documentation ACs
@@ -28,14 +28,15 @@ criteria: |
     categories MUST NOT receive readiness: reviewed."
 depends_on: [ACD-200b]
 doc_links:
-  - templates/agents/it-po-v3.md
+  - templates/agents/it-po.md
 assigned_agent: llm-expert
 estimated_complexity: M
 delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by: []

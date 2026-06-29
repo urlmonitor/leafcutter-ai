@@ -28,7 +28,7 @@ delivers_to:
   agent: python-coder
   contract: "JSON array of {ac_id, ticket_path, confidence, similarity_score, reason} objects"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

@@ -34,10 +34,10 @@ delivers_to:
   agent: test-writer
   contract: "_resolve_git_path() helper returning the best path for git queries, and output dict containing git_resolved_path field as a string"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
-  - it-po-v3
+  - it-po
 superseded_by: null
 covered_by: []
 implemented_by: []

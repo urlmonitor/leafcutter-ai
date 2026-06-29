@@ -32,7 +32,7 @@ it_requirements:
   - "Must report the count of artifacts created at the end of the run"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-17
 amended_by: []
 superseded_by: null

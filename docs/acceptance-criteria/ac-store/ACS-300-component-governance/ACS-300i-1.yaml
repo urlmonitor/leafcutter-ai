@@ -33,9 +33,9 @@ delivers_to:
   agent: python-coder
   contract: "Schema validation logic for exposed_interfaces elements with name/type/path/shape field presence and type checking"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by: [it-po]
 superseded_by: null
 covered_by: [ACS-300i-1-i]
 implemented_by: []

@@ -40,7 +40,7 @@ delivers_to:
   agent: llm-expert
   contract: "SKILL.md contains an 'Agent Consumption Protocol' section with three named invocation patterns that downstream ACs reference"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

@@ -28,7 +28,7 @@ estimated_complexity: S
 delivers_to: test-runner
 expects_from: BP-100g-3
 it_requirements: "Test must cover both format variants (comma-separated string and YAML list); must verify whitespace stripping on comma-separated format"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

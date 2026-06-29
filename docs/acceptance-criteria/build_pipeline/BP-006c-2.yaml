@@ -23,7 +23,7 @@ it_requirements: |
 delivers_to: null
 expects_from:
   BP-006c-1: "The path fix in build_phases.py must be in place for this test to pass"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 created_by_ticket: "tickets/00_inbox/TICKET-20260604-FixFailingBuildPipelineTests.md"
 amended_by: []

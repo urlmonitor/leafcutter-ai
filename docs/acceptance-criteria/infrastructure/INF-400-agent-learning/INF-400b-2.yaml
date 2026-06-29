@@ -15,7 +15,7 @@ criteria: |
     with the following fields:
     - "event": "knowledge_captured"
     - "timestamp": ISO-8601 datetime
-    - "agent": the v3 agent name (e.g., "business-analyst-v3")
+    - "agent": the v3 agent name (e.g., "business-analyst")
     - "component": the component the agent was working in (e.g., "infrastructure")
     - "destination": the file path where the learning was persisted
     - "entry_kind": the classification from route-learning (e.g., "memory-project",
@@ -42,9 +42,10 @@ delivers_to:
 expects_from:
   ac_id: INF-400b-1
   contract: "V3 agent templates with knowledge-capture step that calls route-learning, capture-learning, and emits telemetry"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by: []

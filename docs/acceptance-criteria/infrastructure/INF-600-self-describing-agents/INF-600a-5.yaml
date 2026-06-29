@@ -42,7 +42,7 @@ delivers_to:
   agent: python-coder
   contract: "A pre_flight_reads array in agent frontmatter that the card generator reads to populate the knowledge-flow table's self-read entries"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

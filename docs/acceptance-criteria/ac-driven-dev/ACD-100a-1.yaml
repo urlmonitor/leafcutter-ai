@@ -12,7 +12,7 @@ criteria: |
   When the AC authoring pipeline documentation is reviewed,
   Then a Mermaid sequence diagram exists at
     docs/architecture/diagrams/ac-authoring-pipeline.md,
-  And it shows four actors: User, product-owner-v3, business-analyst-v3, it-po-v3,
+  And it shows four actors: User, product-owner, business-analyst, it-po,
   And the sequence is:
     User describes feature -> PO v3 writes L0/L1 ACs (readiness: draft)
     -> BA v3 decomposes into L2/L3 (readiness: draft)
@@ -29,7 +29,8 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -21,7 +21,7 @@ estimated_complexity: S
 delivers_to: test-writer
 expects_from: INF-500b-1
 it_requirements: "Must handle both empty file and absent file; exit 0 in both cases; print '(no feedback data found)' to stdout; must not raise FileNotFoundError or produce a traceback"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

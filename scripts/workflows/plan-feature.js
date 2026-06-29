@@ -3,14 +3,14 @@
  *
  * Implements the /plan-feature command: triages the user's request via the
  * ac-triage agent (Haiku-tier, fast), routes to the correct AC authoring
- * agents (product-owner, business-analyst-v3, it-po-v3) in sequence with
+ * agents (product-owner, business-analyst, it-po) in sequence with
  * user confirmation gates between stages, and writes all output exclusively
  * to the AC store (docs/acceptance-criteria/). No ticket files are produced.
  *
  * Routing table (matches ac-triage classification):
- *   strategic  → PO v3 → gate → BA v3 → gate → IT PO v3 → final gate
- *   behavioral → BA v3 → gate → IT PO v3 → final gate
- *   technical  → IT PO v3 → final gate
+ *   strategic  → product-owner → gate → business-analyst → gate → it-po → final gate
+ *   behavioral → business-analyst → gate → it-po → final gate
+ *   technical  → it-po → final gate
  *   covered    → show matching ACs → prompt cancel / amend / force
  *
  * Architecture:
@@ -32,11 +32,11 @@ export const meta = {
     "Triage, orchestrate, and gate AC authoring for a new feature request. " +
     "Dispatches ac-triage (Haiku) to classify the request as strategic / " +
     "behavioral / technical / covered, then routes through the correct " +
-    "authoring agents (product-owner, business-analyst-v3, it-po-v3) with user gates between stages. " +
+    "authoring agents (product-owner, business-analyst, it-po) with user gates between stages. " +
     "All output goes exclusively to the AC store — no ticket files are produced.",
   phases: [
     "stage-0: ac-triage (Haiku) — duplicate check + route classification",
-    "stage-1: authoring agents per route (PO v3 / BA v3 / IT PO v3)",
+    "stage-1: authoring agents per route (product-owner / business-analyst / it-po)",
     "gates: user confirm/edit/cancel between each stage",
     "final-gate: priority setting + readiness: approved",
   ],
@@ -191,18 +191,18 @@ async function run({ userInput, agent }) {
   if (effectiveRoute === "strategic") {
     pipeline = [
       { agent: "product-owner",        stage: "po",   gate: "after_po" },
-      { agent: "business-analyst-v3",  stage: "ba",   gate: "after_ba" },
-      { agent: "it-po-v3",             stage: "itpo",  gate: "final" },
+      { agent: "business-analyst",  stage: "ba",   gate: "after_ba" },
+      { agent: "it-po",             stage: "itpo",  gate: "final" },
     ];
   } else if (effectiveRoute === "behavioral") {
     pipeline = [
-      { agent: "business-analyst-v3",  stage: "ba",  gate: "after_ba" },
-      { agent: "it-po-v3",             stage: "itpo", gate: "final" },
+      { agent: "business-analyst",  stage: "ba",  gate: "after_ba" },
+      { agent: "it-po",             stage: "itpo", gate: "final" },
     ];
   } else {
     // technical (or amend → technical, or covered → force handled above)
     pipeline = [
-      { agent: "it-po-v3", stage: "itpo", gate: "final" },
+      { agent: "it-po", stage: "itpo", gate: "final" },
     ];
   }
 
@@ -283,12 +283,12 @@ async function run({ userInput, agent }) {
           approved = true;
         }
       } else {
-        // Final gate: IT PO v3 has enriched ACs and set readiness: reviewed.
+        // Final gate: it-po has enriched ACs and set readiness: reviewed.
         const finalGateResult = await agent({
           agentType: "status-checker",
           input: {
             instructions:
-              `IT PO v3 has enriched the following ACs: ${written.join(", ") || allAcsWritten.join(", ")}.\n` +
+              `it-po has enriched the following ACs: ${written.join(", ") || allAcsWritten.join(", ")}.\n` +
               "Present these to the user with their enriched fields (assigned_agent, complexity, contracts).\n" +
               "Ask the user to:\n" +
               "  1. Set a priority: critical / high / medium / low\n" +

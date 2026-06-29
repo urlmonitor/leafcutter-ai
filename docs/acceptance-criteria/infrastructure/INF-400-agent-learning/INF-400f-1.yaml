@@ -8,12 +8,12 @@ work_status: todo
 priority: high
 readiness: reviewed
 criteria: |
-  Given the product-owner-v3 agent runs first in the v3 ticket-creation pipeline
+  Given the product-owner agent runs first in the v3 ticket-creation pipeline
     and discovers a user preference during L0/L1 framing
     (e.g., "the user prefers value propositions to start with the problem, not the solution"),
   And the PO's knowledge-capture step (INF-400b-1) persists that learning
     to memory/feedback_l0_framing_preference.md before the PO exits,
-  When the business-analyst-v3 agent is spawned next in the same pipeline run,
+  When the business-analyst agent is spawned next in the same pipeline run,
   Then the BA's pre-flight step (INF-400a-1) reads the memory file that the PO just wrote,
   And the BA's L2 decomposition reflects the PO's learned preference
     (e.g., criteria language mirrors the problem-first framing),
@@ -34,9 +34,10 @@ it_requirements:
   - "Must work within the same working tree without coordination beyond sequential execution"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: [INF-400f-1-i]
 implemented_by: []

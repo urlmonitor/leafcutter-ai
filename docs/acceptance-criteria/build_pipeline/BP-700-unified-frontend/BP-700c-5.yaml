@@ -40,7 +40,7 @@ delivers_to: null
 expects_from:
   ac_id: BP-700c-1
   contract: "Verified list of all preserved principles and behavioral rules for inclusion in the reference document"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

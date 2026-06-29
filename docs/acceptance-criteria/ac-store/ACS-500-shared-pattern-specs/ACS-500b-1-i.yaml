@@ -37,7 +37,7 @@ delivers_to: null
 expects_from:
   ac_id: ACS-500b-1
   contract: "Schema validation logic that recognizes implements_pattern as a valid alternative to Gherkin criteria"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-11
 amended_by: []
 superseded_by: null

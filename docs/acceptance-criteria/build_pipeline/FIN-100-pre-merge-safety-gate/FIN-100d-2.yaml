@@ -11,7 +11,7 @@ criteria: |
   Then the workflow marks Step 3 as completed
   And proceeds to Step 4 (PR merge confirmation gate)
   And the triage_report is preserved in workflow state for use in Step 6 (auto-ticketing)
-origin_agent: "business-analyst-v3"
+origin_agent: "business-analyst"
 created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
 assigned_agent: "finalize-feature-workflow"
 estimated_complexity: S

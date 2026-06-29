@@ -32,7 +32,7 @@ delivers_to: null
 expects_from:
   ac_id: ACD-1500d-1
   contract: "The alignment check whose failure path must default to park, not proceed"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-17
 amended_by: []
 superseded_by: null

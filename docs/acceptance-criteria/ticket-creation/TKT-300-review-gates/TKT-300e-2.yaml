@@ -33,7 +33,7 @@ delivers_to: null
 expects_from:
   ac_id: TKT-300e-1
   contract: "Split decision metadata: original AC id, proposed child count, agent assignment per child"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

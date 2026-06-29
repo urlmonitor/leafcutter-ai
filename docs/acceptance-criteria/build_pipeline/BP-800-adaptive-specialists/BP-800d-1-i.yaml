@@ -32,7 +32,7 @@ delivers_to: null
 expects_from:
   ac_id: BP-800d-1
   contract: "Supersession logic that this customization-preservation edge case extends — accesses the legacy file before rename"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

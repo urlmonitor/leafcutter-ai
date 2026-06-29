@@ -21,7 +21,7 @@ estimated_complexity: S
 delivers_to: test-runner
 expects_from: BP-100g-1
 it_requirements: "Happy-path regression test; must invoke build.py on all canonical skill templates and confirm exit 0 with all skills deployed to target"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
   - "split: BP-100g -> BP-100g + BP-100h, 2026-06-05"

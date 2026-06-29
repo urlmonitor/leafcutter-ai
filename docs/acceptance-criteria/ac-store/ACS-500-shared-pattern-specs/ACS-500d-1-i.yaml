@@ -37,7 +37,7 @@ delivers_to: null
 expects_from:
   ac_id: ACS-500d-1
   contract: "Pattern resolution logic that can reverse-lookup: given a pattern AC ID, find all ACs whose implements_pattern field references it"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-11
 amended_by: []
 superseded_by: null

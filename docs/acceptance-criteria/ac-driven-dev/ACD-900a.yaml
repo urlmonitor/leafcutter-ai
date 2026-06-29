@@ -30,7 +30,7 @@ delivers_to: null
 expects_from:
   ac_id: ACD-500a
   contract: "Merged prioritized list from ticket-prioritizer with --include-acs"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

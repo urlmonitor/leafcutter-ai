@@ -48,9 +48,9 @@ delivers_to: null
 expects_from:
   ac_id: BO-530-2
   contract: "test-runner is placed after the coder in the chain and produces failure output"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by: [it-po]
 superseded_by: null
 covered_by: [BO-530-3-i]
 implemented_by: []

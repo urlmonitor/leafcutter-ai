@@ -37,4 +37,5 @@ covered_by:
   - INF-400c
   - INF-400g
   - INF-400h
+child_limit_override: 8
 implemented_by: []

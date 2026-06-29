@@ -22,7 +22,7 @@ estimated_complexity: S
 delivers_to: BP-100f-2-i
 expects_from: null
 it_requirements: "Must add Step 0 guard identical in pattern to BP-100f-1; use subprocess.run(['git', 'rev-parse', '--is-inside-work-tree']); emit user-friendly warning and skip git-dependent steps"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

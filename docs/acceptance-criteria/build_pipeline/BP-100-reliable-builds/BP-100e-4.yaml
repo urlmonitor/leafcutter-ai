@@ -20,7 +20,7 @@ estimated_complexity: S
 delivers_to: test-runner
 expects_from: BP-100e-2
 it_requirements: "Test must exercise the failed line format with valid timestamp (- [ ] agent — failed YYYY-MM-DD HH:MM); ensures hook does not false-positive on the word 'failed'"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

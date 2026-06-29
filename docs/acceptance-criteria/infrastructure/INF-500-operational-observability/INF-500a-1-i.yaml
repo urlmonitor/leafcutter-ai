@@ -21,7 +21,7 @@ estimated_complexity: S
 delivers_to: test-writer
 expects_from: INF-500a-1
 it_requirements: "Output dict must include git_resolved_path key; when rename resolution succeeds, value is the original pre-move path; when no rename was needed, value equals the input path"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

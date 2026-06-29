@@ -9,7 +9,7 @@ criteria: |
   Given an AC YAML file is staged for commit with a new or changed criteria field,
   When the committing agent's identity is python-coder, test-writer, commit,
     pr-reviewer, or any agent NOT on the authorized list
-    (product-owner-v3, business-analyst-v3, it-po-v3, human user),
+    (product-owner, business-analyst, it-po, human user),
   Then the commit is blocked,
   And the error message names the unauthorized agent, the file path,
     and states that only requirement authors may modify the criteria field.
@@ -39,9 +39,10 @@ delivers_to:
   agent: python-coder
   contract: "Shared governance validation function consumed by ACS-400b-3 (protected field rejection) and ACS-400e-1 (error formatting). Returns structured violation data: list of {file_path: str, field: str, agent_id: str, rule: str, authorized_agents: list[str]}"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: [ACS-400a-3-i]
 implemented_by: []

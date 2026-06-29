@@ -37,7 +37,7 @@ delivers_to: null
 expects_from:
   ac_id: BP-600c-2
   contract: "Red-phase result: { outcome: 'FAILED', failure_message: string, assertion_location: string|null } — failure_message is compared with the diagnosed root_cause for divergence"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

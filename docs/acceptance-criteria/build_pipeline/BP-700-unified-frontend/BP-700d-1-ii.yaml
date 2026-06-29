@@ -38,7 +38,7 @@ delivers_to: null
 expects_from:
   ac_id: BP-700d-1
   contract: "build.py migration does not touch PROJECT_CONTEXT.md -- only removes skill directory and overwrites template"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

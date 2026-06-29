@@ -43,7 +43,7 @@ delivers_to:
   agent: python-coder
   contract: "File at templates/agents/frontend-coder.md -- a complete agent template with embedded design principles, pre-write checklist, and no external skill loading instruction"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

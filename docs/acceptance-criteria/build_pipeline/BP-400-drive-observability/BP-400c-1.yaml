@@ -29,10 +29,10 @@ delivers_to:
   agent: llm-expert
   contract: "Four deployed artifacts: SKILL.md, trend_report.py, feedback-analyst.md, feedback-report.md -- all reachable at their .claude/ paths after build"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
-  - it-po-v3
+  - it-po
 superseded_by: null
 covered_by: []
 implemented_by: []

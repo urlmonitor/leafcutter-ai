@@ -28,7 +28,7 @@ delivers_to:
 expects_from:
   ac_id: BO-200a-1
   contract: "Validated work envelope with changed_files list and commit_message string"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

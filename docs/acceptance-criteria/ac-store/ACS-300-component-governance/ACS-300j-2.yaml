@@ -32,9 +32,9 @@ delivers_to:
 expects_from:
   ac_id: ACS-300j-1
   contract: "All depends_on references are valid component IDs before graph construction"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by: [it-po]
 superseded_by: null
 covered_by: [ACS-300j-2-i]
 implemented_by: []

@@ -39,9 +39,9 @@ delivers_to:
 expects_from:
   ac_id: BO-630-2
   contract: "The model tier routing logic that identifies H-complexity tickets for challenge"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by: [it-po]
 superseded_by: null
 covered_by: [BO-640-1-i]
 implemented_by: []

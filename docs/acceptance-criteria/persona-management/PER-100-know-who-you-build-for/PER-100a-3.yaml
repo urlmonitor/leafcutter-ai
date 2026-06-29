@@ -36,7 +36,7 @@ delivers_to: null
 expects_from:
   ac_id: PER-100a-1
   contract: "Persona YAML JSON Schema at config/persona_schema.json that lists required sections"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

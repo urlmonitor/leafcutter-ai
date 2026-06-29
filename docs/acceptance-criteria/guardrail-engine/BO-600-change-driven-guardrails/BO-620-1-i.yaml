@@ -38,9 +38,9 @@ delivers_to: null
 expects_from:
   ac_id: BO-620-1
   contract: "The guardrail mapping that resolves (target, surface) pairs to gate sets"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by: [it-po]
 superseded_by: null
 covered_by: []
 implemented_by: []

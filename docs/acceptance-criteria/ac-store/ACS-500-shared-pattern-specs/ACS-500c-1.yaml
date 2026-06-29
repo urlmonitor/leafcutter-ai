@@ -8,7 +8,7 @@ status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given the business-analyst-v3 agent is decomposing an L1 AC into L2 behaviors,
+  Given the business-analyst agent is decomposing an L1 AC into L2 behaviors,
   And the store contains a pattern AC defining "sortable-table" behavior,
   When the agent encounters a page requirement that includes sortable-table behavior
     (e.g. "the parts list supports column sorting"),
@@ -28,7 +28,7 @@ doc_links:
 assigned_agent: llm-expert
 estimated_complexity: M
 it_requirements:
-  - "Changes are limited to the BA v3 agent template at templates/agents/business-analyst-v3.md"
+  - "Changes are limited to the BA v3 agent template at templates/agents/business-analyst.md"
   - "Must not modify any Python code -- this is a prompt/template change only"
   - "Template instructions must describe pattern lookup as a step in the S1 Knowledge Acquisition phase"
   - "Must not break existing BA v3 behavior for components that have no patterns defined"
@@ -39,9 +39,10 @@ delivers_to:
 expects_from:
   ac_id: ACS-500a-1
   contract: "Schema fields implements_pattern and pattern_bindings are valid in AC YAML (accepted by validator) so the BA agent can use them"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-11
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by:

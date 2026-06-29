@@ -19,7 +19,7 @@ assigned_agent: null
 estimated_complexity: null
 delivers_to: null
 expects_from: null
-origin_agent: product-owner-v3
+origin_agent: product-owner
 created: 2026-06-05
 created_by_ticket: "tickets/00_inbox/TICKET-20260604-FixFailingBuildPipelineTests.md"
 amended_by: []

@@ -30,7 +30,7 @@ it_requirements:
   - "Must clearly distinguish between 'amended_by is empty' and 'amended_by exists but has no new entries' in the error message"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

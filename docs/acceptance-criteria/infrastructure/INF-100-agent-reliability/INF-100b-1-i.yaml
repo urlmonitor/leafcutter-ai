@@ -21,7 +21,7 @@ estimated_complexity: S
 delivers_to: INF-100b-2-i
 expects_from: null
 it_requirements: "Must change .is_dir() to .exists() on line 82 of _resolve_repo_root(); must update the docstring to explain that .git may be a file (not a directory) in a git worktree; must preserve all other behavior of the function"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

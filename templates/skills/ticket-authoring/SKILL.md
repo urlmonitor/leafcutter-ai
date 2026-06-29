@@ -100,7 +100,7 @@ last_updated: 2026-05-06           # optional, bump when you edit substantively
 files_touched:                     # optional — relative paths of files this ticket edits;
   - live_trader/main.py            #   used by epic-supervisor for parallelism gating
   - models/candle_context.py
-agents:                            # optional — set by the AC pipeline (business-analyst-v3 / it-po-v3);
+agents:                            # optional — set by the AC pipeline (business-analyst / it-po);
   architect-review: needed         #   status ∈ {not_needed | needed | signed_off | failed}
   test-writer: needed              #   priority 5 — writes failing tests BEFORE coders;
   python-coder: needed             #   set test-writer: not_needed for docs-only / config-only tickets
@@ -144,12 +144,12 @@ depends_on: []                     # epics are top-level
 | `type` | optional | Only `epic` is valid (use on `Master_Plan.md`) |
 | `priority` | optional | `critical` / `high` / `medium` / `low` |
 | `phase`, `tags`, `last_updated` | optional | Free-form helpers |
-| `files_touched` | optional | List of relative paths this ticket edits; used by `epic-supervisor` to detect file-touch overlap when scheduling parallel tickets. Populated by the AC pipeline (business-analyst-v3 / it-po-v3); omit until those agents run. |
-| `agents` | optional | Map of `<agent-name>: <status>` where status ∈ `not_needed \| needed \| signed_off \| failed`. Populated by the AC pipeline (business-analyst-v3 / it-po-v3). The hook validates every value against the enum; invalid values block the write. Valid agent names come from `leafcutter/config/agent_registry.json` (entries with `is_ticket_phase: true`). See `.claude/skills/signoff/SKILL.md` for the full status lifecycle. **Canonical ordering**: architect-review (4) → test-writer (5) → python-coder (6) → sql-coder (7) → test-runner (9) → documentation-expert (10) → pr-reviewer (11) → commit (12) → pull-request (13). Set `test-writer: not_needed` when `## Test Requirements` → `tests: []` (docs-only / config-only tickets). The `ticket-supervisor` will also auto-skip based on the `tests:` array, but setting `not_needed` in the map avoids the unnecessary spawn check. |
+| `files_touched` | optional | List of relative paths this ticket edits; used by `epic-supervisor` to detect file-touch overlap when scheduling parallel tickets. Populated by the AC pipeline (business-analyst / it-po); omit until those agents run. |
+| `agents` | optional | Map of `<agent-name>: <status>` where status ∈ `not_needed \| needed \| signed_off \| failed`. Populated by the AC pipeline (business-analyst / it-po). The hook validates every value against the enum; invalid values block the write. Valid agent names come from `leafcutter/config/agent_registry.json` (entries with `is_ticket_phase: true`). See `.claude/skills/signoff/SKILL.md` for the full status lifecycle. **Canonical ordering**: architect-review (4) → test-writer (5) → python-coder (6) → sql-coder (7) → test-runner (9) → documentation-expert (10) → pr-reviewer (11) → commit (12) → pull-request (13). Set `test-writer: not_needed` when `## Test Requirements` → `tests: []` (docs-only / config-only tickets). The `ticket-supervisor` will also auto-skip based on the `tests:` array, but setting `not_needed` in the map avoids the unnecessary spawn check. |
 | `requires_diagram` | **required** | Tri-state: `true` (diagram needed), `false` (considered, not needed), `null` (not applicable — pre-existing coverage). **Absent key is a hook failure** per ADR-026. |
 | `requires_adr` | **required** | Tri-state: `true` (ADR needed), `false` (considered, not needed), `null` (not applicable — pre-existing coverage). **Absent key is a hook failure** per ADR-026. |
 | `requires_documentation` | optional | List of doc type strings that must be produced for this ticket. Valid values come from `leafcutter/config/doc_types.json` (e.g. `[how_to, reference]`). When present, ticket-wiring flips the corresponding writer agents to `needed`. Omit when no doc deliverable is required. |
-| `user_facing_surface` | optional | `slash_command \| pre_commit_hook \| agent_orchestrated \| cron \| null`. Identifies the production entrypoint this ticket introduces or modifies. Set by `business-analyst-v3`. When non-null: (a) `actuation_contract` is required; (b) `user-surface-smoker: needed` must appear in `agents`. Absent or `null` = ticket is internal; no smoker dispatch. |
+| `user_facing_surface` | optional | `slash_command \| pre_commit_hook \| agent_orchestrated \| cron \| null`. Identifies the production entrypoint this ticket introduces or modifies. Set by `business-analyst`. When non-null: (a) `actuation_contract` is required; (b) `user-surface-smoker: needed` must appear in `agents`. Absent or `null` = ticket is internal; no smoker dispatch. |
 | `actuation_contract` | optional (required when `user_facing_surface` != null) | One sentence describing the observable side effect when the surface is invoked in production with no parameter overrides. Example: `"Writes N entries to docs/glossary.md and exits 0 on success."`. Used by `user-surface-smoker` to build the `assertion:` regex for the Smoke Fixture. |
 | `roadmap_phase` | optional | Phase ID from `docs/roadmap.json` that this ticket belongs to (e.g. `phase_1`). The hook prints a **warning** (not a block) when the value is not a known phase ID. Omit on tickets predating the roadmap or when the phase is unclear. |
 | `advances_current_outcome` | optional | Boolean (`true` / `false`). Set `true` when this ticket directly advances the current must-achieve outcome in `docs/roadmap.json`. The hook prints a **warning** (not a block) when the value is not a boolean. Omit when not applicable. |
@@ -311,18 +311,18 @@ Add this scenario to every deployment-artifact ticket.
 When a ticket's `agents:` map has **more than one coder agent** (`python-coder`,
 `sql-coder`, or `frontend-coder`) with status `needed`, the ticket body MUST include
 an `## Agent Contracts` section instead of a plain `## Acceptance Criteria` section.
-The `it-po-v3` phase agent authors this section; ticket authors SHOULD leave it blank and
-let `it-po-v3` populate it.
+The `it-po` phase agent authors this section; ticket authors SHOULD leave it blank and
+let `it-po` populate it.
 
 #### Routing decision: multi-coder vs single-coder
 
 | Ticket type | Routing | Who writes ACs |
 |---|---|---|
-| **Single-coder** (1 coder agent needed) | `it-po-v3: not_needed`, AC authoring by BA v3 | business-analyst-v3 agent |
-| **Multi-coder** (>1 coder agent needed) | `it-po-v3: needed`, IT PO v3 writes per-agent contracts | it-po-v3 agent |
+| **Single-coder** (1 coder agent needed) | `it-po: not_needed`, AC authoring by BA v3 | business-analyst agent |
+| **Multi-coder** (>1 coder agent needed) | `it-po: needed`, IT PO v3 writes per-agent contracts | it-po agent |
 
 The `/plan-feature` pipeline determines the routing at AC authoring time based on the BA v3's output.
-For multi-coder tickets, `it-po-v3` is added to the `agents:` map at priority 3.5 (after
+For multi-coder tickets, `it-po` is added to the `agents:` map at priority 3.5 (after
 architecture-diagram-author, before architect-review).
 
 #### Agent Contracts section format
@@ -369,7 +369,7 @@ architecture-diagram-author, before architect-review).
 5. **Integration ACs**: at least one AC per agent boundary must be tagged `<!-- scope: integration -->`.
 6. **Limits**: max 7 ACs per agent (enforced by `check_ac_limits` pre-commit hook); max 20 ACs per ticket.
 
-When a ticket exceeds these limits, the `it-po-v3` §7 Split Protocol splits the ticket into
+When a ticket exceeds these limits, the `it-po` §7 Split Protocol splits the ticket into
 sibling tickets rather than exceeding the cap.
 
 ### Optional: Out-of-Repo Outputs Block

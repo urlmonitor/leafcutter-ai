@@ -43,7 +43,7 @@ delivers_to:
 expects_from:
   ac_id: BP-800a-4
   contract: "Technology manifest JSON file at .leafcutter/technology_manifest.json with schema: {schema_version, generated_at, technologies: list[{name, category, paradigm, confidence, detection_source}]}"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

@@ -24,7 +24,7 @@ estimated_complexity: S
 delivers_to: test-writer
 expects_from: null
 it_requirements: "Compare frontmatter 'name' key against the parent directory name; use Path.parent.name for comparison; must be case-sensitive match"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

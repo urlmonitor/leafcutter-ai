@@ -33,7 +33,7 @@ delivers_to: null
 expects_from:
   ac_id: BP-200a-5
   contract: "Agent template declaring exactly three skills that must match the registry skills_used array"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/03_registry_and_docs.md"
 amended_by: []

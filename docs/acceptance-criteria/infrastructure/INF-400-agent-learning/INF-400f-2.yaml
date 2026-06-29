@@ -8,13 +8,13 @@ work_status: todo
 priority: high
 readiness: reviewed
 criteria: |
-  Given the business-analyst-v3 agent discovers during L2 decomposition that
+  Given the business-analyst agent discovers during L2 decomposition that
     the infrastructure component has a standing rule requiring all ACs to include
     doc_links to architecture documents,
   And the BA's knowledge-capture step persists this to a component-scoped context file
     (e.g., docs/acceptance-criteria/infrastructure/README.md or
     memory/project_infrastructure_conventions.md),
-  When the it-po-v3 agent is spawned next in the same pipeline run to enrich
+  When the it-po agent is spawned next in the same pipeline run to enrich
     the BA's L2 AC files,
   Then the IT PO's pre-flight step reads the context file the BA just wrote,
   And the IT PO ensures its enriched ACs include doc_links to architecture documents
@@ -40,9 +40,10 @@ it_requirements:
   - "Must work within the same working tree without coordination beyond sequential execution"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by: []

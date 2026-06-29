@@ -9,9 +9,9 @@ criteria: |
   Given a new AC file is created with level L0 or L1,
   When the AC validator checks the origin_agent field,
   Then it accepts values from the product-owner class
-    (e.g., "product-owner-v3", "BrainCandy"),
+    (e.g., "product-owner", "BrainCandy"),
   And it rejects origin_agent values from the analyst class
-    (e.g., "business-analyst-v3") with an error stating
+    (e.g., "business-analyst") with an error stating
     "L0/L1 ACs must be authored by a product-owner-class agent",
   And L2/L3 ACs with origin_agent from the analyst class pass validation.
 depends_on: [ACS-100c]
@@ -30,9 +30,10 @@ it_requirements:
   - "Must produce a clear error message naming the rejected agent and the required class"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -20,7 +20,7 @@ doc_links:
     relationship: constrains
 delivers_to: [TKT-500c-3]
 expects_from: []
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

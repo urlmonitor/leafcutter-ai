@@ -27,7 +27,7 @@ estimated_complexity: M
 delivers_to: BP-300a-2
 expects_from: null
 it_requirements: "Must create templates/workflows-js/debug.js following the same module.exports pattern as build-ticket.js; must use Promise.all for parallel agent dispatch; each investigator agent receives the user's issue description plus its domain scope"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

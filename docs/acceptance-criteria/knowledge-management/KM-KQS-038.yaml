@@ -38,7 +38,7 @@ delivers_to: null
 expects_from:
   ac_id: KM-KQS-034
   contract: "Error handling rules in the Agent Protocol that define the warning format with <error_message> placeholder"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

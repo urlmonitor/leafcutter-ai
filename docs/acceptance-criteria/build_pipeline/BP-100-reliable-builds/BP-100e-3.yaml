@@ -20,7 +20,7 @@ estimated_complexity: S
 delivers_to: test-runner
 expects_from: BP-100e-2
 it_requirements: "Test must confirm the hook passes (exit 0) for well-formed timestamps; serves as the positive-path regression guard for the timestamp validator"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

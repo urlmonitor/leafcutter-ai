@@ -34,9 +34,9 @@ delivers_to: null
 expects_from:
   ac_id: BO-1100d-4
   contract: "Analysis result from the specialist: {consistent: false, top_prefixes: [{prefix: string, count: int}, ...]} showing no dominant pattern in historical messages"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by: [it-po]
 superseded_by: null
 covered_by: []
 implemented_by: []

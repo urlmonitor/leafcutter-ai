@@ -27,10 +27,10 @@ it_requirements:
   - "Must verify that drift_warnings is an empty array, not null or absent"
 delivers_to: BP-300b-3-i
 expects_from: BP-300b-1
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
-  - it-po-v3
+  - it-po
 superseded_by: null
 covered_by: [BP-300b-3-i]
 implemented_by: []

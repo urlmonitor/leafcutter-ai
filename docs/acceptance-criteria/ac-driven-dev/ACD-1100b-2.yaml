@@ -9,13 +9,13 @@ req_status: approved
 work_status: todo
 criteria: |
   Given the agent registry previously contained entries with ids
-    "product-owner-v3", "business-analyst-v3", and "it-po-v3",
+    "product-owner", "business-analyst", and "it-po",
   When the v2.0 migration promotes v3 agents,
   Then config/agent_registry.json contains entries with ids:
-    "product-owner" (replacing product-owner-v3)
-    "business-analyst" (replacing business-analyst-v3, distinct from the
+    "product-owner" (replacing product-owner)
+    "business-analyst" (replacing business-analyst, distinct from the
       removed v1 business-analyst)
-    "it-po" (replacing it-po-v3, distinct from the removed v1/v2 it-po)
+    "it-po" (replacing it-po, distinct from the removed v1/v2 it-po)
   And each promoted entry's template_path field references the canonical
     filename (e.g. "templates/agents/product-owner.md")
   And no entry in the entire registry has an "id" field containing the
@@ -43,7 +43,8 @@ delivers_to:
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -40,7 +40,7 @@ If `$ARGUMENTS` is empty, print usage and exit non-zero. Do not spawn
 5. Read the frontmatter. Confirm it has an `agents:` map with at least
    one entry. If empty, refuse with:
    `"Ticket has no `agents:` map — re-create it via /create-ticket so
-   the AC pipeline (business-analyst-v3 / it-po-v3) can populate the map before driving."`
+   the AC pipeline (business-analyst / it-po) can populate the map before driving."`
    Exit non-zero. (This guards against the `feedback_use_create_ticket_agent.md`
    trap codified in user-memory.)
 6. **Delete `.build-feature.lock` (inline-work-guard handoff).** Before

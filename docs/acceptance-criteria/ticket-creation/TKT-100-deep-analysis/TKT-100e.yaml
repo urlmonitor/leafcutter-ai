@@ -24,7 +24,7 @@ doc_links:
 assigned_agent: llm-expert
 estimated_complexity: L
 delivers_to:
-  agent: business-analyst-v3
+  agent: business-analyst
   contract: "L0 + L1 AC YAML files with customer-facing titles, taglines, component assignments"
 expects_from: null
 origin_agent: BrainCandy

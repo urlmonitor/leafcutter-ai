@@ -43,7 +43,7 @@ delivers_to:
   agent: documentation-expert
   contract: "Verified list of all design principles and behavioral rules preserved in the unified template, for use in reference documentation (BP-700c-5)"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

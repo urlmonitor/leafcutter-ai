@@ -6,7 +6,7 @@ description: |
   Use after /po has produced L0/L1 ACs, or to decompose an existing L1.
 ---
 
-Invoke the `business-analyst-v3` agent with the following context:
+Invoke the `business-analyst` agent with the following context:
 
 **User request:** $ARGUMENTS
 
@@ -17,7 +17,7 @@ Invoke the `business-analyst-v3` agent with the following context:
 3. For each L2, identify non-obvious edge cases and failure modes as L3 ACs.
 4. Check existing L2/L3 ACs under the same parent — do not duplicate what already exists.
 5. Write AC YAML files to the appropriate component directory under `docs/acceptance-criteria/`.
-6. Set `origin_agent: business-analyst-v3` on all ACs you create.
+6. Set `origin_agent: business-analyst` on all ACs you create.
 7. Assign `assigned_agent`, `estimated_complexity`, and `depends_on` fields on L2/L3 ACs.
 8. Log assumptions — if you inferred something not stated explicitly, call it out.
 9. Present the hierarchy to the user for review before writing files.

@@ -11,11 +11,11 @@ criteria: |
   Given the emission sink (determined by ADR from INF-400c-1) contains
     three knowledge_captured events:
     - Event 1: entry_kind "memory-project", destination "memory/project_infra.md",
-      agent "business-analyst-v3", learning text "INF prefix, no parent component"
+      agent "business-analyst", learning text "INF prefix, no parent component"
     - Event 2: entry_kind "per-folder-readme", destination "docs/acceptance-criteria/infrastructure/README.md",
-      agent "it-po-v3", learning text "infrastructure ACs use architect-review for ADR work"
+      agent "it-po", learning text "infrastructure ACs use architect-review for ADR work"
     - Event 3: entry_kind "agent-frontmatter", destination ".claude/skills/signoff/PROJECT_CONTEXT.md",
-      agent "product-owner-v3", learning text "signoff section 7 does not fire for v3 agents"
+      agent "product-owner", learning text "signoff section 7 does not fire for v3 agents"
   When the harvester process runs,
   Then it reads each unprocessed event from the sink,
   And for each event, it writes the learning text to the file at the destination path
@@ -43,9 +43,10 @@ delivers_to: null
 expects_from:
   ac_id: INF-400c-1
   contract: "ADR specifying which JSONL sink file to read, the event schema to parse, and whether events are filtered or consumed wholesale"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: [INF-400c-2-i]
 implemented_by: []

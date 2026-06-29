@@ -14,7 +14,7 @@ criteria: |
   And records the run timestamp as baseline_run_at
   And removes the temporary worktree after the run completes
   And the baseline data is forwarded to the triage agent in Step 3
-origin_agent: "business-analyst-v3"
+origin_agent: "business-analyst"
 created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
 assigned_agent: "finalize-feature-workflow"
 estimated_complexity: M

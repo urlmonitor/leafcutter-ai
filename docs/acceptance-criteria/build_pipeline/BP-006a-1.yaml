@@ -23,7 +23,7 @@ it_requirements: |
 delivers_to:
   BP-006a-2: "Provides complete registry entries so orphan-detection test can pass"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 created_by_ticket: "tickets/00_inbox/TICKET-20260604-FixFailingBuildPipelineTests.md"
 amended_by: []

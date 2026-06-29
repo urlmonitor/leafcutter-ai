@@ -797,7 +797,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
-                "_comment": "ACS-400: Blocks commits where an implementation agent (python-coder, test-writer, etc.) modifies protected fields (criteria, title, req_status, depends_on) in AC YAML files. Only authorized requirement authors (product-owner-v3, business-analyst-v3, it-po-v3) and human users may write protected fields. Also enforces origin_agent on new files (ACS-400c-1) and amended_by updates on criteria changes (ACS-400c-2). Fail-open: exits 0 on any unexpected error."
+                "_comment": "ACS-400: Blocks commits where an implementation agent (python-coder, test-writer, etc.) modifies protected fields (criteria, title, req_status, depends_on) in AC YAML files. Only authorized requirement authors (product-owner, business-analyst, it-po) and human users may write protected fields. Also enforces origin_agent on new files (ACS-400c-1) and amended_by updates on criteria changes (ACS-400c-2). Fail-open: exits 0 on any unexpected error."
             },
             {
                 "id": "check-ac-parent-covered-by",

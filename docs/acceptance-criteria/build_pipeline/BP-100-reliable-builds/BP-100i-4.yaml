@@ -53,10 +53,10 @@ delivers_to: null
 expects_from:
   ac_id: BP-100i-1
   contract: "The parity-checking entry-point function that accepts directory paths from configuration and returns a list of violation records, each containing the missing filename and the directory where it is expected"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
-  - it-po-v3
+  - it-po
 superseded_by: null
 covered_by: []
 implemented_by: []

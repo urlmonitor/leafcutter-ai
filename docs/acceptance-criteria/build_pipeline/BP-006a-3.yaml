@@ -22,7 +22,7 @@ it_requirements: |
 delivers_to: null
 expects_from:
   BP-006a-1: "Registry structure must be in place for the detection logic to compare against"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 created_by_ticket: "tickets/00_inbox/TICKET-20260604-FixFailingBuildPipelineTests.md"
 amended_by: []

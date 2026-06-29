@@ -40,7 +40,7 @@ delivers_to:
   agent: llm-expert
   contract: "An ordered list of unresolved feedback entries (the work queue), each entry a dict with feedback_id, category, note, tags, severity, source; consumed one-at-a-time by the classifier sub-agent (ACD-1500a-2)"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-17
 amended_by: []
 superseded_by: null

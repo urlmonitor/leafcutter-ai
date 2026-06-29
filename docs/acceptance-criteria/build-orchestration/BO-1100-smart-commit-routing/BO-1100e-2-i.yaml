@@ -23,7 +23,7 @@ delivers_to: null
 expects_from:
   ac_id: BO-1100e-1
   contract: "Path-scoped git log query that may match zero commits"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

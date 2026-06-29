@@ -22,7 +22,7 @@ estimated_complexity: S
 delivers_to: INF-400g-2-i
 expects_from: INF-400g-1
 it_requirements: "Must use argparse for CLI; must output valid JSON (one line per event, json.dumps with ensure_ascii=False); each line must contain event_type, timestamp (ISO 8601), ticket_path, agent_name, and payload fields; must use 'a' mode for file open (append)"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

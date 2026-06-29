@@ -29,7 +29,7 @@ delivers_to: null
 expects_from:
   ac_id: BP-100a-2
   contract: "Integrity check loop that is silent when all scripts are present"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

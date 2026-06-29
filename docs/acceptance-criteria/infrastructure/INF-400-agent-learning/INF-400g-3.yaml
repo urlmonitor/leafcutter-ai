@@ -20,7 +20,7 @@ estimated_complexity: S
 delivers_to: test-writer
 expects_from: INF-400g-1
 it_requirements: "Must use os.makedirs(parent_dir, exist_ok=True) before opening the log file; must handle the case where the parent directory does not exist without raising an error"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

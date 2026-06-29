@@ -39,7 +39,7 @@ delivers_to: null
 expects_from:
   ac_id: ACD-1200c-1
   contract: "dict[str, list[str]] — mapping from leaf AC ID to list of leaf AC IDs it depends on (resolved inter-leaf edges)"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

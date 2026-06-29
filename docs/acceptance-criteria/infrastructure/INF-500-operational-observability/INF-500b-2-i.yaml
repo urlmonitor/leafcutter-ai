@@ -20,7 +20,7 @@ estimated_complexity: S
 delivers_to: test-runner
 expects_from: INF-500b-2
 it_requirements: "Test must seed feedback.jsonl with two categories of equal count but different severity weights (e.g. high=3 vs low=1); assert the higher-severity category appears first in the prioritized output"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

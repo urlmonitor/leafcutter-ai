@@ -5,6 +5,7 @@ type: card
 status: active
 created: 2026-06-05
 card_version: "generated"
+description: Agent card for research-agent — central context-gathering hub that accepts structured questions, searches the codebase or documentation, and returns curated findings.
 ---
 # research-agent
 
@@ -31,7 +32,7 @@ other coding agent carries these tools.
 
 - `architect-review`
 - `business-analyst`
-- `business-analyst-v3`
+- `business-analyst`
 - `python-coder`
 - `documentation-expert`
 - `reference-author`

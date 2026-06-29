@@ -31,7 +31,7 @@ delivers_to: null
 expects_from:
   ac_id: ACS-100h-1
   contract: "Cluster proposal (grouping of L1s into new parents) ready for user presentation"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

@@ -36,9 +36,9 @@ delivers_to: null
 expects_from:
   ac_id: BO-400b-1
   contract: "CLI script at scripts/set_ticket_status.py accepting --ticket <path> --status <value>; exits 0 on success, prints 'status: <old> -> <new>' to stdout"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by: [it-po]
 superseded_by: null
 covered_by: [BO-400a-1-i]
 implemented_by: []

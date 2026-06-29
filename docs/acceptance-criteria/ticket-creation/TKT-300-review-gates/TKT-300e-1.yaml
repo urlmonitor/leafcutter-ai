@@ -36,7 +36,7 @@ delivers_to:
   agent: llm-expert
   contract: "Split decision metadata: original AC id, proposed child count, agent assignment per child"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

@@ -33,7 +33,7 @@ delivers_to: null
 expects_from:
   ac_id: BP-800a-1
   contract: "Technology detection function signature: detect_technologies(project_path: Path) -> list[dict] — this edge case verifies it returns [] for empty projects"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

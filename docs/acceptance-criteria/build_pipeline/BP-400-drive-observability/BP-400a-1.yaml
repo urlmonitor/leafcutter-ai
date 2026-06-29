@@ -40,10 +40,10 @@ delivers_to:
   agent: llm-expert
   contract: "emit_event.py CLI at templates/skills/agent-telemetry/scripts/emit_event.py that appends structured JSONL with keys: event_type, timestamp, agent_name, ticket_path, payload"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
-  - it-po-v3
+  - it-po
 superseded_by: null
 covered_by: [BP-400a-1-i]
 implemented_by: []

@@ -25,7 +25,7 @@ estimated_complexity: S
 delivers_to: BP-100g-1-i
 expects_from: null
 it_requirements: "Must use yaml.safe_load() with try/except yaml.YAMLError; must print file path and parse error to stderr; must NOT write the broken skill to target directory; must exit non-zero immediately on first error"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

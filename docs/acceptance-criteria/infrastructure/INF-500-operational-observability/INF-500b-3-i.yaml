@@ -24,7 +24,7 @@ estimated_complexity: S
 delivers_to: test-runner
 expects_from: INF-500b-3
 it_requirements: "Test must seed two 7-day windows with controlled counts; verify >20% increase yields 'rising', >20% decrease yields 'falling', within 20% yields 'stable'"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

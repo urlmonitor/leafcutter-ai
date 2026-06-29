@@ -12,7 +12,7 @@ criteria: |
   And the merge_strategy is recorded as "already_up_to_date"
   And the workflow proceeds directly to Step 3 (test run)
   And no git merge command is executed
-origin_agent: "business-analyst-v3"
+origin_agent: "business-analyst"
 created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
 assigned_agent: "finalize-feature-workflow"
 estimated_complexity: S

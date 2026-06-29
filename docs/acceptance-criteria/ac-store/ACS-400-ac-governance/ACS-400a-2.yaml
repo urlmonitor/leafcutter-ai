@@ -8,7 +8,7 @@ work_status: todo
 criteria: |
   Given an existing AC YAML file has its criteria field changed in the staged diff,
   When the committing agent's identity is one of:
-    product-owner-v3, business-analyst-v3, it-po-v3, or a human user,
+    product-owner, business-analyst, it-po, or a human user,
   Then the commit proceeds without governance violation,
   And the updated criteria field is accepted into the repository.
 depends_on: [ACS-400a]
@@ -30,9 +30,10 @@ it_requirements:
   - "Must not re-parse the entire AC store -- only inspect files in the staged diff"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by: []

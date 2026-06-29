@@ -24,7 +24,7 @@ estimated_complexity: S
 delivers_to: test-runner
 expects_from: BP-100g-1
 it_requirements: "Test must create a temporary SKILL.md with broken YAML, invoke build.py via subprocess, and assert the file path appears in captured stderr output"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

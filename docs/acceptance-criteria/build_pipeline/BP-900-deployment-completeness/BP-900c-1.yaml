@@ -36,7 +36,7 @@ delivers_to: null
 expects_from:
   ac_id: BP-900b-2
   contract: "list[dict] — list of broken references with 'missing_path' and 'referencing_template' keys; this AC adds the 'suggested_action' field to each entry"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-11
 created_by_ticket: null
 amended_by: []

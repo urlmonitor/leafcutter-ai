@@ -30,7 +30,7 @@ delivers_to: null
 expects_from:
   ac_id: ACS-400a-3
   contract: "Agent identity classification logic that determines whether a given identity string is a known registered agent or should be treated as human"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

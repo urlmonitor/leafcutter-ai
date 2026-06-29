@@ -8,12 +8,12 @@ work_status: todo
 priority: high
 readiness: reviewed
 criteria: |
-  Given the product-owner-v3 agent ran once and the user corrected its L0 phrasing
+  Given the product-owner agent ran once and the user corrected its L0 phrasing
     from "System provides automated X" to "You get X without manual effort"
     (preferring second-person active voice),
   And that preference was captured as a memory-user learning
     (e.g., memory/feedback_l0_framing_preference.md),
-  When the product-owner-v3 agent runs a second time for a different feature,
+  When the product-owner agent runs a second time for a different feature,
   Then the agent's L0 criteria field uses second-person active voice
     (e.g., "You get..." or "Your project...") rather than third-person passive
     (e.g., "The system provides..." or "Automated X is delivered..."),
@@ -35,9 +35,10 @@ it_requirements:
   - "Must be verifiable by comparing first-run and second-run L0 language for the same user"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by: []

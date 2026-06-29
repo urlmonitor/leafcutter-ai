@@ -22,7 +22,7 @@ estimated_complexity: S
 delivers_to: test-runner
 expects_from: INF-500b-2
 it_requirements: "Test must invoke trend_report.py with --format json; parse output as JSON; assert required keys: summary, by_category, action_items; assert trends key present when --trend was computed"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

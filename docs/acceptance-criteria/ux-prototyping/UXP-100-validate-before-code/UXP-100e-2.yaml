@@ -38,10 +38,10 @@ delivers_to: null
 expects_from:
   ac_id: UXP-100e-1
   contract: "Both agents running concurrently with shared prototype artifact store path accessible to both"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by:
-  - reason: "it-po-v3 enrichment: reassigned frontend-coder -> llm-expert (BA agent template update), 2026-06-08"
+  - reason: "it-po enrichment: reassigned frontend-coder -> llm-expert (BA agent template update), 2026-06-08"
 superseded_by: null
 covered_by: []
 implemented_by: []

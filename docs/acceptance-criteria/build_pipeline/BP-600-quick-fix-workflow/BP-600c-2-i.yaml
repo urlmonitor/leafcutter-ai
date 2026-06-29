@@ -36,7 +36,7 @@ delivers_to: null
 expects_from:
   ac_id: BP-600c-2
   contract: "Red-phase result containing outcome field — ERROR status triggers this edge case halt"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

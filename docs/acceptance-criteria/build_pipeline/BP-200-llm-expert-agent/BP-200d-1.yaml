@@ -28,7 +28,7 @@ it_requirements:
   - "allowed-tools contract is a security boundary -- must not permit write access to audited files"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/04_prompt_audit_skill.md"
 amended_by: []

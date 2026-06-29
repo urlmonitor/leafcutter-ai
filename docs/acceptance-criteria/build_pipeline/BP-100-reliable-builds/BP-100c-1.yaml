@@ -26,7 +26,7 @@ delivers_to:
   agent: python-coder
   contract: "build_ticket_lifecycle() derives tickets_root from config['tickets_inbox_path'] parent"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

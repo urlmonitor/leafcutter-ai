@@ -29,7 +29,7 @@ delivers_to: null
 expects_from:
   ac_id: BP-800b-1
   contract: "Agent generation function that accepts a manifest and produces template files — this edge case verifies deduplication within that function"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

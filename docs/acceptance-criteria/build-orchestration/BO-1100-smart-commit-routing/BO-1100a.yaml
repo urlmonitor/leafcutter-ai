@@ -20,7 +20,7 @@ assigned_agent: null
 estimated_complexity: M
 delivers_to: null
 expects_from: null
-origin_agent: product-owner-v3
+origin_agent: product-owner
 created: 2026-06-05
 amended_by: []
 superseded_by: null
@@ -31,5 +31,6 @@ covered_by:
   - BO-1100a-4
   - BO-1100a-5
   - BO-1100a-6
+child_limit_override: 6
 implemented_by:
 - tickets/00_inbox/TICKET-20260608-BO-1100a.md

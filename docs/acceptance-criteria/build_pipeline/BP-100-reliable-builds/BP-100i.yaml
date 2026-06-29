@@ -22,7 +22,7 @@ criteria: |
 depends_on:
   - BP-100
 doc_links: []
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

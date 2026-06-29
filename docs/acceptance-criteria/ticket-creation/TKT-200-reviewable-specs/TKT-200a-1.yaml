@@ -33,7 +33,7 @@ delivers_to:
 expects_from:
   ac_id: TKT-200a
   contract: "Feature folder path containing L2/L3 AC YAML files with component and depends_on fields populated"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

@@ -20,7 +20,7 @@ estimated_complexity: S
 delivers_to: test-runner
 expects_from: BP-100e-5
 it_requirements: "Positive-path test for comment heading validation; must confirm exit 0 for well-formed heading timestamps"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

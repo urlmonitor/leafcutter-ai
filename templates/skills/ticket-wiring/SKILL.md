@@ -2,7 +2,7 @@
 name: ticket-wiring
 description: |
   Procedural skill for assembling a complete ticket file from collected
-  AC pipeline (business-analyst-v3, it-po-v3) and architect-review outputs.
+  AC pipeline (business-analyst, it-po) and architect-review outputs.
   Handles wiring rules (files_touched, agents map, Sign-offs, Comments), error
   recovery when a payload is missing, and pre-write parity verification. Used
   by the ticket-authoring workflow after gathering all upstream outputs.
@@ -19,9 +19,9 @@ structured outputs from upstream agents into a valid, guard-passing ticket file.
 You receive (at minimum) these collected payloads before invoking this skill:
 
 ```
-ba_output:          structured JSON from business-analyst-v3 (may be absent — see
+ba_output:          structured JSON from business-analyst (may be absent — see
                     Error Recovery Path)
-it_po_output:       structured JSON from it-po-v3 (optional; present only when
+it_po_output:       structured JSON from it-po (optional; present only when
                     ba_output.complexity is "standard" or "novel"; may be
                     absent without triggering the error recovery path)
 architect_output:   structured JSON from architect-review (optional; may be
@@ -36,8 +36,8 @@ ticket_path:        target path where the ticket file should be written
 
 Resolve `files_touched` and `agents` from this priority chain:
 
-1. **it-po-v3** output — use when present and non-empty (multi-coder tickets).
-2. **business-analyst-v3** output — fall back when it-po-v3 omitted them.
+1. **it-po** output — use when present and non-empty (multi-coder tickets).
+2. **business-analyst** output — fall back when it-po omitted them.
 3. **Registry defaults** (error recovery, epic sub-tickets only) — apply when
    neither BA v3 nor IT PO v3 provided an agents map.
 
@@ -55,7 +55,7 @@ When `architect_output` is present, also read these fields:
 - `requires_documentation` — a list of doc type strings from `doc_types.json` (may be absent or empty list).
 
 Also read `ba_output.requires_documentation` when `architect_output` is absent or does not
-include this field. Priority: architect-review wins over business-analyst-v3 when both supply the field.
+include this field. Priority: architect-review wins over business-analyst when both supply the field.
 
 These signals drive Step 2 wiring decisions below. If `architect_output` is
 absent entirely, treat all three fields as empty (no Architecture Plan emitted,
@@ -106,7 +106,7 @@ signal suggesting a diagram or ADR is needed.
   - This rule **supersedes** any earlier BA v3 payload that set
     `adr-author: not_needed`. The architect-review judgment is authoritative;
     a prior `not_needed` value from upstream must be overridden here.
-- When `requires_documentation` (resolved from architect-review or business-analyst-v3
+- When `requires_documentation` (resolved from architect-review or business-analyst
   per the Priority Chain above) is non-empty:
   - For each entry in the list, look up `writer_agent` in `doc_types.json`. When
     `writer_agent` is non-null, set `<writer_agent>: needed` in the `agents` map.
@@ -301,13 +301,13 @@ For each entry in `ba_output.ac_amendments`:
 
 ## Step 3 — Error Recovery Path
 
-**When this fires:** The AC pipeline (business-analyst-v3) always runs before
+**When this fires:** The AC pipeline (business-analyst) always runs before
 this skill for normal tickets. This path fires only when it crashes or returns
 no usable payload. It is NOT a normal invocation mode — it is a defensive guard.
 
 **Two known entry conditions:**
 
-- **BA crash guard**: `business-analyst-v3` failed or returned an empty/malformed
+- **BA crash guard**: `business-analyst` failed or returned an empty/malformed
   payload. Log the failure and surface a warning to the user.
 - **Direct invocation on an existing stub**: a user manually invokes
   `/create-ticket` pointing at a pre-written stub file without any BA payload.

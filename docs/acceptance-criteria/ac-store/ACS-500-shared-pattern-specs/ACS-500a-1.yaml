@@ -43,7 +43,7 @@ delivers_to:
   agent: python-coder
   contract: "Schema fields implements_pattern (string|null) and pattern_bindings (object|null) added to config/ac_store_schema.json, validated by scripts/ac_store/validate_ac_schema.py"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-11
 amended_by: []
 superseded_by: null

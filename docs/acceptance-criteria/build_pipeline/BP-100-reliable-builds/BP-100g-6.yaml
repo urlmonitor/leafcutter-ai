@@ -24,7 +24,7 @@ estimated_complexity: S
 delivers_to: pr-reviewer
 expects_from: null
 it_requirements: "Must add five checklist items to pr-reviewer.md template: YAML parseable, name-directory match, allowed-tools valid, input contract present, output contract present; items must be in a conditional section triggered by templates/skills/*/SKILL.md in the diff"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
   - "split: BP-100g -> BP-100g + BP-100h, 2026-06-05"

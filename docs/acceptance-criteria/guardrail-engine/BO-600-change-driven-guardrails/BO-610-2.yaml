@@ -35,9 +35,9 @@ delivers_to:
   agent: python-coder
   contract: "A schema definition file containing the risk_surface enum with 6 values and their descriptions"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by: [it-po]
 superseded_by: null
 covered_by: []
 implemented_by: []

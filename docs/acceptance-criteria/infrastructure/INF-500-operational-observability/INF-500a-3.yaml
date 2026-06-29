@@ -23,7 +23,7 @@ estimated_complexity: S
 delivers_to: INF-500a-3-i
 expects_from: null
 it_requirements: "Must accept --first-commit and --merge-commit CLI args; when both are provided, derive dates from the specified SHAs via git show; must NOT run git log -- <path> in this mode"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

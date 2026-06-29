@@ -9,8 +9,8 @@ req_status: active
 work_status: todo
 criteria: |
   Given an agent template declares default_origin_agent: "business-analyst",
-  When the agent explicitly sets origin_agent: "business-analyst-v3" on a specific AC,
-  Then the AC file contains origin_agent: "business-analyst-v3" (the explicit value),
+  When the agent explicitly sets origin_agent: "business-analyst" on a specific AC,
+  Then the AC file contains origin_agent: "business-analyst" (the explicit value),
   And the template default is ignored for that AC,
   And other ACs created in the same session without an explicit override still use
     the template default "business-analyst".
@@ -20,9 +20,10 @@ assigned_agent: python-coder
 estimated_complexity: S
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-04
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by: []

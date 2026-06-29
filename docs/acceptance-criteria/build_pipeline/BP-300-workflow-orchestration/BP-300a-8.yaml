@@ -21,7 +21,7 @@ estimated_complexity: S
 delivers_to: pr-reviewer
 expects_from: BP-300a-7
 it_requirements: "Supersession note must be in the first section of SKILL.md; must state the version threshold (>= 2.1.154) and clarify this skill acts as fallback only"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
   - "split: BP-300a -> BP-300a + BP-300c, 2026-06-05"

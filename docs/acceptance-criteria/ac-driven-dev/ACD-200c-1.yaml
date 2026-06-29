@@ -8,7 +8,7 @@ status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given templates/agents/product-owner-v3.md is the PO v3 agent template,
+  Given templates/agents/product-owner.md is the PO v3 agent template,
   When the template is read,
   Then it contains an instruction to include a `documentation_triggers` field
     in every L1 AC YAML,
@@ -24,14 +24,15 @@ criteria: |
     - New internal script with no user interaction -> [] with rationale.
 depends_on: [ACD-200c]
 doc_links:
-  - templates/agents/product-owner-v3.md
+  - templates/agents/product-owner.md
 assigned_agent: llm-expert
 estimated_complexity: S
 delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by: []

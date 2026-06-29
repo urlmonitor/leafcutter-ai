@@ -38,7 +38,7 @@ it_requirements:
   - "Must be idempotent — re-running on the same staged set must produce the same result"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
   - "split: ACS-100a -> ACS-100a + ACS-100i, 2026-06-05"

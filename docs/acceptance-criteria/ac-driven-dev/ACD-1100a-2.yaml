@@ -16,7 +16,7 @@ criteria: |
   Then config/agent_registry.json contains zero entries whose "id" field
     matches any of those seven values,
   And the total agent count in the registry decreases by exactly 7
-    (accounting for the it-po entry being replaced by the promoted it-po-v3).
+    (accounting for the it-po entry being replaced by the promoted it-po).
 depends_on:
   - ACD-1100a
 doc_links:
@@ -38,7 +38,8 @@ delivers_to:
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by: []

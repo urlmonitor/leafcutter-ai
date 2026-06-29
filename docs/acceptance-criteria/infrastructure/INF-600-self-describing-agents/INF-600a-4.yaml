@@ -38,7 +38,7 @@ delivers_to:
   agent: python-coder
   contract: "A complete config_keys block in each agent template that the card generator reads to produce the Configuration table, with no undeclared Mustache variables remaining"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

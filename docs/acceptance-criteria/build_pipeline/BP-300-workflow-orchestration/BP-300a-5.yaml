@@ -24,7 +24,7 @@ estimated_complexity: S
 delivers_to: BP-300a-6
 expects_from: BP-300a-4
 it_requirements: "Must call prompt() asking user whether to finalize; must respect the user's answer (yes -> call finalize workflow, no/skip -> return without finalizing); finalize_result in return must be null when skipped"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
   - "split: BP-300a -> BP-300a + BP-300c, 2026-06-05"

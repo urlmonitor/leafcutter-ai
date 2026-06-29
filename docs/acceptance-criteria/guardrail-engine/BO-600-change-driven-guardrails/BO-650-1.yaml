@@ -40,9 +40,9 @@ delivers_to:
   agent: python-coder
   contract: "Architecture discovery logic that scans docs/architecture/ and returns relevant document paths"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by: [it-po]
 superseded_by: null
 covered_by: [BO-650-1-i]
 implemented_by: []

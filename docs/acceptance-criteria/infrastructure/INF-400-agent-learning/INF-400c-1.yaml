@@ -44,7 +44,7 @@ delivers_to:
   agent: python-coder
   contract: "An ADR at docs/architecture/adrs/ADR-NNN-learning-emission-sink.md that specifies: (1) which JSONL sink file the harvester reads from, (2) the event schema the harvester expects, (3) whether existing telemetry consumers need modification"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

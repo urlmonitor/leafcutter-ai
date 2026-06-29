@@ -24,7 +24,7 @@ delivers_to: null
 expects_from:
   ac_id: BO-100a
   contract: "Ready-set of unblocked tickets with their files_touched metadata"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-04
 amended_by: []
 superseded_by: null

@@ -13,7 +13,7 @@ criteria: |
   And the error message instructs the developer to resolve conflicts and re-run
   And the temporary baseline worktree (if present) is cleaned up
   And the PR is NOT merged to main
-origin_agent: "business-analyst-v3"
+origin_agent: "business-analyst"
 created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
 assigned_agent: "finalize-feature-workflow"
 estimated_complexity: S

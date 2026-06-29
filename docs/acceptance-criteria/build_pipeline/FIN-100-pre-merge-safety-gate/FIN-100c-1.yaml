@@ -12,7 +12,7 @@ criteria: |
   Is classified as "pre_existing"
   And pre_existing failures do NOT block finalization (blocks_finalization remains false)
   And the triage report includes each pre_existing test ID in the pre_existing array
-origin_agent: "business-analyst-v3"
+origin_agent: "business-analyst"
 created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
 assigned_agent: "test-failure-triage"
 estimated_complexity: S

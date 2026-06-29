@@ -27,4 +27,5 @@ amended_by:
   - reason: "split: TKT-100a -> TKT-100h + TKT-100i, TKT-100f -> TKT-100j + TKT-100k, 2026-06-08"
 superseded_by: null
 covered_by: [TKT-100e, TKT-100g, TKT-100h, TKT-100i, TKT-100j, TKT-100k, TKT-100l]
+child_limit_override: 9
 implemented_by: []

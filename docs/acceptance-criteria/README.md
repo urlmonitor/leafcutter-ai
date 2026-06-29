@@ -1,3 +1,7 @@
+---
+description: Index and authoring guide for the AC store — canonical home for all acceptance criteria managed by this project.
+---
+
 # Acceptance Criteria Store
 
 This directory is the **AC store** — the canonical home for all acceptance
@@ -47,8 +51,8 @@ scanner may pick it up for ticket generation:
 
 | Readiness | Set by | Scanner picks up? |
 |---|---|---|
-| `draft` | product-owner-v3 or business-analyst-v3 | No |
-| `reviewed` | it-po-v3 (after enrichment) | No |
+| `draft` | product-owner or business-analyst | No |
+| `reviewed` | it-po (after enrichment) | No |
 | `approved` | User (via `/build-ac` or manual edit) | Yes |
 
 New ACs are always created with `readiness: draft`. The scanner

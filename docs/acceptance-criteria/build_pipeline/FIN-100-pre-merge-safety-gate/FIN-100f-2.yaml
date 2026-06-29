@@ -12,7 +12,7 @@ criteria: |
   And no parallel() dispatch is used for Steps 2, 3, or 4
   And the ordering is enforced by the JavaScript runtime's sequential await semantics
   So that the test run always validates the post-merge state (not the pre-merge state)
-origin_agent: "business-analyst-v3"
+origin_agent: "business-analyst"
 created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
 assigned_agent: "finalize-feature-workflow"
 estimated_complexity: S

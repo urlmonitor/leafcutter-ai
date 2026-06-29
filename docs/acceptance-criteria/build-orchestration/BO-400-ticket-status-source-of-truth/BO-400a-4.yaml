@@ -37,9 +37,9 @@ delivers_to:
   agent: llm-expert
   contract: "ticket_prioritizer.py returns a ready-set list that excludes done and in_progress tickets; consumed by building-epics SKILL.md inline batching logic"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by: [it-po]
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -52,10 +52,10 @@ it_requirements:
   - "Must read directory paths from commit_guardian.json configuration, not hardcode paths"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
-  - it-po-v3
+  - it-po
 superseded_by: null
 covered_by: [BP-100i-1-i, BP-100i-1-ii]
 implemented_by: []

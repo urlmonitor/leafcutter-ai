@@ -48,9 +48,9 @@ delivers_to:
 expects_from:
   ac_id: BO-520-1
   contract: "Ticket frontmatter schema supports the change_type field with the defined enum"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by: [it-po]
 superseded_by: BO-610-4
 covered_by: []
 implemented_by: []

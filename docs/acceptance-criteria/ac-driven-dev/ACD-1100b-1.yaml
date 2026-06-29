@@ -9,18 +9,18 @@ req_status: approved
 work_status: todo
 criteria: |
   Given the package contains v3 agent templates:
-    templates/agents/product-owner-v3.md
-    templates/agents/business-analyst-v3.md
-    templates/agents/it-po-v3.md
+    templates/agents/product-owner.md
+    templates/agents/business-analyst.md
+    templates/agents/it-po.md
   When the v2.0 migration promotes v3 agents to canonical names,
   Then the following template files exist:
     templates/agents/product-owner.md
     templates/agents/business-analyst.md
     templates/agents/it-po.md
   And the v3-suffixed filenames no longer exist:
-    templates/agents/product-owner-v3.md is absent
-    templates/agents/business-analyst-v3.md is absent
-    templates/agents/it-po-v3.md is absent
+    templates/agents/product-owner.md is absent
+    templates/agents/business-analyst.md is absent
+    templates/agents/it-po.md is absent
   And the content of each canonical file is the same as the former v3 file
     (no behavioral changes, only filename change).
 depends_on:
@@ -45,7 +45,8 @@ delivers_to:
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by: []

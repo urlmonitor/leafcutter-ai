@@ -35,9 +35,9 @@ delivers_to: null
 expects_from:
   ac_id: ACS-300k-1
   contract: "The {{components_table}} injection mechanism that this AC verifies end-to-end"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by: [it-po]
 superseded_by: null
 covered_by: []
 implemented_by: []

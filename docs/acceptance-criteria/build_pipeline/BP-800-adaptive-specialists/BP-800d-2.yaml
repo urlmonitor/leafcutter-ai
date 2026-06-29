@@ -37,7 +37,7 @@ delivers_to:
 expects_from:
   ac_id: BP-800c-2
   contract: "Knowledge layer file schema and validation function — migrated files must conform to this structure"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

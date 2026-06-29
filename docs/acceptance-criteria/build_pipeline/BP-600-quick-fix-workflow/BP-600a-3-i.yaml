@@ -33,7 +33,7 @@ delivers_to: null
 expects_from:
   ac_id: BP-600a-3
   contract: "Dirty-tree check that scopes to the target file only, returning pass/fail for the specific file_path"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

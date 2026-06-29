@@ -10,9 +10,9 @@ readiness: reviewed
 criteria: |
   Given a PROJECT_CONTEXT.md file exists alongside the route-knowledge skill
     containing the entry "INF-400 feature folder uses standing-rule-aware decomposition",
-  And the business-analyst-v3 agent's pre-flight step (from INF-400a-1) directs it
+  And the business-analyst agent's pre-flight step (from INF-400a-1) directs it
     to read PROJECT_CONTEXT.md files for skills it loads,
-  When the business-analyst-v3 agent is spawned and loads the route-knowledge skill,
+  When the business-analyst agent is spawned and loads the route-knowledge skill,
   Then the agent reads the co-located PROJECT_CONTEXT.md,
   And the agent incorporates that learning into its working context,
   And the learning influences the agent's output (e.g., it checks for standing rules
@@ -34,9 +34,10 @@ delivers_to: null
 expects_from:
   ac_id: INF-400a-1
   contract: "Pre-flight step in v3 agent templates that reads PROJECT_CONTEXT.md co-located with each loaded skill"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by: []

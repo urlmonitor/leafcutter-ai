@@ -21,7 +21,7 @@ estimated_complexity: S
 delivers_to: test-runner
 expects_from: INF-500a-3
 it_requirements: "Test must verify that git_commit_count is None (Python None, JSON null) when SHA overrides are used — not 0, which would indicate a genuine zero-commit epic"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

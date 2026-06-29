@@ -48,9 +48,9 @@ delivers_to:
 expects_from:
   ac_id: BO-510-1
   contract: "Schema definition of the produces field and its enum values"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by: [it-po]
 superseded_by: null
 covered_by: [BO-510-3-i]
 implemented_by: []

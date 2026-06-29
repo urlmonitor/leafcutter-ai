@@ -33,7 +33,7 @@ delivers_to: null
 expects_from:
   ac_id: BP-800d-2
   contract: "Migration function that extracts content from a single legacy template and writes a knowledge file — this AC invokes it for each known legacy agent"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

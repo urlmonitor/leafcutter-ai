@@ -33,7 +33,7 @@ delivers_to: null
 expects_from:
   ac_id: PER-100c-1
   contract: "Completed persona query workflow at scripts/persona_query.py to diagram"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

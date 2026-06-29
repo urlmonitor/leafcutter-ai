@@ -37,10 +37,10 @@ delivers_to: null
 expects_from:
   ac_id: BP-400c-2
   contract: "trend_report.py CLI available at the deployed path for the agent to invoke"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
-  - it-po-v3
+  - it-po
 superseded_by: null
 covered_by: []
 implemented_by: []

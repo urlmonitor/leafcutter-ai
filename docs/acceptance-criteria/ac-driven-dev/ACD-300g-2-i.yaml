@@ -12,8 +12,8 @@ criteria: |
     ended before the stage commit occurred (e.g. the user's terminal closed,
     the agent timed out, or a network interruption killed the process),
   And the uncommitted AC files remain in the working tree with
-    origin_agent set to one of the AC-authoring agents (product-owner-v3,
-    business-analyst-v3, or it-po-v3) and readiness: draft,
+    origin_agent set to one of the AC-authoring agents (product-owner,
+    business-analyst, or it-po) and readiness: draft,
   When the user invokes /create-ac again,
   Then the workflow detects the uncommitted AC files in the working tree
     by scanning the AC store directory for files with unstaged or staged
@@ -49,9 +49,10 @@ it_requirements:
   - "Must handle errors from the git status operation gracefully per the project error handling policy"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by:

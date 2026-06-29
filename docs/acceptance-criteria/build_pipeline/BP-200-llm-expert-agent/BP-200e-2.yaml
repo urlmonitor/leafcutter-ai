@@ -33,7 +33,7 @@ delivers_to: null
 expects_from:
   ac_id: BP-200d-3
   contract: "Structured report schema providing the violation data that populates the completion report table"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/01_agent_template.md"
 amended_by: []

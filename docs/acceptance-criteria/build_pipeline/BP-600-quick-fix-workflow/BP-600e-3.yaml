@@ -42,7 +42,7 @@ delivers_to: null
 expects_from:
   ac_id: BP-600e-1
   contract: "Paused workflow state containing: { ac_id: string, ac_path: string, test_file: string, target_file: string, diagnosis: object, artifacts_created: string[] }"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

@@ -35,7 +35,7 @@ delivers_to: null
 expects_from:
   ac_id: ACS-300g-4a
   contract: "A working Python script that accepts structured input (id, name, type, description, primary_code, detail_ref, status) and appends a validated entry to docs/components.json. Exit 0 on success, exit 1 on duplicate or validation failure."
-origin_agent: it-po-v3
+origin_agent: it-po
 created: 2026-06-05
 amended_by: []
 superseded_by: null

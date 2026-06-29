@@ -35,7 +35,7 @@ delivers_to:
   agent: llm-expert
   contract: "Agent Protocol section containing a mandatory-invocation rule with rationale and boundary statement about what the protocol does NOT prescribe"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

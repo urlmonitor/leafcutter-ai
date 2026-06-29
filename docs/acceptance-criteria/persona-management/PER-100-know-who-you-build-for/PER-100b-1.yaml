@@ -38,7 +38,7 @@ delivers_to:
   agent: python-coder
   contract: "Updated AC YAML JSON Schema at config/ac_store_schema.json that includes persona_for as an optional field of type string or null"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

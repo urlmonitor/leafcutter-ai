@@ -32,9 +32,9 @@ delivers_to: null
 expects_from:
   ac_id: BO-1100c-1
   contract: "The JSON routing config file at a known, documented path that can be read fresh on each invocation"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by: [it-po]
 superseded_by: null
 covered_by: [BO-1100c-3-i]
 implemented_by: []

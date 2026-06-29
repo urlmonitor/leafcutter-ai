@@ -8,7 +8,7 @@ work_status: todo
 priority: high
 readiness: reviewed
 criteria: |
-  Given the product-owner-v3, business-analyst-v3, and it-po-v3 agent templates,
+  Given the product-owner, business-analyst, and it-po agent templates,
   When an agent is spawned to work on a feature in a specific component
     (e.g., component: infrastructure),
   Then the agent template contains a pre-flight step (before the agent's first
@@ -46,11 +46,12 @@ it_requirements:
   - "Must be consistent across all three v3 agent templates — same step structure, same skip behavior"
 delivers_to:
   agent: llm-expert
-  contract: "Three agent templates (product-owner-v3.md, business-analyst-v3.md, it-po-v3.md) each containing a pre-flight section that reads PROJECT_CONTEXT.md (Channel 3) and per-folder README.md (Channel 2) before the first working step"
+  contract: "Three agent templates (product-owner.md, business-analyst.md, it-po.md) each containing a pre-flight section that reads PROJECT_CONTEXT.md (Channel 3) and per-folder README.md (Channel 2) before the first working step"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by: []

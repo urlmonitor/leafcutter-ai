@@ -35,9 +35,9 @@ delivers_to:
   agent: workflow-architect
   contract: "A working Python script that the skill wraps as its execution engine"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by: [it-po]
 superseded_by: [ACS-300g-4a, ACS-300g-4b]
 covered_by: [ACS-300g-4-i]
 implemented_by: []

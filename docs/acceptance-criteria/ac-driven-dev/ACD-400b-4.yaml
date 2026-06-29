@@ -25,7 +25,7 @@ delivers_to: null
 expects_from:
   ac_id: ACD-400b-1
   contract: "Ticket file whose structure is validated by the guard"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

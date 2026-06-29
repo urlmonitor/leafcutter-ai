@@ -34,7 +34,7 @@ delivers_to:
   agent: python-coder
   contract: "Registry entry at config/agent_registry.json with default_status: not_needed and trigger conditions for frontend file extensions"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

@@ -37,7 +37,7 @@ delivers_to:
   agent: python-coder
   contract: "A persona.yaml JSON Schema at config/persona_schema.json and a creation/validation script at scripts/persona_validate.py"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

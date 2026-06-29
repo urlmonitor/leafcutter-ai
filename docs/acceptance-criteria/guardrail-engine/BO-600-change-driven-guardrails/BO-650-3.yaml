@@ -39,9 +39,9 @@ delivers_to: null
 expects_from:
   ac_id: BO-650-1
   contract: "The discovery output that tells the architect which existing diagrams already exist"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by: [it-po]
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -8,11 +8,11 @@ work_status: todo
 priority: high
 readiness: reviewed
 criteria: |
-  Given the it-po-v3 agent ran once on the infrastructure component and discovered
+  Given the it-po agent ran once on the infrastructure component and discovered
     that infrastructure ACs are typically assigned to "llm-expert" for template work
     and "python-coder" for script work (not "frontend-coder" or "sql-coder"),
   And that mapping was captured in a component-scoped context file,
-  When the it-po-v3 agent runs a second time on new infrastructure L2 ACs,
+  When the it-po agent runs a second time on new infrastructure L2 ACs,
   Then the agent assigns "llm-expert" or "python-coder" to the new ACs
     without needing to re-read the full agent registry to discover this pattern,
   And the agent does not assign agents that have never been relevant to this
@@ -34,9 +34,10 @@ it_requirements:
   - "Must still assign the correct agent even if the learned mapping is stale (agent registry is authoritative)"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -38,7 +38,7 @@ delivers_to:
   agent: test-writer
   contract: "Extended exclusion regex that covers commit_guardian/ paths in both canonical and legacy locations"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

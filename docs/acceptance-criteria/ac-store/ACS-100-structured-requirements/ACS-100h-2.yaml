@@ -36,7 +36,7 @@ delivers_to:
 expects_from:
   ac_id: ACS-100h-1
   contract: "Selected split pattern and the cluster assignment (which L1s move to which new parent)"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

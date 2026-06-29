@@ -18,7 +18,7 @@ depends_on: [PER-100]
 doc_links: []
 delivers_to: null
 expects_from: null
-origin_agent: product-owner-v3
+origin_agent: product-owner
 created: 2026-06-06
 amended_by:
   - reason: "split: PER-100e -> PER-100e + PER-100f, 2026-06-08"
@@ -30,5 +30,6 @@ covered_by:
   - PER-100e-2
   - PER-100e-3
   - PER-100e-4
+child_limit_override: 6
 implemented_by: []
 documentation_triggers: [how-to]

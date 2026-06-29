@@ -37,7 +37,7 @@ delivers_to: null
 expects_from:
   ac_id: BP-800c-1
   contract: "Version-aware regeneration logic that detects stale templates and triggers rebuild"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

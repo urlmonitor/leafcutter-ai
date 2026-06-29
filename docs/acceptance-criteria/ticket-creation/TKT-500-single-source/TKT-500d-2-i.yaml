@@ -19,7 +19,7 @@ depends_on: [TKT-500d-2]
 doc_links: []
 delivers_to: []
 expects_from: []
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

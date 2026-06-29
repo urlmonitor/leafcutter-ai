@@ -31,7 +31,7 @@ delivers_to: null
 expects_from:
   ac_id: BO-700d-1
   contract: "Release data structure with version, entries, and goal groupings already computed"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

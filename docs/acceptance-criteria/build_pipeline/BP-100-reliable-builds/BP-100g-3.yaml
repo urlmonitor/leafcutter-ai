@@ -24,7 +24,7 @@ estimated_complexity: S
 delivers_to: BP-100g-3-i
 expects_from: null
 it_requirements: "Must validate each token in allowed-tools against the canonical tool list (Bash, Read, Edit, Write, etc.) plus mcp__ prefix pattern; unrecognised tokens cause exit non-zero"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

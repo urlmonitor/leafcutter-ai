@@ -42,7 +42,7 @@ delivers_to:
 expects_from:
   ac_id: ACD-1200a-2
   contract: "list[str] — absolute file paths of generated ticket .md files on disk, one per leaf AC"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

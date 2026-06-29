@@ -8,6 +8,8 @@ criteria: |
   When the workflow runs,
   Then all agent dispatch references use canonical names
   (product-owner, business-analyst, it-po)
-  And no v3-suffixed agent names (product-owner-v3, business-analyst-v3, it-po-v3) appear
+  And no v3-suffixed agent names (product-owner, business-analyst, it-po) appear
   And the bug symptom "workflow dispatches non-existent v3 agent names" must not occur
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 notes: "Authored by /quick-fix. Root cause: create-ac-to-plan-feature rename updated the file/skill name but missed the agent dispatch references inside the script."

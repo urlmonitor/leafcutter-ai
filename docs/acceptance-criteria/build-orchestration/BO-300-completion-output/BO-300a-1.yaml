@@ -27,7 +27,7 @@ delivers_to:
 expects_from:
   agent: ticket-supervisor
   contract: "Completed ticket results with files_touched and ACs for test derivation"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

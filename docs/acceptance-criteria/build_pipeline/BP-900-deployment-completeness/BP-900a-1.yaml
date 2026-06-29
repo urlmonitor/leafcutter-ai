@@ -39,7 +39,7 @@ delivers_to:
   agent: python-coder
   contract: "13 files deployed to {target}/.leafcutter/scripts/ac_store/ including __init__.py, making the directory an importable Python package"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-11
 created_by_ticket: null
 amended_by: []

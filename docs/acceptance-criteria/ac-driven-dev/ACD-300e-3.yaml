@@ -8,7 +8,7 @@ status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given the business-analyst-v3 agent has reached Section 1 (Knowledge Acquisition)
+  Given the business-analyst agent has reached Section 1 (Knowledge Acquisition)
     and has read the L1 AC it was given plus its parent L0,
   When the agent executes its knowledge-acquisition steps,
   Then it invokes knowledge-query with the component name to discover all nodes
@@ -47,10 +47,11 @@ it_requirements:
 delivers_to: null
 expects_from:
   ac_id: ACD-300e-1
-  contract: "knowledge-query is listed in skills_used frontmatter of business-analyst-v3.md so the skill is available at runtime"
-origin_agent: business-analyst-v3
+  contract: "knowledge-query is listed in skills_used frontmatter of business-analyst.md so the skill is available at runtime"
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by: []

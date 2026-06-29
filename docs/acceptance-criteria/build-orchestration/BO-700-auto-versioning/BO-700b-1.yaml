@@ -31,7 +31,7 @@ delivers_to:
 expects_from:
   ac_id: BO-700a-3
   contract: "Changelog entry files with ac_id frontmatter that can be resolved to AC YAML files containing a level field"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

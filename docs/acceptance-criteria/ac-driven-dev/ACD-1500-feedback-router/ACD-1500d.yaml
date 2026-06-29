@@ -21,7 +21,7 @@ depends_on:
 doc_links: []
 delivers_to: null
 expects_from: null
-origin_agent: product-owner-v3
+origin_agent: product-owner
 created: 2026-06-17
 amended_by: []
 superseded_by: null

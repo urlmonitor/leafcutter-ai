@@ -26,7 +26,7 @@ delivers_to: null
 expects_from:
   agent: python-coder
   contract: "build-epic.js returns {message: string} with 4-section content"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

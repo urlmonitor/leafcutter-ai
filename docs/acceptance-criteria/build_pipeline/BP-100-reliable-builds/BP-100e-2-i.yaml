@@ -21,7 +21,7 @@ estimated_complexity: S
 delivers_to: test-runner
 expects_from: BP-100e-2
 it_requirements: "Test must exercise the failed sign-off line format specifically (- [ ] agent — failed YYYY-MM-DD prose); must verify both exit code and violation message content"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

@@ -34,7 +34,7 @@ delivers_to: null
 expects_from:
   ac_id: BP-800a-3
   contract: "Database detection result with paradigm classification: {name: 'mongodb', category: 'database', paradigm: 'document', confidence: 'manifest', detection_source: str}"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

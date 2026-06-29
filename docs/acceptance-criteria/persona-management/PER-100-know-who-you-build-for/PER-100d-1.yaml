@@ -11,7 +11,7 @@ criteria: |
   Given a project with two defined personas:
     - docs/personas/field-service-engineer/persona.yaml (with identity.name: "Field Service Engineer")
     - docs/personas/product-manager/persona.yaml (with identity.name: "Product Manager")
-  When the product-owner-v3 or business-analyst-v3 agent is spawned
+  When the product-owner or business-analyst agent is spawned
   Then the agent's context includes a persona summary block containing:
     - Each persona's name and one-line archetype
     - The total count of personas available ("2 personas defined")
@@ -38,9 +38,10 @@ delivers_to:
 expects_from:
   ac_id: PER-100a-1
   contract: "Persona directories at docs/personas/<slug>/ containing persona.yaml with an identity section"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by:
   - PER-100d-1-i

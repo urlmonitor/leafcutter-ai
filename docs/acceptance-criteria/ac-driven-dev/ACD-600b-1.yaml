@@ -26,7 +26,7 @@ delivers_to: null
 expects_from:
   ac_id: ACD-600a-1
   contract: "mark_ac_done script accepting --ticket <path> for each qualifying ticket"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

@@ -36,7 +36,7 @@ delivers_to: null
 expects_from:
   ac_id: BP-800f-3
   contract: "Completed multi-paradigm feature with driver mapping and paradigm classification to document"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

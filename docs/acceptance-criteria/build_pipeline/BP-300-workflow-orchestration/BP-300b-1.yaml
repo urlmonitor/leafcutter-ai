@@ -33,10 +33,10 @@ it_requirements:
   - "Must produce a parseable JSON drift_warnings array in the planner output"
 delivers_to: BP-300b-3
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
-  - it-po-v3
+  - it-po
 superseded_by: null
 covered_by: []
 implemented_by: []

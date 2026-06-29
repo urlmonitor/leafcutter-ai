@@ -36,9 +36,9 @@ delivers_to: null
 expects_from:
   ac_id: BO-520-1
   contract: "Ticket frontmatter schema defines change_type as a required field for build dispatch"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by: [it-po]
 superseded_by: BO-610-3-i
 covered_by: []
 implemented_by: []

@@ -11,7 +11,7 @@ criteria: |
   Then the amended_by list in the staged file must contain a new entry
     that was not present in the previous version,
   And that new entry must identify the amending agent and the date
-    (e.g. "amended by business-analyst-v3, 2026-06-05"),
+    (e.g. "amended by business-analyst, 2026-06-05"),
   And if no new amended_by entry is present, the commit is blocked with an error
     stating "criteria was modified but amended_by was not updated".
 depends_on: [ACS-400c]
@@ -35,9 +35,10 @@ it_requirements:
   - "Must handle the case where the file has no prior committed version (new file) -- amended_by check only applies to modifications"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: [ACS-400c-2-i]
 implemented_by: []

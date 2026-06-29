@@ -13,7 +13,7 @@ criteria: |
   The following agent templates and their registry entries are removed:
   create-ticket, create-ticket-v2, business-analyst, business-analyst-v2,
   create-epic, refinement, and it-po (the v1/v2 IT PO, distinct from
-  it-po-v3 which is promoted). After a fresh install, none of these agents
+  it-po which is promoted). After a fresh install, none of these agents
   appear in the agent registry or are dispatched by any workflow.
 depends_on: [ACD-1100]
 doc_links: []
@@ -23,7 +23,8 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by:
   - ACD-1100a-1

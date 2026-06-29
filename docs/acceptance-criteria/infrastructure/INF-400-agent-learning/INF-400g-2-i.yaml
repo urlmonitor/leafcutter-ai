@@ -21,7 +21,7 @@ estimated_complexity: S
 delivers_to: test-runner
 expects_from: INF-400g-2
 it_requirements: "Test must invoke emit_event.py without --ticket, --phase, --outcome, --retry-count; assert exit code 0; parse the JSON output and verify missing fields are null (not absent)"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

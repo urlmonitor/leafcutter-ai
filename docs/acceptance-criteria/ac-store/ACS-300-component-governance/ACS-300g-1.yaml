@@ -40,9 +40,9 @@ delivers_to:
   agent: python-coder
   contract: "Schema validation logic in check_components_integrity.py that validates required fields (id, name, type, description, status, primary_code) and detail_ref (string path or null) for each component entry"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by: [it-po]
 superseded_by: null
 covered_by: [ACS-300g-1-i, ACS-300g-1-ii]
 implemented_by:

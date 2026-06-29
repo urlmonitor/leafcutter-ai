@@ -18,7 +18,7 @@ depends_on:
   - BP-800
   - BP-800b
 doc_links: []
-origin_agent: product-owner-v3
+origin_agent: product-owner
 created: 2026-06-08
 amended_by: []
 superseded_by: null

@@ -28,7 +28,7 @@ delivers_to: null
 expects_from:
   ac_id: TKT-500f-2
   contract: "Deployed ac-supervisor that has passed the canary run"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by:
   - reason: "renamed TKT-500d-9 -> TKT-500f-4 in split of TKT-500d, 2026-06-18"

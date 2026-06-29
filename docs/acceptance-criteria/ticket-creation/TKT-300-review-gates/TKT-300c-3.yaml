@@ -28,7 +28,7 @@ it_requirements:
   - "Must be idempotent — requesting approval for already-approved files must not create duplicate prompts"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

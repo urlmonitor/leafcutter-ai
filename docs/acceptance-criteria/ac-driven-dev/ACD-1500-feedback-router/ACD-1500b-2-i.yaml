@@ -31,7 +31,7 @@ delivers_to: null
 expects_from:
   ac_id: ACD-1500b-1
   contract: "A per-entry confidence score (float in [0.0,1.0]) compared against the floor at the boundary"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-17
 amended_by: []
 superseded_by: null

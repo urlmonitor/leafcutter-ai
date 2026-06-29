@@ -25,10 +25,10 @@ it_requirements:
   - "Changes must be backward-compatible with existing feedback submission calls"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by:
-  - it-po-v3
+  - it-po
 superseded_by: null
 covered_by:
   - INF-100c-3-i

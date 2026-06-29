@@ -21,7 +21,7 @@ estimated_complexity: S
 delivers_to: test-runner
 expects_from: INF-400g-2
 it_requirements: "Test must pre-populate a log file with one JSON line, invoke emit_event.py a second time, then assert the file now contains exactly two lines with the original first line unchanged"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

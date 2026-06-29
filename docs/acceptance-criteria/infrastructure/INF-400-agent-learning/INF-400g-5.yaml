@@ -27,7 +27,7 @@ estimated_complexity: S
 delivers_to: INF-400g-9
 expects_from: INF-400g-1
 it_requirements: "Feedback emission must occur BEFORE respawning the failing agent; must use category subagent-quality; the instruction must be imperative (not example code) in section 3.1 of the skill"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
   - "split: INF-400g -> INF-400g + INF-400h, 2026-06-05"

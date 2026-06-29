@@ -11,7 +11,7 @@ criteria: |
   Given a memory file exists at memory/project_infrastructure_conventions.md
     containing a learning captured during a previous BA v3 run
     (e.g., "The infrastructure component uses INF- prefix and has no parent component"),
-  When the business-analyst-v3 agent is spawned for a new task in the infrastructure component,
+  When the business-analyst agent is spawned for a new task in the infrastructure component,
   Then the agent's context window contains the content of that memory file
     (injected by the harness via Channel 9 of the knowledge plane),
   And the agent can reference the prior learning without re-discovering it,
@@ -31,9 +31,10 @@ it_requirements:
   - "Must not require changes to the Claude Code harness or SDK"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by: []

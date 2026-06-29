@@ -36,7 +36,7 @@ delivers_to: null
 expects_from:
   ac_id: BP-600b-1
   contract: "AC creation logic that scans existing ACs in the target component directory for semantic overlap before writing"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

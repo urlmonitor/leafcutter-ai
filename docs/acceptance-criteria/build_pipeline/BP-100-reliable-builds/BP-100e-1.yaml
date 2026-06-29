@@ -22,7 +22,7 @@ estimated_complexity: S
 delivers_to: BP-100e-2
 expects_from: null
 it_requirements: "Step 0 must use shell date command (date +\"%Y-%m-%d %H:%M\") not Python datetime; must be inserted at the TOP of the recipe before any Edit tool call"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

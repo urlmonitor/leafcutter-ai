@@ -41,9 +41,9 @@ delivers_to:
   agent: llm-expert
   contract: "Schema with produces enum in agent_registry.schema.json; validation passes when all entries have the field"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by: [it-po]
 superseded_by: null
 covered_by: []
 implemented_by: []

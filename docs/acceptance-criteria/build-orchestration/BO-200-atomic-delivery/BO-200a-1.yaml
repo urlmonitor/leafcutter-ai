@@ -30,7 +30,7 @@ delivers_to:
   agent: python-coder
   contract: "Work envelope dict with keys: ticket_path (str), changed_files (list[str]), commit_message (str), sign_offs (dict)"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

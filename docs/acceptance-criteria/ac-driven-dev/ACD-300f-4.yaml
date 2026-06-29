@@ -43,7 +43,7 @@ delivers_to:
 expects_from:
   ac_id: ACD-300f-1
   contract: "Agent Consumption Protocol section exists in SKILL.md as the container for these subsections"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

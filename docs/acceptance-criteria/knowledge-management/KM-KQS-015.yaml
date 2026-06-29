@@ -31,7 +31,7 @@ doc_links:
   - path: docs/architecture/agent_knowledge_system.md
     relationship: describes
     status: exists
-origin_agent: "business-analyst-v3"
+origin_agent: "business-analyst"
 created_by_ticket: "tickets/00_inbox/epics/EPIC-KnowledgeGraphQueryLayer/04a_surfaces_config_wiring.md"
 superseded_by: null
 amended_by: []

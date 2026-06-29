@@ -34,7 +34,7 @@ delivers_to:
 expects_from:
   ac_id: BP-100a-1
   contract: "The same integrity check loop — this AC verifies its silent path"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

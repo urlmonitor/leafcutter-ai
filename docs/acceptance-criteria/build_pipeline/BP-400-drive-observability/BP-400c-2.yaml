@@ -39,10 +39,10 @@ delivers_to:
 expects_from:
   ac_id: BP-400c-1
   contract: "trend_report.py deployed alongside aggregate.py and list_tags.py at importable paths"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
-  - it-po-v3
+  - it-po
 superseded_by: null
 covered_by: [BP-400c-2-i]
 implemented_by: []

@@ -24,7 +24,7 @@ estimated_complexity: S
 delivers_to: BP-100e-5-i
 expects_from: BP-100e-1
 it_requirements: "Hook must validate comment headings matching ### YYYY-MM-DD HH:MM pattern; must reject trailing parenthetical prose after the timestamp in heading lines"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

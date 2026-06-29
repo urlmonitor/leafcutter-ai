@@ -24,7 +24,7 @@ estimated_complexity: S
 delivers_to: test-runner
 expects_from: BP-100f-1
 it_requirements: "Regression test confirming that the happy path (valid git worktree) is unaffected by the new Step 0 guard; must verify all original steps still execute"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

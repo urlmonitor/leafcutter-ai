@@ -29,7 +29,7 @@ estimated_complexity: M
 delivers_to: INF-500b-2
 expects_from: null
 it_requirements: "Must create four artifacts: SKILL.md, scripts/trend_report.py, feedback-analyst.md agent, and feedback-report.md command; all must be registered in build.py for deployment to .claude/ target"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

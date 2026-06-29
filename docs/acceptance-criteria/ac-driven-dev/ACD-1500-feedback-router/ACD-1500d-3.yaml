@@ -32,7 +32,7 @@ it_requirements:
   - "On a non-protected working branch the route proceeds normally; the branch check must wrap the git call per the project error handling policy"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-17
 amended_by: []
 superseded_by: null

@@ -8,8 +8,8 @@ status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given the agent template files for product-owner-v3, business-analyst-v3,
-    and it-po-v3 each contain a YAML frontmatter block with a skills_used list,
+  Given the agent template files for product-owner, business-analyst,
+    and it-po each contain a YAML frontmatter block with a skills_used list,
   When the template is loaded by the Claude Code harness at agent spawn time,
   Then the skills_used list includes "knowledge-query" as an entry,
   And any pre-existing entries in skills_used (such as "ac-tree-split") are preserved,
@@ -44,9 +44,10 @@ delivers_to:
   agent: llm-expert
   contract: "Three agent template .md files with 'knowledge-query' present in their YAML frontmatter skills_used list, plus matching entries in agent_registry.json"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by: []

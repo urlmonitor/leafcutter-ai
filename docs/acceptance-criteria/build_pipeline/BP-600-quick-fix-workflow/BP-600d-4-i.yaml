@@ -34,7 +34,7 @@ delivers_to: null
 expects_from:
   ac_id: BP-600d-4
   contract: "Close-phase logic that uses gh pr list --head <branch> to check for existing PR — empty result triggers this edge case"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

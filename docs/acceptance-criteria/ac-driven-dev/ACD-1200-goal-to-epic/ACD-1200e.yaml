@@ -19,7 +19,7 @@ depends_on: [ACD-1200a, ACD-700a]
 doc_links: []
 delivers_to: null
 expects_from: null
-origin_agent: product-owner-v3
+origin_agent: product-owner
 created: 2026-06-05
 amended_by: []
 superseded_by: null

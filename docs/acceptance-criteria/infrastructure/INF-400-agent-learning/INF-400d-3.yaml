@@ -36,7 +36,7 @@ delivers_to: null
 expects_from:
   ac_id: INF-400d-2
   contract: "PROJECT_CONTEXT.md files with structured append-only entries that accumulate over time and need lifecycle management when entry count exceeds 100"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

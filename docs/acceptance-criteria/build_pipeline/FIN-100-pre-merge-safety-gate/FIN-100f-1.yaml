@@ -13,7 +13,7 @@ criteria: |
   And specifically the Step 4 code (PR state probe, confirmation prompt, merge dispatch)
   Is physically located AFTER the return statement in the source
   And is therefore unreachable by any execution path when the halt fires
-origin_agent: "business-analyst-v3"
+origin_agent: "business-analyst"
 created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
 assigned_agent: "finalize-feature-workflow"
 estimated_complexity: S

@@ -7,7 +7,7 @@ level: L2
 status: active
 work_status: todo
 criteria: |
-  Given the product-owner-v3 or business-analyst-v3 agent produces an output
+  Given the product-owner or business-analyst agent produces an output
     that contains persistent knowledge (a convention, a decision, a definition),
   When that agent determines where to write the output,
   Then it consults the knowledge surface map (or invokes route-knowledge skill),
@@ -31,7 +31,8 @@ assigned_agent: llm-expert
 estimated_complexity: M
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by: []

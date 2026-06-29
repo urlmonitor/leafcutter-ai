@@ -28,7 +28,7 @@ estimated_complexity: M
 delivers_to: INF-500b-2-i
 expects_from: INF-500b-1
 it_requirements: "trend_report.py must call aggregate.py and list_tags.py as library imports (not subprocess); must group results by category; each section must contain at least one actionable recommendation derived from entry content"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

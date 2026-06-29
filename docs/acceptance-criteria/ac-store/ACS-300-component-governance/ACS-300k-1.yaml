@@ -37,9 +37,9 @@ delivers_to:
   agent: llm-expert
   contract: "A build.py injection phase that reads docs/components.json and replaces {{components_table}} in any template with a formatted Markdown table of component metadata (id, name, type, description, agent_affinity)"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by: [it-po]
 superseded_by: null
 covered_by: [ACS-300k-1-i, ACS-300k-1-ii]
 implemented_by: []

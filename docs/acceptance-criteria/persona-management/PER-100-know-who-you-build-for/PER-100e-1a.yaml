@@ -38,7 +38,7 @@ delivers_to: null
 expects_from:
   ac_id: PER-100e-1b
   contract: "Python script at scripts/persona_expert.py that accepts --create --slug <slug> --data <json> and writes persona.yaml to the correct directory"
-origin_agent: it-po-v3
+origin_agent: it-po
 created: 2026-06-08
 amended_by: []
 superseded_by: null

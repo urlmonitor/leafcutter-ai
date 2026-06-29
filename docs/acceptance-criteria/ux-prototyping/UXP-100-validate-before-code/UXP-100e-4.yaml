@@ -45,10 +45,10 @@ delivers_to: null
 expects_from:
   ac_id: UXP-100e-1
   contract: "Behavioral ACs describing parallel dispatch and shared artifact access, available as diagram source material"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by:
-  - reason: "it-po-v3 enrichment: added it_requirements and doc_links, 2026-06-08"
+  - reason: "it-po enrichment: added it_requirements and doc_links, 2026-06-08"
 superseded_by: null
 covered_by: []
 implemented_by: []

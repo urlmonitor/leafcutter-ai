@@ -25,7 +25,7 @@ estimated_complexity: S
 delivers_to: BP-100f-1-i
 expects_from: null
 it_requirements: "Must add Step 0 guard using subprocess.run(['git', 'rev-parse', '--is-inside-work-tree']); must emit warning to stdout (not stderr) so agent sees it; must skip all subsequent git calls via early return or flag"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

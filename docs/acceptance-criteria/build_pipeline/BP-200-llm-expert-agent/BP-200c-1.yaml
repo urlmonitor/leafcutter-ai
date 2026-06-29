@@ -39,7 +39,7 @@ delivers_to:
 expects_from:
   ac_id: BP-200a-1
   contract: "Agent template file at templates/agents/llm-expert.md with matching frontmatter name field"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/03_registry_and_docs.md"
 amended_by: []

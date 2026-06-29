@@ -28,9 +28,9 @@ delivers_to: null
 expects_from:
   ac_id: BO-1100d-1
   contract: "Shape-tracking store where identity is keyed on {dir_pattern: string, extensions: string[]} (extensions sorted, file count excluded)"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by: [it-po]
 superseded_by: null
 covered_by: []
 implemented_by: []

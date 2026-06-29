@@ -20,10 +20,11 @@ assigned_agent: null
 estimated_complexity: null
 delivers_to: null
 expects_from: null
-origin_agent: product-owner-v3
+origin_agent: product-owner
 created: 2026-06-08
 amended_by: []
 superseded_by: null
 covered_by: [TKT-500b-1, TKT-500b-2, TKT-500b-3, TKT-500b-4, TKT-500b-5, TKT-500b-6]
+child_limit_override: 6
 implemented_by: []
 documentation_triggers: [how-to, sequence-diagram]

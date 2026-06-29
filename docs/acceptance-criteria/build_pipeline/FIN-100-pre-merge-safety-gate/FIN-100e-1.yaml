@@ -12,7 +12,7 @@ criteria: |
   And each ticket includes the test ID, error output, baseline SHA, and triage category
   And flaky tickets additionally note the intermittent nature and need for investigation
   And the ticket path returned by create-ticket is recorded in created_tracking_tickets
-origin_agent: "business-analyst-v3"
+origin_agent: "business-analyst"
 created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
 assigned_agent: "create-ticket"
 estimated_complexity: M

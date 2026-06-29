@@ -34,7 +34,7 @@ delivers_to: null
 expects_from:
   ac_id: PER-100a-1
   contract: "Base persona.yaml JSON Schema at config/persona_schema.json with identity, goals, frustrations, context sections"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

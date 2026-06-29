@@ -30,7 +30,7 @@ it_requirements:
   - "Must attribute the commit message to the commit agent in the work envelope metadata"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

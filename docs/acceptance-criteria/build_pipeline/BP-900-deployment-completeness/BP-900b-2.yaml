@@ -36,7 +36,7 @@ delivers_to:
 expects_from:
   ac_id: BP-900b-1
   contract: "set[tuple[str, str]] — set of (template_path, referenced_script_path) tuples extracted from compiled .md files"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-11
 created_by_ticket: null
 amended_by: []

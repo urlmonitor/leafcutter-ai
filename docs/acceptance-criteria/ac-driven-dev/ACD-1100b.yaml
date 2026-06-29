@@ -11,8 +11,8 @@ criteria: |
   The v3 authoring agents drop their version suffixes and become the
   canonical names.
 
-  product-owner-v3 becomes product-owner, business-analyst-v3 becomes
-  business-analyst, and it-po-v3 becomes it-po. The agent registry,
+  product-owner becomes product-owner, business-analyst becomes
+  business-analyst, and it-po becomes it-po. The agent registry,
   template filenames, and all internal references (skill files, workflow
   scripts, command templates) use the new names. No agent in the registry
   carries a version suffix.
@@ -24,7 +24,8 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by:
   - ACD-1100b-1

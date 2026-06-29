@@ -29,10 +29,10 @@ it_requirements:
   - "Must distinguish between 'needed' (unchecked, no timestamp) and 'failed' (unchecked, with 'failed' keyword)"
 delivers_to: test-runner
 expects_from: BP-300b-1
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
-  - it-po-v3
+  - it-po
 superseded_by: null
 covered_by: []
 implemented_by: []

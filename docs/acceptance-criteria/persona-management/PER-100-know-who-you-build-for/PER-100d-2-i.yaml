@@ -29,7 +29,7 @@ delivers_to: null
 expects_from:
   ac_id: PER-100d-2b
   contract: "Persona-detail script at scripts/persona_detail.py that this edge case exercises"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

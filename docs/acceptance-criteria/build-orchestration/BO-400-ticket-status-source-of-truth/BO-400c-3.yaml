@@ -49,9 +49,9 @@ it_requirements:
   - "Must complete within the existing pre-commit hook time budget (<5 seconds)"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by: [it-po]
 superseded_by: null
 covered_by: []
 implemented_by: []

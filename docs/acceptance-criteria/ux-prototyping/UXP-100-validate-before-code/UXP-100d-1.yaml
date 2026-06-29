@@ -42,10 +42,10 @@ delivers_to:
   ac_id: UXP-100d-2
   contract: "Handoff artifact file: { layout: dict[component_name, position], flow: list[{ step: string, action: string, target: string }], terminology: dict[label_key, label_value], hierarchy: dict[parent, list[child]], component_versions: dict[component_name, version_string] }"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by:
-  - reason: "it-po-v3 enrichment: reassigned frontend-coder -> llm-expert (agent template handoff production), 2026-06-08"
+  - reason: "it-po enrichment: reassigned frontend-coder -> llm-expert (agent template handoff production), 2026-06-08"
 superseded_by: null
 covered_by:
   - UXP-100d-1-i

@@ -38,7 +38,7 @@ delivers_to: null
 expects_from:
   ac_id: ACS-500a-3
   contract: "Validation logic that resolves implements_pattern references and can access the referenced pattern's criteria to extract slot names"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-11
 amended_by: []
 superseded_by: null

@@ -32,7 +32,7 @@ delivers_to: null
 expects_from:
   ac_id: ACD-1500c-2
   contract: "The resolved-entry filter (aggregate.py --unresolved) that guarantees skip-on-rerun behavior"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-17
 amended_by: []
 superseded_by: null

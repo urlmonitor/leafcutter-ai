@@ -33,7 +33,7 @@ delivers_to: null
 expects_from:
   ac_id: ACS-400d-1
   contract: "Governance rules text block and hook script registered in the templates/ directory, ready for build.py to compile into the consumer project's .claude/ directory"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

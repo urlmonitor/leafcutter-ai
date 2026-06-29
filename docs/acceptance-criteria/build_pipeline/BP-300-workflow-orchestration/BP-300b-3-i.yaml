@@ -29,10 +29,10 @@ it_requirements:
   - "Must not raise an error or halt the workflow when Sign-offs is absent"
 delivers_to: test-runner
 expects_from: BP-300b-3
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
-  - it-po-v3
+  - it-po
 superseded_by: null
 covered_by: []
 implemented_by: []

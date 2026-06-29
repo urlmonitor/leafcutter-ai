@@ -26,7 +26,7 @@ delivers_to:
   agent: build-feature
   contract: "message: string containing all 4 sections in order"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

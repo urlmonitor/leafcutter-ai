@@ -32,7 +32,7 @@ it_requirements:
   - "Must integrate with the existing build.py exit code conventions"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-11
 created_by_ticket: null
 amended_by: []

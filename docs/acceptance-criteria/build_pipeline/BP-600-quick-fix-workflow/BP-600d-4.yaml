@@ -40,7 +40,7 @@ delivers_to: null
 expects_from:
   ac_id: BP-600d-3
   contract: "Committed changeset on the current branch — ready to push to origin"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

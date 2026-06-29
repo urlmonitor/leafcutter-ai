@@ -10,7 +10,7 @@ priority: medium
 criteria: |
   Given a project with the persona-management component installed
   And the docs/personas/ directory is empty (no persona subdirectories exist)
-  When the product-owner-v3 agent is spawned
+  When the product-owner agent is spawned
   Then the agent's context includes a persona summary block stating: "0 personas defined. Create personas under docs/personas/ to enable audience-aware planning."
   And no error is raised during agent spawn
   And the agent can proceed with its task without persona context
@@ -30,9 +30,10 @@ delivers_to: null
 expects_from:
   ac_id: PER-100d-1
   contract: "Persona summary injection mechanism that this edge case exercises"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by: []

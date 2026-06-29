@@ -8,7 +8,7 @@ status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given business-analyst-v3 is decomposing an L1 feature AC into L2/L3 behaviors,
+  Given business-analyst is decomposing an L1 feature AC into L2/L3 behaviors,
   When the feature introduces any of:
     - A new user-facing command or slash command
     - A new multi-step workflow with more than 2 actors
@@ -23,14 +23,15 @@ criteria: |
   And documentation ACs reference the behavioral ACs they document via depends_on.
 depends_on: [ACD-200]
 doc_links:
-  - templates/agents/business-analyst-v3.md
+  - templates/agents/business-analyst.md
 assigned_agent: llm-expert
 estimated_complexity: M
 delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: [ACD-200a-1]
 implemented_by: []

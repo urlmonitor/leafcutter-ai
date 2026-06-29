@@ -47,7 +47,7 @@ delivers_to: null
 expects_from:
   ac_id: ACD-300e-2
   contract: "PO v3 template contains a knowledge-query invocation block in S1 that this AC's error-handling augments"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

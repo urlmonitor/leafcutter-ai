@@ -38,10 +38,10 @@ delivers_to:
   ac_id: UXP-100e-2
   contract: "Both agents running concurrently with shared L0/L1 ACs as input context and a shared prototype artifact store path"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by:
-  - reason: "it-po-v3 enrichment: reassigned frontend-coder -> python-coder (pipeline orchestration), 2026-06-08"
+  - reason: "it-po enrichment: reassigned frontend-coder -> python-coder (pipeline orchestration), 2026-06-08"
 superseded_by: null
 covered_by:
   - UXP-100e-1-i

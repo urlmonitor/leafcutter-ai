@@ -27,7 +27,7 @@ estimated_complexity: S
 delivers_to: INF-400g-9
 expects_from: INF-400g-1
 it_requirements: "The Bash block calling submit_feedback.py must be an imperative instruction (not a code example inside prose); agent must execute it directly; submit_feedback.py call must include --category subagent-quality"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
   - "split: INF-400g -> INF-400g + INF-400h, 2026-06-05"

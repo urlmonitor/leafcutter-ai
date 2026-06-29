@@ -30,7 +30,7 @@ delivers_to: null
 expects_from:
   ac_id: BP-200a-2
   contract: "Six-item Prompt-Quality Checklist in the agent template body that this step applies"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/01_agent_template.md"
 amended_by: []

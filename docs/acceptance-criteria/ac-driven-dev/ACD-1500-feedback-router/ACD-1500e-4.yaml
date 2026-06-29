@@ -36,7 +36,7 @@ delivers_to: null
 expects_from:
   ac_id: ACD-1500e-2
   contract: "The deficiency description that the recommendation must map each requested change onto"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-17
 amended_by: []
 superseded_by: null

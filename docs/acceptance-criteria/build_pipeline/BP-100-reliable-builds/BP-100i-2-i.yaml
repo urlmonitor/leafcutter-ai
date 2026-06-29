@@ -48,10 +48,10 @@ delivers_to: null
 expects_from:
   ac_id: BP-100i-2
   contract: "The manifest-comparison function that extracts hook IDs from hooks_manifest.hooks[] in each commit_guardian.json, treating all entries identically regardless of their enabled field value"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
-  - it-po-v3
+  - it-po
 superseded_by: null
 covered_by: []
 implemented_by: []

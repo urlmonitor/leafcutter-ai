@@ -24,7 +24,7 @@ it_requirements:
   - "The template must be maintained in sync with the JS-generated format — same 4 sections, same order"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

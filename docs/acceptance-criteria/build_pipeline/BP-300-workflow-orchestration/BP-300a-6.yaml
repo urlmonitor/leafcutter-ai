@@ -20,7 +20,7 @@ estimated_complexity: S
 delivers_to: BP-300a-6-i
 expects_from: BP-300a-5
 it_requirements: "Return object must be { status, investigation_summary, ticket_path, build_result, finalize_result }; finalize_result is null when user skips finalize"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
   - "split: BP-300a -> BP-300a + BP-300c, 2026-06-05"

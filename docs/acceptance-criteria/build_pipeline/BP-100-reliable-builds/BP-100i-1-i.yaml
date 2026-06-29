@@ -45,10 +45,10 @@ delivers_to: null
 expects_from:
   ac_id: BP-100i-1
   contract: "The parity-checking function that accepts a set[str] exclusion list parameter and filters excluded filenames before comparing directory contents"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
-  - it-po-v3
+  - it-po
 superseded_by: null
 covered_by: []
 implemented_by: []

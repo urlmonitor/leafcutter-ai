@@ -40,7 +40,7 @@ delivers_to: null
 expects_from:
   ac_id: INF-400c-2
   contract: "Harvester that invokes capture-learning for entry_kind 'agent-frontmatter' with destination paths under .claude/skills/"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

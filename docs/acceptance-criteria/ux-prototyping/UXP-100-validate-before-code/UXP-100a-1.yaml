@@ -37,10 +37,10 @@ delivers_to:
   ac_id: UXP-100a-2
   contract: "A prototype artifact file referencing only catalog-listed components, stored at a well-known path relative to the feature folder"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by:
-  - reason: "it-po-v3 enrichment: reassigned frontend-coder -> llm-expert (agent template work), 2026-06-08"
+  - reason: "it-po enrichment: reassigned frontend-coder -> llm-expert (agent template work), 2026-06-08"
 superseded_by: null
 covered_by:
   - UXP-100a-1-i

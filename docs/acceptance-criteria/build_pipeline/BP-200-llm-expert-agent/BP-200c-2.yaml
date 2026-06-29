@@ -31,7 +31,7 @@ it_requirements:
   - "File glob patterns must match the actual directory structure of templates/"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/03_registry_and_docs.md"
 amended_by: []

@@ -21,7 +21,7 @@ estimated_complexity: S
 delivers_to: BP-300a-4-i
 expects_from: BP-300a-2
 it_requirements: "Must call workflow('build-ticket', { userInput: ticket_path }) not workflow('build-epic', ...); ticket_path must come from the create-ticket result"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
   - "split: BP-300a -> BP-300a + BP-300c, 2026-06-05"

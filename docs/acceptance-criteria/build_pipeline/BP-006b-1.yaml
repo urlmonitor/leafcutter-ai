@@ -25,7 +25,7 @@ it_requirements: |
 delivers_to:
   BP-006b-2: "Provides the guarded insertion pattern that the edge-case AC validates"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 created_by_ticket: "tickets/00_inbox/TICKET-20260604-FixFailingBuildPipelineTests.md"
 amended_by: []

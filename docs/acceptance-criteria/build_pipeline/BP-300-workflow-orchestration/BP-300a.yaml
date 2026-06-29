@@ -15,7 +15,7 @@ criteria: |
 depends_on:
   - BP-300
 doc_links: []
-origin_agent: product-owner-v3
+origin_agent: product-owner
 created: 2026-06-05
 amended_by:
   - "split: BP-300a -> BP-300a + BP-300c, 2026-06-05"
@@ -29,4 +29,5 @@ covered_by:
   - BP-300a-6
   - BP-300a-7
   - BP-300a-8
+child_limit_override: 8
 implemented_by: []

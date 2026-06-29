@@ -28,7 +28,7 @@ delivers_to: null
 expects_from:
   ac_id: BO-700a-2
   contract: "Changelog entry files in the changelog directory with YAML frontmatter containing ac_id and created fields"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

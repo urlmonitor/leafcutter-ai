@@ -21,7 +21,7 @@ estimated_complexity: S
 delivers_to: pr-reviewer
 expects_from: INF-100b-1-i
 it_requirements: "Must add a new DECISION HISTORY entry at the bottom of emit_entry.py; entry must document the .is_dir() to .exists() change; must reference the worktree failure context (git worktrees use a .git file, not directory)"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

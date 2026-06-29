@@ -33,7 +33,7 @@ delivers_to:
   agent: llm-expert
   contract: "Six-section PROJECT_CONTEXT.md file loaded by the agent at pre-flight (channel 3 of Knowledge Plane)"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/02_project_context.md"
 amended_by: []

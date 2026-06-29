@@ -36,4 +36,5 @@ covered_by:
   - TKT-100a-4
   - TKT-100a-5
   - TKT-100a-6
+child_limit_override: 6
 implemented_by: []

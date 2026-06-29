@@ -20,7 +20,7 @@ estimated_complexity: S
 delivers_to: test-runner
 expects_from: BP-300a-1
 it_requirements: "Must verify debug.js passes node --check (syntax validation); test should run 'node --check <path>' and assert exit code 0"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

@@ -25,7 +25,7 @@ estimated_complexity: S
 delivers_to: pr-reviewer
 expects_from: INF-500b-1
 it_requirements: "feedback-analyst agent must be read-only (Bash + Read tools only, no Edit or Write); must invoke trend_report.py via Bash; must return structured report to user; must not modify feedback.jsonl or any other file"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
   - "split: INF-500b -> INF-500b + INF-500c, 2026-06-05"

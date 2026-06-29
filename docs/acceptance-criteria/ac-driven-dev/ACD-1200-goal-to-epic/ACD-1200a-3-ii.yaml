@@ -52,7 +52,7 @@ delivers_to: null
 expects_from:
   ac_id: ACD-1200a-3
   contract: "str — the goal AC's title string read from its YAML, fed into the PascalCase epic-name derivation; this AC constrains how quote/apostrophe characters in that title are sanitized before the EPIC- folder name is formed."
-origin_agent: it-po-v3
+origin_agent: it-po
 created: 2026-06-18
 amended_by: []
 superseded_by: null

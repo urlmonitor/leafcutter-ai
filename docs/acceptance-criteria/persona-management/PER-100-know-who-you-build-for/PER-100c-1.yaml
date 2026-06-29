@@ -39,7 +39,7 @@ delivers_to:
 expects_from:
   ac_id: PER-100b-1
   contract: "AC YAML files with persona_for field conforming to config/ac_store_schema.json"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

@@ -180,7 +180,7 @@ No additional enforcement is required: the per-pass scan is inherent to the loop
 > 1. `a.files_touched ∩ b.files_touched = ∅`  *(disjoint physical footprint)*, AND
 > 2. neither `a depends_on b` nor `b depends_on a` under the **transitive closure** of `depends_on` *(no logical dependency chain)*.
 
-Both conditions must hold. The file-touch set is authoritative — it is populated by the AC pipeline (business-analyst-v3 / it-po-v3) and validated by the frontmatter guard. If a ticket's `files_touched` is missing or empty, `/build-feature` MUST treat that ticket as conflicting with every other ticket and run it serially (default-conservative).
+Both conditions must hold. The file-touch set is authoritative — it is populated by the AC pipeline (business-analyst / it-po) and validated by the frontmatter guard. If a ticket's `files_touched` is missing or empty, `/build-feature` MUST treat that ticket as conflicting with every other ticket and run it serially (default-conservative).
 
 ### §1.3 Halt conditions (epic-level)
 

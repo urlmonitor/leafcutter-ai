@@ -8,7 +8,7 @@ work_status: todo
 priority: high
 readiness: reviewed
 criteria: |
-  Given the product-owner-v3, business-analyst-v3, and it-po-v3 agent templates
+  Given the product-owner, business-analyst, and it-po agent templates
     all have signoff: false in their frontmatter,
   And therefore signoff skill section 7 (the standard knowledge-capture trigger)
     never fires for these agents,
@@ -50,9 +50,10 @@ delivers_to:
   agent: llm-expert
   contract: "Three agent templates with embedded post-work knowledge-capture steps that invoke route-learning, capture-learning, and emit knowledge_captured telemetry events"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: [INF-400b-1-i, INF-400b-1-ii]
 implemented_by: []

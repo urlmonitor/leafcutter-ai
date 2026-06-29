@@ -15,7 +15,7 @@ criteria: |
     "# infrastructure — Accumulated Domain Context" followed by a blank line,
   And the learning is appended as a new bullet under a "## Learnings" section,
   And each bullet is prefixed with the date and originating agent
-    (e.g., "- 2026-06-05 [business-analyst-v3]: INF prefix, no parent component"),
+    (e.g., "- 2026-06-05 [business-analyst]: INF prefix, no parent component"),
   And subsequent writes append new bullets without overwriting existing content.
 depends_on: [INF-400d, INF-400c-2]
 doc_links:
@@ -39,9 +39,10 @@ delivers_to:
 expects_from:
   ac_id: INF-400c-2
   contract: "Harvester that invokes capture-learning with entry_kind 'per-folder-readme' and a destination path under docs/acceptance-criteria/"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by: []

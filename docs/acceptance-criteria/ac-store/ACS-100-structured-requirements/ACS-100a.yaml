@@ -22,7 +22,7 @@ assigned_agent: python-coder
 estimated_complexity: M
 delivers_to: null
 expects_from: null
-origin_agent: product-owner-v3
+origin_agent: product-owner
 created: 2026-06-04
 amended_by:
   - "split: ACS-100a -> ACS-100a + ACS-100i, 2026-06-05"
@@ -34,4 +34,5 @@ covered_by:
   - ACS-100a-4
   - ACS-100a-5
   - ACS-100a-6
+child_limit_override: 6
 implemented_by: []

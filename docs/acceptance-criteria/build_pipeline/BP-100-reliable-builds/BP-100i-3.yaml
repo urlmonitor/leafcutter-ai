@@ -55,10 +55,10 @@ delivers_to: null
 expects_from:
   ac_id: BP-100i-1
   contract: "Reusable directory-scanning function that returns a set[str] of .py filenames found in a given directory, applying the same filename filter (hook script naming pattern) used for runtime-vs-canonical comparison"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
-  - it-po-v3
+  - it-po
 superseded_by: null
 covered_by: [BP-100i-3-i]
 implemented_by: []

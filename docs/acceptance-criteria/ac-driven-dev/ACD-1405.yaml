@@ -7,6 +7,8 @@ criteria: |
   (product-owner, business-analyst, it-po),
   When the test suite for create_ac_workflow runs,
   Then all test assertions and mock conditionals use canonical agent names
-  And no test asserts on v3-suffixed agent names (product-owner-v3, business-analyst-v3, it-po-v3)
+  And no test asserts on v3-suffixed agent names (product-owner, business-analyst, it-po)
   And all tests in test_create_ac_workflow.py pass
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 notes: "Authored by /quick-fix. Root cause: test assertions were not updated when create_ac_workflow.py constants were changed from v3 to canonical names."

@@ -43,7 +43,7 @@ delivers_to:
 expects_from:
   ac_id: BP-600b-1
   contract: "AC YAML file absolute path (string) containing: { id: string, criteria: string, component: string }"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

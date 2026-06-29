@@ -61,9 +61,9 @@ delivers_to:
 expects_from:
   ac_id: BO-620
   contract: "Guardrails mapping from (change_target, risk_surface) pairs to mandatory agents"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by: [it-po]
 superseded_by: null
 covered_by: [BO-560-1-i]
 implemented_by: []

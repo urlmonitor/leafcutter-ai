@@ -12,7 +12,7 @@ criteria: |
   And pushes null into created_tracking_tickets as a sentinel
   And continues processing the remaining triage entries
   And the workflow does NOT halt — it proceeds to Step 6b (ticket closing)
-origin_agent: "business-analyst-v3"
+origin_agent: "business-analyst"
 created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
 assigned_agent: "finalize-feature-workflow"
 estimated_complexity: S

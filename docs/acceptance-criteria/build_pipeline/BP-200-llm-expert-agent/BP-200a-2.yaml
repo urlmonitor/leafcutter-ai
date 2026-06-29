@@ -35,7 +35,7 @@ delivers_to:
   agent: llm-expert
   contract: "Six-item checklist definition reused by the prompt-audit skill as its detection ruleset"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/01_agent_template.md"
 amended_by: []

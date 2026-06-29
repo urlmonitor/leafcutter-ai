@@ -46,9 +46,9 @@ delivers_to:
   agent: llm-expert
   contract: "Validated test_constraints schema in ticket frontmatter that test-writer can read"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by: [it-po]
 superseded_by: null
 covered_by: [BO-550-1-i]
 implemented_by: []

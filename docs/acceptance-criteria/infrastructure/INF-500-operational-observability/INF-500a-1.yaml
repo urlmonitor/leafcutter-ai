@@ -22,7 +22,7 @@ estimated_complexity: M
 delivers_to: INF-500a-1-i
 expects_from: null
 it_requirements: "Must use git log --follow --diff-filter=R to detect renames; must fall back to the original (pre-move) path for commit history queries; must populate git_commit_count, git_first_commit_date, and git_last_commit_date from the resolved path"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

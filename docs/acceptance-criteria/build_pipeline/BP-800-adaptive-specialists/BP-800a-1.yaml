@@ -37,7 +37,7 @@ delivers_to:
   agent: python-coder
   contract: "list[dict] where each entry has: {name: str, category: 'language', confidence: 'manifest'|'file-extension', detection_source: str (file path that triggered detection)}"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

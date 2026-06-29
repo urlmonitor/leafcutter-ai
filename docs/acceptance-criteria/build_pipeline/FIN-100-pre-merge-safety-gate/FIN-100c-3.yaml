@@ -12,7 +12,7 @@ criteria: |
   And it classifies ALL post-merge failures as "regression" (conservative path)
   And blocks_finalization is set to true
   And the triage summary explains that classification is conservative due to missing baseline
-origin_agent: "business-analyst-v3"
+origin_agent: "business-analyst"
 created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
 assigned_agent: "test-failure-triage"
 estimated_complexity: S

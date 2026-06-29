@@ -35,7 +35,7 @@ delivers_to: null
 expects_from:
   ac_id: BP-600c-3
   contract: "Green-phase verification scope expanded to include related tests for the modified file"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

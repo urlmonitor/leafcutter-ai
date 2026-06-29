@@ -34,7 +34,7 @@ delivers_to: null
 expects_from:
   ac_id: ACD-1200a-3
   contract: "str — epic folder name (e.g. 'EPIC-ValidateApiInputs') to use as the target_epic value"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

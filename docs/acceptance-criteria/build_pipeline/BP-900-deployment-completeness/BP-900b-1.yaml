@@ -41,7 +41,7 @@ delivers_to:
   agent: python-coder
   contract: "set[tuple[str, str]] — set of (template_path, referenced_script_path) tuples extracted from compiled .md files"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-11
 created_by_ticket: null
 amended_by: []

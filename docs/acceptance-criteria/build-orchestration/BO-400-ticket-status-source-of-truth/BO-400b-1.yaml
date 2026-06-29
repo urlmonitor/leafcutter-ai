@@ -43,9 +43,9 @@ delivers_to:
   agent: llm-expert
   contract: "CLI script at scripts/set_ticket_status.py; interface: --ticket <absolute-path> --status <todo|in_progress|done> [--force]; exit 0 on success with stdout 'status: <old> -> <new>'; exit 1 on rejection with stderr explaining the reason"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by: [it-po]
 superseded_by: null
 covered_by: [BO-400b-1-i]
 implemented_by: []

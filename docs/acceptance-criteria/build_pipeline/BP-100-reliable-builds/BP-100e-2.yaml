@@ -24,7 +24,7 @@ estimated_complexity: S
 delivers_to: BP-100e-2-i
 expects_from: BP-100e-1
 it_requirements: "Hook must use regex matching for YYYY-MM-DD HH:MM format; must reject any trailing parenthetical text after the timestamp; must exit 1 on first violation with file:line reference"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

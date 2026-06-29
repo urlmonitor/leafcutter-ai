@@ -36,7 +36,7 @@ delivers_to: null
 expects_from:
   ac_id: ACD-1500e-1
   contract: "The trigger to emit process-feedback, carrying the identity of the deficient fields (work_type + missing-field set + originating feedback_id)"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-17
 amended_by: []
 superseded_by: null

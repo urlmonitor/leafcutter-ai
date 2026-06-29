@@ -9,15 +9,15 @@ req_status: approved
 work_status: todo
 criteria: |
   Given the v3 agents have been promoted to canonical names
-    (product-owner-v3 -> product-owner, business-analyst-v3 -> business-analyst,
-    it-po-v3 -> it-po),
+    (product-owner -> product-owner, business-analyst -> business-analyst,
+    it-po -> it-po),
   When all skill files, workflow scripts, command templates, and documentation
     under templates/ and docs/ are scanned,
-  Then zero files contain the strings "product-owner-v3", "business-analyst-v3",
-    or "it-po-v3" as agent identifiers,
-  And the /ba skill file references "business-analyst" (not "business-analyst-v3"),
-  And the /po skill file references "product-owner" (not "product-owner-v3"),
-  And the /it-po skill file references "it-po" (not "it-po-v3"),
+  Then zero files contain the strings "product-owner", "business-analyst",
+    or "it-po" as agent identifiers,
+  And the /ba skill file references "business-analyst" (not "business-analyst"),
+  And the /po skill file references "product-owner" (not "product-owner"),
+  And the /it-po skill file references "it-po" (not "it-po"),
   And the create-ac workflow script dispatches "product-owner", "business-analyst",
     and "it-po" (not v3-suffixed variants).
 depends_on:
@@ -44,7 +44,8 @@ expects_from:
   contract: "config/agent_registry.json with canonical ids (product-owner, business-analyst, it-po) already in place; consumer updates all other files to match"
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: [ACD-1100b-3-i]
 implemented_by: []

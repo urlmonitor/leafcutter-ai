@@ -23,7 +23,7 @@ estimated_complexity: S
 delivers_to: test-runner
 expects_from: INF-400g-4
 it_requirements: "Integration-level test; must verify that after an epic drive (or simulated drive), aggregate.py --category subagent-quality returns non-empty output; may use a pre-seeded feedback.jsonl fixture"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

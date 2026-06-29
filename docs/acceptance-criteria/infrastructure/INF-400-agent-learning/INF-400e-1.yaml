@@ -8,12 +8,12 @@ work_status: todo
 priority: high
 readiness: reviewed
 criteria: |
-  Given the business-analyst-v3 agent ran once on component X and discovered
+  Given the business-analyst agent ran once on component X and discovered
     that component X has a standing AC requiring "all L2 criteria must reference
     the parent L1 in depends_on",
   And that learning was captured and persisted to the component's context file
     (via the INF-400b/c pipeline),
-  When the business-analyst-v3 agent runs a second time on a different L1 in component X,
+  When the business-analyst agent runs a second time on a different L1 in component X,
   Then the agent's output L2 AC files include the standing AC reference
     in their depends_on field without the user needing to remind it,
   And the agent does not ask a clarifying question about whether standing ACs apply
@@ -37,9 +37,10 @@ it_requirements:
   - "Must be verifiable by comparing first-run and second-run outputs for the same component"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by: []

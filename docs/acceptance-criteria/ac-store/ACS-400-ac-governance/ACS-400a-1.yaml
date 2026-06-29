@@ -8,7 +8,7 @@ work_status: todo
 criteria: |
   Given an AC YAML file is staged for commit with a populated criteria field,
   When the committing agent's identity is one of:
-    product-owner-v3, business-analyst-v3, it-po-v3, or a human user,
+    product-owner, business-analyst, it-po, or a human user,
   Then the commit proceeds without governance violation,
   And the file is accepted into the repository with the criteria field intact.
 depends_on: [ACS-400a]
@@ -35,9 +35,10 @@ it_requirements:
   - "Must be idempotent -- repeated invocations on the same staged state produce the same result"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by: []

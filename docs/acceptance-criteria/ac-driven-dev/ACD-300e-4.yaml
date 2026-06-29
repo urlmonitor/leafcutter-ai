@@ -8,7 +8,7 @@ status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given the it-po-v3 agent has reached S1 (Knowledge Acquisition)
+  Given the it-po agent has reached S1 (Knowledge Acquisition)
     and has read the L2/L3 AC files it was given for enrichment,
   When the agent executes its knowledge-acquisition steps,
   Then it invokes knowledge-query with a surface filter of "agents" to list
@@ -52,10 +52,11 @@ it_requirements:
 delivers_to: null
 expects_from:
   ac_id: ACD-300e-1
-  contract: "knowledge-query is listed in skills_used frontmatter of it-po-v3.md so the skill is available at runtime"
-origin_agent: business-analyst-v3
+  contract: "knowledge-query is listed in skills_used frontmatter of it-po.md so the skill is available at runtime"
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -9,7 +9,7 @@ req_status: active
 work_status: done
 criteria: |
   Given the user types /po followed by a feature description,
-  When the product-owner-v3 agent is invoked,
+  When the product-owner agent is invoked,
   Then it scans docs/acceptance-criteria/ for existing L0/L1 ACs before asking questions,
   And it identifies overlap with existing goals,
   And it asks clarifying questions to understand customer value,
@@ -25,7 +25,8 @@ assigned_agent: llm-expert
 estimated_complexity: S
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by:

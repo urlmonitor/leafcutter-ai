@@ -27,7 +27,7 @@ delivers_to:
   agent: python-coder
   contract: "A positive integer threshold read from configuration, defaulting to 20"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

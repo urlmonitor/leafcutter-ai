@@ -34,7 +34,7 @@ delivers_to:
   agent: llm-expert
   contract: "An 'Agent Protocol' section in SKILL.md containing two named invocation patterns with concrete Bash syntax examples"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

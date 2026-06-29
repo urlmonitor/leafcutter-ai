@@ -29,10 +29,10 @@ it_requirements:
   - "Must use stderr for warnings, not stdout (stdout is reserved for JSON output)"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
-  - it-po-v3
+  - it-po
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -30,7 +30,7 @@ it_requirements:
   - "Must proceed directly to ticket generation with no user interaction delay"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

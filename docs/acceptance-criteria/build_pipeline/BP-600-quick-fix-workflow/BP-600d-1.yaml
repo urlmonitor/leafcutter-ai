@@ -40,7 +40,7 @@ delivers_to:
   agent: workflow-architect
   contract: "Structured diagnosis object: { file_path: string, location: string|null, symptom: string, root_cause: string } — consumed by AC creation (BP-600b-1), dirty-tree check (BP-600a-3), test-writing (BP-600c-1), and fix-application (BP-600d-2) phases"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

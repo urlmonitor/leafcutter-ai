@@ -34,7 +34,7 @@ it_requirements:
   - "Must scan all file types under templates/skills/, templates/commands/, and scripts/workflows/ (not just .py)"
   - "Must update spawn_allowlist and spawned_by arrays in remaining registry entries without corrupting other fields"
   - "Registry file must remain valid JSON after edits"
-  - "Must not remove references to agents that share a substring with removed agents but are distinct (e.g. 'business-analyst-v3' is distinct from 'business-analyst')"
+  - "Must not remove references to agents that share a substring with removed agents but are distinct (e.g. 'business-analyst' is distinct from 'business-analyst')"
 delivers_to: null
 expects_from:
   ac_id: ACD-1100a-2

@@ -22,7 +22,7 @@ estimated_complexity: S
 delivers_to: test-writer
 expects_from: INF-500a-1
 it_requirements: "Must exit with code 1 (not 0) when no commits are found; must print warning to stderr (not stdout); must never silently return null dates with exit code 0"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

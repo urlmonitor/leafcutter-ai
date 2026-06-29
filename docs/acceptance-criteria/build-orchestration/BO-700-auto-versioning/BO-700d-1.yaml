@@ -30,7 +30,7 @@ delivers_to: null
 expects_from:
   ac_id: BO-700c-2
   contract: "Release data with entries grouped by L0 goal heading"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

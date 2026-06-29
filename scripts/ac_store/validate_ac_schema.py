@@ -48,12 +48,12 @@ _FIELD_HELP: dict[str, str] = {
     "readiness": (
         "readiness: must be one of [draft, reviewed, approved]. "
         "draft = written but not reviewed by IT PO; "
-        "reviewed = IT PO v3 has enriched and approved; "
+        "reviewed = it-po has enriched and approved; "
         "approved = user has signed off (scanner may pick up)."
     ),
     "priority": (
         "priority: must be one of [critical, high, medium, low]. "
-        "Set by user or product-owner-v3 at approval time. "
+        "Set by user or product-owner at approval time. "
         "The scanner uses this for ranking."
     ),
 }

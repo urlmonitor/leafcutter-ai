@@ -31,7 +31,7 @@ delivers_to: null
 expects_from:
   ac_id: BP-800c-1
   contract: "Versioned knowledge layer reading and validation logic that this corruption edge case exercises"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

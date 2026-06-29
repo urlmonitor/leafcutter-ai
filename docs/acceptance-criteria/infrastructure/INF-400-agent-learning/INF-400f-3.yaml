@@ -37,7 +37,7 @@ it_requirements:
   - "Must rely exclusively on existing knowledge plane channels (2, 3, and 9)"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

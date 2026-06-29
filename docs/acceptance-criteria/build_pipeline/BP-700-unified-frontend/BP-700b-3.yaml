@@ -35,7 +35,7 @@ delivers_to: null
 expects_from:
   ac_id: BP-700b-1
   contract: "Registry entry with default_status not_needed ensuring the agent is never dispatched for non-frontend projects"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

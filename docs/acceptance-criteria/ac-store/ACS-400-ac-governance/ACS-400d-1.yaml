@@ -11,7 +11,7 @@ criteria: |
     (CLAUDE.md or the generated agent template),
   Then the instruction text contains the AC governance write-access rules:
     - which agents are authorized to write criteria
-      (product-owner-v3, business-analyst-v3, it-po-v3, human user)
+      (product-owner, business-analyst, it-po, human user)
     - which fields are protected (criteria, title, req_status, depends_on)
     - which fields are open to implementation agents
       (work_status, implemented_by, covered_by)
@@ -39,9 +39,10 @@ delivers_to:
   agent: python-coder
   contract: "Governance rules text block deployed into the consumer project's instruction surface. Format: markdown section with field classifications (protected vs open) and authorized agent list. Location: compiled into .claude/ output by build.py from a templates/ source."
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by: []

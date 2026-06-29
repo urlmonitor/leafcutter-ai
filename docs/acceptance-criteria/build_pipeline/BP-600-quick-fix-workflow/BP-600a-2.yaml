@@ -36,7 +36,7 @@ delivers_to: null
 expects_from:
   ac_id: BP-600a-1
   contract: "Workflow script (templates/workflows-js/quick-fix.js) that operates in-place without worktree creation"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

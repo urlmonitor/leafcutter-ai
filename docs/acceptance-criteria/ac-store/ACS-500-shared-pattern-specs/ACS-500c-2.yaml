@@ -10,7 +10,7 @@ work_status: todo
 criteria: |
   Given an L2 AC has implements_pattern: "ACS-500a-1" and
     pattern_bindings: {entity_type: "invoices", columns: ["number", "date"]},
-  When the it-po-v3 agent adds it_requirements and technical constraints
+  When the it-po agent adds it_requirements and technical constraints
     to the AC,
   Then the implements_pattern and pattern_bindings fields remain unchanged,
   And the it_requirements do NOT restate behavioral rules already covered
@@ -29,7 +29,7 @@ doc_links:
 assigned_agent: llm-expert
 estimated_complexity: S
 it_requirements:
-  - "Changes are limited to the IT PO v3 agent template at templates/agents/it-po-v3.md"
+  - "Changes are limited to the IT PO v3 agent template at templates/agents/it-po.md"
   - "Must not modify any Python code -- this is a prompt/template change only"
   - "Template must add a rule to the S2 Enrichment Protocol: never modify implements_pattern or pattern_bindings fields"
   - "Template must add guidance to avoid restating pattern-defined behavior in it_requirements"
@@ -40,9 +40,10 @@ delivers_to:
 expects_from:
   ac_id: ACS-500a-1
   contract: "Schema fields implements_pattern and pattern_bindings are valid in AC YAML so the IT PO agent can encounter and preserve them"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-11
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by:

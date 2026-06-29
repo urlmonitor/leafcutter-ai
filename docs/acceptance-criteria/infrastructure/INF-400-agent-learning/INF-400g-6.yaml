@@ -26,7 +26,7 @@ estimated_complexity: S
 delivers_to: INF-400g-9
 expects_from: INF-400g-1
 it_requirements: "Must execute submit_feedback.py with category subagent-quality in section 3.2 (cross-agent rework); must be imperative instruction, not example code"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
   - "split: INF-400g -> INF-400g + INF-400h, 2026-06-05"

@@ -22,7 +22,7 @@ estimated_complexity: S
 delivers_to: test-runner
 expects_from: INF-500a-1
 it_requirements: "Regression test; must verify that the pre-existing behavior (epic at original path, no extra flags) produces identical output to today; exit code 0, all date fields populated"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

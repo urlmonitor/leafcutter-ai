@@ -38,7 +38,7 @@ delivers_to:
   agent: python-coder
   contract: "A resolve_feedback.py invocation linking feedback_id F1 to the artifact id it produced (AC id, or commit/ticket for quick-fix), setting resolved_at + resolution_note in feedback.jsonl"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-17
 amended_by: []
 superseded_by: null

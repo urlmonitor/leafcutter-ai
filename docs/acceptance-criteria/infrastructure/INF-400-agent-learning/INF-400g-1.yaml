@@ -23,7 +23,7 @@ estimated_complexity: M
 delivers_to: INF-400g-2
 expects_from: null
 it_requirements: "Must create emit_event.py in templates/skills/agent-telemetry/scripts/; must be registered in build.py skill deployment so it deploys to .claude/skills/agent-telemetry/scripts/; must be executable (chmod +x or shebang line)"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

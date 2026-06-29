@@ -22,7 +22,7 @@ it_requirements:
   - "Must work with paths of any depth (tickets/00_inbox/epics/EPIC-Foo and tickets/01_todo/EPIC-Bar)"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

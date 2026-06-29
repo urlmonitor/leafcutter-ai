@@ -41,7 +41,7 @@ delivers_to:
   agent: llm-expert
   contract: "A working Python script at scripts/components/add_component.py (or similar path) that accepts structured input (id, name, type, description, primary_code, detail_ref, status) and appends a validated entry to docs/components.json. Exit 0 on success, exit 1 on duplicate or validation failure with descriptive stderr."
 expects_from: null
-origin_agent: it-po-v3
+origin_agent: it-po
 created: 2026-06-05
 amended_by: []
 superseded_by: null

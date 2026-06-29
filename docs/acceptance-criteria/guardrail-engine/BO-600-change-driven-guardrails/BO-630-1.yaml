@@ -38,9 +38,9 @@ delivers_to:
   agent: python-coder
   contract: "Model tier routing logic that maps S and M complexity to the faster tier"
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by: [it-po]
 superseded_by: null
 covered_by: [BO-630-1-i]
 implemented_by: []

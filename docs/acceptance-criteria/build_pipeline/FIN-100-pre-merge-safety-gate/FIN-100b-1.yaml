@@ -13,7 +13,7 @@ criteria: |
   And no merge commit is written to the feature branch history
   And the workflow proceeds to Step 3 (test run)
   And the merge_strategy is recorded as "merged_main"
-origin_agent: "business-analyst-v3"
+origin_agent: "business-analyst"
 created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
 assigned_agent: "finalize-feature-workflow"
 estimated_complexity: S

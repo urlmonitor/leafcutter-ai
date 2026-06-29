@@ -36,7 +36,7 @@ delivers_to: null
 expects_from:
   ac_id: BP-800e-2
   contract: "Completed migration feature with summary output format to document"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

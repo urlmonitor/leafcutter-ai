@@ -21,7 +21,7 @@ estimated_complexity: S
 delivers_to: test-writer
 expects_from: BP-300a-1
 it_requirements: "Must validate userInput at function entry; return { status: 'error', message: '...' } not throw; must NOT dispatch any agents when input is empty/undefined"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

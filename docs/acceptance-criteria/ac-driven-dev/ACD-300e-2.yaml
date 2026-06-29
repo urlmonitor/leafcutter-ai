@@ -8,7 +8,7 @@ status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given the product-owner-v3 agent has reached S1 (Knowledge Acquisition)
+  Given the product-owner agent has reached S1 (Knowledge Acquisition)
     and has identified the target component for the user's request,
   When the agent executes its knowledge-acquisition steps,
   Then it invokes knowledge-query with a keyword derived from the user's request
@@ -44,13 +44,14 @@ it_requirements:
   - "Must not introduce dependencies on tools not already in the agent's allowed-tools list"
 delivers_to:
   agent: llm-expert
-  contract: "product-owner-v3.md template body contains a knowledge-query invocation block in S1 with instructions for keyword and component queries"
+  contract: "product-owner.md template body contains a knowledge-query invocation block in S1 with instructions for keyword and component queries"
 expects_from:
   ac_id: ACD-300e-1
-  contract: "knowledge-query is listed in skills_used frontmatter of product-owner-v3.md so the skill is available at runtime"
-origin_agent: business-analyst-v3
+  contract: "knowledge-query is listed in skills_used frontmatter of product-owner.md so the skill is available at runtime"
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: [ACD-300e-2-i, ACD-300e-2-ii]
 implemented_by: []

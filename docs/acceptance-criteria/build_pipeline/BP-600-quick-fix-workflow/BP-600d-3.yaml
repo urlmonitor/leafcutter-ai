@@ -38,7 +38,7 @@ delivers_to:
 expects_from:
   ac_id: BP-600c-3
   contract: "Green-phase result: { all_passed: boolean } — must be true to proceed to commit"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

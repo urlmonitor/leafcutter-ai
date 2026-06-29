@@ -20,7 +20,7 @@ doc_links:
   - path: docs/agents/README.md
     relationship: describes
     status: exists
-origin_agent: product-owner-v3
+origin_agent: product-owner
 created: 2026-06-05
 amended_by: []
 superseded_by: null

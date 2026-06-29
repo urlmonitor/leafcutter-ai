@@ -12,7 +12,7 @@ criteria: |
   Is classified as "regression"
   And the triage report sets blocks_finalization=true
   And the regressions array includes every newly-failing test ID
-origin_agent: "business-analyst-v3"
+origin_agent: "business-analyst"
 created_by_ticket: "tickets/99_done/TICKET-20260604-FinalizeFeatureStepReorder.md"
 assigned_agent: "test-failure-triage"
 estimated_complexity: S

@@ -29,7 +29,7 @@ delivers_to:
 expects_from:
   ac_id: ACD-400a-1
   contract: "The filtering and sorting logic that populates ready and blocked lists"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

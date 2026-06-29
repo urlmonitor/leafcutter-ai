@@ -43,7 +43,7 @@ delivers_to:
 expects_from:
   ac_id: BP-200d-2
   contract: "Six detection checks producing violation objects with check_name, severity, line_number, description, suggested_fix"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/04_prompt_audit_skill.md"
 amended_by: []

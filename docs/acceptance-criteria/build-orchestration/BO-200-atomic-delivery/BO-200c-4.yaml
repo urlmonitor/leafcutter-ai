@@ -30,9 +30,9 @@ delivers_to:
   agent: llm-expert
   contract: "Boolean signal: user_approved_subject_exists — consumed by BO-1100a-4 to gate pattern application"
 expects_from: null
-origin_agent: product-owner-v3
+origin_agent: product-owner
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by: [it-po]
 superseded_by: null
 covered_by: []
 implemented_by: []

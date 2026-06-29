@@ -46,7 +46,7 @@ delivers_to:
 expects_from:
   ac_id: ACS-500a-1
   contract: "Schema fields implements_pattern (string|null) and pattern_bindings (object|null) present in config/ac_store_schema.json"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-11
 amended_by: []
 superseded_by: null

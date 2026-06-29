@@ -30,10 +30,10 @@ delivers_to: null
 expects_from:
   ac_id: BP-400a-1
   contract: "emit_event.py script with --log argument accepting an arbitrary file path"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
-  - it-po-v3
+  - it-po
 superseded_by: null
 covered_by: []
 implemented_by: []

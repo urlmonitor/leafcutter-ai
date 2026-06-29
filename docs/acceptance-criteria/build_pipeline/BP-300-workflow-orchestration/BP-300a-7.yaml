@@ -20,7 +20,7 @@ estimated_complexity: S
 delivers_to: BP-300a-8
 expects_from: BP-300a-1
 it_requirements: "debug.md must detect Claude Code runtime version and fall back to SKILL.md for runtimes < 2.1.154; preserve all existing prose skill behavior as fallback path"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by:
   - "split: BP-300a -> BP-300a + BP-300c, 2026-06-05"

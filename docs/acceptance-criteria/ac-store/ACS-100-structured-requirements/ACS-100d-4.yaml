@@ -10,7 +10,7 @@ work_status: todo
 criteria: |
   Given the AC schema defines origin_agent as a free-form string,
   When a new agent type not yet seen in the codebase writes an AC
-    (e.g. origin_agent: "business-analyst-v3" or origin_agent: "custom-pipeline"),
+    (e.g. origin_agent: "business-analyst" or origin_agent: "custom-pipeline"),
   Then the schema validator accepts the value without error,
   And no schema change is required to support the new agent name,
   And the only constraint is that the value must be non-empty
@@ -21,9 +21,10 @@ assigned_agent: python-coder
 estimated_complexity: S
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-04
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by: []

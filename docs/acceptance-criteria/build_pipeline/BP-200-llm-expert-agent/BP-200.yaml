@@ -17,7 +17,7 @@ criteria: |
   reviewer catches bugs before merge.
 depends_on: []
 doc_links: []
-origin_agent: product-owner-v3
+origin_agent: product-owner
 created: 2026-06-05
 amended_by: []
 superseded_by: null

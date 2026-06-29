@@ -8,10 +8,10 @@ work_status: todo
 priority: high
 readiness: reviewed
 criteria: |
-  Given the product-owner-v3 agent runs first in the pipeline,
+  Given the product-owner agent runs first in the pipeline,
   And its knowledge-capture step fires but the PO answers "no" (nothing discovered),
   And no new context files are written during the PO run,
-  When the business-analyst-v3 agent is spawned next,
+  When the business-analyst agent is spawned next,
   Then the BA's pre-flight step reads only the pre-existing context files
     (which may be empty or from prior pipeline runs),
   And the BA produces its L2 ACs at normal baseline quality,
@@ -29,9 +29,10 @@ it_requirements:
   - "Cross-agent knowledge sharing is additive — its absence must not degrade baseline quality"
 delivers_to: null
 expects_from: null
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by: []

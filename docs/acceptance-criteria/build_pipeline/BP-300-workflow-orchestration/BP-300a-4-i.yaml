@@ -21,7 +21,7 @@ estimated_complexity: S
 delivers_to: test-writer
 expects_from: BP-300a-4
 it_requirements: "Must guard against falsy ticket_path (null, undefined, empty string); return structured error object with status and message; must NOT proceed to Phase 3"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

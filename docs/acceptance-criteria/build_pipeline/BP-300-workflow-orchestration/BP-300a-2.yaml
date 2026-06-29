@@ -20,7 +20,7 @@ estimated_complexity: S
 delivers_to: BP-300a-4
 expects_from: BP-300a-1
 it_requirements: "Confidence check: all three reports must have confidence >= threshold (e.g. 'high') and must agree on root cause; if conditions met, skip prompt() and go directly to create-ticket"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null

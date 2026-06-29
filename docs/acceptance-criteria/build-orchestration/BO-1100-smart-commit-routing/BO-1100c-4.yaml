@@ -44,7 +44,7 @@ delivers_to:
 expects_from:
   ac_id: BO-1100c-1
   contract: "A JSON config file at a documented path containing routing entries"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-08
 amended_by: []
 superseded_by: null

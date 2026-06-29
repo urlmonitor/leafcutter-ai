@@ -9,7 +9,7 @@ req_status: active
 work_status: done
 criteria: |
   Given the user types /ba followed by a reference to L1 ACs or a feature area,
-  When the business-analyst-v3 agent is invoked,
+  When the business-analyst agent is invoked,
   Then it reads the referenced L0/L1 ACs from the AC store,
   And it decomposes each L1 into testable L2 Gherkin behaviors,
   And it identifies edge cases as L3 ACs under each L2,
@@ -26,7 +26,8 @@ assigned_agent: llm-expert
 estimated_complexity: S
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "python-coder: updated v3 agent name references to canonical names, 2026-06-29"
 superseded_by: null
 covered_by: []
 implemented_by:

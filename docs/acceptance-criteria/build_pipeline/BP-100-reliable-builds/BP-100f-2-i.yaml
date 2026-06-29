@@ -21,7 +21,7 @@ estimated_complexity: S
 delivers_to: pr-reviewer
 expects_from: BP-100f-2
 it_requirements: "Same template audit pattern as BP-100f-1-i; no git command before the guard; all gated behind guard passing"
-origin_agent: business-analyst-v3
+origin_agent: business-analyst
 created: 2026-06-05
 amended_by: []
 superseded_by: null
