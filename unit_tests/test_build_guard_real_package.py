@@ -313,9 +313,65 @@ def test_fresh_clone_build_guard_exits_0() -> None:
     )
 
 
+# ---------------------------------------------------------------------------
+# BP-1200a-1-ii follow-up: commit_guardian scripts must be in templates/
+# ---------------------------------------------------------------------------
+
+
+def test_commit_guardian_missing_scripts_in_templates() -> None:
+    """templates/scripts/commit_guardian/ must contain the 3 previously-missing scripts.
+
+    After PR #180 restored templates/scripts/feedback/, three scripts were still
+    missing from templates/scripts/commit_guardian/:
+    - known_failing_tests.py
+    - transform_decision_history.py
+    - check_test_fixture_bloat.py
+
+    Their absence caused ModuleNotFoundError at pytest collection time for:
+    - tests/test_known_failing_tests.py
+    - tests/test_transform_decision_history.py
+    - unit_tests/commit_guardian/test_check_test_fixture_bloat.py
+
+    This test asserts that all 3 files are present in the tracked template source
+    so that build.py deploys them and they remain importable after a fresh clone.
+
+    AC BP-1200a-1-ii (follow-up: zero collection errors).
+    """
+    # covers: BP-1200a-1-ii
+    templates_commit_guardian = _REAL_PACKAGE_ROOT / "templates" / "scripts" / "commit_guardian"
+
+    assert templates_commit_guardian.is_dir(), (
+        f"templates/scripts/commit_guardian/ does not exist at {templates_commit_guardian}. "
+        "The canonical tracked source for commit_guardian scripts is missing."
+    )
+
+    required_scripts = [
+        "known_failing_tests.py",
+        "transform_decision_history.py",
+        "check_test_fixture_bloat.py",
+    ]
+    for script_name in required_scripts:
+        script_path = templates_commit_guardian / script_name
+        assert script_path.is_file(), (
+            f"templates/scripts/commit_guardian/{script_name} is missing. "
+            f"This script is imported by tests and must be present in the tracked "
+            f"template source so build.py deploys it on a fresh clone. "
+            f"Without it, pytest --collect-only fails with ModuleNotFoundError. "
+            f"(AC BP-1200a-1-ii follow-up)"
+        )
+
+
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-06-29 [python-coder/TICKET-20260629-BP-1200a-1-ii follow-up]: Added
+#   test_commit_guardian_missing_scripts_in_templates. Root cause: 3 scripts
+#   (known_failing_tests.py, transform_decision_history.py,
+#   check_test_fixture_bloat.py) were absent from
+#   templates/scripts/commit_guardian/, causing pytest --collect-only to fail
+#   with ModuleNotFoundError for 3 test files. Fix: recovered from git history
+#   (83737a44^) and restored to templates/; build.py now deploys them.
+#   (#BP-1200a-1-ii)
 # - 2026-06-29 [python-coder/TICKET-20260629-BP-1200a-1-ii]: Added
 #   test_feedback_scripts_tracked_in_templates and
 #   test_fresh_clone_build_guard_exits_0 (AC BP-1200a-1-ii).
