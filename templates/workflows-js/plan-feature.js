@@ -186,7 +186,7 @@ async function commitStageOutput(agent, written, stageName, component, isFinal, 
   const stageLabel = stageDisplayName(stageName);
 
   // ---------------------------------------------------------------------------
-  // AC BO-1500c-3 — NO-MAIN-COMMIT DEFENSIVE GUARD
+  // AC BO-1500c-3 — NO-MAIN-COMMIT DEFENSIVE GUARD (fail-CLOSED)
   //
   // Before staging or committing anything, verify that the authoring worktree is
   // NOT on the main branch.  The authoring worktree should always be on a
@@ -194,12 +194,19 @@ async function commitStageOutput(agent, written, stageName, component, isFinal, 
   // violate the invariant that approved AC files reach main ONLY via PR merge
   // (deliverAuthoringBranch()).
   //
-  // Fail-open: if the git branch check itself fails (e.g. git unavailable,
-  // worktree not set up yet), we log a warning and proceed — infrastructure
-  // failure must not block authoring.  Fail-closed: if the branch IS main,
-  // we abort immediately with a clear error and the commit never runs.
+  // Fail-CLOSED: when authoringWorktreePath is set, the branch MUST be
+  // positively confirmed as a non-main authoring branch before any commit
+  // proceeds.  ALL failure paths (agent dispatch throws, non-JSON response,
+  // non-zero exit code, empty or unparseable output) return a structured error
+  // and abort the commit — we cannot risk committing to an unknown branch.
+  //
+  // When authoringWorktreePath is absent (legacy / test mode), the guard is
+  // skipped entirely — there is no worktree isolation contract to enforce.
   // ---------------------------------------------------------------------------
   if (authoringWorktreePath) {
+    let branchConfirmed = false;
+    let branchCheckError = "unknown error during branch check";
+
     try {
       const branchCheckResult = await agent({
         agentType: "status-checker",
@@ -210,10 +217,16 @@ async function commitStageOutput(agent, written, stageName, component, isFinal, 
             `Return JSON: { "output": "<raw stdout line>", "exit_code": <number> }`,
         },
       });
-      const branchParsed =
-        typeof branchCheckResult === "string"
-          ? JSON.parse(branchCheckResult)
-          : branchCheckResult;
+      let branchParsed;
+      try {
+        branchParsed =
+          typeof branchCheckResult === "string"
+            ? JSON.parse(branchCheckResult)
+            : branchCheckResult;
+      } catch (_parseErr) {
+        branchCheckError = "branch check response was not valid JSON";
+        branchParsed = null;
+      }
 
       if (branchParsed && branchParsed.exit_code === 0) {
         const currentBranch = (branchParsed.output || "").trim();
@@ -227,19 +240,34 @@ async function commitStageOutput(agent, written, stageName, component, isFinal, 
             is_conflict: false,
           };
         }
+        if (currentBranch.length > 0) {
+          // Positively confirmed: non-empty, non-main branch name.
+          branchConfirmed = true;
+        } else {
+          branchCheckError = "git branch --show-current returned an empty branch name";
+        }
+      } else if (branchParsed) {
+        branchCheckError =
+          "git branch --show-current exited non-zero (exit_code=" +
+          branchParsed.exit_code + ")";
       } else {
-        // git branch --show-current failed — warn and proceed (fail-open).
-        console.warn(
-          "commitStageOutput: could not verify authoring branch (git branch --show-current failed). " +
-          "Proceeding without branch guard (AC BO-1500c-3)."
-        );
+        branchCheckError = "branch check returned null or unparseable result";
       }
     } catch (branchCheckErr) {
-      // Agent dispatch failure — warn and proceed (fail-open).
-      console.warn(
-        "commitStageOutput: branch check dispatch failed: " + branchCheckErr.message + ". " +
-        "Proceeding without branch guard (AC BO-1500c-3)."
-      );
+      branchCheckError = "agent dispatch failed: " + branchCheckErr.message;
+    }
+
+    if (!branchConfirmed) {
+      // Cannot positively confirm the branch — fail-closed: abort the commit.
+      return {
+        status: "error",
+        message:
+          "safety: cannot confirm authoring branch is not main — commit aborted to prevent " +
+          "committing to an unknown branch (AC BO-1500c-3). Cause: " + branchCheckError,
+        hook_name: null,
+        failing_files: [],
+        is_conflict: false,
+      };
     }
   }
   // ---------------------------------------------------------------------------
@@ -572,6 +600,15 @@ async function scanOrphanedAcDrafts(agent, acStoreDir, authoringWorktreePath) {
       xyStatus === "??";
     if (!isRelevant) { continue; }
 
+    // Resolve the file path against the authoring worktree root so reads
+    // target the correct worktree, not the process CWD.  git status -C <path>
+    // emits paths relative to <path>; without this join the agent reads from
+    // the wrong directory and gets empty content (H-4 fix).
+    // Matches the behaviour of scripts/ac_store/scan_ac_orphans.py.
+    const resolvedFilePath = authoringWorktreePath
+      ? authoringWorktreePath.replace(/\/$/, "") + "/" + filePath.replace(/^\//, "")
+      : filePath;
+
     // Read the YAML file content to qualify it as an orphan.
     let fileContent;
     try {
@@ -579,7 +616,7 @@ async function scanOrphanedAcDrafts(agent, acStoreDir, authoringWorktreePath) {
         agentType: "status-checker",
         input: {
           instructions:
-            `Read the file at path "${filePath}" and return its raw text content.\n` +
+            `Read the file at path "${resolvedFilePath}" and return its raw text content.\n` +
             `Return a JSON object: { "content": "<raw file text>" }\n` +
             `If the file cannot be read, return: { "content": null }`,
         },
@@ -618,7 +655,9 @@ async function scanOrphanedAcDrafts(agent, acStoreDir, authoringWorktreePath) {
       acId = filename.replace(/\.ya?ml$/, "");
     }
 
-    orphans.push({ filePath, acId });
+    // Store the resolved (absolute) path so downstream operations (discard,
+    // commit) target the correct worktree location (H-4 fix).
+    orphans.push({ filePath: resolvedFilePath, acId });
   }
 
   return orphans;
@@ -700,17 +739,38 @@ async function deliverAuthoringBranch(agent, authoringBranch, authoringWorktreeP
           `  Run: ${gitC} push --set-upstream origin ${authoringBranch}\n` +
           `  If the push exits non-zero, return:\n` +
           `    { "status": "error", "message": "push failed: <stderr>", "pr_url": null }\n\n` +
-          `Step 2 — Open the pull request:\n` +
-          `  Run: gh pr create \\\n` +
-          `    --base main \\\n` +
-          `    --head "${authoringBranch}" \\\n` +
-          `    --title "${prTitle.replace(/"/g, '\\"')}" \\\n` +
-          `    --body "$(cat <<'PREOF'\n${prBody}\nPREOF\n)"\n` +
-          `  Capture the PR URL from stdout.\n` +
-          `  If gh pr create exits non-zero, return:\n` +
-          `    { "status": "error", "message": "gh pr create failed: <stderr>", "pr_url": null }\n\n` +
-          `Step 3 — Return success:\n` +
-          `  { "status": "ok", "message": "PR opened", "pr_url": "<url from gh pr create>" }\n\n` +
+          `Step 2 — Switch to the authorized GitHub account (EMU-tolerant, e-3 fix):\n` +
+          `  Run: gh auth switch --user urlmonitor\n` +
+          `  If this exits non-zero, continue anyway (the account may already be active).\n\n` +
+          `Step 3 — Open the pull request (with REST API fallback for EMU accounts):\n` +
+          `  Attempt A — gh pr create (preferred path):\n` +
+          `    Run: gh pr create \\\n` +
+          `      --base main \\\n` +
+          `      --head "${authoringBranch}" \\\n` +
+          `      --title "${prTitle.replace(/"/g, '\\"')}" \\\n` +
+          `      --body "$(cat <<'PREOF'\n${prBody}\nPREOF\n)"\n` +
+          `    Capture the PR URL from stdout.\n` +
+          `    If gh pr create succeeds (exit 0): proceed to Step 4.\n` +
+          `    If gh pr create fails with an error containing "Enterprise Managed User",\n` +
+          `    "createPullRequest", or "GraphQL" in the stderr, fall through to Attempt B.\n` +
+          `    If gh pr create fails for any other reason, return:\n` +
+          `      { "status": "error", "message": "gh pr create failed: <stderr>", "pr_url": null }\n\n` +
+          `  Attempt B — REST API fallback (for EMU-blocked GraphQL accounts):\n` +
+          `    Determine the GitHub org/repo from the git remote URL:\n` +
+          `      Run: ${gitC} remote get-url origin\n` +
+          `      Parse the org and repo name from the URL (e.g. git@github.com:org/repo.git → org/repo).\n` +
+          `    Run the REST API call:\n` +
+          `      gh api -X POST repos/<org>/<repo>/pulls \\\n` +
+          `        -f title="${prTitle.replace(/"/g, '\\"')}" \\\n` +
+          `        -f head="${authoringBranch}" \\\n` +
+          `        -f base="main" \\\n` +
+          `        -f body="${prBody.replace(/"/g, '\\"').replace(/\n/g, "\\n")}"\n` +
+          `    Parse the JSON response to extract .html_url as the PR URL.\n` +
+          `    If gh api exits non-zero, return:\n` +
+          `      { "status": "error", "message": "gh api REST fallback failed: <stderr>", "pr_url": null }\n\n` +
+          `Step 4 — Return success with the PR URL from whichever path succeeded:\n` +
+          `  { "status": "ok", "message": "PR opened", "pr_url": "<url>" }\n` +
+          `  The pr_url must be the full HTTPS URL to the pull request.\n\n` +
           `IMPORTANT: Do NOT add a sign-off to any ticket file — there is no ticket in this flow. ` +
           `Return ONLY the JSON payload described above.`,
       },
@@ -1325,10 +1385,78 @@ async function run({ userInput, agent }) {
     // done and the pipeline advances to the first uncommitted stage.
     // -----------------------------------------------------------------------
     if (committedStageKeys.has(step.stage)) {
-      // Record this stage as committed so cancel messages are accurate.
-      // We do not know exactly which AC IDs were written; leave committedAcs
-      // as-is — the cancel message will correctly report the committed stages.
-      stageResults.push({ stage: step.stage, agent: step.agent, acs: [], skipped: true });
+      // Crash-resume: this stage's output is already in git history.
+      // Recover the AC IDs from the commit body so they are included in
+      // allAcsWritten (and thus in the final approval set and PR body).
+      // Without this recovery, resumed ACs are omitted from the final PR body
+      // and the approval summary, causing phantom-done on partial-run restarts
+      // (H-1 fix, AC BO-1500b-2).
+      //
+      // The commit body written by commitStageOutput() has the line:
+      //   AC IDs: ACD-100, ACD-101, ...
+      // We read the full log body for commits matching this stage's label and
+      // parse that line.
+      const stageDisplayLabel = stageDisplayName(step.stage);
+      const resumeLogCmd = authoringWorktreePath
+        ? `git -C "${authoringWorktreePath}" log --format=%B origin/main..HEAD`
+        : "git log --format=%B origin/main..HEAD";
+
+      let resumedAcIds = [];
+      try {
+        const resumeLogResult = await agent({
+          agentType: "status-checker",
+          input: {
+            instructions:
+              `Run the following command and return ONLY the raw stdout:\n` +
+              `${resumeLogCmd}\n` +
+              `Return JSON: { "output": "<raw stdout>", "exit_code": <number> }`,
+          },
+        });
+        const resumeLogParsed =
+          typeof resumeLogResult === "string"
+            ? JSON.parse(resumeLogResult)
+            : resumeLogResult;
+        if (resumeLogParsed && resumeLogParsed.exit_code === 0) {
+          const logBody = resumeLogParsed.output || "";
+          // Split into individual commit messages (separated by double newlines
+          // between commits in --format=%B output — each commit ends with \n\n).
+          const commitBlocks = logBody.split(/\n{2,}/);
+          for (const block of commitBlocks) {
+            // Match commits whose subject line is for this stage.
+            // Subject format: "plan-feature(<STAGE>[, final]): <component>"
+            const subjectMatch = block.match(
+              new RegExp(
+                `^plan-feature\\(${stageDisplayLabel}(?:[^)]*)?\\):`,
+                "im"
+              )
+            );
+            if (subjectMatch) {
+              // Extract the "AC IDs: ..." line from this commit's body.
+              const acIdsMatch = block.match(/^AC IDs:\s*(.+)$/m);
+              if (acIdsMatch) {
+                const ids = acIdsMatch[1]
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter((s) => s.length > 0 && s !== "(none)");
+                resumedAcIds = ids;
+              }
+              break;
+            }
+          }
+        }
+      } catch (_resumeErr) {
+        // Cannot read git log — proceed without recovering AC IDs.
+        // The stage will still be skipped correctly; only the final summary
+        // will be missing these IDs (acceptable degradation on log-read failure).
+      }
+
+      // Add recovered AC IDs to allAcsWritten so they appear in the final
+      // approval set and PR body (H-1 fix).
+      allAcsWritten.push(...resumedAcIds);
+      // Also add to committedAcs so cancel messages distinguish prior commits.
+      committedAcs.push(...resumedAcIds);
+
+      stageResults.push({ stage: step.stage, agent: step.agent, acs: resumedAcIds, skipped: true });
       continue;
     }
 
