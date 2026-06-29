@@ -48,7 +48,7 @@ import tempfile
 import textwrap
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 # ---------------------------------------------------------------------------
 # sys.path setup — deterministic, cwd-independent
