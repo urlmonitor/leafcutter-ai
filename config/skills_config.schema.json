@@ -186,7 +186,7 @@
     },
     "testing_context": {
       "type": "object",
-      "description": "Test infrastructure knowledge shared by test-planner, test-writer, and test-runner agents. Adopters customize this block to match their project's test layout.",
+      "description": "Test infrastructure knowledge shared by test-writer and test-runner agents. Adopters customize this block to match their project's test layout.",
       "required": ["test_root", "readme_path", "directories", "max_test_duration_seconds"],
       "properties": {
         "test_root": {
@@ -196,12 +196,12 @@
         },
         "readme_path": {
           "type": "string",
-          "description": "Path to the primary test README (read by test-planner at runtime for directory layout, naming conventions, and performance constraints).",
+          "description": "Path to the primary test README (read by test-writer at runtime for directory layout, naming conventions, and performance constraints).",
           "default": "unit_tests/README.md"
         },
         "directories": {
           "type": "object",
-          "description": "Maps each test subdirectory name to its framework and DB-dependency flag. Used by test-planner to produce valid target_dir values and by test-writer to pick the correct setUp/tearDown pattern.",
+          "description": "Maps each test subdirectory name to its framework and DB-dependency flag. Used by test-writer to pick the correct setUp/tearDown pattern and produce valid target_dir values.",
           "additionalProperties": {
             "type": "object",
             "required": ["framework", "db_required"],

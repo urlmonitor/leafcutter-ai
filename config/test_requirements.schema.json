@@ -3,7 +3,7 @@
   "$id": "https://leafcutter/config/test_requirements.schema.json",
   "version": "1.1.0",
   "title": "test_requirements",
-  "description": "Schema for the test_requirements block produced by the test-planner agent and embedded in ticket bodies. Used by test-writer to author tests and by check_test_requirements_refs.py to verify schema version consistency across all consumers. Version 1.1.0 adds live_dispatch type and surface_invoked field.",
+  "description": "Schema for the test_requirements block produced by business-analyst and embedded in ticket bodies. Used by test-writer to author tests and by check_test_requirements_refs.py to verify schema version consistency across all consumers. Version 1.1.0 adds live_dispatch type and surface_invoked field.",
   "type": "object",
   "required": ["test_requirements"],
   "properties": {

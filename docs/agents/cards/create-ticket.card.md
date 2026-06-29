@@ -1,6 +1,7 @@
 ---
 agent_id: create-ticket
 title: "Agent Card: create-ticket"
+description: "Agent card for create-ticket — orchestrates ticket creation from any user request through business-analyst, refinement, and architect-review phases."
 type: card
 status: active
 created: 2026-06-05
@@ -32,7 +33,6 @@ that needs to be captured in tickets/.**
 
 - `user`
 - `create-epic`
-- `product-owner-agent`
 ---
 
 ## Knowledge Flow
@@ -52,7 +52,6 @@ flowchart TD
 
     user["user\n(phase tier)"]:::phase
     create_epic["create-epic\n(phase tier)"]:::phase
-    product_owner_agent["product-owner-agent\n(phase tier)"]:::phase
     create_ticket["create-ticket\n(supervisor tier, priority ?)"]:::target
     business_analyst["business-analyst\n(phase tier)"]:::phase
     refinement["refinement\n(phase tier)"]:::phase
@@ -63,7 +62,6 @@ flowchart TD
 
     user -->|dispatches| create_ticket
     create_epic -->|dispatches| create_ticket
-    product_owner_agent -->|dispatches| create_ticket
     create_ticket -->|spawns| business_analyst
     create_ticket -->|spawns| refinement
     create_ticket -->|spawns| architect_review
