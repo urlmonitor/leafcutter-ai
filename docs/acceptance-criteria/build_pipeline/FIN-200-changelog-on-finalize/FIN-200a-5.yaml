@@ -1,0 +1,48 @@
+id: FIN-200a-5
+title: "Sequence diagram shows finalize invoking changelog generation"
+component: finalize
+level: L2
+status: active
+readiness: approved
+priority: high
+req_status: draft
+work_status: todo
+parent: FIN-200a
+criteria: |
+  Given the finalize-feature architecture documentation
+  When a reader views the finalize sequence diagram
+  Then the diagram shows the finalize workflow invoking the changelog generation
+    capability as a distinct step in the sequence
+  And the diagram shows the changelog entry being written to the changelogs
+    directory
+  And the diagram shows the changelog step occurring before the PR merge step
+depends_on:
+  - FIN-200a
+  - FIN-200a-1
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements: |
+  - The sequence diagram must depict finalize dispatching the existing changelog
+    capability (changelog-agent / emit_entry.py) as a distinct participant/step,
+    not as inline finalize logic
+  - The diagram must show the entry being written to the changelogs/ directory
+  - The diagram must place the changelog step before the merge_pr step (4),
+    consistent with the FIN-100f sequential-ordering precedent and the actual step
+    map (the changelog step sits in the step 3.5 / pre-merge region)
+  - The diagram must reflect only the implemented sequence (depends on FIN-200a-1)
+    and use the project's standard sequence-diagram notation/location
+delivers_to: null
+expects_from:
+  - agent: finalize-feature-workflow
+    contract: "the implemented changelog step whose sequence this diagram depicts"
+doc_links:
+  - path: "templates/workflows/finalize-feature.md"
+    relationship: describes
+    status: exists
+    relevance: "Step map the sequence diagram must reflect, including changelog step placement"
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

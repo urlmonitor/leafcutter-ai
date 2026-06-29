@@ -1,0 +1,55 @@
+id: FIN-200c-4
+title: "State diagram shows the changelog-capture outcomes and their transitions"
+component: finalize
+level: L2
+status: active
+readiness: approved
+priority: high
+req_status: draft
+work_status: todo
+parent: FIN-200c
+criteria: |
+  Given the finalize-feature architecture documentation
+  When a reader views the changelog-capture state diagram
+  Then the diagram shows the three distinct outcomes of the changelog step:
+    entry written, clean no-op (empty range), and capture failure
+  And the diagram shows the no-op and entry-written outcomes transitioning to the
+    PR merge gate
+  And the diagram shows the capture-failure outcome branching by configuration:
+    warn-and-continue by default, halt-before-merge when changelog is required
+  And the diagram shows that a capture failure records a missing-entry condition
+    that is reported rather than silently dropped
+depends_on:
+  - FIN-200c
+  - FIN-200c-1
+  - FIN-200c-2
+  - FIN-200c-3
+  - FIN-200c-1-i
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements: |
+  - The state diagram must depict exactly the three changelog-step outcomes:
+    entry-written, clean no-op (empty range), and capture-failure — matching the
+    discrimination defined in FIN-200c-1-i
+  - entry-written and no-op must transition to the merge_pr gate; capture-failure
+    must branch by the changelog_blocks_merge config: warn-and-continue (default,
+    FIN-200c-1) vs halt-before-merge (FIN-200c-3)
+  - The diagram must show that a capture failure records the missing-entry
+    condition (FIN-200c-2) that is reported, not silently dropped
+  - The diagram must reflect only the implemented outcome handling (depends on
+    FIN-200c-1/2/3/1-i) and use the project's standard state-diagram notation/location
+delivers_to: null
+expects_from:
+  - agent: finalize-feature-workflow
+    contract: "the implemented changelog-step outcome handling this diagram depicts"
+doc_links:
+  - path: "templates/workflows/finalize-feature.md"
+    relationship: describes
+    status: exists
+    relevance: "Halt categories and step outcomes the state diagram must reflect"
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

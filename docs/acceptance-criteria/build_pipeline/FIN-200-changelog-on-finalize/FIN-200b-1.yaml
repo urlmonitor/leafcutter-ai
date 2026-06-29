@@ -1,0 +1,70 @@
+id: FIN-200b-1
+title: "Changelog entry is committed on the feature branch before the PR merge step"
+component: finalize
+level: L2
+status: active
+readiness: approved
+priority: high
+req_status: draft
+work_status: todo
+parent: FIN-200b
+criteria: |
+  Given the finalize-feature step sequence, where the PR merge step is the step
+    that merges the feature branch into main
+  When finalize executes
+  Then the changelog generation-and-commit step runs before the PR merge step
+  And the changelog entry is committed onto the feature branch (the same branch
+    the PR will merge), not onto main directly
+  And no execution path allows the PR merge step to run before the changelog
+    entry has been committed on the feature branch
+  And this ordering mirrors the FIN-100f step-ordering guarantee, except the
+    invariant here is release-history completeness (the entry ships with the
+    work) rather than the FIN-100 integration-safety gate (tests pass before
+    merge)
+depends_on:
+  - FIN-200b
+  - FIN-200a-1
+assigned_agent: finalize-feature-workflow
+estimated_complexity: M
+it_requirements: |
+  - The changelog generate-and-commit step must run before the merge_pr step (4)
+    and on the feature branch — mirror the step 3.5 (pre_merge_ac_closure) pattern,
+    which already commits on the feature branch pre-merge so the merge carries it
+    to origin/main atomically
+  - The step must reset/abort the Step 2 --no-commit --no-ff test-merge before
+    committing (as step 3.5 does) so the changelog commit is clean and does not
+    capture premature origin/main content
+  - Ordering must be enforced structurally by sequential await in finalize-feature.js
+    (no parallel() dispatch), per the FIN-100f precedent — no execution path may
+    reach merge_pr before the changelog step has committed (or cleanly no-op'd)
+  - The entry must be committed onto the feature branch only — never committed or
+    pushed directly to main
+  - git add/commit is external I/O: wrap and log per the project error handling
+    policy; the step must be idempotent (a re-run with the entry already committed
+    is a no-op, like step 3.5)
+  - Boundary note (cite, do not duplicate): FIN-100f guarantees the same sequential
+    ordering for an integration-safety gate; this AC's invariant is release-history
+    completeness — same mechanism, distinct purpose
+delivers_to: null
+expects_from:
+  - agent: changelog-agent
+    contract: "produces and commits the entry file on the feature branch (its Step 8 commit)"
+doc_links:
+  - path: "templates/workflows/finalize-feature.md"
+    relationship: describes
+    status: exists
+    relevance: "Step map — changelog step inserted before step 4 (merge_pr), alongside step 3.5 pre-merge closure"
+  - path: "docs/acceptance-criteria/build_pipeline/FIN-100-pre-merge-safety-gate/FIN-100f.yaml"
+    relationship: relates-to
+    status: exists
+    relevance: "Step-ordering precedent — boundary: FIN-100 = integration safety gate; FIN-200 = release-history completeness"
+  - path: "templates/workflows-js/finalize-feature.js"
+    relationship: describes
+    status: exists
+    relevance: "Sequential-await step body where the changelog commit step is inserted before merge_pr"
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,57 @@
+id: FIN-200a-3
+title: "No entry is generated only when there is genuinely nothing to log"
+component: finalize
+level: L2
+status: active
+readiness: approved
+priority: high
+req_status: draft
+work_status: todo
+parent: FIN-200a
+criteria: |
+  Given finalize is running on a branch whose feature ref range contains zero
+    commits that are not already on main
+  When the changelog step runs
+  Then no changelog entry file is created
+  And finalize treats the empty result as a successful no-op, not as a failure
+  And finalize reports to the developer that no changelog entry was generated
+    because there were no commits to record
+  And the skip occurs only for this genuinely-empty case — a range with one or
+    more feature commits always produces an entry
+depends_on:
+  - FIN-200a
+  - FIN-200a-1
+  - FIN-200a-2
+assigned_agent: finalize-feature-workflow
+estimated_complexity: S
+it_requirements: |
+  - The empty-range branch must be driven by the changelog capability's existing
+    empty-range behavior (changelog-agent Step 2: prints a message and exits
+    without creating a file) — finalize must not invent a parallel emptiness check
+  - finalize must classify the empty-range outcome as a successful no-op
+    (success, no warning, no halt) and surface a clear developer-facing message
+    that no entry was generated because there were no commits to record
+  - The no-op classification must be distinguishable from a genuine capture error
+    (see FIN-200c-1-i): empty-range == clean exit with no file; error == non-zero
+    exit. Do not collapse the two into one branch
+  - A range with one or more feature commits must always produce an entry — the
+    skip path must be reachable ONLY for the genuinely-empty range
+delivers_to: null
+expects_from:
+  - agent: changelog-agent
+    contract: "exits without creating a file when the supplied range is empty (prints a message, no error)"
+doc_links:
+  - path: "templates/agents/changelog-agent.md"
+    relationship: describes
+    status: exists
+    relevance: "Step 2 — empty range prints a message and exits without creating any file"
+  - path: "templates/workflows/finalize-feature.md"
+    relationship: describes
+    status: exists
+    relevance: "Changelog step semantics within the finalize sequence"
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

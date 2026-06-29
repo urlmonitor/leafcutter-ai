@@ -1,0 +1,49 @@
+id: FIN-200b-3
+title: "Sequence diagram shows the entry committed pre-merge and landing in the merge"
+component: finalize
+level: L2
+status: active
+readiness: approved
+priority: high
+req_status: draft
+work_status: todo
+parent: FIN-200b
+criteria: |
+  Given the finalize-feature architecture documentation
+  When a reader views the finalize sequence diagram
+  Then the diagram shows the changelog entry being committed on the feature
+    branch before the PR merge step
+  And the diagram shows the PR merge step carrying that commit to main together
+    with the feature's own commits
+  And the diagram makes clear no separate post-merge follow-up commits the entry
+depends_on:
+  - FIN-200b
+  - FIN-200b-1
+  - FIN-200b-2
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements: |
+  - The diagram must show the changelog commit on the feature branch occurring
+    before the merge_pr step (4), consistent with FIN-200b-1
+  - The diagram must show merge_pr carrying that commit to main together with the
+    feature's own commits (one atomic merge), and must make explicit that no
+    separate post-merge follow-up commits the entry
+  - This may extend the same finalize sequence diagram authored for FIN-200a-5
+    rather than a separate artifact — keep one coherent finalize sequence diagram
+  - The diagram must reflect only the implemented ordering (depends on FIN-200b-1/2)
+    and use the project's standard sequence-diagram notation/location
+delivers_to: null
+expects_from:
+  - agent: finalize-feature-workflow
+    contract: "the implemented pre-merge changelog commit ordering this diagram depicts"
+doc_links:
+  - path: "templates/workflows/finalize-feature.md"
+    relationship: describes
+    status: exists
+    relevance: "Step ordering the sequence diagram must reflect (changelog commit before merge_pr)"
+origin_agent: BrainCandy
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
