@@ -31,7 +31,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
@@ -180,7 +180,7 @@ Scenario: registry bidirectional test passes
 - [x] python-coder — 2026-06-29 12:00
 - [x] test-runner — 2026-06-29 13:00
 - [x] pr-reviewer — 2026-06-29 14:00
-- [ ] commit
+- [x] commit — 2026-06-29 15:00
 - [ ] pull-request
 
 ## Comments
@@ -259,3 +259,14 @@ completion_manifest:
   guard_files_untouched: true
 
 Review passed. Verified §PRR (lines 116–319), §1–§3 (lines 343–396), and §MP (lines 399–475) are all present in templates/skills/plan-feature/SKILL.md with normative content intact. No `/create-ac` active invocation surfaces remain in templates/commands/ or templates/skills/ (matches found are `create-ac-worktree` subcommand references and DECISION HISTORY exempt notes only). skill_registry.json parses as valid JSON with no `id: "create-ac"` entry (36 entries remain). Guard files scripts/setup_ticket_worktree.py, templates/scripts/setup_ticket_worktree.py, config/agent_registry.json, and scripts/build.py show zero diff. Diff scope is exactly the 5 expected files with no unexpected additions.
+
+### 2026-06-29 15:00 — commit (status: ok)
+
+feedback-id: (submit-failed)
+Auto-authorized commit gate: subject "feat(skills): complete ACD-1100c — migrate create-ac spec into plan-feature"; staged files: config/skill_registry.json templates/skills/build-single-ticket/SKILL.md templates/skills/create-ac/SKILL.md templates/skills/plan-feature/SKILL.md tickets/00_inbox/TICKET-20260629-CompleteACD1100c-MigrateCreateAcToplanFeature.md.
+
+SHA: ebcc30c6f3dd77ea3eff32f5d04cb844e3cc4033. Pre-commit hook autofix applied: added `feedback-id: (submit-failed)` to python-coder comment heading before retrying commit.
+
+completion_manifest:
+  commit_executed: true
+  pre_commit_hooks_passed: true
