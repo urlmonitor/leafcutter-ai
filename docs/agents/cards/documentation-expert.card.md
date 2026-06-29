@@ -1,6 +1,7 @@
 ---
 agent_id: documentation-expert
 title: "Agent Card: documentation-expert"
+description: "Diataxis-routing documentation orchestrator that classifies doc requests by intent and dispatches to specialist sub-agents."
 type: card
 status: active
 created: 2026-06-05
@@ -92,7 +93,9 @@ flowchart TD
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `signoff` | — | — |
+| `route-knowledge` | conditional | — |
+| `signoff` | conditional | — |
+| `direct-write` | conditional | Glossary coverage lint — agent writes directly to docs/glossary.md and docs/glossary_blacklist.md for simple glossary updates, without spawning a specialist |
 ---
 
 ## Configuration
@@ -100,6 +103,16 @@ flowchart TD
 *No configuration keys declared.*
 ---
 
+## Behavioral Patterns
+
+| Pattern | Trigger | Action | Decision Boundary |
+|---------|---------|--------|-------------------|
+| `delegate-to-specialist` | Request requires a full diataxis-typed document (how-to guide, ADR, C4 diagram, explanation, or reference page), OR the guide exceeds ~5 implementation steps, OR user explicitly names a doc type | Classify intent → dispatch matching specialist via Agent tool | Delegates when: output is a standalone doc requiring diataxis structure; guide > 5 steps; ADR-level record needed; C4 diagram requested |
+| `direct-write` | Simple inline update to an existing doc — add a paragraph, fix a table row, append a short note — AND no new diataxis-structured document is required | Write or edit the file directly using Read/Edit/Write tools; no specialist spawned | Handles directly when: targeting an existing file; no genre routing needed; single-file patch of low structural complexity |
+| `glossary-coverage-lint` | Novel project terms detected in any written output | Spawn `glossary-triage` to classify candidate terms | Always runs post-write as a conditional delegation |
+
+---
+
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+This agent has two execution paths: **delegation** (complex docs → specialist sub-agents) and **direct-write** (simple inline edits → own tools). The `spawn_allowlist` lists all specialists that may be delegated to for complex cases. The `behavioral_patterns` table above defines the decision boundary between the two paths.

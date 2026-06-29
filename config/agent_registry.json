@@ -749,6 +749,31 @@
                 {
                     "skill_id": "signoff",
                     "mode": "conditional"
+                },
+                {
+                    "skill_id": "direct-write",
+                    "mode": "conditional",
+                    "condition": "glossary coverage lint — agent writes directly to docs/glossary.md and docs/glossary_blacklist.md for simple glossary updates, without spawning a specialist"
+                }
+            ],
+            "behavioral_patterns": [
+                {
+                    "pattern_id": "delegate-to-specialist",
+                    "trigger": "Request requires a full diataxis-typed document (how-to guide, ADR, C4 diagram, explanation, or reference page), OR the guide or doc exceeds 5 implementation steps, OR the user explicitly requests a named doc type",
+                    "action": "Classify intent → dispatch matching specialist (how-to-author, adr-author, architecture-diagram-author, explanation-author, reference-author) via Agent tool",
+                    "decision_boundary": "Delegates when: (1) output is a standalone doc file requiring its own diataxis genre structure, (2) guide exceeds ~5 steps, (3) ADR-level decision record is needed, (4) C4 diagram at any flight level is requested"
+                },
+                {
+                    "pattern_id": "direct-write",
+                    "trigger": "Request is a simple inline doc update — e.g. adding a paragraph to an existing doc, updating a table row, fixing a factual error, or appending a short note — AND the change does not require a new diataxis-structured document",
+                    "action": "Write or edit the documentation file directly using Bash/Read/Edit/Write tools without spawning a specialist sub-agent",
+                    "decision_boundary": "Handles directly when: (1) change targets an existing doc file (not a new standalone doc), (2) no diataxis genre routing is required, (3) change is a single-file patch of low structural complexity"
+                },
+                {
+                    "pattern_id": "glossary-coverage-lint",
+                    "trigger": "After any doc write, agent detects novel project terms in the output",
+                    "action": "Spawn glossary-triage to classify candidate terms",
+                    "decision_boundary": "Always runs post-write; glossary-triage is always a conditional delegation"
                 }
             ],
             "knowledge_channels": [
