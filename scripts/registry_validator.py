@@ -41,6 +41,10 @@ def validate_agent_registry(package_root: Path) -> list[str]:
       5. No self-loops in the spawn graph.
       6. Every skills_used entry for portable agents references an existing
          skill directory in templates/skills/. Domain skills are skipped.
+      7. (Warning only) If an agent's spawn_allowlist contains both the
+         __ticket_phase_agents__ macro and an individually-listed agent whose
+         is_ticket_phase is true, a warning is printed identifying the
+         redundant entry (AC INF-600g-2).
 
     Args:
         package_root: Absolute path to the leafcutter package root
@@ -74,6 +78,7 @@ def validate_agent_registry(package_root: Path) -> list[str]:
     errors.extend(_check_skills_used(portable_agents, package_root))
     errors.extend(validate_verification_flags(template_dir))
     errors.extend(validate_produces_field(agents, template_dir))
+    _warn_redundant_phase_agents(agents)
 
     # Validate category field values against agent_categories (if present in registry)
     registry_path = package_root / "config" / "agent_registry.json"
@@ -389,6 +394,36 @@ def _check_agent_categories(
                 f"Valid categories: {sorted(valid_categories)}."
             )
     return errors
+
+
+def _warn_redundant_phase_agents(agents: list[dict[str, Any]]) -> None:
+    """Warn when spawn_allowlist contains __ticket_phase_agents__ alongside
+    individually-listed agents that already have is_ticket_phase: true.
+
+    The warning is printed to stdout rather than returned as an error because
+    the registry is still structurally valid — the redundancy is informational.
+    Callers should not treat this as a build-blocking condition.
+
+    Args:
+        agents: List of agent dicts from the registry.
+    """
+    phase_agent_ids: set[str] = {
+        a["id"] for a in agents if a.get("is_ticket_phase") is True
+    }
+    for agent in agents:
+        allowlist: list[str] = agent.get("spawn_allowlist") or []
+        if _SPECIAL_TOKEN not in allowlist:
+            continue
+        agent_id = agent["id"]
+        for child_id in allowlist:
+            if child_id == _SPECIAL_TOKEN:
+                continue
+            if child_id in phase_agent_ids:
+                print(
+                    f"[WARNING] {agent_id}.spawn_allowlist: {child_id} is redundantly listed "
+                    f"because it is already included in {_SPECIAL_TOKEN} "
+                    f"(is_ticket_phase: true)"
+                )
 
 
 def _check_self_loops(spawn_map: dict[str, list[str]]) -> list[str]:
@@ -754,4 +789,11 @@ if __name__ == "__main__":
 #   "asymmetric spawn: A.spawn_allowlist includes B, but B.spawned_by does not
 #    include A" and "asymmetric spawn: A.spawned_by includes B, but B.spawn_allowlist
 #    does not include A". Error names both agents involved in the asymmetry.
+# - 2026-06-29 [python-coder/EPIC-SelfDescribingAgentsCorrections/02]: Added (#EPIC-SelfDescribingAgentsCorrections/02)
+#   _warn_redundant_phase_agents() per AC INF-600g-2. When an agent's
+#   spawn_allowlist contains __ticket_phase_agents__ alongside any individually-
+#   listed agent with is_ticket_phase: true, a [WARNING] is printed to stdout.
+#   Wired into validate_agent_registry() after validate_produces_field(). The
+#   check is advisory-only (printed as WARNING, not returned as error) because
+#   the registry remains structurally valid; the redundancy is a style issue.
 # ====================================================================
