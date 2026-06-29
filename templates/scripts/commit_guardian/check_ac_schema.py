@@ -11,7 +11,9 @@ ARCHITECTURE: Phase 1 validates only STAGED AC YAML files against
     delegated to _ac_schema_validators.py and use the full on-disk store as a
     lookup index (not narrowed to staged only). Phase 2 compares HEAD vs staged
     for each modified AC and blocks if implements_pattern was present in HEAD
-    but absent in staged. Fail-open.
+    but absent in staged. HEAD blobs for all modified files are fetched in a
+    single batched ``git cat-file --batch`` invocation (O(1) subprocesses
+    regardless of the number of staged-modified files). Fail-open.
 
 Exit codes:
     0 - All staged AC YAML files pass validation
@@ -39,6 +41,14 @@ DECISION HISTORY:
     analogous to _get_modified_ac_paths(). Cross-file lookup index continues to
     use the full on-disk store. HOOK_TEST_STAGED_FILES env var seam added for
     tests (mirrors HOOK_TEST_FILES_MODIFIED for Phase 2).
+  - 2026-06-29 [python-coder/fix/ac-schema-git-batch]: Replaced per-file
+    ``git show HEAD:<path>`` with a single batched ``git cat-file --batch``
+    invocation in _fetch_head_yaml_batch(). _load_head_yaml() now accepts an
+    optional head_cache dict for O(1) lookups; the single-subprocess fallback
+    is preserved for any direct callers that do not supply the cache. stdout
+    is read in binary mode for byte-accurate size slicing (multibyte-safe).
+    Removed _assign_fallback_yaml() and all mock-tolerance branches — the
+    parser now handles only real git cat-file protocol output.
 """
 
 from __future__ import annotations
@@ -90,16 +100,166 @@ def _find_project_root() -> Path | None:
 # implements_pattern field-preservation check (ACS-500f-1)
 # ---------------------------------------------------------------------------
 
-def _load_head_yaml(rel_path: str, project_root: Path | None) -> dict | None:
+def _fetch_head_yaml_batch(
+    rel_paths: list[str],
+    project_root: Path | None,
+) -> dict[str, dict | None]:
+    """Fetch HEAD versions of multiple AC YAML files in ONE git cat-file --batch call.
+
+    Sends all object specs (``HEAD:<path>``) to ``git cat-file --batch`` via
+    stdin as UTF-8 bytes and parses the binary batch protocol output.  Each
+    found entry in the output has the form::
+
+        <oid> blob <size>\\n
+        <content — exactly <size> bytes>\\n
+
+    A missing object yields::
+
+        <spec> missing\\n
+
+    Sizes in the protocol are byte counts, so stdout is read in binary mode and
+    content is sliced by byte position before decoding.  This is correct for
+    any file encoding, including multibyte UTF-8 content.
+
+    Fail-open semantics: if the protocol is genuinely malformed (should never
+    happen with a real git process), a WARNING is printed to stderr and all
+    remaining paths receive None rather than raising or producing false positives.
+
+    Args:
+        rel_paths: Repo-relative path strings whose HEAD content is needed.
+        project_root: Absolute repo root path, or None.
+
+    Returns:
+        Mapping of rel_path -> parsed YAML dict (or None on any error/missing).
+    """
+    result_map: dict[str, dict | None] = {p: None for p in rel_paths}
+
+    if not rel_paths:
+        return result_map
+
+    if os.environ.get("HOOK_NO_GIT"):
+        return result_map
+
+    git_cmd = ["git"]
+    if project_root:
+        git_cmd = ["git", "-C", str(project_root)]
+
+    # Encode the stdin payload as bytes; sizes in the protocol are byte counts.
+    stdin_bytes = ("\n".join(f"HEAD:{p}" for p in rel_paths) + "\n").encode("utf-8")
+
+    try:
+        result = subprocess.run(
+            [*git_cmd, "cat-file", "--batch"],
+            input=stdin_bytes,
+            capture_output=True,
+            text=False,
+            timeout=30,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        print(
+            f"{_HOOK_PREFIX} WARNING: git cat-file --batch failed: {exc}",
+            file=sys.stderr,
+        )
+        return result_map
+
+    if result.returncode != 0:
+        return result_map
+
+    stdout: bytes = result.stdout
+    path_iter = iter(rel_paths)
+    pos = 0
+
+    while pos < len(stdout):
+        # Read header line (terminated by b"\n").
+        newline_idx = stdout.find(b"\n", pos)
+        if newline_idx == -1:
+            break
+        header = stdout[pos:newline_idx].decode("utf-8", errors="replace")
+        pos = newline_idx + 1
+
+        header_parts = header.split()
+
+        if len(header_parts) == 3 and header_parts[1] == "blob":
+            # Found entry: "<oid> blob <size>\n<content><size bytes>\n"
+            try:
+                size = int(header_parts[2])
+            except ValueError:
+                # Malformed size field — protocol error; treat remaining as missing.
+                print(
+                    f"{_HOOK_PREFIX} WARNING: git cat-file --batch returned malformed "
+                    f"size in header '{header}'; treating remaining paths as missing.",
+                    file=sys.stderr,
+                )
+                break
+
+            # Read exactly <size> bytes of content, then skip the trailing b"\n".
+            content_bytes = stdout[pos:pos + size]
+            pos += size + 1  # +1 for the trailing newline after the blob
+
+            try:
+                rel_path = next(path_iter)
+            except StopIteration:
+                break
+
+            try:
+                content_str = content_bytes.decode("utf-8")
+            except UnicodeDecodeError as exc:
+                print(
+                    f"{_HOOK_PREFIX} WARNING: cannot decode HEAD:{rel_path} as UTF-8: "
+                    f"{exc}; treating as missing.",
+                    file=sys.stderr,
+                )
+                # result_map[rel_path] stays None — fail-open.
+                continue
+
+            result_map[rel_path] = load_yaml_from_string(
+                content_str, source_label=f"HEAD:{rel_path}"
+            )
+
+        elif len(header_parts) >= 2 and header_parts[-1] == "missing":
+            # Missing entry: "<spec> missing\n" — object absent at HEAD (new file).
+            try:
+                next(path_iter)
+            except StopIteration:
+                break
+
+        else:
+            # Genuinely unrecognised header — real git should never produce this.
+            print(
+                f"{_HOOK_PREFIX} WARNING: git cat-file --batch returned unrecognised "
+                f"header '{header}'; treating remaining paths as missing.",
+                file=sys.stderr,
+            )
+            break
+
+    return result_map
+
+
+def _load_head_yaml(
+    rel_path: str,
+    project_root: Path | None,
+    head_cache: dict[str, dict | None] | None = None,
+) -> dict | None:
     """Load HEAD version of an AC YAML file from git; None on any error.
+
+    When ``head_cache`` is supplied (pre-built by ``_fetch_head_yaml_batch``),
+    this function performs an O(1) dict lookup and never spawns a subprocess.
+    When ``head_cache`` is None (direct callers, backward compatibility), a
+    single ``git show HEAD:<rel_path>`` subprocess is used instead.
 
     Args:
         rel_path: Repo-relative path.
         project_root: Absolute repo root path, or None.
+        head_cache: Optional pre-built mapping from rel_path to parsed dict
+            (or None).  When provided, suppresses all subprocess calls for
+            this path.
 
     Returns:
         Parsed dict or None.
     """
+    if head_cache is not None:
+        return head_cache.get(rel_path)
+
     if os.environ.get("HOOK_NO_GIT"):
         return None
 
@@ -234,6 +394,7 @@ def _check_implements_pattern_preserved(
     staged_abs_path: str,
     rel_path: str,
     project_root: Path | None,
+    head_cache: dict[str, dict | None] | None = None,
 ) -> list[str]:
     """Block if implements_pattern was present in HEAD but absent in staged.
 
@@ -241,6 +402,8 @@ def _check_implements_pattern_preserved(
         staged_abs_path: Absolute path to the staged file on disk.
         rel_path: Repo-relative path for git show.
         project_root: Absolute repo root path, or None.
+        head_cache: Optional pre-built mapping from rel_path to parsed HEAD
+            dict (or None); when supplied, no subprocess is spawned.
 
     Returns:
         Violation strings; empty when the field was not dropped.
@@ -264,7 +427,7 @@ def _check_implements_pattern_preserved(
     if staged_data is None:
         return []
 
-    head_data = _load_head_yaml(rel_path, project_root)
+    head_data = _load_head_yaml(rel_path, project_root, head_cache=head_cache)
     if head_data is None:
         return []
 
@@ -457,11 +620,15 @@ def main() -> int:
     if test_files_env:
         extra = test_files_env.replace(os.pathsep, "\n").splitlines()
         modified_paths = [p.strip() for p in extra if p.strip() and p.strip().endswith(".yaml")]
+    # Batch-fetch all HEAD blobs in ONE git cat-file --batch subprocess (O(1)).
+    head_cache = _fetch_head_yaml_batch(modified_paths, project_root)
     for rel_path in modified_paths:
         abs_path = rel_path
         if not Path(rel_path).is_absolute() and project_root:
             abs_path = str(project_root / rel_path)
-        p_errs = _check_implements_pattern_preserved(abs_path, rel_path, project_root)
+        p_errs = _check_implements_pattern_preserved(
+            abs_path, rel_path, project_root, head_cache=head_cache
+        )
         if p_errs:
             failed.append((Path(abs_path), p_errs))
     if not failed:
