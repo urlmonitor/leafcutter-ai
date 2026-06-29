@@ -237,9 +237,150 @@ def test_onboard_hook_opt_in_is_deployable() -> None:
     )
 
 
+# ---------------------------------------------------------------------------
+# BP-1200a-1-ii: fresh-clone collection sentinel
+# ---------------------------------------------------------------------------
+
+
+def test_feedback_scripts_tracked_in_templates() -> None:
+    """templates/scripts/feedback/ must contain the canonical feedback scripts.
+
+    On a fresh clone the gitignored ``scripts/feedback/`` build-output directory
+    is absent.  Per ADR-016 the tracked source lives under
+    ``templates/scripts/feedback/`` so that ``build_feedback()`` can deploy it
+    and ``_manifest_feedback_scripts()`` reports it as deployable — preventing
+    the ``_check_script_reference_guard`` from aborting build.py with exit 1.
+
+    This test asserts that the canonical set of feedback scripts required by
+    agent/skill templates are present in the tracked template source.  If any
+    script is missing the guard will abort the build on every fresh clone.
+
+    AC BP-1200a-1-ii.
+    """
+    # covers: BP-1200a-1-ii
+    templates_feedback = _REAL_PACKAGE_ROOT / "templates" / "scripts" / "feedback"
+
+    assert templates_feedback.is_dir(), (
+        f"templates/scripts/feedback/ does not exist at {templates_feedback}. "
+        "The canonical tracked source for feedback scripts is missing. "
+        "On a fresh clone this causes build.py to exit 1 (broken script references). "
+        "See ADR-016 for the source-of-truth policy."
+    )
+
+    required_scripts = [
+        "submit_feedback.py",
+        "aggregate.py",
+        "resolve_feedback.py",
+        "emit_hook_finding.py",
+        "list_tags.py",
+    ]
+    for script_name in required_scripts:
+        script_path = templates_feedback / script_name
+        assert script_path.is_file(), (
+            f"templates/scripts/feedback/{script_name} is missing. "
+            f"This script is referenced by agent/skill templates and must be "
+            f"present in the tracked source so build.py deploys it on a fresh "
+            f"clone. Without it _check_script_reference_guard() exits 1. "
+            f"(AC BP-1200a-1-ii)"
+        )
+
+
+def test_fresh_clone_build_guard_exits_0() -> None:
+    """_check_script_reference_guard() must return 0 simulating a fresh-clone state.
+
+    On a fresh clone ``scripts/feedback/`` is absent (gitignored build output).
+    After PR #164 removed the tracked source, the guard found no deployable
+    feedback scripts and aborted with exit 1 — breaking all CI test collection.
+
+    This test verifies that with ``templates/scripts/feedback/`` present as the
+    tracked canonical source (ADR-016), the guard returns 0 even when
+    ``scripts/feedback/`` is absent.  It calls the REAL guard against the REAL
+    package root — same as ``test_guard_exits_0_on_clean_package`` but named
+    explicitly to document the fresh-clone regression scenario.
+
+    AC BP-1200a-1-ii: zero collection errors on a fresh clone.
+    """
+    # covers: BP-1200a-1-ii
+    result = _build._check_script_reference_guard(_REAL_PACKAGE_ROOT)
+    assert result == 0, (
+        f"_check_script_reference_guard() returned {result!r}. "
+        "Expected 0 — no broken script references — so build.py does not exit 1 "
+        "on a fresh clone. "
+        "Check that templates/scripts/feedback/ contains all scripts referenced in "
+        "agent/skill templates and that _manifest_feedback_scripts() scans "
+        "templates/scripts/feedback/ (not the gitignored scripts/feedback/). "
+        "(AC BP-1200a-1-ii)"
+    )
+
+
+# ---------------------------------------------------------------------------
+# BP-1200a-1-ii follow-up: commit_guardian scripts must be in templates/
+# ---------------------------------------------------------------------------
+
+
+def test_commit_guardian_missing_scripts_in_templates() -> None:
+    """templates/scripts/commit_guardian/ must contain the 3 previously-missing scripts.
+
+    After PR #180 restored templates/scripts/feedback/, three scripts were still
+    missing from templates/scripts/commit_guardian/:
+    - known_failing_tests.py
+    - transform_decision_history.py
+    - check_test_fixture_bloat.py
+
+    Their absence caused ModuleNotFoundError at pytest collection time for:
+    - tests/test_known_failing_tests.py
+    - tests/test_transform_decision_history.py
+    - unit_tests/commit_guardian/test_check_test_fixture_bloat.py
+
+    This test asserts that all 3 files are present in the tracked template source
+    so that build.py deploys them and they remain importable after a fresh clone.
+
+    AC BP-1200a-1-ii (follow-up: zero collection errors).
+    """
+    # covers: BP-1200a-1-ii
+    templates_commit_guardian = _REAL_PACKAGE_ROOT / "templates" / "scripts" / "commit_guardian"
+
+    assert templates_commit_guardian.is_dir(), (
+        f"templates/scripts/commit_guardian/ does not exist at {templates_commit_guardian}. "
+        "The canonical tracked source for commit_guardian scripts is missing."
+    )
+
+    required_scripts = [
+        "known_failing_tests.py",
+        "transform_decision_history.py",
+        "check_test_fixture_bloat.py",
+    ]
+    for script_name in required_scripts:
+        script_path = templates_commit_guardian / script_name
+        assert script_path.is_file(), (
+            f"templates/scripts/commit_guardian/{script_name} is missing. "
+            f"This script is imported by tests and must be present in the tracked "
+            f"template source so build.py deploys it on a fresh clone. "
+            f"Without it, pytest --collect-only fails with ModuleNotFoundError. "
+            f"(AC BP-1200a-1-ii follow-up)"
+        )
+
+
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-06-29 [python-coder/TICKET-20260629-BP-1200a-1-ii follow-up]: Added
+#   test_commit_guardian_missing_scripts_in_templates. Root cause: 3 scripts
+#   (known_failing_tests.py, transform_decision_history.py,
+#   check_test_fixture_bloat.py) were absent from
+#   templates/scripts/commit_guardian/, causing pytest --collect-only to fail
+#   with ModuleNotFoundError for 3 test files. Fix: recovered from git history
+#   (83737a44^) and restored to templates/; build.py now deploys them.
+#   (#BP-1200a-1-ii)
+# - 2026-06-29 [python-coder/TICKET-20260629-BP-1200a-1-ii]: Added
+#   test_feedback_scripts_tracked_in_templates and
+#   test_fresh_clone_build_guard_exits_0 (AC BP-1200a-1-ii).
+#   Root cause: PR #164 untracked scripts/feedback/ (converting it to a
+#   gitignored build output) but left no tracked source for fresh clones.
+#   Fix: templates/scripts/feedback/ is now the canonical source
+#   (mirrors templates/scripts/commit_guardian/ pattern).
+#   _manifest_feedback_scripts() and build_feedback() now read from there.
+#   See ADR-016 for the policy. (#BP-1200a-1-ii)
 # - 2026-06-22 [debug/quick-fix]: Added test_onboard_hook_opt_in_is_deployable
 #   (AC BP-900d). Regression sentinel for the script-promotion gap that made
 #   `build.py --target-dir` abort on the onboard.md reference. Asserts the

@@ -1090,9 +1090,16 @@ def build_feedback(target_root: Path, config: dict[str, Any],
                    dry_run: bool, force: bool) -> int:
     """Deploy feedback scripts and config to ``<target_root>/scripts/feedback/`` and ``<target_root>/config/``.
 
-    Copies the write-path scripts (submit_feedback.py, emit_hook_finding.py,
-    list_tags.py) and feedback_categories.yaml so the signoff skill's feedback
-    emission actually works from a deployed consumer project.
+    Reads feedback scripts from ``templates/scripts/feedback/`` (the canonical
+    tracked source, per ADR-016) so that a fresh clone with no gitignored build
+    outputs still produces a correct deployment. This mirrors the pattern used
+    by ``build_commit_guardian``, which reads from
+    ``templates/scripts/commit_guardian/``.
+
+    All ``.py`` and text files have config placeholders injected via
+    ``inject_config``; the directory is scanned with ``rglob`` so that any
+    sub-directories are also handled. ``feedback_categories.yaml`` is deployed
+    from ``config/feedback_categories.yaml`` in the package root.
 
     Args:
         target_root: Absolute path to the target project root directory.
@@ -1103,7 +1110,7 @@ def build_feedback(target_root: Path, config: dict[str, Any],
     Returns:
         Count of files written (or that would be written in dry-run mode).
     """
-    feedback_src = PACKAGE_ROOT / "scripts" / "feedback"
+    feedback_src = TEMPLATES_DIR / "scripts" / "feedback"
     config_src = PACKAGE_ROOT / "config" / "feedback_categories.yaml"
     if not feedback_src.exists():
         return 0
@@ -1111,26 +1118,34 @@ def build_feedback(target_root: Path, config: dict[str, Any],
     output_dir = target_root / "scripts" / "feedback"
     written = 0
 
-    deploy_scripts = [
-        "submit_feedback.py",
-        "emit_hook_finding.py",
-        "list_tags.py",
-        # Class B resolution: aggregate.py and resolve_feedback.py are referenced in
-        # templates (retrospective-agent.md, feedback-review/SKILL.md, ticket-wiring/SKILL.md)
-        # but were not deployed by this phase. Added to close the deploy gap.
-        "aggregate.py",
-        "resolve_feedback.py",
-    ]
-    for script_name in deploy_scripts:
-        src_file = feedback_src / script_name
-        if not src_file.is_file():
+    for template_file in sorted(feedback_src.rglob("*")):
+        if not template_file.is_file():
             continue
-        output_path = output_dir / script_name
-        text = inject_config(src_file.read_text(encoding="utf-8"), config)
-        if _write(output_path, text, dry_run, force):
-            written += 1
-            if not dry_run:
-                print(f"  feedback/{script_name}")
+        rel = template_file.relative_to(feedback_src)
+        output_path = output_dir / rel
+
+        if template_file.suffix in (".py", ".yaml", ".yml", ".json", ".md"):
+            text = inject_config(template_file.read_text(encoding="utf-8"), config)
+            if _write(output_path, text, dry_run, force):
+                written += 1
+                if not dry_run:
+                    print(f"  feedback/{rel}")
+        else:
+            if not _should_overwrite(output_path, force):
+                continue
+            if _files_content_identical(template_file, output_path):
+                global _uptodate_count  # noqa: PLW0603
+                _uptodate_count += 1
+                continue
+            if dry_run:
+                print(f"  [DRY-RUN] would copy scripts/feedback/{rel}")
+                written += 1
+            else:
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                import shutil as _shutil
+                _shutil.copy2(template_file, output_path)
+                print(f"  scripts/feedback/{rel}")
+                written += 1
 
     if config_src.is_file():
         config_output = target_root / "config" / "feedback_categories.yaml"
