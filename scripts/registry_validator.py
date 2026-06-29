@@ -236,9 +236,8 @@ def _check_allowlist_has_matching_spawned_by(
             child_spawned_by = spawned_by_map.get(child_id, [])
             if agent_id not in child_spawned_by and agent_id not in _EXTERNAL_CALLERS:
                 errors.append(
-                    f"Bidirectional mismatch: '{agent_id}' lists '{child_id}' in "
-                    f"spawn_allowlist, but '{child_id}' does not list '{agent_id}' "
-                    f"in its spawned_by."
+                    f"asymmetric spawn: {agent_id}.spawn_allowlist includes {child_id}, "
+                    f"but {child_id}.spawned_by does not include {agent_id}"
                 )
     return errors
 
@@ -271,9 +270,8 @@ def _check_spawned_by_has_matching_allowlist(
             parent_allowlist = spawn_map.get(parent_id, [])
             if agent_id not in parent_allowlist and _SPECIAL_TOKEN not in parent_allowlist:
                 errors.append(
-                    f"Bidirectional mismatch: '{agent_id}' lists '{parent_id}' in "
-                    f"spawned_by, but '{parent_id}' does not list '{agent_id}' in "
-                    f"its spawn_allowlist."
+                    f"asymmetric spawn: {agent_id}.spawned_by includes {parent_id}, "
+                    f"but {parent_id}.spawn_allowlist does not include {agent_id}"
                 )
     return errors
 
@@ -749,4 +747,11 @@ if __name__ == "__main__":
 #   whose value is in the allowed enum, and that every agent's template frontmatter
 #   also declares 'produces'. Wired into validate_agent_registry() as the final
 #   check. AC BO-510-3-i: 17 new tests all green.
+# - 2026-06-29 [python-coder/EPIC-SelfDescribingAgentsCorrections/01]: Updated error (#EPIC-SelfDescribingAgentsCorrections/01)
+#   message format in _check_allowlist_has_matching_spawned_by and
+#   _check_spawned_by_has_matching_allowlist to use "asymmetric spawn:" prefix per
+#   AC INF-600g-1. Previous format was "Bidirectional mismatch:". New format:
+#   "asymmetric spawn: A.spawn_allowlist includes B, but B.spawned_by does not
+#    include A" and "asymmetric spawn: A.spawned_by includes B, but B.spawn_allowlist
+#    does not include A". Error names both agents involved in the asymmetry.
 # ====================================================================
