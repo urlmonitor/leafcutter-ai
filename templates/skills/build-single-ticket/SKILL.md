@@ -462,8 +462,8 @@ Do not add any other preamble or summary text.
   a `(status: question)` or a `failed` payload, this skill is a
   passthrough — it does not try to answer on the user's behalf.
 - **Does not create AC-authoring worktrees.** The dedicated AC-authoring
-  worktree (branched from `origin/main`) is created by `/create-ac` and
-  `/plan-feature` via `scripts/setup_ticket_worktree.py create-ac-worktree`
+  worktree (branched from `origin/main`) is created by `/plan-feature`
+  via `scripts/setup_ticket_worktree.py create-ac-worktree`
   (AC BO-1500a-1). This skill creates implementation worktrees (branched
   from local `main`) for ticket execution — a separate concern from AC
   authoring.
@@ -473,13 +473,13 @@ Do not add any other preamble or summary text.
   rather than failing with "worktree already exists" or "branch already exists".
   Existing AC YAML files committed on the branch are never deleted or overwritten.
   **Main-branch invocation is supported (AC BO-1500e-1):** if the user is on
-  the protected `main` branch when they run `/create-ac` or `/plan-feature`,
+  the protected `main` branch when they run `/plan-feature`,
   the AC-authoring workflow still proceeds normally — it creates the authoring
   worktree from `origin/main` regardless of the user's current checkout.  No
   branch switch is required.  This skill's implementation worktrees use the same
   structural isolation principle but branch from local `main` rather than
   `origin/main` (see `scripts/setup_ticket_worktree.py` for the distinction).
-  See `templates/skills/create-ac/SKILL.md §MP` for the full specification of
+  See `templates/skills/plan-feature/SKILL.md §MP` for the full specification of
   main-branch invocation behaviour for the AC-authoring workflows.
 - **Does not push the AC-authoring branch or open the AC-authoring PR.** After
   the user gives final approval in `/plan-feature`, the `deliverAuthoringBranch()`
@@ -505,8 +505,8 @@ Do not add any other preamble or summary text.
     privileged merge, and no mechanism by which approved AC files can reach
     `main` while skipping the required checks.
 - **Does not enforce the per-stage AC commit invariant.** The commit-before-next-stage
-  invariant (AC BO-1500b-1) is owned by the `/create-ac` skill
-  (`templates/skills/create-ac/SKILL.md §1–§3`) and enforced mechanically by the
+  invariant (AC BO-1500b-1) is specified in the `/plan-feature` skill
+  (`templates/skills/plan-feature/SKILL.md §1–§3`) and enforced mechanically by the
   `commitStageOutput()` call in `scripts/workflows/plan-feature.js`. That function
   commits each stage's AC YAML files (product-owner-v3 → business-analyst-v3 →
   it-po-v3) to the authoring branch immediately after user approval, blocking the
