@@ -6,7 +6,7 @@ GOAL: Regression tests for check_ac_parent_covered_by.py, the pre-commit hook
 Includes:
   - Correctness tests: violation detected when parent omits child; clean when
     parent includes child.
-  - PERFORMANCE REGRESSION TEST: asserts the AC store is walked at most once
+  - PERFORMANCE REGRESSION TEST: asserts the AC store is walked exactly once
     regardless of how many staged files are checked. The current code calls
     _resolve_parent_file per staged file, which does a full rglob walk per call
     — O(staged_files × store_files). The fix must build an id→file index once
@@ -18,7 +18,7 @@ ARCHITECTURE: Tests call main() directly via importlib so no subprocess is
     The full-store walk count is instrumented by patching Path.rglob and
     counting how many times the AC store rglob is invoked.
 
-# covers: UNKNOWN
+Performance-regression guard for check-ac-parent-covered-by — no formal AC.
 """
 
 from __future__ import annotations
@@ -31,10 +31,36 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+# ---------------------------------------------------------------------------
+# Repo root and hook path — derived from THIS file's location so resolution is
+# stable regardless of pytest's cwd.
+# parents[0] = unit_tests/commit_guardian/
+# parents[1] = unit_tests/
+# parents[2] = worktree root  (contains scripts/, templates/, etc.)
+# ---------------------------------------------------------------------------
+_REPO_ROOT = Path(__file__).resolve().parents[2]
 _HOOK_PATH = (
     _REPO_ROOT / "templates" / "scripts" / "commit_guardian" / "check_ac_parent_covered_by.py"
 )
+
+# ---------------------------------------------------------------------------
+# Deterministic import of derive_parent_id — resolved from the known worktree
+# path, independent of pytest cwd or sys.path order.
+# ---------------------------------------------------------------------------
+_AC_PARENT_ID_PATH = _REPO_ROOT / "scripts" / "ac_store" / "ac_parent_id.py"
+
+if not _AC_PARENT_ID_PATH.exists():
+    raise ImportError(
+        f"ac_parent_id.py not found at {_AC_PARENT_ID_PATH}. "
+        "Check that the worktree root is correctly computed from __file__."
+    )
+
+_ac_parent_id_spec = importlib.util.spec_from_file_location(
+    "ac_parent_id_test_shim", str(_AC_PARENT_ID_PATH)
+)
+_ac_parent_id_mod = importlib.util.module_from_spec(_ac_parent_id_spec)  # type: ignore[arg-type]
+_ac_parent_id_spec.loader.exec_module(_ac_parent_id_mod)  # type: ignore[union-attr]
+_derive_parent_id = _ac_parent_id_mod.derive_parent_id
 
 # ---------------------------------------------------------------------------
 # Load the module under test via importlib (standalone file, no package import)
@@ -47,8 +73,6 @@ try:
     _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
 
     _check_file = _mod._check_file  # type: ignore[attr-defined]
-    _resolve_parent_file = _mod._resolve_parent_file  # type: ignore[attr-defined]
-    _get_derive_parent_id = _mod._get_derive_parent_id  # type: ignore[attr-defined]
     _main = _mod.main  # type: ignore[attr-defined]
     _IMPORT_OK = True
     _IMPORT_ERROR = ""
@@ -144,11 +168,13 @@ class TestCorrectnessViolationDetected(unittest.TestCase):
 
     @_requires_import
     def test_ac_perf_correctness_violation_when_child_missing_from_covered_by(self):
-        # covers: UNKNOWN
         """A child AC staged whose parent covered_by does not list it → violation returned.
 
         This verifies the hook's core detection logic so that any perf fix cannot
         silently break correctness.
+
+        Uses _derive_parent_id imported deterministically from the worktree's own
+        scripts/ac_store/ac_parent_id.py — no cwd dependency, no skipTest fallback.
         """
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
@@ -166,16 +192,11 @@ class TestCorrectnessViolationDetected(unittest.TestCase):
                 _child_yaml("ACS-100a-1", "ACS-100a"),
             )
 
-            try:
-                derive_parent_id = _get_derive_parent_id()
-            except ImportError:
-                self.skipTest("derive_parent_id not importable in this env")
-
             old_env = os.environ.copy()
             os.environ["HOOK_ROOT"] = tmpdir
             os.environ["HOOK_TEST_FILES"] = str(child_path)
             try:
-                violations = _check_file(str(child_path), derive_parent_id)
+                violations = _check_file(str(child_path), _derive_parent_id)
             finally:
                 os.environ.clear()
                 os.environ.update(old_env)
@@ -194,10 +215,12 @@ class TestCorrectnessViolationDetected(unittest.TestCase):
 
     @_requires_import
     def test_ac_perf_correctness_no_violation_when_child_in_covered_by(self):
-        # covers: UNKNOWN
         """A child AC staged whose parent covered_by lists it → no violation returned.
 
         Verifies the clean (green) path so that the perf fix cannot break it.
+
+        Uses _derive_parent_id imported deterministically from the worktree's own
+        scripts/ac_store/ac_parent_id.py — no cwd dependency, no skipTest fallback.
         """
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
@@ -214,16 +237,11 @@ class TestCorrectnessViolationDetected(unittest.TestCase):
                 _child_yaml("ACS-200a-1", "ACS-200a"),
             )
 
-            try:
-                derive_parent_id = _get_derive_parent_id()
-            except ImportError:
-                self.skipTest("derive_parent_id not importable in this env")
-
             old_env = os.environ.copy()
             os.environ["HOOK_ROOT"] = tmpdir
             os.environ["HOOK_TEST_FILES"] = str(child_path)
             try:
-                violations = _check_file(str(child_path), derive_parent_id)
+                violations = _check_file(str(child_path), _derive_parent_id)
             finally:
                 os.environ.clear()
                 os.environ.update(old_env)
@@ -240,48 +258,47 @@ class TestCorrectnessViolationDetected(unittest.TestCase):
 # Performance regression test
 # ---------------------------------------------------------------------------
 
-class TestStoreWalkedAtMostOnce(unittest.TestCase):
-    """PERFORMANCE REGRESSION: the AC store must be walked at most once.
+class TestStoreWalkedExactlyOnce(unittest.TestCase):
+    """PERFORMANCE REGRESSION: the AC store must be walked exactly once.
 
     Against the CURRENT (unfixed) code, _resolve_parent_file calls
     ac_store_root.rglob('*.yaml') once per staged file, so with N staged files
-    the store is walked N times. This test asserts the walk happens at most once
-    regardless of how many staged files are processed, which FAILS (red) until
-    the index-once fix is applied.
+    the store is walked N times. This test asserts the walk happens exactly once
+    regardless of batch size, which FAILS (red) until the index-once fix is applied.
 
-    Instrumentation: we patch Path.rglob at the module level inside check_ac_parent_covered_by
-    and count calls whose argument is '*.yaml' on the AC store path. After the fix,
-    the count should be <=1 (index built once, then re-used).
+    Two different batch sizes (N=4 and N=12) each assert == 1.  This rules out
+    any hidden O(N) factor that a single-N test with <= 1 could not catch, and a
+    count of 0 also fails (positive lower bound), so instrumentation drift is caught.
+
+    Instrumentation: we patch Path.rglob globally and count calls whose argument
+    is '*.yaml' on the AC store path prefix. A count of 0 is also a failure —
+    it means the filter stopped matching (path refactor, pattern change) and the
+    test would give a false green.
     """
 
-    # Number of child AC files to stage in the batch test.
-    # Large enough that the O(N) vs O(1) distinction is clear in counts.
-    _N_STAGED_FILES = 8
-
-    def _build_fixture(self, tmp: Path) -> tuple[list[str], Path]:
-        """Create a parent AC + N child ACs in a temp AC store.
+    def _build_fixture(self, tmp: Path, n: int) -> list[str]:
+        """Create a parent AC + n child ACs in a temp AC store.
 
         All children depend_on the parent; the parent lists all of them in
         covered_by (so there are no violations — we only test the walk count).
 
         Args:
             tmp: Temporary directory to use as project root.
+            n: Number of child AC files to create and stage.
 
         Returns:
-            Tuple of (list_of_child_absolute_paths, parent_yaml_path).
+            List of absolute child path strings.
         """
-        n = self._N_STAGED_FILES
         child_ids = [f"ACS-300a-{i}" for i in range(1, n + 1)]
 
-        # Write the parent
         _write_yaml(
             tmp,
             f"{_AC_STORE_REL}/perf/ACS-300a.yaml",
             _parent_yaml("ACS-300a", covered_by=child_ids),
         )
 
-        # Write 20 additional filler files to make the store non-trivially sized.
-        # This ensures rglob is doing real work and the count is measurable.
+        # 20 filler files make the store non-trivially sized so the walk is
+        # doing real work and the count is unambiguously measurable.
         for j in range(1, 21):
             _write_yaml(
                 tmp,
@@ -289,7 +306,6 @@ class TestStoreWalkedAtMostOnce(unittest.TestCase):
                 _child_yaml(f"ACS-900a-{j}", "ACS-900a"),
             )
 
-        # Write all child files
         child_paths = []
         for child_id in child_ids:
             p = _write_yaml(
@@ -299,74 +315,113 @@ class TestStoreWalkedAtMostOnce(unittest.TestCase):
             )
             child_paths.append(str(p))
 
-        return child_paths, tmp / _AC_STORE_REL / "perf" / "ACS-300a.yaml"
+        return child_paths
+
+    def _count_store_rglob_calls(self, tmp: Path, child_paths: list[str]) -> int:
+        """Run main() with the given staged paths and return the AC-store rglob count.
+
+        The counter increments only for rglob("*.yaml") calls whose self_path
+        starts with the AC store root inside tmp.  Any other rglob call (e.g.
+        from unrelated stdlib code) is transparent and does not affect the count.
+
+        sys.path is temporarily extended with the worktree's scripts/ directory so
+        that the hook's _get_derive_parent_id() can resolve ac_parent_id via Strategy 1
+        (package import) regardless of pytest's cwd.  Without this, _get_derive_parent_id
+        fails when pytest is run from outside the worktree root, causing main() to exit
+        early (fail-open) before _build_parent_index is ever called — making the rglob
+        count 0 and giving a spurious "instrumentation broken" failure.
+
+        Args:
+            tmp: Temporary project root (contains the AC store).
+            child_paths: Absolute paths of staged child AC files to pass via
+                HOOK_TEST_FILES.
+
+        Returns:
+            Number of times ac_store_root.rglob("*.yaml") was invoked during main().
+        """
+        rglob_call_count = 0
+        original_rglob = Path.rglob
+        ac_store_str = str(tmp / _AC_STORE_REL)
+
+        def counting_rglob(self_path, pattern, **kwargs):
+            nonlocal rglob_call_count
+            if str(self_path).startswith(ac_store_str) and pattern == "*.yaml":
+                rglob_call_count += 1
+            return original_rglob(self_path, pattern, **kwargs)
+
+        # Patch _get_derive_parent_id on the loaded hook module so that main()
+        # receives our deterministically-resolved _derive_parent_id regardless of
+        # pytest cwd.  The hook's own import strategies (Strategy 1-3) all rely on
+        # cwd or __file__ paths that may not resolve when pytest runs from outside
+        # the worktree root; bypassing them here keeps the perf test cwd-agnostic.
+        old_env = os.environ.copy()
+        os.environ["HOOK_ROOT"] = str(tmp)
+        os.environ["HOOK_TEST_FILES"] = os.pathsep.join(child_paths)
+        os.environ.pop("HOOK_NO_GIT", None)
+        try:
+            with patch.object(Path, "rglob", counting_rglob):
+                with patch.object(_mod, "_get_derive_parent_id", return_value=_derive_parent_id):
+                    _main()
+        finally:
+            os.environ.clear()
+            os.environ.update(old_env)
+
+        return rglob_call_count
 
     @_requires_import
-    def test_ac_perf_store_walked_at_most_once_for_batch_of_staged_files(self):
-        # covers: UNKNOWN
-        """PERFORMANCE REGRESSION: store rglob must be called at most once for a
-        batch of N staged files, not once-per-staged-file.
+    def test_ac_perf_store_walked_exactly_once_batch_of_4(self):
+        """PERFORMANCE REGRESSION (N=4): store rglob must fire exactly once.
 
-        Current code: _resolve_parent_file calls ac_store_root.rglob('*.yaml')
-        for every staged file → count == N (FAILS this test).
-
-        After fix: index built once at the start of main() → count == 1 (or 0
-        if the parent is located by path convention rather than a walk).
-
-        The assertion:
-            rglob_call_count <= 1
-
-        This is the single-walk invariant. Against the current code, the count
-        equals the number of staged files (8 in this test) → AssertionError.
+        A count of 0 means the instrumentation filter is broken (false green).
+        A count > 1 means the index-once fix is missing (O(N) walk per staged file).
+        Exactly 1 is the only acceptable value.
         """
-        n = self._N_STAGED_FILES
-
+        n = 4
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
-            child_paths, _ = self._build_fixture(tmp)
+            child_paths = self._build_fixture(tmp, n)
+            count = self._count_store_rglob_calls(tmp, child_paths)
 
-            rglob_call_count = 0
-            original_rglob = Path.rglob
+        self.assertEqual(
+            count,
+            1,
+            f"PERFORMANCE REGRESSION (N={n}): ac_store_root.rglob('*.yaml') fired "
+            f"{count} time(s). Expected exactly 1 (index built once). "
+            f"count==0 means instrumentation filter is broken; "
+            f"count=={n} means the per-file walk was not fixed.",
+        )
 
-            def counting_rglob(self_path, pattern, **kwargs):
-                # covers: UNKNOWN
-                nonlocal rglob_call_count
-                # Only count rglob calls on the AC store directory (not on other dirs).
-                ac_store_str = str(tmp / _AC_STORE_REL)
-                if str(self_path).startswith(ac_store_str) and pattern == "*.yaml":
-                    rglob_call_count += 1
-                return original_rglob(self_path, pattern, **kwargs)
+    @_requires_import
+    def test_ac_perf_store_walked_exactly_once_batch_of_12(self):
+        """PERFORMANCE REGRESSION (N=12): store rglob must fire exactly once.
 
-            old_env = os.environ.copy()
-            os.environ["HOOK_ROOT"] = tmpdir
-            os.environ["HOOK_TEST_FILES"] = os.pathsep.join(child_paths)
-            os.environ.pop("HOOK_NO_GIT", None)
+        Running the same invariant at a larger batch size proves the walk count is
+        constant (O(1)) and not just <= 1 for the specific N=4 case.  If the fix
+        has a hidden O(N) factor, this test catches it while the N=4 test masks it.
 
-            try:
-                with patch.object(Path, "rglob", counting_rglob):
-                    _main()
-            finally:
-                os.environ.clear()
-                os.environ.update(old_env)
+        A count of 0 means the instrumentation filter is broken (false green).
+        A count > 1 means the index-once fix is missing or incomplete.
+        """
+        n = 12
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            child_paths = self._build_fixture(tmp, n)
+            count = self._count_store_rglob_calls(tmp, child_paths)
 
-            self.assertLessEqual(
-                rglob_call_count,
-                1,
-                f"PERFORMANCE REGRESSION DETECTED: ac_store_root.rglob('*.yaml') was called "
-                f"{rglob_call_count} times for {n} staged files. "
-                f"Expected at most 1 call (index built once). "
-                f"Current code walks the full store once per staged file (O(N) × O(store_size)), "
-                f"which causes pre-commit timeouts on large AC stores. "
-                f"Fix: build an id→file index in a single rglob pass at the start of main(), "
-                f"then do O(1) dict lookups in _resolve_parent_file."
-            )
+        self.assertEqual(
+            count,
+            1,
+            f"PERFORMANCE REGRESSION (N={n}): ac_store_root.rglob('*.yaml') fired "
+            f"{count} time(s). Expected exactly 1 (index built once). "
+            f"count==0 means instrumentation filter is broken; "
+            f"count=={n} means the per-file walk was not fixed.",
+        )
 
 
 class TestModuleImport(unittest.TestCase):
     """Verify the hook module exists and loads without import errors."""
 
     def test_hook_script_exists_at_template_path(self):
-        # covers: UNKNOWN
         """The hook file must exist at templates/scripts/commit_guardian/check_ac_parent_covered_by.py."""
         self.assertTrue(
             _HOOK_PATH.exists(),
@@ -375,7 +430,6 @@ class TestModuleImport(unittest.TestCase):
         )
 
     def test_module_imports_successfully(self):
-        # covers: UNKNOWN
         """Hook module must import without syntax errors or import failures."""
         self.assertTrue(
             _IMPORT_OK,
