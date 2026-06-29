@@ -426,8 +426,7 @@
             "portable": true,
             "domain": null,
             "spawn_allowlist": [
-                "research-agent",
-                "test-runner"
+                "research-agent"
             ],
             "spawned_by": [
                 "ticket-supervisor",
@@ -469,6 +468,11 @@
                 {
                     "skill_id": "doc-enforcer",
                     "mode": "always"
+                },
+                {
+                    "skill_id": "run-tests",
+                    "mode": "always",
+                    "note": "Test execution is performed directly via Bash tool (inline pytest invocation), not by delegating to the test-runner agent"
                 }
             ],
             "knowledge_channels": [
@@ -621,7 +625,6 @@
             "spawn_allowlist": [],
             "spawned_by": [
                 "ticket-supervisor",
-                "python-coder",
                 "test-writer",
                 "finalize-feature.js"
             ],

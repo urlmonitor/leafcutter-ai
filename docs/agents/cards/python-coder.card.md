@@ -1,6 +1,7 @@
 ---
 agent_id: python-coder
 title: "Agent Card: python-coder"
+description: Standards-enforcing Python implementation agent that writes, edits, and refactors Python code.
 type: card
 status: active
 created: 2026-06-05
@@ -61,12 +62,10 @@ flowchart TD
     sql_coder["sql-coder\n(phase tier)"]:::phase
     python_coder["python-coder\n(phase tier, priority 6)"]:::target
     research_agent["research-agent\n(utility tier)"]:::utility
-    test_runner["test-runner\n(phase tier)"]:::phase
 
     ticket_supervisor -->|dispatches| python_coder
     sql_coder -->|dispatches| python_coder
     python_coder -->|spawns| research_agent
-    python_coder -->|spawns| test_runner
 ```
 ---
 

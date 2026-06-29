@@ -1,6 +1,7 @@
 ---
 agent_id: test-runner
 title: "Agent Card: test-runner"
+description: Test execution agent that picks the right test suite based on what changed and returns a structured failure report.
 type: card
 status: active
 created: 2026-06-05
@@ -30,7 +31,6 @@ invokes this agent for its inner-loop test cycle.**
 ### Spawned By
 
 - `ticket-supervisor`
-- `python-coder`
 - `test-writer`
 - `finalize-feature`
 ---
@@ -51,13 +51,11 @@ flowchart TD
     classDef target fill:#fee2e2,stroke:#dc2626,stroke-width:3px
 
     ticket_supervisor["ticket-supervisor\n(supervisor tier)"]:::supervisor
-    python_coder["python-coder\n(phase tier)"]:::phase
     test_writer["test-writer\n(phase tier)"]:::phase
     finalize_feature["finalize-feature\n(phase tier)"]:::phase
     test_runner["test-runner\n(phase tier, priority 9)"]:::target
 
     ticket_supervisor -->|dispatches| test_runner
-    python_coder -->|dispatches| test_runner
     test_writer -->|dispatches| test_runner
     finalize_feature -->|dispatches| test_runner
 ```
