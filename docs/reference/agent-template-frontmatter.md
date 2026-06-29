@@ -1,9 +1,10 @@
 ---
 title: "Reference: Agent Template Frontmatter Fields"
+description: "Complete field reference for agent template YAML frontmatter, including registry id conventions, tool allowlists, spawn_allowlist, and signoff protocol fields."
 type: reference
 status: active
 created: 2026-05-28
-last_updated: 2026-05-28
+last_updated: 2026-06-29
 components:
   - build_pipeline
   - config_loader
@@ -159,7 +160,7 @@ in the ecosystem. Each entry in the `agents` array describes one agent.
 
 | Registry Field | Type | Required | Description |
 |---|---|---|---|
-| `id` | string | **yes** | Unique agent identifier. Must match the frontmatter `name` field and the filename stem under `templates/agents/`. |
+| `id` | string | **yes** | Unique agent identifier. Must match the frontmatter `name` field and the filename stem under `templates/agents/`. Must NOT carry a version suffix: values matching `/-v[0-9]+$/` or containing `-v1`, `-v2`, or `-v3` are forbidden (AC ACD-1100b-3-i). Use the canonical unversioned name (e.g. `business-analyst`, not `business-analyst-v3`). |
 | `name` | string | **yes** | Human-readable display name (Title Case). Used in documentation tables and the Claude Code sidebar. |
 | `tier` | string | **yes** | Agent classification: `supervisor` (orchestrates others), `phase` (runs inside a ticket), or `utility` (general-purpose). |
 | `role` | string | **yes** | Functional role: `orchestration`, `analysis`, `coding`, `documentation`, `commit`, `review`, or `utility`. |
