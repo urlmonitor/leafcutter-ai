@@ -18,7 +18,7 @@ agents:
   python-coder: signed_off
   test-writer: signed_off
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -127,7 +127,7 @@ this time, but the gap means any future worktree drive ships unguarded.
 - [x] python-coder — 2026-06-30 12:00
 - [x] test-writer — 2026-06-30 00:00
 - [x] pr-reviewer — 2026-06-30 14:00
-- [ ] commit
+- [x] commit — 2026-06-30 15:00
 - [ ] pull-request
 
 ## Comments
@@ -182,6 +182,14 @@ distinguishing "build.py ran but config is missing" from "cannot resolve path"
 TRY003 compliance: long message strings live inside the exception class via
 classmethods, never at raw `raise` sites. Both files pass `ruff check` (all
 rules) and `ruff check --select E722,BLE001,TRY` cleanly.
+
+### 2026-06-30 15:00 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Auto-authorized via /build-feature human-supervised batch drive (COMMIT_AGENT_MODE=1). Pre-commit hooks active in this worktree. Autofix applied: added missing `feedback-id: (submit-failed)` to the `### 2026-06-30 00:01 — ticket-supervisor` comment heading before retry. Commit SHA 735786f6 landed on feature/worktree-precommit-bootstrap.
 
 ### 2026-06-30 14:00 — pr-reviewer (status: ok)
 feedback-id: (submit-failed)
