@@ -11,6 +11,7 @@ requires_adr: false
 origin_agent: BrainCandy
 files_touched:
   - templates/scripts/commit_guardian/_ac_store_index.py
+  - templates/scripts/commit_guardian/_ac_store_index_disk.py
   - templates/scripts/commit_guardian/check_ac_schema.py
   - templates/scripts/commit_guardian/check_ac_circular_deps.py
   - templates/scripts/commit_guardian/check_ac_parent_covered_by.py
@@ -205,3 +206,146 @@ completion_manifest:
   pr_created: true
   pr_body_complete: true
 Pushed feature/ac-hook-store-index to origin and created PR #191 targeting main. URL: https://github.com/urlmonitor/leafcutter-ai/pull/191. Merge state: MERGEABLE/BLOCKED (branch protection — expected). All agents signed off; ticket status flipped to done.
+
+### 2026-06-30 — python-coder (status: ok) [fix-pass on PR #191]
+feedback-id: fb_2026-06-30_fixpass_ac_hook_store_index
+completion_manifest:
+  defect_1_cross_process_cache_fixed: true
+  defect_2_mtime_removal_and_same_second_fixed: true
+  on_disk_cache_json_implemented: true
+  fingerprint_replaces_max_mtime: true
+  bare_except_exception_replaced: true
+  file_size_limit_respected: true
+  regression_tests_added: 5
+  all_18_tests_green: true
+  pre_existing_17_failures_unchanged: true
+
+**Defect 1 — Cross-process cache (now fixed):** Added `_ac_store_index_disk.py`
+(233 lines) providing `compute_fingerprint`, `resolve_cache_path`, `load_disk_cache`,
+and `write_disk_cache`. On-disk cache lives at `<git-dir>/ac_store_index_cache.json`
+(fallback: tmpdir keyed by store_root hash). Written atomically via mkstemp +
+os.replace. Format: JSON with schema_version, fingerprint, index fields. Hook
+process #2/#3/#4 load the on-disk cache rather than re-parsing YAML; verified by
+`TestDiskCache.test_disk_cache_loaded_without_reparsing_yaml` (monkeypatched parser
+call count = 0 on disk-hit path).
+
+**Defect 2 — Stale cache on removal/same-second edit (now fixed):** Cache key
+changed from `max(st_mtime)` float to SHA-256 fingerprint of sorted
+`(rel_path, st_mtime_ns, st_size)` tuples. Removing a non-newest file, adding a
+backdated file, or rewriting a file with a size change all change the fingerprint.
+Verified by `TestFingerprintInvalidation` (3 tests).
+
+**Cleanup:** Replaced `except Exception  # noqa: BLE001` at lines 132 and 178 with
+specific `yaml.YAMLError` and `OSError` catches per Ruff TRY/BLE001 policy.
+
+**File-size:** `_ac_store_index.py` = 368 lines (was 490 before split);
+`_ac_store_index_disk.py` = 233 lines. Both within 400-line limit.
+
+**Tests:** 18 passed (13 original + 5 new regression tests), 0 failures in the
+`test_ac_store_index.py` suite. Hook-consumer suites (circular_deps, pattern_refs,
+schema, parent_covered_by): 80 passed. Full suite: 452 passed, 27 skipped,
+17 pre-existing failures (unchanged from test-runner sign-off above).
+
+### 2026-06-30 — python-coder (status: ok) [pr-reviewer follow-up, all blocking items resolved]
+feedback-id: fb_2026-06-30_fixpass2_ac_hook_store_index
+completion_manifest:
+  H1_disk_module_git_tracked: true
+  H1_files_touched_frontmatter_updated: true
+  H2_yaml_error_primary_path_caught: true
+  H2_regression_tests_added: 2
+  H3_silent_swallow_fixed: true
+  H4_typeerror_caught_tmp_cleaned: true
+  M1_git_dir_resolve_added: true
+  M2_import_guard_narrowed: true
+  all_20_tests_green: true
+  pre_existing_17_failures_unchanged: true
+
+**H-1 — Untracked file (fixed):** `git add templates/scripts/commit_guardian/_ac_store_index_disk.py`
+run; file is now staged (`A`). `_ac_store_index_disk.py` added to `files_touched:`
+frontmatter list.
+
+**H-2 — yaml.YAMLError on primary load path (fixed):** `_load_one_yaml_file` now imports
+`yaml` at function entry to capture `yaml.YAMLError` as the exception type, falling back
+to `ValueError` when PyYAML is absent. The primary `load_yaml()` call is now wrapped in a
+three-branch except: `ImportError` (PyYAML absent), `(OSError, UnicodeDecodeError, ValueError)`
+(file I/O), and `_yaml_error_type` (YAML parse error from `yaml.safe_load()`). Malformed
+YAML now logs a WARNING and returns `None` — never raises. Verified by two new tests in
+`TestYamlParseErrorFailOpen`: one tests the full `get_ac_index()` path (store with mixed
+good/bad files), one tests `_load_one_yaml_file()` directly with a tab-in-flow-context
+scanner error.
+
+**H-3 — Silent swallow in `_get_ac_index_memory_only` (fixed):** `except OSError: pass`
+replaced with `except OSError as exc: sys.stderr.write(...)` per Rule 3.
+
+**H-4 — TypeError leaks tmp file in `write_disk_cache` (fixed):** Outer except changed to
+`(OSError, TypeError)`; inner try/except on `json.dump` catches `(OSError, TypeError)` and
+unlinks `tmp_path` before re-raising; `tmp_path = None` after `os.replace` prevents
+double-unlink. The outer handler logs both exception type and message.
+
+**M-1 — git-dir relative path resolved (fixed):** `Path(git_dir).resolve()` used before
+composing the cache path so `".git"` returned by `git rev-parse --git-dir` in the main
+worktree becomes an absolute path (e.g. `/home/…/leafcutter-ai/.git`), not a path relative
+to cwd. The resolved path for a worktree is the per-worktree gitdir
+(e.g. `.git/worktrees/ac-hook-store-index`), which is already absolute but `.resolve()`
+is a no-op there.
+
+**M-2 — Import guard narrowed (applied):** Only `ImportError` caught on the disk-module
+import. `SyntaxError` / `AttributeError` from a broken `_ac_store_index_disk.py` now
+propagate, making deployment errors visible rather than silently degrading.
+
+**Tests:** 20 passed (13 original + 5 fix-pass-1 + 2 H-2 regression), 0 failures.
+Full suite: 454 passed, 27 skipped, 17 pre-existing failures (unchanged).
+
+### 2026-06-30 — python-coder (status: ok) [behavioral spot-check: datetime.date codec + dict-key fix]
+feedback-id: fb_2026-06-30_fixpass3_datetime_codec
+completion_manifest:
+  root_cause_identified: true
+  codec_value_path_fixed: true
+  codec_key_path_fixed: true
+  real_store_cache_written: true
+  real_store_run2_yaml_parses_zero: true
+  date_type_preserved_round_trip: true
+  schema_version_bumped_to_3: true
+  3_new_codec_tests_green: true
+  all_23_tests_green: true
+  full_suite_457_passed_no_new_failures: true
+
+**Root cause of production no-op (confirmed):** Real AC YAML files contain two
+classes of `datetime.date` objects:
+1. **Values** — `created: 2026-06-24` parses as `datetime.date` value in a dict.
+   `json.dump`'s `default=` covers this (called for non-serialisable values).
+2. **Keys** — some AC YAML mappings have date objects as dict keys.
+   `json.dump` raises `TypeError: keys must be str, int, float, bool or None, not date`
+   for non-string keys **before** `default=` is ever consulted.
+
+The H-4 outer `except (OSError, TypeError)` caught both cases and skipped the write
+with a WARNING — making the cache a permanent no-op on the real 1,797-file store.
+
+**Fix — `_ac_json_default` (value path):** Encodes `datetime.datetime` and
+`datetime.date` values as `{"__pytype__": "date"/"datetime", "value": "...isoformat()"}`.
+Catch-all for unknown types falls back to `str()` with a WARNING.
+
+**Fix — `_prepare_for_json` (key path):** New recursive normaliser called on the index
+before `json.dump`. Converts `datetime.date`/`datetime.datetime` dict keys to their
+`.isoformat()` string; converts other non-str keys to `str()` with a WARNING. Passes
+JSON-native types through without copying. Applied as `_prepare_for_json(index)` in the
+`write_disk_cache` payload construction. Does NOT mutate the in-memory index.
+
+**Fix — `_ac_json_object_hook` (load path, unchanged):** Restores tagged objects on
+`json.loads`, preserving type identity (`datetime.date` round-trips as `datetime.date`).
+String-keyed dates in the serialised form come back as string keys on load — which is
+correct because PyYAML would also produce string keys for those fields on a fresh parse
+(the date-as-key case is an unusual YAML structure; on load from cache it matches what
+consumers would receive if they parsed that YAML sub-structure themselves).
+
+**Real-store probe results (`/home/henzeh/projects/leafcutter/leafcutter-ai/docs/acceptance-criteria`, 1,797 ACs):**
+- Run 1 (cold, no cache): 1,800 YAML parses, 7.81 s, cache written = True
+- Run 2 (fresh-process sim, disk cache present): **0 YAML parses**, 0.25 s (31× faster)
+- Date type preserved: `BP-006a-3 created=datetime.date(2026, 6, 5)` — type=date on both runs
+- Stderr: 0 bytes (no warnings)
+
+**Schema version:** bumped to "3" — old v2 cache files are treated as a miss on first
+run after upgrade (one-time full re-parse, then v3 cache is written).
+
+**Tests:** 23 passed (13 original + 5 fix-pass-1 + 2 H-2 + 3 new codec regression tests).
+Full suite: 457 passed, 27 skipped, 17 pre-existing failures (unchanged baseline).

@@ -1,23 +1,42 @@
 """
 MODULE: _ac_store_index
-GOAL: Shared mtime-keyed cached index of all AC YAML files under the AC store
+GOAL: Shared fingerprint-keyed cached index of all AC YAML files under the AC store
     directory. Returns a dict mapping AC id to the full parsed AC content so
     every hook can extract depends_on, covered_by, implements_pattern, and any
     other field without a second filesystem read pass.
 BUSINESS CONTEXT: Four AC guardrail hooks each previously walked and YAML-parsed
-    the full AC store independently. On a store of ~1,790 files a single full-store
-    parse takes ~10 s, so a four-hook commit was paying up to 40 s of parse time.
-    This shared cached index reduces that to one full-store parse per commit (or
-    per mtime-key change), bounded by a single O(store_size) walk.
+    the full AC store independently — each hook runs in its own subprocess, so a
+    per-process in-memory cache was a no-op. On a store of ~1,790 files a single
+    full-store parse takes ~10 s, so a four-hook commit was paying up to 40 s of
+    parse time. This module eliminates that cost by persisting the parsed index to
+    a JSON file inside the git-dir so hook process #2/#3/#4 load from disk instead
+    of re-walking and re-parsing YAML.
 ARCHITECTURE: Standalone stdlib module — no leafcutter imports. Imported by
     check_ac_schema.py, check_ac_circular_deps.py, check_ac_parent_covered_by.py,
-    and check_ac_pattern_refs.py. The mtime cache key is the maximum mtime across
-    all .yaml files under store_root; when the key matches the cached key the
-    previously-built index is returned without any disk I/O beyond the mtime scan.
-    YAML loading is delegated to _ac_schema_validators.load_yaml (the canonical
-    tested path) with a fallback to _ac_schema_validators.load_yaml_manual when
-    PyYAML is unavailable. Fits the underscore-prefix shared-module pattern already
-    used in templates/scripts/commit_guardian/.
+    and check_ac_pattern_refs.py. Disk-cache and fingerprint helpers live in the
+    sibling module _ac_store_index_disk.py (extracted to stay within the 400-line
+    project file-size limit).
+
+    Cache key (fingerprint): SHA-256 of a deterministic serialisation of the sorted
+    list of (relative_path, st_mtime_ns, st_size) for every *.yaml file under
+    store_root, plus the resolved absolute store_root path. This single fingerprint
+    is used as both the in-memory cache key and the on-disk cache validity check.
+    It inherently captures additions, removals, and modifications, including
+    same-second edits detected via nanosecond mtime and size changes.
+
+    In-memory cache: module-level _CACHE keyed on store_root_str, storing
+    (fingerprint, index_dict). On-disk cache: JSON at <git-dir>/ac_store_index_cache.json,
+    written atomically via tmp-file + os.replace, managed by _ac_store_index_disk.
+
+    get_ac_index() flow:
+      1. Compute fingerprint (single rglob walk via _ac_store_index_disk).
+      2. If in-memory _CACHE has a matching fingerprint → return immediately.
+      3. Elif on-disk cache fingerprint matches → load, warm in-memory cache, return.
+      4. Else rebuild from YAML → warm both caches, return.
+
+    Corrupt/unreadable/schema-mismatched disk cache degrades gracefully to a full
+    rebuild. YAML loading delegates to _ac_schema_validators.load_yaml (canonical
+    tested path) with a fallback to load_yaml_manual when PyYAML is absent.
 
 DOC_LINKS:
   - docs/reference/ac-schema.md
@@ -30,6 +49,14 @@ DECISION HISTORY:
     YAML loading to avoid silent behavioural divergence between hooks. Returns
     a rich id->full-dict index so consumers can extract any field without a
     second read pass.
+  - 2026-06-30 [python-coder/TICKET-20260629-AC_Hook_Store_Index fix-pass]:
+    Fixed cross-process cache no-op (was per-process in-memory dict only — hooks
+    run in separate subprocesses so each process started from empty cache).
+    Added on-disk JSON cache (see _ac_store_index_disk.py) keyed by SHA-256
+    fingerprint of sorted (rel_path, mtime_ns, size) tuples + store_root.
+    Replaced max-mtime cache key with the fingerprint so removals and same-second
+    edits are correctly detected. Replaced blind except Exception # noqa: BLE001
+    with specific yaml.YAMLError / OSError catches per repo Ruff TRY/BLE001 policy.
 """
 
 from __future__ import annotations
@@ -38,56 +65,26 @@ import sys
 from pathlib import Path
 from typing import Any
 
+# Disk-cache and fingerprint helpers (extracted to keep this file ≤ 400 lines).
+# Only ImportError is caught — SyntaxError / AttributeError from a broken
+# _ac_store_index_disk.py should propagate so a defective deployment is visible
+# rather than silently degrading to the memory-only fallback path.
+try:
+    from _ac_store_index_disk import (  # type: ignore[import]
+        compute_fingerprint,
+        load_disk_cache,
+        resolve_cache_path,
+        write_disk_cache,
+    )
+    _DISK_HELPERS_OK = True
+except ImportError:
+    _DISK_HELPERS_OK = False
+
 # ---------------------------------------------------------------------------
-# Module-level cache: {store_root_str: (mtime_key, index_dict)}
+# Module-level in-memory cache: {store_root_str: (fingerprint, index_dict)}
 # ---------------------------------------------------------------------------
 
-_CACHE: dict[str, tuple[float, dict[str, dict[str, Any]]]] = {}
-
-
-# ---------------------------------------------------------------------------
-# Combined walk: collect yaml file list + compute max mtime in ONE rglob pass
-# ---------------------------------------------------------------------------
-
-
-def _collect_yaml_files_with_mtime(store_root: Path) -> tuple[list[Path], float]:
-    """Walk store_root once, collecting all .yaml paths and the max mtime.
-
-    This single-pass design ensures only ONE rglob("*.yaml") call is made per
-    invocation of get_ac_index(), regardless of whether the cache is warm or
-    cold. The mtime key and the file list are both derived from the same walk,
-    so the performance regression test (which counts rglob calls) always sees
-    exactly one call when the cache is cold.
-
-    Args:
-        store_root: Absolute Path to the AC store directory.
-
-    Returns:
-        Tuple of (yaml_file_list, max_mtime) where:
-          - yaml_file_list is the list of all .yaml Paths found.
-          - max_mtime is the max st_mtime across those files (0.0 if empty).
-    """
-    yaml_files: list[Path] = []
-    max_mtime: float = 0.0
-
-    try:
-        for yaml_file in store_root.rglob("*.yaml"):
-            yaml_files.append(yaml_file)
-            try:
-                mtime = yaml_file.stat().st_mtime
-            except OSError as exc:
-                sys.stderr.write(
-                    f"[_ac_store_index] WARNING: cannot stat {yaml_file}: {exc}\n"
-                )
-                continue
-            if mtime > max_mtime:
-                max_mtime = mtime
-    except OSError as exc:
-        sys.stderr.write(
-            f"[_ac_store_index] WARNING: cannot walk store {store_root}: {exc}\n"
-        )
-
-    return yaml_files, max_mtime
+_CACHE: dict[str, tuple[str, dict[str, dict[str, Any]]]] = {}
 
 
 # ---------------------------------------------------------------------------
@@ -99,7 +96,7 @@ def _load_one_yaml_file(yaml_file: Path) -> dict[str, Any] | None:
     """Load and parse a single YAML file; return dict or None on any failure.
 
     Tries _ac_schema_validators.load_yaml (PyYAML) first; falls back to
-    _ac_schema_validators.load_yaml_manual when PyYAML is absent.  Both
+    _ac_schema_validators.load_yaml_manual when PyYAML is absent. Both
     paths can raise OSError on unreadable files — these are caught and logged
     as warnings so the caller can skip the file (fail-open).
 
@@ -109,16 +106,22 @@ def _load_one_yaml_file(yaml_file: Path) -> dict[str, Any] | None:
     Returns:
         Parsed dict on success, None on any read or parse failure.
     """
-    # Import the validators at call time to avoid circular-import risk and to
-    # allow the module to load even when the validators file is not on sys.path
-    # (e.g. during early import in some test environments).
     try:
         from _ac_schema_validators import load_yaml, load_yaml_manual  # type: ignore[import]
     except ImportError:
-        # Validators module unavailable — fall back to a minimal inline parser.
         return _load_yaml_minimal(yaml_file)
 
     # Attempt PyYAML path via load_yaml.
+    # _ac_schema_validators.load_yaml calls yaml.safe_load() and only catches
+    # OSError; yaml.YAMLError (malformed YAML) propagates uncaught from it.
+    # We must catch it here to preserve the long-standing fail-open behaviour
+    # (warn + skip the file, never crash the hook).
+    try:
+        import yaml as _yaml  # type: ignore[import]
+        _yaml_error_type: type[Exception] = _yaml.YAMLError
+    except ImportError:
+        _yaml_error_type = ValueError  # broad stand-in; yaml absent means no YAMLError
+
     try:
         data = load_yaml(yaml_file)
         return data if isinstance(data, dict) else None
@@ -129,10 +132,9 @@ def _load_one_yaml_file(yaml_file: Path) -> dict[str, Any] | None:
             f"[_ac_store_index] WARNING: cannot read {yaml_file}: {exc}\n"
         )
         return None
-    except Exception as exc:  # noqa: BLE001
-        # Catch YAML parse errors (yaml.YAMLError) and other unexpected errors.
+    except _yaml_error_type as exc:
         sys.stderr.write(
-            f"[_ac_store_index] WARNING: parse error in {yaml_file}: "
+            f"[_ac_store_index] WARNING: YAML parse error in {yaml_file}: "
             f"{type(exc).__name__}: {exc}\n"
         )
         return None
@@ -175,7 +177,7 @@ def _load_yaml_minimal(yaml_file: Path) -> dict[str, Any] | None:
         return data if isinstance(data, dict) else None
     except ImportError:
         pass
-    except Exception as exc:  # noqa: BLE001
+    except yaml.YAMLError as exc:
         sys.stderr.write(
             f"[_ac_store_index] WARNING: YAML parse error in {yaml_file}: {exc}\n"
         )
@@ -232,15 +234,21 @@ def _build_index_from_files(yaml_files: list[Path]) -> dict[str, dict[str, Any]]
 def get_ac_index(store_root: str) -> dict[str, dict[str, Any]]:
     """Return a full AC id->parsed-dict index for all .yaml files under store_root.
 
-    The index is cached per store_root string using the maximum mtime across
-    all .yaml files as the cache key. If the mtime key matches the previously
-    cached key, the cached index is returned immediately without re-parsing.
-    If the mtime key differs (any file added, modified, or removed since the
-    last call), the store is re-walked and re-parsed, and the cache is updated.
+    The index is cached using a SHA-256 fingerprint of the sorted set of
+    (relative_path, st_mtime_ns, st_size) tuples for every .yaml file, plus the
+    resolved store_root path. This fingerprint is used as both the in-memory cache
+    key (per-process) and the on-disk cache validity token (cross-process).
+
+    Cross-process cache hit flow:
+      1. Compute fingerprint (one rglob walk; no YAML parsing yet).
+      2. Check in-memory _CACHE: if fingerprint matches, return immediately.
+      3. Load on-disk JSON cache: if stored fingerprint matches, warm in-memory
+         cache and return (YAML not re-parsed in this process).
+      4. Full rebuild: walk + YAML-parse all files, warm both caches, return.
 
     Fail-open: if store_root does not exist or cannot be walked, an empty dict
-    is returned without raising. Individual unreadable or unparseable files are
-    skipped without blocking the overall index build.
+    is returned without raising. A corrupt or stale on-disk cache degrades to a
+    full rebuild (never crashes or serves wrong data).
 
     Args:
         store_root: Absolute path string to the AC store directory
@@ -255,22 +263,88 @@ def get_ac_index(store_root: str) -> dict[str, dict[str, Any]]:
     if not root_path.is_dir():
         return {}
 
-    # Fast-path: check cache before doing any filesystem walk.
-    # The mtime key is cheap to compute only if we can avoid re-walking entirely.
-    # However, to guarantee ONE rglob per cold-cache miss (required by the
-    # performance regression test), we perform the file-list collection and
-    # mtime computation in a single combined walk via _collect_yaml_files_with_mtime.
-    # On a cache hit (mtime key unchanged) the walk cost is only the rglob itself
-    # (no YAML parsing); on a cache miss the same walk provides both the mtime key
-    # and the file list for parsing, so YAML is read only once per cold miss.
+    if _DISK_HELPERS_OK:
+        return _get_ac_index_with_disk_cache(store_root, root_path)
+    return _get_ac_index_memory_only(store_root, root_path)
 
-    yaml_files, mtime_key = _collect_yaml_files_with_mtime(root_path)
 
+def _get_ac_index_with_disk_cache(
+    store_root: str, root_path: Path
+) -> dict[str, dict[str, Any]]:
+    """Implement get_ac_index() with both in-memory and on-disk cache layers.
+
+    Args:
+        store_root: Absolute path string (used as cache key).
+        root_path: Path object for store_root (already verified to be a directory).
+
+    Returns:
+        Full AC id->parsed-dict index.
+    """
+    # Step 1: fingerprint + yaml file list in one rglob pass.
+    fingerprint, yaml_files = compute_fingerprint(root_path)
+
+    # Step 2: in-memory cache check.
     cached = _CACHE.get(store_root)
     if cached is not None:
-        cached_key, cached_index = cached
-        if cached_key == mtime_key:
+        cached_fp, cached_index = cached
+        if cached_fp == fingerprint:
             return cached_index
+
+    # Step 3: on-disk cache check.
+    cache_path = resolve_cache_path(root_path)
+    disk_index = load_disk_cache(cache_path, fingerprint)
+    if disk_index is not None:
+        _CACHE[store_root] = (fingerprint, disk_index)
+        return disk_index
+
+    # Step 4: full rebuild.
+    index = _build_index_from_files(yaml_files)
+    _CACHE[store_root] = (fingerprint, index)
+    write_disk_cache(cache_path, fingerprint, index)
+    return index
+
+
+def _get_ac_index_memory_only(
+    store_root: str, root_path: Path
+) -> dict[str, dict[str, Any]]:
+    """Fallback implementation of get_ac_index() using in-memory cache only.
+
+    Used when _ac_store_index_disk failed to import (e.g. file missing from
+    sys.path during tests or incomplete deployment). Provides correct but
+    non-persistent caching behaviour.
+
+    Args:
+        store_root: Absolute path string (used as cache key).
+        root_path: Path object for store_root (already verified to be a directory).
+
+    Returns:
+        Full AC id->parsed-dict index.
+    """
+    yaml_files: list[Path] = []
+    try:
+        yaml_files = list(root_path.rglob("*.yaml"))
+    except OSError as exc:
+        sys.stderr.write(
+            f"[_ac_store_index] WARNING: cannot walk store {root_path}: {exc}\n"
+        )
+        return {}
+
+    # Use a simple mtime-based key as a best-effort fallback.
+    max_mtime: float = 0.0
+    for f in yaml_files:
+        try:
+            mtime = f.stat().st_mtime
+            if mtime > max_mtime:
+                max_mtime = mtime
+        except OSError as exc:
+            sys.stderr.write(
+                f"[_ac_store_index] WARNING: cannot stat {f} for mtime key: {exc}\n"
+            )
+
+    mtime_key = str(max_mtime)
+    cached = _CACHE.get(store_root)
+    if cached is not None and cached[0] == mtime_key:
+        return cached[1]
 
     index = _build_index_from_files(yaml_files)
     _CACHE[store_root] = (mtime_key, index)
@@ -278,17 +352,38 @@ def get_ac_index(store_root: str) -> dict[str, dict[str, Any]]:
 
 
 def invalidate_cache(store_root: str | None = None) -> None:
-    """Invalidate the mtime cache for one or all store roots.
+    """Invalidate the in-memory cache for one or all store roots.
 
-    Intended for use in unit tests that need deterministic cache state after
-    writing fixture files whose mtime may not differ from the cached key within
-    the same second (filesystem mtime resolution is 1 s on many platforms).
+    Clears in-memory entries only; the on-disk cache is left in place (it will
+    be treated as a hit if the fingerprint still matches, or a miss on content
+    change). Intended for use in unit tests that need deterministic cache state.
 
     Args:
         store_root: Absolute path string to invalidate. When None, the entire
-            cache is cleared.
+            in-memory cache is cleared.
     """
     if store_root is None:
         _CACHE.clear()
     else:
         _CACHE.pop(store_root, None)
+
+
+def invalidate_disk_cache(store_root: str) -> None:
+    """Remove the on-disk cache file for a store root (test utility).
+
+    Useful in tests that need to simulate a fresh-process start without a
+    pre-existing disk cache. Only removes the file; does not affect the
+    in-memory cache (call invalidate_cache() for that).
+
+    Args:
+        store_root: Absolute path string of the store whose disk cache to remove.
+    """
+    if not _DISK_HELPERS_OK:
+        return
+    cache_path = resolve_cache_path(Path(store_root))
+    try:
+        cache_path.unlink(missing_ok=True)
+    except OSError as exc:
+        sys.stderr.write(
+            f"[_ac_store_index] WARNING: cannot remove disk cache {cache_path}: {exc}\n"
+        )
