@@ -2,7 +2,7 @@ id: BP-1000a-6
 title: "After the feedback source relocation, deploying feedback to a target still installs and shims the scripts with no consumer regression"
 component: build-pipeline
 level: L2
-status: active
+status: superseded_by
 req_status: draft
 work_status: todo
 readiness: approved
@@ -58,7 +58,7 @@ amended_by:
   - reason: "it-po-technical-enrichment"
     entry: "Added it_requirements pinning the before/after deployed+shimmed feedback-set equality, the MANDATORY consumer-install validation (build.py --target-dir into a clean external project, not only the self-build), the ADR-001/013 deployment-boundary + unchanged-install_shims constraint, and the requirement to consume BP-1000a-5's resolved set rather than re-deriving from the gitignored working copy. Promoted build.py/build_phases.py doc_links to relationship: implements. Criteria unchanged; assigned_agent (python-coder), complexity (M), and the BP-1000a-5 expects_from contract validated and kept (contract shape tightened to name the resolved feedback set)."
     by: it-po
-superseded_by: null
+superseded_by: [BP-1200a-1-ii]
 covered_by: []
 implemented_by: []
 notes: |

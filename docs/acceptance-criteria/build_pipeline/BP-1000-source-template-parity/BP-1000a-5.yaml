@@ -2,7 +2,7 @@ id: BP-1000a-5
 title: "The build reads the feedback deployable-script source from the tracked templates mirror, not the gitignored working copy"
 component: build-pipeline
 level: L2
-status: active
+status: superseded_by
 req_status: draft
 work_status: todo
 readiness: approved
@@ -64,7 +64,7 @@ amended_by:
   - reason: "it-po-technical-enrichment"
     entry: "Added it_requirements pinning the relocation mechanism (canonical source -> tracked templates/scripts/feedback/, mirroring _manifest_commit_guardian_scripts; repoint _manifest_feedback_scripts in build.py and feedback_src/build_feedback in build_phases.py), the tracked-only / fresh-clone independence, the ADR-001 deployed-output-stays-gitignored boundary, the ADR-001/013 build.py round-trip parity, the BP-1000a-6 no-regression coupling, and the error-handling-policy non-empty-set guard. Added delivers_to naming the resolved-feedback-set contract consumed by BP-1000a-6 / BP-1000a-5-i / BP-1200a-1-iii. Promoted scripts/build.py and scripts/build_phases.py doc_links to relationship: implements and ADR-013 doc_link added. Criteria unchanged; assigned_agent (python-coder) and complexity (M) validated and kept."
     by: it-po
-superseded_by: null
+superseded_by: [BP-1200a-1-ii]
 covered_by:
   - BP-1000a-5-i
 implemented_by: []
