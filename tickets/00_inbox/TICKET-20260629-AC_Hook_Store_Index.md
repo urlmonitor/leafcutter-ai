@@ -21,7 +21,7 @@ agents:
   test-writer: signed_off
   test-runner: signed_off
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -114,7 +114,7 @@ Scenario: large-store performance no longer scales per hook
 - [x] test-writer — 2026-06-30 14:35
 - [x] test-runner — 2026-06-30 16:20
 - [x] pr-reviewer — 2026-06-30 17:10
-- [ ] commit
+- [x] commit — 2026-06-30 18:45
 - [ ] pull-request
 
 ## Comments
@@ -188,3 +188,12 @@ completion_manifest:
   new_tests_cover_key_invariants: true
 
 PR review passed. The shared mtime-cached AC store index (`_ac_store_index.py`) is structurally clean: single `rglob` per cold-cache miss, mtime-keyed invalidation, YAML loading canonicalised on `_ac_schema_validators.load_yaml`, and all four hooks retain correct fallback paths when the index module is unavailable. The full graph scope invariant in `check_ac_circular_deps` is preserved and explicitly tested by `TestFullGraphScope.test_cycle_through_unstaged_node_detected`. All 36 new tests pass; 17 pre-existing failures are unrelated to this ticket. No high-confidence findings.
+
+### 2026-06-30 18:45 — commit (status: ok)
+feedback-id: fb_2026-06-30_421e877d
+completion_manifest:
+  staged_files_correct: true
+  commit_created: true
+  hooks_passed: true
+Committed implementation to feature/ac-hook-store-index. SHA: d37f0012.
+Hook autofix applied: added `description:` field to 51 agent card files and YAML frontmatter to docs/INDEX.md (check-description-field hook).
