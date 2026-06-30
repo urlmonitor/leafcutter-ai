@@ -8,6 +8,10 @@ work_status: todo
 readiness: approved
 priority: high
 roadmap_phase: phase_1
+# Temporary waiver: BP-1000a-5 and BP-1000a-6 are superseded_by BP-1200a-1-ii
+# (redundant with PR #180), so this L1 has 6 L2 children (4 active + 2 superseded).
+# Remove once the subtree is split or the tree-limit hook discounts superseded children.
+child_limit_override: 6
 criteria: |
   Every shipped script provably matches its tested source — byte-for-byte, no exceptions.
 

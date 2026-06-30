@@ -2,7 +2,7 @@ id: BP-1000a-5-i
 title: "Feedback build succeeds from tracked-only files when the gitignored working copy is deleted"
 component: build-pipeline
 level: L3
-status: active
+status: superseded_by
 req_status: draft
 work_status: todo
 readiness: approved
@@ -50,6 +50,6 @@ amended_by:
   - reason: "it-po-technical-enrichment"
     entry: "Added it_requirements pinning the tracked-only end-to-end build-success + preflight-no-broken-feedback evidence, the leftover-working-tree-independent determinism, and the observable-only scope (defer the relocation mechanism to BP-1000a-5). Criteria unchanged; assigned_agent (python-coder), complexity (S), and the BP-1000a-5 expects_from contract validated and kept (contract shape tightened to name the resolved feedback set)."
     by: it-po
-superseded_by: null
+superseded_by: [BP-1200a-1-ii]
 covered_by: []
 implemented_by: []
