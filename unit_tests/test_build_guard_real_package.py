@@ -521,9 +521,53 @@ def test_tracked_source_guard_noop_on_non_git_root(tmp_path: Path) -> None:
     )
 
 
+def test_guard_source_paths_match_deployable_set() -> None:
+    """The tracked-source guard's source set must stay 1:1 with the deployable set.
+
+    Regression guard for the LOW finding in the BP-900f re-review:
+    ``_get_source_paths_for_guard`` re-implements the per-group scans of
+    ``_get_source_deployable_scripts`` (deploy namespace) to produce
+    source-namespace paths. The two MUST cover exactly the same scripts — if a
+    future manifest group is added to one function but not the other, the guard
+    would silently stop checking that group's sources (a coverage hole, the same
+    failure class the original BP-900f review caught one level down). This test
+    fails on any such drift.
+
+    AC BP-900f-1.
+    """
+    # covers: BP-900f-1
+    deployable = _build._get_source_deployable_scripts(_REAL_PACKAGE_ROOT)
+    guard_sources = _build._get_source_paths_for_guard(_REAL_PACKAGE_ROOT)
+
+    assert deployable, (
+        "_get_source_deployable_scripts() returned an empty set on the real "
+        "package — the manifest derivation is broken."
+    )
+    assert guard_sources, (
+        "_get_source_paths_for_guard() returned an empty set on the real "
+        "package — the guard source derivation is broken."
+    )
+
+    assert len(guard_sources) == len(deployable), (
+        f"Tracked-source guard set ({len(guard_sources)}) and deployable set "
+        f"({len(deployable)}) have diverged. A manifest group was likely added to "
+        "_get_source_deployable_scripts() (or a _manifest_* helper) without a "
+        "matching scan in _get_source_paths_for_guard() — the tracked-source guard "
+        "would then silently skip that group's sources. Update both functions "
+        "together so they stay 1:1."
+    )
+
+
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-06-30 [BrainCandy/guard-manifest-consistency]: Added
+#   test_guard_source_paths_match_deployable_set. Closes the LOW finding from
+#   the BP-900f re-review: _get_source_paths_for_guard duplicates the per-group
+#   scans of _get_source_deployable_scripts, with no test asserting they stay
+#   1:1. A forgotten group in either function would silently drop that group's
+#   sources from the tracked-source guard. The new test asserts equal cardinality
+#   on the real package so any drift fails CI. (#BP-900f-1)
 # - 2026-06-29 [python-coder/TICKET-20260629-BP-1200a-1-ii follow-up]: Added
 #   test_commit_guardian_missing_scripts_in_templates. Root cause: 3 scripts
 #   (known_failing_tests.py, transform_decision_history.py,
