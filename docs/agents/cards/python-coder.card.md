@@ -152,3 +152,32 @@ flowchart TD
 
 - [Agent Knowledge Plane](../../architecture/agent_knowledge_plane.md)
 - [Agent Conventions](../conventions.md)
+
+---
+
+## AC Assignments
+
+### python-coder
+- INF-600a-1: Registry declares every skill an agent invokes, with invocation mode
+- INF-600a-1-i: skills_invoked rejects skill IDs that do not resolve to a template or project-local skill
+- INF-600a-2: Agent frontmatter declares structured inputs, outputs, and mutates
+- INF-600a-2-i: Agent with empty inputs array is valid (utility agents spawned without payload)
+- INF-600a-3: Registry declares which knowledge channels feed each agent
+- INF-600a-3-i: knowledge_channels rejects channel numbers outside the 1-11 range
+- INF-600a-4: Every config value referenced in the template body is declared in config_keys
+- INF-600a-4-i: Build detects Mustache variables in template body that are not declared in config_keys
+- INF-600a-5: Agent frontmatter declares structured pre-flight reads
+- INF-600a-6: Agent frontmatter declares structured behavioral patterns
+- INF-600b-1: Generated card includes hyperlinks to component docs and architecture references
+- INF-600b-1-i: Card omits hyperlinks for documents that do not exist on disk
+- INF-600b-2: Generated card surfaces per-agent AC assignments so agents can work AC-by-AC
+- INF-600d-1: spawn_allowlist excludes agents whose capability is performed via a skill rather than delegation
+- INF-600d-1-i: Agent that delegates to a specialist for complex cases AND has a fallback skill declares both
+- INF-600g-1: Build validates that spawned_by entries are reciprocal with spawn_allowlist entries
+- INF-600g-2: Build detects phase agents redundantly listed alongside __ticket_phase_agents__ macro
+- INF-600g-2-i: Non-phase agent individually listed alongside __ticket_phase_agents__ is valid
+- INF-600g-3: Build cross-references skills_invoked against actual skill usage in agent template body
+- INF-600g-3-i: Project-local skill referenced in skills_invoked resolves via .claude/skills/ fallback
+- INF-600k-1: A workflow filename in spawned_by passes registry validation as an external caller
+- INF-600k-2: A direct user trigger in spawned_by passes registry validation as an external caller
+- INF-600k-3: A genuinely unknown agent in spawned_by is still rejected

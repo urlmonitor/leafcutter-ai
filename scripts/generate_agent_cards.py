@@ -555,6 +555,94 @@ def render_behavioral_patterns(template_frontmatter: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def render_ac_assignments(agent_id: str, ac_list: list[dict[str, Any]]) -> str:
+    """Render the '## AC Assignments' card section for a specific agent.
+
+    Groups the provided AC dicts (each with at minimum ``id`` and ``title``)
+    under a ``### {agent_id}`` heading.  Returns an empty string when
+    *ac_list* is empty so callers can omit the section entirely.
+
+    Args:
+        agent_id: Canonical agent identifier (e.g. ``"python-coder"``).
+        ac_list: List of AC dicts, each containing at minimum ``id`` and
+            ``title`` keys.  Only ACs that belong to *agent_id* (i.e. whose
+            ``assigned_agent`` field equals *agent_id*) should be supplied by
+            the caller — this function does not filter.
+
+    Returns:
+        Markdown string for the AC Assignments section, or empty string when
+        *ac_list* is empty.
+    """
+    if not ac_list:
+        return ""
+
+    lines: list[str] = ["## AC Assignments", "", f"### {agent_id}", ""]
+    for ac in ac_list:
+        ac_id = ac.get("id", "—")
+        title = ac.get("title", "—")
+        lines.append(f"- {ac_id}: {title}")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _scan_ac_assignments(
+    agent_id: str,
+    docs_root: Path,
+) -> list[dict[str, Any]]:
+    """Scan the AC store for YAML files assigned to *agent_id*.
+
+    Walks ``docs_root/docs/acceptance-criteria/`` recursively and loads
+    every ``.yaml`` / ``.yml`` file.  Returns dicts with ``id`` and
+    ``title`` for files whose ``assigned_agent`` field matches *agent_id*
+    and whose ``status`` field is ``"active"``.
+
+    Args:
+        agent_id: Canonical agent identifier to match against
+            ``assigned_agent`` in each AC YAML file.
+        docs_root: Absolute path to the package root (repo root).  The AC
+            store is expected at ``docs_root/docs/acceptance-criteria/``.
+
+    Returns:
+        List of ``{"id": ..., "title": ..., "assigned_agent": ...}`` dicts
+        for each matching active AC, sorted by AC ``id``.  Empty list when
+        the AC store directory does not exist or no matching ACs are found.
+    """
+    ac_dir = docs_root / "docs" / "acceptance-criteria"
+    if not ac_dir.exists():
+        return []
+
+    results: list[dict[str, Any]] = []
+    for dirpath, _dirs, filenames in os.walk(ac_dir):
+        for filename in filenames:
+            if not (filename.endswith(".yaml") or filename.endswith(".yml")):
+                continue
+            filepath = Path(dirpath) / filename
+            try:
+                text = filepath.read_text(encoding="utf-8")
+            except OSError as exc:
+                _log.warning("Cannot read AC file %s: %s", filepath, exc)
+                continue
+            try:
+                data = yaml.safe_load(text)
+            except yaml.YAMLError as exc:
+                _log.warning("YAML parse error in %s: %s", filepath, exc)
+                continue
+            if not isinstance(data, dict):
+                continue
+            if data.get("assigned_agent") != agent_id:
+                continue
+            if data.get("status") != "active":
+                continue
+            results.append({
+                "id": data.get("id", filename.rstrip(".yaml")),
+                "title": data.get("title", ""),
+                "assigned_agent": agent_id,
+            })
+
+    results.sort(key=lambda d: d.get("id", ""))
+    return results
+
+
 def render_references(
     registry_entry: dict[str, Any],
     card_path: Path | None = None,
@@ -658,6 +746,7 @@ def generate_card(
     registry_entry: dict[str, Any],
     card_path: Path | None = None,
     package_root: Path | None = None,
+    ac_assignments: list[dict[str, Any]] | None = None,
 ) -> str:
     """Generate a complete .card.md string for one agent.
 
@@ -671,6 +760,10 @@ def generate_card(
     knowledge_channel source strings that resolve to real files on disk are
     also rendered as hyperlinks in the Knowledge Flow table.
 
+    When *ac_assignments* is a non-empty list, a "## AC Assignments" section
+    is appended after all other sections, grouping the listed ACs under the
+    agent's own heading (INF-600b-2).
+
     Args:
         agent_id: Canonical agent identifier (e.g. ``"python-coder"``).
         template_frontmatter: Parsed frontmatter dict from the agent's
@@ -682,6 +775,10 @@ def generate_card(
         package_root: Absolute path to the package root (repo root).  Used to
             resolve file paths when generating hyperlinks.  ``None`` disables
             link generation.
+        ac_assignments: Optional list of AC dicts (each with at minimum ``id``
+            and ``title``) for ACs assigned to this agent in the AC store.
+            When non-empty, a "## AC Assignments" section is appended to the
+            card.  ``None`` or ``[]`` omits the section.
 
     Returns:
         Complete card markdown string, starting with YAML frontmatter.
@@ -755,6 +852,11 @@ def generate_card(
     if references_section:
         sections += ["---\n\n", references_section]
 
+    # Append the AC Assignments section when assignments are available (INF-600b-2).
+    ac_section = render_ac_assignments(agent_id, ac_assignments or [])
+    if ac_section:
+        sections += ["---\n\n", ac_section]
+
     return card_fm + title_block + summary_table + "".join(sections)
 
 
@@ -822,6 +924,8 @@ def build_agent_cards(
 
         card_path = cards_dir / f"{agent_id}.card.md"
 
+        ac_assignments = _scan_ac_assignments(agent_id, target_root)
+
         try:
             card_content = generate_card(
                 agent_id,
@@ -829,6 +933,7 @@ def build_agent_cards(
                 registry_entry,
                 card_path=card_path,
                 package_root=target_root,
+                ac_assignments=ac_assignments,
             )
         except Exception as exc:  # noqa: BLE001
             _log.warning("Card generation failed for %s: %s", agent_id, exc)
@@ -889,4 +994,17 @@ def build_agent_cards(
 #   instead of a code span, and emits a WARNING via the module logger so
 #   consumers detect stale references without failing the build.
 #   (#EPIC-SelfDescribingAgentsCorrections/09)
+#
+# - 2026-06-30 [python-coder/EPIC-SelfDescribingAgentsCorrections/10]:
+#   Per-agent AC assignment section (INF-600b-2). Added two new helpers:
+#   render_ac_assignments() emits a ## AC Assignments / ### {agent_id}
+#   grouped Markdown section; _scan_ac_assignments() walks
+#   docs/acceptance-criteria/ for YAML files with assigned_agent ==
+#   agent_id and status == active. generate_card() gains an optional
+#   ac_assignments parameter; when non-empty, the section is appended
+#   after ## References. build_agent_cards() calls _scan_ac_assignments()
+#   per agent and passes results to generate_card(). Both new functions
+#   follow project error-handling rules (OSError + yaml.YAMLError
+#   wrapped, never bare except, never silently swallowed).
+#   (#EPIC-SelfDescribingAgentsCorrections/10)
 # ====================================================================
