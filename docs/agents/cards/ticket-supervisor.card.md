@@ -3,8 +3,9 @@ agent_id: ticket-supervisor
 title: "Agent Card: ticket-supervisor"
 type: card
 status: active
-created: 2026-06-05
+created: 2026-06-30
 card_version: "generated"
+description: "Agent card for the ticket-supervisor agent."
 ---
 # ticket-supervisor
 
@@ -30,8 +31,13 @@ card_version: "generated"
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 3 | ticket_path from ticket-supervisor | — | — |
+| 4 | pre-flight file reads | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
 ---
 
 ## Spawn and Dependency
@@ -58,7 +64,26 @@ flowchart TD
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_path` | file_path | Absolute path to the ticket markdown file |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `sign_off_comment` | sign_off_comment | Sign-off comment with status: ok | blocker | handoff |
+| `ticket_path` | structured_response | Output field: ticket_path |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_frontmatter_agents_status` | — | Sets agents.ticket-supervisor to signed_off or failed |
+| `sign_offs_checklist` | — | Checks the ticket-supervisor checkbox with timestamp |
+| `implementation_artifacts` | — | Files created or modified during phase execution |
 ---
 
 ## Tools Available
@@ -76,8 +101,8 @@ flowchart TD
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `building-epics` | — | — |
-| `signoff` | — | — |
+| `building-epics` | always | — |
+| `signoff` | conditional | — |
 ---
 
 ## Configuration
@@ -87,4 +112,16 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Stop-and-Ask | condition requiring user decision or out-of-scope action | Do not proceed to step 4 until all three reads are complete. | `None` |
+| Stop-and-Ask | condition requiring user decision or out-of-scope action | halt immediately with a
+parity-violation payload — the agent appeared to sign off but no bytes
+chang | `None` |
+| Delegation to frontend-coder | task requiring frontend-coder capabilities | Delegates to frontend-coder via Agent tool | `frontend-coder` |
+| Delegation to webapp-testing | task requiring webapp-testing capabilities | Delegates to webapp-testing via Agent tool | `webapp-testing` |
+| Delegation to test-writer | task requiring test-writer capabilities | Delegates to test-writer via Agent tool | `test-writer` |
+| Conditional Behavior | `agents:` IS present | **validate every agent name against the registry** | `None` |
+| Conditional Behavior | you first read a ticket's `agents:` map | validate each agent name by | `None` |

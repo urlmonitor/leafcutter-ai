@@ -49,6 +49,11 @@ DECISION HISTORY:
     is read in binary mode for byte-accurate size slicing (multibyte-safe).
     Removed _assign_fallback_yaml() and all mock-tolerance branches — the
     parser now handles only real git cat-file protocol output.
+  - 2026-06-30 [python-coder/TICKET-20260629-AC_Hook_Store_Index]: Replaced the
+    per-invocation _find_ac_files + _build_ac_index store walk in main() with a
+    call to _ac_store_index.get_ac_index(). The git cat-file --batch optimization
+    from PR #185 is preserved unchanged. The shared mtime-keyed cached index is
+    parsed exactly once per commit across all four AC guardrail hooks.
 """
 
 from __future__ import annotations
@@ -65,6 +70,12 @@ from _ac_schema_validators import (  # noqa: E402
     validate_criteria_not_pattern_duplicate, validate_deprecated_pattern_reference,
     validate_manually, validate_pattern_bindings_completeness, validate_with_jsonschema,
 )
+
+try:
+    from _ac_store_index import get_ac_index  # type: ignore[import]
+    _AC_STORE_INDEX_AVAILABLE = True
+except ImportError:
+    _AC_STORE_INDEX_AVAILABLE = False
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -610,8 +621,14 @@ def main() -> int:
         failed: list[tuple[Path, list[str]]] = []
     else:
         # Build the full-store lookup index for cross-file checks (AC-4: not narrowed).
-        all_store_files = _find_ac_files(root)
-        all_ac_data = _build_ac_index(all_store_files)
+        # Use the shared mtime-cached index when available; fall back to the
+        # direct _find_ac_files + _build_ac_index walk otherwise.
+        ac_store_dir = root / AC_GLOB_PATTERN
+        if _AC_STORE_INDEX_AVAILABLE:
+            all_ac_data = get_ac_index(str(ac_store_dir))
+        else:
+            all_store_files = _find_ac_files(root)
+            all_ac_data = _build_ac_index(all_store_files)
         failed = []
         for path in staged_files:
             errs = _validate_file(path, schema, all_ac_data)

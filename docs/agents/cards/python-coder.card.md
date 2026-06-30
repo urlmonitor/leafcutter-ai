@@ -3,8 +3,9 @@ agent_id: python-coder
 title: "Agent Card: python-coder"
 type: card
 status: active
-created: 2026-06-05
+created: 2026-06-30
 card_version: "generated"
+description: "Agent card for the python-coder agent."
 ---
 # python-coder
 
@@ -120,8 +121,6 @@ flowchart TD
 |-------|------|-----------|
 | `signoff` | always | — |
 | `doc-enforcer` | always | — |
-| `complexity-reduction` | conditional | when flagged functions exceed complexity threshold |
-| `collector-enforcer` | conditional | when paths under collector/ are edited |
 ---
 
 ## Configuration

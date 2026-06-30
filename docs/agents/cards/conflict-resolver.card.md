@@ -3,8 +3,9 @@ agent_id: conflict-resolver
 title: "Agent Card: conflict-resolver"
 type: card
 status: active
-created: 2026-06-05
+created: 2026-06-30
 card_version: "generated"
+description: "Agent card for the conflict-resolver agent."
 ---
 # conflict-resolver
 
@@ -34,8 +35,11 @@ unresolved_files.
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
 ---
 
 ## Spawn and Dependency
@@ -58,7 +62,17 @@ flowchart TD
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `completion_report` | structured_response | Structured completion payload or sign-off comment |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `none` | — | Read-only agent — no filesystem mutations |
 ---
 
 ## Tools Available
@@ -84,4 +98,10 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Delegation to conflict-resolver-deep | task requiring conflict-resolver-deep capabilities | Delegates to conflict-resolver-deep via Agent tool | `conflict-resolver-deep` |
+| Conditional Behavior | the input is absent or incomplete | list conflicted files yourself via | `None` |
+| Conditional Behavior | the file is a Python source file | check that no conflict marker | `None` |

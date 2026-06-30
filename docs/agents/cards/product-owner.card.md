@@ -1,28 +1,26 @@
 ---
-agent_id: brainstorm-worker
-title: "Agent Card: brainstorm-worker"
+agent_id: product-owner
+title: "Agent Card: product-owner"
 type: card
 status: active
 created: 2026-06-30
 card_version: "generated"
-description: "Agent card for the brainstorm-worker agent."
+description: "Agent card for the product-owner agent."
 ---
-# brainstorm-worker
+# product-owner
 
-**Internal-only single-perspective analyst. Spawned exclusively by
-`brainstorm-lead` (never by the user, never by a supervisor, never by
-any other agent) as part of the design-escalation tier from
-`building-epics` §3.3. Receives a design question plus a single
-perspective parameter (e.g. `simplicity`, `robustness`,
-`reversibility`, `performance`, `usability`, `maintainability`) and
-reasons about the question through that lens only. Returns a strictly
-structured `{perspective, recommendation, rationale, risks}` block —
-the parent lead parses on these keys. Does NOT spawn sub-agents; this
-is a single-shot read-only analyst.**
+**Product Owner agent for the AC pipeline. Operates at the L0/L1 flight level:
+translates user requests into customer value propositions (L0) and feature
+benefit statements (L1). Speaks customer language, never engineering jargon.
+Owns the "what" and "why" — never the "how."
+
+Use when: a user describes a product need, a feature idea, or a strategic
+goal. The PO runs before the BA, framing the request in benefit language
+so the BA can decompose L1s into testable L2/L3 Gherkin behaviors.**
 
 | Field | Value |
 |-------|-------|
-| Model | sonnet |
+| Model | opus |
 | Tier | utility |
 | Priority | — |
 | Portable | Yes |
@@ -31,10 +29,6 @@ is a single-shot read-only analyst.**
 ---
 
 ## When to Use
-
-### Spawned By
-
-- `brainstorm-lead`
 ---
 
 ## Knowledge Flow
@@ -42,8 +36,10 @@ is a single-shot read-only analyst.**
 | Channel | Source | Injection Mode | Description |
 |---------|--------|----------------|-------------|
 | 1 | template description field | — | — |
+| 4 | pre-flight file reads | — | — |
 | 6 | project files read during execution | — | — |
 | 7 | bash command output (git, build, tests) | — | — |
+| 8 | PROJECT_CONTEXT.md | — | — |
 ---
 
 ## Spawn and Dependency
@@ -55,21 +51,12 @@ flowchart TD
     classDef utility fill:#f3f4f6,stroke:#4b5563,stroke-width:2px
     classDef target fill:#fee2e2,stroke:#dc2626,stroke-width:3px
 
-    brainstorm_lead["brainstorm-lead\n(phase tier)"]:::phase
-    brainstorm_worker["brainstorm-worker\n(utility tier, priority ?)"]:::target
+    product_owner["product-owner\n(utility tier, priority ?)"]:::target
 
-    brainstorm_lead -->|dispatches| brainstorm_worker
 ```
 ---
 
 ## Input / Output Contract
-
-### Inputs
-
-| Name | Type | Description |
-|------|------|-------------|
-| `question` | string | Design question to reason about |
-| `perspective` | string | Single reasoning lens (simplicity, robustness, etc.) |
 
 ### Outputs
 
@@ -89,14 +76,15 @@ flowchart TD
 | Tool |
 |------|
 | `Read` |
+| `Write` |
 | `Bash` |
+| `Skill` |
 ---
 
 ## Skills Used
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `building-epics` | always | — |
 | `signoff` | always | — |
 ---
 
@@ -111,6 +99,5 @@ flowchart TD
 
 | Pattern | Trigger | Behavior | Related Agent |
 |---------|---------|----------|---------------|
-| Stop-and-Ask | condition requiring user decision or out-of-scope action | refuse
-politely and point them at `brainstorm-lead`. | `None` |
-| Conditional Behavior | either field is missing or unparseable | return the malformed-input | `None` |
+| Conditional Behavior | a user request implies a strategic shift (new direction | reprioritization, | `None` |
+| Conditional Behavior | a file is absent | unreadable, binary, or exceeds 50 KB | `None` |

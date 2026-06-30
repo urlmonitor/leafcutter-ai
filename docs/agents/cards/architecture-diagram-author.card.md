@@ -3,8 +3,9 @@ agent_id: architecture-diagram-author
 title: "Agent Card: architecture-diagram-author"
 type: card
 status: active
-created: 2026-06-05
+created: 2026-06-30
 card_version: "generated"
+description: "Agent card for the architecture-diagram-author agent."
 ---
 # architecture-diagram-author
 
@@ -35,8 +36,12 @@ and rationale.
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 3 | ticket_path from ticket-supervisor | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
 ---
 
 ## Spawn and Dependency
@@ -59,7 +64,25 @@ flowchart TD
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_path` | file_path | Absolute path to the ticket markdown file |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `sign_off_comment` | sign_off_comment | Sign-off comment with status: ok | blocker | handoff |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_frontmatter_agents_status` | — | Sets agents.architecture-diagram-author to signed_off or failed |
+| `sign_offs_checklist` | — | Checks the architecture-diagram-author checkbox with timestamp |
+| `implementation_artifacts` | — | Files created or modified during phase execution |
 ---
 
 ## Tools Available
@@ -77,7 +100,7 @@ flowchart TD
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `write-c4-diagram` | — | — |
+| `write-c4-diagram` | conditional | — |
 ---
 
 ## Configuration
@@ -87,4 +110,13 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Stop-and-Ask | condition requiring user decision or out-of-scope action | Do not proceed past Step 1 until the skill is loaded. | `None` |
+| Stop-and-Ask | condition requiring user decision or out-of-scope action | do not proceed to Step 3. | `None` |
+| Delegation to documentation-expert | task requiring documentation-expert capabilities | Delegates to documentation-expert via Agent tool | `documentation-expert` |
+| Delegation to architecture-author | task requiring architecture-author capabilities | Delegates to architecture-author via Agent tool | `architecture-author` |
+| Conditional Behavior | a ticket is provided (`ticket_path`) | check whether the ticket body contains | `None` |
+| Conditional Behavior | any AC was not satisfied | surface it as a blocker comment rather than signing off | `None` |

@@ -3,8 +3,9 @@ agent_id: sql-view-creator
 title: "Agent Card: sql-view-creator"
 type: card
 status: active
-created: 2026-06-05
+created: 2026-06-30
 card_version: "generated"
+description: "Agent card for the sql-view-creator agent."
 ---
 # sql-view-creator
 
@@ -32,8 +33,13 @@ and file conventions. Produces the SQL file plus test file in one pass.
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 4 | pre-flight file reads | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
+| 8 | PROJECT_CONTEXT.md | — | — |
 ---
 
 ## Spawn and Dependency
@@ -56,7 +62,17 @@ flowchart TD
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `completion_report` | structured_response | Structured completion payload or sign-off comment |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `none` | — | Read-only agent — no filesystem mutations |
 ---
 
 ## Tools Available
@@ -72,7 +88,9 @@ flowchart TD
 
 ## Skills Used
 
-*No skills declared.*
+| Skill | Mode | Condition |
+|-------|------|-----------|
+| `signoff` | always | — |
 ---
 
 ## Configuration
@@ -82,4 +100,15 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Stop-and-Ask | condition requiring user decision or out-of-scope action | stop and ask before writing:
+
+| Input | Required | Example |
+|---|---|---|
+| View name | Yes | `cagg | `None` |
+| Stop-and-Ask | condition requiring user decision or out-of-scope action | stop and ask. | `None` |
+| Conditional Behavior | any of the following is missing from the invocation context | stop and ask before writing: | `None` |
+| Conditional Behavior | the request is flavour-incompatible | emit the structured FLAVOUR ERROR and stop | `None` |
