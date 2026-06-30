@@ -1,0 +1,29 @@
+id: SD-100d
+readiness: draft
+priority: medium
+title: "Send the same value as a tailored update written for a specific audience"
+component: stakeholder-delivery
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  The approved value can be rendered as a stakeholder email or update, written
+  for a named audience rather than the whole room.
+
+  When you name who the update is for, the delivery partner shapes the message to
+  what that audience cares about, so each stakeholder hears the part that matters
+  to them.
+depends_on: [SD-100]
+documentation_triggers: [how-to]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
