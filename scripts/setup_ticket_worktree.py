@@ -62,39 +62,31 @@ class BootstrapError(RuntimeError):
     """
 
     @classmethod
-    def missing_config(cls, config_path: object) -> "BootstrapError":
-        """Return an AC-5 error for a missing .pre-commit-config.yaml after build.
+    def missing_config(cls, config_path: object, build_exc: Exception | None = None) -> "BootstrapError":
+        """Return an AC-5 error for a missing .pre-commit-config.yaml.
 
         Args:
             config_path: Path (or string) where the config was expected.
+            build_exc: Optional build failure exception that caused the absence.
+                When provided, the message reflects the build failure as the
+                root cause rather than implying build.py succeeded.
 
         Returns:
             BootstrapError with a structured diagnostic message.
         """
+        if build_exc is not None:
+            return cls(
+                f"AC-5: build.py failed ({build_exc}), so .pre-commit-config.yaml "
+                f"was not materialised at {config_path}. Pre-commit hooks will be "
+                "silently skipped. Remediation: fix build.py errors and re-run "
+                "bootstrap, or run build.py manually."
+            )
         return cls(
-            f"AC-5: build.py ran but .pre-commit-config.yaml is missing at "
-            f"{config_path}. Pre-commit hooks will be silently skipped. "
+            f"AC-5: .pre-commit-config.yaml is missing at {config_path}. "
+            "Pre-commit hooks will be silently skipped. "
             "Remediation: verify install_shims() completed without error, "
             "then re-run bootstrap or run build.py manually."
         )
-
-    @classmethod
-    def unresolvable_config(cls, config_path: object, cause: Exception) -> "BootstrapError":
-        """Return an AC-5 error when the config path cannot be resolved via the OS.
-
-        Args:
-            config_path: Path (or string) that could not be resolved.
-            cause: The underlying OSError that triggered the failure.
-
-        Returns:
-            BootstrapError with a structured diagnostic message.
-        """
-        return cls(
-            f"AC-5: Cannot resolve {config_path}: {cause}. "
-            "Pre-commit hooks will be silently skipped."
-        )
-
-
 
 
 # ---------------------------------------------------------------------------
@@ -230,11 +222,14 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
 
     Missing source files are silently skipped (FileNotFoundError → no action).
 
-    After running ``build.py --target-dir``, a post-build probe verifies that
-    ``<worktree>/.pre-commit-config.yaml`` exists and is not a dangling symlink
-    (AC-5).  If the probe fails a ``BootstrapError`` is raised so the caller can
+    After the build step (whether build.py ran, failed, or was not found), an
+    unconditional post-build probe verifies that
+    ``<worktree>/.pre-commit-config.yaml`` exists (AC-5, pr-reviewer H-1).
+    If the probe fails a ``BootstrapError`` is raised so the caller can
     surface the failure clearly rather than continuing with hooks silently
-    disabled.
+    disabled.  The error message identifies the root cause: build failure
+    (when build_exc is set) or general absence (when build.py was not found
+    or install_shims failed silently).
 
     Args:
         main_repo: Absolute Path to the main repository root where source
@@ -242,8 +237,9 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
         worktree_path: Absolute Path to the worktree being bootstrapped.
 
     Raises:
-        BootstrapError: If build.py ran but ``.pre-commit-config.yaml`` is
-            absent or unresolvable in the worktree after the build step (AC-5).
+        BootstrapError: If ``.pre-commit-config.yaml`` is absent at the
+            worktree root after the build step, regardless of whether
+            build.py was found or ran successfully (AC-5).
     """
     # --- .env: symlink-first, copy as fallback ---
     env_src = main_repo / ".env"
@@ -330,6 +326,7 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
         worktree_path / "scripts" / "build.py",
     ]
     build_script = next((c for c in build_candidates if c.exists()), None)
+    build_exc: Exception | None = None
     if build_script is not None:
         try:
             subprocess.run(
@@ -338,20 +335,12 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
                 check=True,
             )
         except subprocess.CalledProcessError as exc:
+            build_exc = exc
             print(
                 f"WARNING: build.py run failed in new worktree ({exc}); "
                 "named-workflow resolution may fail until build.py is run manually.",
                 file=sys.stderr,
             )
-        # AC-5: post-build probe — verify .pre-commit-config.yaml was materialised
-        # by install_shims() so that package hooks are not silently skipped.
-        config_path = worktree_path / ".pre-commit-config.yaml"
-        try:
-            resolved = os.path.realpath(str(config_path))
-            if not os.path.exists(resolved):
-                raise BootstrapError.missing_config(config_path)
-        except OSError as exc:
-            raise BootstrapError.unresolvable_config(config_path, exc) from exc
     else:
         print(
             "WARNING: build.py not found in worktree (probed "
@@ -360,6 +349,14 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
             ".leafcutter/ build outputs.",
             file=sys.stderr,
         )
+
+    # AC-5: post-build probe — verify .pre-commit-config.yaml was materialised
+    # regardless of whether build.py was found or run.  A missing config causes
+    # package hooks to be silently skipped for the entire drive.  Runs
+    # unconditionally so a worktree where build.py was absent also fails fast.
+    config_path = worktree_path / ".pre-commit-config.yaml"
+    if not config_path.exists():
+        raise BootstrapError.missing_config(config_path, build_exc)
 
 
 def _derive_slug(ticket_path: Path) -> str:
@@ -696,6 +693,25 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-30 [Agent/python-coder]: Three focused fixes (TICKET-20260617-Worktree_Precommit_Bootstrap,
+  closes AC-5 script-level gap per pr-reviewer H-1):
+  FIX 1 (HIGH): Moved the .pre-commit-config.yaml existence probe outside the
+  `if build_script is not None:` branch so it runs unconditionally after both
+  the build-ran and build-not-found cases.  A worktree where build.py was not
+  found now raises BootstrapError instead of warning-and-continuing (the AC-5
+  hole that allowed a missing config to pass bootstrap silently).
+  FIX 2 (MEDIUM): When build.py exits non-zero (CalledProcessError), the
+  exception is now captured as build_exc and forwarded to missing_config() so
+  the BootstrapError message names the build failure as the root cause rather
+  than implying build succeeded.  missing_config() gained an optional build_exc
+  parameter; the message branch is: build failed → "build.py failed (…)" vs
+  no-build → "missing at …".  raise … from exc chain preserved.
+  FIX 3 (LOW): Removed dead unresolvable_config classmethod and its OSError
+  handler (os.path.realpath does not raise OSError; Path.exists() already
+  handles dangling symlinks).  Collapsed realpath + os.path.exists to a single
+  config_path.exists() call.  Removed triple-blank-line gap after the class.
+  templates/scripts/setup_ticket_worktree.py receives identical changes (mirror
+  contract).
 - 2026-06-30 [Agent/python-coder]: Added BootstrapError class with factory
   classmethods (missing_config, unresolvable_config) and a post-build probe
   in _bootstrap() after build.py runs (TICKET-20260617-Worktree_Precommit_Bootstrap).
