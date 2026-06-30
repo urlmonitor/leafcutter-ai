@@ -1,6 +1,6 @@
 ---
 title: "Consolidate AC-store parsing in guardrail hooks behind one mtime-cached index"
-status: in_progress
+status: done
 components:
   - build_pipeline
 created: 2026-06-29
@@ -22,7 +22,7 @@ agents:
   test-runner: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # Consolidate AC-store parsing in guardrail hooks behind one mtime-cached index
@@ -115,7 +115,7 @@ Scenario: large-store performance no longer scales per hook
 - [x] test-runner — 2026-06-30 16:20
 - [x] pr-reviewer — 2026-06-30 17:10
 - [x] commit — 2026-06-30 18:45
-- [ ] pull-request
+- [x] pull-request — 2026-06-30 19:15
 
 ## Comments
 
@@ -197,3 +197,11 @@ completion_manifest:
   hooks_passed: true
 Committed implementation to feature/ac-hook-store-index. SHA: d37f0012.
 Hook autofix applied: added `description:` field to 51 agent card files and YAML frontmatter to docs/INDEX.md (check-description-field hook).
+
+### 2026-06-30 19:15 — pull-request (status: ok)
+feedback-id: fb_2026-06-30_pr191
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Pushed feature/ac-hook-store-index to origin and created PR #191 targeting main. URL: https://github.com/urlmonitor/leafcutter-ai/pull/191. Merge state: MERGEABLE/BLOCKED (branch protection — expected). All agents signed off; ticket status flipped to done.
