@@ -3,15 +3,16 @@ agent_id: test-writer
 title: "Agent Card: test-writer"
 type: card
 status: active
-created: 2026-06-05
+created: 2026-06-30
 card_version: "generated"
+description: "Agent card for the test-writer agent."
 ---
 # test-writer
 
 **TDD test-first authoring agent. Spawned by ticket-supervisor at priority 5,
 BEFORE python-coder or sql-coder run. Reads the ## Test Requirements section
-from the ticket body (produced by business-analyst during ticket creation), writes
-the specified failing test stubs, runs the suite to confirm all new tests are
+from the ticket body and writes the specified failing test stubs, runs the suite
+to confirm all new tests are
 RED (non-zero exit), captures a structured red_baseline block in its sign-off
 comment, and hands off to coders whose job is to make the red-baseline green.
 Classifies test failures before touching production code, enumerates consumers
@@ -39,8 +40,14 @@ immediately, zero file writes) when tests array is empty or block is absent.**
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 3 | ticket_path from ticket-supervisor | — | — |
+| 4 | pre-flight file reads | — | — |
+| 5 | skills_config.json config_keys | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
 ---
 
 ## Spawn and Dependency
@@ -65,7 +72,25 @@ flowchart TD
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_path` | file_path | Absolute path to the ticket markdown file |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `sign_off_comment` | sign_off_comment | Sign-off comment with status: ok | blocker | handoff |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_frontmatter_agents_status` | — | Sets agents.test-writer to signed_off or failed |
+| `sign_offs_checklist` | — | Checks the test-writer checkbox with timestamp |
+| `implementation_artifacts` | — | Files created or modified during phase execution |
 ---
 
 ## Tools Available
@@ -83,7 +108,7 @@ flowchart TD
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `signoff` | — | — |
+| `signoff` | conditional | — |
 ---
 
 ## Configuration
@@ -97,4 +122,11 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Stop-and-Ask | condition requiring user decision or out-of-scope action | Do not proceed without human review. | `None` |
+| Delegation to research-agent | task requiring research-agent capabilities | Delegates to research-agent via Agent tool | `research-agent` |
+| Conditional Behavior | an AC is untestable | write `(not testable: <reason>)` in the Test column | `None` |
+| Conditional Behavior | `## Agent Contracts` is absent from the ticket body | skip all AC-aware | `None` |

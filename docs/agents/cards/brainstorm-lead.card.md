@@ -3,8 +3,9 @@ agent_id: brainstorm-lead
 title: "Agent Card: brainstorm-lead"
 type: card
 status: active
-created: 2026-06-05
+created: 2026-06-30
 card_version: "generated"
+description: "Agent card for the brainstorm-lead agent."
 ---
 # brainstorm-lead
 
@@ -35,13 +36,16 @@ exhausted; cap is 1 invocation per ticket per `building-epics` §4.**
 ### Spawned By
 
 - `ticket-supervisor`
-- `create-ticket`
 ---
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 4 | pre-flight file reads | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
 ---
 
 ## Spawn and Dependency
@@ -54,19 +58,34 @@ flowchart TD
     classDef target fill:#fee2e2,stroke:#dc2626,stroke-width:3px
 
     ticket_supervisor["ticket-supervisor\n(supervisor tier)"]:::supervisor
-    create_ticket["create-ticket\n(phase tier)"]:::phase
     brainstorm_lead["brainstorm-lead\n(utility tier, priority ?)"]:::target
     brainstorm_worker["brainstorm-worker\n(phase tier)"]:::phase
 
     ticket_supervisor -->|dispatches| brainstorm_lead
-    create_ticket -->|dispatches| brainstorm_lead
     brainstorm_lead -->|spawns| brainstorm_worker
 ```
 ---
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `question` | string | Design question to reason about |
+| `perspective` | string | Single reasoning lens (simplicity, robustness, etc.) |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `completion_report` | structured_response | Structured completion payload or sign-off comment |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `none` | — | Read-only agent — no filesystem mutations |
 ---
 
 ## Tools Available
@@ -80,7 +99,9 @@ flowchart TD
 
 ## Skills Used
 
-*No skills declared.*
+| Skill | Mode | Condition |
+|-------|------|-----------|
+| `building-epics` | conditional | — |
 ---
 
 ## Configuration
@@ -90,4 +111,10 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Stop-and-Ask | condition requiring user decision or out-of-scope action | refuse politely and point them at `/build-feature`. | `None` |
+| Conditional Behavior | a user appears to have invoked you directly | refuse politely and point them at `/build-feature` | `None` |
+| Conditional Behavior | either is missing | return an `outcome: | `None` |

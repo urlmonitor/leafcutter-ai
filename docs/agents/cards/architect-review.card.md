@@ -3,8 +3,9 @@ agent_id: architect-review
 title: "Agent Card: architect-review"
 type: card
 status: active
-created: 2026-06-05
+created: 2026-06-30
 card_version: "generated"
+description: "Agent card for the architect-review agent."
 ---
 # architect-review
 
@@ -29,13 +30,16 @@ inline architectural note (Sonnet only) or escalates to an Opus sub-agent.
 ### Spawned By
 
 - `ticket-supervisor`
-- `create-ticket`
 ---
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 3 | ticket_path from ticket-supervisor | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
 ---
 
 ## Spawn and Dependency
@@ -48,13 +52,11 @@ flowchart TD
     classDef target fill:#fee2e2,stroke:#dc2626,stroke-width:3px
 
     ticket_supervisor["ticket-supervisor\n(supervisor tier)"]:::supervisor
-    create_ticket["create-ticket\n(phase tier)"]:::phase
     architect_review["architect-review\n(phase tier, priority 4)"]:::target
     research_agent["research-agent\n(utility tier)"]:::utility
     architect_review_deep["architect-review-deep\n(phase tier)"]:::phase
 
     ticket_supervisor -->|dispatches| architect_review
-    create_ticket -->|dispatches| architect_review
     architect_review -->|spawns| research_agent
     architect_review -->|spawns| architect_review_deep
 ```
@@ -62,7 +64,25 @@ flowchart TD
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_path` | file_path | Absolute path to the ticket markdown file |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `sign_off_comment` | sign_off_comment | Sign-off comment with status: ok | blocker | handoff |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_frontmatter_agents_status` | — | Sets agents.architect-review to signed_off or failed |
+| `sign_offs_checklist` | — | Checks the architect-review checkbox with timestamp |
+| `implementation_artifacts` | — | Files created or modified during phase execution |
 ---
 
 ## Tools Available
@@ -80,7 +100,7 @@ flowchart TD
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `signoff` | — | — |
+| `signoff` | conditional | — |
 ---
 
 ## Configuration
@@ -90,4 +110,11 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Delegation to adr-author | task requiring adr-author capabilities | Delegates to adr-author via Agent tool | `adr-author` |
+| Delegation to architect-review-deep | task requiring architect-review-deep capabilities | Delegates to architect-review-deep via Agent tool | `architect-review-deep` |
+| Conditional Behavior | the change introduces a new cross-cutting policy decision (new abstraction | new constraint, new cross-component contract) that is not already covered by an | `None` |
+| Conditional Behavior | `requires_adr: true` | also set `adr-author: needed` in the `agents` map | `None` |

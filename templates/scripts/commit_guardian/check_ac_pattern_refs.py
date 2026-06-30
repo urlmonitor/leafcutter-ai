@@ -18,6 +18,8 @@ ARCHITECTURE: Reads staged .yaml files from docs/acceptance-criteria/ (via
         id via implements_pattern.
       - If so: emits "Cannot delete <id>: still referenced by N consuming ACs"
         and exits 1.
+    The AC store index is built via _ac_store_index.get_ac_index() — a shared
+    mtime-keyed cached index parsed at most once per commit across all four hooks.
     Fail-open: any unexpected parse error is logged as a warning and the file is
     skipped (exits 0). This prevents CI storms caused by unrelated YAML issues.
 
@@ -40,6 +42,11 @@ DECISION HISTORY:
     Fail-open on parse errors (exits 0 with stderr warning per ACS-500a-3).
     Deletion guard: checks surviving ACs reference-count before allowing
     pattern AC deletion (ACS-500d-1-i).
+  - 2026-06-30 [python-coder/TICKET-20260629-AC_Hook_Store_Index]: Replaced the
+    per-invocation store walk in _check_implements_pattern_refs and
+    _check_pattern_deletion_safety with calls to _ac_store_index.get_ac_index().
+    The shared mtime-keyed cached index is parsed exactly once per commit across
+    all four AC guardrail hooks.
 """
 
 from __future__ import annotations
@@ -49,6 +56,12 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+
+try:
+    from _ac_store_index import get_ac_index  # type: ignore[import]
+    _AC_STORE_INDEX_AVAILABLE = True
+except ImportError:
+    _AC_STORE_INDEX_AVAILABLE = False
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -351,6 +364,9 @@ def _check_implements_pattern_refs(
     1. Check that the referenced AC ID exists in the store.
     2. Check that the referenced AC _has_parameterized_slots.
 
+    Uses _ac_store_index.get_ac_index for a shared mtime-cached index when
+    available; falls back to a direct per-invocation store walk otherwise.
+
     Args:
         staged_paths: Repo-relative paths of staged AC YAML files.
         project_root: Absolute path to the project root.
@@ -359,17 +375,22 @@ def _check_implements_pattern_refs(
         List of human-readable violation strings. Empty list = no violations.
     """
     violations: list[str] = []
-    all_ac_files = _iter_all_ac_files(project_root)
 
-    # Build an index of all ACs in the store: id -> parsed dict
-    ac_index: dict[str, dict] = {}
-    for ac_file in all_ac_files:
-        data = _load_file(str(ac_file))
-        if data is None:
-            continue  # fail-open: skip unparseable files
-        ac_id = data.get("id")
-        if ac_id is not None:
-            ac_index[str(ac_id)] = data
+    # Build an index of all ACs in the store: id -> parsed dict.
+    # Use the shared mtime-cached index when available.
+    ac_store_root = project_root / _AC_STORE_DIR
+    if _AC_STORE_INDEX_AVAILABLE:
+        ac_index: dict[str, dict] = get_ac_index(str(ac_store_root))
+    else:
+        all_ac_files = _iter_all_ac_files(project_root)
+        ac_index = {}
+        for ac_file in all_ac_files:
+            data = _load_file(str(ac_file))
+            if data is None:
+                continue  # fail-open: skip unparseable files
+            ac_id = data.get("id")
+            if ac_id is not None:
+                ac_index[str(ac_id)] = data
 
     for rel_path in staged_paths:
         abs_path = rel_path
@@ -416,6 +437,9 @@ def _check_pattern_deletion_safety(
     For each deleted file, reads its id from HEAD, then counts how many
     surviving (non-deleted) ACs in the store reference it via implements_pattern.
 
+    Uses _ac_store_index.get_ac_index for a shared mtime-cached index when
+    available; falls back to a direct per-invocation store walk otherwise.
+
     Args:
         deleted_paths: Repo-relative paths of deleted AC YAML files.
         project_root: Absolute path to the project root.
@@ -439,26 +463,41 @@ def _check_pattern_deletion_safety(
     if not deleted_ids:
         return []
 
-    # Find all surviving AC files (not in the deleted set)
-    all_ac_files = _iter_all_ac_files(project_root)
-    surviving_files = [
-        f for f in all_ac_files
-        if not any(
-            str(f).endswith(rel.lstrip("/"))
-            or rel.lstrip("/") in str(f)
-            for rel in deleted_rel_set
-        )
-    ]
-
-    # Count references from surviving ACs to each deleted id
+    # Count references from surviving ACs to each deleted id.
+    # Use the shared mtime-cached index when available; otherwise walk the store.
+    ac_store_root = project_root / _AC_STORE_DIR
     ref_counts: dict[str, int] = {ac_id: 0 for ac_id in deleted_ids}
-    for ac_file in surviving_files:
-        data = _load_file(str(ac_file))
-        if data is None:
-            continue  # fail-open: skip unparseable files
-        ref = data.get("implements_pattern")
-        if ref is not None and str(ref) in deleted_ids:
-            ref_counts[str(ref)] += 1
+
+    if _AC_STORE_INDEX_AVAILABLE:
+        # Shared index path: iterate the full id->dict map.
+        store_index = get_ac_index(str(ac_store_root))
+        for ac_id, data in store_index.items():
+            # Skip entries whose file path is in the deleted set.
+            # The index key is AC id, not path, so we check implements_pattern
+            # against deleted_ids only for entries that are NOT themselves deleted.
+            if ac_id in deleted_ids:
+                continue
+            ref = data.get("implements_pattern")
+            if ref is not None and str(ref) in deleted_ids:
+                ref_counts[str(ref)] += 1
+    else:
+        # Fallback: direct store walk.
+        all_ac_files = _iter_all_ac_files(project_root)
+        surviving_files = [
+            f for f in all_ac_files
+            if not any(
+                str(f).endswith(rel.lstrip("/"))
+                or rel.lstrip("/") in str(f)
+                for rel in deleted_rel_set
+            )
+        ]
+        for ac_file in surviving_files:
+            data = _load_file(str(ac_file))
+            if data is None:
+                continue  # fail-open: skip unparseable files
+            ref = data.get("implements_pattern")
+            if ref is not None and str(ref) in deleted_ids:
+                ref_counts[str(ref)] += 1
 
     for deleted_id, count in ref_counts.items():
         if count > 0:
