@@ -1,0 +1,70 @@
+id: BP-1000a-6
+title: "After the feedback source relocation, deploying feedback to a target still installs and shims the scripts with no consumer regression"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000a.yaml"
+criteria: |
+  Given the feedback deployable-script source has been relocated to the tracked
+    templates/scripts/feedback/ mirror (per BP-1000a-5)
+  And a clean external target project with no prior leafcutter deployment
+  When the build is run against that target project
+  Then every feedback script that exists under templates/scripts/feedback/ is
+    deployed to the target's feedback scripts location and shimmed exactly as it
+    was before the relocation
+  And the set of feedback script files present in the target after the build is
+    identical to the set that the pre-relocation build produced for the same
+    target
+  And no feedback script is missing, renamed, or left unshimmed compared to the
+    pre-relocation behavior
+depends_on:
+  - BP-1000a
+  - BP-1000a-5
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000a.yaml"
+    relationship: parent
+    status: exists
+  - path: "scripts/build.py"
+    relationship: implements
+    status: exists
+  - path: "scripts/build_phases.py"
+    relationship: implements
+    status: exists
+  - path: "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Acceptance is a before/after equality of the DEPLOYED + shimmed feedback script set in a clean target: the set of feedback files installed (and the shims created for them) after the relocation must equal the set the pre-relocation build produced for the same target. No feedback script may be missing, renamed, or left unshimmed."
+  - "Validate against a CONSUMER install, not only the self-build: run build.py --target-dir into a clean external project (no prior leafcutter deployment) and assert the deployed+shimmed feedback set there. A change that fixes the self-build but regresses a consumer install is a regression (the SHARED-CONTRACT validation requirement that BP-1200a-1 also carries)."
+  - "Preserve the ADR-001/ADR-013 deployment boundary: the deployed feedback output remains a build output at the consumer's feedback scripts location; the shimming behavior (install_shims) for feedback must be unchanged by the source relocation — only the build's READ source moved to templates/scripts/feedback/."
+  - "The deploy+shim step must consume the resolved feedback set produced by BP-1000a-5 (sourced from the tracked mirror); it must not re-derive the set from the gitignored scripts/feedback/ working copy."
+delivers_to: null
+expects_from:
+  ac_id: BP-1000a-5
+  contract: "The build reads feedback deployable-script source from tracked templates/scripts/feedback/ (resolved feedback set, repo-root-relative POSIX paths); this AC asserts the downstream deploy+shim of that source to a clean external target is behaviorally unchanged for consumers (before/after deployed-set equality)."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Added it_requirements pinning the before/after deployed+shimmed feedback-set equality, the MANDATORY consumer-install validation (build.py --target-dir into a clean external project, not only the self-build), the ADR-001/013 deployment-boundary + unchanged-install_shims constraint, and the requirement to consume BP-1000a-5's resolved set rather than re-deriving from the gitignored working copy. Promoted build.py/build_phases.py doc_links to relationship: implements. Criteria unchanged; assigned_agent (python-coder), complexity (M), and the BP-1000a-5 expects_from contract validated and kept (contract shape tightened to name the resolved feedback set)."
+    by: it-po
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Regression guard for the relocation: consumers must see no behavioral change.
+  The acceptance is a before/after equality of the deployed+shimmed feedback
+  script set in a clean target, validated against a consumer install
+  (build --target-dir into an external project), not only the self-build —
+  consistent with the SHARED-CONTRACT validation requirement carried by
+  BP-1200a-1.

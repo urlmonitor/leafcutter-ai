@@ -1,0 +1,69 @@
+id: BP-1200a-1-iii
+title: "On a fresh clone the build's deployable-script preflight does not abort for want of a tracked feedback source"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1200-ci-test-gate/BP-1200a-1.yaml"
+criteria: |
+  Given a brand-new checkout obtained by cloning into an empty directory (no
+    leftover untracked working-tree files from prior local work are present)
+  And the documented CI test command runs the build preparation step that the
+    fresh-clone procedure prescribes
+  When that build preparation step runs its deployable-script broken-reference
+    preflight guard
+  Then the preflight guard resolves the feedback deployable scripts from tracked
+    source and does not abort the build for a missing or untracked feedback source
+  And the build preparation step completes with a non-failing outcome on the fresh
+    clone
+  And the full suite then runs without any test erroring at collection because the
+    build preparation step failed to produce the feedback scripts the suite needs
+depends_on:
+  - BP-1200a-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1200-ci-test-gate/BP-1200a-1.yaml"
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-016-ci-fresh-clone-test-dependencies.md
+    relationship: depends-on
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "This edge case pins the specific fresh-clone failure: today the deployable-script broken-reference preflight aborts because the feedback source is gitignored and absent on a clone, so the build-prepare step (Approach 1) never reaches the shim/test phase. Once the feedback source is tracked (BP-1000a-5) the preflight must resolve it and the build-prepare step must complete on a fresh clone."
+  - "Acceptance is measured at the build-preparation step of the documented CI command on a fresh clone: the preflight guard exits non-failing for the feedback scripts and the prepare step completes, enabling the suite to run."
+  - "Consistent with ADR-016 Approach 1: the DEPLOYED scripts/feedback/ output remains gitignored and bridged via the install_shims shim_map for the tests; this AC only asserts that the build's READ source for feedback is tracked so the preflight no longer aborts. Do not resolve this by committing build outputs into source control."
+  - "Acceptance is observable only — assert at the build-prepare boundary that the feedback broken-reference preflight does NOT abort; do not re-specify the relocation mechanism here (that is owned by BP-1000a-5). This L3 must stay a thin observable over BP-1000a-5's structural fix, per BP-1200a's decompose-the-outcome / defer-the-mechanism rule."
+  - "The fresh-clone determinism this asserts must not depend on leftover working-tree files: the preflight verdict over the feedback source must be identical whether or not a stale scripts/feedback/ working copy happens to be present."
+delivers_to: null
+expects_from:
+  ac_id: BP-1000a-5
+  contract: "The build reads the feedback deployable-script source from the tracked templates/scripts/feedback/ mirror; this edge case asserts that, given that tracked source, the fresh-clone build-prepare preflight no longer aborts for a missing feedback source."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Corrected ADR-016 doc_link status from 'planned' to 'exists' (the ADR was authored under BP-1200a-1 and is now present and active). Added two it_requirements pinning the observable-only scope (defer the relocation mechanism to BP-1000a-5) and the leftover-working-tree-independence of the fresh-clone verdict. Criteria unchanged; assigned_agent (python-coder), complexity (S), and the BP-1000a-5 expects_from contract validated and kept."
+    by: it-po
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Cross-tree link: the root cause guarded here (gitignored feedback source with
+  no tracked home) is fixed structurally by BP-1000a-5 (relocate source) and
+  caught generally by BP-900f (tracked-source guard). This L3 records the
+  fresh-clone CI-gate OBSERVABLE of that fix without re-specifying the mechanism,
+  honoring BP-1200a's "decompose the outcome, defer the mechanism to ADR" rule.

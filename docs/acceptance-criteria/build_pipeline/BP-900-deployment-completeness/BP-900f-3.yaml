@@ -1,0 +1,52 @@
+id: BP-900f-3
+title: "The tracked-source guard generalizes beyond feedback and catches any newly untracked deployable directory on a fresh clone"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: not_started
+readiness: approved
+priority: high
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900f.yaml"
+criteria: |
+  Given a deployable directory other than feedback — for example a future
+    scripts/doc_compliance/ source whose template-referenced scripts are deployed
+  And one of its source files is added to the working tree but left untracked in
+    git
+  When the build runs the tracked-source guard on a fresh clone state (no leftover
+    untracked working-tree files beyond the one under test)
+  Then the guard fails the build and names that newly untracked source file,
+    without any feedback-specific or directory-specific special-casing
+  And when every deployable source across all directories is tracked, the guard
+    passes
+  And the same guard run on the same committed state yields the same verdict every
+    time, independent of which untracked files happen to be present in any local
+    working tree
+depends_on:
+  - BP-900f
+  - BP-900f-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900f.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/build_pipeline/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The guard must operate over the full deployable-script source set generically; it must contain no per-directory allowlist or feedback-specific branch — any directory that contributes deployable scripts is subject to the same tracked-ness check."
+  - "Reproducibility: the verdict is a pure function of the committed tree (git index) plus the deployable-script source set; it must not vary with the presence of unrelated untracked working-tree files."
+delivers_to: null
+expects_from:
+  ac_id: BP-900f-1
+  contract: "list[dict] of untracked deployable scripts; this AC asserts the producer's classification is directory-agnostic and reproducible on a fresh clone."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

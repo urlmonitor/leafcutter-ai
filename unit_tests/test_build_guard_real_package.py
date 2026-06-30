@@ -360,6 +360,166 @@ def test_commit_guardian_missing_scripts_in_templates() -> None:
             f"(AC BP-1200a-1-ii follow-up)"
         )
 
+# ---------------------------------------------------------------------------
+# BP-900f wire-up integration: main() must call _check_tracked_source_guard
+# (pr-reviewer H-1 repair — 2026-06-24)
+# ---------------------------------------------------------------------------
+
+
+def test_main_calls_tracked_source_guard_when_sources_untracked(
+    tmp_path: Path,
+) -> None:
+    """main() must exit 1 when _check_tracked_source_guard() returns 1.
+
+    This test exercises the build entry point (main()) — not the guard function
+    directly — to confirm the wiring added in the pr-reviewer H-1 repair.  It
+    mocks _check_tracked_source_guard to return 1 (simulating untracked sources)
+    and asserts that main() propagates the non-zero exit without writing any
+    output files.
+
+    AC BP-900f-2: build exits non-zero and writes no partial deployment.
+    AC BP-900f-3: the guard runs before any deployment output is written.
+    """
+    # Point --target-dir at a fresh temp directory so no real output is
+    # written even if the mock somehow does not fire.
+    target_dir = tmp_path / "deploy_target"
+    target_dir.mkdir()
+
+    # Patch _check_tracked_source_guard inside the build module so that the
+    # integration test does not require untracked files in the real working
+    # tree (which would vary by developer environment and CI state).
+    with patch.object(_build, "_check_tracked_source_guard", return_value=1):
+        result = _build.main(["--target-dir", str(target_dir)])
+
+    assert result != 0, (
+        "main() returned 0 (success) even though _check_tracked_source_guard() "
+        "returned 1 (untracked sources detected). "
+        "The tracked-source guard must be wired into main() so that a non-zero "
+        "guard return causes main() to propagate the exit code (AC BP-900f-2). "
+        "This test exercises main() — not _check_tracked_source_guard() in "
+        "isolation — to verify the wiring, not just the guard function."
+    )
+
+    # No deployment output must have been written (guard runs before _run_phases).
+    output_files = list(target_dir.rglob("*"))
+    assert not output_files, (
+        f"main() wrote {len(output_files)} output file(s) after the guard returned 1. "
+        "The guard must abort before any deployment output is written (AC BP-900f-3). "
+        f"Unexpected files: {[str(p) for p in output_files[:5]]}"
+    )
+
+
+def test_main_does_not_call_tracked_source_guard_under_validate_only(
+    tmp_path: Path,
+) -> None:
+    """Under --validate-only, main() must NOT invoke _check_tracked_source_guard.
+
+    The guard is a deployment preflight, not a config-correctness check.
+    Running it under --validate-only would produce false-positives on machines
+    that have not checked out all sources.  The guard is skipped by the
+    ``if not args.validate_only:`` block that wraps both preflight guards.
+    """
+    call_count: list[int] = [0]
+
+    def _counting_guard(package_root: Path) -> int:  # noqa: ARG001
+        call_count[0] += 1
+        return 0  # returning 0 so if it IS called it would not abort main
+
+    with patch.object(_build, "_check_tracked_source_guard", side_effect=_counting_guard):
+        _build.main(["--validate-only"])
+
+    assert call_count[0] == 0, (
+        f"_check_tracked_source_guard() was called {call_count[0]} time(s) under "
+        "--validate-only. It must be skipped in --validate-only mode because it is "
+        "a deployment preflight, not a config-correctness check."
+    )
+
+
+# ---------------------------------------------------------------------------
+# H-4: Real-package positive-control tests for _check_tracked_source_guard
+# ---------------------------------------------------------------------------
+
+
+def test_tracked_source_guard_exits_0_on_real_package() -> None:
+    """_check_tracked_source_guard() must return 0 on the clean committed worktree.
+
+    This is the key positive-control test (H-4): it calls the REAL guard against
+    the REAL package root with NO subprocess mock.  All source paths returned by
+    _get_source_paths_for_guard() are committed to git in the worktree, so the
+    guard must pass without error.
+
+    If this test fails, a source file that the build deploys is missing from the
+    git index — the exact defect the guard is designed to catch.
+    """
+    result = _build._check_tracked_source_guard(_REAL_PACKAGE_ROOT)
+    assert result == 0, (
+        f"_check_tracked_source_guard() returned {result!r} on the real package. "
+        "Expected 0 (all source paths tracked). "
+        "A deployable script's SOURCE file is missing from the git index. "
+        "Run: python scripts/build.py --dry-run to see which path is flagged."
+    )
+
+
+def test_tracked_source_guard_nonzero_on_untracked_source(tmp_path: Path) -> None:
+    """_check_tracked_source_guard() must return non-zero and name an untracked source.
+
+    Injects a synthetic package root where templates/scripts/feedback/ exists
+    (satisfying _manifest_feedback_scripts) but git ls-files returns empty.
+    The guard must return 1 and write the untracked source path to stderr.
+    """
+    from unittest.mock import MagicMock, patch
+
+    pkg = tmp_path / "fake_pkg"
+    fb_src = pkg / "templates" / "scripts" / "feedback"
+    fb_src.mkdir(parents=True)
+    (fb_src / "submit_feedback.py").write_text("# stub\n", encoding="utf-8")
+
+    captured = io.StringIO()
+    # _is_git_repo must return True so the guard doesn't short-circuit.
+    with patch.object(_build, "_is_git_repo", return_value=True):
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout="")
+            with patch("sys.stderr", captured):
+                result = _build._check_tracked_source_guard(pkg)
+
+    assert result != 0, (
+        "_check_tracked_source_guard() returned 0 despite git ls-files being empty "
+        "(all source paths untracked). Expected non-zero (H-4 negative control)."
+    )
+    stderr_text = captured.getvalue()
+    assert "templates/scripts/feedback/submit_feedback.py" in stderr_text, (
+        "Guard returned non-zero but stderr does not name the untracked source path "
+        "'templates/scripts/feedback/submit_feedback.py'. "
+        f"Actual stderr: {stderr_text!r}"
+    )
+
+
+def test_tracked_source_guard_noop_on_non_git_root(tmp_path: Path) -> None:
+    """_check_tracked_source_guard() must return 0 (no-op) for a non-git package root.
+
+    Consumer installs (tarball/pip/vendored) are not git repositories.  The guard
+    must detect this and skip silently rather than raising RuntimeError or returning 1
+    (H-3 fix: ADR-001 requires build.py to work identically for consumers).
+    """
+    # tmp_path is guaranteed not to be inside the worktree's git repo.
+    pkg = tmp_path / "consumer_install"
+    pkg.mkdir()
+    # Minimal structure so _get_source_paths_for_guard doesn't raise RuntimeError.
+    fb_src = pkg / "templates" / "scripts" / "feedback"
+    fb_src.mkdir(parents=True)
+    (fb_src / "submit_feedback.py").write_text("# stub\n", encoding="utf-8")
+
+    # Do NOT mock _is_git_repo — let it run for real against tmp_path.
+    # tmp_path is under /tmp which is never inside the worktree git index.
+    result = _build._check_tracked_source_guard(pkg)
+
+    assert result == 0, (
+        f"_check_tracked_source_guard() returned {result!r} for a non-git directory. "
+        "Expected 0 (no-op for consumer installs). "
+        "The guard must detect that the package root is not a git repository and "
+        "skip the check gracefully (H-3 / ADR-001)."
+    )
+
 
 # ====================================================================
 # DECISION HISTORY
@@ -381,6 +541,21 @@ def test_commit_guardian_missing_scripts_in_templates() -> None:
 #   (mirrors templates/scripts/commit_guardian/ pattern).
 #   _manifest_feedback_scripts() and build_feedback() now read from there.
 #   See ADR-016 for the policy. (#BP-1200a-1-ii)
+# - 2026-06-29 [python-coder/BP-900-guard]: Added H-4 tests:
+#   test_tracked_source_guard_exits_0_on_real_package (positive control, no mock),
+#   test_tracked_source_guard_nonzero_on_untracked_source (negative control,
+#   mocks _is_git_repo=True + subprocess for empty git ls-files output),
+#   test_tracked_source_guard_noop_on_non_git_root (H-3 consumer-install no-op,
+#   real _is_git_repo against tmp_path which is never a git repo).
+#   (#BP-900-guard H-4)
+# - 2026-06-24 [python-coder/TICKET-20260624-BP-900f-1/retry]: Added
+#   test_main_calls_tracked_source_guard_when_sources_untracked and
+#   test_main_does_not_call_tracked_source_guard_under_validate_only.
+#   Both tests exercise main() through the build entry point (not the guard
+#   function in isolation) to confirm the wiring added in the pr-reviewer H-1
+#   repair. The positive test mocks _check_tracked_source_guard to return 1
+#   and asserts main() exits non-zero with no output written. The negative test
+#   asserts the guard is not called under --validate-only. (#BP-900f-2, #BP-900f-3)
 # - 2026-06-22 [debug/quick-fix]: Added test_onboard_hook_opt_in_is_deployable
 #   (AC BP-900d). Regression sentinel for the script-promotion gap that made
 #   `build.py --target-dir` abort on the onboard.md reference. Asserts the
