@@ -48,6 +48,53 @@ import sys
 from pathlib import Path
 
 
+# ---------------------------------------------------------------------------
+# Exceptions
+# ---------------------------------------------------------------------------
+
+
+class BootstrapError(RuntimeError):
+    """Raised when worktree bootstrap cannot establish a working pre-commit config.
+
+    Surfaced as a structured AC-5 error so callers can distinguish a bootstrap
+    failure from other subprocess errors and report the gap clearly to the user
+    before the drive proceeds.
+    """
+
+    @classmethod
+    def missing_config(cls, config_path: object) -> "BootstrapError":
+        """Return an AC-5 error for a missing .pre-commit-config.yaml after build.
+
+        Args:
+            config_path: Path (or string) where the config was expected.
+
+        Returns:
+            BootstrapError with a structured diagnostic message.
+        """
+        return cls(
+            f"AC-5: build.py ran but .pre-commit-config.yaml is missing at "
+            f"{config_path}. Pre-commit hooks will be silently skipped. "
+            "Remediation: verify install_shims() completed without error, "
+            "then re-run bootstrap or run build.py manually."
+        )
+
+    @classmethod
+    def unresolvable_config(cls, config_path: object, cause: Exception) -> "BootstrapError":
+        """Return an AC-5 error when the config path cannot be resolved via the OS.
+
+        Args:
+            config_path: Path (or string) that could not be resolved.
+            cause: The underlying OSError that triggered the failure.
+
+        Returns:
+            BootstrapError with a structured diagnostic message.
+        """
+        return cls(
+            f"AC-5: Cannot resolve {config_path}: {cause}. "
+            "Pre-commit hooks will be silently skipped."
+        )
+
+
 
 
 # ---------------------------------------------------------------------------
@@ -183,10 +230,20 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
 
     Missing source files are silently skipped (FileNotFoundError → no action).
 
+    After running ``build.py --target-dir``, a post-build probe verifies that
+    ``<worktree>/.pre-commit-config.yaml`` exists and is not a dangling symlink
+    (AC-5).  If the probe fails a ``BootstrapError`` is raised so the caller can
+    surface the failure clearly rather than continuing with hooks silently
+    disabled.
+
     Args:
         main_repo: Absolute Path to the main repository root where source
             ``.env`` and ``.mcp.json`` reside.
         worktree_path: Absolute Path to the worktree being bootstrapped.
+
+    Raises:
+        BootstrapError: If build.py ran but ``.pre-commit-config.yaml`` is
+            absent or unresolvable in the worktree after the build step (AC-5).
     """
     # --- .env: symlink-first, copy as fallback ---
     env_src = main_repo / ".env"
@@ -290,6 +347,15 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
                 ".leafcutter/ build outputs may be incomplete.",
                 file=sys.stderr,
             )
+        # AC-5: post-build probe — verify .pre-commit-config.yaml was materialised
+        # by install_shims() so that package hooks are not silently skipped.
+        config_path = worktree_path / ".pre-commit-config.yaml"
+        try:
+            resolved = os.path.realpath(str(config_path))
+            if not os.path.exists(resolved):
+                raise BootstrapError.missing_config(config_path)
+        except OSError as exc:
+            raise BootstrapError.unresolvable_config(config_path, exc) from exc
 
 
 def _derive_slug(ticket_path: Path) -> str:
@@ -610,6 +676,9 @@ def main() -> None:
     args = parser.parse_args()
     try:
         args.func(args)
+    except BootstrapError as exc:
+        print(f"BOOTSTRAP ERROR: {exc}", file=sys.stderr)
+        sys.exit(1)
     except subprocess.CalledProcessError as exc:
         print(f"ERROR: subprocess failed: {exc}", file=sys.stderr)
         sys.exit(1)
@@ -623,6 +692,15 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-30 [Agent/python-coder]: Added BootstrapError class with factory
+  classmethods (missing_config, unresolvable_config) and a post-build probe
+  in _bootstrap() after build.py runs (TICKET-20260617-Worktree_Precommit_Bootstrap).
+  The probe checks that <worktree>/.pre-commit-config.yaml exists and resolves;
+  raises BootstrapError (AC-5) if absent or unresolvable so callers surface
+  the gap rather than continuing silently. main() catches BootstrapError and
+  exits 1 with a clear "BOOTSTRAP ERROR:" prefix. TRY003-compliant: long
+  messages are defined inside the exception class via classmethods, not at
+  raise sites. Mirror of scripts/setup_ticket_worktree.py changes.
 - 2026-06-04 00:00 [Agent/python-coder]: Added build.py invocation in _bootstrap()
   after poetry install --no-root (TICKET-20260604-WorktreeBuildOutputs). Runs
   `python scripts/build.py --target-dir .` in the worktree so that .leafcutter/

@@ -58,6 +58,17 @@ behavioral_patterns:
   name: Conditional Behavior
   related_agent: null
   trigger: an existing epic worktree is reused (Epic Workflow branch)
+- behavior: >
+    After bootstrap, probe that <worktree>/.pre-commit-config.yaml exists and
+    resolves (is not a dangling symlink). If the probe fails, emit a structured
+    BOOTSTRAP ERROR (AC-5) message — distinguish "build.py ran but config
+    missing" from "build.py not found" — and do NOT claim the worktree is ready
+    or that hooks are active. Do NOT silently continue with
+    PRE_COMMIT_ALLOW_NO_CONFIG=1 as the default; that env-var is a last-resort
+    documented fallback only.
+  name: Pre-commit Bootstrap Verification
+  related_agent: null
+  trigger: bootstrap step completes (build.py returns, exit 0 or non-zero)
 
 ---
 
@@ -95,6 +106,38 @@ For epic ticket paths (containing an `EPIC-*/` path segment), fall back to loadi
 - Creation is non-destructive. Do not ask for confirmation before running the script.
 - If the script exits non-zero, surface stderr verbatim and abort.
 - If an existing epic worktree is reused (Epic Workflow branch), report which worktree was reused and the branch it is on.
+
+### Post-bootstrap pre-commit probe (AC-1 / AC-5 — mandatory)
+
+After the bootstrap script returns (whether exit 0 or non-zero), probe that
+`.pre-commit-config.yaml` exists and resolves inside the new worktree:
+
+```bash
+python -c "import os, sys; p='<worktree_path>/.pre-commit-config.yaml'; sys.exit(0 if os.path.exists(p) else 1)"
+```
+
+Replace `<worktree_path>` with the absolute path returned by the bootstrap script.
+
+Interpret the result as follows:
+
+- **Probe passes** — report "Pre-commit hooks are active in this worktree."
+- **Probe fails, build.py ran** — emit:
+  ```
+  BOOTSTRAP ERROR (AC-5): build.py ran but .pre-commit-config.yaml is missing.
+  Package hooks will NOT run. Re-run build.py manually inside the worktree, or
+  run the hooks manually against the branch diff before merge.
+  ```
+- **Probe fails, build.py not found** — emit:
+  ```
+  BOOTSTRAP ERROR (AC-5): build.py not found in worktree.
+  .pre-commit-config.yaml was not created — package hooks will NOT run.
+  Locate and run the correct build.py for this project layout.
+  ```
+
+**Do NOT proceed claiming hooks are active when the probe fails.**
+**Do NOT use `PRE_COMMIT_ALLOW_NO_CONFIG=1` as the default path.** That env-var
+silently disables all package hooks. It is a documented last-resort fallback —
+use it only when the user explicitly accepts that hooks will not run.
 
 ### Post-create check: local/origin divergence
 
