@@ -315,6 +315,8 @@ def _get_staged_ac_paths(root: Path | None = None) -> list[Path]:
             if not part or not part.endswith(".yaml"):
                 continue
             p = Path(part)
+            if p.name == "index.yaml":
+                continue
             if not p.is_absolute() and root is not None:
                 p = root / part
             if p.is_file():
@@ -348,6 +350,8 @@ def _get_staged_ac_paths(root: Path | None = None) -> list[Path]:
         if not rel or _AC_STORE_DIR not in rel or not rel.endswith(".yaml"):
             continue
         p = Path(rel)
+        if p.name == "index.yaml":
+            continue
         if not p.is_absolute() and root is not None:
             p = root / rel
         if p.is_file():

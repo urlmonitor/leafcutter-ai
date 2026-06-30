@@ -43,4 +43,5 @@ created: 2026-06-05
 amended_by: []
 superseded_by: null
 covered_by: [INF-600d-1-i]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260629-INF-600d-1.md
