@@ -179,7 +179,12 @@ def _resolve_source_to_path(
             if hint in root_path.name.lower() and filename in files:
                 return root_path / filename
 
-    # Strategy 3: filename-only match (first encountered, up to 4 levels deep).
+    # Strategy 3: filename-only match (up to 4 levels deep).
+    # Collect ALL matches; resolve only when exactly one unique path is found.
+    # An ambiguous match (multiple locations share the same basename) returns None
+    # so that the caller's missing-doc / plain-text fallback applies rather than
+    # producing a non-deterministic hyperlink.
+    matches: list[Path] = []
     for root_dir, _dirs, files in os.walk(package_root):
         root_path = Path(root_dir)
         try:
@@ -190,8 +195,11 @@ def _resolve_source_to_path(
             _dirs.clear()  # prune deeper subtrees
             continue
         if filename in files:
-            return root_path / filename
+            matches.append(root_path / filename)
 
+    unique_matches = sorted(set(matches))
+    if len(unique_matches) == 1:
+        return unique_matches[0]
     return None
 
 
@@ -634,7 +642,7 @@ def _scan_ac_assignments(
             if data.get("status") != "active":
                 continue
             results.append({
-                "id": data.get("id", filename.rstrip(".yaml")),
+                "id": data.get("id", Path(filename).stem),
                 "title": data.get("title", ""),
                 "assigned_agent": agent_id,
             })

@@ -608,5 +608,186 @@ class TestMissingDocLinkRendering(unittest.TestCase):
             )
 
 
+# ---------------------------------------------------------------------------
+# Test 9 — H-1 regression: _scan_ac_assignments uses Path.stem for id fallback
+# Defect: filename.rstrip(".yaml") strips a CHARACTER SET, not a suffix.
+# e.g. "ml-100a.yaml" -> "ml-100" (the trailing 'a' is in {., y, a, m, l})
+#      "data.yaml"    -> "dat"   (the trailing 'a' is stripped)
+# Fix: use Path(filename).stem which derives the true stem.
+# ---------------------------------------------------------------------------
+
+class TestScanAcAssignmentsStemFallback(unittest.TestCase):
+    """H-1 regression: AC id fallback uses Path.stem, not str.rstrip."""
+
+    def setUp(self):
+        # covers: H-1 regression
+        from generate_agent_cards import _scan_ac_assignments
+        self._scan_ac_assignments = _scan_ac_assignments
+
+    def test_ac_id_fallback_preserves_full_stem_for_yaml_suffix(self):
+        # covers: H-1 regression
+        """H-1: When AC YAML omits 'id', derived id equals full filename stem (no truncation)."""
+        import yaml
+
+        with tempfile.TemporaryDirectory() as tmp:
+            docs_root = Path(tmp)
+            ac_dir = docs_root / "docs" / "acceptance-criteria"
+            ac_dir.mkdir(parents=True)
+
+            # Filenames whose stems end in chars that appear in ".yaml" —
+            # rstrip(".yaml") would corrupt these; Path.stem must not.
+            test_cases = [
+                # (filename, expected_stem)
+                ("ml-100a.yaml", "ml-100a"),   # trailing 'a' is in {a,y,m,l,.}
+                ("data.yaml", "data"),           # trailing 'a' is in {a,y,m,l,.}
+                ("my-yaml.yaml", "my-yaml"),     # entire suffix overlap
+                ("ACD-200m.yaml", "ACD-200m"),  # trailing 'm' is in {a,y,m,l,.}
+            ]
+
+            for filename, expected_stem in test_cases:
+                ac_content = yaml.dump({
+                    "assigned_agent": "test-agent",
+                    "status": "active",
+                    "title": "Test AC",
+                    # intentionally omitting 'id' to trigger the fallback
+                })
+                (ac_dir / filename).write_text(ac_content, encoding="utf-8")
+
+            results = self._scan_ac_assignments("test-agent", docs_root)
+            found_ids = {r["id"] for r in results}
+
+            for filename, expected_stem in test_cases:
+                self.assertIn(
+                    expected_stem,
+                    found_ids,
+                    msg=(
+                        f"Filename '{filename}': expected fallback id '{expected_stem}' "
+                        f"but got ids: {found_ids}. "
+                        "Path.stem must be used — not str.rstrip('.yaml')."
+                    ),
+                )
+
+    def test_ac_id_from_yaml_field_is_unaffected(self):
+        # covers: H-1 regression
+        """H-1: When AC YAML supplies 'id', it is used as-is (stem fallback not triggered)."""
+        import yaml
+
+        with tempfile.TemporaryDirectory() as tmp:
+            docs_root = Path(tmp)
+            ac_dir = docs_root / "docs" / "acceptance-criteria"
+            ac_dir.mkdir(parents=True)
+
+            ac_content = yaml.dump({
+                "id": "ACD-999z",
+                "assigned_agent": "test-agent",
+                "status": "active",
+                "title": "Explicit ID Test",
+            })
+            (ac_dir / "ACD-999z.yaml").write_text(ac_content, encoding="utf-8")
+
+            results = self._scan_ac_assignments("test-agent", docs_root)
+            self.assertEqual(len(results), 1)
+            self.assertEqual(
+                results[0]["id"],
+                "ACD-999z",
+                msg="Explicit id field in YAML must be returned unchanged.",
+            )
+
+
+# ---------------------------------------------------------------------------
+# Test 10 — H-2 regression: _resolve_source_to_path Strategy 3 ambiguity
+# Defect: first os.walk match returned non-deterministically when multiple
+# files share the same basename (e.g. every skill dir has SKILL.md).
+# Fix: collect ALL matches; return path only when exactly 1 unique match
+# exists; return None for zero or more-than-one matches.
+# ---------------------------------------------------------------------------
+
+class TestResolveSourceToPathAmbiguity(unittest.TestCase):
+    """H-2 regression: Strategy 3 resolves uniquely or returns None on ambiguity."""
+
+    def setUp(self):
+        # covers: H-2 regression
+        from generate_agent_cards import _resolve_source_to_path
+        self._resolve_source_to_path = _resolve_source_to_path
+
+    def test_ambiguous_basename_returns_none(self):
+        # covers: H-2 regression
+        """H-2: When a basename matches files in two locations, resolver returns None."""
+        with tempfile.TemporaryDirectory() as tmp:
+            package_root = Path(tmp)
+            # Create two files with the same basename in different directories
+            dir_a = package_root / "skills" / "signoff"
+            dir_b = package_root / "skills" / "doc-enforcer"
+            dir_a.mkdir(parents=True)
+            dir_b.mkdir(parents=True)
+            (dir_a / "SKILL.md").write_text("# signoff skill", encoding="utf-8")
+            (dir_b / "SKILL.md").write_text("# doc-enforcer skill", encoding="utf-8")
+
+            result = self._resolve_source_to_path("SKILL.md", package_root)
+
+            self.assertIsNone(
+                result,
+                msg=(
+                    "When SKILL.md exists in two directories, _resolve_source_to_path "
+                    "must return None (ambiguous) — not a non-deterministic first match."
+                ),
+            )
+
+    def test_unique_basename_returns_that_path(self):
+        # covers: H-2 regression
+        """H-2: When a basename matches exactly one file, that path is returned."""
+        with tempfile.TemporaryDirectory() as tmp:
+            package_root = Path(tmp)
+            # Create a unique file
+            docs_dir = package_root / "docs" / "architecture"
+            docs_dir.mkdir(parents=True)
+            unique_file = docs_dir / "unique-document.md"
+            unique_file.write_text("# Unique", encoding="utf-8")
+
+            result = self._resolve_source_to_path("unique-document.md", package_root)
+
+            self.assertEqual(
+                result,
+                unique_file,
+                msg=(
+                    "When unique-document.md exists in exactly one location, "
+                    "_resolve_source_to_path must return that path."
+                ),
+            )
+
+    def test_absent_basename_returns_none(self):
+        # covers: H-2 regression
+        """H-2: When a basename matches no file anywhere, resolver returns None."""
+        with tempfile.TemporaryDirectory() as tmp:
+            package_root = Path(tmp)
+            # Empty tree — nothing to match
+            result = self._resolve_source_to_path("nonexistent-file.md", package_root)
+
+            self.assertIsNone(
+                result,
+                msg="With no matching file on disk, resolver must return None.",
+            )
+
+    def test_three_matches_returns_none(self):
+        # covers: H-2 regression
+        """H-2: When a basename matches three locations, resolver returns None (not first match)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            package_root = Path(tmp)
+            for subdir in ("a", "b", "c"):
+                d = package_root / subdir
+                d.mkdir()
+                (d / "README.md").write_text(f"# {subdir}", encoding="utf-8")
+
+            result = self._resolve_source_to_path("README.md", package_root)
+
+            self.assertIsNone(
+                result,
+                msg=(
+                    "When README.md exists in three directories, resolver must return "
+                    "None — not a first/arbitrary match."
+                ),
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
