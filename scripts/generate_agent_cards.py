@@ -14,7 +14,9 @@ ARCHITECTURE: Single public entry point `generate_card()` returns a complete
     YAML frontmatter is parsed with `yaml.safe_load()`. All file I/O is
     wrapped in `try/except OSError`. Hyperlink helpers convert doc_links and
     knowledge_channel sources that resolve to real files into relative Markdown
-    links from the card output path.
+    links from the card output path. doc_links entries that reference files not
+    present on disk are rendered as plain text with a ``(missing)`` marker and
+    a WARNING is emitted — card generation continues without error.
 """
 
 from __future__ import annotations
@@ -562,9 +564,11 @@ def render_references(
 
     Each entry in the ``doc_links`` list becomes a relative Markdown hyperlink
     pointing from the card's location to the referenced document.  If the
-    referenced file does not exist on disk, the path is rendered as a code
-    span (no hyperlink) so the card remains valid Markdown even for files that
-    have not yet been created.
+    referenced file does not exist on disk, the path is rendered as plain text
+    annotated with ``(missing)`` so the card remains valid Markdown even for
+    files that have not yet been created.  A WARNING is emitted to the build
+    log for every missing file so consumers can detect stale ``doc_links``
+    without failing the build.
 
     Args:
         registry_entry: Registry entry dict for the agent.
@@ -581,6 +585,7 @@ def render_references(
     if not doc_links:
         return ""
 
+    agent_id = registry_entry.get("id", "unknown")
     hyperlinks_enabled = card_path is not None and package_root is not None
 
     lines: list[str] = ["## References", ""]
@@ -601,8 +606,16 @@ def render_references(
                 link = make_relative_link(card_path, target, label)
                 lines.append(f"- {link}")
                 continue
+            # File does not exist: emit warning and render as plain text with marker.
+            _log.warning(
+                "%s: doc_links references %s but the file does not exist on disk",
+                agent_id,
+                path_str,
+            )
+            lines.append(f"- `{path_str}` (missing)")
+            continue
 
-        # File not on disk or hyperlinks disabled: render as code span.
+        # Hyperlinks disabled (card_path or package_root not supplied): render as code span.
         lines.append(f"- `{path_str}`")
 
     lines.append("")
@@ -869,4 +882,11 @@ def build_agent_cards(
 #   generate_card() and build_agent_cards() updated to pass card_path
 #   and package_root through the render pipeline.
 #   (#EPIC-SelfDescribingAgentsCorrections/08)
+#
+# - 2026-06-29 [python-coder/EPIC-SelfDescribingAgentsCorrections/09]:
+#   Missing doc_links handling (INF-600b-1-i). render_references() now
+#   annotates non-existent doc_links with "(missing)" plain-text marker
+#   instead of a code span, and emits a WARNING via the module logger so
+#   consumers detect stale references without failing the build.
+#   (#EPIC-SelfDescribingAgentsCorrections/09)
 # ====================================================================

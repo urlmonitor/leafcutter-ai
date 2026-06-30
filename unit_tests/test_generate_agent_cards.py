@@ -451,5 +451,162 @@ class TestBuildPhaseIntegration(unittest.TestCase):
             )
 
 
+# ---------------------------------------------------------------------------
+# Test 8 — render_references: missing doc_link renders (missing) annotation
+#           (INF-600b-1-i)
+# ---------------------------------------------------------------------------
+
+class TestMissingDocLinkRendering(unittest.TestCase):
+    """INF-600b-1-i: Missing doc_links are rendered as plain text with (missing) annotation."""
+
+    def setUp(self):
+        # covers: INF-600b-1-i
+        from generate_agent_cards import render_references  # noqa: F401
+        self.render_references = render_references
+
+    def test_ac1_missing_doclink_rendered_as_plain_text_with_missing_marker(self):
+        # covers: INF-600b-1-i
+        """INF-600b-1-i: Non-existent doc_links entry is plain text annotated with '(missing)'."""
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmp:
+            package_root = Path(tmp)
+            card_path = package_root / "docs" / "agents" / "cards" / "python-coder.card.md"
+            card_path.parent.mkdir(parents=True)
+
+            registry_entry = {
+                "id": "python-coder",
+                "doc_links": [
+                    {"path": "docs/architecture/nonexistent-doc.md", "label": "Nonexistent Doc"},
+                ],
+            }
+
+            result = self.render_references(
+                registry_entry=registry_entry,
+                card_path=card_path,
+                package_root=package_root,
+            )
+
+        self.assertIn("## References", result, "References section must be present")
+        self.assertIn(
+            "(missing)",
+            result,
+            msg="Missing doc_link must be annotated with '(missing)' in the References section.",
+        )
+        # Must NOT render as a hyperlink (no Markdown link syntax [label](path))
+        self.assertNotIn(
+            "[Nonexistent Doc]",
+            result,
+            msg="Non-existent doc must NOT be rendered as a Markdown hyperlink.",
+        )
+        # Must contain the raw path as plain text
+        self.assertIn(
+            "docs/architecture/nonexistent-doc.md",
+            result,
+            msg="Missing doc path must appear as plain text in the References section.",
+        )
+
+    def test_ac2_missing_doclink_emits_warning_with_agent_id_and_path(self):
+        # covers: INF-600b-1-i
+        """INF-600b-1-i: _log.warning() is called with agent_id and missing path string."""
+        import tempfile
+        import logging
+        from pathlib import Path
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as tmp:
+            package_root = Path(tmp)
+            card_path = package_root / "docs" / "agents" / "cards" / "python-coder.card.md"
+            card_path.parent.mkdir(parents=True)
+
+            registry_entry = {
+                "id": "python-coder",
+                "doc_links": [
+                    {"path": "docs/architecture/nonexistent-doc.md", "label": "Nonexistent Doc"},
+                ],
+            }
+
+            import generate_agent_cards
+            with patch.object(generate_agent_cards._log, "warning") as mock_warn:
+                self.render_references(
+                    registry_entry=registry_entry,
+                    card_path=card_path,
+                    package_root=package_root,
+                )
+                # Must have called _log.warning at least once
+                self.assertTrue(
+                    mock_warn.called,
+                    msg="_log.warning must be called when a doc_link references a missing file.",
+                )
+                # The warning args must include the agent_id and the missing path
+                found_warning = False
+                for call_args in mock_warn.call_args_list:
+                    args = call_args[0]  # positional args tuple
+                    # args[0] is the format string; args[1] is agent_id; args[2] is path_str
+                    if len(args) >= 3:
+                        if (
+                            args[1] == "python-coder"
+                            and "docs/architecture/nonexistent-doc.md" in str(args[2])
+                        ):
+                            found_warning = True
+                            break
+                self.assertTrue(
+                    found_warning,
+                    msg=(
+                        "WARNING must be emitted with agent_id='python-coder' and "
+                        "path='docs/architecture/nonexistent-doc.md'. "
+                        f"Actual calls: {mock_warn.call_args_list}"
+                    ),
+                )
+
+    def test_ac3_card_generation_does_not_fail_when_doclink_missing(self):
+        # covers: INF-600b-1-i
+        """INF-600b-1-i: generate_card() does not raise when doc_links references a non-existent file."""
+        import tempfile
+        from pathlib import Path
+        from generate_agent_cards import generate_card
+
+        with tempfile.TemporaryDirectory() as tmp:
+            package_root = Path(tmp)
+            card_path = package_root / "docs" / "agents" / "cards" / "python-coder.card.md"
+            card_path.parent.mkdir(parents=True)
+
+            registry_entry = dict(PYTHON_CODER_REGISTRY)
+            registry_entry["doc_links"] = [
+                {"path": "docs/architecture/nonexistent-doc.md", "label": "Nonexistent Doc"},
+            ]
+
+            try:
+                result = generate_card(
+                    agent_id="python-coder",
+                    template_frontmatter=PYTHON_CODER_TEMPLATE_FM,
+                    registry_entry=registry_entry,
+                    card_path=card_path,
+                    package_root=package_root,
+                )
+            except Exception as exc:  # noqa: BLE001
+                self.fail(
+                    f"generate_card raised {type(exc).__name__} when doc_link is missing: {exc}"
+                )
+
+            self.assertIsInstance(
+                result,
+                str,
+                msg="generate_card must return a string even when doc_links reference a missing file.",
+            )
+            self.assertGreater(
+                len(result),
+                0,
+                msg="generate_card must return non-empty card string when doc_link is missing.",
+            )
+            # The card should contain the (missing) marker
+            self.assertIn(
+                "(missing)",
+                result,
+                msg="Card output must include '(missing)' marker for non-existent doc_link.",
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
