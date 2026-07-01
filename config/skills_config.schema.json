@@ -184,6 +184,24 @@
       },
       "additionalProperties": false
     },
+    "workflows": {
+      "type": "object",
+      "description": "Controls which workflow engine variant is deployed and whether workflow generation is enabled at all.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "When false, build.py skips workflow generation entirely.",
+          "default": true
+        },
+        "engine": {
+          "type": "string",
+          "enum": ["auto", "e1", "e2"],
+          "description": "Which workflow-engine contract to use. auto = detect from installed harness; e1 = legacy top-level-body contract; e2 = exported run() contract.",
+          "default": "auto"
+        }
+      },
+      "additionalProperties": false
+    },
     "testing_context": {
       "type": "object",
       "description": "Test infrastructure knowledge shared by test-planner, test-writer, and test-runner agents. Adopters customize this block to match their project's test layout.",

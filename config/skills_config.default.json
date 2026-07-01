@@ -52,6 +52,11 @@
     "test_command": ""
   },
 
+  "workflows": {
+    "enabled": true,
+    "engine": "auto"
+  },
+
   "worktree_cleanup": {
     "kill_residual_processes": true,
     "log_globs": ["*.log", "precommit-autofix*.log", ".sql_test_results.json"],
