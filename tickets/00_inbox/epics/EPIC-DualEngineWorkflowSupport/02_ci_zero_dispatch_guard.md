@@ -1,6 +1,6 @@
 ---
 title: "Dual-engine test harness + zero-agent-dispatch CI guard"
-status: in_progress
+status: done
 components:
   - testing_quality
 created: 2026-07-01
@@ -20,7 +20,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 02: Dual-engine test harness + zero-agent-dispatch CI guard
@@ -75,7 +75,7 @@ Scenario: guard covers the whole fleet
 - [x] test-runner — 2026-07-01 16:00
 - [x] pr-reviewer — 2026-07-01 17:00
 - [x] commit — 2026-07-01 17:30
-- [ ] pull-request
+- [x] pull-request — 2026-07-01 18:00
 
 ## Comments
 
@@ -155,3 +155,11 @@ completion_manifest:
   suite_green: true
   ac2_validated: true
 Second pass: H-1 confirmed fixed — `pytest.mark.xfail(strict=True)` is now applied at parametrize time via `_make_params()` (test_workflow_dual_engine.py lines 66-100); no runtime `pytest.xfail()` call remains. M-2 confirmed fixed — temp file write-error path explicitly unlinks before returning. Ruff: all checks passed on both files. Suite: 4 passed, 5 xfailed in 0.36s (exit 0). M-1 (duplicate `startswith("export {")` in `_strip_exports`) remains a latent bug for `export * from` forms not present in the current script fleet; classified medium, not elevated to high (no script in the current fleet triggers the dead branch). No high-confidence blockers — signing off.
+
+### 2026-07-01 18:00 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Switched gh auth to urlmonitor; pushed EPIC-DualEngineWorkflowSupport to origin (5374721f..7c86313a); PR #198 (https://github.com/urlmonitor/leafcutter-ai/pull/198) updated with ticket 02 implementation. All agents signed_off or not_needed — ticket flipped to status: done.
