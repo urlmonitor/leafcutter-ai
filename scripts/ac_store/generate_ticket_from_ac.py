@@ -28,6 +28,7 @@ AC-6: Ticket passes ticket_frontmatter_guard without errors.
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from datetime import date
 from pathlib import Path
@@ -59,6 +60,25 @@ _SQL_AGENTS: list[str] = ["sql-coder"]
 _NOT_NEEDED_AGENTS: list[str] = [
     "documentation-expert",
 ]
+
+#: Canonical phase order for agent map output.
+_CANONICAL_PHASE_ORDER: list[str] = [
+    "architect-review",
+    "test-writer",
+    "python-coder",
+    "sql-coder",
+    "test-runner",
+    "documentation-expert",
+    "pr-reviewer",
+    "commit",
+    "pull-request",
+]
+
+#: Default path of the agent registry relative to the repo root.
+_DEFAULT_AGENT_REGISTRY = "config/agent_registry.json"
+
+#: Default path of the guardrail gates config relative to the repo root.
+_DEFAULT_GUARDRAIL_GATES = "config/guardrail_gates.yaml"
 
 # ---------------------------------------------------------------------------
 # Type alias
@@ -185,31 +205,238 @@ def _extract_local_paths(doc_links: list[Any]) -> list[str]:
     return local
 
 
-def _build_agents_map(assigned_agent: str) -> dict[str, str]:
+def _load_guardrail_gates(guardrail_config_path: Path) -> dict[str, Any]:
+    """Load and return the guardrail gates configuration from YAML.
+
+    Args:
+        guardrail_config_path: Absolute path to guardrail_gates.yaml.
+
+    Returns:
+        Parsed YAML content as a dict.
+
+    Raises:
+        FileNotFoundError: When the file does not exist.
+        yaml.YAMLError: When the file cannot be parsed.
+        OSError: When the file cannot be read.
+    """
+    try:
+        with open(guardrail_config_path, encoding="utf-8") as fh:
+            data = yaml.safe_load(fh)
+    except (yaml.YAMLError, OSError) as exc:
+        print(
+            f"ERROR: could not load guardrail config {guardrail_config_path}: {exc}",
+            file=sys.stderr,
+        )
+        raise
+    return data or {}
+
+
+def _load_production_code_agents(agent_registry_path: Path) -> set[str]:
+    """Return the set of agent IDs whose produces field equals 'production_code'.
+
+    Args:
+        agent_registry_path: Absolute path to agent_registry.json.
+
+    Returns:
+        Set of agent IDs that produce production_code.
+
+    Raises:
+        FileNotFoundError: When the file does not exist.
+        json.JSONDecodeError: When the file cannot be parsed.
+        OSError: When the file cannot be read.
+    """
+    try:
+        with open(agent_registry_path, encoding="utf-8") as fh:
+            registry = json.load(fh)
+    except (json.JSONDecodeError, OSError) as exc:
+        print(
+            f"ERROR: could not load agent registry {agent_registry_path}: {exc}",
+            file=sys.stderr,
+        )
+        raise
+    producers: set[str] = set()
+    for agent in registry.get("agents", []):
+        if agent.get("produces") == "production_code":
+            producers.add(agent["id"])
+    return producers
+
+
+def _build_agents_map(
+    assigned_agent: str,
+    change_targets: list[str] | None = None,
+    risk_surface: str | None = None,
+    not_needed_overrides: dict[str, str] | None = None,
+    guardrail_config_path: Path | str | None = None,
+    agent_registry_path: Path | str | None = None,
+) -> dict[str, str]:
     """Build the agents map for the ticket frontmatter.
 
-    The assigned agent is set to 'needed'. All canonical support agents are
-    also set to 'needed'. sql-coder and documentation-expert are set to
-    'not_needed' unless assigned_agent is 'sql-coder'.
+    When change_targets and risk_surface are provided the map is computed from
+    the guardrail_gates.yaml lookup (unioning all applicable targets) plus the
+    work agent.  When they are omitted the function falls back to the legacy
+    behaviour (assigned_agent + canonical support agents).
+
+    The returned dict is ordered according to _CANONICAL_PHASE_ORDER.
+    test-writer is auto-injected before, and test-runner after, any agent
+    whose produces field equals 'production_code' in agent_registry.json.
+    Explicit not_needed_overrides are always preserved — they are never
+    recomputed to 'needed'.
 
     Args:
         assigned_agent: The agent name from the AC's assigned_agent field.
+        change_targets: List of change target categories (e.g. ['python_code', 'config']).
+        risk_surface: Risk surface label (e.g. 'low', 'high', 'production').
+        not_needed_overrides: Map of agent → 'not_needed' that must be preserved.
+        guardrail_config_path: Path to config/guardrail_gates.yaml.
+        agent_registry_path: Path to config/agent_registry.json.
 
     Returns:
         Ordered dict suitable for YAML frontmatter serialisation.
     """
-    agents: dict[str, str] = {}
-    agents[assigned_agent] = "needed"
+    overrides: dict[str, str] = not_needed_overrides or {}
+
+    if change_targets is not None and risk_surface is not None:
+        # --- Computed path ---
+        # Resolve config paths
+        if guardrail_config_path is None:
+            # Try to locate the repo root relative to this script
+            try:
+                repo_root = _find_worktree_root(Path(__file__))
+                guardrail_config_path = repo_root / _DEFAULT_GUARDRAIL_GATES
+            except FileNotFoundError:
+                guardrail_config_path = Path(_DEFAULT_GUARDRAIL_GATES)
+        guardrail_config_path = Path(guardrail_config_path)
+
+        if agent_registry_path is None:
+            try:
+                repo_root = _find_worktree_root(Path(__file__))
+                agent_registry_path = repo_root / _DEFAULT_AGENT_REGISTRY
+            except FileNotFoundError:
+                agent_registry_path = Path(_DEFAULT_AGENT_REGISTRY)
+        agent_registry_path = Path(agent_registry_path)
+
+        # Load guardrail gates
+        try:
+            gates = _load_guardrail_gates(guardrail_config_path)
+        except (OSError, yaml.YAMLError):
+            gates = {}
+
+        # Load production_code producers
+        try:
+            prod_code_agents = _load_production_code_agents(agent_registry_path)
+        except (OSError, json.JSONDecodeError):
+            prod_code_agents = {"python-coder", "sql-coder", "frontend-coder"}
+
+        # Union guardrail agents from all change_targets × risk_surface
+        guardrail_set: set[str] = set()
+        for target in change_targets:
+            surface_map = gates.get(target, {})
+            gate_list = surface_map.get(risk_surface, [])
+            if gate_list:
+                guardrail_set.update(gate_list)
+
+        # Collect all agent names that should appear in the map
+        # Start with guardrails + assigned agent + standard tail agents
+        all_needed: set[str] = set(guardrail_set)
+        all_needed.add(assigned_agent)
+        # Always include commit and pull-request
+        all_needed.add("commit")
+        all_needed.add("pull-request")
+
+        # Auto-inject test-writer before and test-runner after any production_code agent
+        for agent in list(all_needed):
+            if agent in prod_code_agents:
+                all_needed.add("test-writer")
+                all_needed.add("test-runner")
+                break
+
+        # Remove any agent that has an explicit not_needed override
+        for agent in overrides:
+            all_needed.discard(agent)
+
+        # Build ordered result according to _CANONICAL_PHASE_ORDER
+        agents: dict[str, str] = {}
+        # First add agents in canonical order
+        for canonical_agent in _CANONICAL_PHASE_ORDER:
+            if canonical_agent in overrides:
+                agents[canonical_agent] = "not_needed"
+            elif canonical_agent in all_needed:
+                agents[canonical_agent] = "needed"
+
+        # Then add any remaining agents not in _CANONICAL_PHASE_ORDER
+        for agent in all_needed:
+            if agent not in _CANONICAL_PHASE_ORDER and agent not in agents:
+                if agent in overrides:
+                    agents[agent] = "not_needed"
+                else:
+                    agents[agent] = "needed"
+
+        # Add any overrides for agents not already in the map
+        for agent, status in overrides.items():
+            if agent not in agents:
+                agents[agent] = status
+
+        return agents
+
+    # --- Legacy path (no change_targets/risk_surface) ---
+    agents_legacy: dict[str, str] = {}
+    agents_legacy[assigned_agent] = "needed"
     for canonical in _CANONICAL_SUPPORT_AGENTS:
         if canonical != assigned_agent:
-            agents[canonical] = "needed"
+            agents_legacy[canonical] = "needed"
     for sql_agent in _SQL_AGENTS:
-        if sql_agent != assigned_agent and sql_agent not in agents:
-            agents[sql_agent] = "not_needed"
+        if sql_agent != assigned_agent and sql_agent not in agents_legacy:
+            agents_legacy[sql_agent] = "not_needed"
     for not_needed in _NOT_NEEDED_AGENTS:
-        if not_needed != assigned_agent and not_needed not in agents:
-            agents[not_needed] = "not_needed"
-    return agents
+        if not_needed != assigned_agent and not_needed not in agents_legacy:
+            agents_legacy[not_needed] = "not_needed"
+    return agents_legacy
+
+
+def _agent_produces_production_code(
+    agent_id: str,
+    agent_registry_path: Path | str | None = None,
+) -> bool:
+    """Return True if the given agent produces production_code.
+
+    Loads agent_registry.json to check the produces field. Falls back to a
+    known hard-coded set when the registry cannot be loaded.
+
+    Args:
+        agent_id: The agent identifier to check.
+        agent_registry_path: Path to agent_registry.json; resolved from repo
+                             root when omitted.
+
+    Returns:
+        True if the agent produces production_code, False otherwise.
+    """
+    # Known production_code producers (fallback when registry is unavailable)
+    _FALLBACK_PRODUCERS: frozenset[str] = frozenset(
+        {
+            "python-coder",
+            "sql-coder",
+            "frontend-coder",
+            "sql-table-creator",
+            "sql-query",
+            "sql-procedure-creator",
+            "sql-function-creator",
+            "sql-index-creator",
+            "sql-view-creator",
+        }
+    )
+
+    if agent_registry_path is None:
+        try:
+            repo_root = _find_worktree_root(Path(__file__))
+            agent_registry_path = repo_root / _DEFAULT_AGENT_REGISTRY
+        except FileNotFoundError:
+            return agent_id in _FALLBACK_PRODUCERS
+
+    try:
+        producers = _load_production_code_agents(Path(agent_registry_path))
+        return agent_id in producers
+    except (OSError, json.JSONDecodeError):
+        return agent_id in _FALLBACK_PRODUCERS
 
 
 def _build_signoffs_section(agents: dict[str, str]) -> str:
@@ -287,6 +514,7 @@ def _build_ticket_body(ac: AcRecord, ac_id: str) -> str:
     """Build the ticket body (everything after the frontmatter).
 
     Includes: Actor/Goal, Context, Acceptance Criteria (verbatim from AC),
+    an optional Test Requirements block (emitted for any production_code agent),
     and Sign-offs.
 
     Args:
@@ -301,6 +529,7 @@ def _build_ticket_body(ac: AcRecord, ac_id: str) -> str:
     assigned_agent = ac.get("assigned_agent", "python-coder")
     agents = _build_agents_map(assigned_agent)
     signoffs = _build_signoffs_section(agents)
+    is_code_producer = _agent_produces_production_code(assigned_agent)
 
     lines: list[str] = [
         f"# {title}",
@@ -323,11 +552,24 @@ def _build_ticket_body(ac: AcRecord, ac_id: str) -> str:
         criteria.rstrip(),
         "```",
         "",
+    ]
+
+    if is_code_producer:
+        lines.extend([
+            "## Test Requirements",
+            "",
+            "```yaml",
+            "tests: []",
+            "```",
+            "",
+        ])
+
+    lines.extend([
         signoffs,
         "",
         "## Comments",
         "",
-    ]
+    ])
     return "\n".join(lines)
 
 
