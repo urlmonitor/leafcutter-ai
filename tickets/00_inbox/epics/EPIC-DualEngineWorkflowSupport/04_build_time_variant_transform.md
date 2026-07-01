@@ -1,6 +1,6 @@
 ---
 title: "Build-time _emit_workflow_variant transform (identity for E2, wrap for E1)"
-status: in_progress
+status: done
 components:
   - build_pipeline
 created: 2026-07-01
