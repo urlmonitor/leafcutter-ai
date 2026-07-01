@@ -1,6 +1,6 @@
 id: BP-1100e-1-ii
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "Path comparison is normalized for separators and case so NTFS/APFS paths are not false-flagged"
 component: build-pipeline
 level: L3
@@ -29,6 +29,7 @@ estimated_complexity: S
 it_requirements:
   - "Normalize both the declared and the actual paths to a canonical form before set comparison: unify path separators to POSIX forward-slash, and case-fold when the target filesystem is case-insensitive (NTFS/APFS) so casing differences do not cause a false mismatch."
   - "Do not case-fold unconditionally on case-sensitive filesystems (two files differing only by case are distinct there); gate case-folding on filesystem case-sensitivity."
+  - "PORTABLE SURFACE: this path normalization lives in the same hook (templates/scripts/commit_guardian/hooks/check_files_touched_reconciliation.py) pinned in BP-1100e-1; ADR-001 build.py round-trip parity applies. Path normalization is what keeps the check portable across the WSL2/NTFS, macOS/APFS, and native-Linux consumer filesystems."
   - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
 delivers_to: null
 expects_from:
@@ -36,7 +37,11 @@ expects_from:
   contract: "The reconciliation verdict whose path comparison this AC normalizes for separators and case."
 origin_agent: business-analyst-v3
 created: 2026-07-01
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    entry: "Pinned shared-hook portable surface (check_files_touched_reconciliation.py, ADR-001 parity) and tied path normalization to cross-filesystem portability. readiness draft->reviewed."
+    confirmed_by: it-po-v3
+    confirmed_at: 2026-07-01
 superseded_by: null
 covered_by: []
 implemented_by: []

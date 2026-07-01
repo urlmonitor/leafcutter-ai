@@ -1,6 +1,6 @@
 id: BO-1600d-3-v
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "When a worktree's cache-tree is poisoned, recovery rebuilds via a fresh worktree"
 component: build-orchestration
 level: L3
@@ -31,6 +31,7 @@ it_requirements:
   - "Detect when an in-place cache-tree rebuild does not clear a linked worktree's poisoned cache-tree; in that case escalate to the fresh-worktree fallback rather than looping the in-place rebuild."
   - "The fresh-worktree creation must appear as its own line in the dry-run plan (heavier, distinct action) so the human explicitly sees and confirms it; it is never applied silently."
   - "Verify the fresh worktree reads cleanly (no cache-tree error) as the success condition."
+  - "PORTABLE SURFACE: this fresh-worktree fallback lives in the same standalone recovery script (templates/scripts/git_recovery.py) pinned in BO-1600d-1/BO-1600d-4; ADR-001 deployed/template parity applies."
   - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
 delivers_to: null
 expects_from:
@@ -38,7 +39,11 @@ expects_from:
   contract: "The rebuild-poisoned-index step this edge case extends with the fresh-worktree fallback."
 origin_agent: business-analyst-v3
 created: 2026-07-01
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    entry: "Pinned portable surface (templates/scripts/git_recovery.py, ADR-001 parity). readiness draft->reviewed."
+    confirmed_by: it-po-v3
+    confirmed_at: 2026-07-01
 superseded_by: null
 covered_by: []
 implemented_by: []

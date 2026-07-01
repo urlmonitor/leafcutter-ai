@@ -5,8 +5,8 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   The generated agent card always agrees with the agent registry -- mismatches are caught automatically.

@@ -1,6 +1,6 @@
 id: BO-1600d-3-iv
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "Branch-ref reset targets the detected default/current branch, never a hardcoded main"
 component: build-orchestration
 level: L3
@@ -29,6 +29,7 @@ estimated_complexity: S
 it_requirements:
   - "Determine the branch to reset from runtime state (the corrupt ref name, current HEAD, or the repository's configured default branch via origin/HEAD) — never assume 'main'/'master'. Reset that branch to its own reflog tip."
   - "If the affected branch is ambiguous or undeterminable, stop and report rather than resetting the wrong branch."
+  - "PORTABLE SURFACE: this runtime-branch-detection guard lives in the same standalone recovery script (templates/scripts/git_recovery.py) pinned in BO-1600d-1/BO-1600d-4; ADR-001 deployed/template parity applies. Runtime branch detection is what makes the helper portable across consumer repos whose default branch is not 'main'."
   - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
 delivers_to: null
 expects_from:
@@ -36,7 +37,11 @@ expects_from:
   contract: "The reset-corrupt-branch-to-reflog-tip step this edge case constrains to the detected branch."
 origin_agent: business-analyst-v3
 created: 2026-07-01
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    entry: "Pinned portable surface (templates/scripts/git_recovery.py, ADR-001 parity) and tied runtime branch detection to cross-consumer portability. readiness draft->reviewed."
+    confirmed_by: it-po-v3
+    confirmed_at: 2026-07-01
 superseded_by: null
 covered_by: []
 implemented_by: []

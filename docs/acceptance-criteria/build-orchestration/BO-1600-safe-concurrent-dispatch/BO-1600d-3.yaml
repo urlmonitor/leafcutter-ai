@@ -1,6 +1,6 @@
 id: BO-1600d-3
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "Recovery performs the real repair steps observed in the incident, in dependency order"
 component: build-orchestration
 level: L2
@@ -41,6 +41,8 @@ assigned_agent: python-coder
 estimated_complexity: L
 it_requirements:
   - "The step engine must implement the concrete recovery actions observed in the incident: (a) detect + list zero-byte loose objects; (b) remove the listed objects and re-fetch authoritative objects from origin; (c) reset a corrupt branch ref to that branch's reflog tip; (d) rebuild the poisoned index cache-tree. The worktree-cache-tree-poisoned fresh-worktree fallback is BO-1600d-3-v."
+  - "PORTABLE SURFACE: the step engine lives in the same standalone recovery script pinned in BO-1600d-1/BO-1600d-4 (templates/scripts/git_recovery.py); it is not a separate deployable artifact."
+  - "GIT-VERSION GUARD (NEW HELPER — the package has none today): the re-fetch action uses 'git fetch --refetch', which requires git >= 2.36. The recovery script MUST first probe the installed git version and gate the --refetch flag behind >= 2.36. Because no git-version guard helper exists in the package, add one (e.g. a small _git_version()/_require_git_version() helper local to the recovery module, or a shared helper if reuse emerges). The version-refuse/fallback behavior is specified in BO-1600d-3-i."
   - "Steps run in dependency order (remove-then-refetch before ref/index repair) and each step is confirmed against the actual damaged state, not applied blindly; a step whose precondition is absent is skipped from the plan (so a clean facet is never touched)."
   - "The branch reset MUST target the reflog tip of the actual current/affected branch — detect the branch by name at runtime; do NOT hardcode 'main' or 'master' (see BO-1600d-3-iv non-default-branch edge case)."
   - "Object removal MUST be limited to objects the detection identified as zero-byte/corrupt loose objects; it must NOT blindly delete every empty file in the object store (see BO-1600d-3-vi large-store edge case)."
@@ -54,7 +56,11 @@ expects_from:
   contract: "The dry-run-first plan/confirm layer that sequences and gates these actions and executes them only after explicit human confirmation."
 origin_agent: business-analyst-v3
 created: 2026-07-01
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    entry: "Pinned portable surface (step engine inside templates/scripts/git_recovery.py). Added GIT-VERSION GUARD it_requirement flagging that the package has NO git-version helper today and one must be added to gate 'git fetch --refetch' behind git >= 2.36 (behavior in BO-1600d-3-i). readiness draft->reviewed."
+    confirmed_by: it-po-v3
+    confirmed_at: 2026-07-01
 superseded_by: null
 covered_by:
   - BO-1600d-3-i

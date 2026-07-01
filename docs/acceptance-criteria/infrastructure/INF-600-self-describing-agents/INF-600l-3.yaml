@@ -1,6 +1,6 @@
 id: INF-600l-3
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "The pr-reviewer prose backstop for card/registry consistency delegates the search to research-agent"
 component: infrastructure
 level: L2
@@ -32,17 +32,21 @@ doc_links:
 assigned_agent: llm-expert
 estimated_complexity: S
 it_requirements:
-  - "The surface is the pr-reviewer agent template prose (templates/agents/pr-reviewer.md) -> llm-expert, NOT a python hook. Add review-instruction prose for card<->registry consistency."
-  - "pr-reviewer has NO search tools (per the strict research-delegation rule); the prose MUST instruct it to delegate the registry/card cross-reference to research-agent and reason over the returned findings -- it must not be written as if pr-reviewer can grep the store itself."
+  - "PORTABLE SURFACE: the surface is the pr-reviewer agent template PROSE at 'templates/agents/pr-reviewer.md' (confirmed present) -> llm-expert, NOT a python hook. Add review-instruction prose for card<->registry consistency."
+  - "pr-reviewer has NO search tools (confirmed against the registry / per the strict research-delegation rule); the prose MUST instruct it to delegate the registry/card cross-reference to research-agent (confirmed present in the registry) and reason over the returned findings -- it must not be written as if pr-reviewer can grep the store itself."
   - "Frame the prose check explicitly as a BACKSTOP to the authoritative build-time mirror check (INF-600l-1); it does not replace the deterministic check and must not be relied on as the primary gate."
-  - "PORTABLE per ADR-001: the pr-reviewer template ships to consumers via build.py; the deployed and template-source copies must be kept in parity via the build.py round-trip."
+  - "PORTABLE per ADR-001: the pr-reviewer template ships to consumers via build.py; the deployed (.claude/agents/) and template-source (templates/agents/) copies must be kept in parity via the build.py round-trip; must NOT rely on the leafcutter repo's own root CLAUDE.md."
 delivers_to: null
 expects_from:
   ac_id: INF-600l-1
   contract: "The authoritative build-time card<->registry mirror-consistency verdict that this pr-reviewer prose backstops (does not replace)."
 origin_agent: business-analyst-v3
 created: 2026-07-01
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    entry: "Confirmed pr-reviewer.md template present + research-agent present in the registry; confirmed pr-reviewer has no search tools (delegation to research-agent is mandatory). Tightened ADR-001 parity to name both deployed (.claude/agents/) and template-source copies. readiness draft->reviewed."
+    confirmed_by: it-po-v3
+    confirmed_at: 2026-07-01
 superseded_by: null
 covered_by: []
 implemented_by: []

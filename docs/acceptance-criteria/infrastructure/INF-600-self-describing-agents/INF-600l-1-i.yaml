@@ -1,6 +1,6 @@
 id: INF-600l-1-i
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "When agent cards are absent, the mirror check no-ops instead of false-failing"
 component: infrastructure
 level: L3
@@ -30,6 +30,7 @@ estimated_complexity: S
 it_requirements:
   - "When an agent's card is absent or its path does not resolve, SKIP the mirror comparison for that agent (fail-open no-op) -- never report a card<->registry mismatch caused purely by the card's absence, and never fail the build for a missing card."
   - "The skip must be observable (advisory note naming the skipped agents); the pre-existing registry-internal spawn-consistency check (INF-600g) must continue to run regardless of card presence."
+  - "PORTABLE SURFACE: this card-absent fail-open lives in the same EXISTING hook (templates/scripts/commit_guardian/hooks/check_agent_spawn_consistency.py) extended in INF-600l-1; the card-absent no-op is what keeps the extended check harmless in a consumer that has a registry but has not generated cards. ADR-001 build.py round-trip parity applies."
   - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
 delivers_to: null
 expects_from:
@@ -37,7 +38,11 @@ expects_from:
   contract: "The card<->registry mirror-consistency verdict this AC guards with a fail-open no-op when cards are absent."
 origin_agent: business-analyst-v3
 created: 2026-07-01
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    entry: "Pinned the existing-hook portable surface (check_agent_spawn_consistency.py, ADR-001 parity) and tied the card-absent no-op to consumer portability. readiness draft->reviewed."
+    confirmed_by: it-po-v3
+    confirmed_at: 2026-07-01
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -1,6 +1,6 @@
 id: INF-600l-1
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "The consistency check catches a wired relationship present on one side (card or registry) but not the other"
 component: infrastructure
 level: L2
@@ -36,22 +36,29 @@ doc_links:
   - path: config/agent_registry.json
     relationship: describes
     status: exists
+  - path: "templates/scripts/commit_guardian/hooks/check_agent_spawn_consistency.py"
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
-  - "EXTEND the existing check_agent_spawn_consistency hook (do NOT create a new parallel hook) to add a card<->registry mirror comparison: for each agent, compare the wired relationships shown in its generated card against the corresponding relationships in its registry entry, in BOTH directions (card-has-but-registry-lacks AND registry-has-but-card-lacks)."
+  - "PORTABLE SURFACE: EXTEND the EXISTING hook at 'templates/scripts/commit_guardian/hooks/check_agent_spawn_consistency.py' (confirmed present in both the package source templates/scripts/... and the deployed scripts/... copy) — do NOT create a new parallel hook. Add a card<->registry mirror comparison: for each agent, compare the wired relationships shown in its generated card against the corresponding relationships in its registry entry, in BOTH directions (card-has-but-registry-lacks AND registry-has-but-card-lacks). Its hooks_manifest entry (check-agent-spawn-consistency) already exists; no new registration is needed."
   - "Reuse the registry-validation strength already established by INF-600g (spawned_by/spawn_allowlist reciprocity) and INF-600k (external-caller tolerance); the mirror check compares against the SAME registry facts INF-600k accepts, so a legitimate external caller (workflow filename / user) shown consistently on both sides must NOT be reported as a mismatch."
   - "The mismatch report must name both agents and identify which side is missing the edge, so the fix is obvious; agreement produces no report."
   - "The card-absent and registry-absent fail-open cases are INF-600l-1-i and INF-600l-1-ii; the opt-in scoping and configurable card-path convention are INF-600l-2 -- do not fold them in here."
   - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3): wrap card/registry reads and parsing in try/except with specific exception types, log at WARNING or higher, and fail open on internal error (mirror the existing spawn-consistency hook's error tail)."
-  - "PORTABLE per ADR-001: the extended check ships to consumers via build.py (deployed + template source kept in parity via the build.py round-trip) and must NOT rely on the leafcutter repo's own root CLAUDE.md."
+  - "PORTABLE per ADR-001: the extended check ships to consumers via build.py (deployed scripts/commit_guardian/hooks/ copy + template source kept in parity via the build.py round-trip, canonical source = templates/scripts/commit_guardian/) and must NOT rely on the leafcutter repo's own root CLAUDE.md."
 delivers_to:
   agent: python-coder
   contract: "The card<->registry mirror-consistency verdict added to check_agent_spawn_consistency: given an agent's generated card and its registry entry, produce the set of wired relationships that appear on one side but not the other (both directions), naming both agents and the missing side. This verdict is the load-bearing primitive the opt-in/path-convention scoping (INF-600l-2) and the absent-side fail-open guards (INF-600l-1-i/ii) build on, and the pr-reviewer backstop (INF-600l-3) mirrors in prose."
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-07-01
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    entry: "Pinned the exact existing-hook surface (templates/scripts/commit_guardian/hooks/check_agent_spawn_consistency.py, confirmed present in both source + deployed; hooks_manifest entry check-agent-spawn-consistency already exists so no new registration) — EXTEND not create-parallel. Added the hook doc_link. readiness draft->reviewed."
+    confirmed_by: it-po-v3
+    confirmed_at: 2026-07-01
 superseded_by: null
 covered_by:
   - INF-600l-1-i

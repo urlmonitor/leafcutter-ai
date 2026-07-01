@@ -1,6 +1,6 @@
 id: BP-1100e-1-iv
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "The reconciliation no-ops cleanly when the ticket has no files_touched frontmatter"
 component: build-pipeline
 level: L3
@@ -29,6 +29,7 @@ estimated_complexity: S
 it_requirements:
   - "When files_touched frontmatter is absent (not just empty), skip reconciliation entirely — there is no declared baseline to compare against — and do not flag or error. Distinguish absent (no-op skip) from empty-but-present (a declared empty scope, which BP-1100e-1 evaluates normally)."
   - "The skip must be observable (advisory note to stderr/log naming the reason), consistent with the fail-open posture of BP-1100e-2, so a repository not using files_touched is never blocked by the check."
+  - "PORTABLE SURFACE: this no-op guard lives in the same hook (templates/scripts/commit_guardian/hooks/check_files_touched_reconciliation.py) pinned in BP-1100e-1; the absent-frontmatter no-op is what keeps the deployed hook harmless in consumer projects that do not use files_touched frontmatter. ADR-001 build.py round-trip parity applies."
   - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
 delivers_to: null
 expects_from:
@@ -36,7 +37,11 @@ expects_from:
   contract: "The reconciliation verdict this AC guards with a clean no-op when no files_touched frontmatter exists."
 origin_agent: business-analyst-v3
 created: 2026-07-01
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    entry: "Pinned shared-hook portable surface (check_files_touched_reconciliation.py, ADR-001 parity) and tied the absent-frontmatter no-op to consumer-project portability. readiness draft->reviewed."
+    confirmed_by: it-po-v3
+    confirmed_at: 2026-07-01
 superseded_by: null
 covered_by: []
 implemented_by: []

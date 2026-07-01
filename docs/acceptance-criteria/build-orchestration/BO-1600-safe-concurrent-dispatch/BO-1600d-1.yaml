@@ -1,6 +1,6 @@
 id: BO-1600d-1
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "Recovery is human-invoked and confirmation-gated — it never runs inside the automatic drive loop"
 component: build-orchestration
 level: L2
@@ -34,20 +34,29 @@ doc_links:
   - path: "docs/architecture/agent_delivery_workflows.md"
     relationship: describes
     status: exists
+  - path: "templates/skills/building-epics/SKILL.md"
+    relationship: relates
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
   - "Recovery must be a SEPARATE human-invoked entry point (a distinct command/script surface), NOT a step wired into the automatic drive loop or the BO-1600c halt path; the halt path must only report and reference recovery, never call it."
+  - "PORTABLE SURFACE: the entry point ships as a standalone Python script in the package source tree build.py deploys from — canonical home 'templates/scripts/git_recovery.py' (top-level of templates/scripts/, so build_template_standalone_scripts() in build_phases.py auto-deploys it via its shallow glob('*.py')). If a subdirectory placement is chosen instead, a NEW build_phases.py deploy phase is required (the shallow glob will not recurse) — see BO-1600d-4."
   - "On start, the entry point must be inert with respect to the repository: it makes no git write of any kind until the human has explicitly confirmed (this is the gate; the plan-then-confirm mechanics are BO-1600d-2)."
+  - "PREVENTION IS NOT RE-DERIVED HERE: the serial-drive / commit-serialization-lock discipline that prevents the corruption this recovery repairs is already owned by the building-epics skill (templates/skills/building-epics/SKILL.md); reference it, do not duplicate its prevention rules in the recovery script. This AC is the recovery-side human-invoked-only gate only."
   - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3): wrap git/filesystem probes in try/except with a specific exception type and log at WARNING or higher; an errored probe must not be treated as permission to proceed."
-  - "PORTABLE per ADR-001: the entry point ships to consumer projects via build.py (see BO-1600d-4), so the human-invoked-only + gate guarantee holds in any installing project — it must NOT depend on the leafcutter repo's own root CLAUDE.md."
+  - "PORTABLE per ADR-001: the entry point ships to consumer projects via build.py (see BO-1600d-4), so the human-invoked-only + gate guarantee holds in any installing project — it must NOT depend on the leafcutter repo's own root CLAUDE.md. Canonical template source and the deployed copy stay in parity via the build.py round-trip."
 delivers_to:
   agent: python-coder
   contract: "A human-invoked recovery entry point that (a) is never called by the automatic drive loop or the BO-1600c halt path, and (b) performs no repository write before explicit human confirmation. This entry point is the shell that the dry-run-first plan/confirm behavior (BO-1600d-2) and the recovery-step engine (BO-1600d-3) are wired into."
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-07-01
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    entry: "Pinned portable surface (templates/scripts/git_recovery.py, top-level auto-deploy via build_template_standalone_scripts shallow glob; new build_phases.py phase required if placed in a subdir). Added building-epics SKILL.md reference for the serial-drive/commit-lock PREVENTION (not duplicated here). Added building-epics doc_link. readiness draft->reviewed."
+    confirmed_by: it-po-v3
+    confirmed_at: 2026-07-01
 superseded_by: null
 covered_by: []
 implemented_by: []

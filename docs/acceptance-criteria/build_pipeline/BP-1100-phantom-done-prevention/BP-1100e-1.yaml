@@ -1,6 +1,6 @@
 id: BP-1100e-1
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "Before a ticket is marked done, source files changed but not declared are flagged"
 component: build-pipeline
 level: L2
@@ -35,21 +35,29 @@ doc_links:
   - path: "docs/architecture/agent_delivery_workflows.md"
     relationship: describes
     status: exists
+  - path: "templates/scripts/commit_guardian/commit_guardian.json"
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
+  - "PORTABLE SURFACE: implement as a NEW commit_guardian hook script at 'templates/scripts/commit_guardian/hooks/check_files_touched_reconciliation.py' (package source), deployed to the consumer's 'scripts/commit_guardian/hooks/check_files_touched_reconciliation.py' via build.py. Register it in the hooks_manifest.hooks[] array of 'templates/scripts/commit_guardian/commit_guardian.json' (id + name + entry via run_hook.py + language + files + stages + pass_filenames), mirroring the existing check-agent-spawn-consistency entry. This complements BP-1100a (pre-dispatch); it does NOT duplicate it."
   - "POST-CHANGE reconciliation, distinct from BP-1100a's PRE-DISPATCH declaration check: compute the set of source files ACTUALLY changed by the ticket (from the real diff) and compare against the ticket's declared files_touched UNION out_of_scope. Do NOT re-derive BP-1100a's pre-dispatch scope-completeness behavior."
   - "The gate point is BEFORE the ticket reaches status: done (at the pre-done/commit-time reconciliation step in the drive/finalize surface), so the mismatch is caught before 'done' masks missing work."
   - "Source files are those with source/executable extensions (.py/.sql/.ts/.tsx/.js). The union-with-out_of_scope exemption and generated/lockfile exemption are BP-1100e-1-i; path normalization is BP-1100e-1-ii; docs/config-only narrow-scope non-false-positive is BP-1100e-1-iii; the no-frontmatter no-op is BP-1100e-1-iv."
   - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3): wrap the diff/frontmatter reads in try/except with a specific exception type and log at WARNING or higher; an errored reconciliation must fail open (BP-1100e-2), never hard-block by accident."
-  - "PORTABLE per ADR-001: the check ships to consumers via build.py and must NOT rely on the leafcutter repo's own root CLAUDE.md."
+  - "PORTABLE per ADR-001: the hook + its commit_guardian.json config section + hooks_manifest entry ship to consumers via build.py, kept in parity via the build.py round-trip (canonical source = templates/scripts/commit_guardian/, the scripts/ copy is a build output); it must NOT rely on the leafcutter repo's own root CLAUDE.md."
 delivers_to:
   agent: python-coder
   contract: "The declared-vs-actual reconciliation verdict: given a ticket's real changed-source-file set and its declared files_touched UNION out_of_scope, produce the list of source files changed-but-not-declared, evaluated at the pre-done gate point. This verdict is the single load-bearing primitive the advisory/strict enforcement mode (BP-1100e-2) and the edge-case exemptions (BP-1100e-1-i..iv) build on."
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-07-01
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    entry: "Pinned the portable surface: NEW hook templates/scripts/commit_guardian/hooks/check_files_touched_reconciliation.py + hooks_manifest.hooks[] registration in templates/scripts/commit_guardian/commit_guardian.json (mirror check-agent-spawn-consistency), ADR-001 build.py round-trip parity, complements-not-duplicates BP-1100a. Added commit_guardian.json doc_link. readiness draft->reviewed."
+    confirmed_by: it-po-v3
+    confirmed_at: 2026-07-01
 superseded_by: null
 covered_by:
   - BP-1100e-1-i
