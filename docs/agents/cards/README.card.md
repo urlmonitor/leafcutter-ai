@@ -1,11 +1,11 @@
 ---
 agent_id: README
 title: "Agent Card: README"
+description: ""
 type: card
 status: active
-created: 2026-06-30
+created: 2026-07-01
 card_version: "generated"
-description: "Index of all agent reference cards for the leafcutter-ai package."
 ---
 # README
 

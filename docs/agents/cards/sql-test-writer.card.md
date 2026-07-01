@@ -1,11 +1,11 @@
 ---
 agent_id: sql-test-writer
 title: "Agent Card: sql-test-writer"
+description: "Specialist for authoring SQL function and procedure test files. Reads PROJECT_CONTEXT.md for the test folder path, test framework choice, slow-test marker, and isolation conventions. Produces transaction-rollback test files and writes no auxiliary output inside the project tree. (internal — invoked by sql-coder or ticket-supervisor)"
 type: card
 status: active
-created: 2026-06-30
+created: 2026-07-01
 card_version: "generated"
-description: "Agent card for the sql-test-writer agent."
 ---
 # sql-test-writer
 

@@ -1,11 +1,11 @@
 ---
 agent_id: build-ac
 title: "Agent Card: build-ac"
+description: "Entry-point coordinator for the AC-to-ticket-to-build pipeline. Finds the next highest-priority unimplemented AC via ac_prioritizer.py, generates a ticket from it via generate_ticket_from_ac.py, surfaces the result to the user for confirmation (yes / review / skip), and—after the user builds the ticket manually with /build-feature—marks the AC done via mark_ac_done.py.  DEPTH-CAP NOTE: This agent does NOT call /build-feature inline. Calling /build-feature from inside this agent would violate Claude Code's depth-1 sub-agent hard limit (build-ac → build-feature → ticket-supervisor = depth 3). Instead, this agent generates the ticket and hands off to the user to invoke /build-feature manually. See ADR-006-flatten-supervisor-chain.md."
 type: card
 status: active
-created: 2026-06-30
+created: 2026-07-01
 card_version: "generated"
-description: "Agent card for the build-ac agent."
 ---
 # build-ac
 

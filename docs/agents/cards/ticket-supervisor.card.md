@@ -1,11 +1,11 @@
 ---
 agent_id: ticket-supervisor
 title: "Agent Card: ticket-supervisor"
+description: "Depth-0 ticket orchestrator — dispatched directly by `/build-feature` (or by the user for a single-ticket workflow). Drives a single ticket through its phase agents: reads the frontmatter `agents:` map, spawns the next `needed` agent in natural order via the Agent tool, parses the resulting `## Comments` status tag, and routes on ok / handoff / blocker / question. On blocker, runs the failure adjudication ladder (mechanical retry → cross-agent rework → brainstorm-lead → halt) with hard retry caps. Holds the worktree-root commit-phase lock around `commit` and `pull-request` phases. Returns a structured payload to the caller when escalating. Primary instruction set: `.claude/skills/building-epics/SKILL.md`. Architecture decision: ADR-006-flatten-supervisor-chain.md."
 type: card
 status: active
-created: 2026-06-30
+created: 2026-07-01
 card_version: "generated"
-description: "Agent card for the ticket-supervisor agent."
 ---
 # ticket-supervisor
 
@@ -53,11 +53,13 @@ flowchart TD
     epic_supervisor["epic-supervisor\n(supervisor tier)"]:::supervisor
     ticket_supervisor["ticket-supervisor\n(supervisor tier, priority ?)"]:::target
     __ticket_phase_agents__["__ticket_phase_agents__\n(phase tier)"]:::phase
+    brainstorm_lead["brainstorm-lead\n(phase tier)"]:::phase
     llm_expert["llm-expert\n(phase tier)"]:::phase
 
     user -->|dispatches| ticket_supervisor
     epic_supervisor -->|dispatches| ticket_supervisor
     ticket_supervisor -->|spawns| __ticket_phase_agents__
+    ticket_supervisor -->|spawns| brainstorm_lead
     ticket_supervisor -->|spawns| llm_expert
 ```
 ---

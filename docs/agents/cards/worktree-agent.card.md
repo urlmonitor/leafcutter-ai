@@ -1,11 +1,11 @@
 ---
 agent_id: worktree-agent
 title: "Agent Card: worktree-agent"
+description: "Manages git worktree lifecycle — creates a new worktree for a feature branch or reuses the existing epic worktree for an in-flight epic ticket; removes a worktree after a branch merges. Create is non-destructive (no confirmation required). Remove is destructive and requires an explicit \"yes\" after displaying the safety-check report. Use when: user types /worktree; asks to create a worktree for a branch or ticket; asks to remove or close a worktree after a PR merges."
 type: card
 status: active
-created: 2026-06-30
+created: 2026-07-01
 card_version: "generated"
-description: "Agent card for the worktree-agent agent."
 ---
 # worktree-agent
 

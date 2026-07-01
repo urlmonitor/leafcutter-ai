@@ -1,11 +1,11 @@
 ---
 agent_id: frontend-coder
 title: "Agent Card: frontend-coder"
+description: "Standards-enforcing frontend/UI implementation agent. Writes, edits, and refactors HTML, CSS, JavaScript, TypeScript, React, Vue, Svelte, and other web-layer files. Loads optional webapp-testing skill when installed. Embeds design principles directly (does NOT load the legacy frontend-design skill even if present). Delegates Python logic to python-coder and SQL changes to sql-coder via Stop-and-Ask rules.  Use when: ticket involves creating or modifying frontend/UI components, markup, or styles; ticket requires visual changes to a web interface; files_touched contains .tsx, .jsx, .vue, .svelte, .html, .css, or .scss.  See ADR-005 for the sibling-agent design rationale."
 type: card
 status: active
-created: 2026-06-30
+created: 2026-07-01
 card_version: "generated"
-description: "Agent card for the frontend-coder agent."
 ---
 # frontend-coder
 
@@ -133,3 +133,10 @@ flowchart TD
 | Delegation to sql-coder | task requiring sql-coder capabilities | Delegates to sql-coder via Agent tool | `sql-coder` |
 | Conditional Behavior | installed:** After making UI changes | invoke the webapp-testing skill by | `None` |
 | Conditional Behavior | a `Delivers to:` item is ambiguous | add a one-line comment in the code and | `None` |
+---
+
+## AC Assignments
+
+### frontend-coder
+
+- UXP-100d-2: Frontend-coder agent consumes the handoff artifact without human translation

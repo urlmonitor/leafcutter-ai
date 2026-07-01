@@ -1,11 +1,11 @@
 ---
 agent_id: change-scope-reviewer
 title: "Agent Card: change-scope-reviewer"
+description: "Scope-integrity reviewer dispatched by ticket-supervisor after the coder phase and before pr-reviewer. Reads the ticket's files_touched + out_of_scope lists and the staged diff, classifies each unexpected file as soft/hard/ambiguous using the three-tier disagreement model, and returns an actionable comment without auto-promoting to ADR or rewriting ticket frontmatter. (internal — invoked by ticket-supervisor only)"
 type: card
 status: active
-created: 2026-06-30
+created: 2026-07-01
 card_version: "generated"
-description: "Agent card for the change-scope-reviewer agent."
 ---
 # change-scope-reviewer
 

@@ -1,11 +1,11 @@
 ---
 agent_id: feedback-analyst
 title: "Agent Card: feedback-analyst"
+description: "Read-only analyst agent that loads the feedback-analysis skill, invokes trend_report.py against the full feedback corpus (or a filtered date window), interprets findings across all nine feedback categories, and returns a structured Markdown report with prioritized recommendations. Never modifies any file. Never creates tickets automatically — all recommendations are presented as a list for the user to act on. Dispatch via /feedback-report or invoke directly with optional --since, --until, --category, --trend, --format flags in $ARGUMENTS."
 type: card
 status: active
-created: 2026-06-30
+created: 2026-07-01
 card_version: "generated"
-description: "Agent card for the feedback-analyst agent."
 ---
 # feedback-analyst
 

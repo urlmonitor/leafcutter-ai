@@ -1,11 +1,11 @@
 ---
 agent_id: test-runner
 title: "Agent Card: test-runner"
+description: "Picks the right test suite based on what has changed, runs it, and returns a structured failure report (file, test name, stacktrace excerpt, rerun command) instead of a raw stdout dump. Use when: user types /test; asks \"run the tests\"; asks \"did I break anything?\"; asks \"run the SQL tests\"; or any implementation agent (python-coder, sql-coder) invokes this agent for its inner-loop test cycle."
 type: card
 status: active
-created: 2026-06-30
+created: 2026-07-01
 card_version: "generated"
-description: "Agent card for the test-runner agent."
 ---
 # test-runner
 
@@ -31,7 +31,6 @@ invokes this agent for its inner-loop test cycle.**
 ### Spawned By
 
 - `ticket-supervisor`
-- `python-coder`
 - `test-writer`
 - `finalize-feature.js`
 ---
@@ -58,13 +57,11 @@ flowchart TD
     classDef target fill:#fee2e2,stroke:#dc2626,stroke-width:3px
 
     ticket_supervisor["ticket-supervisor\n(supervisor tier)"]:::supervisor
-    python_coder["python-coder\n(phase tier)"]:::phase
     test_writer["test-writer\n(phase tier)"]:::phase
     finalize_feature.js["finalize-feature.js\n(phase tier)"]:::phase
     test_runner["test-runner\n(phase tier, priority 9)"]:::target
 
     ticket_supervisor -->|dispatches| test_runner
-    python_coder -->|dispatches| test_runner
     test_writer -->|dispatches| test_runner
     finalize_feature.js -->|dispatches| test_runner
 ```
@@ -123,3 +120,15 @@ flowchart TD
 |---------|---------|----------|---------------|
 | Conditional Behavior | invoked by `ticket-supervisor` | first check `git diff --name-only HEAD` | `None` |
 | Conditional Behavior | the user does not specify an action | default to `auto` | `None` |
+---
+
+## AC Assignments
+
+### test-runner
+
+- BP-006a-2: test_no_orphaned_directories passes with no unregistered skill directories
+- BP-006a-3: Edge case: new skill directory added without registry entry is detected
+- BP-006c-2: test_build_workflow_phase validates .claude/workflows/ path
+- BP-1200a-1-i: Suite is green across repeated runs with both fixed and varied test-ordering seeds
+- TQ-100b-1-iii: The AC store is read once per session and the enforced set is stable across repeated runs
+- TQ-100e-1-iii: Switching enforcement modes changes behavior with no edits to any test

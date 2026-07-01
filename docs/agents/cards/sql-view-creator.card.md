@@ -1,11 +1,11 @@
 ---
 agent_id: sql-view-creator
 title: "Agent Card: sql-view-creator"
+description: "Creates regular views, materialized views, and time-series continuous aggregates. Reads PROJECT_CONTEXT.md for project-specific how-to paths, flavour rules, and file conventions. Produces the SQL file plus test file in one pass. (internal — invoked by parent agents only)"
 type: card
 status: active
-created: 2026-06-30
+created: 2026-07-01
 card_version: "generated"
-description: "Agent card for the sql-view-creator agent."
 ---
 # sql-view-creator
 

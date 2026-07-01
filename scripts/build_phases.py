@@ -1373,6 +1373,13 @@ def validate_agent_self_description(
     #   and knowledge_channels range (1-11). Aggregated output. Two severity
     #   modes: 'warning' returns (0, N); 'error' returns (N, 0).
     #   (#EPIC-SelfDescribingAgents/04)
+    # - 2026-06-29 [python-coder/EPIC-SelfDescribingAgentsCorrections/05]:
+    #   Confirmed two-path resolution order per INF-600g-3-i:
+    #   1. templates/skills/{skill_id}/SKILL.md (package-level)
+    #   2. .claude/skills/{skill_id}/SKILL.md (project-local)
+    #   A project-local-only skill passes validation without error.
+    #   Only when neither path resolves is an error emitted.
+    #   (#EPIC-SelfDescribingAgentsCorrections/05)
     """
     agents_template_dir = target_root / "templates" / "agents"
     registry_path = target_root / "config" / "agent_registry.json"

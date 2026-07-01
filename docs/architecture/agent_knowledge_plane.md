@@ -1,5 +1,6 @@
 ---
 title: "Agent Knowledge Plane"
+description: "Canonical reference for knowledge injection — all channels through which agents receive context at invocation time, including skills_invoked cross-reference validation."
 type: "reference"
 status: "active"
 created: "2026-05-30"
@@ -467,6 +468,43 @@ channel wins** at the point of decision:
 
 ---
 
+## Build-Time Validation: `skills_invoked` Cross-Reference
+
+`config/agent_registry.json` carries a `skills_invoked` array on each agent
+entry.  This array declares which skills the agent is expected to load at
+runtime (typically via the Skill tool or by an explicit `.claude/skills/<id>/SKILL.md`
+load directive in the template body).
+
+At build time, `scripts/registry_validator.py` cross-references each agent's
+`skills_invoked` array against skill references extracted from its compiled
+template body.  Two classes of mismatch are detected and emitted as advisory
+`[WARNING]` messages:
+
+| Mismatch direction | Warning format |
+|---|---|
+| Template references a skill **absent** from `skills_invoked` | `<agent-id>: template references skill '<skill-id>' but skills_invoked does not declare it` |
+| `skills_invoked` declares a skill with **no** template reference | `<agent-id>: skills_invoked declares '<skill-id>' but no reference found in template body` |
+
+These warnings are advisory — they do not block the build — because skill
+references may appear in prose that does not match the extraction patterns, or
+a skill may be loaded implicitly through a parent template rather than an
+inline directive.  Nevertheless, consistent `skills_invoked` declarations help
+downstream tooling (agent cards, documentation generation) produce accurate
+capability descriptions.
+
+The detection heuristic recognises three reference patterns:
+
+1. **Path-based**: ``.claude/skills/<skill-id>/SKILL.md`` — the canonical
+   runtime load path used by the Sign-off section and supervisor boot sequences.
+2. **Natural-language directives**: ``load the <skill-id> skill``,
+   ``invoke the <skill-id> skill``, etc. — the imperative form used in
+   instruction-heavy sections.
+3. **Skill tool patterns**: ``Skill tool invocation pattern referencing
+   "<skill-id>"`` — the structured form used in AC acceptance criteria and
+   onboarding prose.
+
+---
+
 ## Cross-References
 
 - [Agent Knowledge System](agent_knowledge_system.md) — knowledge capture
@@ -484,6 +522,8 @@ channel wins** at the point of decision:
   routed learnings.
 - `.claude/skills/signoff/SKILL.md` §7 — mandatory knowledge-capture trigger
   after every phase agent sign-off.
+- `scripts/registry_validator.py` — `check_skills_invoked_xref()` — build-time
+  cross-reference checker for `skills_invoked` vs. template body (AC INF-600g-3).
 
 <!-- related-code-hash:3a2a4fc1 -->
 

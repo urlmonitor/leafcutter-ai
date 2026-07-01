@@ -1,11 +1,11 @@
 ---
 agent_id: reference-author
 title: "Agent Card: reference-author"
+description: "Diataxis \"look up\" specialist. Produces lookup-oriented reference docs — API tables, schema dictionaries, configuration enums, parameter glossaries — by loading the canonical how-to before writing. Applies a genre guard and hands back to the correct specialist when the request is not \"look up\". (internal — invoked by documentation-expert only)"
 type: card
 status: active
-created: 2026-06-30
+created: 2026-07-01
 card_version: "generated"
-description: "Agent card for the reference-author agent."
 ---
 # reference-author
 
@@ -121,3 +121,10 @@ flowchart TD
 | Delegation to how-to-author | task requiring how-to-author capabilities | Delegates to how-to-author via Agent tool | `how-to-author` |
 | Conditional Behavior | a ticket is provided (`ticket_path`) | check whether the ticket body contains | `None` |
 | Conditional Behavior | items 1–3 are missing and cannot be inferred from context | surface the gaps | `None` |
+---
+
+## AC Assignments
+
+### reference-author
+
+- TQ-100e-2: Reference doc for the enforcement rollout stages and their controlling configuration

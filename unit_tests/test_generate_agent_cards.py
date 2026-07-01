@@ -451,5 +451,342 @@ class TestBuildPhaseIntegration(unittest.TestCase):
             )
 
 
+# ---------------------------------------------------------------------------
+# Test 8 — render_references: missing doc_link renders (missing) annotation
+#           (INF-600b-1-i)
+# ---------------------------------------------------------------------------
+
+class TestMissingDocLinkRendering(unittest.TestCase):
+    """INF-600b-1-i: Missing doc_links are rendered as plain text with (missing) annotation."""
+
+    def setUp(self):
+        # covers: INF-600b-1-i
+        from generate_agent_cards import render_references  # noqa: F401
+        self.render_references = render_references
+
+    def test_ac1_missing_doclink_rendered_as_plain_text_with_missing_marker(self):
+        # covers: INF-600b-1-i
+        """INF-600b-1-i: Non-existent doc_links entry is plain text annotated with '(missing)'."""
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmp:
+            package_root = Path(tmp)
+            card_path = package_root / "docs" / "agents" / "cards" / "python-coder.card.md"
+            card_path.parent.mkdir(parents=True)
+
+            registry_entry = {
+                "id": "python-coder",
+                "doc_links": [
+                    {"path": "docs/architecture/nonexistent-doc.md", "label": "Nonexistent Doc"},
+                ],
+            }
+
+            result = self.render_references(
+                registry_entry=registry_entry,
+                card_path=card_path,
+                package_root=package_root,
+            )
+
+        self.assertIn("## References", result, "References section must be present")
+        self.assertIn(
+            "(missing)",
+            result,
+            msg="Missing doc_link must be annotated with '(missing)' in the References section.",
+        )
+        # Must NOT render as a hyperlink (no Markdown link syntax [label](path))
+        self.assertNotIn(
+            "[Nonexistent Doc]",
+            result,
+            msg="Non-existent doc must NOT be rendered as a Markdown hyperlink.",
+        )
+        # Must contain the raw path as plain text
+        self.assertIn(
+            "docs/architecture/nonexistent-doc.md",
+            result,
+            msg="Missing doc path must appear as plain text in the References section.",
+        )
+
+    def test_ac2_missing_doclink_emits_warning_with_agent_id_and_path(self):
+        # covers: INF-600b-1-i
+        """INF-600b-1-i: _log.warning() is called with agent_id and missing path string."""
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as tmp:
+            package_root = Path(tmp)
+            card_path = package_root / "docs" / "agents" / "cards" / "python-coder.card.md"
+            card_path.parent.mkdir(parents=True)
+
+            registry_entry = {
+                "id": "python-coder",
+                "doc_links": [
+                    {"path": "docs/architecture/nonexistent-doc.md", "label": "Nonexistent Doc"},
+                ],
+            }
+
+            import generate_agent_cards
+            with patch.object(generate_agent_cards._log, "warning") as mock_warn:
+                self.render_references(
+                    registry_entry=registry_entry,
+                    card_path=card_path,
+                    package_root=package_root,
+                )
+                # Must have called _log.warning at least once
+                self.assertTrue(
+                    mock_warn.called,
+                    msg="_log.warning must be called when a doc_link references a missing file.",
+                )
+                # The warning args must include the agent_id and the missing path
+                found_warning = False
+                for call_args in mock_warn.call_args_list:
+                    args = call_args[0]  # positional args tuple
+                    # args[0] is the format string; args[1] is agent_id; args[2] is path_str
+                    if len(args) >= 3:
+                        if (
+                            args[1] == "python-coder"
+                            and "docs/architecture/nonexistent-doc.md" in str(args[2])
+                        ):
+                            found_warning = True
+                            break
+                self.assertTrue(
+                    found_warning,
+                    msg=(
+                        "WARNING must be emitted with agent_id='python-coder' and "
+                        "path='docs/architecture/nonexistent-doc.md'. "
+                        f"Actual calls: {mock_warn.call_args_list}"
+                    ),
+                )
+
+    def test_ac3_card_generation_does_not_fail_when_doclink_missing(self):
+        # covers: INF-600b-1-i
+        """INF-600b-1-i: generate_card() does not raise when doc_links references a non-existent file."""
+        import tempfile
+        from pathlib import Path
+        from generate_agent_cards import generate_card
+
+        with tempfile.TemporaryDirectory() as tmp:
+            package_root = Path(tmp)
+            card_path = package_root / "docs" / "agents" / "cards" / "python-coder.card.md"
+            card_path.parent.mkdir(parents=True)
+
+            registry_entry = dict(PYTHON_CODER_REGISTRY)
+            registry_entry["doc_links"] = [
+                {"path": "docs/architecture/nonexistent-doc.md", "label": "Nonexistent Doc"},
+            ]
+
+            try:
+                result = generate_card(
+                    agent_id="python-coder",
+                    template_frontmatter=PYTHON_CODER_TEMPLATE_FM,
+                    registry_entry=registry_entry,
+                    card_path=card_path,
+                    package_root=package_root,
+                )
+            except Exception as exc:  # noqa: BLE001
+                self.fail(
+                    f"generate_card raised {type(exc).__name__} when doc_link is missing: {exc}"
+                )
+
+            self.assertIsInstance(
+                result,
+                str,
+                msg="generate_card must return a string even when doc_links reference a missing file.",
+            )
+            self.assertGreater(
+                len(result),
+                0,
+                msg="generate_card must return non-empty card string when doc_link is missing.",
+            )
+            # The card should contain the (missing) marker
+            self.assertIn(
+                "(missing)",
+                result,
+                msg="Card output must include '(missing)' marker for non-existent doc_link.",
+            )
+
+
+# ---------------------------------------------------------------------------
+# Test 9 — H-1 regression: _scan_ac_assignments uses Path.stem for id fallback
+# Defect: filename.rstrip(".yaml") strips a CHARACTER SET, not a suffix.
+# e.g. "ml-100a.yaml" -> "ml-100" (the trailing 'a' is in {., y, a, m, l})
+#      "data.yaml"    -> "dat"   (the trailing 'a' is stripped)
+# Fix: use Path(filename).stem which derives the true stem.
+# ---------------------------------------------------------------------------
+
+class TestScanAcAssignmentsStemFallback(unittest.TestCase):
+    """H-1 regression: AC id fallback uses Path.stem, not str.rstrip."""
+
+    def setUp(self):
+        # covers: H-1 regression
+        from generate_agent_cards import _scan_ac_assignments
+        self._scan_ac_assignments = _scan_ac_assignments
+
+    def test_ac_id_fallback_preserves_full_stem_for_yaml_suffix(self):
+        # covers: H-1 regression
+        """H-1: When AC YAML omits 'id', derived id equals full filename stem (no truncation)."""
+        import yaml
+
+        with tempfile.TemporaryDirectory() as tmp:
+            docs_root = Path(tmp)
+            ac_dir = docs_root / "docs" / "acceptance-criteria"
+            ac_dir.mkdir(parents=True)
+
+            # Filenames whose stems end in chars that appear in ".yaml" —
+            # rstrip(".yaml") would corrupt these; Path.stem must not.
+            test_cases = [
+                # (filename, expected_stem)
+                ("ml-100a.yaml", "ml-100a"),   # trailing 'a' is in {a,y,m,l,.}
+                ("data.yaml", "data"),           # trailing 'a' is in {a,y,m,l,.}
+                ("my-yaml.yaml", "my-yaml"),     # entire suffix overlap
+                ("ACD-200m.yaml", "ACD-200m"),  # trailing 'm' is in {a,y,m,l,.}
+            ]
+
+            for filename, expected_stem in test_cases:
+                ac_content = yaml.dump({
+                    "assigned_agent": "test-agent",
+                    "status": "active",
+                    "title": "Test AC",
+                    # intentionally omitting 'id' to trigger the fallback
+                })
+                (ac_dir / filename).write_text(ac_content, encoding="utf-8")
+
+            results = self._scan_ac_assignments("test-agent", docs_root)
+            found_ids = {r["id"] for r in results}
+
+            for filename, expected_stem in test_cases:
+                self.assertIn(
+                    expected_stem,
+                    found_ids,
+                    msg=(
+                        f"Filename '{filename}': expected fallback id '{expected_stem}' "
+                        f"but got ids: {found_ids}. "
+                        "Path.stem must be used — not str.rstrip('.yaml')."
+                    ),
+                )
+
+    def test_ac_id_from_yaml_field_is_unaffected(self):
+        # covers: H-1 regression
+        """H-1: When AC YAML supplies 'id', it is used as-is (stem fallback not triggered)."""
+        import yaml
+
+        with tempfile.TemporaryDirectory() as tmp:
+            docs_root = Path(tmp)
+            ac_dir = docs_root / "docs" / "acceptance-criteria"
+            ac_dir.mkdir(parents=True)
+
+            ac_content = yaml.dump({
+                "id": "ACD-999z",
+                "assigned_agent": "test-agent",
+                "status": "active",
+                "title": "Explicit ID Test",
+            })
+            (ac_dir / "ACD-999z.yaml").write_text(ac_content, encoding="utf-8")
+
+            results = self._scan_ac_assignments("test-agent", docs_root)
+            self.assertEqual(len(results), 1)
+            self.assertEqual(
+                results[0]["id"],
+                "ACD-999z",
+                msg="Explicit id field in YAML must be returned unchanged.",
+            )
+
+
+# ---------------------------------------------------------------------------
+# Test 10 — H-2 regression: _resolve_source_to_path Strategy 3 ambiguity
+# Defect: first os.walk match returned non-deterministically when multiple
+# files share the same basename (e.g. every skill dir has SKILL.md).
+# Fix: collect ALL matches; return path only when exactly 1 unique match
+# exists; return None for zero or more-than-one matches.
+# ---------------------------------------------------------------------------
+
+class TestResolveSourceToPathAmbiguity(unittest.TestCase):
+    """H-2 regression: Strategy 3 resolves uniquely or returns None on ambiguity."""
+
+    def setUp(self):
+        # covers: H-2 regression
+        from generate_agent_cards import _resolve_source_to_path
+        self._resolve_source_to_path = _resolve_source_to_path
+
+    def test_ambiguous_basename_returns_none(self):
+        # covers: H-2 regression
+        """H-2: When a basename matches files in two locations, resolver returns None."""
+        with tempfile.TemporaryDirectory() as tmp:
+            package_root = Path(tmp)
+            # Create two files with the same basename in different directories
+            dir_a = package_root / "skills" / "signoff"
+            dir_b = package_root / "skills" / "doc-enforcer"
+            dir_a.mkdir(parents=True)
+            dir_b.mkdir(parents=True)
+            (dir_a / "SKILL.md").write_text("# signoff skill", encoding="utf-8")
+            (dir_b / "SKILL.md").write_text("# doc-enforcer skill", encoding="utf-8")
+
+            result = self._resolve_source_to_path("SKILL.md", package_root)
+
+            self.assertIsNone(
+                result,
+                msg=(
+                    "When SKILL.md exists in two directories, _resolve_source_to_path "
+                    "must return None (ambiguous) — not a non-deterministic first match."
+                ),
+            )
+
+    def test_unique_basename_returns_that_path(self):
+        # covers: H-2 regression
+        """H-2: When a basename matches exactly one file, that path is returned."""
+        with tempfile.TemporaryDirectory() as tmp:
+            package_root = Path(tmp)
+            # Create a unique file
+            docs_dir = package_root / "docs" / "architecture"
+            docs_dir.mkdir(parents=True)
+            unique_file = docs_dir / "unique-document.md"
+            unique_file.write_text("# Unique", encoding="utf-8")
+
+            result = self._resolve_source_to_path("unique-document.md", package_root)
+
+            self.assertEqual(
+                result,
+                unique_file,
+                msg=(
+                    "When unique-document.md exists in exactly one location, "
+                    "_resolve_source_to_path must return that path."
+                ),
+            )
+
+    def test_absent_basename_returns_none(self):
+        # covers: H-2 regression
+        """H-2: When a basename matches no file anywhere, resolver returns None."""
+        with tempfile.TemporaryDirectory() as tmp:
+            package_root = Path(tmp)
+            # Empty tree — nothing to match
+            result = self._resolve_source_to_path("nonexistent-file.md", package_root)
+
+            self.assertIsNone(
+                result,
+                msg="With no matching file on disk, resolver must return None.",
+            )
+
+    def test_three_matches_returns_none(self):
+        # covers: H-2 regression
+        """H-2: When a basename matches three locations, resolver returns None (not first match)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            package_root = Path(tmp)
+            for subdir in ("a", "b", "c"):
+                d = package_root / subdir
+                d.mkdir()
+                (d / "README.md").write_text(f"# {subdir}", encoding="utf-8")
+
+            result = self._resolve_source_to_path("README.md", package_root)
+
+            self.assertIsNone(
+                result,
+                msg=(
+                    "When README.md exists in three directories, resolver must return "
+                    "None — not a first/arbitrary match."
+                ),
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
