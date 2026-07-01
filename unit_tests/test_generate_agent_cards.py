@@ -511,7 +511,6 @@ class TestMissingDocLinkRendering(unittest.TestCase):
         # covers: INF-600b-1-i
         """INF-600b-1-i: _log.warning() is called with agent_id and missing path string."""
         import tempfile
-        import logging
         from pathlib import Path
         from unittest.mock import patch
 
