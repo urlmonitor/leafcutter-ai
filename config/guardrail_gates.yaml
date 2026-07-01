@@ -1,0 +1,226 @@
+# guardrail_gates.yaml
+#
+# Machine-readable mapping of (change_target, risk_surface) pairs to mandatory
+# guardrail agent names. Consumed by generate_ticket_from_ac.py::_build_agents_map
+# to compute the full agent map for generated tickets.
+#
+# Structure:
+#   <change_target>:          # 10 values: code, schema, config, documentation,
+#                             #             prompt, test, hook, skill, template, data
+#     <risk_surface>:         # 6 values: production, staging, integration, unit, none, all
+#       - <agent-name>        # must be a valid is_ticket_phase: true agent from agent_registry.json
+#
+# Multi-value targets (e.g. a change that touches both code and schema) union
+# their gate lists — the caller is responsible for deduplication.
+#
+# risk_surface semantics:
+#   production   - change goes live in production; highest scrutiny
+#   staging      - change goes to staging; high scrutiny
+#   integration  - integration/E2E environment; medium scrutiny
+#   unit         - unit-test scope only; lighter scrutiny
+#   none         - no deployment surface (e.g. local-only exploration); minimal
+#   all          - superset sentinel: gates that apply regardless of surface
+#
+# Agent names must match agent IDs in config/agent_registry.json with is_ticket_phase: true.
+
+code:
+  production:
+    - architect-review
+    - test-writer
+    - test-runner
+    - pr-reviewer
+  staging:
+    - architect-review
+    - test-writer
+    - test-runner
+    - pr-reviewer
+  integration:
+    - test-writer
+    - test-runner
+    - pr-reviewer
+  unit:
+    - test-writer
+    - test-runner
+  none:
+    - test-writer
+  all:
+    - architect-review
+    - test-writer
+    - test-runner
+    - pr-reviewer
+
+schema:
+  production:
+    - architect-review
+    - test-writer
+    - test-runner
+    - pr-reviewer
+  staging:
+    - architect-review
+    - test-writer
+    - test-runner
+    - pr-reviewer
+  integration:
+    - architect-review
+    - test-runner
+    - pr-reviewer
+  unit:
+    - architect-review
+    - test-writer
+  none:
+    - architect-review
+  all:
+    - architect-review
+    - test-writer
+    - test-runner
+    - pr-reviewer
+
+config:
+  production:
+    - status-checker
+    - pr-reviewer
+  staging:
+    - pr-reviewer
+  integration:
+    - pr-reviewer
+  unit:
+    []
+  none:
+    []
+  all:
+    - pr-reviewer
+
+documentation:
+  production:
+    - documentation-expert
+    - pr-reviewer
+  staging:
+    - documentation-expert
+    - pr-reviewer
+  integration:
+    - documentation-expert
+  unit:
+    - documentation-expert
+  none:
+    []
+  all:
+    - documentation-expert
+    - pr-reviewer
+
+prompt:
+  production:
+    - llm-expert
+    - architect-review
+    - pr-reviewer
+  staging:
+    - llm-expert
+    - pr-reviewer
+  integration:
+    - llm-expert
+    - pr-reviewer
+  unit:
+    - llm-expert
+  none:
+    []
+  all:
+    - llm-expert
+    - architect-review
+    - pr-reviewer
+
+test:
+  production:
+    - architect-review
+    - test-runner
+    - pr-reviewer
+  staging:
+    - test-runner
+    - pr-reviewer
+  integration:
+    - test-runner
+    - pr-reviewer
+  unit:
+    - test-runner
+  none:
+    []
+  all:
+    - architect-review
+    - test-runner
+    - pr-reviewer
+
+hook:
+  production:
+    - architect-review
+    - change-scope-reviewer
+    - pr-reviewer
+  staging:
+    - architect-review
+    - change-scope-reviewer
+    - pr-reviewer
+  integration:
+    - architect-review
+    - change-scope-reviewer
+  unit:
+    - change-scope-reviewer
+  none:
+    []
+  all:
+    - architect-review
+    - change-scope-reviewer
+    - pr-reviewer
+
+skill:
+  production:
+    - architect-review
+    - llm-expert
+    - pr-reviewer
+  staging:
+    - architect-review
+    - llm-expert
+    - pr-reviewer
+  integration:
+    - llm-expert
+    - pr-reviewer
+  unit:
+    - llm-expert
+  none:
+    []
+  all:
+    - architect-review
+    - llm-expert
+    - pr-reviewer
+
+template:
+  production:
+    - llm-expert
+    - pr-reviewer
+  staging:
+    - llm-expert
+    - pr-reviewer
+  integration:
+    - llm-expert
+  unit:
+    - llm-expert
+  none:
+    []
+  all:
+    - llm-expert
+    - pr-reviewer
+
+data:
+  production:
+    - architect-review
+    - status-checker
+    - pr-reviewer
+  staging:
+    - architect-review
+    - pr-reviewer
+  integration:
+    - pr-reviewer
+  unit:
+    []
+  none:
+    []
+  all:
+    - architect-review
+    - status-checker
+    - pr-reviewer
