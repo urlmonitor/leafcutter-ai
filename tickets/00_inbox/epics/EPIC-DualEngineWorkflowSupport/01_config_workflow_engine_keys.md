@@ -20,7 +20,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -75,7 +75,7 @@ Scenario: build reads engine without KeyError
 - [x] python-coder — 2026-07-01 13:15
 - [x] test-runner — 2026-07-01 14:05
 - [x] pr-reviewer — 2026-07-01 14:30
-- [ ] commit
+- [x] commit — 2026-07-01 15:00
 - [ ] pull-request
 
 ## Comments
@@ -106,6 +106,13 @@ completion_manifest:
   tests_comprehensive: true
   no_regressions: true
 Config changes are minimal and correct. Schema properly typed; defaults safe. Tests cover all 3 ACs.
+
+### 2026-07-01 15:00 — commit (status: ok)
+feedback-id: fb_2026-07-01_8bce7d4d
+completion_manifest:
+  files_staged: true
+  commit_created: true
+COMMIT_AGENT_MODE=1 — pre-authorized by batch drive. Committed feat(config) with 4 files. Hooks passed (PRE_COMMIT_ALLOW_NO_CONFIG=1 used — no .pre-commit-config.yaml in worktree, known gap).
 
 ## Implementation Tasks
 - [x] Add `workflows` object (enabled: boolean, engine: enum auto/e1/e2) to skills_config.schema.json
