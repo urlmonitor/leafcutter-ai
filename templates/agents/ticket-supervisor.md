@@ -226,6 +226,16 @@ worktree root) if it exists:
 `python-coder` or `sql-coder` start — this enforces the epic's primary
 must-have: diagrams and ADRs before coding.
 
+**Flow-change pairs (architect + docs before coders):** For tickets generated
+from (change_target, risk_surface) pairs listed in `config/guardrail_gates.yaml`
+`flow_change_gates:` (e.g. `code/production`, `code/all`, `schema/production`,
+`schema/all`), the computed agents map will include both `architect-review`
+(priority 4) and `documentation-expert` (priority 10). The canonical priority
+ordering above ensures these agents are dispatched before `python-coder` (6)
+and `sql-coder` (7) automatically — no special supervisor logic is required.
+This is the machine-readable complement to the flow-change gate registry in
+`config/guardrail_gates.yaml`.
+
 **frontend-coder dispatch (priority 8):**
 Invoke `frontend-coder` when `agents.get("frontend-coder") == "needed"`.
 Dispatch it after `sql-coder` (priority 7) and before `test-runner` (priority 9).

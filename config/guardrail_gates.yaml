@@ -224,3 +224,78 @@ data:
     - architect-review
     - status-checker
     - pr-reviewer
+
+# ---------------------------------------------------------------------------
+# flow_change_gates
+#
+# Identifies (change_target, risk_surface) pairs that are "flow-change" — i.e.
+# structural or pipeline-modifying changes that require design review and
+# documentation planning BEFORE any coder runs.
+#
+# For these pairs, `architect-review` and `documentation-expert` are MANDATORY
+# additions to the computed agent map, above and beyond the per-surface gate
+# list above.
+#
+# The canonical phase ordering in ticket-supervisor (priorities 4 and 10
+# respectively) ensures that when these agents are present, they are dispatched
+# BEFORE python-coder (priority 6) and sql-coder (priority 7).
+#
+# Rationale for pair selection:
+#   - `code` + `production` or `all`:  Live production code changes carry the
+#     highest risk of contract breakage; architectural sign-off and doc planning
+#     must precede implementation.
+#   - `schema` + `production` or `all`:  Schema migrations are irreversible in
+#     production; an architect must confirm the migration plan and a doc owner
+#     must plan migration notes before any coder touches the schema.
+#
+# Pairs that already mandate architect-review in the per-surface gate table
+# (e.g. code/staging, schema/staging) do NOT automatically become flow-change
+# pairs — the flow-change designation is reserved for the highest-scrutiny
+# combinations where BOTH architect-review AND documentation-expert are
+# explicitly required in advance of coding.
+#
+# mandatory_agents: agents that must appear in the computed agents map for this
+#   pair (deduplication against the per-surface gate list is the caller's
+#   responsibility).
+# phase_constraint: human-readable note on the ordering requirement (enforced
+#   by ticket-supervisor's canonical phase ordering, not by this YAML alone).
+# ---------------------------------------------------------------------------
+
+flow_change_gates:
+  - change_target: code
+    risk_surface: production
+    mandatory_agents:
+      - architect-review
+      - documentation-expert
+    phase_constraint: >
+      architect-review (priority 4) and documentation-expert (priority 10)
+      must be dispatched before python-coder (priority 6) and
+      sql-coder (priority 7).
+
+  - change_target: code
+    risk_surface: all
+    mandatory_agents:
+      - architect-review
+      - documentation-expert
+    phase_constraint: >
+      architect-review (priority 4) and documentation-expert (priority 10)
+      must be dispatched before python-coder (priority 6) and
+      sql-coder (priority 7).
+
+  - change_target: schema
+    risk_surface: production
+    mandatory_agents:
+      - architect-review
+      - documentation-expert
+    phase_constraint: >
+      architect-review (priority 4) and documentation-expert (priority 10)
+      must be dispatched before sql-coder (priority 7).
+
+  - change_target: schema
+    risk_surface: all
+    mandatory_agents:
+      - architect-review
+      - documentation-expert
+    phase_constraint: >
+      architect-review (priority 4) and documentation-expert (priority 10)
+      must be dispatched before sql-coder (priority 7).

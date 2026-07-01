@@ -565,6 +565,16 @@ The priority column is the authoritative ordering for dispatch ties. Lower numbe
 | 12 | `commit` | Atomic commit phase |
 | 13 | `pull-request` | Pushes branch and opens PR |
 
+**Flow-change pair ordering note:** For tickets generated from (change_target,
+risk_surface) pairs listed in `config/guardrail_gates.yaml` `flow_change_gates:`
+(e.g. `code/production`, `code/all`, `schema/production`, `schema/all`),
+the computed agents map will include both `architect-review` (priority 4) and
+`documentation-expert` (priority 10). This table's ordering guarantees that
+architect-review (4) and documentation-expert (10) are dispatched before
+python-coder (6) and sql-coder (7) — satisfying the flow-change requirement
+that design review and doc planning precede implementation. No special
+supervisor logic is needed beyond this priority ordering.
+
 ### §2.2 Routing table
 
 | Comment status | Action | Loop control |
