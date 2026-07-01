@@ -874,5 +874,229 @@ class TestBuildChildrenMapCrossLinkBug(unittest.TestCase):
         )
 
 
+# ---------------------------------------------------------------------------
+# Tests for ACS-100c-6: superseded children excluded from child-count cap
+# ---------------------------------------------------------------------------
+
+
+def _make_l2_superseded(ac_id: str, parent_l1: str, status: str) -> str:
+    """Minimal L2 AC YAML with an explicit status field.
+
+    Args:
+        ac_id: The AC identifier string.
+        parent_l1: ID of the L1 parent.
+        status: The status string (e.g. 'superseded_by', 'superseded', 'active').
+
+    Returns:
+        YAML content as a string.
+    """
+    return textwrap.dedent(f"""\
+        id: {ac_id}
+        title: "L2 behavior"
+        level: L2
+        component: test-component
+        status: {status}
+        depends_on:
+          - {parent_l1}
+        criteria: |
+          Given something
+          When something
+          Then {ac_id}
+    """)
+
+
+class TestSupersededChildrenExcludedFromCount(unittest.TestCase):
+    """ACS-100c-6: superseded_by (and legacy superseded) children are excluded
+    from the child-count cap enforced by _check_limits.
+
+    All four tests in this class are RED against the current code because
+    AcNode has no 'status' field and _check_limits uses len(children) without
+    any status filtering.
+    """
+
+    def _make_node(
+        self,
+        ac_id: str,
+        level: str,
+        depends_on: list[str],
+        status: str = "active",
+        child_limit_override: "int | None" = None,
+    ) -> "AcNode":
+        """Build an AcNode with a status attribute and optional override.
+
+        The current AcNode dataclass does NOT have a status field. This helper
+        calls AcNode and then attempts to set node.status, which is the
+        interface the fixed code must provide. Against the current code,
+        constructing with a status kwarg raises TypeError (RED signal).
+
+        Args:
+            ac_id: AC identifier.
+            level: AC level string.
+            depends_on: List of dependency ID strings.
+            status: Status string — 'active', 'superseded_by', or 'superseded'.
+            child_limit_override: Optional integer override for the child cap.
+
+        Returns:
+            AcNode with status and optional child_limit_override set.
+        """
+        return AcNode(
+            ac_id=ac_id,
+            level=level,
+            depends_on=depends_on,
+            status=status,
+            child_limit_override=child_limit_override,
+        )
+
+    @_requires_import
+    def test_acs100c6_at_cap_with_one_superseded_passes(self) -> None:
+        # covers: ACS-100c-6
+        """ACS-100c-6 scenario 1: parent at cap=5 with 1 superseded_by child.
+
+        Effective count = 4 active children → does NOT exceed cap of 5 → PASSES.
+        Against the current code this test is RED because:
+          - AcNode has no 'status' kwarg → TypeError on construction, OR
+          - _check_limits counts all 5 children without filtering → violation
+            fires when it should not.
+        """
+        # 5 children total; 1 has status superseded_by
+        nodes = [
+            self._make_node("ACS-200", "L0", []),
+            self._make_node("ACS-200a", "L1", ["ACS-200"]),
+            self._make_node("ACS-200a-1", "L2", ["ACS-200a"], status="active"),
+            self._make_node("ACS-200a-2", "L2", ["ACS-200a"], status="active"),
+            self._make_node("ACS-200a-3", "L2", ["ACS-200a"], status="active"),
+            self._make_node("ACS-200a-4", "L2", ["ACS-200a"], status="active"),
+            self._make_node("ACS-200a-5", "L2", ["ACS-200a"], status="superseded_by"),
+        ]
+        cm = _build_children_map(nodes)
+        staged_ids = {"ACS-200a-4"}  # one active child staged
+        violations, _ = _check_limits(nodes, cm, staged_ids)
+
+        self.assertEqual(
+            violations,
+            [],
+            msg=(
+                "ACS-100c-6: parent 'ACS-200a' has 5 children but 1 is superseded_by; "
+                "effective count=4 must not exceed cap=5. "
+                f"Got violations: {violations}"
+            ),
+        )
+
+    @_requires_import
+    def test_acs100c6_all_children_superseded_passes(self) -> None:
+        # covers: ACS-100c-6-i
+        """ACS-100c-6-i: ALL children superseded_by → effective count = 0 → PASSES.
+
+        Against the current code this test is RED because _check_limits counts
+        all children regardless of status, so the effective count equals the
+        total child count and a sparse advisory (not a violation) fires.
+        More critically AcNode has no 'status' field → TypeError on construction.
+        """
+        nodes = [
+            self._make_node("ACS-300", "L0", []),
+            self._make_node("ACS-300a", "L1", ["ACS-300"]),
+            self._make_node("ACS-300a-1", "L2", ["ACS-300a"], status="superseded_by"),
+            self._make_node("ACS-300a-2", "L2", ["ACS-300a"], status="superseded_by"),
+            self._make_node("ACS-300a-3", "L2", ["ACS-300a"], status="superseded_by"),
+        ]
+        cm = _build_children_map(nodes)
+        staged_ids = {"ACS-300a-1"}
+        violations, _ = _check_limits(nodes, cm, staged_ids)
+
+        self.assertEqual(
+            violations,
+            [],
+            msg=(
+                "ACS-100c-6-i: all 3 children are superseded_by; "
+                "effective count=0 must not trigger a violation. "
+                f"Got violations: {violations}"
+            ),
+        )
+
+    @_requires_import
+    def test_acs100c6_override_composes_with_filtered_count(self) -> None:
+        # covers: ACS-100c-6-ii
+        """ACS-100c-6-ii: status exclusion composes with child_limit_override.
+
+        Setup: override=7, default=5, 7 children total with 3 superseded_by.
+        Filtered count = 4; effective cap = max(5, 7) = 7.
+        4 < 7 → PASSES.
+
+        Against the current code:
+          - AcNode has no 'status' kwarg → TypeError on construction, OR
+          - count = 7 (no filtering); cap = max(5,7) = 7; 7 is NOT > 7
+            → no violation fires today, BUT the filtered count would be
+            incorrectly 7 (not 4). The test asserts the FILTERED count is
+            used, so we also verify no false violation occurs AND that the
+            raw total would only pass because of the override (which is the
+            wrong reason). We confirm this by asserting no violation fires
+            when filtered count=4 < default=5 (override not needed). To make
+            this RED we push the raw count beyond the override too: 8 children,
+            3 superseded → filtered=5, raw=8; raw>7 fires a violation under
+            the current code but filtered=5 <= cap=7 must pass.
+        """
+        # 8 children raw, 3 superseded_by, filtered = 5; override=7
+        # Current code: raw=8 > effective cap=7 → violation (RED).
+        # Fixed code: filtered=5 <= 7 → passes.
+        nodes = [
+            self._make_node("ACS-400", "L0", []),
+            self._make_node("ACS-400a", "L1", ["ACS-400"], child_limit_override=7),
+            self._make_node("ACS-400a-1", "L2", ["ACS-400a"], status="active"),
+            self._make_node("ACS-400a-2", "L2", ["ACS-400a"], status="active"),
+            self._make_node("ACS-400a-3", "L2", ["ACS-400a"], status="active"),
+            self._make_node("ACS-400a-4", "L2", ["ACS-400a"], status="active"),
+            self._make_node("ACS-400a-5", "L2", ["ACS-400a"], status="active"),
+            self._make_node("ACS-400a-6", "L2", ["ACS-400a"], status="superseded_by"),
+            self._make_node("ACS-400a-7", "L2", ["ACS-400a"], status="superseded_by"),
+            self._make_node("ACS-400a-8", "L2", ["ACS-400a"], status="superseded_by"),
+        ]
+        cm = _build_children_map(nodes)
+        staged_ids = {"ACS-400a-5"}
+        violations, _ = _check_limits(nodes, cm, staged_ids)
+
+        self.assertEqual(
+            violations,
+            [],
+            msg=(
+                "ACS-100c-6-ii: 8 children total, 3 superseded_by → filtered=5; "
+                "override=7; effective cap=max(5,7)=7; 5 <= 7 must pass. "
+                f"Got violations: {violations}"
+            ),
+        )
+
+    @_requires_import
+    def test_acs100c6_legacy_superseded_status_also_excluded(self) -> None:
+        # covers: ACS-100c-6
+        """Legacy 'superseded' (not 'superseded_by') is also excluded.
+
+        Same structure as scenario 1 but with the legacy 'superseded' spelling.
+        Effective count = 4 active children → does NOT exceed cap of 5 → PASSES.
+        Against the current code this test is RED for the same reasons as
+        test_acs100c6_at_cap_with_one_superseded_passes.
+        """
+        nodes = [
+            self._make_node("ACS-500", "L0", []),
+            self._make_node("ACS-500a", "L1", ["ACS-500"]),
+            self._make_node("ACS-500a-1", "L2", ["ACS-500a"], status="active"),
+            self._make_node("ACS-500a-2", "L2", ["ACS-500a"], status="active"),
+            self._make_node("ACS-500a-3", "L2", ["ACS-500a"], status="active"),
+            self._make_node("ACS-500a-4", "L2", ["ACS-500a"], status="active"),
+            self._make_node("ACS-500a-5", "L2", ["ACS-500a"], status="superseded"),
+        ]
+        cm = _build_children_map(nodes)
+        staged_ids = {"ACS-500a-4"}
+        violations, _ = _check_limits(nodes, cm, staged_ids)
+
+        self.assertEqual(
+            violations,
+            [],
+            msg=(
+                "ACS-100c-6 legacy: parent 'ACS-500a' has 5 children but 1 has "
+                "legacy status='superseded'; effective count=4 must not exceed cap=5. "
+                f"Got violations: {violations}"
+            ),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
