@@ -24,6 +24,10 @@ DECISION HISTORY:
     Implements derive_parent_id() per ACS-100i-1 Gherkin spec.
     Root pattern (PREFIX-NNN) returns None; alpha-level IDs strip trailing
     letters; hyphen-delimited IDs strip the last '-segment'. (#EPIC-AcParentChildLinkEnforcement/01)
+  - 2026-07-01 [python-coder/BO-1700]: Widened the root/alpha digit run from
+    {3} to {3,} so four-digit-hundred L0s (e.g. BO-1700 and its child BO-1700a)
+    derive correctly. Previously BO-1700a mis-derived to "BO" instead of
+    "BO-1700", breaking the L0<->L1 link and check_ac_parent_covered_by.
 """
 
 from __future__ import annotations
@@ -34,15 +38,17 @@ import re
 # Canonical regex patterns (aligned with ADR-007)
 # ---------------------------------------------------------------------------
 
-# Root-level AC: exactly PREFIX + hyphen + three digits (no further segments).
-# Examples: ACS-100, FIN-001, AUTH-007
-_ROOT_PATTERN = re.compile(r"^([A-Z]{2,6})-([0-9]{3})$")
+# Root-level AC: exactly PREFIX + hyphen + three-or-more digits (no further
+# segments). Three digits is the common case (ACS-100); four-digit hundreds
+# (e.g. BO-1700) are valid roots too, so the digit run is {3,} not {3}.
+# Examples: ACS-100, FIN-001, AUTH-007, BO-1700
+_ROOT_PATTERN = re.compile(r"^([A-Z]{2,6})-([0-9]{3,})$")
 
 # First-letter sub-level: PREFIX-NNNx where x is one or more lowercase letters
 # directly appended to the numeric part (no hyphen before the letters).
-# Examples: ACS-100a, ACS-400e, FIN-001b
+# Examples: ACS-100a, ACS-400e, FIN-001b, BO-1700a
 # The parent of ACS-100a is ACS-100 (strip trailing alpha suffix).
-_ALPHA_SUBLEVEL_PATTERN = re.compile(r"^([A-Z]{2,6}-[0-9]{3})([a-z]+)$")
+_ALPHA_SUBLEVEL_PATTERN = re.compile(r"^([A-Z]{2,6}-[0-9]{3,})([a-z]+)$")
 
 
 # ---------------------------------------------------------------------------

@@ -126,6 +126,47 @@ class TestDeriveParentIdRealPatterns:
 
 
 # ---------------------------------------------------------------------------
+# Four-digit-hundred L0 regression (BO-1700 family)
+# ---------------------------------------------------------------------------
+
+
+class TestDeriveParentIdFourDigitHundred:
+    """Regression: four-digit-hundred L0s (e.g. BO-1700) and their descendants.
+
+    Before the {3}->{3,} widening, the root/alpha patterns matched only exactly
+    three digits, so 'BO-1700a' fell through to the rfind fallback and derived
+    'BO' instead of 'BO-1700' — breaking the L0<->L1 link and
+    check_ac_parent_covered_by. These tests lock in the corrected behaviour.
+    """
+
+    def test_four_digit_root_has_no_parent(self) -> None:
+        # covers: ACS-100i-1
+        """BO-1700 -> None (four-digit-hundred root)."""
+        assert derive_parent_id("BO-1700") is None
+
+    def test_four_digit_alpha_sublevel_to_root(self) -> None:
+        # covers: ACS-100i-1
+        """BO-1700a -> BO-1700 (was mis-deriving to 'BO')."""
+        assert derive_parent_id("BO-1700a") == "BO-1700"
+
+    def test_four_digit_l2_to_l1(self) -> None:
+        # covers: ACS-100i-1
+        """BO-1700a-1 -> BO-1700a."""
+        assert derive_parent_id("BO-1700a-1") == "BO-1700a"
+
+    def test_four_digit_l3_to_l2(self) -> None:
+        # covers: ACS-100i-1
+        """BO-1700a-1-i -> BO-1700a-1."""
+        assert derive_parent_id("BO-1700a-1-i") == "BO-1700a-1"
+
+    def test_four_digit_root_is_root_ac(self) -> None:
+        # covers: ACS-100i-1
+        """is_root_ac('BO-1700') is True; 'BO-1700a' is not a root."""
+        assert is_root_ac("BO-1700")
+        assert not is_root_ac("BO-1700a")
+
+
+# ---------------------------------------------------------------------------
 # is_root_ac() tests
 # ---------------------------------------------------------------------------
 
