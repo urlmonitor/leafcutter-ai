@@ -155,6 +155,8 @@ depends_on: []                     # epics are top-level
 | `advances_current_outcome` | optional | Boolean (`true` / `false`). Set `true` when this ticket directly advances the current must-achieve outcome in `docs/roadmap.json`. The hook prints a **warning** (not a block) when the value is not a boolean. Omit when not applicable. |
 | `artifact_checklist` | optional | Per-agent checklist overrides. Map of agent-name → list of item names. Merges with agent's default_artifact_checklist; ticket items extend defaults, same key overrides. |
 | `ac_coverage` | optional | Machine-readable AC completion ratio. Format: `N/M` where M = total AC count and N = number of validated ACs. Default `0/M` when first added. Updated by agents or the supervisor as ACs are confirmed green. Example: `ac_coverage: 3/6`. |
+| `change_target` | optional | What the change physically touches. One of: `code`, `schema`, `ui`, `infrastructure`, `pipeline`, `prompt`, `model`, `config`, `docs`, `dependency`. Used by the computed quality gates system to derive the agent map. The hook blocks if present with an invalid value; absent field passes (backward-compatible). |
+| `risk_surface` | optional | Where the blast radius lands. One of: `internal`, `contract_boundary`, `auth`, `privacy`, `safety`, `cost`. Used alongside `change_target` to classify the two-axis risk profile of the ticket. The hook blocks if present with an invalid value; absent field passes (backward-compatible). |
 
 ### `depends_on` Resolution
 
