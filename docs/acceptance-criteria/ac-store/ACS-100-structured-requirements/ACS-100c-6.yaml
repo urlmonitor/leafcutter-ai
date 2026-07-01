@@ -52,7 +52,8 @@ superseded_by: null
 covered_by:
   - ACS-100c-6-i
   - ACS-100c-6-ii
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260701-ACS-100c-6.md
 notes: |
   Motivated by BP-1000a: an L1 parent had 6 L2 children of which 2 were
   superseded, and the hook counted all 6 (over the cap of 5), forcing a
