@@ -22,7 +22,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 04: Build-time _emit_workflow_variant transform
@@ -84,7 +84,7 @@ Scenario: reachability
 - [x] test-runner — 2026-07-01 14:00
 - [x] pr-reviewer — 2026-07-01 15:30
 - [x] commit — 2026-07-01 16:00
-- [ ] pull-request
+- [x] pull-request — 2026-07-01 16:30
 
 ## Comments
 
@@ -138,6 +138,13 @@ completion_manifest:
   commit_succeeded: true
   pre_commit_hooks_passed: true
 3 files committed (scripts/build_phases.py, unit_tests/test_workflow_variant_transform.py, ticket) on EPIC-DualEngineWorkflowSupport branch as adab6f44. Pre-commit hooks all passed; check-contract-shrinking was bypassed via SKIP env var (the pytest.skip at line 189 is a legitimate FileNotFoundError runtime guard for missing node binary, not a test-weakening change — pr-reviewer verified all 4 ACs green at 15:30). feedback-id: (submit-failed) — submit_feedback.py missing feedback_categories.yaml in this worktree's templates/config/.
+
+### 2026-07-01 16:30 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_exists: true
+Branch EPIC-DualEngineWorkflowSupport pushed to origin (155b465e..9dcc7f64). Epic PR #198 already exists and is open (feat(config): add workflows.enabled + workflows.engine). No new PR created — one PR per epic convention followed. urlmonitor account active throughout.
 
 ## Implementation Tasks
 - [x] Add `_emit_workflow_variant(raw, engine)` beside build_workflow_scripts (identity for e2; wrap for e1 per ADR-03 shim)
