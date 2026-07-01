@@ -264,6 +264,70 @@ def build_agents(target_root: Path, config: dict[str, Any],
     return written
 
 
+# ---------------------------------------------------------------------------
+# E1-wrap shim prepended by _emit_workflow_variant when engine == "e1".
+# ---------------------------------------------------------------------------
+_E1_SHIM = """\
+// ---------------------------------------------------------------------------
+// Engine-detection predicate
+// ---------------------------------------------------------------------------
+const IS_E2 = (function detectEngine() {
+  try { workflow(); return false } catch (_) { return true }
+})()
+
+// ---------------------------------------------------------------------------
+// callAgent adapter
+// ---------------------------------------------------------------------------
+async function callAgent(prompt, opts = {}) {
+  if (IS_E2) {
+    return agent(prompt, opts)
+  } else {
+    const raw = await agent({
+      agentType: opts.agentType || 'general-purpose',
+      input: prompt,
+    })
+    return opts.schema ? JSON.parse(raw) : raw
+  }
+}
+
+// ---------------------------------------------------------------------------
+// E1 export shim
+// ---------------------------------------------------------------------------
+export async function run({ agent: _agentE1, workflow: _wf, parallel: _par, userInput }) {
+  const result = await callAgent(
+    typeof userInput === 'string' ? userInput : JSON.stringify(userInput),
+    { agentType: 'general-purpose' }
+  )
+  return result
+}
+
+"""
+
+
+def _emit_workflow_variant(raw: bytes, engine: str) -> bytes:
+    """Return engine-specific bytes for a canonical E2 workflow source.
+
+    Args:
+        raw: Raw bytes of the canonical E2 workflow script.
+        engine: Target engine identifier. ``"e2"`` and ``"auto"`` produce
+            byte-identical output (identity transform). ``"e1"`` prepends the
+            E1-wrap shim (engine-detection predicate, callAgent adapter,
+            exported run() entry point).
+
+    Returns:
+        Transformed bytes ready to write to the output directory.
+    """
+    if engine in ("e2", "auto"):
+        return raw
+    if engine == "e1":
+        shim_bytes = _E1_SHIM.encode("utf-8")
+        # decode() uses errors='strict' — caller handles UnicodeDecodeError.
+        _ = raw.decode("utf-8")
+        return shim_bytes + raw
+    # Unknown engine — fall back to identity (safe default).
+    return raw
+
+
 def build_workflow_scripts(target_root: Path, config: dict[str, Any],
                            dry_run: bool, force: bool) -> int:
     """Copy Claude Code Workflow JS scripts to ``<output_root>/workflows/``.
@@ -303,6 +367,7 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
     # ------------------------------------------------------------------
     workflows_config = config.get("workflows", {})
     enabled = workflows_config.get("enabled", False) if isinstance(workflows_config, dict) else False
+    engine = workflows_config.get("engine", "auto") if isinstance(workflows_config, dict) else "auto"
     if not enabled:
         print("Workflow scripts: skipped (not enabled in skills_config.json)")
         return 0
@@ -364,6 +429,16 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
         dest = output_dir / js_file.name
         content = js_file.read_bytes()
 
+        try:
+            emitted = _emit_workflow_variant(content, engine)
+        except UnicodeDecodeError as exc:
+            _log.warning(
+                "Skipping %s: E1 transform failed (non-UTF-8 source): %s",
+                js_file.name,
+                exc,
+            )
+            continue
+
         if not _should_overwrite(dest, force):
             continue
 
@@ -371,7 +446,7 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
         if dest.exists():
             import hashlib as _hashlib
             existing_digest = _hashlib.sha256(dest.read_bytes()).hexdigest()
-            new_digest = _hashlib.sha256(content).hexdigest()
+            new_digest = _hashlib.sha256(emitted).hexdigest()
             if existing_digest == new_digest:
                 global _uptodate_count  # noqa: PLW0603
                 _uptodate_count += 1
@@ -383,7 +458,7 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
             written += 1
         else:
             dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_bytes(content)
+            dest.write_bytes(emitted)
             written += 1
 
     if not dry_run:
