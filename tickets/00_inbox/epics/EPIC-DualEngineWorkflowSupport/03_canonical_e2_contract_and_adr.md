@@ -1,6 +1,6 @@
 ---
 title: "Spike E2 edges; ADR + canonical E2 authoring template and E1-wrap shim spec"
-status: in_progress
+status: done
 components:
   - supervisor_system
 created: 2026-07-01
