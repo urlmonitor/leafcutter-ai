@@ -1,6 +1,6 @@
 ---
 title: "Flow-change gates: architect + docs before coder"
-status: in_progress
+status: done
 components:
   - infrastructure
 created: 2026-07-01
