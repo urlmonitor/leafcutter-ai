@@ -115,11 +115,11 @@ this time, but the gap means any future worktree drive ships unguarded.
 
 | AC | Test | Implementation | Validated |
 |----|------|----------------|-----------|
-| AC-1 | | | ok — 2026-06-30 |
-| AC-2 | | | ok — 2026-06-30 |
-| AC-3 | | | ok — 2026-06-30 |
-| AC-4 | | | ok — 2026-06-30 |
-| AC-5 | | | ok — 2026-06-30 |
+| AC-1 | test_setup_ticket_worktree.py:TestBootstrapAC1HappyPath::test_ac1_no_bootstrap_error_when_config_present, test_setup_ticket_worktree.py:TestBootstrapAC1HappyPath::test_ac1_config_resolvable_at_worktree_root_after_bootstrap | | ok — 2026-06-30 |
+| AC-2 | test_setup_ticket_worktree.py:TestBootstrapAC2ProbeGuarantee::test_ac2_probe_precondition_config_present_implies_hooks_activatable (probe-level; full integration test not automatable — see class docstring) | | ok — 2026-06-30 |
+| AC-3 | test_setup_ticket_worktree.py:TestBootstrapAC3Idempotency::test_ac3_main_repo_tree_unchanged_after_bootstrap, test_setup_ticket_worktree.py:TestBootstrapAC3Idempotency::test_ac3_running_successful_bootstrap_twice_is_safe | | ok — 2026-06-30 |
+| AC-4 | (not testable at unit level: AC-4 requires reading commit-agent template docs and verifying PRE_COMMIT_ALLOW_NO_CONFIG=1 is not the default path — a human doc review, not an automated test) | | ok — 2026-06-30 |
+| AC-5 | test_setup_ticket_worktree.py:TestBootstrapAC5RaisesWhenConfigAbsent::test_ac5_raises_when_build_ran_but_config_absent, test_setup_ticket_worktree.py:TestBootstrapAC5RaisesWhenConfigAbsent::test_ac5_raises_when_build_not_found, test_setup_ticket_worktree.py:TestBootstrapAC5RaisesWhenConfigAbsent::test_ac5_raises_with_build_exc_when_called_process_error, test_setup_ticket_worktree.py:TestBootstrapErrorClassmethod::test_ac5_bootstrap_error_is_runtime_error_subclass, test_setup_ticket_worktree.py:TestBootstrapErrorClassmethod::test_ac5_missing_config_without_build_exc, test_setup_ticket_worktree.py:TestBootstrapErrorClassmethod::test_ac5_missing_config_with_build_exc_names_build_failure | | ok — 2026-06-30 |
 
 ## Sign-offs
 - [x] architect-review — 2026-06-30 10:16
@@ -229,7 +229,7 @@ Reviewed staged diff (310 ins, 12 del across 5 files). AC-1 through AC-5 are cov
   contract and the failure-surfacing behavior (AC-5).
 - [x] If a script change is needed (e.g. a `--worktree` mode or a bootstrap
   helper), implement it in the relevant build script.
-- [ ] test-writer: a test that a freshly-bootstrapped worktree has working hooks
+- [x] test-writer: a test that a freshly-bootstrapped worktree has working hooks
   (AC-1/AC-2) and that bootstrap is idempotent (AC-3).
 - [ ] Drop the `PRE_COMMIT_ALLOW_NO_CONFIG=1` default from the commit path docs
   (AC-4).
