@@ -1,6 +1,6 @@
 ---
 title: "Add workflows.enabled + workflows.engine to config schema and defaults"
-status: in_progress
+status: done
 components:
   - build_pipeline
 created: 2026-07-01
