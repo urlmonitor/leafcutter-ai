@@ -1,0 +1,55 @@
+id: BP-1000a-5-i
+title: "Feedback build succeeds from tracked-only files when the gitignored working copy is deleted"
+component: build-pipeline
+level: L3
+status: superseded_by
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000a-5.yaml"
+criteria: |
+  Given a checkout that contains the tracked templates/scripts/feedback/ source
+    mirror
+  And the gitignored working-tree directory scripts/feedback/ has been deleted
+    entirely (simulating a fresh clone with no leftover working-tree files)
+  When the build is run end to end including its broken-reference preflight guard
+  Then the build resolves the feedback deployable-script set from the tracked
+    mirror and completes with a success outcome
+  And the broken-reference preflight guard does not report any feedback script as
+    a broken or missing reference
+  And the build outcome is identical whether or not a stale scripts/feedback/
+    working copy happens to be present, so the result never depends on leftover
+    working-tree files
+depends_on:
+  - BP-1000a-5
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000a-5.yaml"
+    relationship: parent
+    status: exists
+  - path: "scripts/build.py"
+    relationship: describes
+    status: exists
+  - path: "scripts/build_phases.py"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Pin the fresh-clone evidence concretely: with templates/scripts/feedback/ tracked and the gitignored scripts/feedback/ deleted entirely, an end-to-end build (including the broken-reference preflight) must complete with a success outcome and the preflight must report no feedback script as broken or missing."
+  - "Idempotent / deterministic verdict: the build outcome must be identical whether or not a stale scripts/feedback/ working copy is present — the feedback resolution and preflight depend solely on the tracked mirror, never on leftover working-tree files."
+  - "This is an end-to-end acceptance over BP-1000a-5's relocation; it asserts the observable (build succeeds from tracked-only files) and must not re-specify the relocation mechanism (owned by BP-1000a-5)."
+delivers_to: null
+expects_from:
+  ac_id: BP-1000a-5
+  contract: "The build reads feedback source from tracked templates/scripts/feedback/ (resolved feedback set); this edge case pins the fresh-clone / tracked-only acceptance evidence — delete the gitignored scripts/feedback/ and the end-to-end build (incl. preflight) still succeeds."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Added it_requirements pinning the tracked-only end-to-end build-success + preflight-no-broken-feedback evidence, the leftover-working-tree-independent determinism, and the observable-only scope (defer the relocation mechanism to BP-1000a-5). Criteria unchanged; assigned_agent (python-coder), complexity (S), and the BP-1000a-5 expects_from contract validated and kept (contract shape tightened to name the resolved feedback set)."
+    by: it-po
+superseded_by: [BP-1200a-1-ii]
+covered_by: []
+implemented_by: []

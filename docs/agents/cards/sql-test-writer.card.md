@@ -4,7 +4,7 @@ title: "Agent Card: sql-test-writer"
 description: "Specialist for authoring SQL function and procedure test files. Reads PROJECT_CONTEXT.md for the test folder path, test framework choice, slow-test marker, and isolation conventions. Produces transaction-rollback test files and writes no auxiliary output inside the project tree. (internal — invoked by sql-coder or ticket-supervisor)"
 type: card
 status: active
-created: 2026-06-29
+created: 2026-07-01
 card_version: "generated"
 ---
 # sql-test-writer
@@ -41,7 +41,7 @@ and writes no auxiliary output inside the project tree.
 | 4 | pre-flight file reads | — | — |
 | 6 | project files read during execution | — | — |
 | 7 | bash command output (git, build, tests) | — | — |
-| 8 | [PROJECT_CONTEXT.md](../../../templates/skills/signoff/PROJECT_CONTEXT.md) | — | — |
+| 8 | PROJECT_CONTEXT.md | — | — |
 ---
 
 ## Spawn and Dependency

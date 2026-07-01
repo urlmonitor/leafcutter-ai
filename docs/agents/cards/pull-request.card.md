@@ -4,7 +4,7 @@ title: "Agent Card: pull-request"
 description: "Confirmation-gated PR creation agent. Reads recent commits on the current branch, drafts a title (<=70 chars) and body (Summary + Test plan), shows the draft to the user, and waits for an explicit \"yes\" before pushing the branch and running gh pr create. Spawns conflict-resolver on any merge conflict detected before the push, then retries once after resolution. Use when: user types /pull-request; is in the commit->push->PR flow via /commit-push-pr; or asks to \"open a PR\", \"create a pull request\", or \"push and open a PR for this branch\"."
 type: card
 status: active
-created: 2026-06-29
+created: 2026-07-01
 card_version: "generated"
 ---
 # pull-request
@@ -45,7 +45,7 @@ Use when: user types /pull-request; is in the commit->push->PR flow via
 | 4 | pre-flight file reads | — | — |
 | 6 | project files read during execution | — | — |
 | 7 | bash command output (git, build, tests) | — | — |
-| 8 | [PROJECT_CONTEXT.md](../../../templates/skills/signoff/PROJECT_CONTEXT.md) | — | — |
+| 8 | PROJECT_CONTEXT.md | — | — |
 ---
 
 ## Spawn and Dependency

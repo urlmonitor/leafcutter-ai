@@ -4,7 +4,7 @@ title: "Agent Card: glossary-triage"
 description: "Pinned-haiku agent that classifies a jargon candidate term and returns a structured JSON decision. Accepts a candidate term plus up to 5 context windows from glossary_detector.py and returns one of three actions: add_to_glossary, add_to_blacklist, or false_positive. Never modifies files — only returns decisions. Invoked by glossary-bootstrap, check_glossary_coverage pre-commit hook, and documentation-expert coverage-lint step."
 type: card
 status: active
-created: 2026-06-29
+created: 2026-07-01
 card_version: "generated"
 ---
 # glossary-triage
@@ -36,7 +36,7 @@ card_version: "generated"
 | 4 | pre-flight file reads | — | — |
 | 6 | project files read during execution | — | — |
 | 7 | bash command output (git, build, tests) | — | — |
-| 8 | [PROJECT_CONTEXT.md](../../../templates/skills/signoff/PROJECT_CONTEXT.md) | — | — |
+| 8 | PROJECT_CONTEXT.md | — | — |
 ---
 
 ## Spawn and Dependency

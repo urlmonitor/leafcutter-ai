@@ -4,7 +4,7 @@ title: "Agent Card: sql-function-creator"
 description: "Specialist for creating new SQL functions. Produces the .sql file, a matching unit test, and a design-decision record. Reads PROJECT_CONTEXT.md for project-specific paths, how-tos, and conventions. (internal — invoked by parent agents only)"
 type: card
 status: active
-created: 2026-06-29
+created: 2026-07-01
 card_version: "generated"
 ---
 # sql-function-creator
@@ -39,7 +39,7 @@ for project-specific paths, how-tos, and conventions.
 | 4 | pre-flight file reads | — | — |
 | 6 | project files read during execution | — | — |
 | 7 | bash command output (git, build, tests) | — | — |
-| 8 | [PROJECT_CONTEXT.md](../../../templates/skills/signoff/PROJECT_CONTEXT.md) | — | — |
+| 8 | PROJECT_CONTEXT.md | — | — |
 ---
 
 ## Spawn and Dependency

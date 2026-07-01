@@ -4,7 +4,7 @@ title: "Agent Card: sql-index-creator"
 description: "Creates file-based database index files following the project's idempotent, non-migration index pattern. Reads PROJECT_CONTEXT.md for project-specific file paths, naming conventions, and reload commands. Returns the correct reload command to sql-coder for deployment. (internal — invoked by parent agents only)"
 type: card
 status: active
-created: 2026-06-29
+created: 2026-07-01
 card_version: "generated"
 ---
 # sql-index-creator
@@ -40,7 +40,7 @@ reload command to sql-coder for deployment.
 | 4 | pre-flight file reads | — | — |
 | 6 | project files read during execution | — | — |
 | 7 | bash command output (git, build, tests) | — | — |
-| 8 | [PROJECT_CONTEXT.md](../../../templates/skills/signoff/PROJECT_CONTEXT.md) | — | — |
+| 8 | PROJECT_CONTEXT.md | — | — |
 ---
 
 ## Spawn and Dependency

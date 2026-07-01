@@ -1,30 +1,219 @@
 ---
 title: "How to use the AC Traceability Store"
-description: "Step-by-step guide for creating, amending, deprecating, and tracing acceptance criteria through the AC Traceability Store and knowledge map."
+description: "How-to guide for delivering approved ACs via the reviewed-PR path, and for creating, amending, deprecating, and tracing acceptance criteria through the AC Traceability Store and knowledge map."
 type: how-to
 status: active
 created: 2026-06-04
-last_updated: 2026-06-22
+last_updated: 2026-06-24
 components:
   - build_pipeline
+  - build-orchestration
   - knowledge-management
 related_docs:
   - docs/reference/ac-schema.md
   - docs/acceptance-criteria/README.md
   - config/ac_store_schema.json
+  - docs/how-to/ac-driven-build-loop.md
+  - docs/how-to/approval-gate.md
   - templates/skills/knowledge-query/SKILL.md
 ---
 
 # How to use the AC Traceability Store
 
-This guide covers the six most common operations on the AC Traceability
-Store: creating a new acceptance criterion, amending an existing one,
-deprecating one, adding `covers:` tags to existing tests, handling
-a deprecated-AC test failure at triage time, and tracing a requirement
-to its implementing code and test files via the knowledge map.
+This guide covers two areas:
 
-After completing this guide you will be able to manage the full lifecycle
-of an AC without reading any agent template or skill file.
+1. **Delivering approved ACs via the reviewed-PR path** — how to invoke
+   `/create-ac` or `/plan-feature`, approve each stage, give final approval,
+   and follow the resulting pull request to merge. This is the primary workflow
+   for getting new requirements into `main`.
+
+2. **Manual AC lifecycle operations** — creating, amending, and deprecating
+   AC YAML files directly, adding `covers:` tags to tests, and handling
+   deprecated-AC test failures at triage time.
+
+After completing this guide you will be able to move an acceptance criterion
+from first draft all the way to a merged PR without manually building branches
+or opening pull requests yourself.
+
+---
+
+## Part 1 — Delivering Approved ACs via the Reviewed-PR Path
+
+This section explains how your approved requirements reach `main`. You do not
+hand-build a branch or open a pull request yourself. The tooling handles both
+steps once you give final approval.
+
+### Overview of the flow
+
+```
+/create-ac  or  /plan-feature
+        |
+        v
+Stage 1: Product Owner produces L0/L1 ACs  → you approve
+Stage 2: Business Analyst produces L2/L3 ACs → you approve
+Stage 3: IT PO enriches ACs (agent, complexity, contracts) → you approve
+        |
+        v
+Final approval: AC readiness → approved
+        |
+        v
+/build-ac generates a ticket → ticket-supervisor drives it
+        |
+        v
+pull-request phase opens a PR on your behalf
+        |
+        v
+PR review passes → you (or a reviewer) merges to main
+```
+
+### Step 1 — Invoke /create-ac or /plan-feature
+
+Choose based on your starting point:
+
+- **`/create-ac`** — when you want to author a single acceptance criterion
+  directly, starting from a goal or a feature idea.
+- **`/plan-feature`** — when you want to author a full feature plan that
+  produces multiple acceptance criteria across all three AC levels (L0 → L1 → L2/L3).
+
+Both commands launch the same multi-stage approval pipeline. This guide uses
+`/plan-feature` for illustration; the steps are identical for `/create-ac`.
+
+```
+/plan-feature
+```
+
+Describe the feature you want to build in plain language. For example:
+
+```
+"When a user invokes /build-ac with --goal, the system should detect that the
+ AC is an L0/L1 goal, produce an epic scaffold, and route to create-epic rather
+ than generate_ticket_from_ac."
+```
+
+### Step 2 — Approve the Product Owner stage (L0/L1 ACs)
+
+The product-owner agent produces L0 (value proposition) and L1 (feature benefit)
+ACs and presents them to you for review. Read each AC and respond:
+
+- **`yes`** — the L0/L1 framing is correct. The pipeline moves to Stage 2.
+- **`revise`** — describe what is wrong. The PO reruns with your feedback.
+- **`cancel`** — see "What happens if you cancel" below.
+
+You are reviewing customer-language framing at this stage, not implementation
+detail. Approve if the "what" and "why" are correct.
+
+### Step 3 — Approve the Business Analyst stage (L2/L3 ACs)
+
+The business-analyst agent decomposes each L1 into testable Gherkin behaviors
+(L2) and edge-case specifications (L3). Review the produced AC YAML files and
+respond:
+
+- **`yes`** — all Gherkin criteria are testable and complete.
+- **`revise <AC-ID>`** — flag a specific AC for rework. Describe the required change.
+- **`cancel`** — see "What happens if you cancel" below.
+
+At this stage, check that each `criteria:` block is specific enough for a test
+to be written against it, and that the `Given / When / Then` structure is
+unambiguous.
+
+### Step 4 — Approve the IT PO enrichment stage
+
+The it-po agent enriches each L2/L3 AC with technical fields: `assigned_agent`,
+`estimated_complexity`, `delivers_to`, `expects_from`, and `doc_links`. Review
+the enriched YAML files and respond:
+
+- **`yes`** — the agent assignment and complexity look correct.
+- **`revise <AC-ID>`** — flag an AC for agent or complexity correction.
+- **`cancel`** — see "What happens if you cancel" below.
+
+### Step 5 — Give final approval
+
+After Stage 3 is approved, each AC is written with `readiness: reviewed`. To
+make an AC eligible for ticket generation you must promote it to `approved`:
+
+```
+/build-ac --approve <AC-ID>
+```
+
+Or edit the YAML directly:
+
+```yaml
+readiness: approved
+```
+
+Then commit the approval:
+
+```bash
+git add docs/acceptance-criteria/<component>/<ID>.yaml
+git commit -m "approve <ID>: ready to build"
+```
+
+Only `readiness: approved` ACs are visible to `/build-ac`. All others remain
+in the backlog without generating any ticket.
+
+### Step 6 — Follow the pull request to merge
+
+Once you confirm the `/build-ac` prompt, the pipeline:
+
+1. Calls `generate_ticket_from_ac.py` to write a ticket file.
+2. Dispatches `ticket-supervisor`, which drives all phase agents
+   (`test-writer`, `python-coder`, `pr-reviewer`, `commit`).
+3. The `pull-request` phase agent opens a pull request on your Git hosting
+   platform automatically.
+
+You receive the PR URL. Review the diff, address any comments from the
+`pr-reviewer`, and merge when ready. You do not need to push a branch or
+run `gh pr create` yourself — the `pull-request` agent handles both steps.
+
+After the PR merges, `mark_ac_done.py` sets `work_status: done` on the source
+AC, closing the traceability loop.
+
+---
+
+### What happens if you cancel before final approval?
+
+If you respond **`cancel`** at any stage (Stage 1, 2, or 3):
+
+- Any AC YAML files already written remain in `docs/acceptance-criteria/` as
+  `readiness: draft` or `readiness: reviewed` (depending on how far the
+  pipeline progressed).
+- No ticket is generated.
+- No branch is created.
+- No pull request is opened.
+
+Your draft ACs are safe. Nothing is lost. The pipeline simply stops.
+
+### How to resume after a cancel
+
+To resume from where you left off:
+
+1. **Find the draft ACs** that were written before the cancel:
+
+   ```bash
+   python scripts/ac_store/scan_ac_store.py --level leaf --readiness draft
+   python scripts/ac_store/scan_ac_store.py --level leaf --readiness reviewed
+   ```
+
+2. **Review the existing ACs.** Open each YAML file and check whether the
+   content is still correct. The files are at
+   `docs/acceptance-criteria/<component>/<ID>.yaml`.
+
+3. **Resume from the last approved stage.** If Stage 1 (PO) was approved but
+   Stage 2 (BA) was cancelled, you can invoke `/plan-feature` again and the
+   pipeline will detect the existing L1 ACs and skip Stage 1, proceeding
+   directly to the BA decomposition step. If all three stages were already
+   approved before the cancel, skip to Step 5 (final approval) and promote
+   the ACs to `readiness: approved` manually.
+
+4. **Promote and build when ready.** Once the ACs are at `readiness: approved`,
+   run `/build-ac` to generate the ticket and kick off the build pipeline.
+
+---
+
+## Part 2 — Manual AC Lifecycle Operations
+
+The rest of this guide covers direct management of AC YAML files: creating,
+amending, deprecating, tagging tests, and handling triage failures.
 
 ---
 
@@ -372,5 +561,8 @@ All three commands should exit 0 with no error output.
 - `docs/reference/ac-schema.md` — complete field-by-field reference for the AC YAML schema.
 - `docs/acceptance-criteria/README.md` — directory structure and quick-start.
 - `config/ac_store_schema.json` — machine-readable JSON Schema (draft-07).
+- `docs/how-to/ac-driven-build-loop.md` — end-to-end walkthrough of the AC-driven build loop on a consumer install.
+- `docs/how-to/approval-gate.md` — detailed explanation of the multi-stage approval gate and readiness state machine.
+- `docs/how-to/build-ac-unified.md` — auto-detection logic for leaf vs goal mode; epic-generation path for L0/L1 goal ACs.
 - `docs/README.md` — full documentation index.
 - `templates/skills/knowledge-query/SKILL.md` — full reference for all `knowledge_query.py` flags and output modes.

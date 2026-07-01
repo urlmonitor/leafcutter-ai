@@ -4,7 +4,7 @@ title: "Agent Card: retrospective-agent"
 description: "Automated epic retrospective agent. Reads all completed tickets in an epic folder (including done/ subfolder), parses ## Comments sections for retry patterns and blockers, optionally reads telemetry JSONL for quantitative data, and generates a structured retrospective artifact. Proposes Knowledge Item entries and rule updates as diffs for user approval — never auto-applies. Use when: user invokes /retro EPIC-Name; after an epic closes and all tickets are in done/, or when epic-supervisor auto-invokes at the end of a run."
 type: card
 status: active
-created: 2026-06-29
+created: 2026-07-01
 card_version: "generated"
 ---
 # retrospective-agent

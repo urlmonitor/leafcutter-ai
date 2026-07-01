@@ -4,7 +4,7 @@ title: "Agent Card: change-scope-reviewer"
 description: "Scope-integrity reviewer dispatched by ticket-supervisor after the coder phase and before pr-reviewer. Reads the ticket's files_touched + out_of_scope lists and the staged diff, classifies each unexpected file as soft/hard/ambiguous using the three-tier disagreement model, and returns an actionable comment without auto-promoting to ADR or rewriting ticket frontmatter. (internal — invoked by ticket-supervisor only)"
 type: card
 status: active
-created: 2026-06-29
+created: 2026-07-01
 card_version: "generated"
 ---
 # change-scope-reviewer
@@ -42,7 +42,7 @@ without auto-promoting to ADR or rewriting ticket frontmatter.
 | 4 | pre-flight file reads | — | — |
 | 6 | project files read during execution | — | — |
 | 7 | bash command output (git, build, tests) | — | — |
-| 8 | [PROJECT_CONTEXT.md](../../../templates/skills/signoff/PROJECT_CONTEXT.md) | — | — |
+| 8 | PROJECT_CONTEXT.md | — | — |
 ---
 
 ## Spawn and Dependency

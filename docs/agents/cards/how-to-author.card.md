@@ -4,7 +4,7 @@ title: "Agent Card: how-to-author"
 description: "Writes a task-oriented how-to guide for this project following the canonical convention in docs/how-to/documentation/write-how-to.md. Produces the guide file, chooses the correct location per the codified decision rule, and returns a structured payload naming the path and location rationale. (internal — invoked by documentation-expert only)"
 type: card
 status: active
-created: 2026-06-29
+created: 2026-07-01
 card_version: "generated"
 ---
 # how-to-author
@@ -116,3 +116,11 @@ flowchart TD
 | Stop-and-Ask | condition requiring user decision or out-of-scope action | Do not proceed without doing this. | `None` |
 | Conditional Behavior | a ticket is provided (`ticket_path`) | check whether the ticket body contains | `None` |
 | Conditional Behavior | writing the guide: add required sections | ensure required steps are covered, | `None` |
+---
+
+## AC Assignments
+
+### how-to-author
+
+- TKT-500b-5: How-to: configuring and overriding TDD sequencing
+- TKT-500c-5: How-to: reading and interpreting AC delivery state

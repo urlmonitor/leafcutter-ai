@@ -4,7 +4,7 @@ title: "Agent Card: sql-view-creator"
 description: "Creates regular views, materialized views, and time-series continuous aggregates. Reads PROJECT_CONTEXT.md for project-specific how-to paths, flavour rules, and file conventions. Produces the SQL file plus test file in one pass. (internal — invoked by parent agents only)"
 type: card
 status: active
-created: 2026-06-29
+created: 2026-07-01
 card_version: "generated"
 ---
 # sql-view-creator
@@ -39,7 +39,7 @@ and file conventions. Produces the SQL file plus test file in one pass.
 | 4 | pre-flight file reads | — | — |
 | 6 | project files read during execution | — | — |
 | 7 | bash command output (git, build, tests) | — | — |
-| 8 | [PROJECT_CONTEXT.md](../../../templates/skills/signoff/PROJECT_CONTEXT.md) | — | — |
+| 8 | PROJECT_CONTEXT.md | — | — |
 ---
 
 ## Spawn and Dependency

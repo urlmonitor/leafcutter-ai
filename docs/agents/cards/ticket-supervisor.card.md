@@ -4,7 +4,7 @@ title: "Agent Card: ticket-supervisor"
 description: "Depth-0 ticket orchestrator — dispatched directly by `/build-feature` (or by the user for a single-ticket workflow). Drives a single ticket through its phase agents: reads the frontmatter `agents:` map, spawns the next `needed` agent in natural order via the Agent tool, parses the resulting `## Comments` status tag, and routes on ok / handoff / blocker / question. On blocker, runs the failure adjudication ladder (mechanical retry → cross-agent rework → brainstorm-lead → halt) with hard retry caps. Holds the worktree-root commit-phase lock around `commit` and `pull-request` phases. Returns a structured payload to the caller when escalating. Primary instruction set: `.claude/skills/building-epics/SKILL.md`. Architecture decision: ADR-006-flatten-supervisor-chain.md."
 type: card
 status: active
-created: 2026-06-29
+created: 2026-07-01
 card_version: "generated"
 ---
 # ticket-supervisor

@@ -4,7 +4,7 @@ title: "Agent Card: sql-procedure-creator"
 description: "Specialist that authors new database stored procedures following the project's procedure pattern. Produces the procedure SQL file and the matching rollback-only test file in one pass. Reads PROJECT_CONTEXT.md for project-specific paths and deploy commands. (internal — invoked by parent agents only)"
 type: card
 status: active
-created: 2026-06-29
+created: 2026-07-01
 card_version: "generated"
 ---
 # sql-procedure-creator
@@ -40,7 +40,7 @@ project-specific paths and deploy commands.
 | 4 | pre-flight file reads | — | — |
 | 6 | project files read during execution | — | — |
 | 7 | bash command output (git, build, tests) | — | — |
-| 8 | [PROJECT_CONTEXT.md](../../../templates/skills/signoff/PROJECT_CONTEXT.md) | — | — |
+| 8 | PROJECT_CONTEXT.md | — | — |
 ---
 
 ## Spawn and Dependency

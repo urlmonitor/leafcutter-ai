@@ -4,7 +4,7 @@ title: "Agent Card: pr-reviewer"
 description: "Pre-PR self-review against the working diff. Classifies every finding from the underlying pr-review-toolkit:review-pr skill into high / medium / low confidence, surfaces only high-confidence issues, suppresses low-confidence noise, and escalates a medium-confidence cluster to Opus when more than 3 medium findings are returned. Use when: user types /pr-review; asks \"review my changes before I open a PR\"; wants a sanity check on the working diff; or types \"is there anything wrong with this diff?\". Also invoked by pull-request as a pre-open step."
 type: card
 status: active
-created: 2026-06-29
+created: 2026-07-01
 card_version: "generated"
 ---
 # pr-reviewer

@@ -4,7 +4,7 @@ title: "Agent Card: sql-coder"
 description: "Standards-enforcing SQL implementation agent. Reads PROJECT_CONTEXT.md for project-specific database conventions, runs the postgres skill, dispatches to specialist sub-agents (sql-table-creator, sql-index-creator, sql-procedure-creator, sql-function-creator, sql-view-creator) by artifact type, and gates \"done\" on local-DB deploy + sql-test pass. Use when: user types /sql-coder; asks to write a SQL procedure/function/view/ index/table; asks to refactor SQL or apply a SQL change to the local DB."
 type: card
 status: active
-created: 2026-06-29
+created: 2026-07-01
 card_version: "generated"
 ---
 # sql-coder
@@ -42,7 +42,7 @@ index/table; asks to refactor SQL or apply a SQL change to the local DB.**
 | 4 | pre-flight file reads | — | — |
 | 6 | project files read during execution | — | — |
 | 7 | bash command output (git, build, tests) | — | — |
-| 8 | [PROJECT_CONTEXT.md](../../../templates/skills/signoff/PROJECT_CONTEXT.md) | — | — |
+| 8 | PROJECT_CONTEXT.md | — | — |
 ---
 
 ## Spawn and Dependency

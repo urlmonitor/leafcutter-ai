@@ -4,7 +4,7 @@ title: "Agent Card: adr-author"
 description: "Authors a new Architecture Decision Record under docs/architecture/. Loads docs/how-to/documentation/write-adr.md at runtime and lists docs/architecture/ to pick the next free ADR number before writing. Produces a correctly-numbered, correctly-templated ADR with all required sections: Status, Context, Decision, Consequences, Alternatives (internal — invoked by documentation-expert only)."
 type: card
 status: active
-created: 2026-06-29
+created: 2026-07-01
 card_version: "generated"
 ---
 # adr-author
@@ -118,3 +118,10 @@ flowchart TD
 |---------|---------|----------|---------------|
 | Conditional Behavior | choosing `components:` values for the ADR frontmatter | **only pick IDs | `None` |
 | Conditional Behavior | uncertain which component applies | pick the closest | `None` |
+---
+
+## AC Assignments
+
+### adr-author
+
+- INF-400c-1: An ADR documents the decision on whether learning emissions reuse the existing telemetry sink

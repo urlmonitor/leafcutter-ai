@@ -4,7 +4,7 @@ title: "Agent Card: brainstorm-lead"
 description: "Internal-only escalation tier between `ticket-supervisor` and the user, invoked from the failure-adjudication ladder in `building-epics` §3.3 (open-ended design choice). Receives a design question payload from `ticket-supervisor`, chooses 2-3 perspectives suited to the question (default trio: `simplicity`, `robustness`, `reversibility`), spawns that many `brainstorm-worker` agents in parallel via the `Agent` tool, and synthesises their structured responses into a single recommendation (consensus when 2+ workers agree; \"present-all\" envelope when all disagree). Runs on Opus — **only** the right escalation when mechanical adjudication has been exhausted; cap is 1 invocation per ticket per `building-epics` §4."
 type: card
 status: active
-created: 2026-06-29
+created: 2026-07-01
 card_version: "generated"
 ---
 # brainstorm-lead

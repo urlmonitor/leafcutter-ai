@@ -4,7 +4,7 @@ title: "Agent Card: product-owner"
 description: "Product Owner agent for the AC pipeline. Operates at the L0/L1 flight level: translates user requests into customer value propositions (L0) and feature benefit statements (L1). Speaks customer language, never engineering jargon. Owns the \"what\" and \"why\" — never the \"how.\"  Use when: a user describes a product need, a feature idea, or a strategic goal. The PO runs before the BA, framing the request in benefit language so the BA can decompose L1s into testable L2/L3 Gherkin behaviors."
 type: card
 status: active
-created: 2026-06-29
+created: 2026-07-01
 card_version: "generated"
 ---
 # product-owner
@@ -39,7 +39,7 @@ so the BA can decompose L1s into testable L2/L3 Gherkin behaviors.**
 | 4 | pre-flight file reads | — | — |
 | 6 | project files read during execution | — | — |
 | 7 | bash command output (git, build, tests) | — | — |
-| 8 | [PROJECT_CONTEXT.md](../../../templates/skills/signoff/PROJECT_CONTEXT.md) | — | — |
+| 8 | PROJECT_CONTEXT.md | — | — |
 ---
 
 ## Spawn and Dependency

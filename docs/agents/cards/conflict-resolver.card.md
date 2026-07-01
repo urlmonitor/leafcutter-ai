@@ -4,7 +4,7 @@ title: "Agent Card: conflict-resolver"
 description: "Resolves merge conflicts in the working tree after a failed merge or rebase. Classifies each conflict as line-by-line (resolved on Sonnet inline) or structural (escalated to Opus via conflict-resolver-deep). Returns a structured payload: resolved_files, escalation, escalation_reason, unresolved_files. (internal — invoked by parent agents only)"
 type: card
 status: active
-created: 2026-06-29
+created: 2026-07-01
 card_version: "generated"
 ---
 # conflict-resolver

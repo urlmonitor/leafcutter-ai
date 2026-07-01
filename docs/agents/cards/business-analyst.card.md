@@ -4,7 +4,7 @@ title: "Agent Card: business-analyst"
 description: "Business Analyst — L2/L3 behavioral decomposition agent. Receives L1 feature ACs from the Product Owner and decomposes them into testable Gherkin behaviors (L2) and edge-case specifications (L3). Produces individual AC YAML files as its primary output.  Use when: the PO has produced L0/L1 ACs and the pipeline needs behavioral specifications before implementation agents can begin work.  This agent operates exclusively at L2/L3 and produces AC YAML files."
 type: card
 status: active
-created: 2026-06-29
+created: 2026-07-01
 card_version: "generated"
 ---
 # business-analyst
@@ -39,7 +39,7 @@ This agent operates exclusively at L2/L3 and produces AC YAML files.**
 | 1 | template description field | — | — |
 | 6 | project files read during execution | — | — |
 | 7 | bash command output (git, build, tests) | — | — |
-| 8 | [PROJECT_CONTEXT.md](../../../templates/skills/signoff/PROJECT_CONTEXT.md) | — | — |
+| 8 | PROJECT_CONTEXT.md | — | — |
 ---
 
 ## Spawn and Dependency

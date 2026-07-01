@@ -1,0 +1,29 @@
+id: SD-100b
+readiness: draft
+priority: medium
+title: "Hand stakeholders a single file they can open anywhere"
+component: stakeholder-delivery
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  The deck is one self-contained file that opens on its own -- no install, no
+  login, no dependency on the team's tools.
+
+  Whoever you send it to can open it directly and see the full story, so sharing
+  the value is as simple as forwarding a single file.
+depends_on: [SD-100]
+documentation_triggers: []
+documentation_rationale: "Quality attribute of the deck artifact (self-contained, no external dependencies) -- introduces no separate user-facing behavior or workflow needing its own documentation."
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

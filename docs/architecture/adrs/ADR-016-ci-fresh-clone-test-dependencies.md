@@ -1,10 +1,10 @@
 ---
 title: "ADR-016: CI Fresh-Clone Test Dependencies — Build Step Required Before Test Suite"
-description: "Records the decision to extend install_shims() with script-directory shims so that the full test suite passes on a fresh clone after the ADR-004 consolidation removed scripts/commit_guardian/, scripts/doc_compliance/, and scripts/feedback/ from the project root."
+description: "Records the decision to extend install_shims() with script-directory shims so that the full test suite passes on a fresh clone after the ADR-004 consolidation removed scripts/commit_guardian/, scripts/doc_compliance/, and scripts/feedback/ from the project root. Also records the decision to move feedback scripts into templates/scripts/feedback/ as the canonical tracked source so that build.py's _check_script_reference_guard() passes on a fresh clone (AC BP-1200a-1-ii)."
 type: "adr"
 status: "active"
 created: "2026-06-24"
-last_updated: "2026-06-24"
+last_updated: "2026-06-29"
 deciders:
   - leafcutter-engineering-team
 components:
@@ -15,6 +15,8 @@ related_docs:
 related_code:
   - scripts/build_helpers.py
   - scripts/build.py
+  - scripts/build_phases.py
+  - templates/scripts/feedback/
 ---
 
 # ADR-016: CI Fresh-Clone Test Dependencies — Build Step Required Before Test Suite
@@ -173,6 +175,82 @@ the commit-guardian, doc-compliance, and feedback modules.
 - The `force=True` default in `install_shims()` means re-running `build.py`
   will overwrite stale shims without requiring a manual cleanup step.
 
+## Amendment — AC BP-1200a-1-ii: Tracked Source for Feedback Scripts (2026-06-29)
+
+### Additional Context
+
+PR #164 (commit `83737a44`) removed the tracked source files under
+`scripts/feedback/` from git, converting them to gitignored build outputs. This
+broke the `_check_script_reference_guard()` preflight in `build.py`: on a fresh
+clone, `scripts/feedback/` is absent so `_manifest_feedback_scripts()` reports
+zero deployable scripts, causing the guard to find broken references from agent
+and skill templates and abort `build.py` with exit 1. The CI "Test suite
+(pytest)" job runs `build.py` before `pytest`, so this build abort caused ~36
+tests to fail at collection with no module/file found errors.
+
+The symptom differs from the original ADR-016 context (which was about shim
+paths for test `sys.path` imports): here the build itself refuses to run at all
+because the script-reference preflight guard finds no deployable feedback
+scripts to satisfy references in `templates/agents/` and `templates/skills/`.
+
+### Additional Options Evaluated (BP-1200a-1-ii)
+
+**Approach 1 — Tracked templates as canonical source (chosen)**
+Move feedback scripts into `templates/scripts/feedback/` (tracked, not gitignored).
+Update `build_feedback()` to read from `templates/scripts/feedback/` (mirroring
+`build_commit_guardian()` which reads from `templates/scripts/commit_guardian/`).
+Update `_manifest_feedback_scripts()` to scan `templates/scripts/feedback/`
+instead of `scripts/feedback/`.
+
+**Approach 2 — Re-track scripts/feedback/ directly**
+Remove `scripts/feedback/` from `.gitignore` and commit the scripts there.
+This creates confusion because `scripts/feedback/` would then be both a tracked
+file and a build output — violating the ADR-001 self-hosting boundary principle.
+
+**Approach 3 — Add scripts/feedback/ to EXTERNAL_DEPENDENCY_ALLOWLIST**
+Suppress the guard error without fixing the deployment gap. This is not a fix;
+it only suppresses the symptom while leaving consumer installs broken.
+
+### Why Approach 1 was chosen
+
+The `templates/scripts/commit_guardian/` precedent already exists: `build_commit_guardian()`
+deploys from `templates/scripts/commit_guardian/` and `_manifest_commit_guardian_scripts()`
+scans the same directory. Feedback scripts follow the same pattern. The tracked
+template source is not a build output — it is the authoritative source file from
+which build outputs are generated. Committing it to `templates/scripts/feedback/`
+respects the ADR-001 boundary (source lives in the package, outputs go to the
+consumer) and ensures a fresh clone has everything needed to build and pass the
+guard.
+
+### Amendment Decision
+
+`templates/scripts/feedback/` is established as the canonical tracked source for
+all feedback scripts (`submit_feedback.py`, `aggregate.py`, `resolve_feedback.py`,
+`emit_hook_finding.py`, `list_tags.py`, `link_feedback.py`).
+
+- `build_feedback()` in `scripts/build_phases.py` reads from
+  `templates/scripts/feedback/` (not `scripts/feedback/`).
+- `_manifest_feedback_scripts()` in `scripts/build.py` scans
+  `templates/scripts/feedback/` (not `scripts/feedback/`).
+- The shim in `install_shims()` (`scripts/feedback` → `scripts/feedback`) remains
+  in place to bridge the canonical deployment location for consumers that reference
+  `scripts/feedback/` at runtime.
+
+### Consequences of Amendment
+
+**Positive:**
+- `build.py --target-dir <dir>` exits 0 on a fresh clone (AC BP-1200a-1-ii).
+- `pytest` test collection succeeds without collection errors on a fresh clone.
+- The `templates/scripts/feedback/` / `templates/scripts/commit_guardian/` pattern
+  is now consistent for both groups of scripts.
+
+**Negative / accepted tradeoffs:**
+- Any future addition of a feedback script requires placing it in
+  `templates/scripts/feedback/` (not `scripts/feedback/`) to be deployable.
+  Developers must know this convention. It is enforced by the guard test
+  `test_feedback_scripts_tracked_in_templates` in
+  `unit_tests/test_build_guard_real_package.py`.
+
 ## References
 
 - [ADR-004 — Consolidated Output Root](ADR-004-consolidated-output-root.md) —
@@ -181,4 +259,6 @@ the commit-guardian, doc-compliance, and feedback modules.
 - [ADR-001 — Self-Hosting Boundary](ADR-001-self-hosting-boundary.md) —
   establishes the self-hosting convention; noted `scripts/commit_guardian/` as
   a remaining root-level output (resolved by ADR-004, extended here).
-- AC `BP-1200a-1` — the acceptance criterion this decision satisfies.
+- AC `BP-1200a-1` — the acceptance criterion for the original shim-map fix.
+- AC `BP-1200a-1-ii` — the acceptance criterion for the tracked-source fix
+  documented in the amendment above.

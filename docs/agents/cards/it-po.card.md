@@ -4,7 +4,7 @@ title: "Agent Card: it-po"
 description: "IT Product Owner — technical enrichment agent for the AC pipeline. Operates AFTER the BA has produced L2/L3 AC YAML files. Enriches each AC with technical fields: assigned_agent, it_requirements, estimated_complexity, delivers_to/expects_from contracts, and doc_links to architecture documents.  Does NOT create tickets. Does NOT modify the BA's criteria field. Uses architecture docs, component registries, and agent registries to understand the technical landscape. Splits ACs when technical boundaries reveal multi-agent work.  Use when: the BA has produced L2/L3 AC files and the pipeline needs technical enrichment before implementation agents can begin work.  This agent operates on AC YAML files directly."
 type: card
 status: active
-created: 2026-06-29
+created: 2026-07-01
 card_version: "generated"
 ---
 # it-po
@@ -44,7 +44,7 @@ This agent operates on AC YAML files directly.**
 | 1 | template description field | — | — |
 | 6 | project files read during execution | — | — |
 | 7 | bash command output (git, build, tests) | — | — |
-| 8 | [PROJECT_CONTEXT.md](../../../templates/skills/signoff/PROJECT_CONTEXT.md) | — | — |
+| 8 | PROJECT_CONTEXT.md | — | — |
 ---
 
 ## Spawn and Dependency

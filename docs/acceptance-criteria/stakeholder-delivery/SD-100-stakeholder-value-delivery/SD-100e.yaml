@@ -1,0 +1,29 @@
+id: SD-100e
+readiness: draft
+priority: medium
+title: "Stakeholder material appears the moment a decision is approved"
+component: stakeholder-delivery
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Delivery becomes automatic -- approving a value proposition produces the
+  stakeholder-facing material without anyone having to ask for it.
+
+  The instant the Product Owner marks value as approved, the matching
+  stakeholder deliverable is ready, so the people who care are always current
+  with no extra step.
+depends_on: [SD-100]
+documentation_triggers: [how-to, sequence-diagram, state-diagram]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

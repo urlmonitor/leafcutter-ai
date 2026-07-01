@@ -4,7 +4,7 @@ title: "Agent Card: test-failure-triage"
 description: "Classifies post-merge test failures into structured categories before any remediation work begins. Receives a post-merge failure list, a baseline failure list, and the set of files changed by the feature branch, then emits a triage report so downstream finalize-feature.js steps can route each failure to the correct handler without re-running LLM reasoning. (internal — spawned by finalize-feature only)"
 type: card
 status: active
-created: 2026-06-29
+created: 2026-07-01
 card_version: "generated"
 ---
 # test-failure-triage
@@ -101,3 +101,12 @@ flowchart TD
 |---------|---------|----------|---------------|
 | Conditional Behavior | absent or `# covers: UNKNOWN` | set `covers_tag` to `null` | `None` |
 | Conditional Behavior | the file does not exist | log a warning and | `None` |
+---
+
+## AC Assignments
+
+### test-failure-triage
+
+- FIN-100c-1: Failures present in baseline are classified as pre-existing
+- FIN-100c-2: Failures absent from baseline are classified as regressions
+- FIN-100c-3: Null baseline causes all failures to be treated as regressions
