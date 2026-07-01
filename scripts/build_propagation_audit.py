@@ -201,29 +201,77 @@ ACTION_ADD_DEPLOY_PHASE = "add a deploy phase in build_phases.py"
 #: by leafcutter) and should be registered in the allowlist instead.
 ACTION_ADD_TO_ALLOWLIST = "add to the external-dependency allowlist"
 
+#: Suggested action when the source directory and its deploy phase already
+#: exist but the script file is missing or untracked in git (AC BP-900c-3).
+#: The author must commit the source under the tracked deploy-source mirror.
+ACTION_COMMIT_UNDER_TEMPLATES = (
+    "source is missing or untracked — commit the file under templates/scripts/ "
+    "(the tracked deploy-source mirror)"
+)
+
+# Prefixes that have an established deploy phase in build_phases.py.
+# When a broken reference falls under one of these prefixes the directory and
+# deploy phase already exist, so the truthful corrective action is to commit
+# the missing source rather than to add a new deploy phase (AC BP-900c-3).
+#
+# M-1 MAINTENANCE NOTE: Keep this tuple in sync with the phase functions in
+# build_phases.py that deploy into scripts/. Each entry here corresponds to a
+# build phase: build_ac_store → scripts/ac_store/, build_feedback →
+# scripts/feedback/, build_commit_guardian → scripts/commit_guardian/.
+# A focused test (test_build_tracked_source_guard.py::TestSuggestActionDirPresent)
+# will fail if a new phase is added to build_phases.py without a matching prefix
+# entry here, preventing silent drift.
+_PREFIXES_WITH_EXISTING_DEPLOY_PHASE: tuple[str, ...] = (
+    "scripts/ac_store/",
+    "scripts/feedback/",
+    "scripts/commit_guardian/",
+)
+
 
 def _suggest_action(missing_path: str, allowlist: frozenset[str]) -> str:
     """Return the appropriate suggested action for a single broken reference.
 
-    Heuristic: paths under directories that leafcutter owns and deploys get the
-    deploy-phase suggestion. Everything else gets the allowlist suggestion.
+    State-based selector (AC BP-900c-3 / BP-900c-3-i / M-2):
+
+    * When the missing path is in the external-dependency allowlist: should
+      not normally reach this function, but if it does the path is external —
+      return ``ACTION_ADD_TO_ALLOWLIST``.
+    * When the missing path is under a directory that already has an established
+      deploy phase in build_phases.py the source file is missing or untracked
+      in git; the truthful action is to commit the source under
+      ``templates/scripts/`` (the tracked deploy-source mirror).
+    * When the path is under an entirely new directory (no deploy phase exists)
+      the action is to add a deploy phase in build_phases.py.
+
+    The three states are distinguishable per-entry so a single report can
+    contain all action types.
 
     Args:
         missing_path: The ``scripts/<path>`` string that was not deployed and
             not allowlisted.
-        allowlist: The effective allowlist in use during the audit.
+        allowlist: The effective allowlist in use during the audit.  When the
+            path appears in the allowlist it is classified as an external
+            dependency (M-2: restore ACTION_ADD_TO_ALLOWLIST branch).
 
     Returns:
-        One of ``ACTION_ADD_DEPLOY_PHASE`` or ``ACTION_ADD_TO_ALLOWLIST``.
+        One of ``ACTION_ADD_TO_ALLOWLIST`` (external dependency, not owned by
+        leafcutter), ``ACTION_COMMIT_UNDER_TEMPLATES`` (dir+phase exist, source
+        missing/untracked), or ``ACTION_ADD_DEPLOY_PHASE`` (genuinely new
+        capability, no deploy phase yet).
     """
-    leafcutter_owned_prefixes = (
-        "scripts/ac_store/",
-        "scripts/feedback/",
-        "scripts/commit_guardian/",
-    )
-    if any(missing_path.startswith(prefix) for prefix in leafcutter_owned_prefixes):
-        return ACTION_ADD_DEPLOY_PHASE
-    return ACTION_ADD_TO_ALLOWLIST
+    # M-2: external-dependency branch — path is in the allowlist but caller
+    # explicitly passed it through (e.g. for advisory reporting).  Return the
+    # allowlist action so consumers know this path should be registered, not
+    # authored.
+    if missing_path in allowlist:
+        return ACTION_ADD_TO_ALLOWLIST
+
+    # Dir+phase already exist — source file is missing or untracked.
+    if any(missing_path.startswith(prefix) for prefix in _PREFIXES_WITH_EXISTING_DEPLOY_PHASE):
+        return ACTION_COMMIT_UNDER_TEMPLATES
+
+    # Genuinely new capability — no deploy phase exists yet.
+    return ACTION_ADD_DEPLOY_PHASE
 
 
 @dataclass(frozen=True)

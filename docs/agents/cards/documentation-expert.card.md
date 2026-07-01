@@ -3,8 +3,9 @@ agent_id: documentation-expert
 title: "Agent Card: documentation-expert"
 type: card
 status: active
-created: 2026-06-05
+created: 2026-06-30
 card_version: "generated"
+description: "Agent card for the documentation-expert agent."
 ---
 # documentation-expert
 
@@ -38,8 +39,13 @@ Auto-triggers on any request whose primary verb is "document", "write a doc",
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 3 | ticket_path from ticket-supervisor | — | — |
+| 4 | pre-flight file reads | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
 ---
 
 ## Spawn and Dependency
@@ -74,7 +80,25 @@ flowchart TD
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_path` | file_path | Absolute path to the ticket markdown file |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `sign_off_comment` | sign_off_comment | Sign-off comment with status: ok | blocker | handoff |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket_frontmatter_agents_status` | — | Sets agents.documentation-expert to signed_off or failed |
+| `sign_offs_checklist` | — | Checks the documentation-expert checkbox with timestamp |
+| `implementation_artifacts` | — | Files created or modified during phase execution |
 ---
 
 ## Tools Available
@@ -92,7 +116,8 @@ flowchart TD
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `signoff` | — | — |
+| `route-knowledge` | conditional | — |
+| `signoff` | conditional | — |
 ---
 
 ## Configuration
@@ -102,4 +127,11 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Delegation to glossary-triage | task requiring glossary-triage capabilities | Delegates to glossary-triage via Agent tool | `glossary-triage` |
+| Delegation to documentation-expert | task requiring documentation-expert capabilities | Delegates to documentation-expert via Agent tool | `documentation-expert` |
+| Conditional Behavior | intent is genuinely ambiguous between two types | ask one clarifying | `None` |
+| Conditional Behavior | dispatching more than one specialist in a single run | always use this | `None` |

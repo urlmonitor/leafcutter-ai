@@ -1,0 +1,64 @@
+id: BP-900c-3
+title: "When the source directory exists but the script file is missing or untracked, the suggested action says to commit the source under templates/scripts/"
+component: build_pipeline
+level: L2
+status: active
+req_status: active
+work_status: not_started
+readiness: approved
+priority: high
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900c.yaml"
+criteria: |
+  Given the build-time broken-reference guard has detected that a referenced
+    script, scripts/feedback/submit_feedback.py, is broken
+  And the script's containing source directory (scripts/feedback/) already exists
+    and the corresponding deploy phase that ships that directory already exists in
+    the build
+  And the referenced script file is either absent from the source directory or
+    present but untracked in git
+  When the guard emits the error report entry for this reference
+  Then the suggested_action states that the script's source is missing or
+    untracked and must be committed under templates/scripts/ (the tracked
+    deploy-source mirror)
+  And the suggested_action does NOT tell the author to add a deploy phase in the
+    build phases module, because a deploy phase for this directory already exists
+  And the entry still contains the missing path and the referencing template
+    alongside the corrected suggested_action
+depends_on:
+  - BP-900c
+  - BP-900c-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900c.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/build_propagation_audit.py
+    relationship: extends
+    status: exists
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The suggested-action selector must branch on the state of the broken reference: when the source directory exists AND a deploy phase for it already exists, the missing-or-untracked-source action is selected instead of the add-a-deploy-phase action."
+  - "Determine whether the script file is untracked from the git index, not from filesystem presence alone, so an on-disk-but-untracked file is correctly diagnosed as untracked rather than as merely missing."
+  - "The corrected action text must direct the author to commit the source under templates/scripts/ (the tracked deploy-source mirror), matching the source-of-truth convention used by commit_guardian and doc_compliance."
+  - "Preserve the existing three-field entry shape (missing_path, referencing_template, suggested_action) from BP-900c-1; this AC changes only which suggested_action value is chosen for this state, not the entry schema."
+delivers_to: null
+expects_from:
+  ac_id: BP-900c-1
+  contract: "Each broken-reference entry already carries missing_path, referencing_template, and a suggested_action chosen from a finite set; this AC adds the missing-or-untracked-source action and the state-based selection rule that picks it over the add-a-deploy-phase action."
+origin_agent: business-analyst
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-900c-3-i
+implemented_by: []
+notes: |
+  Fixes the misleading suggested_action produced today by the action suggester in
+  scripts/build_propagation_audit.py: it advises "add a deploy phase in
+  build_phases.py" even when the deploy phase already exists and the real problem
+  is that the script's source is missing or untracked (the feedback case after
+  commit 83737a44 git-untracked scripts/feedback/). The truthful action points
+  the author at committing the source under templates/scripts/.

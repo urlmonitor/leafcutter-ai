@@ -3,8 +3,9 @@ agent_id: brainstorm-worker
 title: "Agent Card: brainstorm-worker"
 type: card
 status: active
-created: 2026-06-05
+created: 2026-06-30
 card_version: "generated"
+description: "Agent card for the brainstorm-worker agent."
 ---
 # brainstorm-worker
 
@@ -38,8 +39,11 @@ is a single-shot read-only analyst.**
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
 ---
 
 ## Spawn and Dependency
@@ -60,7 +64,24 @@ flowchart TD
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `question` | string | Design question to reason about |
+| `perspective` | string | Single reasoning lens (simplicity, robustness, etc.) |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `completion_report` | structured_response | Structured completion payload or sign-off comment |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `none` | — | Read-only agent — no filesystem mutations |
 ---
 
 ## Tools Available
@@ -73,7 +94,10 @@ flowchart TD
 
 ## Skills Used
 
-*No skills declared.*
+| Skill | Mode | Condition |
+|-------|------|-----------|
+| `building-epics` | always | — |
+| `signoff` | always | — |
 ---
 
 ## Configuration
@@ -83,4 +107,10 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Stop-and-Ask | condition requiring user decision or out-of-scope action | refuse
+politely and point them at `brainstorm-lead`. | `None` |
+| Conditional Behavior | either field is missing or unparseable | return the malformed-input | `None` |

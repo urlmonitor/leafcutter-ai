@@ -80,6 +80,10 @@ components:
       - "conftest.py"
       - "tests/conftest.py"
       - "unit_tests/conftest.py"
+  - id: stakeholder-delivery
+    prefix: SD
+    description: "ACs for stakeholder-facing delivery of product value: the presentation-agent that renders the Product Owner's approved value propositions into self-contained HTML decks (now) and tailored stakeholder emails (later). A delivery/communication agent class with a stakeholder audience, distinct from the engineer-facing documentation-expert."
+    owner: null
 
 # Composite Pattern AC Example (AC ACS-500e-1)
 #

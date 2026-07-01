@@ -1,0 +1,29 @@
+id: SD-100c
+readiness: draft
+priority: medium
+title: "What stakeholders see matches exactly what was approved -- no drift"
+component: stakeholder-delivery
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  The deliverable reflects only the value the Product Owner has approved -- never
+  a stale, embellished, or invented version of the plan.
+
+  Stakeholders can trust that what they are shown is the real, current commitment,
+  so the conversation with them stays honest and aligned with the team.
+depends_on: [SD-100]
+documentation_triggers: []
+documentation_rationale: "Fidelity guarantee on the rendered output -- a correctness constraint with no separate user-facing command or workflow to document."
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-06-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

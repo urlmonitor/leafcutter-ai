@@ -12,9 +12,12 @@ BUSINESS CONTEXT: The depends_on field forms a directed graph of composition
 ARCHITECTURE: Reads staged .yaml files from docs/acceptance-criteria/ (via
     git diff --cached, or HOOK_TEST_FILES env var for testing). Builds a
     combined depends_on graph by merging:
-      - All on-disk AC YAML files (to capture existing edges)
+      - All on-disk AC YAML files via _ac_store_index.get_ac_index (shared
+        mtime-cached index, parsed exactly once per commit across all hooks)
       - The staged versions of any changed files (to capture the proposed change)
     Then runs a depth-first search (DFS) to detect cycles in the merged graph.
+    CRITICAL: the FULL graph scope is preserved — cycles can route through
+    unstaged nodes, so all AC nodes from the index are included in the graph.
     If a cycle is detected that involves any staged AC ID, the commit is blocked
     with an error message listing the full cycle path
     (e.g. "Circular dependency detected: PTN-010 -> PTN-020 -> PTN-010").
@@ -40,6 +43,12 @@ DECISION HISTORY:
     Loads the full AC store from disk and overlays staged changes to detect
     cycles introduced by the proposed commit. DFS-based cycle detection with
     cycle path reporting. Fail-open on unexpected exceptions.
+  - 2026-06-30 [python-coder/TICKET-20260629-AC_Hook_Store_Index]: Replaced the
+    per-invocation _build_depends_graph store walk with a call to
+    _ac_store_index.get_ac_index(). The shared mtime-keyed cached index is
+    parsed exactly once per commit across all four AC guardrail hooks. Full
+    graph scope preserved: all AC nodes from the index are merged into the
+    graph so cycles through unstaged nodes are still detected.
 """
 
 from __future__ import annotations
@@ -48,6 +57,12 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+
+try:
+    from _ac_store_index import get_ac_index  # type: ignore[import]
+    _AC_STORE_INDEX_AVAILABLE = True
+except ImportError:
+    _AC_STORE_INDEX_AVAILABLE = False
 
 
 _HOOK_PREFIX = "[check-ac-circular-deps]"
@@ -245,10 +260,16 @@ def _build_depends_graph(
 ) -> dict[str, list[str]]:
     """Build a full depends_on adjacency list from the AC store.
 
-    Scans all .yaml files in ac_store_root, loading their id and depends_on
-    fields. Staged files are substituted with their in-memory parsed content
-    from staged_overrides (keyed by AC id) so the graph reflects the proposed
+    Uses _ac_store_index.get_ac_index when available for a shared mtime-cached
+    index (parsed once per commit across all hooks). Falls back to a direct
+    per-invocation rglob walk when the index module is unavailable.
+
+    Staged files are substituted with their in-memory parsed content from
+    staged_overrides (keyed by AC id) so the graph reflects the proposed
     commit state rather than the current HEAD state.
+
+    FULL GRAPH SCOPE: all AC nodes from the index are included in the graph
+    (not just staged files) because cycles can route through unstaged nodes.
 
     Args:
         ac_store_root: Path to the docs/acceptance-criteria/ directory.
@@ -271,8 +292,18 @@ def _build_depends_graph(
         deps = _extract_depends_on(data)
         graph[ac_id] = deps
 
-    # Walk the AC store and load on-disk files; skip any id already in
-    # staged_overrides (the staged version takes precedence).
+    if _AC_STORE_INDEX_AVAILABLE:
+        # Fast path: use the shared mtime-cached index.
+        store_index = get_ac_index(str(ac_store_root))
+        for ac_id, data in store_index.items():
+            if ac_id in staged_overrides:
+                # Staged version already recorded; skip on-disk version.
+                continue
+            deps = _extract_depends_on(data)
+            graph[ac_id] = deps
+        return graph
+
+    # Slow path (fallback): per-invocation rglob walk when index module absent.
     for yaml_file in ac_store_root.rglob("*.yaml"):
         try:
             content = yaml_file.read_text(encoding="utf-8")

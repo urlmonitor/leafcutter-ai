@@ -3,8 +3,9 @@ agent_id: code-review-architect
 title: "Agent Card: code-review-architect"
 type: card
 status: active
-created: 2026-06-05
+created: 2026-06-30
 card_version: "generated"
+description: "Agent card for the code-review-architect agent."
 ---
 # code-review-architect
 
@@ -35,8 +36,11 @@ beyond what pr-reviewer covers.**
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
 ---
 
 ## Spawn and Dependency
@@ -57,7 +61,17 @@ flowchart TD
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `completion_report` | structured_response | Structured completion payload or sign-off comment |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `none` | — | Read-only agent — no filesystem mutations |
 ---
 
 ## Tools Available
@@ -81,4 +95,9 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Conditional Behavior | the stack includes a framework/library with important internals | include low-level checks explicitly in the review | `None` |
+| Conditional Behavior | such technology is present and no issues are found | state briefly that low-level checks were performed and no material violations were detected | `None` |

@@ -1204,5 +1204,208 @@ class TestBootstrapAC2ProbeGuarantee(unittest.TestCase):
     # as a MANUAL integration test and is not automated here.
 
 
+# ---------------------------------------------------------------------------
+# Focused unit tests for _establish_pre_commit_config (AC BO-1500b-1-i)
+# ---------------------------------------------------------------------------
+
+
+class TestEstablishPreCommitConfigSymlinkPath(unittest.TestCase):
+    """_establish_pre_commit_config: symlink path creates .leafcutter in worktree."""
+
+    def test_creates_leafcutter_symlink_when_main_repo_has_it(self):
+        """
+        Given main_repo/.leafcutter exists,
+        When _establish_pre_commit_config is called,
+        Then worktree/.leafcutter is created as a symlink pointing to main_repo/.leafcutter.
+        """
+        import tempfile
+
+        mod = _load_scripts_setup_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            main_repo = Path(tmp) / "main"
+            worktree = Path(tmp) / "worktree"
+            main_repo.mkdir()
+            worktree.mkdir()
+
+            # Create the source .leafcutter directory in main_repo
+            (main_repo / ".leafcutter").mkdir()
+
+            mod._establish_pre_commit_config(main_repo, worktree)
+
+            leafcutter_dst = worktree / ".leafcutter"
+            self.assertTrue(
+                leafcutter_dst.is_symlink(),
+                "worktree/.leafcutter must be a symlink when main_repo/.leafcutter exists",
+            )
+            self.assertEqual(
+                leafcutter_dst.resolve(),
+                (main_repo / ".leafcutter").resolve(),
+                "symlink must point to main_repo/.leafcutter",
+            )
+
+    def test_bootstrap_does_not_raise_when_main_repo_has_leafcutter(self):
+        """
+        AC-1 via establish path: when main_repo has .leafcutter,
+        _establish_pre_commit_config creates the worktree .leafcutter symlink
+        and _bootstrap does NOT raise BootstrapError.
+        """
+        import tempfile
+
+        mod = _load_scripts_setup_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            main_repo = Path(tmp) / "main"
+            worktree = Path(tmp) / "worktree"
+            main_repo.mkdir()
+            worktree.mkdir()
+
+            # main_repo has .leafcutter — establish will symlink it
+            (main_repo / ".leafcutter").mkdir()
+
+            def fake_run(cmd, **kwargs):
+                cmd_str = " ".join(str(c) for c in cmd) if isinstance(cmd, list) else str(cmd)
+                if "submodule" in cmd_str:
+                    return MagicMock(returncode=0)
+                if "poetry" in cmd_str or "pip" in cmd_str:
+                    return MagicMock(returncode=0)
+                # build.py not present — no config created by build
+                return MagicMock(returncode=0)
+
+            with patch.object(mod.subprocess, "run", side_effect=fake_run):
+                try:
+                    mod._bootstrap(main_repo, worktree)
+                except mod.BootstrapError as exc:
+                    self.fail(
+                        f"_bootstrap() must not raise BootstrapError when "
+                        f"_establish_pre_commit_config creates .leafcutter symlink; got: {exc}"
+                    )
+
+            # The .leafcutter symlink must now exist in the worktree
+            leafcutter_dst = worktree / ".leafcutter"
+            self.assertTrue(
+                leafcutter_dst.exists() or leafcutter_dst.is_symlink(),
+                ".leafcutter must exist in worktree after bootstrap when main_repo/.leafcutter present",
+            )
+
+
+class TestEstablishPreCommitConfigCopyFallback(unittest.TestCase):
+    """_establish_pre_commit_config: copy fallback when os.symlink raises OSError."""
+
+    def test_copies_pre_commit_config_when_symlink_fails(self):
+        """
+        Given main_repo/.leafcutter exists but os.symlink raises OSError (NTFS/Windows),
+        When _establish_pre_commit_config is called,
+        Then main_repo/.pre-commit-config.yaml is copied to the worktree.
+        """
+        import tempfile
+
+        mod = _load_scripts_setup_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            main_repo = Path(tmp) / "main"
+            worktree = Path(tmp) / "worktree"
+            main_repo.mkdir()
+            worktree.mkdir()
+
+            # Provide .leafcutter source (triggers step 2) and a copy fallback
+            (main_repo / ".leafcutter").mkdir()
+            (main_repo / ".pre-commit-config.yaml").write_text(
+                "repos: []\n", encoding="utf-8"
+            )
+
+            win_err = OSError(1314, "A required privilege is not held by the client")
+
+            with patch.object(mod.os, "symlink", side_effect=win_err):
+                mod._establish_pre_commit_config(main_repo, worktree)
+
+            config_dst = worktree / ".pre-commit-config.yaml"
+            self.assertTrue(
+                config_dst.exists(),
+                ".pre-commit-config.yaml must be copied into worktree when symlink fails",
+            )
+
+
+class TestEstablishPreCommitConfigStep4WarnAndContinue(unittest.TestCase):
+    """_establish_pre_commit_config step 4: warns and continues when no source exists."""
+
+    def test_warns_and_creates_nothing_when_main_repo_has_no_sources(self):
+        """
+        Given main_repo has neither .leafcutter nor .pre-commit-config.yaml,
+        When _establish_pre_commit_config is called,
+        Then no exception is raised, a WARNING is emitted,
+        and neither .leafcutter nor .pre-commit-config.yaml is created in the worktree.
+        """
+        import io
+        import tempfile
+
+        mod = _load_scripts_setup_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            main_repo = Path(tmp) / "main"
+            worktree = Path(tmp) / "worktree"
+            main_repo.mkdir()
+            worktree.mkdir()
+
+            fake_stderr = io.StringIO()
+
+            with patch("sys.stderr", fake_stderr):
+                # Must NOT raise
+                try:
+                    mod._establish_pre_commit_config(main_repo, worktree)
+                except Exception as exc:  # noqa: BLE001
+                    self.fail(
+                        f"_establish_pre_commit_config must not raise when "
+                        f"main repo has no sources; got: {exc}"
+                    )
+
+            warning_output = fake_stderr.getvalue()
+            self.assertIn(
+                "WARNING",
+                warning_output,
+                "A WARNING must be emitted when neither source exists in the main repo",
+            )
+
+            # Nothing must have been created in the worktree
+            leafcutter_dst = worktree / ".leafcutter"
+            config_dst = worktree / ".pre-commit-config.yaml"
+            self.assertFalse(
+                leafcutter_dst.exists() or leafcutter_dst.is_symlink(),
+                "worktree/.leafcutter must NOT be created when main_repo has no sources",
+            )
+            self.assertFalse(
+                config_dst.exists(),
+                "worktree/.pre-commit-config.yaml must NOT be created when main_repo has no sources",
+            )
+
+    def test_idempotent_when_worktree_already_has_config(self):
+        """
+        AC-3: calling _establish_pre_commit_config twice on a worktree that already
+        has .pre-commit-config.yaml is safe (step-1 no-op on second call).
+        """
+        import tempfile
+
+        mod = _load_scripts_setup_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            main_repo = Path(tmp) / "main"
+            worktree = Path(tmp) / "worktree"
+            main_repo.mkdir()
+            worktree.mkdir()
+
+            # Pre-create config so both calls hit step-1 no-op
+            (worktree / ".pre-commit-config.yaml").write_text(
+                "repos: []\n", encoding="utf-8"
+            )
+
+            try:
+                mod._establish_pre_commit_config(main_repo, worktree)
+                mod._establish_pre_commit_config(main_repo, worktree)
+            except Exception as exc:  # noqa: BLE001
+                self.fail(
+                    f"_establish_pre_commit_config must be idempotent; got: {exc}"
+                )
+
+
 if __name__ == "__main__":
     unittest.main()

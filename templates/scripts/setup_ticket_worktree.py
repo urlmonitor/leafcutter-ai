@@ -1,26 +1,32 @@
 """
 MODULE: setup_ticket_worktree.py
 GOAL: Canonical script for creating and bootstrapping a git worktree for a
-    standalone ticket or a free-form feature branch.
+    standalone ticket, a free-form feature branch, or a dedicated AC-authoring
+    session.
 BUSINESS CONTEXT: Eliminates fragile multi-step worktree setup duplicated across
     build-single-ticket/SKILL.md, feature/SKILL.md, and worktree-agent.md. All
     three call sites delegate to this script so there is one place to fix when
     the bootstrap recipe changes (Windows path-with-spaces quoting, .env symlink
     policy, poetry --no-root flag, etc.).
 ARCHITECTURE: Pure stdlib (pathlib, subprocess, shutil, json, argparse, re,
-    sys). Two subcommands: ``setup-ticket`` (full flow: validate + slug + worktree
-    + bootstrap) and ``create-only`` (worktree + bootstrap, no ticket). Ticket
-    files are never moved by this script; folder reconciliation on main is handled
-    by ``finalize-feature.js`` after the branch merges. Outputs a single-line JSON
-    payload to stdout so callers can parse it with any JSON tool. All subprocess
-    calls use check=True to propagate non-zero exits as Python exceptions, which
-    are caught and printed to stderr before sys.exit(1). No file output to project
-    directories — the script itself is idempotent and safe to re-run.
-BRANCHING POLICY: New worktrees are branched from local ``main`` HEAD (not
-    ``origin/main``).  This ensures that unpushed commits on local ``main`` —
-    most commonly the ticket-creation commit produced by ``/create-ticket`` — are
-    always present in the new worktree.  When local ``main`` is in sync with
-    ``origin/main`` (the dominant code path) there is no observable difference.
+    sys). Three subcommands: ``setup-ticket`` (full flow: validate + slug +
+    worktree + bootstrap), ``create-only`` (worktree + bootstrap, no ticket),
+    and ``create-ac-worktree`` (AC-authoring worktree branched from
+    ``origin/main``). Ticket files are never moved by this script; folder
+    reconciliation on main is handled by ``finalize-feature.js`` after the
+    branch merges. Outputs a single-line JSON payload to stdout so callers can
+    parse it with any JSON tool. All subprocess calls use check=True to
+    propagate non-zero exits as Python exceptions, which are caught and printed
+    to stderr before sys.exit(1). No file output to project directories — the
+    script itself is idempotent and safe to re-run.
+BRANCHING POLICY: New ticket/feature worktrees are branched from local ``main``
+    HEAD (not ``origin/main``).  This ensures that unpushed commits on local
+    ``main`` — most commonly the ticket-creation commit produced by
+    ``/create-ticket`` — are always present in the new worktree.  When local
+    ``main`` is in sync with ``origin/main`` (the dominant code path) there is
+    no observable difference.  AC-authoring worktrees (``create-ac-worktree``
+    subcommand) are branched from ``origin/main`` instead so that no local
+    in-flight work contaminates the clean authoring branch (AC BO-1500a-1).
 HOOK SHIM INSTALL: After worktree creation both subcommands invoke
     ``install_pre_commit_shims.install_shims(main_repo)`` to idempotently write
     any missing pre-commit hook shims (post-commit, post-checkout, etc.) into
@@ -34,6 +40,19 @@ PORTABILITY: ``_install_drift_hook`` writes a post-checkout hook that invokes
     origin), so the installer early-returns when the target script is missing.
     Projects that ship the drift checker get the hook automatically; projects
     that do not are unaffected.
+INSTALLED-COPY PATH RESOLUTION: ``_resolve_installed_layout()`` detects whether
+    the script is running from the dev layout (leafcutter-ai/ is the top-level git
+    root whose parent is a plain workspace directory) or a consumer/installed layout
+    (leafcutter-ai/ is a subdirectory of a consumer project that is itself a git
+    repo).  It returns ``(repo_root, worktrees_base)`` where all worktree directories
+    are created at ``worktrees_base / "worktrees"``.  In the dev layout
+    ``worktrees_base`` is the workspace parent — identical to the former sibling
+    convention.  In the consumer layout both ``repo_root`` and ``worktrees_base`` are
+    the consumer project root, so worktrees appear at ``<consumer_root>/worktrees/``
+    and the AC store resolves to
+    ``<consumer_root>/worktrees/<session>/docs/acceptance-criteria/``.  This means
+    ``/create-ac`` and ``/plan-feature`` work correctly when leafcutter-ai is
+    installed as a subdirectory of a consumer project (AC BO-1500e-2).
 """
 
 from __future__ import annotations
@@ -128,14 +147,98 @@ def _git_toplevel(anchor: Path | None = None) -> Path:
     return Path(result.stdout.strip())
 
 
+def _resolve_installed_layout(leafcutter_repo: Path) -> tuple[Path, Path]:
+    """Resolve the effective repository root and worktrees base for the current layout.
+
+    Distinguishes between two supported layouts and returns a pair
+    ``(repo_root, worktrees_base)`` where ``worktrees_base / "worktrees"``
+    is the canonical directory for all git worktrees created by this script.
+
+    **Dev layout** (self-hosting / leafcutter-ai development):
+
+    .. code-block:: text
+
+        leafcutter/               <- workspace directory (NOT a git repo)
+          leafcutter-ai/          <- THIS repo root (= leafcutter_repo)
+          worktrees/              <- sibling to leafcutter-ai/
+
+    ``leafcutter_repo.parent`` is *not* a git repository, so:
+
+    - ``repo_root`` = ``leafcutter_repo``
+    - ``worktrees_base`` = ``leafcutter_repo.parent`` (the workspace directory)
+
+    Worktrees are created at ``workspace/worktrees/<slug>`` — identical to the
+    former ``main_repo.parent / "worktrees"`` behaviour.
+
+    **Consumer / installed layout** (leafcutter-ai installed as a submodule):
+
+    .. code-block:: text
+
+        my-project/               <- consumer project root (its own git repo)
+          leafcutter-ai/          <- leafcutter submodule (= leafcutter_repo)
+          tickets/                <- tickets live at the consumer root
+          worktrees/              <- worktrees should also be here
+
+    ``leafcutter_repo.parent`` *is* a git repository
+    (``git rev-parse --show-toplevel`` succeeds and returns a path different
+    from ``leafcutter_repo``), so:
+
+    - ``repo_root`` = consumer project root
+    - ``worktrees_base`` = consumer project root
+
+    Worktrees are created at ``<consumer_root>/worktrees/<slug>`` and the AC
+    store resolves to ``<consumer_root>/worktrees/<session>/docs/
+    acceptance-criteria/``.
+
+    The detection is intentionally conservative: if probing the parent with
+    ``git rev-parse --show-toplevel`` raises any error, or if the returned
+    path equals ``leafcutter_repo`` (same repo boundary), the function silently
+    falls back to the dev layout pair.
+
+    Args:
+        leafcutter_repo: Absolute Path to the leafcutter-ai git root as
+            resolved by ``_git_toplevel()``.
+
+    Returns:
+        A ``(repo_root, worktrees_base)`` tuple.  ``repo_root`` is used as
+        the git anchor for all worktree and hook operations; ``worktrees_base``
+        is used to compute ``worktrees_dir = worktrees_base / "worktrees"``.
+    """
+    parent = leafcutter_repo.parent
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(parent), "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (subprocess.SubprocessError, OSError):
+        # Parent is not a git repo — dev layout.
+        return leafcutter_repo, parent
+    parent_toplevel = Path(result.stdout.strip())
+    if parent_toplevel != leafcutter_repo:
+        # Parent is a distinct git repo — consumer/installed layout.
+        print(
+            f"INFO: Detected consumer/installed layout. "
+            f"Consumer project root: {parent_toplevel}. "
+            f"Worktrees and AC store will be placed relative to the consumer root.",
+            file=sys.stderr,
+        )
+        return parent_toplevel, parent_toplevel
+    # The parent git root resolves to the same directory — still the dev layout.
+    return leafcutter_repo, parent
+
+
 def _worktree_exists(branch: str) -> tuple[bool, Path | None]:
     """Check whether a worktree for *branch* already exists.
 
     Parses ``git worktree list --porcelain`` to find a matching branch line.
-    Both ``feature/<branch>`` and ``ticket/<branch>`` prefixes are recognised.
+    The ``feature/<branch>``, ``ticket/<branch>``, and
+    ``ac-authoring/<branch>`` prefixes are all recognised.
 
     Args:
-        branch: The branch slug (without the feature/ or ticket/ prefix).
+        branch: The branch slug (without the feature/, ticket/, or
+            ac-authoring/ prefix).
 
     Returns:
         A tuple (exists, worktree_path_or_None) where exists is True when a
@@ -160,11 +263,53 @@ def _worktree_exists(branch: str) -> tuple[bool, Path | None]:
             current_worktree_path = Path(line[len("worktree "):])
         elif line.startswith("branch "):
             refs_branch = line[len("branch "):].strip()
-            # refs_branch is like refs/heads/feature/my-slug or refs/heads/ticket/my-slug
-            for prefix in (f"refs/heads/feature/{branch}", f"refs/heads/ticket/{branch}"):
+            # refs_branch is like refs/heads/feature/my-slug,
+            # refs/heads/ticket/my-slug, or refs/heads/ac-authoring/my-slug
+            for prefix in (
+                f"refs/heads/feature/{branch}",
+                f"refs/heads/ticket/{branch}",
+                f"refs/heads/ac-authoring/{branch}",
+            ):
                 if refs_branch == prefix:
                     return True, current_worktree_path
     return False, None
+
+
+def _branch_exists(full_branch: str, repo_root: Path) -> bool:
+    """Check whether a local branch with the exact name *full_branch* exists.
+
+    Runs ``git -C <repo_root> branch --list <full_branch>`` and returns
+    ``True`` when the output is non-empty (git prints the branch name when it
+    exists, empty output when it does not).
+
+    This is used by ``_create_ac_worktree`` to detect the
+    *branch-without-worktree* scenario: the branch was created in a prior run
+    but its worktree was later pruned or removed.  In that scenario
+    ``git worktree add -b <branch>`` would fail with "branch already exists";
+    by detecting the condition first we can fall back to
+    ``git worktree add <path> <branch>`` (checkout-only, no new branch).
+
+    Args:
+        full_branch: The fully-qualified branch name including any prefix
+            (e.g. ``"ac-authoring/report-export"``).
+        repo_root: Absolute Path to the repository root used as the ``-C``
+            anchor for the git command.
+
+    Returns:
+        ``True`` if the branch exists locally; ``False`` otherwise.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(repo_root), "branch", "--list", full_branch],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        raise subprocess.SubprocessError(  # noqa: TRY003
+            f"Failed to check branch existence for '{full_branch}': {exc}"
+        ) from exc
+    return bool(result.stdout.strip())
 
 
 def _create_worktree(slug: str, worktrees_dir: Path) -> Path:
@@ -209,6 +354,240 @@ def _create_worktree(slug: str, worktrees_dir: Path) -> Path:
     return worktree_path
 
 
+def _fetch_origin(anchor: Path) -> None:
+    """Fetch the latest state of ``origin`` so ``origin/main`` is up-to-date.
+
+    Runs ``git fetch origin`` anchored to *anchor* (the repository root).  The
+    call is best-effort: a fetch failure (e.g. no network, no remote) prints a
+    warning to stderr but does not abort the caller — the caller will still
+    attempt to create the worktree from the locally-cached ``origin/main`` ref,
+    which is acceptable when the local cache is recent.
+
+    Args:
+        anchor: Absolute Path to the repository root used as the git working
+            directory for the fetch call.
+    """
+    try:
+        subprocess.run(
+            ["git", "-C", str(anchor), "fetch", "origin"],
+            check=True,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        print(
+            f"WARNING: git fetch origin failed ({exc}); "
+            "proceeding with cached origin/main ref. "
+            "The AC authoring worktree may not reflect the very latest remote state.",
+            file=sys.stderr,
+        )
+
+
+def _create_ac_worktree(branch_name: str, worktrees_dir: Path, repo_root: Path) -> Path:
+    """Create (or reconnect) an AC-authoring worktree from ``origin/main``.
+
+    Unlike ``_create_worktree`` (which branches from local ``main``), this
+    function always roots a *new* branch at ``origin/main`` so that no local
+    in-flight changes on ``main`` contaminate the AC authoring session.  This
+    implements AC ``BO-1500a-1``: every AC authoring worktree starts from the
+    current tip of ``origin/main``.
+
+    The worktree is created at *worktrees_dir*/*branch_name* on a branch
+    named ``ac-authoring/<branch_name>``.  The ``ac-authoring/`` prefix makes
+    these worktrees visually distinct from ``feature/`` and ``ticket/`` worktrees
+    in ``git worktree list`` output.
+
+    **Branch-without-worktree resilience (AC BO-1500a-1-i):** if the branch
+    ``ac-authoring/<branch_name>`` already exists locally (e.g. it was created
+    in a prior run whose worktree was later pruned or removed by ``git worktree
+    prune``), this function uses ``git worktree add <path> <branch>`` instead of
+    ``git worktree add -b <branch> <path> origin/main``.  The checkout-only form
+    reuses the existing branch (and therefore any commits already on it) rather
+    than failing with "branch already exists".  Existing AC YAML files committed
+    on that branch are preserved intact.
+
+    Args:
+        branch_name: Short slug for the authoring session (e.g.
+            ``"20260624-report-export"``).  Combined with the ``ac-authoring/``
+            prefix to form the full branch name.
+        worktrees_dir: Parent directory under which the new worktree directory
+            is created.
+        repo_root: Absolute Path to the main repository root — used as the
+            ``-C`` anchor for the ``git worktree add`` call so the command works
+            regardless of the process CWD.
+
+    Returns:
+        Absolute Path to the newly created (or reconnected) worktree directory.
+
+    Raises:
+        subprocess.SubprocessError: If the ``git worktree add`` call exits
+            non-zero (e.g. ``origin/main`` is not a valid ref when creating
+            fresh, or the worktree directory is already occupied).
+    """
+    worktree_path = worktrees_dir / branch_name
+    full_branch = f"ac-authoring/{branch_name}"
+
+    # Detect the branch-without-worktree scenario: branch exists locally but
+    # no worktree is registered for it.  In this case we must not pass "-b"
+    # (which would try to create a new branch and fail) — instead we use the
+    # checkout-only form that puts an existing branch into a new worktree
+    # directory.
+    branch_already_exists = _branch_exists(full_branch, repo_root)
+
+    if branch_already_exists:
+        # Reuse the existing branch — checkout-only, no new branch creation.
+        # The existing commits (including AC YAML files) are preserved.
+        try:
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(repo_root),
+                    "worktree",
+                    "add",
+                    str(worktree_path),
+                    full_branch,
+                ],
+                check=True,
+            )
+        except (subprocess.CalledProcessError, OSError) as exc:
+            raise subprocess.SubprocessError(  # noqa: TRY003
+                f"Failed to add AC-authoring git worktree at {worktree_path} "
+                f"reusing existing branch '{full_branch}': {exc}"
+            ) from exc
+        print(
+            f"INFO: Reusing existing branch '{full_branch}' in new worktree "
+            f"at {worktree_path}. Existing AC YAML files are preserved.",
+            file=sys.stderr,
+        )
+    else:
+        # Fresh path — create a new branch rooted at origin/main.
+        try:
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(repo_root),
+                    "worktree",
+                    "add",
+                    "-b",
+                    full_branch,
+                    str(worktree_path),
+                    "origin/main",
+                ],
+                check=True,
+            )
+        except (subprocess.CalledProcessError, OSError) as exc:
+            raise subprocess.SubprocessError(  # noqa: TRY003
+                f"Failed to add AC-authoring git worktree at {worktree_path} "
+                f"from origin/main: {exc}"
+            ) from exc
+
+    return worktree_path
+
+
+def _establish_pre_commit_config(main_repo: Path, worktree_path: Path) -> None:
+    """Ensure the worktree has a working pre-commit configuration so hooks run.
+
+    Git worktrees do not inherit ``.pre-commit-config.yaml`` from the main
+    working tree.  The file is installed by ``build.py`` (via ``install_shims``)
+    as a symlink into ``.leafcutter/``, but when ``build.py`` is absent or
+    fails, a fresh worktree has neither the symlink nor a populated
+    ``.leafcutter/`` directory, causing all package hooks to silently skip.
+
+    This function ensures the pre-commit configuration is always present by
+    applying the following strategy in order (stopping at the first success):
+
+    1. **No-op if already present**: if either ``.leafcutter`` or
+       ``.pre-commit-config.yaml`` already exists in the worktree root
+       (written by a prior ``build.py`` run or a previous bootstrap call),
+       return immediately — the configuration is already active.
+
+    2. **Symlink ``.leafcutter``** (preferred): attempt to create
+       ``<worktree>/.leafcutter -> <main_repo>/.leafcutter``.  On Linux
+       native FS this is fast, always-fresh, and transparent to all
+       hook scripts that resolve paths via the symlink target.
+
+    3. **Copy ``.pre-commit-config.yaml``** (fallback): on Windows or NTFS
+       mounts where ``os.symlink`` raises ``OSError`` / ``EPERM`` /
+       ``WinError 1314``, copy the resolved config file directly.  The copy
+       is a point-in-time snapshot; future changes to the main repo's config
+       require a manual re-copy, but the hooks will not silently skip.
+
+    4. **Warn and continue** if neither the symlink source (``.leafcutter``)
+       nor the copy source (``.pre-commit-config.yaml``) exists in the main
+       repo — the project has not been bootstrapped yet.  Worktree creation
+       continues; the operator must run ``build.py`` manually before the
+       hooks become active.
+
+    The function is **idempotent**: calling it twice on the same worktree is
+    safe — the no-op guard in step 1 prevents duplicate symlink creation or
+    clobber of an existing copy.
+
+    Args:
+        main_repo: Absolute Path to the main repository root (the directory
+            that contains ``.leafcutter/`` or ``.pre-commit-config.yaml``).
+        worktree_path: Absolute Path to the worktree being bootstrapped.
+    """
+    leafcutter_dst = worktree_path / ".leafcutter"
+    pre_commit_dst = worktree_path / ".pre-commit-config.yaml"
+
+    # Step 1 — idempotent no-op: config already present.
+    if leafcutter_dst.exists() or leafcutter_dst.is_symlink():
+        return
+    if pre_commit_dst.exists() or pre_commit_dst.is_symlink():
+        return
+
+    leafcutter_src = main_repo / ".leafcutter"
+
+    # Step 2 — symlink .leafcutter (preferred).
+    if leafcutter_src.exists():
+        try:
+            os.symlink(leafcutter_src, leafcutter_dst)
+        except OSError as exc:
+            print(
+                f"WARNING: os.symlink failed for .leafcutter ({exc}); "
+                "falling back to copying .pre-commit-config.yaml.",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"INFO: created .leafcutter symlink in {worktree_path} "
+                f"-> {leafcutter_src}; pre-commit hooks are active.",
+                file=sys.stderr,
+            )
+            return
+
+    # Step 3 — copy .pre-commit-config.yaml (fallback).
+    # Resolve the source: the main repo may expose it directly as a file or as
+    # a symlink pointing into .leafcutter/.  shutil.copy follows symlinks by
+    # default, so both cases produce a plain file copy in the worktree.
+    pre_commit_src = main_repo / ".pre-commit-config.yaml"
+    if pre_commit_src.exists():
+        try:
+            shutil.copy(pre_commit_src, pre_commit_dst)
+        except OSError as exc:
+            print(
+                f"WARNING: could not copy .pre-commit-config.yaml ({exc}); "
+                "pre-commit hooks may be skipped in this worktree.",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"INFO: copied .pre-commit-config.yaml into {worktree_path}; "
+                "pre-commit hooks are active (point-in-time copy — "
+                "re-run bootstrap if the main repo config changes).",
+                file=sys.stderr,
+            )
+        return
+
+    # Step 4 — neither source exists; warn and continue.
+    print(
+        f"WARNING: neither {leafcutter_src} nor {pre_commit_src} found in "
+        "the main repo.  Run build.py inside the worktree manually to "
+        "materialise the pre-commit configuration before committing.",
+        file=sys.stderr,
+    )
+
+
 def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
     """Symlink .env and copy .mcp.json into *worktree_path*, then run poetry install.
 
@@ -222,14 +601,16 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
 
     Missing source files are silently skipped (FileNotFoundError → no action).
 
-    After the build step (whether build.py ran, failed, or was not found), an
-    unconditional post-build probe verifies that
-    ``<worktree>/.pre-commit-config.yaml`` exists (AC-5, pr-reviewer H-1).
-    If the probe fails a ``BootstrapError`` is raised so the caller can
-    surface the failure clearly rather than continuing with hooks silently
-    disabled.  The error message identifies the root cause: build failure
-    (when build_exc is set) or general absence (when build.py was not found
-    or install_shims failed silently).
+    After the build step, ``_establish_pre_commit_config`` actively ensures
+    ``.leafcutter`` or ``.pre-commit-config.yaml`` is present in the worktree
+    root (symlink-first, copy-fallback, warn-and-continue if neither source
+    exists in main repo).  Following that, an AC-5 fail-fast probe checks
+    that EITHER ``.leafcutter`` OR ``.pre-commit-config.yaml`` exists — if
+    both are still absent (step 4 warn-and-continue was reached), a
+    ``BootstrapError`` is raised so the drive never proceeds with hooks
+    silently disabled.  The error message identifies the root cause: build
+    failure (when build_exc is set) or general absence (when build.py was
+    not found or install_shims failed silently).
 
     Args:
         main_repo: Absolute Path to the main repository root where source
@@ -237,9 +618,9 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
         worktree_path: Absolute Path to the worktree being bootstrapped.
 
     Raises:
-        BootstrapError: If ``.pre-commit-config.yaml`` is absent at the
-            worktree root after the build step, regardless of whether
-            build.py was found or ran successfully (AC-5).
+        BootstrapError: If neither ``.leafcutter`` nor ``.pre-commit-config.yaml``
+            is present at the worktree root after ``_establish_pre_commit_config``
+            runs — i.e. when the main repo had no config sources (AC-5).
     """
     # --- .env: symlink-first, copy as fallback ---
     env_src = main_repo / ".env"
@@ -347,12 +728,16 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
             file=sys.stderr,
         )
 
-    # AC-5: post-build probe — verify .pre-commit-config.yaml was materialised
-    # regardless of whether build.py was found or run.  A missing config causes
-    # package hooks to be silently skipped for the entire drive.  Runs
-    # unconditionally so a worktree where build.py was absent also fails fast.
+    _establish_pre_commit_config(main_repo, worktree_path)
+
+    # AC-5 fail-fast safety net: _establish_pre_commit_config warns-and-continues
+    # when neither source exists in the main repo (its step 4). Convert that
+    # silent gap into a hard failure so the drive never proceeds with hooks
+    # disabled. Checks BOTH markers to match that function's success contract:
+    # a .leafcutter symlink alone is a valid established state.
+    leafcutter_path = worktree_path / ".leafcutter"
     config_path = worktree_path / ".pre-commit-config.yaml"
-    if not config_path.exists():
+    if not config_path.exists() and not (leafcutter_path.exists() or leafcutter_path.is_symlink()):
         raise BootstrapError.missing_config(config_path, build_exc)
 
 
@@ -546,11 +931,16 @@ def cmd_setup_ticket(args: argparse.Namespace) -> None:
     if args.branch:
         slug = args.branch
 
-    main_repo = _git_toplevel(ticket_path.parent)
+    leafcutter_repo = _git_toplevel(ticket_path.parent)
+    # Resolve the effective repo root and worktrees base.  In the dev layout
+    # worktrees_base is the workspace parent (a sibling to leafcutter-ai/);
+    # in the consumer/installed layout both main_repo and worktrees_base are
+    # the consumer project root.  See _resolve_installed_layout() for details.
+    main_repo, worktrees_base = _resolve_installed_layout(leafcutter_repo)
     # Anchor all subsequent CWD-relative git calls to the repo root so the
     # script works when launched from a non-repo parent workspace.
     os.chdir(main_repo)
-    worktrees_dir = main_repo.parent / "worktrees"
+    worktrees_dir = worktrees_base / "worktrees"
     worktrees_dir.mkdir(parents=True, exist_ok=True)
 
     exists, existing_path = _worktree_exists(slug)
@@ -589,11 +979,14 @@ def cmd_create_only(args: argparse.Namespace) -> None:
     """
     branch_name = args.branch_name
 
-    main_repo = _git_toplevel()
+    leafcutter_repo = _git_toplevel()
+    # Resolve the effective repo root and worktrees base.  See
+    # _resolve_installed_layout() for the dev vs consumer layout detection.
+    main_repo, worktrees_base = _resolve_installed_layout(leafcutter_repo)
     # Anchor all subsequent CWD-relative git calls to the repo root so the
     # script works when launched from a non-repo parent workspace.
     os.chdir(main_repo)
-    worktrees_dir = main_repo.parent / "worktrees"
+    worktrees_dir = worktrees_base / "worktrees"
     worktrees_dir.mkdir(parents=True, exist_ok=True)
 
     exists, existing_path = _worktree_exists(branch_name)
@@ -620,6 +1013,115 @@ def cmd_create_only(args: argparse.Namespace) -> None:
     print(json.dumps(payload))
 
 
+def cmd_create_ac_worktree(args: argparse.Namespace) -> None:
+    """Create (or reuse) a dedicated AC-authoring worktree.
+
+    Implements AC ``BO-1500a-1`` and ``BO-1500a-1-i``:
+
+    - AC ``BO-1500a-1``: the new branch is rooted at ``origin/main`` so the
+      AC authoring session starts from a clean, well-defined base independent
+      of any local in-flight commits on ``main``.
+    - AC ``BO-1500a-1-i``: if a prior run left an authoring worktree or branch
+      on disk, the command detects and reuses it rather than failing.  Three
+      scenarios are handled:
+
+      1. **Worktree registered and reachable**: ``_worktree_exists`` returns
+         the existing path; no ``git worktree add`` is called.
+      2. **Branch exists but worktree was pruned**: ``_branch_exists`` detects
+         the branch; ``_create_ac_worktree`` uses ``git worktree add <path>
+         <branch>`` (checkout-only) so existing AC YAML commits are preserved.
+      3. **No prior state**: fresh branch created at ``origin/main`` as before.
+
+    Flow:
+    1. Resolve the main repository root.
+    2. Fetch ``origin`` so the local ``origin/main`` ref is current.
+    3. Derive a timestamped worktree directory name if not supplied.
+    4. Check whether the worktree already exists (idempotent on re-run).
+    5. Create or reuse the worktree.
+    6. Bootstrap (only on fresh creation).
+    7. Install drift and pre-commit hook shims.
+    8. Print a JSON payload containing ``worktree_path``, ``branch``, and
+       ``ac_store_path`` (the absolute path to ``docs/acceptance-criteria/``
+       inside the new worktree) so callers know exactly where to write AC YAML
+       files.
+
+    Prints a single-line JSON payload to stdout on success and exits 0.
+    Exits 1 on any subprocess failure.
+
+    Args:
+        args: Parsed argparse namespace.  Expected attribute: ``session_name``
+            (str or None).  If omitted, a name is derived from the current UTC
+            date so that ``create-ac-worktree`` is idempotent when called twice
+            in the same day.
+    """
+    import datetime
+
+    leafcutter_repo = _git_toplevel()
+    # Resolve the effective repo root and worktrees base.  In the consumer/
+    # installed layout the AC store path emitted in the JSON payload points
+    # into the authoring worktree rooted at the consumer project, so callers
+    # see AC files at
+    # ``<consumer_root>/worktrees/<session>/docs/acceptance-criteria/``.
+    # See _resolve_installed_layout() for the dev vs consumer detection logic.
+    main_repo, worktrees_base = _resolve_installed_layout(leafcutter_repo)
+    os.chdir(main_repo)
+
+    # Fetch origin so origin/main is fresh (best-effort — warning on failure).
+    _fetch_origin(main_repo)
+
+    # Derive the session name: caller-supplied slug, or today's UTC date.
+    session_name = args.session_name
+    if not session_name:
+        session_name = datetime.datetime.utcnow().strftime("ac-%Y%m%d")
+
+    worktrees_dir = worktrees_base / "worktrees"
+    worktrees_dir.mkdir(parents=True, exist_ok=True)
+
+    # Canonical full branch name — used in the JSON payload and log messages.
+    full_branch = f"ac-authoring/{session_name}"
+
+    # Scenario 1 — worktree already registered: _worktree_exists now recognises
+    # the ac-authoring/<slug> prefix in addition to feature/ and ticket/.
+    # CWD is main_repo (set above by os.chdir), so _worktree_exists does not
+    # need an explicit -C anchor.
+    try:
+        worktree_registered, existing_worktree_path = _worktree_exists(session_name)
+    except subprocess.SubprocessError as exc:
+        print(f"ERROR: cannot list worktrees: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    if worktree_registered and existing_worktree_path is not None:
+        # Reuse the registered worktree — no worktree-add needed.
+        worktree_path = existing_worktree_path
+        created = False
+    else:
+        # Scenarios 2 & 3 — branch may or may not exist.
+        # _create_ac_worktree handles both: it calls _branch_exists internally
+        # and selects the checkout-only form when the branch already exists.
+        worktree_path = _create_ac_worktree(session_name, worktrees_dir, main_repo)
+        _bootstrap(main_repo, worktree_path)
+        created = True
+
+    # Install post-checkout drift hook on both the new worktree and main.
+    _install_drift_hook(worktree_path, main_repo)
+    _install_drift_hook(main_repo, main_repo)
+
+    # Idempotently install any missing pre-commit hook shims.
+    _install_pre_commit_shims(main_repo)
+
+    # Compute the absolute path to the AC store inside the new worktree so
+    # callers can redirect AC YAML writes there without re-deriving it.
+    ac_store_path = str(worktree_path / "docs" / "acceptance-criteria")
+
+    payload = {
+        "worktree_path": str(worktree_path),
+        "branch": full_branch,
+        "ac_store_path": ac_store_path,
+        "created": created,
+    }
+    print(json.dumps(payload))
+
+
 # ---------------------------------------------------------------------------
 # CLI entry point
 # ---------------------------------------------------------------------------
@@ -630,9 +1132,10 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="setup_ticket_worktree.py",
         description=(
-            "Canonical worktree bootstrap script. Two subcommands:\n"
-            "  setup-ticket  Full flow: validate ticket, create worktree, bootstrap.\n"
-            "  create-only   Worktree + bootstrap only (no ticket)."
+            "Canonical worktree bootstrap script. Three subcommands:\n"
+            "  setup-ticket       Full flow: validate ticket, create worktree, bootstrap.\n"
+            "  create-only        Worktree + bootstrap only (no ticket).\n"
+            "  create-ac-worktree Dedicated AC-authoring worktree from origin/main."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -664,6 +1167,26 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Branch name (without the feature/ prefix).",
     )
     p_create.set_defaults(func=cmd_create_only)
+
+    # create-ac-worktree subcommand
+    p_ac = subparsers.add_parser(
+        "create-ac-worktree",
+        help=(
+            "Create a dedicated AC-authoring worktree branched from origin/main "
+            "(AC BO-1500a-1). The new branch is named ac-authoring/<session_name>. "
+            "Outputs JSON with worktree_path, branch, and ac_store_path."
+        ),
+    )
+    p_ac.add_argument(
+        "session_name",
+        nargs="?",
+        default=None,
+        help=(
+            "Short slug for the authoring session (e.g. 'report-export'). "
+            "Defaults to 'ac-YYYYMMDD' based on the current UTC date."
+        ),
+    )
+    p_ac.set_defaults(func=cmd_create_ac_worktree)
 
     return parser
 
@@ -777,5 +1300,22 @@ DECISION HISTORY
   in --help output and to avoid ambiguous flag combinations.
   Uses pathlib.Path throughout to avoid Windows path-with-spaces
   quoting issues that surfaced during a /build-feature run.
+- 2026-06-29 [EPIC-SafeAcAuthoring/python-coder]: Ported ``create-ac-worktree``
+  feature additions from scripts/setup_ticket_worktree.py to the template.
+  Added ``_resolve_installed_layout()`` (dev vs consumer layout detection),
+  ``_branch_exists()`` (detect branch-without-worktree scenario),
+  ``_fetch_origin()`` (best-effort git fetch before AC worktree creation),
+  ``_create_ac_worktree()`` (worktree branched from origin/main with
+  ac-authoring/ prefix and checkout-only reuse when branch already exists),
+  and ``_establish_pre_commit_config()`` (symlink-first / copy-fallback
+  pre-commit config bootstrap safety net). Extended ``_worktree_exists()``
+  to recognise the ``ac-authoring/`` prefix. Called
+  ``_establish_pre_commit_config`` at the end of ``_bootstrap()`` as a
+  safety net. Updated ``cmd_setup_ticket`` and ``cmd_create_only`` to use
+  ``_resolve_installed_layout()`` for correct consumer-install layout
+  detection. Registered the ``create-ac-worktree`` subparser in
+  ``_build_parser()``. The template's pre-existing _bootstrap build.py
+  invocation region and its DECISION HISTORY are preserved intact — only
+  the create-ac-worktree feature additions were ported.
 ====================================================================
 """

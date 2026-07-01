@@ -3,8 +3,9 @@ agent_id: sql-procedure-creator
 title: "Agent Card: sql-procedure-creator"
 type: card
 status: active
-created: 2026-06-05
+created: 2026-06-30
 card_version: "generated"
+description: "Agent card for the sql-procedure-creator agent."
 ---
 # sql-procedure-creator
 
@@ -33,8 +34,13 @@ project-specific paths and deploy commands.
 
 ## Knowledge Flow
 
-*No knowledge channels declared.*
-
+| Channel | Source | Injection Mode | Description |
+|---------|--------|----------------|-------------|
+| 1 | template description field | — | — |
+| 4 | pre-flight file reads | — | — |
+| 6 | project files read during execution | — | — |
+| 7 | bash command output (git, build, tests) | — | — |
+| 8 | PROJECT_CONTEXT.md | — | — |
 ---
 
 ## Spawn and Dependency
@@ -57,7 +63,17 @@ flowchart TD
 
 ## Input / Output Contract
 
-*No structured I/O contract declared.*
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `completion_report` | structured_response | Structured completion payload or sign-off comment |
+
+### Mutates (Side Effects)
+
+| Name | Type | Description |
+|------|------|-------------|
+| `none` | — | Read-only agent — no filesystem mutations |
 ---
 
 ## Tools Available
@@ -73,7 +89,9 @@ flowchart TD
 
 ## Skills Used
 
-*No skills declared.*
+| Skill | Mode | Condition |
+|-------|------|-----------|
+| `signoff` | always | — |
 ---
 
 ## Configuration
@@ -83,4 +101,12 @@ flowchart TD
 
 ## Contributor Notes
 
-No conditional behaviors — this agent follows a single fixed execution path
+### Key Behavioral Patterns
+
+| Pattern | Trigger | Behavior | Related Agent |
+|---------|---------|----------|---------------|
+| Stop-and-Ask | condition requiring user decision or out-of-scope action | stop and ask `sql-coder` to supply it — do not guess. | `None` |
+| Stop-and-Ask | condition requiring user decision or out-of-scope action | stop and ask before writing any file. | `None` |
+| Delegation to research-agent | task requiring research-agent capabilities | Delegates to research-agent via Agent tool | `research-agent` |
+| Conditional Behavior | required inputs are missing | stop and ask before writing any file | `None` |
+| Conditional Behavior | the how-to conflicts with this system prompt | the how-to wins | `None` |
