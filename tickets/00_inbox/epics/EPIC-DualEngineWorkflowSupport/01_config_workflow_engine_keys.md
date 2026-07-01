@@ -21,7 +21,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 01: Add workflows.enabled + workflows.engine to config schema and defaults
@@ -76,7 +76,7 @@ Scenario: build reads engine without KeyError
 - [x] test-runner — 2026-07-01 14:05
 - [x] pr-reviewer — 2026-07-01 14:30
 - [x] commit — 2026-07-01 15:00
-- [ ] pull-request
+- [x] pull-request — 2026-07-01 15:30
 
 ## Comments
 ### 2026-07-01 12:00 — ticket-supervisor (status: ok)
@@ -113,6 +113,13 @@ completion_manifest:
   files_staged: true
   commit_created: true
 COMMIT_AGENT_MODE=1 — pre-authorized by batch drive. Committed feat(config) with 4 files. Hooks passed (PRE_COMMIT_ALLOW_NO_CONFIG=1 used — no .pre-commit-config.yaml in worktree, known gap).
+
+### 2026-07-01 15:30 — pull-request (status: ok)
+feedback-id: fb_2026-07-01_3a29379e
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+Branch EPIC-DualEngineWorkflowSupport pushed to origin. Epic PR opened: https://github.com/urlmonitor/leafcutter-ai/pull/198
 
 ## Implementation Tasks
 - [x] Add `workflows` object (enabled: boolean, engine: enum auto/e1/e2) to skills_config.schema.json
