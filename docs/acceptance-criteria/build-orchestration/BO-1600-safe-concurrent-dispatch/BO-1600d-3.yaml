@@ -1,0 +1,78 @@
+id: BO-1600d-3
+readiness: approved
+priority: high
+title: "Recovery performs the real repair steps observed in the incident, in dependency order"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
+criteria: |
+  Given the human has confirmed execution of the recovery plan against a shared
+    repository that the BO-1600c detection identified as damaged (for example a
+    zero-byte loose object, a branch ref pointing at a corrupt commit, and a
+    poisoned index cache-tree)
+  When recovery executes
+  Then it detects and lists the zero-byte loose objects, removes those specific
+    listed objects, and re-fetches the authoritative objects from origin so the
+    removed objects are restored from the remote
+  And when a branch ref points at a corrupt commit, it resets that branch ref to the
+    branch's own reflog tip (the last known-good entry), not to a hardcoded branch
+  And when the index cache-tree is poisoned, it rebuilds the index cache-tree so a
+    fresh status/read succeeds with no cache-tree error
+  And after execution the repository reads cleanly (a fresh integrity read reports no
+    remaining corruption for the items the plan addressed)
+depends_on:
+  - BO-1600d
+  - BO-1600d-1
+  - BO-1600d-2
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600c.yaml"
+    relationship: relates
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "The step engine must implement the concrete recovery actions observed in the incident: (a) detect + list zero-byte loose objects; (b) remove the listed objects and re-fetch authoritative objects from origin; (c) reset a corrupt branch ref to that branch's reflog tip; (d) rebuild the poisoned index cache-tree. The worktree-cache-tree-poisoned fresh-worktree fallback is BO-1600d-3-v."
+  - "PORTABLE SURFACE: the step engine lives in the same standalone recovery script pinned in BO-1600d-1/BO-1600d-4 (templates/scripts/git_recovery.py); it is not a separate deployable artifact."
+  - "GIT-VERSION GUARD (NEW HELPER — the package has none today): the re-fetch action uses 'git fetch --refetch', which requires git >= 2.36. The recovery script MUST first probe the installed git version and gate the --refetch flag behind >= 2.36. Because no git-version guard helper exists in the package, add one (e.g. a small _git_version()/_require_git_version() helper local to the recovery module, or a shared helper if reuse emerges). The version-refuse/fallback behavior is specified in BO-1600d-3-i."
+  - "Steps run in dependency order (remove-then-refetch before ref/index repair) and each step is confirmed against the actual damaged state, not applied blindly; a step whose precondition is absent is skipped from the plan (so a clean facet is never touched)."
+  - "The branch reset MUST target the reflog tip of the actual current/affected branch — detect the branch by name at runtime; do NOT hardcode 'main' or 'master' (see BO-1600d-3-iv non-default-branch edge case)."
+  - "Object removal MUST be limited to objects the detection identified as zero-byte/corrupt loose objects; it must NOT blindly delete every empty file in the object store (see BO-1600d-3-vi large-store edge case)."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3): each git subprocess wrapped in try/except with a specific exception type, logged at WARNING or higher; a failed step stops recovery with a clear report rather than proceeding to the next step on a partially-repaired store."
+  - "PORTABLE per ADR-001: the step engine ships to consumers via build.py (BO-1600d-4); it must NOT rely on the leafcutter repo's own root CLAUDE.md."
+delivers_to:
+  agent: python-coder
+  contract: "The recovery-step engine: the ordered set of concrete repair actions (list+remove zero-byte objects, refetch from origin, reset corrupt branch ref to reflog tip, rebuild index cache-tree) that the BO-1600d-2 plan/confirm layer sequences, displays, and gates. Each action exposes its concrete targets so the plan layer can name them. The engine is the surface the edge-case guards (BO-1600d-3-i..vi) extend."
+expects_from:
+  ac_id: BO-1600d-2
+  contract: "The dry-run-first plan/confirm layer that sequences and gates these actions and executes them only after explicit human confirmation."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by:
+  - reason: it-po-technical-enrichment
+    entry: "Pinned portable surface (step engine inside templates/scripts/git_recovery.py). Added GIT-VERSION GUARD it_requirement flagging that the package has NO git-version helper today and one must be added to gate 'git fetch --refetch' behind git >= 2.36 (behavior in BO-1600d-3-i). readiness draft->reviewed."
+    confirmed_by: it-po-v3
+    confirmed_at: 2026-07-01
+superseded_by: null
+covered_by:
+  - BO-1600d-3-i
+  - BO-1600d-3-ii
+  - BO-1600d-3-iii
+  - BO-1600d-3-iv
+  - BO-1600d-3-v
+  - BO-1600d-3-vi
+implemented_by: []
+notes: |
+  These are the exact hand-repair steps performed during the incident recovery,
+  promoted into a guided helper. The worktree-cache-tree fresh-worktree fallback
+  is factored into its own L3 (BO-1600d-3-v) because it is a distinct, heavier
+  action than an in-place cache-tree rebuild. The five other L3s pin the refuse/
+  fail-safe edge cases the user called out.

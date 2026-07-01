@@ -1,0 +1,43 @@
+id: BO-1600d
+title: "If corruption is ever found, you get a safe, guided way back to a working repository"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Guided, confirmation-gated recovery that never touches your repository without your say-so.
+
+  When a parallel drive detects that the shared repository has been left in a
+  damaged state and halts (see BO-1600c), you are not left to hand-repair the git
+  store yourself. You get a safe, guided path back to a working state: the recovery
+  is non-destructive by default, never runs on its own, and always tells you in
+  plain terms exactly what it will do before it does anything -- and only proceeds
+  once you confirm. Any project that installs leafcutter and runs build.py gets
+  this recovery guidance the same way, without relying on notes in the leafcutter
+  repository's own setup. This completes the BO-1600 promise that you never have
+  to hand-repair a broken git store: BO-1600c stops the drive and tells you it is
+  broken; BO-1600d gives you the guided, opt-in way to get unblocked.
+depends_on: [BO-1600]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600c.yaml
+    relationship: relates
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1600d-1
+  - BO-1600d-2
+  - BO-1600d-3
+  - BO-1600d-4
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - sequence-diagram

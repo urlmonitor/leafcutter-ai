@@ -1,0 +1,69 @@
+id: BO-1600d-4
+readiness: approved
+priority: high
+title: "Any project that installs leafcutter and runs build.py gets the recovery helper the same way"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
+criteria: |
+  Given a fresh consumer project that has installed leafcutter and run
+    build.py --target-dir .
+  When the consumer looks for the guided recovery helper after a corruption halt
+  Then the recovery entry point and its step engine are present in the consumer
+    project from the build, deployed from the package source tree that build.py
+    copies from (not left only in the leafcutter repository's own working tree)
+  And the recovery behavior available to the consumer is the same human-invoked,
+    dry-run-first, confirmation-gated behavior defined in BO-1600d-1 through BO-1600d-3
+  And the recovery guidance a consumer relies on does not depend on the leafcutter
+    repository's own root CLAUDE.md, which is not deployed to consumers
+depends_on:
+  - BO-1600d
+  - BO-1600d-1
+  - BO-1600d-3
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
+    relationship: describes
+    status: exists
+  - path: "templates/scripts/git_recovery.py"
+    relationship: describes
+    status: planned
+  - path: "templates/docs/how-to/"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The recovery entry point + step engine must have a package SOURCE home under the tree build.py deploys from — canonical: 'templates/scripts/git_recovery.py' (top-level of templates/scripts/, so build_template_standalone_scripts() auto-deploys it via its shallow glob('*.py') to the consumer's scripts/git_recovery.py). It is copied into the consumer's project by build.py so a fresh install gets it. The canonical source and the deployed copy must be kept in parity via the build.py round-trip (ADR-001)."
+  - "BUILD-PHASE CAVEAT: build_template_standalone_scripts() scans templates/scripts/ SHALLOW (non-recursive glob('*.py')). If the recovery helper is placed in a SUBDIRECTORY of templates/scripts/ instead of at the top level, it will NOT be picked up — a NEW dedicated deploy phase in scripts/build_phases.py (mirroring build_knowledge_scripts / build_workflow_tools) is then required, plus its unit-test assertion. Prefer the top-level placement to avoid the extra phase."
+  - "PORTABLE HOW-TO OBLIGATION (satisfies the BO-1600d L1 documentation_trigger: how-to WITHOUT a standalone doc-AC child — BO-1600d holds a hard 5-child L2 cap and stays at 4 behavior L2s): the recovery how-to must be authored in the deployable package source at 'templates/docs/how-to/' (e.g. templates/docs/how-to/git-recovery.md), which build deploys to the consumer's 'docs/how-to/'. The how-to must document the human-invoked, --dry-run-first, confirmation-gated flow. It must NOT live in (or depend on) the leafcutter repo's own root CLAUDE.md, which is not deployed to consumers."
+  - "The guarantee is PORTABLE: no part of the recovery behavior or its how-to may rely on the leafcutter repo's root CLAUDE.md or any file not deployed to consumers (ADR-001). Verify a fresh install picks up both the helper script and the how-to (the BO-1400a-2 fresh-install-reachability lens is the precedent for this check)."
+  - "This AC is the deployment/parity + portable-how-to wiring; the human-invoked-only gate (BO-1600d-1), dry-run-first (BO-1600d-2), and the repair steps (BO-1600d-3) define the behavior being deployed — do not re-derive them here."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
+delivers_to: null
+expects_from:
+  ac_id: BO-1600d-3
+  contract: "The recovery entry point + step engine whose package-source placement and build.py deployment this AC guarantees for consumers."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by:
+  - reason: it-po-technical-enrichment
+    entry: "Pinned deployment surface (templates/scripts/git_recovery.py top-level auto-deploy; build_phases.py caveat for subdir placement). Pinned the portable HOW-TO obligation to templates/docs/how-to/ (deployed to docs/how-to/, never CLAUDE.md) as the concrete satisfaction of the BO-1600d L1 how-to documentation_trigger without adding a doc-AC child (5-child L2 cap). Added git_recovery.py + templates/docs/how-to/ doc_links. readiness draft->reviewed."
+    confirmed_by: it-po-v3
+    confirmed_at: 2026-07-01
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Cross-cutting portability invariant for every leafcutter guardrail (per BO and
+  BP PROJECT_CONTEXT): the benefit must reach any installing project via build.py
+  and must never rely on the leafcutter repo's own root CLAUDE.md (ADR-001).
+  The BO-1600d L1 documentation_triggers [how-to, sequence-diagram] are satisfied
+  via the parent trigger mechanism (as BO-1600c does), not via standalone doc-AC
+  children — BO-1600d holds a hard 5-child L2 cap and sits at 4 behavior L2s. The
+  how-to obligation is pinned into this AC's it_requirements (templates/docs/how-to/).

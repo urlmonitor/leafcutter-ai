@@ -1,0 +1,53 @@
+id: BO-1600d-3-v
+readiness: approved
+priority: high
+title: "When a worktree's cache-tree is poisoned, recovery rebuilds via a fresh worktree"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
+criteria: |
+  Given a linked worktree's index cache-tree is poisoned such that an in-place
+    cache-tree rebuild in that worktree does not clear the corruption
+  When the recovery step engine addresses the poisoned worktree
+  Then its printed plan includes creating a fresh worktree (from the now-repaired
+    object store / branch) as the fallback, and on confirmation it rebuilds via that
+    fresh worktree rather than continuing to fight the poisoned one
+  And after the fresh worktree is established, a status/read in it succeeds with no
+    cache-tree error
+  And the fallback is presented as a distinct, heavier action in the dry-run plan (so
+    the human sees a new worktree will be created) — it is not applied silently
+depends_on:
+  - BO-1600d-3
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
+    relationship: relates
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Detect when an in-place cache-tree rebuild does not clear a linked worktree's poisoned cache-tree; in that case escalate to the fresh-worktree fallback rather than looping the in-place rebuild."
+  - "The fresh-worktree creation must appear as its own line in the dry-run plan (heavier, distinct action) so the human explicitly sees and confirms it; it is never applied silently."
+  - "Verify the fresh worktree reads cleanly (no cache-tree error) as the success condition."
+  - "PORTABLE SURFACE: this fresh-worktree fallback lives in the same standalone recovery script (templates/scripts/git_recovery.py) pinned in BO-1600d-1/BO-1600d-4; ADR-001 deployed/template parity applies."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
+delivers_to: null
+expects_from:
+  ac_id: BO-1600d-3
+  contract: "The rebuild-poisoned-index step this edge case extends with the fresh-worktree fallback."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by:
+  - reason: it-po-technical-enrichment
+    entry: "Pinned portable surface (templates/scripts/git_recovery.py, ADR-001 parity). readiness draft->reviewed."
+    confirmed_by: it-po-v3
+    confirmed_at: 2026-07-01
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Mirrors the incident's own recovery (a fresh worktree was created when the
+  shared worktree's cache-tree stayed poisoned). Kept as an L3 because it is a
+  distinct, heavier action than the in-place cache-tree rebuild in BO-1600d-3.

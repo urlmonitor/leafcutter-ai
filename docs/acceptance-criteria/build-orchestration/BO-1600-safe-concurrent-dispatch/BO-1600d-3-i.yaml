@@ -1,0 +1,50 @@
+id: BO-1600d-3-i
+readiness: approved
+priority: high
+title: "On git older than 2.36 (no fetch --refetch), recovery falls back or refuses rather than running an unsupported command"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
+criteria: |
+  Given the installed git version is older than 2.36 and therefore does not support
+    "git fetch --refetch"
+  When the recovery step engine reaches the re-fetch-from-origin action
+  Then it detects the git version before invoking the refetch and does NOT run the
+    unsupported --refetch flag
+  And it either uses a supported equivalent to restore the removed objects from origin
+    (a plain fetch of the needed objects) or, if no supported equivalent can restore
+    them, it stops and reports that the installed git version is too old for automatic
+    re-fetch and names the minimum version required
+  And in the refuse case it makes no partial change that leaves the store worse than
+    the halted state (the removed-objects step is not applied unless the refetch path
+    is viable)
+depends_on:
+  - BO-1600d-3
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
+    relationship: relates
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "NEW GIT-VERSION GUARD HELPER: the leafcutter package has NO git-version guard helper today (confirmed absent). This AC's behavior REQUIRES one — add a small helper (e.g. _git_version()/_require_git_version() in the recovery module templates/scripts/git_recovery.py) that parses the installed git version and gates the --refetch flag behind version >= 2.36. Probe the version BEFORE the refetch action; never invoke an unsupported flag and let git error opaquely."
+  - "On git older than 2.36, either use a supported fetch that restores the needed objects, or refuse with a message naming the minimum version (2.36) — the version-refuse must be a clean, explicit stop, not an opaque git error."
+  - "Ordering safety: do not remove the zero-byte objects until the refetch path for restoring them is confirmed viable, so a version-refuse never leaves the store worse than the halted state."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3): wrap the version probe and fetch subprocess in try/except with a specific exception type and log at WARNING or higher; a failed/ambiguous version probe must refuse the refetch, never assume support."
+delivers_to: null
+expects_from:
+  ac_id: BO-1600d-3
+  contract: "The re-fetch-from-origin step this edge case guards for old git versions."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by:
+  - reason: it-po-technical-enrichment
+    entry: "Strengthened the git-version-guard it_requirement to record that the package has NO git-version helper today and a NEW helper must be added (in templates/scripts/git_recovery.py) to gate --refetch behind git >= 2.36. Added fail-safe-on-probe-failure clause. readiness draft->reviewed."
+    confirmed_by: it-po-v3
+    confirmed_at: 2026-07-01
+superseded_by: null
+covered_by: []
+implemented_by: []
