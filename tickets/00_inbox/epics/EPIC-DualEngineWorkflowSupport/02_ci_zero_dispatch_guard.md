@@ -19,7 +19,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -74,7 +74,7 @@ Scenario: guard covers the whole fleet
 - [x] python-coder — 2026-07-01 15:00
 - [x] test-runner — 2026-07-01 16:00
 - [x] pr-reviewer — 2026-07-01 17:00
-- [ ] commit
+- [x] commit — 2026-07-01 17:30
 - [ ] pull-request
 
 ## Comments
@@ -138,6 +138,13 @@ completion_manifest:
   all_tests_passing: true
   failure_report_structured: true
 Re-run after python-coder rework pass (H-1 fix). Suite: 4 passed, 5 xfailed in 0.40s (exit 0). Confirmed: pytest.mark.xfail(strict=True) is applied at parametrize time via _make_params() helper (test file lines 84-99). E1-only scripts (build-epic.js, build-ticket.js, plan-feature.js, finalize-feature.js, create-ticket.js) produce expected xfail results. quick-fix.js PASSED outright. No XPASS, no unexpected failures.
+
+### 2026-07-01 17:30 — commit (status: ok)
+Auto-authorized commit gate: subject "feat(testing): add dual-engine test harness + zero-dispatch CI guard"; staged files: unit_tests/_workflow_engine_harness.py, unit_tests/test_workflow_dual_engine.py, tickets/00_inbox/epics/EPIC-DualEngineWorkflowSupport/02_ci_zero_dispatch_guard.md. SHA: 0bbcc5d9.
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
 
 ### 2026-07-01 17:00 — pr-reviewer (status: ok)
 feedback-id: (submit-failed)
