@@ -15,7 +15,7 @@ agents:
   python-coder: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ac_traceability:
   - BO-620
   - BO-620-1
@@ -83,11 +83,22 @@ completion_manifest:
   staged_files_correct: true
 All checks passed. guardrail_gates.yaml loads as valid YAML, contains exactly 10 change_target keys each with 6 risk_surface keys, all agent names are valid is_ticket_phase:true entries from agent_registry.json, assignments escalate appropriately for higher-risk surfaces (production/staging > integration > unit/none), and only config/guardrail_gates.yaml and the ticket appear in the staged diff. feedback script absent from worktree — using (submit-failed) fallback per §2a.
 
+### 2026-07-01 16:00 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  gh_account_verified: urlmonitor
+  commits_pushed: 2
+  pr_number: 201
+  pr_state: OPEN
+  pr_branch: EPIC-ComputedQualityGates
+  push_sha_range: "85cdfd6c..c7c2f09d"
+Verified active gh account is urlmonitor. Branch had 2 commits ahead of origin (commit phase + sign-off). Pushed to origin; PR #201 is OPEN on branch EPIC-ComputedQualityGates. Feedback script absent from worktree — using (submit-failed) fallback per §2a.
+
 ## Sign-offs
 - [x] python-coder — 2026-07-01 14:30
 - [x] pr-reviewer — 2026-07-01 15:00
 - [x] commit — 2026-07-01 15:15
-- [ ] pull-request
+- [x] pull-request — 2026-07-01 16:00
 
 ## Implementation Tasks
 
