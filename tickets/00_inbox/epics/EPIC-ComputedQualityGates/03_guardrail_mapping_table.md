@@ -1,6 +1,6 @@
 ---
 title: "Guardrail Mapping Table: (change_target, risk_surface) → agent gates"
-status: in_progress
+status: done
 components:
   - infrastructure
 created: 2026-07-01
