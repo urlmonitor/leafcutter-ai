@@ -22,8 +22,14 @@ ENTROPY_HIGH:templates/agents/llm-expert.md:39
 ENTROPY_HIGH:templates/agents/llm-expert.md:104
 # False positives: guardrail config path constant passed as kwarg in unit tests (not a secret)
 ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:77
+ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:84
 ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:119
+ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:126
 ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:159
+ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:166
 ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:196
+ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:203
 ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:233
+ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:240
 ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:269
+ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:276

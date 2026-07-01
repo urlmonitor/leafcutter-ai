@@ -434,9 +434,10 @@ def _agent_produces_production_code(
 
     try:
         producers = _load_production_code_agents(Path(agent_registry_path))
-        return agent_id in producers
     except (OSError, json.JSONDecodeError):
         return agent_id in _FALLBACK_PRODUCERS
+    else:
+        return agent_id in producers
 
 
 def _build_signoffs_section(agents: dict[str, str]) -> str:
@@ -475,6 +476,7 @@ def _build_frontmatter(
         Formatted frontmatter string (including opening and closing ``---``).
     """
     today = date.today().isoformat()
+    complexity = _infer_complexity(ac)
     fm: dict[str, Any] = {
         "title": ac.get("title", f"Implement {ac_id}"),
         "status": "todo",
@@ -489,7 +491,12 @@ def _build_frontmatter(
         "requires_adr": False,
         "files_touched": files_touched,
         "agents": agents,
+        "complexity": complexity,
     }
+    test_constraints_raw = ac.get("test_constraints")
+    test_constraints = _parse_test_constraints(test_constraints_raw)
+    if test_constraints:
+        fm["test_constraints"] = test_constraints
     return "---\n" + yaml.dump(fm, default_flow_style=False, allow_unicode=True) + "---"
 
 
@@ -530,6 +537,7 @@ def _build_ticket_body(ac: AcRecord, ac_id: str) -> str:
     agents = _build_agents_map(assigned_agent)
     signoffs = _build_signoffs_section(agents)
     is_code_producer = _agent_produces_production_code(assigned_agent)
+    complexity = _infer_complexity(ac)
 
     lines: list[str] = [
         f"# {title}",
@@ -544,7 +552,8 @@ def _build_ticket_body(ac: AcRecord, ac_id: str) -> str:
         f"This ticket was generated from AC store entry `{ac_id}`. "
         f"Component: `{ac.get('component', 'unknown')}`. "
         f"Assigned agent: `{assigned_agent}`. "
-        f"Estimated complexity: `{ac.get('estimated_complexity', '?')}`.",
+        f"Estimated complexity: `{ac.get('estimated_complexity', '?')}`. "
+        f"complexity: `{complexity}`.",
         "",
         "## Acceptance Criteria",
         "",
@@ -649,6 +658,125 @@ def _write_implemented_by(ac_path: Path, ticket_path: str, ac_id: str) -> None:
         new_content = "".join(result_lines)
 
     ac_path.write_text(new_content, encoding="utf-8")
+
+
+# ---------------------------------------------------------------------------
+# Test constraints parsing
+# ---------------------------------------------------------------------------
+
+
+def _parse_test_constraints(value: "str | list[str] | None") -> list[str]:
+    """Normalise the test_constraints frontmatter field to a list of strings.
+
+    Args:
+        value: Raw value from an AC record's test_constraints field.
+               May be ``None`` (absent), a bare string, or a list of strings.
+
+    Returns:
+        A list of constraint strings.  An absent field returns ``[]`` so
+        callers can safely iterate without a ``None`` check.
+    """
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    return list(value)
+
+
+# ---------------------------------------------------------------------------
+# Complexity inference
+# ---------------------------------------------------------------------------
+
+
+def _infer_complexity(ac: AcRecord) -> str:
+    """Infer a complexity label from an AC record.
+
+    Priority:
+    1. ``estimated_complexity`` field (S → low, M → medium, L/XL → high).
+    2. Criteria line count (1-2 → low, 3-6 → medium, 7+ → high).
+    3. Default to ``"medium"`` when no criteria are present.
+
+    Args:
+        ac: Parsed AC record dict.
+
+    Returns:
+        One of ``"low"``, ``"medium"``, or ``"high"``.
+    """
+    explicit = ac.get("estimated_complexity", "")
+    _complexity_map: dict[str, str] = {
+        "S": "low",
+        "M": "medium",
+        "L": "high",
+        "XL": "high",
+    }
+    if explicit in _complexity_map:
+        return _complexity_map[explicit]
+
+    criteria: str = ac.get("criteria") or ""
+    non_empty_lines = [ln for ln in criteria.split("\n") if ln.strip()]
+    line_count = len(non_empty_lines)
+    if line_count == 0:
+        return "medium"
+    if line_count <= 2:
+        return "low"
+    if line_count <= 6:
+        return "medium"
+    return "high"
+
+
+# ---------------------------------------------------------------------------
+# Complexity → model tier
+# ---------------------------------------------------------------------------
+
+
+def _complexity_to_model_tier(complexity: str) -> str:
+    """Map a complexity label to a model tier string.
+
+    Args:
+        complexity: One of ``"low"``, ``"medium"``, or ``"high"``.
+
+    Returns:
+        ``"sonnet"`` for low/medium, ``"opus"`` for high.
+
+    Raises:
+        ValueError: When *complexity* is not a recognised value.
+    """
+    _tier_map: dict[str, str] = {
+        "low": "sonnet",
+        "medium": "sonnet",
+        "high": "opus",
+    }
+    if complexity not in _tier_map:
+        raise ValueError(f"Unknown complexity: {complexity!r}")  # noqa: TRY003
+    return _tier_map[complexity]
+
+
+# ---------------------------------------------------------------------------
+# Challenge gate / Opus escalation
+# ---------------------------------------------------------------------------
+
+
+def _should_escalate_to_opus(
+    complexity: str,
+    complexity_override: "str | None" = None,
+) -> bool:
+    """Determine whether a ticket should escalate to the Opus model tier.
+
+    The challenge gate fires when either:
+    - *complexity_override* is ``"force_opus"`` (user hard-override), or
+    - *complexity* is ``"high"`` (inferred or declared high effort).
+
+    Args:
+        complexity: Inferred complexity label (``"low"``, ``"medium"``, or ``"high"``).
+        complexity_override: Optional override string from the AC/ticket.
+                             Pass ``"force_opus"`` to bypass the challenge gate.
+
+    Returns:
+        ``True`` when the ticket should run on Opus, ``False`` otherwise.
+    """
+    if complexity_override == "force_opus":
+        return True
+    return complexity == "high"
 
 
 # ---------------------------------------------------------------------------
