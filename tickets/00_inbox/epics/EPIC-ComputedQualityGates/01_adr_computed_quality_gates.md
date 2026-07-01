@@ -1,6 +1,6 @@
 ---
 title: "ADR: Computed Quality Gates"
-status: in_progress
+status: done
 components:
   - infrastructure
 created: 2026-07-01
@@ -13,7 +13,7 @@ agents:
   adr-author: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 01: ADR — Computed Quality Gates
@@ -86,12 +86,20 @@ completion_manifest:
   ticket_staged: true
 Committed SHA e7d4fdff. Pre-commit hook `check-description-field` failed on first attempt (ADR missing description: frontmatter field); autofix applied (added description field), re-staged, and committed successfully on retry. 3 files, 322 insertions.
 
+### 2026-07-01 13:00 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Pushed branch EPIC-ComputedQualityGates to origin and created epic PR #201 at https://github.com/urlmonitor/leafcutter-ai/pull/201 (base: main). PR title: "feat(computed-quality-gates): add ADR-017 two-axis quality gate design". All preceding agents signed_off; ticket status flipped to done.
+
 ## Sign-offs
 - [x] documentation-expert — 2026-07-01 12:15
 - [x] adr-author — 2026-07-01 12:00
 - [x] pr-reviewer — 2026-07-01 12:30
 - [x] commit — 2026-07-01 12:45
-- [ ] pull-request
+- [x] pull-request — 2026-07-01 13:00
 
 ## Implementation Tasks
 
