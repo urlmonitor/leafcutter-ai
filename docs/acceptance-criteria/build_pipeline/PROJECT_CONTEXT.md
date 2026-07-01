@@ -72,6 +72,32 @@ duplicate behavior across them when authoring or decomposing:
 BP-1100 = "did THIS ticket's feature run?" (drive-time, per-change).
 BP-1200 = "does the WHOLE suite stay green on EVERY PR?" (standing CI gate).
 
+## BP-1100 family (phantom-done prevention) — internal scope boundary (for BA v3)
+
+Phantom-done (a ticket passes every gate while the feature is absent) is OWNED
+by BP-1100 — do NOT create a new L0 for any "files_touched accuracy" / "work
+reported as done is genuinely done" request; attach it here as a BP-1100 sibling.
+The two files_touched-accuracy angles are split across DISTINCT L1s — keep them
+distinct when decomposing:
+
+- **BP-1100a** — PRE-DISPATCH scope completeness: a behavioral ticket whose
+  declared `files_touched` omits the executable surface (lists only docs) is
+  flagged BEFORE any coder runs (refinement lens BP-1100a-1 + supervisor
+  read-step BP-1100a-2). "Did the ticket declare the right scope up front?"
+- **BP-1100e** — POST-CHANGE reconciliation (added 2026-07-01, PO run KI-2):
+  before a ticket reaches `status: done`, the files ACTUALLY changed are
+  compared against the declared `files_touched`, and a mismatch is flagged so
+  it cannot mask missing work (e.g. coder edited docs when source was needed).
+  "Did what actually got changed match what was declared?" BP-1100e is the
+  opposite-end bookend to BP-1100a — decompose the declared-vs-actual diff
+  comparison + the pre-`done` gate point here; do NOT re-derive BP-1100a's
+  pre-dispatch behavior.
+
+Cross-cutting benefit invariant for BP-1100e (and all portable guardrails):
+state the benefit in PORTABLE terms — any project that installs leafcutter and
+runs build.py must get the check; it must NOT rely on the leafcutter repo's own
+root CLAUDE.md (not deployed to consumers per ADR-001).
+
 ## BP-1200 family (CI test gate) — for BA v3 decomposition
 
 - BP-1200  (L0) — every PR gets trustworthy proof it didn't break the suite.

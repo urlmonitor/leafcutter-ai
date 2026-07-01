@@ -1,0 +1,42 @@
+id: INF-600l
+title: "An agent's card can never quietly disagree with how the system actually wires that agent"
+component: infrastructure
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  The generated agent card always agrees with the agent registry -- mismatches are caught automatically.
+
+  The whole point of an agent card is that you can trust it to describe an agent
+  without reading its source. That trust breaks the moment the card says one thing
+  and the underlying registry says another -- for example the card shows one agent
+  can start another, but the registry has no such connection (or the reverse). This
+  makes the card's self-description silently wrong. The system automatically checks
+  the generated card against the registry and catches any disagreement, so the card
+  a reader relies on can never drift out of step with how the agent is really wired.
+  Any project that installs leafcutter and runs build.py gets this consistency
+  guarantee the same way. This differs from INF-600k (which teaches the registry
+  validator to accept legitimate external callers) -- INF-600l guarantees the card
+  and the registry tell the same story.
+depends_on: [INF-600]
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600b.yaml
+    relationship: relates
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Internal build-time consistency check between the generated agent card and the agent registry -- no new user-facing behavior or workflow is introduced; it hardens an existing build artifact."
