@@ -19,7 +19,7 @@ agents:
   test-runner: not_needed
   documentation-expert: signed_off
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -79,7 +79,7 @@ Scenario: decision recorded
 - [x] python-coder — 2026-07-01 15:00
 - [x] documentation-expert — 2026-07-01 16:00
 - [x] pr-reviewer — 2026-07-01 17:00
-- [ ] commit
+- [x] commit — 2026-07-01 17:15
 - [ ] pull-request
 
 ## Comments
@@ -133,6 +133,16 @@ completion_manifest:
   ticket_ac_coverage_table_implementation_column_filled: true
   signoffs_consistent_with_frontmatter_agents_map: true
 Reviewed staged diff against all 4 ACs. AC-1: ADR-017 §Probe Evidence records verbatim probe output (runWasCalled=false; top-level object returned as result). AC-2: workflow-authoring-contract.md §5 enumerates all 5 non-transparent edges (Date.now ban, parallel cap, schema asymmetry, user gate asymmetry, workflow() leaf-invariant) with handling conventions. AC-3: §2 has copy-pasteable E2 skeleton; §3 has E1-wrap shim with callAgent adapter and engine-detection IIFE. AC-4: ADR §Decision records canonical-E2 + build-time-wrap + no-LLM-fallback with 3 alternatives and consequences. Diagram frontmatter has diagram_type: data_flow and related_code field as required by config/diagram_types.json. No high-confidence blockers found.
+
+### 2026-07-01 17:15 — commit (status: ok)
+feedback-id: (pending)
+completion_manifest:
+  staged_files_verified: true
+  pre_commit_hooks_passed: true
+  description_field_fix_applied: true
+  commit_sha: 6de25c42
+  files_committed: 4
+Committed 4 deliverables (ADR-017, workflow-authoring-contract.md, df-001 data_flow diagram, ticket) in commit 6de25c42. Pre-commit hook `check-description-field` caught a missing `description:` frontmatter field in `workflow-authoring-contract.md` — fixed inline and re-staged before the commit succeeded. All other hooks passed. The `.pre-commit-config.yaml` symlink was established in the worktree root to resolve the pre-commit config gap.
 
 ## Implementation Tasks
 - [x] Run a zero-side-effect probe to confirm how E2 surfaces run()/top-level return values
