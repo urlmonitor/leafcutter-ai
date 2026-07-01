@@ -20,7 +20,7 @@ agents:
   documentation-expert: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 03: Canonical E2 contract — spike, ADR, and authoring template
@@ -80,7 +80,7 @@ Scenario: decision recorded
 - [x] documentation-expert — 2026-07-01 16:00
 - [x] pr-reviewer — 2026-07-01 17:00
 - [x] commit — 2026-07-01 17:15
-- [ ] pull-request
+- [x] pull-request — 2026-07-01 17:45
 
 ## Comments
 
@@ -143,6 +143,15 @@ completion_manifest:
   commit_sha: 6de25c42
   files_committed: 4
 Committed 4 deliverables (ADR-017, workflow-authoring-contract.md, df-001 data_flow diagram, ticket) in commit 6de25c42. Pre-commit hook `check-description-field` caught a missing `description:` frontmatter field in `workflow-authoring-contract.md` — fixed inline and re-staged before the commit succeeded. All other hooks passed. The `.pre-commit-config.yaml` symlink was established in the worktree root to resolve the pre-commit config gap.
+
+### 2026-07-01 17:45 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  pr_exists_verified: true
+  gh_auth_urlmonitor_confirmed: true
+  branch_pushed_to_origin: true
+  ticket_signoff_applied: true
+Verified PR #198 (EPIC-DualEngineWorkflowSupport) exists and is open. Confirmed gh auth is urlmonitor. Pushed branch bd521025..6ab7b1dc to origin/EPIC-DualEngineWorkflowSupport successfully. Applied pull-request sign-off to ticket frontmatter and Sign-offs checklist.
 
 ## Implementation Tasks
 - [x] Run a zero-side-effect probe to confirm how E2 surfaces run()/top-level return values
