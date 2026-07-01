@@ -921,7 +921,7 @@ class TestSupersededChildrenExcludedFromCount(unittest.TestCase):
         depends_on: list[str],
         status: str = "active",
         child_limit_override: "int | None" = None,
-    ) -> "AcNode":
+    ):
         """Build an AcNode with a status attribute and optional override.
 
         The current AcNode dataclass does NOT have a status field. This helper
