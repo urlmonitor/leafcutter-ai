@@ -17,7 +17,7 @@ agents:
   llm-expert: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ac_traceability:
   - BO-540
   - BO-540-1
@@ -115,11 +115,19 @@ completion_manifest:
   signoff_written: true
 Committed 4 files (config/guardrail_gates.yaml, templates/agents/ticket-supervisor.md, templates/skills/building-epics/SKILL.md, ticket file) as feat(computed-quality-gates) on branch EPIC-ComputedQualityGates (commit 4381ae23). All staged files matched the ticket's files_touched list plus the ticket itself. No unintended files included; .epic-commit-lock left untracked.
 
+### 2026-07-01 15:20 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_verified: true
+  push_to_origin_succeeded: true
+  pr_201_verified_open: true
+Branch EPIC-ComputedQualityGates verified on correct branch and pushed to origin successfully. PR #201 (feat(computed-quality-gates): add ADR-017 two-axis quality gate design) confirmed open. No new PR created.
+
 ## Sign-offs
 - [x] llm-expert — 2026-07-01 12:15
 - [x] pr-reviewer — 2026-07-01 14:20
 - [x] commit — 2026-07-01 15:05
-- [ ] pull-request
+- [x] pull-request — 2026-07-01 15:20
 
 ## Implementation Tasks
 
