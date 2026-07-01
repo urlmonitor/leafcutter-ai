@@ -18,7 +18,7 @@ agents:
   test-writer: signed_off
   test-runner: signed_off
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ac_traceability:
   - BO-610
@@ -78,7 +78,7 @@ Added ALLOWED_CHANGE_TARGETS (10 values) and ALLOWED_RISK_SURFACES (6 values) co
 - [x] python-coder — 2026-07-01 10:30
 - [x] test-runner — 2026-07-01 11:00
 - [x] pr-reviewer — 2026-07-01 12:00
-- [ ] commit
+- [x] commit — 2026-07-01 14:00
 - [ ] pull-request
 
 ## Implementation Tasks
@@ -162,3 +162,11 @@ completion_manifest:
   tests_green: true
   no_high_confidence_findings: true
 Second-pass review clean. All 3 first-pass blockers are resolved: (1) error messages now say "Valid values:" — verified by test_change_target_error_message_format and test_risk_surface_error_message_format; (2) list-value input handled correctly in both validators — verified by test_change_target_list_mixed and test_risk_surface_list_mixed; (3) AC-BO-610-5 checkbox present in Acceptance Criteria. Ruff fixes (TRY300, BLE001x4) are correct narrowings. 14 tests pass (16 subtests). Two medium-confidence non-blocking observations: (M-1) TypeError in parse_frontmatter except clause is imprecise but harmless; (M-2) AC-BO-610-3 checkbox text says "or absent" but implementation treats absent as pass — a pre-existing spec-wording inconsistency, not a new defect. Neither is a blocker.
+
+### 2026-07-01 14:00 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Committed 4 files (SHA 69587816): templates/hooks/ticket_frontmatter_guard.py, templates/skills/ticket-authoring/SKILL.md, unit_tests/test_ticket_frontmatter_guard.py (new, 14 tests), and ticket file. One autofix applied: added missing feedback-id to the ticket-supervisor comment to satisfy the check-feedback-id hook. All other hooks passed on first attempt.
