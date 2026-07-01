@@ -14,7 +14,7 @@ files_touched:
 agents:
   python-coder: signed_off
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ac_traceability:
   - BO-620
@@ -62,6 +62,16 @@ completion_manifest:
   file_staged: true
 Created config/guardrail_gates.yaml with 10 change_target keys and 6 risk_surface keys each (60 pairs total). All agent names cross-checked against agent_registry.json is_ticket_phase:true entries; no invented names used. YAML validated via python3 yaml.safe_load. File staged. feedback script absent from worktree — using (submit-failed) fallback per §2a.
 
+### 2026-07-01 15:15 — commit (status: ok)
+feedback-id: (submit-failed)
+commit_sha: 14881b31
+completion_manifest:
+  staged_files_verified: true
+  pre_commit_hooks_passed: true
+  commit_message_correct: true
+  commit_sha: "14881b31"
+Committed config/guardrail_gates.yaml and ticket file to branch EPIC-ComputedQualityGates. Pre-commit hooks passed with no errors. 2 files, 264 insertions. Feedback script absent from worktree — using (submit-failed) fallback per §2a.
+
 ### 2026-07-01 15:00 — pr-reviewer (status: ok)
 feedback-id: (submit-failed)
 completion_manifest:
@@ -76,7 +86,7 @@ All checks passed. guardrail_gates.yaml loads as valid YAML, contains exactly 10
 ## Sign-offs
 - [x] python-coder — 2026-07-01 14:30
 - [x] pr-reviewer — 2026-07-01 15:00
-- [ ] commit
+- [x] commit — 2026-07-01 15:15
 - [ ] pull-request
 
 ## Implementation Tasks
