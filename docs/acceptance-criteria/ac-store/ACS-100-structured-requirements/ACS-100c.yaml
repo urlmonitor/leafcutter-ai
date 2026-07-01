@@ -7,6 +7,12 @@ level: L1
 status: active
 req_status: active
 work_status: todo
+# Temporary waiver: ACS-100c is a large foundational L1 now holding 6 active L2
+# children (ACS-100c-1..6). None are superseded, so ACS-100c-6's own
+# superseded-exclusion rule cannot reduce this count. Consistent with the ACS-100
+# family's existing overrides (ACS-100 L0 waived to 10; ACS-100h holds 7).
+# Remove during the AC-UID-decoupling reorg.
+child_limit_override: 6
 criteria: |
   Business owners define what success looks like; analysts define exact behaviors.
   Goals and features are written in customer language by the product owner, while
@@ -28,4 +34,5 @@ covered_by:
   - ACS-100c-3
   - ACS-100c-4
   - ACS-100c-5
+  - ACS-100c-6
 implemented_by: []

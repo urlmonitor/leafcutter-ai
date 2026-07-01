@@ -1,0 +1,59 @@
+id: ACS-100c-6-ii
+readiness: draft
+priority: medium
+title: "Status exclusion composes with an existing child_limit_override"
+component: ac-store
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100c.yaml
+criteria: |
+  Given an L1 AC "ACS-100a" has 8 L2 child AC files in its feature folder,
+  And the parent has child_limit_override set to 7,
+  And the default L1 child-count cap is 5,
+  When the check-ac-tree-limits hook counts the parent's children for the
+    ACS-100c cap with all 8 children having status "active",
+  Then the effective limit is max(5, 7) = 7,
+  And the effective child count is 8, which exceeds the effective limit of 7,
+  And the hook fails, identifying the over-limit parent, its child count 8,
+    and the effective limit 7.
+
+  Given the same parent "ACS-100a" with child_limit_override set to 7,
+  When 3 of its 8 children are changed to status "superseded_by",
+  Then the effective child count is 5 (the 5 non-superseded children),
+  And 5 does not exceed the effective limit of 7,
+  And the hook passes,
+  And 5 also does not exceed the default cap of 5, so the child_limit_override
+    is no longer required for this parent to pass.
+depends_on: [ACS-100c-6, ACS-100h-7a]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: templates/scripts/commit_guardian/check_ac_limits.py
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The status exclusion filters the child COUNT; the child_limit_override adjusts the LIMIT via max(default, N). Both must apply together: compare the status-filtered count against the override-adjusted limit"
+  - "An override below the default is still silently ignored (fail-open) — the effective limit is never lowered below the default by an override"
+  - "Once enough children are superseded that the filtered count is at or below the default cap, the parent passes with or without the override; the override becoming redundant must not itself raise an error or warning that blocks the commit"
+delivers_to: null
+expects_from:
+  ac_id: ACS-100h-7a
+  contract: "The effective-limit computation max(default, child_limit_override) that this edge case composes with the status-filtered count"
+origin_agent: business-analyst
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Confirms the two mechanisms are orthogonal: status-exclusion shrinks the
+  numerator (count), child_limit_override raises the denominator (limit). The
+  child_limit_override remains a valid escape hatch but is retired for a given
+  parent as soon as superseding redundant children brings the active count back
+  under the default cap — the stopgap-retirement direction recorded in the
+  ACS-800 PROJECT_CONTEXT note.
