@@ -1,5 +1,5 @@
 id: ACS-100c-6-ii
-readiness: draft
+readiness: approved
 priority: medium
 title: "Status exclusion composes with an existing child_limit_override"
 component: ac-store
