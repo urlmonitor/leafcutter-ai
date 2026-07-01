@@ -1,6 +1,6 @@
 ---
 title: "Add change_target + risk_surface frontmatter fields + guard"
-status: in_progress
+status: done
 components:
   - infrastructure
 created: 2026-07-01
@@ -19,7 +19,7 @@ agents:
   test-runner: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ac_traceability:
   - BO-610
   - BO-610-1
@@ -79,7 +79,7 @@ Added ALLOWED_CHANGE_TARGETS (10 values) and ALLOWED_RISK_SURFACES (6 values) co
 - [x] test-runner — 2026-07-01 11:00
 - [x] pr-reviewer — 2026-07-01 12:00
 - [x] commit — 2026-07-01 14:00
-- [ ] pull-request
+- [x] pull-request — 2026-07-01 15:00
 
 ## Implementation Tasks
 
@@ -170,3 +170,11 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Committed 4 files (SHA 69587816): templates/hooks/ticket_frontmatter_guard.py, templates/skills/ticket-authoring/SKILL.md, unit_tests/test_ticket_frontmatter_guard.py (new, 14 tests), and ticket file. One autofix applied: added missing feedback-id to the ticket-supervisor comment to satisfy the check-feedback-id hook. All other hooks passed on first attempt.
+
+### 2026-07-01 15:00 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Branch EPIC-ComputedQualityGates pushed to origin (70349a98..14a1ca7e). PR #201 confirmed open (feat(computed-quality-gates): add ADR-017 two-axis quality gate design). No new PR created — existing PR #201 used as instructed. All agents now signed_off; ticket status flipped to done.
