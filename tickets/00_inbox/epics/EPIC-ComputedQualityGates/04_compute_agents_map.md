@@ -1,6 +1,6 @@
 ---
 title: "Compute + materialize agents map in Python; fix TDD bug"
-status: in_progress
+status: done
 components:
   - infrastructure
 created: 2026-07-01
@@ -22,7 +22,7 @@ agents:
   llm-expert: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ac_traceability:
   - BO-560
   - BO-560-1
@@ -130,7 +130,7 @@ Wrote all 7 RED test stubs in unit_tests/test_generate_ticket_from_ac.py. Tests 
 - [x] llm-expert — 2026-07-01 17:00
 - [x] pr-reviewer — 2026-07-01 20:00
 - [x] commit — 2026-07-01 20:30
-- [ ] pull-request
+- [x] pull-request — 2026-07-01 20:45
 
 ### 2026-07-01 17:00 — llm-expert (status: ok)
 
@@ -195,6 +195,15 @@ Review passed — no high-confidence blockers. Findings:
 7. Template prose (ticket-supervisor.md + building-epics/SKILL.md): The three-branch skip rule is consistent across both files. The pseudocode block in ticket-supervisor.md and the algorithmic prose in SKILL.md agree: (A) block absent → skip; (B) block present + empty tests + no code producer → skip; (C) block present + code producer present (even if tests: []) → dispatch normally. No ambiguity or contradiction between the two files.
 
 8. Test quality (7 tests): All 7 tests are confirmed GREEN. Coverage maps correctly to the 7 ACs: basic lookup, union, canonical ordering, test-writer injection before coder, test-runner injection after coder, not_needed preservation, and TDD bug fix (## Test Requirements block present for code producers). Tests use real guardrail_gates.yaml for correctness validation. Test design is clean, assertions are specific with diagnostic messages.
+
+### 2026-07-01 20:45 — pull-request (status: ok)
+
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_exists: true
+  pr_number: "201"
+Pushed branch EPIC-ComputedQualityGates to origin (commits 430b686b + 58020cac). PR #201 (feat(computed-quality-gates): add ADR-017 two-axis quality gate design) is OPEN and updated with ticket-04 changes. No new PR created — pushed to existing epic PR per drive instructions.
 
 ### 2026-07-01 20:30 — commit (status: ok)
 
