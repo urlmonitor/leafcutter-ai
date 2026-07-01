@@ -1,0 +1,50 @@
+id: BP-1100e-2
+readiness: draft
+priority: medium
+title: "The reconciliation is advisory and fails open by default; strict blocking is opt-in"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e.yaml"
+criteria: |
+  Given the pre-done reconciliation produces a verdict that a ticket changed source
+    files not present in its declared files_touched UNION out_of_scope
+  When the reconciliation runs in its default configuration
+  Then it reports the mismatch as an advisory (it names the undeclared source files
+    and does not hard-block the ticket from reaching done) — the default is fail-open
+  And when the strict mode is explicitly opted into via configuration, the same
+    verdict blocks the ticket from being marked done until the scope is reconciled
+  And when the reconciliation itself cannot run (an internal error computing the diff
+    or reading frontmatter), it fails open — it does not block the ticket on account
+    of its own failure
+depends_on:
+  - BP-1100e
+  - BP-1100e-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e.yaml"
+    relationship: parent
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Default enforcement is ADVISORY / fail-open: a real mismatch is reported but does not hard-block the ticket reaching done. A STRICT mode that blocks on a real mismatch is opt-in via a config key (mirror the existing warn/error configurable-hook precedent, e.g. check_test_ac_tags mode)."
+  - "Fail-open on INTERNAL error is orthogonal to the advisory/strict mode: any exception in computing the verdict causes the check to not block (report to stderr, exit non-blocking), so a script error never strands a ticket."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3): specific exception types, log at WARNING or higher, never swallow silently."
+  - "PORTABLE per ADR-001: ships to consumers via build.py; the config default (advisory) travels with it and must NOT rely on the leafcutter repo's own root CLAUDE.md."
+delivers_to: null
+expects_from:
+  ac_id: BP-1100e-1
+  contract: "The declared-vs-actual reconciliation verdict (list of undeclared changed source files) that this AC gates behind the advisory-default / strict-opt-in mode."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The user called out advisory/fail-open default with strict opt-in so the check
+  never hard-blocks by default. Distinct from BP-1100e-1-iv (no-op when no
+  files_touched frontmatter exists): that is a scope guard, this is the
+  enforcement-strength policy.

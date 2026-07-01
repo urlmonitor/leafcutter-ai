@@ -1,0 +1,46 @@
+id: BP-1100e-1-ii
+readiness: draft
+priority: medium
+title: "Path comparison is normalized for separators and case so NTFS/APFS paths are not false-flagged"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e.yaml"
+criteria: |
+  Given a ticket declares files_touched: ["scripts/build_phases.py"]
+  And the actual diff reports the same file with a backslash separator
+    "scripts\\build_phases.py" (as on Windows/NTFS) or with differing case
+    "Scripts/Build_Phases.py" (as on a case-insensitive APFS/NTFS filesystem)
+  When the pre-done reconciliation compares the actual path against the declared set
+  Then it normalizes path separators (backslash vs forward slash) and applies
+    case-folding on case-insensitive filesystems before comparing
+  And it treats the actual path as matching the declared entry — it does NOT flag it
+    as an undeclared source file merely because of separator or case differences
+depends_on:
+  - BP-1100e-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e.yaml"
+    relationship: relates
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Normalize both the declared and the actual paths to a canonical form before set comparison: unify path separators to POSIX forward-slash, and case-fold when the target filesystem is case-insensitive (NTFS/APFS) so casing differences do not cause a false mismatch."
+  - "Do not case-fold unconditionally on case-sensitive filesystems (two files differing only by case are distinct there); gate case-folding on filesystem case-sensitivity."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
+delivers_to: null
+expects_from:
+  ac_id: BP-1100e-1
+  contract: "The reconciliation verdict whose path comparison this AC normalizes for separators and case."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  leafcutter runs on WSL2/NTFS and macOS/APFS as well as native Linux; separator
+  and case-fold normalization is required or the check false-flags on the common
+  developer filesystems.

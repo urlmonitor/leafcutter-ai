@@ -1,0 +1,43 @@
+id: INF-600l-1-i
+readiness: draft
+priority: medium
+title: "When agent cards are absent, the mirror check no-ops instead of false-failing"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600l.yaml"
+criteria: |
+  Given a project that has an agent registry but no generated agent cards on disk
+    (a consumer that uses the registry but has not generated cards, or a card whose
+    expected path does not resolve)
+  When the extended consistency check runs the card<->registry mirror comparison
+  Then it treats the absent card as "nothing to compare" and does NOT report a
+    mismatch or fail the build for the missing card
+  And it emits an advisory note (to stderr / log) that the mirror comparison was
+    skipped for the agents whose cards were absent, so the skip is visible
+  And it still runs the registry-internal consistency it already performed (the
+    absence of cards does not disable the pre-existing spawn-consistency behavior)
+depends_on:
+  - INF-600l-1
+doc_links:
+  - path: "docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600l.yaml"
+    relationship: relates
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "When an agent's card is absent or its path does not resolve, SKIP the mirror comparison for that agent (fail-open no-op) -- never report a card<->registry mismatch caused purely by the card's absence, and never fail the build for a missing card."
+  - "The skip must be observable (advisory note naming the skipped agents); the pre-existing registry-internal spawn-consistency check (INF-600g) must continue to run regardless of card presence."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
+delivers_to: null
+expects_from:
+  ac_id: INF-600l-1
+  contract: "The card<->registry mirror-consistency verdict this AC guards with a fail-open no-op when cards are absent."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

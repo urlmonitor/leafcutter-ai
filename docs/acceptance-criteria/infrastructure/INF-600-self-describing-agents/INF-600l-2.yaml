@@ -1,0 +1,55 @@
+id: INF-600l-2
+readiness: draft
+priority: medium
+title: "The mirror check is opt-in to the leafcutter agent subsystem and resolves the card path from convention, not a hardcode"
+component: infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600l.yaml"
+criteria: |
+  Given a consumer project that uses the leafcutter agent subsystem (it has an agent
+    registry and generated agent cards under the leafcutter card-path convention)
+  When the build runs the extended consistency check
+  Then the card<->registry mirror comparison runs and reports mismatches per INF-600l-1
+  And the check locates each agent's card via the configured/derived card-path
+    convention rather than a single hardcoded path, so a project whose card location
+    differs from the default still has its cards found
+  And the mirror comparison is scoped to the leafcutter agent subsystem (it only
+    applies where the registry + card convention are in use), so it does not impose
+    itself on unrelated files
+depends_on:
+  - INF-600l
+  - INF-600l-1
+doc_links:
+  - path: "docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600l.yaml"
+    relationship: parent
+    status: exists
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The mirror check is OPT-IN / leafcutter-subsystem-specific: it activates only where the agent registry + generated-card convention are present, and does not run against projects that do not use the agent subsystem."
+  - "The card path must be resolved from the card-path CONVENTION (configurable / derived), not a single hardcoded path, so projects whose card directory differs from the default still resolve; when a card's expected path cannot be resolved, defer to the absent-card fail-open (INF-600l-1-i) rather than erroring."
+  - "Do not broaden the check beyond the registry+card surfaces (it is not a general file linter); the scoping keeps it aligned with the INF-600g/INF-600k registry-validation family."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
+  - "PORTABLE per ADR-001: ships to consumers via build.py; the card-path convention default travels with it."
+delivers_to: null
+expects_from:
+  ac_id: INF-600l-1
+  contract: "The card<->registry mirror-consistency verdict this AC scopes (opt-in) and feeds via convention-based card-path resolution."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The user flagged that the card path convention may vary and that the check is
+  leafcutter-subsystem-specific (opt-in). Kept separate from INF-600l-1 (the
+  comparison itself) so the scoping/path-resolution policy is independently
+  testable and the absent-side fail-open (INF-600l-1-i/ii) stays the failure mode
+  when a path cannot be resolved.

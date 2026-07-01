@@ -36,7 +36,10 @@ origin_agent: product-owner-v3
 created: 2026-07-01
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - INF-600l-1
+  - INF-600l-2
+  - INF-600l-3
 implemented_by: []
 documentation_triggers: []
 documentation_rationale: "Internal build-time consistency check between the generated agent card and the agent registry -- no new user-facing behavior or workflow is introduced; it hardens an existing build artifact."

@@ -1,0 +1,41 @@
+id: INF-600l-1-ii
+readiness: draft
+priority: medium
+title: "When the agent registry is absent, the mirror check no-ops instead of false-failing"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600l.yaml"
+criteria: |
+  Given a project that does not use the leafcutter agent system at all -- there is no
+    agent registry present
+  When the build runs the extended consistency check
+  Then the card<->registry mirror comparison no-ops: with no registry there is nothing
+    to mirror against, so it does NOT report a mismatch and does NOT fail the build
+  And it emits an advisory note (to stderr / log) that the check was skipped because
+    no agent registry was found, so the skip is visible rather than silent
+  And a project without the agent subsystem is never blocked or errored by this check
+depends_on:
+  - INF-600l-1
+doc_links:
+  - path: "docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600l.yaml"
+    relationship: relates
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "When no agent registry is present, SKIP the entire mirror comparison (fail-open no-op) -- a project that does not use the agent subsystem must never be false-failed by this check."
+  - "The skip must be observable (advisory note that no registry was found); this is the registry-absent counterpart to the card-absent fail-open (INF-600l-1-i), consistent with the opt-in scoping in INF-600l-2."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
+delivers_to: null
+expects_from:
+  ac_id: INF-600l-1
+  contract: "The card<->registry mirror-consistency verdict this AC guards with a fail-open no-op when the registry is absent."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

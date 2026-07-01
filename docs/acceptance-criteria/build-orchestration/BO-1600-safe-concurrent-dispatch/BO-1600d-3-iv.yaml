@@ -1,0 +1,42 @@
+id: BO-1600d-3-iv
+readiness: draft
+priority: medium
+title: "Branch-ref reset targets the detected default/current branch, never a hardcoded main"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
+criteria: |
+  Given the corrupt branch ref belongs to a branch whose name is not "main" (for
+    example a repository whose default branch is "master" or a drive on an epic
+    branch "EPIC-Foo")
+  When the recovery step engine performs the reset-corrupt-branch-to-reflog-tip action
+  Then it resets the reflog tip of the actual affected branch — detected at runtime
+    from the corrupt ref / current HEAD / repository default branch — and never
+    resets a hardcoded "main" or "master"
+  And if the affected branch cannot be determined unambiguously, it stops and reports
+    that it could not identify the branch to reset rather than guessing
+depends_on:
+  - BO-1600d-3
+doc_links:
+  - path: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
+    relationship: relates
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Determine the branch to reset from runtime state (the corrupt ref name, current HEAD, or the repository's configured default branch via origin/HEAD) — never assume 'main'/'master'. Reset that branch to its own reflog tip."
+  - "If the affected branch is ambiguous or undeterminable, stop and report rather than resetting the wrong branch."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
+delivers_to: null
+expects_from:
+  ac_id: BO-1600d-3
+  contract: "The reset-corrupt-branch-to-reflog-tip step this edge case constrains to the detected branch."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -32,7 +32,11 @@ origin_agent: product-owner-v3
 created: 2026-07-01
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - BO-1600d-1
+  - BO-1600d-2
+  - BO-1600d-3
+  - BO-1600d-4
 implemented_by: []
 documentation_triggers:
   - how-to

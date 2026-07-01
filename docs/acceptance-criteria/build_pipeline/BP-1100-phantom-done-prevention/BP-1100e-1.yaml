@@ -1,0 +1,66 @@
+id: BP-1100e-1
+readiness: draft
+priority: medium
+title: "Before a ticket is marked done, source files changed but not declared are flagged"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e.yaml"
+criteria: |
+  Given a ticket has passed its gates and is about to be marked status: done,
+    and its frontmatter declares files_touched: ["scripts/build_phases.py"] with
+    no out_of_scope entries,
+  And the actual set of source files changed by the ticket's work is
+    ["scripts/build_phases.py", "scripts/workflows/finalize-feature.js"]
+  When the pre-done reconciliation runs (comparing the actually-changed source files
+    against the declared files_touched UNION out_of_scope)
+  Then it flags the ticket, naming "scripts/workflows/finalize-feature.js" as a
+    source file that was changed but not declared in files_touched or out_of_scope
+  And the flag is raised at the pre-done point (before the ticket reaches
+    status: done), not only after the fact
+  And a source file is one with an executable/source extension (.py, .sql, .ts,
+    .tsx, .js); a real diff containing such a file absent from the declared scope
+    is what triggers the flag
+depends_on:
+  - BP-1100e
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100a.yaml"
+    relationship: relates
+    status: exists
+  - path: "docs/architecture/agent_delivery_workflows.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "POST-CHANGE reconciliation, distinct from BP-1100a's PRE-DISPATCH declaration check: compute the set of source files ACTUALLY changed by the ticket (from the real diff) and compare against the ticket's declared files_touched UNION out_of_scope. Do NOT re-derive BP-1100a's pre-dispatch scope-completeness behavior."
+  - "The gate point is BEFORE the ticket reaches status: done (at the pre-done/commit-time reconciliation step in the drive/finalize surface), so the mismatch is caught before 'done' masks missing work."
+  - "Source files are those with source/executable extensions (.py/.sql/.ts/.tsx/.js). The union-with-out_of_scope exemption and generated/lockfile exemption are BP-1100e-1-i; path normalization is BP-1100e-1-ii; docs/config-only narrow-scope non-false-positive is BP-1100e-1-iii; the no-frontmatter no-op is BP-1100e-1-iv."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3): wrap the diff/frontmatter reads in try/except with a specific exception type and log at WARNING or higher; an errored reconciliation must fail open (BP-1100e-2), never hard-block by accident."
+  - "PORTABLE per ADR-001: the check ships to consumers via build.py and must NOT rely on the leafcutter repo's own root CLAUDE.md."
+delivers_to:
+  agent: python-coder
+  contract: "The declared-vs-actual reconciliation verdict: given a ticket's real changed-source-file set and its declared files_touched UNION out_of_scope, produce the list of source files changed-but-not-declared, evaluated at the pre-done gate point. This verdict is the single load-bearing primitive the advisory/strict enforcement mode (BP-1100e-2) and the edge-case exemptions (BP-1100e-1-i..iv) build on."
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1100e-1-i
+  - BP-1100e-1-ii
+  - BP-1100e-1-iii
+  - BP-1100e-1-iv
+implemented_by: []
+notes: |
+  Origin: BP-1100 PO run KI-2 (phantom-done: a ticket edited docs when source was
+  needed, passed every gate). BP-1100e is the opposite-end bookend to BP-1100a:
+  a is pre-dispatch (did the ticket declare the right scope up front?), e is
+  post-change (did what actually changed match what was declared?). Per BP
+  PROJECT_CONTEXT, decompose the declared-vs-actual diff + pre-done gate here; do
+  not re-derive BP-1100a.
