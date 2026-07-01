@@ -1,6 +1,6 @@
 ---
 title: "Test constraints + complexity-driven model tier selection"
-status: in_progress
+status: done
 components:
   - infrastructure
 created: 2026-07-01
@@ -22,7 +22,7 @@ agents:
   llm-expert: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ac_traceability:
   - BO-550
   - BO-550-1
@@ -213,6 +213,13 @@ hook_autofixes_applied:
   - .security-allowlist: added 6 new line-number suppressions for guardrail_config_path kwargs in unit_tests/test_generate_ticket_from_ac.py (lines 84, 126, 166, 203, 240, 276)
   - tickets/06_test_constraints_and_complexity.md: added feedback-id lines to python-coder and commit comment headings
 
+### 2026-07-01 14:15 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_updated: true
+Pushed branch EPIC-ComputedQualityGates to origin. Existing PR #201 (feat(computed-quality-gates): add ADR-017 two-axis quality gate design) updated with ticket 06 commit dc66e265. No new PR opened — push to existing PR per dispatch context.
+
 ### 2026-07-01 13:30 — pr-reviewer (status: ok)
 feedback-id: (submit-failed)
 completion_manifest:
@@ -230,7 +237,7 @@ Review passed. 4 new pure functions (_parse_test_constraints, _infer_complexity,
 - [x] llm-expert — 2026-07-01 13:00
 - [x] pr-reviewer — 2026-07-01 13:30
 - [x] commit — 2026-07-01 14:00
-- [ ] pull-request
+- [x] pull-request — 2026-07-01 14:15
 
 ## Implementation Tasks
 
