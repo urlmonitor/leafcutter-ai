@@ -67,6 +67,45 @@ import sys
 from pathlib import Path
 
 
+# ---------------------------------------------------------------------------
+# Exceptions
+# ---------------------------------------------------------------------------
+
+
+class BootstrapError(RuntimeError):
+    """Raised when worktree bootstrap cannot establish a working pre-commit config.
+
+    Surfaced as a structured AC-5 error so callers can distinguish a bootstrap
+    failure from other subprocess errors and report the gap clearly to the user
+    before the drive proceeds.
+    """
+
+    @classmethod
+    def missing_config(cls, config_path: object, build_exc: Exception | None = None) -> "BootstrapError":
+        """Return an AC-5 error for a missing .pre-commit-config.yaml.
+
+        Args:
+            config_path: Path (or string) where the config was expected.
+            build_exc: Optional build failure exception that caused the absence.
+                When provided, the message reflects the build failure as the
+                root cause rather than implying build.py succeeded.
+
+        Returns:
+            BootstrapError with a structured diagnostic message.
+        """
+        if build_exc is not None:
+            return cls(
+                f"AC-5: build.py failed ({build_exc}), so .pre-commit-config.yaml "
+                f"was not materialised at {config_path}. Pre-commit hooks will be "
+                "silently skipped. Remediation: fix build.py errors and re-run "
+                "bootstrap, or run build.py manually."
+            )
+        return cls(
+            f"AC-5: .pre-commit-config.yaml is missing at {config_path}. "
+            "Pre-commit hooks will be silently skipped. "
+            "Remediation: verify install_shims() completed without error, "
+            "then re-run bootstrap or run build.py manually."
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -587,10 +626,25 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
     action) for steps 1–2.  Steps 3–5 treat failures as warnings so that a
     single failing step does not prevent the worktree from being usable at all.
 
+    After ``_establish_pre_commit_config`` runs, an unconditional AC-5
+    fail-fast probe checks that EITHER ``.leafcutter`` OR
+    ``.pre-commit-config.yaml`` is present in the worktree root.  This
+    converts ``_establish_pre_commit_config``'s warn-and-continue step 4
+    (neither source found in main repo) into a hard ``BootstrapError`` so
+    the drive never proceeds with hooks silently disabled.  The error message
+    identifies the root cause: build failure (when build_exc is set) or
+    general absence (when build.py was not found or install_shims failed
+    silently).
+
     Args:
         main_repo: Absolute Path to the main repository root where source
             ``.env``, ``.mcp.json``, and ``.leafcutter/`` reside.
         worktree_path: Absolute Path to the worktree being bootstrapped.
+
+    Raises:
+        BootstrapError: If neither ``.leafcutter`` nor ``.pre-commit-config.yaml``
+            is present at the worktree root after ``_establish_pre_commit_config``
+            runs — i.e. when the main repo had no config sources (AC-5).
     """
     # --- .env: symlink-first, copy as fallback ---
     env_src = main_repo / ".env"
@@ -677,6 +731,7 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
         worktree_path / "scripts" / "build.py",
     ]
     build_script = next((c for c in build_candidates if c.exists()), None)
+    build_exc: Exception | None = None
     if build_script is not None:
         try:
             subprocess.run(
@@ -685,6 +740,7 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
                 check=True,
             )
         except subprocess.CalledProcessError as exc:
+            build_exc = exc
             print(
                 f"WARNING: build.py run failed in new worktree ({exc}); "
                 "named-workflow resolution may fail until build.py is run manually.",
@@ -699,12 +755,17 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
             file=sys.stderr,
         )
 
-    # Safety net: ensure the pre-commit configuration is present in the worktree
-    # regardless of whether build.py ran successfully.  Without this guarantee,
-    # a failed or missing build.py leaves the worktree with no .leafcutter/ and
-    # no .pre-commit-config.yaml, causing all package hooks to silently skip for
-    # the entire drive (AC BO-1500b-1-i).
     _establish_pre_commit_config(main_repo, worktree_path)
+
+    # AC-5 fail-fast safety net: _establish_pre_commit_config warns-and-continues
+    # when neither source exists in the main repo (its step 4). Convert that
+    # silent gap into a hard failure so the drive never proceeds with hooks
+    # disabled. Checks BOTH markers to match that function's success contract:
+    # a .leafcutter symlink alone is a valid established state.
+    leafcutter_path = worktree_path / ".leafcutter"
+    config_path = worktree_path / ".pre-commit-config.yaml"
+    if not config_path.exists() and not (leafcutter_path.exists() or leafcutter_path.is_symlink()):
+        raise BootstrapError.missing_config(config_path, build_exc)
 
 
 def _derive_slug(ticket_path: Path) -> str:
@@ -1163,6 +1224,9 @@ def main() -> None:
     args = parser.parse_args()
     try:
         args.func(args)
+    except BootstrapError as exc:
+        print(f"BOOTSTRAP ERROR: {exc}", file=sys.stderr)
+        sys.exit(1)
     except subprocess.CalledProcessError as exc:
         print(f"ERROR: subprocess failed: {exc}", file=sys.stderr)
         sys.exit(1)
@@ -1176,6 +1240,35 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-06-30 [Agent/python-coder]: Three focused fixes (TICKET-20260617-Worktree_Precommit_Bootstrap,
+  closes AC-5 script-level gap per pr-reviewer H-1):
+  FIX 1 (HIGH): Moved the .pre-commit-config.yaml existence probe outside the
+  `if build_script is not None:` branch so it runs unconditionally after both
+  the build-ran and build-not-found cases.  A worktree where build.py was not
+  found now raises BootstrapError instead of warning-and-continuing (the AC-5
+  hole that allowed a missing config to pass bootstrap silently).
+  FIX 2 (MEDIUM): When build.py exits non-zero (CalledProcessError), the
+  exception is now captured as build_exc and forwarded to missing_config() so
+  the BootstrapError message names the build failure as the root cause rather
+  than implying build succeeded.  missing_config() gained an optional build_exc
+  parameter; the message branch is: build failed → "build.py failed (…)" vs
+  no-build → "missing at …".  raise … from exc chain preserved.
+  FIX 3 (LOW): Removed dead unresolvable_config classmethod and its OSError
+  handler (os.path.realpath does not raise OSError; Path.exists() already
+  handles dangling symlinks).  Collapsed realpath + os.path.exists to a single
+  config_path.exists() call.  Removed triple-blank-line gap after the class.
+  templates/scripts/setup_ticket_worktree.py receives identical changes (mirror
+  contract).
+- 2026-06-30 [Agent/python-coder]: Added BootstrapError class with factory
+  classmethods (missing_config, unresolvable_config) and a post-build probe
+  in _bootstrap() after build.py runs (TICKET-20260617-Worktree_Precommit_Bootstrap).
+  The probe checks that <worktree>/.pre-commit-config.yaml exists and resolves;
+  raises BootstrapError (AC-5) if absent or unresolvable so callers surface
+  the gap rather than continuing silently. main() catches BootstrapError and
+  exits 1 with a clear "BOOTSTRAP ERROR:" prefix. TRY003-compliant: long
+  messages are defined inside the exception class via classmethods, not at
+  raise sites. templates/scripts/setup_ticket_worktree.py receives identical
+  changes (mirror contract).
 - 2026-06-03 10:02 [EPIC-MoveOnMainOnly/01]: Removed _move_ticket() — branches
   no longer move ticket files; finalize-feature.js reconciles folder
   position on main after merge. The JSON output field was renamed from
