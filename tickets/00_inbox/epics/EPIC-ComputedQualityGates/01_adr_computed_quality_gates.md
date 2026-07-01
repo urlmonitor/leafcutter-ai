@@ -12,7 +12,7 @@ agents:
   documentation-expert: signed_off
   adr-author: signed_off
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -77,11 +77,20 @@ completion_manifest:
   style_consistent_with_existing_adrs: true
 PR review passed. ADR-017 at docs/architecture/adrs/ADR-017-computed-quality-gates.md is correctly numbered (follows ADR-016), contains all required sections (Status/Context/Decision/Consequences/Alternatives), addresses all 7 ACs, and all cross-references resolve (ADR-001, ADR-007, build-ticket-workflow-dispatch.md, generate_ticket_from_ac.py, agent_registry.json, ticket-supervisor.md, building-epics SKILL.md). The description of _build_agents_map and its three module constants (_CANONICAL_SUPPORT_AGENTS, _SQL_AGENTS, _NOT_NEEDED_AGENTS) was verified against the actual source. No high or medium confidence findings. Zero suppressions.
 
+### 2026-07-01 12:45 — commit (status: ok)
+Auto-authorized commit gate: subject "docs: author ADR-017 computed quality gates design"; staged files: docs/architecture/adrs/ADR-017-computed-quality-gates.md tickets/00_inbox/epics/EPIC-ComputedQualityGates/.pending/adr_handoff.json tickets/00_inbox/epics/EPIC-ComputedQualityGates/01_adr_computed_quality_gates.md.
+feedback-id: (submit-failed)
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Committed SHA e7d4fdff. Pre-commit hook `check-description-field` failed on first attempt (ADR missing description: frontmatter field); autofix applied (added description field), re-staged, and committed successfully on retry. 3 files, 322 insertions.
+
 ## Sign-offs
 - [x] documentation-expert — 2026-07-01 12:15
 - [x] adr-author — 2026-07-01 12:00
 - [x] pr-reviewer — 2026-07-01 12:30
-- [ ] commit
+- [x] commit — 2026-07-01 12:45
 - [ ] pull-request
 
 ## Implementation Tasks
