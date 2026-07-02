@@ -1,0 +1,52 @@
+id: BO-1700e-1
+readiness: approved
+priority: medium
+title: "The build deploys all three guard scripts to their target paths for a fresh install"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700e.yaml"
+criteria: |
+  Given a fresh consumer install runs the build step,
+  When the build completes,
+  Then all three guard scripts -- the verification probe, the canary hook, and the
+    self-healing hook -- are present at their deployed target paths under
+    `scripts/commit_guardian/`, each copied from its `templates/scripts/commit_guardian/`
+    source,
+  And a fresh install has all three scripts available with no manual copy step.
+depends_on: [BO-1700e]
+doc_links:
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  build.py deploys verify_precommit_active.py, precommit_canary.py, and
+  ensure_precommit_config.py from templates/scripts/commit_guardian/ to
+  scripts/commit_guardian/ like every other package hook (ADR-013 portable
+  deployment boundary). ADR-001 parity: the canonical source is the templates/ copy;
+  the scripts/ copy is a build output — the two are verified in parity via the
+  build.py round-trip. This is the deployment producer the other e-family ACs
+  (completeness e-3, subdir discovery e-1-i) consume.
+delivers_to:
+  agent: python-coder
+  contract: "All three guard scripts (verify_precommit_active.py, precommit_canary.py, ensure_precommit_config.py) deployed under scripts/commit_guardian/ on a fresh install, each byte-identical to its templates/scripts/commit_guardian/ source."
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: [BO-1700e-1-i]
+implemented_by: []

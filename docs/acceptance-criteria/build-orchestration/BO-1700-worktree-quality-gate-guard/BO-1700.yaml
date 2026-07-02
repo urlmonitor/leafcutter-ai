@@ -1,0 +1,37 @@
+id: BO-1700
+readiness: approved
+priority: medium
+title: "Code can never ship from a workspace with its quality gates switched off"
+component: build-orchestration
+level: L0
+status: active
+req_status: draft
+work_status: todo
+child_limit_override: 8
+criteria: |
+  Every commit passes through the same quality checks -- no silent skips, ever.
+
+  When work happens in a fresh, throwaway workspace, the automatic quality
+  checks that protect the main line are always active -- never silently
+  disabled. If those checks cannot be made to run, the work stops rather than
+  slipping through unchecked. You get the same protection in every workspace,
+  whether the project is building itself or is installed inside another project,
+  and you never have to remember a manual setup step to stay safe.
+roadmap_phase: phase_1
+depends_on: []
+doc_links:
+  - docs/architecture/agent_delivery_workflows.md
+  - templates/skills/feature/SKILL.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-01
+amended_by:
+  - reason: "split: BO-1700a intermediate split added sibling L1s BO-1700g + BO-1700h, 2026-07-02"
+  - reason: "child_limit_override: 8 -- intermediate split of BO-1700a raised the L0 to 8 L1 children (a-h), exceeding the default L0 cap of 7. Temporary audited waiver; remove by folding into a sibling L0 (Pattern A, PO approval) once decided. 2026-07-02"
+superseded_by: null
+covered_by: [BO-1700a, BO-1700b, BO-1700c, BO-1700d, BO-1700e, BO-1700f, BO-1700g, BO-1700h]
+implemented_by: []
+notes: "Boundaries for BA decomposition (not requirements): (1) Upstream of BO-210 -- the pre-commit safety net assumes hooks FIRE; BO-1700 guarantees they fire. (2) Distinct from BO-1500e -- that covers the AC-authoring workflow's own worktree; BO-1700 covers general epic/feature build drives. (3) Distinct from BP-100k / BP-1000 -- those govern hook CONTENT/parity; BO-1700 governs hook EXECUTION in a worktree. The minimal one-file epic-path slice was already committed separately -- BO-1700 is the durable, complete hardening. Origin: three-agent investigation into fresh-worktree silent hook-skip (EPIC-AcPipelineDeployGaps: 9 hooks skipped, 14 would-have-blocked findings)."

@@ -1,0 +1,44 @@
+id: BO-1700f-1
+readiness: approved
+priority: medium
+title: "A project with no pre-commit config at all: the guard prints INFO and exits 0"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700f.yaml"
+criteria: |
+  Given the main tree has no pre-commit configuration at all (the project does not
+    use the framework's quality gates),
+  When the guard runs,
+  Then it prints an INFO message stating no gates are configured, exits 0, and the
+    drive proceeds,
+  And it does not raise a failure or block the work.
+depends_on: [BO-1700f]
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  The no-op path is taken ONLY when the MAIN tree genuinely has no config (see
+  BO-1700f-1-ii for the authoritative determination via git-common-dir). INFO
+  message, exit 0. This is the graceful-no-op boundary — it must NOT be reachable
+  when the main tree HAS a config but the worktree cannot fire it (that is the hard
+  fail in BO-1700f-1-i). Implemented in the shared probe helper (BO-1700a-1); ADR-001
+  deployed/template parity applies.
+delivers_to: null
+expects_from:
+  ac_id: BO-1700a-1
+  contract: "The probe's no-config determination (main tree genuinely has no gates) that triggers the no-op path."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: [BO-1700f-1-i, BO-1700f-1-ii]
+implemented_by: []

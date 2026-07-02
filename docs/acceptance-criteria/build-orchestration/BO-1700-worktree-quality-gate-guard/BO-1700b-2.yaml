@@ -1,0 +1,47 @@
+id: BO-1700b-2
+readiness: approved
+priority: high
+title: "Setting PRE_COMMIT_ALLOW_NO_CONFIG cannot produce a passing verdict"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700b.yaml"
+criteria: |
+  Given the environment variable `PRE_COMMIT_ALLOW_NO_CONFIG` is set when the
+    probe runs, and the worktree has no firing hook chain,
+  When the probe runs Check D,
+  Then Check D still requires the canary to actually fire; the probe exits
+    non-zero, `canary` is false in the JSON result, and stderr states that the
+    canary did not fire.
+  And a workspace whose only "pass" would come from pre-commit being told to
+    allow a missing config is reported FAIL, not trusted.
+depends_on: [BO-1700b]
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  PRE_COMMIT_ALLOW_NO_CONFIG=1 is the ROOT CAUSE of the production silent-skip bug:
+  a fresh worktree with no config resolves to pre-commit exiting 0 while running
+  ZERO hooks. The probe must NOT inherit pre-commit's allow-no-config leniency as a
+  pass signal. Check D's token assertion is independent of the env var, and the env
+  var being set is itself a signal the chain may be inert. Implemented in the shared
+  probe helper (BO-1700a-1); fail closed (BO-1700b-1); ADR-001 deployed/template
+  parity applies.
+delivers_to: null
+expects_from:
+  ac_id: BO-1700a-1
+  contract: "The probe's Check D, which must ignore allow-no-config leniency."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

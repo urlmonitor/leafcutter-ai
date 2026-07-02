@@ -1,0 +1,29 @@
+id: BO-1700c
+readiness: approved
+priority: medium
+title: "Every workspace sets up its own protection automatically, however it was created"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  A workspace repairs its own missing quality-check setup automatically, no
+  matter how the workspace came to exist.
+
+  You do not have to prepare a workspace by hand for it to be protected -- the
+  setup restores itself so no workspace is ever left unguarded.
+roadmap_phase: phase_1
+depends_on: [BO-1700]
+documentation_triggers: [component-diagram, sequence-diagram]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: [BO-1700c-1, BO-1700c-2, BO-1700c-3]
+implemented_by: []

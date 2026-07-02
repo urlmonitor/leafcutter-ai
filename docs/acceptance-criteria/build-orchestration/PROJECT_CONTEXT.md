@@ -10,9 +10,9 @@ Read this before authoring or decomposing ACs in this component.
 ## ID numbering
 
 - L0s occupy hundreds: 100, 200, 201, 202, 300, 400, 500, 700, 800, 900, 1100,
-  1200, 1300, 1400, 1500, 1600.
-- Next free L0 hundred after BO-1500 was **BO-1600** (assigned to the
-  safe-concurrent-dispatch goal). Pick the next free hundred for any new L0.
+  1200, 1300, 1400, 1500, 1600, 1700.
+- Next free L0 hundred after BO-1700 is **BO-1800**. Pick the next free hundred
+  for any new L0. (BO-1700 = worktree-quality-gate-guard, added 2026-07-01.)
 - Deprecated/superseded IDs are reserved permanently — never reuse a numeric slot.
 
 ## Concurrency / atomicity scope boundaries (avoid duplication)
@@ -32,6 +32,31 @@ do not conflate or duplicate when authoring near any of them:
 BO-100c = "don't let same-file tickets run together" (pre-dispatch scheduling).
 BO-200  = "make one ticket's commit atomic" (single-supervisor).
 BO-1600 = "don't let concurrent commits corrupt the shared git store" (multi-supervisor, storage layer).
+
+## Worktree quality-gate boundaries (avoid duplication) — BO-1700 family
+
+BO-1700 ("Code can never ship from a workspace with its quality gates switched
+off", added 2026-07-01) closes the fresh-worktree silent-hook-skip hole:
+`.pre-commit-config.yaml` is a gitignored `.leafcutter` symlink, so a worktree
+checked out from origin/main has neither symlink nor dir → pre-commit exits 0
+running ZERO hooks. Six L1s: BO-1700a (execution/canary probe, not file-exists),
+b (fail closed), c (self-healing shared hook), d (dual gate at create-time +
+pre-drive), e (portable self-build + installed), f (graceful no-op where no
+gates exist). Keep these DISTINCT from the adjacent trees:
+
+- **Upstream of BO-210** — the pre-commit safety net (re-dispatch original coder
+  on a hook FAILURE) assumes hooks FIRE. BO-1700 guarantees they fire first.
+  Do not fold BO-1700 into BO-210 or vice versa.
+- **Distinct from BO-1500e** — BO-1500e is the AC-authoring workflow's OWN
+  worktree robustness (start-from-main / installed-copy). BO-1700 is general
+  epic/feature BUILD-DRIVE worktrees. Same portability instinct, different path.
+- **Distinct from BP-100k / BP-1000** (build-pipeline) — those govern hook
+  CONTENT / source↔template parity. BO-1700 governs hook EXECUTION in a worktree.
+
+Component-choice rationale (for future similar features): a "does the hook chain
+actually FIRE during a drive" concern belongs in build-orchestration (drive /
+worktree / pre-drive-gate territory), NOT build-pipeline (build.py / parity) or
+infrastructure (hook content / conventions).
 
 ## Cross-component placement notes (parity & registry — NOT build-orchestration)
 
