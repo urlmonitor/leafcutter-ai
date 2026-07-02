@@ -28,7 +28,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 07: Default engine to E2, version-as-floor, wire command bodies
@@ -157,6 +157,16 @@ completion_manifest:
   main_commit: "feat(workflow-engine): default E2, version floor-only, wire command bodies"
 Committed all 6 staged files: scripts/build_phases.py, templates/commands/plan-feature.md, templates/commands/finalize-feature.md, templates/commands/build-feature.md, templates/commands/create-ticket.md, and the ticket file. Pre-commit hook `check-feedback-id` blocked the first attempt due to a missing feedback-id on the ticket-supervisor comment heading; fixed inline and recommitted successfully. Feedback submission failed (feedback_categories.yaml absent in worktree); using (submit-failed) per §2a.
 
+### 2026-07-02 02:30 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed_to_origin: true
+  existing_pr_verified: true
+  pr_number: 198
+  pr_state: OPEN
+  push_sha: 39412110
+Pushed EPIC-DualEngineWorkflowSupport branch to origin (a543150f → 39412110). PR #198 ("feat(config): add workflows.enabled + workflows.engine") is OPEN — no new PR was created. Feedback submission failed (feedback_categories.yaml absent in worktree); using (submit-failed) per §2a.
+
 ## Sign-offs
 - [x] test-writer — 2026-07-02 00:00
 - [x] llm-expert — 2026-07-02 00:30
@@ -164,7 +174,7 @@ Committed all 6 staged files: scripts/build_phases.py, templates/commands/plan-f
 - [x] test-runner — 2026-07-02 01:00
 - [x] pr-reviewer — 2026-07-02 01:30
 - [x] commit — 2026-07-02 02:00
-- [ ] pull-request
+- [x] pull-request — 2026-07-02 02:30
 
 ## Risk & Safety
 - Touches money? No.
