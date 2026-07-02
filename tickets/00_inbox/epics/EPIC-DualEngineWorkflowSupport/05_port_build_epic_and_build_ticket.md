@@ -21,7 +21,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -83,7 +83,7 @@ Scenario: E1 wrap still valid
 - [x] python-coder — 2026-07-01 14:30
 - [x] test-runner — 2026-07-01 15:20
 - [x] pr-reviewer — 2026-07-02 00:00
-- [ ] commit
+- [x] commit — 2026-07-02 09:00
 - [ ] pull-request
 
 ## Comments
@@ -124,6 +124,14 @@ completion_manifest:
   zero_dispatch_test_uses_plan_feature: true
   xfail_semantics_intact: true
 E2 port review passed. Both build-epic.js and build-ticket.js have been ported to top-level body form with no `export async function run()` wrappers, no banned primitives (Date.now/Math.random/process.cwd absent), no JSON.parse on schema-guarded agent results, and no workflow() calls. parallel() dispatch in build-epic.js is chunked to BATCH_SIZE=12. The _E1_ONLY_SCRIPTS frozenset retains plan-feature.js/finalize-feature.js/create-ticket.js and the zero-dispatch guard test correctly uses plan-feature.js. One medium observation: parallel(...chunk.map(...)) uses spread rather than array form — tests confirm harness accepts this. No high-confidence blockers.
+
+### 2026-07-02 09:00 — commit (status: ok)
+feedback-id: (batch-drive-auto-authorized)
+Auto-authorized commit gate: subject "feat(workflows): port build-epic.js and build-ticket.js to E2 canonical form"; staged files: templates/workflows-js/build-epic.js, templates/workflows-js/build-ticket.js, unit_tests/test_workflow_dual_engine.py, tickets/00_inbox/epics/EPIC-DualEngineWorkflowSupport/05_port_build_epic_and_build_ticket.md. SHA: 64561c03.
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
 
 ## Implementation Tasks
 - [x] Port build-ticket.js to E2 canonical (top-level body, agent(prompt,opts), schema returns)
