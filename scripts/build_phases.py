@@ -307,17 +307,21 @@ export async function run({ agent: _agentE1, workflow: _wf, parallel: _par, user
 def _emit_workflow_variant(raw: bytes, engine: str) -> bytes:
     """Return engine-specific bytes for a canonical E2 workflow source.
 
+    The ``engine`` parameter received here is the *resolved* engine (i.e.
+    ``"auto"`` has already been resolved to ``"e2"`` by the caller before this
+    function is invoked — see ``build_workflow_scripts``).
+
     Args:
         raw: Raw bytes of the canonical E2 workflow script.
-        engine: Target engine identifier. ``"e2"`` and ``"auto"`` produce
-            byte-identical output (identity transform). ``"e1"`` prepends the
+        engine: Resolved target engine identifier. ``"e2"`` produces the
+            identity transform (raw bytes unchanged). ``"e1"`` prepends the
             E1-wrap shim (engine-detection predicate, callAgent adapter,
             exported run() entry point).
 
     Returns:
         Transformed bytes ready to write to the output directory.
     """
-    if engine in ("e2", "auto"):
+    if engine == "e2":
         return raw
     if engine == "e1":
         shim_bytes = _E1_SHIM.encode("utf-8")
@@ -338,18 +342,28 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
        Default is ``False`` — workflows are experimental. If absent or ``False``,
        the phase skips silently with a "skipped (not enabled" message.
 
-    2. **Version check**: detects Claude Code version via the
+    2. **Version check (floor only)**: detects Claude Code version via the
        ``CLAUDE_CODE_VERSION`` environment variable, then ``claude --version``
        subprocess (2-second timeout), then treats version as unknown.
        - Below minimum (``2.1.154``): warn and skip file copying.
        - Unknown: warn and install (fail-open, since CI may lack Claude Code).
+       The version check is a **floor gate only** — it does NOT influence which
+       engine is selected. Engine selection is determined solely by
+       ``config["workflows"]["engine"]``.
+
+    **Engine resolution**: ``config["workflows"]["engine"]`` is resolved before
+    any file is written. The value ``"auto"`` resolves to ``"e2"`` (the
+    deterministic E2 top-level-body engine, per ADR-017). Explicit ``"e1"`` or
+    ``"e2"`` values are used as-is. The resolved engine is passed to
+    ``_emit_workflow_variant`` to apply the correct build-time transform.
 
     Applies the compare-before-write guard so that identical files are skipped
     on subsequent runs, satisfying the idempotency requirement.
 
     Args:
         target_root: Absolute path to the target project root directory.
-        config: Merged config dictionary; reads ``config["workflows"]["enabled"]``.
+        config: Merged config dictionary; reads ``config["workflows"]["enabled"]``
+            and ``config["workflows"]["engine"]``.
         dry_run: When True, logs intent but writes nothing.
         force: When True, overwrites existing files.
 
@@ -367,7 +381,11 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
     # ------------------------------------------------------------------
     workflows_config = config.get("workflows", {})
     enabled = workflows_config.get("enabled", False) if isinstance(workflows_config, dict) else False
-    engine = workflows_config.get("engine", "auto") if isinstance(workflows_config, dict) else "auto"
+    _raw_engine = workflows_config.get("engine", "auto") if isinstance(workflows_config, dict) else "auto"
+    # Resolve "auto" → "e2" (the deterministic E2 top-level-body engine).
+    # Engine selection is purely config-driven; the version check below is a
+    # floor gate only and must NOT influence which engine is selected (ADR-017).
+    engine = "e2" if _raw_engine == "auto" else _raw_engine
     if not enabled:
         print("Workflow scripts: skipped (not enabled in skills_config.json)")
         return 0
@@ -2091,4 +2109,12 @@ def clean_stale_artifacts(
 #   mark_ac_done.py, build_ac_mode_detection.py, goal_to_epic.py) to
 #   <target_root>/scripts/ac_store/, closing the portable-skill/missing-script
 #   gap for ac-scanner and build-ac per ADR-013. (#EPIC-AcPipelineDeployGaps/03)
+# - 2026-07-02 [python-coder/EPIC-DualEngineWorkflowSupport/07]:
+#   build_workflow_scripts(): resolved "auto" → "e2" explicitly before
+#   calling _emit_workflow_variant (ADR-017: E2 is the default deterministic
+#   engine). Version check remains a floor gate only — it warns/skips when
+#   the Claude Code version is below the minimum but does NOT influence engine
+#   selection. Updated _emit_workflow_variant docstring to reflect that "auto"
+#   is resolved upstream and no longer reaches the transform function.
+#   (#EPIC-DualEngineWorkflowSupport/07)
 # ====================================================================
