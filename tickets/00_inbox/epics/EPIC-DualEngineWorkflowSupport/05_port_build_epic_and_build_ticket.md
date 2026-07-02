@@ -1,6 +1,6 @@
 ---
 title: "Port build-epic.js and build-ticket.js to E2 canonical form"
-status: in_progress
+status: done
 components:
   - supervisor_system
 created: 2026-07-01
@@ -22,7 +22,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 05: Port build-epic.js and build-ticket.js to E2 canonical form
@@ -84,7 +84,7 @@ Scenario: E1 wrap still valid
 - [x] test-runner — 2026-07-01 15:20
 - [x] pr-reviewer — 2026-07-02 00:00
 - [x] commit — 2026-07-02 09:00
-- [ ] pull-request
+- [x] pull-request — 2026-07-02 10:00
 
 ## Comments
 
@@ -124,6 +124,14 @@ completion_manifest:
   zero_dispatch_test_uses_plan_feature: true
   xfail_semantics_intact: true
 E2 port review passed. Both build-epic.js and build-ticket.js have been ported to top-level body form with no `export async function run()` wrappers, no banned primitives (Date.now/Math.random/process.cwd absent), no JSON.parse on schema-guarded agent results, and no workflow() calls. parallel() dispatch in build-epic.js is chunked to BATCH_SIZE=12. The _E1_ONLY_SCRIPTS frozenset retains plan-feature.js/finalize-feature.js/create-ticket.js and the zero-dispatch guard test correctly uses plan-feature.js. One medium observation: parallel(...chunk.map(...)) uses spread rather than array form — tests confirm harness accepts this. No high-confidence blockers.
+
+### 2026-07-02 10:00 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_created: false — PR #198 already existed; pushed commits to existing epic PR branch
+  pr_body_complete: true
+Pushed ticket-05 commits (64561c03, 0591564a) to origin EPIC-DualEngineWorkflowSupport branch. Existing PR #198 updated. All agents signed off; ticket status flipped to done.
 
 ### 2026-07-02 09:00 — commit (status: ok)
 feedback-id: (batch-drive-auto-authorized)
