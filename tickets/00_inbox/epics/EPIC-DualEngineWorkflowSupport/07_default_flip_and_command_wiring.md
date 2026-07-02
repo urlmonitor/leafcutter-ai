@@ -27,7 +27,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -147,13 +147,23 @@ AC-3: `create-ticket.md` created with RETIRED frontmatter, routes user to `/plan
 AC-4: `build-feature.md` contains no inline prose batching fallback — sole path is `Workflow(...)`. AC met.
 Feedback submission failed (feedback_categories.yaml absent in worktree); proceeding with (submit-failed) per §2a.
 
+### 2026-07-02 02:00 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  commit_sha: 54a9778f
+  files_committed: 6
+  hook_fix_applied: true
+  hook_fix: "Added feedback-id: (submit-failed) to ticket-supervisor comment heading (check-feedback-id hook)"
+  main_commit: "feat(workflow-engine): default E2, version floor-only, wire command bodies"
+Committed all 6 staged files: scripts/build_phases.py, templates/commands/plan-feature.md, templates/commands/finalize-feature.md, templates/commands/build-feature.md, templates/commands/create-ticket.md, and the ticket file. Pre-commit hook `check-feedback-id` blocked the first attempt due to a missing feedback-id on the ticket-supervisor comment heading; fixed inline and recommitted successfully. Feedback submission failed (feedback_categories.yaml absent in worktree); using (submit-failed) per §2a.
+
 ## Sign-offs
 - [x] test-writer — 2026-07-02 00:00
 - [x] llm-expert — 2026-07-02 00:30
 - [x] python-coder — 2026-07-02 00:30
 - [x] test-runner — 2026-07-02 01:00
 - [x] pr-reviewer — 2026-07-02 01:30
-- [ ] commit
+- [x] commit — 2026-07-02 02:00
 - [ ] pull-request
 
 ## Risk & Safety
