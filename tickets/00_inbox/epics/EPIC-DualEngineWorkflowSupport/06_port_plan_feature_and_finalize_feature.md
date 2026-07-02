@@ -1,6 +1,6 @@
 ---
 title: "Port plan-feature.js and finalize-feature.js to E2 canonical form"
-status: in_progress
+status: done
 components:
   - supervisor_system
   - ac_store
@@ -23,7 +23,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 06: Port plan-feature.js and finalize-feature.js to E2 canonical form
@@ -85,7 +85,7 @@ Scenario: banned globals removed
 - [x] test-runner — 2026-07-02 11:00
 - [x] pr-reviewer — 2026-07-02 11:30
 - [x] commit — 2026-07-02 12:00
-- [ ] pull-request
+- [x] pull-request — 2026-07-02 12:30
 
 ## Comments
 
@@ -188,3 +188,11 @@ completion_manifest:
   pre_commit_hooks_pass: true
   commit_message_valid: true
   ticket_staged: true
+
+### 2026-07-02 12:30 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_created: false
+  pr_body_complete: true
+PR #198 already existed for this EPIC branch; pushed ticket 06 commits (57896b67) to origin/EPIC-DualEngineWorkflowSupport, updating the open PR. No new PR was created — the EPIC uses one PR per branch. All prior phase agents signed off; ticket status flipped to done.
