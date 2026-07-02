@@ -38,8 +38,6 @@ _WORKFLOWS_DIR = _REPO_ROOT / "templates" / "workflows-js"
 
 _E1_ONLY_SCRIPTS = frozenset(
     [
-        "build-epic.js",
-        "build-ticket.js",
         "plan-feature.js",
         "finalize-feature.js",
         "create-ticket.js",
@@ -248,27 +246,31 @@ def test_harness_captures_agent_calls_from_e2_script() -> None:
 def test_zero_dispatch_script_fails_guard() -> None:
     """A script whose top-level body dispatches no agents FAILS the guard.
 
-    Uses build-epic.js as the canonical E1-only example: it defines
+    Uses plan-feature.js as the canonical E1-only example: it defines
     ``async function run({agent})`` but has no top-level agent() calls.
     The assertion must fail (zero dispatches), confirming AC-2.
 
     This test asserts the failure itself — it is the meta-test that proves the
     guard is not vacuously passing for inert scripts.
-    """
-    build_epic = _WORKFLOWS_DIR / "build-epic.js"
-    if not build_epic.exists():
-        pytest.skip(f"build-epic.js not found at {build_epic}")
 
-    result = run_workflow_under_e2(build_epic)
+    Note: build-epic.js and build-ticket.js have been ported to E2 (ticket 05)
+    and now dispatch >= 1 agent from their top-level bodies. plan-feature.js
+    remains E1-only and serves as the zero-dispatch reference for this test.
+    """
+    plan_feature = _WORKFLOWS_DIR / "plan-feature.js"
+    if not plan_feature.exists():
+        pytest.skip(f"plan-feature.js not found at {plan_feature}")
+
+    result = run_workflow_under_e2(plan_feature)
 
     assert result.error == "", (
-        f"Harness error while running build-epic.js: {result.error}"
+        f"Harness error while running plan-feature.js: {result.error}"
     )
-    # This is the key assertion for AC-2: build-epic.js dispatches 0 agents.
-    # If this fails (dispatch_count > 0), build-epic.js has been ported to E2
+    # This is the key assertion for AC-2: plan-feature.js dispatches 0 agents.
+    # If this fails (dispatch_count > 0), plan-feature.js has been ported to E2
     # and the xfail marker in test_e2_dispatch_count should be removed.
     assert result.dispatch_count == 0, (
-        f"build-epic.js unexpectedly dispatched {result.dispatch_count} agents "
+        f"plan-feature.js unexpectedly dispatched {result.dispatch_count} agents "
         f"under E2. It may have been ported to the E2 contract. "
         f"Remove it from _E1_ONLY_SCRIPTS and update this test."
     )
