@@ -1,0 +1,46 @@
+id: BO-1700d-2
+readiness: approved
+priority: medium
+title: "Pre-drive gate: no ticket starts until the probe passes against the worktree"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700d.yaml"
+criteria: |
+  Given an epic/feature drive is about to dispatch its first phase agent,
+  When the drive reaches its pre-flight step,
+  Then a new pre-flight step runs the probe against the worktree root before any
+    phase agent is dispatched, mirroring the existing feedback-sink pre-flight,
+  And if the probe returns a non-zero verdict the drive returns
+    `{status: blocked, reason: <failing check>}` and no ticket is started,
+  And only when the probe passes does the drive proceed to dispatch phase agents.
+depends_on: [BO-1700d, BO-1700a-1]
+doc_links:
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements: |
+  Gate 2 is a new section (e.g. §1.0.1) in templates/skills/building-epics/SKILL.md
+  PROSE (llm-expert surface), mirroring the existing §1.0 feedback-sink pre-flight.
+  It REUSES the shared probe helper (BO-1700a-1) — it does NOT reimplement the four
+  checks. Hard-halt with the structured blocked payload {status: blocked, reason:
+  <failing check>}; proceed only on exit 0 + empty failing_checks (BO-1700b-1). The
+  gate must be placed BEFORE any phase agent is dispatched so no ticket can start
+  through an unverified worktree.
+delivers_to: null
+expects_from:
+  ac_id: BO-1700a-1
+  contract: "The structured probe result (exit 0 + empty failing_checks == pass) the pre-drive gate evaluates."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

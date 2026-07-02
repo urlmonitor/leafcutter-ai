@@ -1,0 +1,48 @@
+id: BO-1700f-1-ii
+readiness: approved
+priority: medium
+title: "The no-config verdict is judged against the main tree, and ambiguity fails closed"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700f.yaml"
+criteria: |
+  Given the guard must decide whether a project genuinely has no gates,
+  When it makes that determination,
+  Then it judges "no config" against the MAIN tree's authoritative state (located
+    via the shared git dir / project root), not against the worktree's
+    possibly-unmaterialized view,
+  And when the state cannot be determined unambiguously, the guard fails closed
+    (exits non-zero) rather than assuming no gates and taking the no-op path.
+depends_on: [BO-1700f-1]
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  Resolve the main tree via git-common-dir (the shared resolver in BO-1700e-2); a
+  worktree missing its .leafcutter symlink must NEVER be mistaken for a
+  genuinely-no-gates project. Ambiguity in the determination is FAIL-CLOSED per
+  BO-1700b-1, never assume-no-gates. Implemented in the shared probe helper
+  (BO-1700a-1) over the git-common-dir resolution (BO-1700e-2); ADR-001
+  deployed/template parity applies.
+delivers_to: null
+expects_from:
+  ac_id: BO-1700e-2
+  contract: "The shared-git-dir resolution used to locate the main tree's authoritative config state for the no-config determination."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

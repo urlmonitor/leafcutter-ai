@@ -1,0 +1,49 @@
+id: BO-1700a-3
+readiness: approved
+priority: medium
+title: "A present-but-inert chain fails Check D even when A, B and C pass"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700a.yaml"
+criteria: |
+  Given a worktree where the pre-commit binary is on PATH (Check A would pass),
+    the `.pre-commit-config.yaml` resolves and parses (Check B would pass),
+    and the shared git hook contains the sentinel (Check C would pass),
+  But the hook chain is broken so that invoking the canary produces no token,
+  When the probe runs,
+  Then Check D fails, the probe exits non-zero, `canary` is false in the JSON
+    result, and `failing_checks` contains "D".
+  And the overall probe verdict is FAIL — a configuration that merely appears
+    installed but fires nothing is reported as broken, not trusted.
+depends_on: [BO-1700a, BO-1700a-1]
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  Check D is the AUTHORITATIVE "does the chain actually fire" proof and the whole
+  reason this feature exists: the production silent-skip bug is exactly a config
+  that looks installed but runs zero hooks (a fresh worktree with pre-commit
+  running under PRE_COMMIT_ALLOW_NO_CONFIG=1). Check D must run the canary via the
+  resolved config at the manual stage and assert the token in captured output;
+  token absence is a FAIL regardless of A/B/C outcomes (fail closed, per
+  BO-1700b-1). Implemented ONLY in the shared probe helper (BO-1700a-1); ADR-001
+  deployed/template parity applies.
+delivers_to: null
+expects_from:
+  ac_id: BO-1700a-1
+  contract: "The probe orchestrator whose Check D this behavior exercises."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: [BO-1700a-3-i, BO-1700a-3-ii]
+implemented_by: []

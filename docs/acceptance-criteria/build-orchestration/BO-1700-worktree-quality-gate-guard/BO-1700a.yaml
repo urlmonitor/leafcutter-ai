@@ -1,0 +1,31 @@
+id: BO-1700a
+readiness: approved
+priority: medium
+title: "Quality checks are proven to actually run, not just assumed present"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  The workspace confirms that a real quality check actually fires before it is
+  trusted -- instead of only checking that a configuration file appears to be
+  present.
+
+  You get real proof the protection is live, so a workspace that looks set up
+  but silently runs nothing is caught rather than trusted.
+roadmap_phase: phase_1
+depends_on: [BO-1700]
+documentation_triggers: [how-to, sequence-diagram]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-01
+amended_by:
+  - reason: "split: BO-1700a -> BO-1700a + BO-1700g + BO-1700h [intermediate, 11->5+3+3]; moved a-4,a-6,a-9 to BO-1700g and a-5,a-7,a-8 to BO-1700h, 2026-07-02"
+superseded_by: null
+covered_by: [BO-1700a-1, BO-1700a-2, BO-1700a-3, BO-1700a-10, BO-1700a-11]
+implemented_by: []

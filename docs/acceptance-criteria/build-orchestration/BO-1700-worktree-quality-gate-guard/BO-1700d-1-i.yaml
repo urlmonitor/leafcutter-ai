@@ -1,0 +1,42 @@
+id: BO-1700d-1-i
+readiness: approved
+priority: medium
+title: "Binary absent while main has config halts creation with an install hint"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700d.yaml"
+criteria: |
+  Given the pre-commit executable is not on PATH but the main tree has a
+    pre-commit config,
+  When the create-time gate runs the probe,
+  Then Check A fails, worktree creation halts, and the error text on stderr
+    contains the substring "pip install pre-commit".
+depends_on: [BO-1700d-1]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  The install hint is emitted ONLY when a config is present in the main tree (a
+  genuinely-no-gates project takes the no-op path, BO-1700f-1). The exact substring
+  "pip install pre-commit" is asserted so the message stays actionable. Implemented
+  in the create-time gate (BO-1700d-1) over the shared probe (BO-1700a-1); ADR-001
+  deployed/template parity applies.
+delivers_to: null
+expects_from:
+  ac_id: BO-1700a-1
+  contract: "The probe's Check A verdict this edge case exercises."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

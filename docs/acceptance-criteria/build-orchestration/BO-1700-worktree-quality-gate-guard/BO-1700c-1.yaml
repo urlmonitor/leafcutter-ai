@@ -1,0 +1,59 @@
+id: BO-1700c-1
+readiness: approved
+priority: medium
+title: "First-registered self-healing hook re-materializes a missing config on any commit"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700c.yaml"
+criteria: |
+  Given the commit-guardian manifest,
+  When it is read,
+  Then the self-healing hook is the entry at index 0 (registered first, before any
+    other hook).
+  And given a commit is attempted in a worktree where `.pre-commit-config.yaml`
+    does not resolve to a readable file,
+    When the self-healing hook runs,
+    Then it re-materializes the config by creating a `.leafcutter` symlink to the
+      main tree's `.leafcutter` (located via the shared git dir), or by copying
+      the config when a symlink cannot be created,
+    And after it runs the worktree's `.pre-commit-config.yaml` resolves and the
+      remaining hooks run against the restored config.
+depends_on: [BO-1700c]
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  New script scripts/commit_guardian/ensure_precommit_config.py with a
+  templates/scripts/commit_guardian/ mirror; deployed and template copies edited
+  together and verified via the build.py round-trip (ADR-001). The
+  config-establishment logic (symlink .leafcutter from main via the shared
+  git-common-dir resolver in BO-1700e-2, else copy) is folded INTO this hook — do
+  NOT create a separate extract-helper AC. This is the SINGLE live
+  config-establishment path (single producer); it supersedes the interim one-file
+  feature/SKILL.md slice (see BO-1700e-2 / L0 notes) so no two competing
+  establishment paths remain. Manifest index-0 registration is asserted so the heal
+  runs before any other hook (canonical manifest source is the templates/ copy).
+delivers_to:
+  agent: python-coder
+  contract: "A first-registered (index-0) self-healing hook that guarantees a resolvable .pre-commit-config.yaml before any other hook runs; consumed by the create-time gate (BO-1700d-1)."
+expects_from:
+  ac_id: BO-1700e-2
+  contract: "The shared-git-dir -> main-checkout resolution used to locate the main tree's .leafcutter for re-materialization."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: [BO-1700c-1-i, BO-1700c-1-ii, BO-1700c-1-iii, BO-1700c-1-iv]
+implemented_by: []

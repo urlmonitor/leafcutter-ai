@@ -1,0 +1,40 @@
+id: BO-1700a-11
+readiness: approved
+priority: medium
+title: "Sequence diagram: probe check flow A -> B -> C -> D -> verdict"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700a.yaml"
+criteria: |
+  Given a reader wants to understand the probe's control flow,
+  When they open the sequence diagram,
+  Then it shows the caller invoking the probe, the ordered Check A -> B -> C -> D
+    interactions, the first-failure short-circuit, and the returned structured
+    verdict with its exit code.
+depends_on: [BO-1700a, BO-1700a-1]
+doc_links:
+  - path: docs/architecture/diagrams/precommit-probe-sequence.md
+    relationship: creates
+    status: planned
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements: |
+  Depict the first-failure short-circuit accurately: the probe stops at the first
+  failing check (BO-1700a-1), so the diagram must show the early-return path per
+  check, not a run-all-four fan-out.
+delivers_to: null
+expects_from:
+  ac_id: BO-1700a-1
+  contract: "The probe's ordered check flow and first-failure short-circuit this diagram depicts."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

@@ -1,0 +1,29 @@
+id: BO-1700d
+readiness: approved
+priority: medium
+title: "Protection is verified twice: when the workspace is created and again before the drive starts"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  The workspace's protection is confirmed at two checkpoints -- once when the
+  workspace is created, and again just before the work begins.
+
+  You catch a broken workspace early and again at the last safe moment, so a
+  gap can never survive all the way to a commit.
+roadmap_phase: phase_1
+depends_on: [BO-1700]
+documentation_triggers: [sequence-diagram]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: [BO-1700d-1, BO-1700d-2, BO-1700d-3, BO-1700d-4]
+implemented_by: []

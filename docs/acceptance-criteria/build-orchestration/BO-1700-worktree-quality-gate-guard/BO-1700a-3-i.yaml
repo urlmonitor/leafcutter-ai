@@ -1,0 +1,42 @@
+id: BO-1700a-3-i
+readiness: approved
+priority: medium
+title: "Dangling config symlink fails Check B naming the unresolved path"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700a.yaml"
+criteria: |
+  Given the worktree's `.pre-commit-config.yaml` is a symlink whose `.leafcutter`
+    target file does not exist,
+  When the probe runs,
+  Then Check B fails, the probe exits non-zero, `config` is false in the JSON
+    result, and stderr names the unresolved path rather than emitting a generic
+    YAML parse error.
+depends_on: [BO-1700a-3]
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  Distinguish "symlink target missing" from "target present but invalid YAML" so
+  the error message is actionable. This is the exact fresh-worktree state the
+  guard exists to catch (the gitignored .leafcutter symlink is absent). Implemented
+  in the shared probe helper (BO-1700a-1); ADR-001 deployed/template parity applies.
+delivers_to: null
+expects_from:
+  ac_id: BO-1700a-1
+  contract: "The probe's Check B path this edge case exercises."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

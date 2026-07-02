@@ -1,0 +1,55 @@
+id: BO-1700a-2
+readiness: approved
+priority: medium
+title: "Canary hook prints a fixed token and only ever runs when explicitly invoked"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700a.yaml"
+criteria: |
+  Given the canary hook is invoked directly,
+  When it runs,
+  Then it prints the exact constant string `PRECOMMIT_CANARY_OK` to stdout and exits 0.
+  And the canary is registered in the commit-guardian hooks manifest with
+    `stages: [manual]` only, `always_run: true`, and `pass_filenames: false`.
+  And given a normal `git commit` in the worktree,
+    When the commit's pre-commit stage runs,
+    Then the canary hook does NOT execute and the token does NOT appear in the
+      commit's hook output.
+  And given the build step that generates the deployed pre-commit config runs,
+    Then the generated config contains the canary hook entry with `stages: [manual]`.
+depends_on: [BO-1700a]
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  New script scripts/commit_guardian/precommit_canary.py with a
+  templates/scripts/commit_guardian/ mirror; deployed and template copies edited
+  together and verified via the build.py round-trip (ADR-001). The manifest entry
+  is added to the CANONICAL templates/scripts/commit_guardian/commit_guardian.json
+  (the config/ copy is a build output, never the source of truth). build_precommit
+  must emit the canary into the generated pre-commit config. The manual-only stage
+  is what guarantees the canary NEVER runs on a real commit — it exists solely as
+  the artifact the probe's Check D invokes on demand (single-producer contract
+  with BO-1700a-1).
+delivers_to:
+  agent: python-coder
+  contract: "A manual-stage-only canary hook (stages: [manual], always_run: true, pass_filenames: false) that emits exactly PRECOMMIT_CANARY_OK on stdout and exits 0; invoked by the probe's Check D (BO-1700a-1)."
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

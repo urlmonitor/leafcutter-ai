@@ -1,0 +1,40 @@
+id: BO-1700c-3
+readiness: approved
+priority: medium
+title: "Sequence diagram: commit triggers heal, config resolves, chain fires"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700c.yaml"
+criteria: |
+  Given a reader wants to understand the self-healing control flow at commit time,
+  When they open the sequence diagram,
+  Then it shows a commit invoking the first-registered self-healing hook, the hook
+    detecting an unresolved config, re-materializing it (symlink or copy fallback),
+    and the remaining hook chain then firing against the restored config.
+depends_on: [BO-1700c, BO-1700c-1]
+doc_links:
+  - path: docs/architecture/diagrams/worktree-precommit-heal-sequence.md
+    relationship: creates
+    status: planned
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements: |
+  Depict the index-0 ordering guarantee (the self-healing hook fires FIRST) and
+  the symlink-then-copy-fallback branch, so the diagram matches the actual heal
+  path in BO-1700c-1.
+delivers_to: null
+expects_from:
+  ac_id: BO-1700c-1
+  contract: "The self-healing commit-time flow (heal-then-remaining-chain) this diagram depicts."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

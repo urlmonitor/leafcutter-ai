@@ -1,0 +1,30 @@
+id: BO-1700f
+readiness: approved
+priority: medium
+title: "Projects that genuinely don't use these checks are left alone, without false alarms"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Where a project genuinely has no quality checks, the guard steps aside quietly
+  instead of raising a false alarm.
+
+  You only ever see the guard act when there is something real to protect, so it
+  never becomes noise in projects that do not use these checks.
+roadmap_phase: phase_1
+depends_on: [BO-1700]
+documentation_triggers: []
+documentation_rationale: "Defines the graceful no-op boundary of the guard behavior documented under BO-1700b and BO-1700e; no separate documentation artifact is needed."
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-07-01
+amended_by: []
+superseded_by: null
+covered_by: [BO-1700f-1]
+implemented_by: []

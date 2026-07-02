@@ -1,0 +1,47 @@
+id: BO-1700g-2
+readiness: approved
+priority: high
+title: "The canary token is only trusted when the canary hook actually executed"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700g.yaml"
+criteria: |
+  Given the string `PRECOMMIT_CANARY_OK` appears in tracked repository content or
+    in some other hook's output, but the canary hook itself is NOT registered in
+    the resolved config,
+  When the probe runs Check D,
+  Then Check D fails, the probe exits non-zero, `canary` is false in the JSON
+    result, and stderr states that the token could not be attributed to a
+    registered canary hook execution.
+  And Check D only passes when the token is produced by invoking the registered
+    canary hook through the resolved config.
+depends_on: [BO-1700g, BO-1700a-1]
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements: |
+  Check D must ATTRIBUTE the token to the canary hook's own execution (e.g. run
+  only the canary hook by id and assert the token in that invocation's captured
+  output), not scan arbitrary content for the token string. Prevents a spoofed
+  token from producing a false pass. Implemented in the shared probe helper
+  (BO-1700a-1); fail closed (BO-1700b-1); ADR-001 deployed/template parity applies.
+delivers_to: null
+expects_from:
+  ac_id: BO-1700a-1
+  contract: "The probe's Check D, hardened against token spoofing."
+origin_agent: business-analyst-v3
+created: 2026-07-01
+amended_by:
+  - reason: "split: renamed BO-1700a-6 -> BO-1700g-2 (BO-1700a intermediate split), 2026-07-02"
+superseded_by: null
+covered_by: []
+implemented_by: []
