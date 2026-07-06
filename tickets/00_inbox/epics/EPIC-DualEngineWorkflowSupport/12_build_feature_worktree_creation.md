@@ -1,6 +1,6 @@
 ---
 title: "build-feature.js creates/reuses an isolated worktree before driving"
-status: in_progress
+status: done
 components:
   - build_orchestration
 created: 2026-07-02
