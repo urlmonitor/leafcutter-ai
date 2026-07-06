@@ -1,6 +1,6 @@
 ---
 title: "Probe Core + Canary + Git-Common-Dir Resolution"
-status: in_progress
+status: done
 components:
   - build-orchestration
 created: 2026-07-02
@@ -30,7 +30,7 @@ agents:
   test-writer: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 02: Probe Core + Canary + Git-Common-Dir Resolution
@@ -56,7 +56,7 @@ This is the single producer consumed by all gates (BO-1700b/d families).
 - [x] test-writer — 2026-07-06 14:40
 - [x] pr-reviewer — 2026-07-06 16:45
 - [x] commit — 2026-07-06 16:50
-- [ ] pull-request
+- [x] pull-request — 2026-07-06 17:15
 
 ## Comments
 
@@ -188,6 +188,14 @@ red_baseline:
   - test_name: test_hook_manifest_pass_filenames
     file: unit_tests/commit_guardian/test_precommit_canary.py
     error: "AssertionError: No canary hook entry found in commit_guardian.json hooks_manifest.hooks (looked for id containing 'canary'). Add the precommit-canary entry ..."
+
+### 2026-07-06 17:15 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+PR: https://github.com/urlmonitor/leafcutter-ai/pull/204
 
 ### 2026-07-06 16:50 — commit (status: ok)
 feedback-id: (commit-agent)
