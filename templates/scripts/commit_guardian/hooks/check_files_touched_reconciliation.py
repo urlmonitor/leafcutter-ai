@@ -3,22 +3,15 @@ MODULE: check_files_touched_reconciliation
 GOAL: Pre-commit hook that flags source files changed by a ticket's work but
     absent from the ticket's declared files_touched UNION out_of_scope,
     immediately before the ticket is allowed to reach status: done.
-BUSINESS CONTEXT: BP-1100e-1 — A ticket can pass every gate (tests green,
-    sign-offs complete) and still deliver nothing, because the files it
-    actually changed do not match the files it declared. This hook fires
-    at the pre-done commit gate and blocks the commit when an undeclared
-    source file (.py, .sql, .ts, .tsx, .js) is found in the branch diff.
-    Complements BP-1100a (pre-dispatch scope declaration) without duplicating
-    it: BP-1100a fires before work starts; this hook fires after work is done.
+BUSINESS CONTEXT: BP-1100e-1 — blocks commits when a ticket moves to done
+    but changed source files (.py, .sql, .ts, .tsx, .js) are absent from
+    files_touched or out_of_scope. Complements BP-1100a (fires before work
+    starts; this hook fires after work is done).
 ARCHITECTURE: Standalone hook in templates/scripts/commit_guardian/hooks/
-    (portable — no leafcutter-internal imports). Fires when a ticket .md file
-    is staged. Computes changed source files from git diff origin/main...HEAD
-    plus the current staged set, then compares against files_touched UNION
-    out_of_scope in the ticket frontmatter. Exits 1 (blocking) when undeclared
-    source files are found; exits 0 on any reconciliation error (fail-open per
-    BP-1100e-2). Registered in hooks_manifest.hooks[] of
-    templates/scripts/commit_guardian/commit_guardian.json, mirroring the
-    check-agent-spawn-consistency entry.
+    (portable — no leafcutter-internal imports). Computes branch diff plus
+    staged source files, compares against files_touched UNION out_of_scope.
+    Exits 1 on undeclared sources; 0 on errors (fail-open, BP-1100e-2).
+    Registered in hooks_manifest.hooks[] of commit_guardian.json.
 """
 
 from __future__ import annotations
@@ -33,6 +26,33 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 
 SOURCE_EXTENSIONS: frozenset[str] = frozenset({".py", ".sql", ".ts", ".tsx", ".js"})
+
+# Path segment and filename markers that identify code-generated files.
+# Slashed markers match full path segments; dot/underscore markers match
+# generated filename stems (e.g. ".generated.", "_generated.").
+GENERATED_PATH_PATTERNS: frozenset[str] = frozenset({
+    "/generated/",
+    "/.generated/",
+    "/__generated__/",
+    "/dist/",
+    ".generated.",
+    "_generated.",
+})
+
+# Well-known lock-file base-names (always exempt; no declarable behavior).
+LOCKFILE_NAMES: frozenset[str] = frozenset({
+    "poetry.lock",
+    "Pipfile.lock",
+    "package-lock.json",
+    "yarn.lock",
+    "composer.lock",
+    "Gemfile.lock",
+    "go.sum",
+    "Cargo.lock",
+    "pnpm-lock.yaml",
+    "uv.lock",
+})
+
 _BRANCH_BASE_CANDIDATES: list[str] = ["origin/main", "main"]
 _HOOK_TAG = "[check-predone-scope]"
 
@@ -43,11 +63,7 @@ _HOOK_TAG = "[check-predone-scope]"
 
 
 def _get_staged_files() -> list[str]:
-    """Return staged file paths from the git index.
-
-    Returns:
-        List of repo-relative staged path strings, or empty list on error.
-    """
+    """Return staged file paths from the git index, or empty list on error."""
     try:
         result = subprocess.run(
             ["git", "diff", "--cached", "--name-only"],
@@ -62,11 +78,7 @@ def _get_staged_files() -> list[str]:
 
 
 def _get_repo_root() -> str:
-    """Return the absolute path to the git repository root.
-
-    Returns:
-        Repo root as a string, or empty string on error.
-    """
+    """Return the absolute git repo root path, or empty string on error."""
     try:
         result = subprocess.run(
             ["git", "rev-parse", "--show-toplevel"],
@@ -80,12 +92,10 @@ def _get_repo_root() -> str:
 
 
 def _get_branch_diff_files() -> frozenset[str]:
-    """Return source files changed in this branch relative to origin/main.
+    """Return files changed in this branch relative to origin/main.
 
-    Tries origin/main first, then main. Uses the three-dot merge-base diff
-    syntax so only commits on this branch (not on main) are included.
-    Fails open — returns empty frozenset when git is unavailable or both
-    base candidates fail.
+    Tries origin/main, then main; uses three-dot merge-base syntax.
+    Fails open — returns empty frozenset when git is unavailable.
 
     Returns:
         frozenset of repo-relative path strings changed since the branch point.
@@ -142,16 +152,13 @@ def _get_status(frontmatter: str) -> str:
 
 
 def _parse_yaml_list_field(frontmatter: str, field_name: str) -> list[str]:
-    """Parse a block-sequence YAML list field from frontmatter text.
+    """Parse a block-sequence YAML list field from raw frontmatter text.
 
-    Handles the standard ticket format:
-        field_name:
-          - item1
-          - item2
+    Handles the ``field_name:\\n  - item`` block-sequence format.
 
     Args:
         frontmatter: Raw YAML text between the --- delimiters.
-        field_name: The field to extract (e.g. 'files_touched', 'out_of_scope').
+        field_name: Field to extract (e.g. 'files_touched', 'out_of_scope').
 
     Returns:
         List of stripped string values, or empty list if the field is absent.
@@ -195,6 +202,39 @@ def _is_source_file(path: str) -> bool:
     return Path(path).suffix in SOURCE_EXTENSIONS
 
 
+def _is_generated_file(path: str) -> bool:
+    """Return True if the path belongs to a code-generated artifact.
+
+    Prepends a leading slash before checking GENERATED_PATH_PATTERNS so
+    segment markers (e.g. ``/generated/``) match full segments only, not
+    substrings of unrelated names like ``not_generated/``.
+
+    Args:
+        path: File path to test (repo-relative or absolute).
+
+    Returns:
+        bool: True when a GENERATED_PATH_PATTERNS marker is found.
+    """
+    norm = "/" + path.replace("\\", "/").lstrip("/")
+    return any(marker in norm for marker in GENERATED_PATH_PATTERNS)
+
+
+def _is_lockfile(path: str) -> bool:
+    """Return True if the file is a well-known dependency lock-file.
+
+    Provides an explicit, readable guard even though most lock-files are
+    already implicitly exempt because their extensions are not in
+    SOURCE_EXTENSIONS.
+
+    Args:
+        path: File path to test.
+
+    Returns:
+        bool: True when the filename matches a known lock-file name.
+    """
+    return Path(path).name in LOCKFILE_NAMES
+
+
 def _compute_undeclared(
     declared_scope: set[str],
     branch_diff_files: frozenset[str],
@@ -214,7 +254,7 @@ def _compute_undeclared(
     changed_sources = {
         _normalise_path(p)
         for p in all_changed
-        if _is_source_file(p)
+        if _is_source_file(p) and not _is_generated_file(p) and not _is_lockfile(p)
     }
     return sorted(changed_sources - declared_scope)
 
@@ -231,19 +271,17 @@ def _check_ticket(
 ) -> list[str]:
     """Check one staged ticket file for undeclared source changes.
 
-    Reads the ticket from disk, parses its frontmatter, and returns undeclared
-    source files when the ticket status is 'done' and its declared scope misses
-    at least one changed source file.
+    Reads the ticket, parses its frontmatter, and returns undeclared source
+    files when status is 'done' and the declared scope misses a changed file.
 
     Args:
         rel_path: Repo-relative path to the staged ticket .md file.
-        repo_root: Absolute path to the git repo root (may be empty string).
+        repo_root: Absolute git repo root path (may be empty string).
         staged_files: All staged file paths for the current commit.
 
     Returns:
-        Sorted list of undeclared source file paths.
-        Empty list means the ticket is clean, status is not done, or a
-        read/parse error occurred (fail-open).
+        Sorted list of undeclared source file paths, or empty list when the
+        ticket is clean, not-done, or a read/parse error occurred.
     """
     abs_path = Path(repo_root, rel_path) if repo_root else Path(rel_path)
 
@@ -307,15 +345,12 @@ def _print_errors(all_errors: list[tuple[str, list[str]]]) -> None:
 def main() -> int:
     """Run the pre-done scope reconciliation pre-commit hook.
 
-    Reads staged ticket files, identifies those transitioning to status: done,
-    computes the branch's actual changed source files, and blocks the commit
-    when any source file was changed but not declared in the ticket's
-    files_touched or out_of_scope frontmatter.
+    Identifies done-staged tickets, computes changed source files, and blocks
+    the commit when any source file is absent from files_touched / out_of_scope.
 
     Returns:
-        0 when no done ticket is staged, all sources are declared, or a
-        reconciliation error occurs (fail-open per BP-1100e-2).
-        1 when undeclared source files are found in a ticket being set to done.
+        0 when clean or on any reconciliation error (fail-open per BP-1100e-2).
+        1 when undeclared source files are found.
     """
     staged_files = _get_staged_files()
     if not staged_files:
@@ -353,4 +388,10 @@ if __name__ == "__main__":
 #   git/IO errors per BP-1100e-2. Standalone — no leafcutter-internal
 #   imports for portability (ADR-001). Mirrors check-agent-spawn-consistency
 #   entry in commit_guardian.json hooks_manifest.hooks[].
+# - 2026-07-06 [python-coder/BP-1100e-1-i]: Add generated-file and
+#   lockfile exemptions (AC BP-1100e-1-i). GENERATED_PATH_PATTERNS covers
+#   path segments (/generated/, /__generated__/, /dist/, /.generated/) and
+#   stem markers (.generated., _generated.). LOCKFILE_NAMES covers common
+#   lock-files by basename. Both _is_generated_file() and _is_lockfile()
+#   are pure (no I/O). _compute_undeclared() filters both categories.
 # ====================================================================
