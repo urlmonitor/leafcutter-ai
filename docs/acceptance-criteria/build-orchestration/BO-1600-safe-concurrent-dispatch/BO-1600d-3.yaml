@@ -69,7 +69,8 @@ covered_by:
   - BO-1600d-3-iv
   - BO-1600d-3-v
   - BO-1600d-3-vi
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-GuidedGitRecovery/03_TICKET-20260706-BO-1600d-3.md
 notes: |
   These are the exact hand-repair steps performed during the incident recovery,
   promoted into a guided helper. The worktree-cache-tree fresh-worktree fallback

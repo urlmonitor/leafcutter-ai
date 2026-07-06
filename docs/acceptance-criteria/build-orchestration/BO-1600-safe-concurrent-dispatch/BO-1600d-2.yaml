@@ -56,7 +56,8 @@ amended_by:
     confirmed_at: 2026-07-01
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-GuidedGitRecovery/02_TICKET-20260706-BO-1600d-2.md
 notes: |
   Non-destructive-by-default and dry-run-first are the two safety properties the
   user called out explicitly. Splitting them from the step engine (BO-1600d-3)

@@ -64,7 +64,8 @@ covered_by:
   - BP-1100e-1-ii
   - BP-1100e-1-iii
   - BP-1100e-1-iv
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-PhantomDoneFilesTouched/01_TICKET-20260706-BP-1100e-1.md
 notes: |
   Origin: BP-1100 PO run KI-2 (phantom-done: a ticket edited docs when source was
   needed, passed every gate). BP-1100e is the opposite-end bookend to BP-1100a:

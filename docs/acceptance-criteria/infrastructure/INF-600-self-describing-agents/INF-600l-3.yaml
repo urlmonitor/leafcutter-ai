@@ -49,7 +49,8 @@ amended_by:
     confirmed_at: 2026-07-01
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RegistryCardMirror/05_TICKET-20260706-INF-600l-3.md
 notes: |
   The user flagged that pr-reviewer prose is only a backstop and that pr-reviewer
   has no search tools, so any reviewer check must delegate to research-agent. This

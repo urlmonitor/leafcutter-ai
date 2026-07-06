@@ -58,7 +58,8 @@ amended_by:
     confirmed_at: 2026-07-01
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-GuidedGitRecovery/10_TICKET-20260706-BO-1600d-4.md
 notes: |
   Cross-cutting portability invariant for every leafcutter guardrail (per BO and
   BP PROJECT_CONTEXT): the benefit must reach any installing project via build.py

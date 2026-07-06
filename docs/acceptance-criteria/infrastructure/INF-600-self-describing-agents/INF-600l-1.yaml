@@ -63,7 +63,8 @@ superseded_by: null
 covered_by:
   - INF-600l-1-i
   - INF-600l-1-ii
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RegistryCardMirror/01_TICKET-20260706-INF-600l-1.md
 notes: |
   Extends the existing check_agent_spawn_consistency hook (which today validates
   spawned_by/spawn_allowlist reciprocity within the registry, INF-600g) to also

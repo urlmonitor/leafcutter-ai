@@ -59,7 +59,8 @@ amended_by:
     confirmed_at: 2026-07-01
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-GuidedGitRecovery/01_TICKET-20260706-BO-1600d-1.md
 notes: |
   Origin: EPIC-FinalizeFeatureHardening incident (parallel supervisors produced a
   0-byte loose object corrupting the shared worktree index). BO-1600c owns
