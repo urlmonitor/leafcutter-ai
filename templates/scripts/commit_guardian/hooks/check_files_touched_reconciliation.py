@@ -56,6 +56,10 @@ LOCKFILE_NAMES: frozenset[str] = frozenset({
 _BRANCH_BASE_CANDIDATES: list[str] = ["origin/main", "main"]
 _HOOK_TAG = "[check-predone-scope]"
 
+# Module-level cache for the case-insensitivity probe result.  None means
+# the probe has not yet run; True/False are cached outcomes.
+_FS_CASE_INSENSITIVE: bool | None = None
+
 
 # ---------------------------------------------------------------------------
 # Git helpers
@@ -119,6 +123,39 @@ def _get_branch_diff_files() -> frozenset[str]:
     return frozenset()
 
 
+def _is_case_insensitive_fs() -> bool:
+    """Return True if the git working tree is on a case-insensitive filesystem.
+
+    Detects case-insensitivity by querying ``git config --get core.ignoreCase``.
+    Result is cached at module level so the subprocess call runs at most once
+    per process invocation.  Fails open — returns False on any subprocess error,
+    consistent with the hook's BP-1100e-2 fail-open policy.
+
+    Returns:
+        bool: True when ``core.ignoreCase`` is ``true`` (NTFS / APFS),
+        False otherwise.
+    """
+    global _FS_CASE_INSENSITIVE
+    if _FS_CASE_INSENSITIVE is not None:
+        return _FS_CASE_INSENSITIVE
+    try:
+        result = subprocess.run(
+            ["git", "config", "--get", "core.ignoreCase"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except subprocess.SubprocessError as exc:
+        print(
+            f"{_HOOK_TAG} WARNING: git config core.ignoreCase failed: {exc}",
+            file=sys.stderr,
+        )
+        _FS_CASE_INSENSITIVE = False
+        return False
+    _FS_CASE_INSENSITIVE = result.stdout.strip().lower() == "true"
+    return _FS_CASE_INSENSITIVE
+
+
 # ---------------------------------------------------------------------------
 # Frontmatter parsing (pure — no I/O, no try/except)
 # ---------------------------------------------------------------------------
@@ -177,15 +214,27 @@ def _parse_yaml_list_field(frontmatter: str, field_name: str) -> list[str]:
 
 
 def _normalise_path(path: str) -> str:
-    """Strip leading ./ and normalise path separators.
+    """Strip leading ./ and normalise path separators; apply case-folding on
+    case-insensitive filesystems.
+
+    Applies case-folding (lowercase) when the underlying filesystem is
+    case-insensitive, as detected by :func:`_is_case_insensitive_fs`.  This
+    ensures paths that differ only by case (e.g. ``Scripts/Build.py`` vs
+    ``scripts/build.py`` on NTFS or APFS) compare as equal after normalisation.
+    Both separator normalisation and case-folding are applied in sequence so
+    the two transformations compose correctly on Windows NTFS and macOS APFS.
 
     Args:
         path: Raw file path from frontmatter or git output.
 
     Returns:
-        Normalised repo-relative path string.
+        Normalised repo-relative path string, lowercased on case-insensitive
+        filesystems.
     """
-    return path.strip().lstrip("./").replace("\\", "/")
+    normalised = path.strip().lstrip("./").replace("\\", "/")
+    if _is_case_insensitive_fs():
+        return normalised.lower()
+    return normalised
 
 
 def _is_source_file(path: str) -> bool:
@@ -394,4 +443,14 @@ if __name__ == "__main__":
 #   stem markers (.generated., _generated.). LOCKFILE_NAMES covers common
 #   lock-files by basename. Both _is_generated_file() and _is_lockfile()
 #   are pure (no I/O). _compute_undeclared() filters both categories.
+# - 2026-07-06 [python-coder/BP-1100e-1-ii]: Add case-folding to
+#   _normalise_path() for case-insensitive filesystems (NTFS/APFS).
+#   AC BP-1100e-1-ii: paths that differ only by case (e.g.
+#   "Scripts/Build_Phases.py" vs "scripts/build_phases.py") are treated
+#   as matching on case-insensitive filesystems.
+#   _is_case_insensitive_fs() queries git config --get core.ignoreCase,
+#   caches the boolean result at module level (_FS_CASE_INSENSITIVE), and
+#   fails open (returns False on SubprocessError) per BP-1100e-2 policy.
+#   Separator normalisation (backslash → forward slash) and case-folding
+#   compose correctly in _normalise_path() — both applied in sequence.
 # ====================================================================
