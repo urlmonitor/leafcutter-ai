@@ -20,11 +20,17 @@ DECISION HISTORY
 - 2026-07-06 [EPIC-WorktreeQualityGateGuard/02]: Initial implementation.
   Implements the four-check orchestrator described in ADR-WorktreeQualityGate.
   git-common-dir resolution supports both main-tree and worktree topologies.
+- 2026-07-06 [EPIC-WorktreeQualityGateGuard/03]: Integrity and robustness pass.
+  Added validate_hook_name (anti-spoofing exact-match guard), validate_canary_stage
+  (stage attribution validator), check_hook_freshness (drift detector), and
+  resolve_hooks_path (hooksPath edge-case resolution). Raised check_d_canary
+  subprocess timeout from 5s to 10s (BO-1700h-2).
 ====================================================================
 """
 
 from __future__ import annotations
 
+import configparser
 import json
 import logging
 import shutil
@@ -190,7 +196,7 @@ def check_c_git_hook() -> bool:
 def check_d_canary() -> bool:
     """Check D: precommit_canary.py emits PRECOMMIT_CANARY_OK on stdout.
 
-    Invokes precommit_canary.py as a subprocess with a 5-second timeout.
+    Invokes precommit_canary.py as a subprocess with a 10-second timeout.
     Inspects stdout for the PRECOMMIT_CANARY_OK sentinel token.
 
     Returns:
@@ -206,16 +212,132 @@ def check_d_canary() -> bool:
             capture_output=True,
             text=True,
             encoding="utf-8",
-            timeout=5,
+            timeout=10,
         )
     except subprocess.TimeoutExpired:
-        _log.warning("check_d_canary: canary timed out after 5 seconds")
+        _log.warning("check_d_canary: canary timed out after 10 seconds")
         raise
     except OSError as exc:
         _log.warning("check_d_canary: subprocess launch failed: %s", exc)
         raise
 
     return _CANARY_EXPECTED in result.stdout
+
+
+def validate_hook_name(hook_path: Path) -> bool:
+    """Validate that a hook file is named exactly 'pre-commit' (anti-spoofing guard).
+
+    Performs an exact filename match. Any suffix, prefix, extension, or dot-prefix
+    makes the name non-canonical and returns False.
+
+    Args:
+        hook_path: Path to the hook file to validate.
+
+    Returns:
+        True if hook_path.name is exactly 'pre-commit', False for any other name.
+    """
+    return hook_path.name == "pre-commit"
+
+
+def validate_canary_stage(config_path: Path) -> bool:
+    """Validate that the precommit-canary entry is registered in exactly ['manual'] stage.
+
+    Reads the commit_guardian.json registry at config_path, finds the entry with
+    id 'precommit-canary', and returns True only when its stages list is exactly
+    ['manual'] (single element, case-sensitive). Returns False when the entry is
+    absent, stages is empty, contains any non-manual element, or contains 'manual'
+    alongside any other stage.
+
+    Args:
+        config_path: Path to the commit_guardian.json registry file.
+
+    Returns:
+        True if the canary entry exists with stages == ['manual'], False otherwise.
+    """
+    try:
+        content = config_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        _log.warning("validate_canary_stage: cannot read %s: %s", config_path, exc)
+        return False
+
+    try:
+        data = json.loads(content)
+    except json.JSONDecodeError as exc:
+        _log.warning("validate_canary_stage: JSON parse error in %s: %s", config_path, exc)
+        return False
+
+    for hook in data.get("hooks", []):
+        if hook.get("id") == "precommit-canary":
+            return hook.get("stages") == ["manual"]
+
+    return False
+
+
+def check_hook_freshness(hook_path: Path, config_path: Path) -> bool:
+    """Compare hook mtime against config mtime to detect stale/drift state.
+
+    Returns True when the hook file's modification time is at least as recent as
+    the config file's. Returns False when the hook is older than the config (drift)
+    or when the hook file is missing (fail-closed).
+
+    Args:
+        hook_path: Path to the git pre-commit hook file.
+        config_path: Path to the .pre-commit-config.yaml (or equivalent) config file.
+
+    Returns:
+        True if hook mtime >= config mtime, False if hook is stale or missing.
+    """
+    try:
+        hook_mtime = hook_path.stat().st_mtime
+        config_mtime = config_path.stat().st_mtime
+    except OSError as exc:
+        _log.warning("check_hook_freshness: stat failed: %s", exc)
+        return False
+
+    return hook_mtime >= config_mtime
+
+
+def resolve_hooks_path(cwd: Path) -> Path:
+    """Resolve the effective git hooks directory for the given working tree.
+
+    Reads .git/config from cwd to find core.hooksPath. If core.hooksPath is set
+    and absolute, returns it as-is. If relative, resolves it against cwd. If
+    core.hooksPath is absent, falls back to calling _resolve_git_commondir(cwd)
+    and appending 'hooks'.
+
+    Args:
+        cwd: The working directory (worktree root) to resolve hooks from.
+
+    Returns:
+        Absolute Path to the effective hooks directory.
+
+    Raises:
+        OSError: When .git/config exists but cannot be read (fail-closed; caller
+            must handle).
+    """
+    git_config_path = cwd / ".git" / "config"
+
+    try:
+        config_text = git_config_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        _log.warning("resolve_hooks_path: cannot read .git/config at %s: %s", git_config_path, exc)
+        raise
+
+    parser = configparser.ConfigParser()
+    parser.read_string(config_text)
+
+    # configparser lowercases option keys by default; git uses 'hooksPath'
+    hooks_path_str = parser.get("core", "hookspath", fallback=None)
+
+    if hooks_path_str is not None:
+        hooks_path_str = hooks_path_str.strip()
+        hooks_path = Path(hooks_path_str)
+        if hooks_path.is_absolute():
+            return hooks_path
+        return (cwd / hooks_path_str).resolve()
+
+    commondir = _resolve_git_commondir(cwd)
+    return commondir / "hooks"
 
 
 def run_checks() -> dict[str, Any]:

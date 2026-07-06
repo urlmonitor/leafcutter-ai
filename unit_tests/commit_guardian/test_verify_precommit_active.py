@@ -544,5 +544,623 @@ class TestExitCodeAnyFailure(unittest.TestCase):
         )
 
 
+# ---------------------------------------------------------------------------
+# TICKET 03 ADDITIONS — g-1, g-2, g-3, h-1, h-2, h-3
+# Added: 2026-07-06 [EPIC-WorktreeQualityGateGuard/03]
+# All classes below are RED until the following functions are implemented in
+# verify_precommit_active.py:
+#   validate_hook_name(hook_path: Path) -> bool
+#   validate_canary_stage(config_path: Path) -> bool
+#   check_hook_freshness(hook_path: Path, config_path: Path) -> bool
+#   resolve_hooks_path(cwd: Path) -> Path
+# Additionally, test_canary_timeout_10s_returns_false is RED because the
+# current check_d_canary uses timeout=5 (must be changed to 10).
+# ---------------------------------------------------------------------------
+
+
+class TestValidateHookName(unittest.TestCase):
+    """g-1: Required-hook-ID validation. Hook file must be named exactly 'pre-commit'."""
+
+    def test_valid_hook_name_exact(self):
+        # covers: UNKNOWN
+        """validate_hook_name returns True when the hook file is named exactly 'pre-commit'.
+
+        Must implement validate_hook_name(hook_path: Path) -> bool that returns True only
+        when hook_path.name == 'pre-commit' (exact match, no prefix/suffix/extension).
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module first."
+            )
+        if not hasattr(_vpa, "validate_hook_name"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose validate_hook_name(). "
+                "Implement validate_hook_name(hook_path: Path) -> bool."
+            )
+        hook_path = Path("/tmp/.git/hooks/pre-commit")
+        result = _vpa.validate_hook_name(hook_path)
+        self.assertTrue(
+            result,
+            msg=f"Expected validate_hook_name(Path('.../pre-commit')) == True. Got: {result}",
+        )
+
+    def test_invalid_hook_name_backup(self):
+        # covers: UNKNOWN
+        """validate_hook_name returns False when the hook is named 'pre-commit-backup'.
+
+        A backup hook must not be accepted as the canonical pre-commit hook.
+        """
+        if not _IMPORT_OK:
+            self.fail("ImportError: cannot import verify_precommit_active.")
+        if not hasattr(_vpa, "validate_hook_name"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose validate_hook_name(). "
+                "Implement validate_hook_name(hook_path: Path) -> bool."
+            )
+        hook_path = Path("/tmp/.git/hooks/pre-commit-backup")
+        result = _vpa.validate_hook_name(hook_path)
+        self.assertFalse(
+            result,
+            msg=f"Expected validate_hook_name(Path('.../pre-commit-backup')) == False. Got: {result}",
+        )
+
+    def test_invalid_hook_name_no_hyphen(self):
+        # covers: UNKNOWN
+        """validate_hook_name returns False when the hook is named 'precommit' (no hyphen).
+
+        Hook filename must match exactly 'pre-commit'; 'precommit' is a distinct name.
+        """
+        if not _IMPORT_OK:
+            self.fail("ImportError: cannot import verify_precommit_active.")
+        if not hasattr(_vpa, "validate_hook_name"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose validate_hook_name(). "
+                "Implement validate_hook_name(hook_path: Path) -> bool."
+            )
+        hook_path = Path("/tmp/.git/hooks/precommit")
+        result = _vpa.validate_hook_name(hook_path)
+        self.assertFalse(
+            result,
+            msg=f"Expected validate_hook_name(Path('.../precommit')) == False. Got: {result}",
+        )
+
+    def test_invalid_hook_name_dotted(self):
+        # covers: UNKNOWN
+        """validate_hook_name returns False when the hook is named '.pre-commit' (dot-prefixed).
+
+        A hidden file '.pre-commit' must not pass; only the bare name 'pre-commit' is valid.
+        """
+        if not _IMPORT_OK:
+            self.fail("ImportError: cannot import verify_precommit_active.")
+        if not hasattr(_vpa, "validate_hook_name"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose validate_hook_name(). "
+                "Implement validate_hook_name(hook_path: Path) -> bool."
+            )
+        hook_path = Path("/tmp/.git/hooks/.pre-commit")
+        result = _vpa.validate_hook_name(hook_path)
+        self.assertFalse(
+            result,
+            msg=f"Expected validate_hook_name(Path('.../.pre-commit')) == False. Got: {result}",
+        )
+
+    def test_invalid_hook_name_with_extension(self):
+        # covers: UNKNOWN
+        """validate_hook_name returns False when the hook is named 'pre-commit.sh' (extension present).
+
+        Any file extension makes the name non-canonical; only the bare 'pre-commit' passes.
+        """
+        if not _IMPORT_OK:
+            self.fail("ImportError: cannot import verify_precommit_active.")
+        if not hasattr(_vpa, "validate_hook_name"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose validate_hook_name(). "
+                "Implement validate_hook_name(hook_path: Path) -> bool."
+            )
+        hook_path = Path("/tmp/.git/hooks/pre-commit.sh")
+        result = _vpa.validate_hook_name(hook_path)
+        self.assertFalse(
+            result,
+            msg=f"Expected validate_hook_name(Path('.../pre-commit.sh')) == False. Got: {result}",
+        )
+
+
+class TestValidateCanaryStage(unittest.TestCase):
+    """g-2/g-3: Canary anti-spoof / stage attribution. Canary must be in exactly ['manual']."""
+
+    def _write_registry(self, tmp_dir: Path, hooks: list) -> Path:
+        """Write a minimal commit_guardian.json registry to tmp_dir and return its path."""
+        registry = {"hooks": hooks}
+        config_path = tmp_dir / "commit_guardian.json"
+        config_path.write_text(json.dumps(registry), encoding="utf-8")
+        return config_path
+
+    def test_canary_stage_manual_only(self):
+        # covers: UNKNOWN
+        """validate_canary_stage returns True when the canary entry has stages: ['manual'] exactly.
+
+        Must implement validate_canary_stage(config_path: Path) -> bool that reads
+        commit_guardian.json, finds the 'precommit-canary' entry, and returns True
+        only when stages == ['manual'] (single-element list, exactly 'manual').
+        """
+        if not _IMPORT_OK:
+            self.fail("ImportError: cannot import verify_precommit_active.")
+        if not hasattr(_vpa, "validate_canary_stage"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose validate_canary_stage(). "
+                "Implement validate_canary_stage(config_path: Path) -> bool."
+            )
+        with tempfile.TemporaryDirectory() as tmp:
+            config_path = self._write_registry(
+                Path(tmp),
+                [{"id": "precommit-canary", "stages": ["manual"]}],
+            )
+            result = _vpa.validate_canary_stage(config_path)
+        self.assertTrue(
+            result,
+            msg=(
+                "Expected validate_canary_stage to return True when "
+                f"stages=['manual']. Got: {result}"
+            ),
+        )
+
+    def test_canary_stage_empty(self):
+        # covers: UNKNOWN
+        """validate_canary_stage returns False when the canary entry has stages: [].
+
+        An empty stages list means the canary fires in no stage — must fail.
+        """
+        if not _IMPORT_OK:
+            self.fail("ImportError: cannot import verify_precommit_active.")
+        if not hasattr(_vpa, "validate_canary_stage"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose validate_canary_stage(). "
+                "Implement validate_canary_stage(config_path: Path) -> bool."
+            )
+        with tempfile.TemporaryDirectory() as tmp:
+            config_path = self._write_registry(
+                Path(tmp),
+                [{"id": "precommit-canary", "stages": []}],
+            )
+            result = _vpa.validate_canary_stage(config_path)
+        self.assertFalse(
+            result,
+            msg=f"Expected validate_canary_stage to return False when stages=[]. Got: {result}",
+        )
+
+    def test_canary_stage_commit_msg(self):
+        # covers: UNKNOWN
+        """validate_canary_stage returns False when stages: ['commit-msg'].
+
+        The canary must only be in the 'manual' stage; 'commit-msg' is forbidden.
+        """
+        if not _IMPORT_OK:
+            self.fail("ImportError: cannot import verify_precommit_active.")
+        if not hasattr(_vpa, "validate_canary_stage"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose validate_canary_stage(). "
+                "Implement validate_canary_stage(config_path: Path) -> bool."
+            )
+        with tempfile.TemporaryDirectory() as tmp:
+            config_path = self._write_registry(
+                Path(tmp),
+                [{"id": "precommit-canary", "stages": ["commit-msg"]}],
+            )
+            result = _vpa.validate_canary_stage(config_path)
+        self.assertFalse(
+            result,
+            msg=(
+                "Expected validate_canary_stage to return False when "
+                f"stages=['commit-msg']. Got: {result}"
+            ),
+        )
+
+    def test_canary_stage_multi_including_manual(self):
+        # covers: UNKNOWN
+        """validate_canary_stage returns False when stages include 'manual' AND another stage.
+
+        Multi-stage registration is a spoof risk; canary must be in ONLY ['manual'].
+        stages=['manual', 'pre-commit'] must fail even though 'manual' is present.
+        """
+        if not _IMPORT_OK:
+            self.fail("ImportError: cannot import verify_precommit_active.")
+        if not hasattr(_vpa, "validate_canary_stage"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose validate_canary_stage(). "
+                "Implement validate_canary_stage(config_path: Path) -> bool."
+            )
+        with tempfile.TemporaryDirectory() as tmp:
+            config_path = self._write_registry(
+                Path(tmp),
+                [{"id": "precommit-canary", "stages": ["manual", "pre-commit"]}],
+            )
+            result = _vpa.validate_canary_stage(config_path)
+        self.assertFalse(
+            result,
+            msg=(
+                "Expected validate_canary_stage to return False when "
+                f"stages=['manual', 'pre-commit']. Got: {result}"
+            ),
+        )
+
+    def test_canary_entry_absent(self):
+        # covers: UNKNOWN
+        """validate_canary_stage returns False when no 'precommit-canary' entry exists in registry.
+
+        A missing canary entry means the canary is not installed — fail-closed.
+        """
+        if not _IMPORT_OK:
+            self.fail("ImportError: cannot import verify_precommit_active.")
+        if not hasattr(_vpa, "validate_canary_stage"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose validate_canary_stage(). "
+                "Implement validate_canary_stage(config_path: Path) -> bool."
+            )
+        with tempfile.TemporaryDirectory() as tmp:
+            config_path = self._write_registry(
+                Path(tmp),
+                [{"id": "some-other-hook", "stages": ["manual"]}],
+            )
+            result = _vpa.validate_canary_stage(config_path)
+        self.assertFalse(
+            result,
+            msg=(
+                "Expected validate_canary_stage to return False when canary entry is absent. "
+                f"Got: {result}"
+            ),
+        )
+
+    def test_canary_non_manual_stage(self):
+        # covers: UNKNOWN
+        """validate_canary_stage returns False when canary is in stages: ['pre-push'] only.
+
+        Any non-manual stage alone must fail; the canary must never appear in push stages.
+        """
+        if not _IMPORT_OK:
+            self.fail("ImportError: cannot import verify_precommit_active.")
+        if not hasattr(_vpa, "validate_canary_stage"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose validate_canary_stage(). "
+                "Implement validate_canary_stage(config_path: Path) -> bool."
+            )
+        with tempfile.TemporaryDirectory() as tmp:
+            config_path = self._write_registry(
+                Path(tmp),
+                [{"id": "precommit-canary", "stages": ["pre-push"]}],
+            )
+            result = _vpa.validate_canary_stage(config_path)
+        self.assertFalse(
+            result,
+            msg=(
+                "Expected validate_canary_stage to return False when "
+                f"stages=['pre-push']. Got: {result}"
+            ),
+        )
+
+
+class TestCheckHookFreshness(unittest.TestCase):
+    """h-1: Config freshness/drift detection. Hook must be at least as new as config."""
+
+    def test_hook_newer_than_config(self):
+        # covers: UNKNOWN
+        """check_hook_freshness returns True when hook mtime > config mtime.
+
+        Must implement check_hook_freshness(hook_path: Path, config_path: Path) -> bool
+        that returns True when hook_path.stat().st_mtime >= config_path.stat().st_mtime.
+        """
+        if not _IMPORT_OK:
+            self.fail("ImportError: cannot import verify_precommit_active.")
+        if not hasattr(_vpa, "check_hook_freshness"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose check_hook_freshness(). "
+                "Implement check_hook_freshness(hook_path: Path, config_path: Path) -> bool."
+            )
+        import time
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            config_path = tmp_path / ".pre-commit-config.yaml"
+            config_path.write_text("repos: []", encoding="utf-8")
+            time.sleep(0.02)  # ensure strictly different filesystem mtime
+            hook_path = tmp_path / "pre-commit"
+            hook_path.write_text("#!/bin/sh\n", encoding="utf-8")
+            result = _vpa.check_hook_freshness(hook_path, config_path)
+        self.assertTrue(
+            result,
+            msg=(
+                "Expected check_hook_freshness to return True when hook is newer than config. "
+                f"Got: {result}"
+            ),
+        )
+
+    def test_hook_same_mtime_as_config(self):
+        # covers: UNKNOWN
+        """check_hook_freshness returns True when hook mtime == config mtime.
+
+        Equal mtime means the hook was regenerated at the same time as config — not stale.
+        """
+        if not _IMPORT_OK:
+            self.fail("ImportError: cannot import verify_precommit_active.")
+        if not hasattr(_vpa, "check_hook_freshness"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose check_hook_freshness(). "
+                "Implement check_hook_freshness(hook_path: Path, config_path: Path) -> bool."
+            )
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            config_path = tmp_path / ".pre-commit-config.yaml"
+            hook_path = tmp_path / "pre-commit"
+            config_path.write_text("repos: []", encoding="utf-8")
+            hook_path.write_text("#!/bin/sh\n", encoding="utf-8")
+            # Force equal mtime by copying config's mtime onto hook
+            config_stat = config_path.stat()
+            os.utime(hook_path, (config_stat.st_atime, config_stat.st_mtime))
+            result = _vpa.check_hook_freshness(hook_path, config_path)
+        self.assertTrue(
+            result,
+            msg=(
+                "Expected check_hook_freshness to return True when hook mtime == config mtime. "
+                f"Got: {result}"
+            ),
+        )
+
+    def test_hook_older_than_config(self):
+        # covers: UNKNOWN
+        """check_hook_freshness returns False when hook mtime < config mtime (hook is stale).
+
+        A hook older than the config means the config was updated but the hook was not
+        regenerated — this is the stale/drift state that must fail.
+        """
+        if not _IMPORT_OK:
+            self.fail("ImportError: cannot import verify_precommit_active.")
+        if not hasattr(_vpa, "check_hook_freshness"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose check_hook_freshness(). "
+                "Implement check_hook_freshness(hook_path: Path, config_path: Path) -> bool."
+            )
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            config_path = tmp_path / ".pre-commit-config.yaml"
+            hook_path = tmp_path / "pre-commit"
+            config_path.write_text("repos: []", encoding="utf-8")
+            hook_path.write_text("#!/bin/sh\n", encoding="utf-8")
+            # Force hook to be 100 seconds older than config
+            config_stat = config_path.stat()
+            os.utime(
+                hook_path,
+                (config_stat.st_atime - 100, config_stat.st_mtime - 100),
+            )
+            result = _vpa.check_hook_freshness(hook_path, config_path)
+        self.assertFalse(
+            result,
+            msg=(
+                "Expected check_hook_freshness to return False when hook mtime < config mtime. "
+                f"Got: {result}"
+            ),
+        )
+
+    def test_hook_missing_config_present(self):
+        # covers: UNKNOWN
+        """check_hook_freshness returns False when hook does not exist but config does.
+
+        A missing hook with a present config is a fail-closed state (hook not installed).
+        """
+        if not _IMPORT_OK:
+            self.fail("ImportError: cannot import verify_precommit_active.")
+        if not hasattr(_vpa, "check_hook_freshness"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose check_hook_freshness(). "
+                "Implement check_hook_freshness(hook_path: Path, config_path: Path) -> bool."
+            )
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            config_path = tmp_path / ".pre-commit-config.yaml"
+            config_path.write_text("repos: []", encoding="utf-8")
+            hook_path = tmp_path / "pre-commit"  # intentionally never created
+            result = _vpa.check_hook_freshness(hook_path, config_path)
+        self.assertFalse(
+            result,
+            msg=(
+                "Expected check_hook_freshness to return False when hook file is absent. "
+                f"Got: {result}"
+            ),
+        )
+
+
+class TestCheckDCanaryTimeout(unittest.TestCase):
+    """h-2: Canary timeout fail-closed. Timeout must be 10 seconds (ticket 03 raises it from 5)."""
+
+    def test_canary_timeout_10s_returns_false(self):
+        # covers: UNKNOWN
+        """run_checks() marks canary: False when subprocess.TimeoutExpired fires at 10s.
+
+        Ticket 03 changes the canary timeout from 5s to 10s. This test:
+        (1) Simulates TimeoutExpired(timeout=10) and verifies fail-closed behavior.
+        (2) Inspects check_d_canary source to assert 'timeout=10' is present (not 'timeout=5').
+        The source inspection assertion is the primary RED signal until the implementation
+        is updated. The mock path verifies the run_checks() fail-closed behavior.
+        """
+        if not _IMPORT_OK:
+            self.fail("ImportError: cannot import verify_precommit_active.")
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+        if not hasattr(_vpa, "check_d_canary"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose check_d_canary()."
+            )
+        # Part 1: fail-closed behavior with 10s timeout exception
+        timeout_exc = subprocess.TimeoutExpired(cmd="pre-commit run ...", timeout=10)
+        with (
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            patch.object(_vpa, "check_d_canary", side_effect=timeout_exc),
+        ):
+            result = _vpa.run_checks()
+        self.assertFalse(
+            result.get("canary"),
+            msg=(
+                "Expected canary: false when check_d_canary raises TimeoutExpired(timeout=10). "
+                f"Got: {result}"
+            ),
+        )
+        self.assertIn(
+            "canary",
+            result.get("failing_checks", []),
+            msg=f"Expected 'canary' in failing_checks on 10s timeout. Got: {result}",
+        )
+        # Part 2: source inspection — the implementation MUST use timeout=10, not timeout=5.
+        import inspect
+        source = inspect.getsource(_vpa.check_d_canary)
+        self.assertIn(
+            "timeout=10",
+            source,
+            msg=(
+                "verify_precommit_active.check_d_canary must use timeout=10 (ticket 03 raises "
+                f"the threshold from 5 to 10). Found in source:\n{source}"
+            ),
+        )
+
+
+class TestResolveHooksPath(unittest.TestCase):
+    """h-3: hooksPath resolution. Absolute, relative, unset, and unreadable .git/config."""
+
+    def test_hooks_path_absolute_from_git_config(self):
+        # covers: UNKNOWN
+        """resolve_hooks_path returns the absolute path from core.hooksPath in .git/config.
+
+        Must implement resolve_hooks_path(cwd: Path) -> Path that reads .git/config,
+        finds core.hooksPath, and returns it as-is when it is already absolute.
+        """
+        if not _IMPORT_OK:
+            self.fail("ImportError: cannot import verify_precommit_active.")
+        if not hasattr(_vpa, "resolve_hooks_path"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose resolve_hooks_path(). "
+                "Implement resolve_hooks_path(cwd: Path) -> Path."
+            )
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            git_dir = tmp_path / ".git"
+            git_dir.mkdir()
+            git_config = git_dir / "config"
+            git_config.write_text(
+                "[core]\n\thooksPath = /absolute/hooks/path\n",
+                encoding="utf-8",
+            )
+            result = _vpa.resolve_hooks_path(tmp_path)
+        self.assertEqual(
+            result,
+            Path("/absolute/hooks/path"),
+            msg=(
+                "Expected resolve_hooks_path to return Path('/absolute/hooks/path') "
+                f"for absolute core.hooksPath. Got: {result}"
+            ),
+        )
+
+    def test_hooks_path_relative_from_git_config(self):
+        # covers: UNKNOWN
+        """resolve_hooks_path resolves a relative core.hooksPath against the worktree root.
+
+        When core.hooksPath is a relative path (e.g. '.hooks'), it must be resolved
+        relative to cwd (the worktree root), not relative to the .git directory.
+        """
+        if not _IMPORT_OK:
+            self.fail("ImportError: cannot import verify_precommit_active.")
+        if not hasattr(_vpa, "resolve_hooks_path"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose resolve_hooks_path(). "
+                "Implement resolve_hooks_path(cwd: Path) -> Path."
+            )
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            git_dir = tmp_path / ".git"
+            git_dir.mkdir()
+            git_config = git_dir / "config"
+            git_config.write_text(
+                "[core]\n\thooksPath = .hooks\n",
+                encoding="utf-8",
+            )
+            result = _vpa.resolve_hooks_path(tmp_path)
+        expected = tmp_path / ".hooks"
+        self.assertEqual(
+            result,
+            expected,
+            msg=(
+                f"Expected resolve_hooks_path to return {expected} "
+                f"for relative core.hooksPath='.hooks'. Got: {result}"
+            ),
+        )
+
+    def test_hooks_path_unset_falls_back_to_commondir(self):
+        # covers: UNKNOWN
+        """resolve_hooks_path falls back to <commondir>/hooks/ when core.hooksPath is unset.
+
+        When .git/config has no core.hooksPath setting, resolve_hooks_path must fall
+        back to the standard hooks location: .git/hooks/ (or commondir/hooks/ for worktrees).
+        """
+        if not _IMPORT_OK:
+            self.fail("ImportError: cannot import verify_precommit_active.")
+        if not hasattr(_vpa, "resolve_hooks_path"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose resolve_hooks_path(). "
+                "Implement resolve_hooks_path(cwd: Path) -> Path."
+            )
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            git_dir = tmp_path / ".git"
+            git_dir.mkdir()
+            # Write a config without hooksPath
+            git_config = git_dir / "config"
+            git_config.write_text(
+                "[core]\n\trepositoryformatversion = 0\n\tfilemode = true\n",
+                encoding="utf-8",
+            )
+            result = _vpa.resolve_hooks_path(tmp_path)
+        expected = tmp_path / ".git" / "hooks"
+        self.assertEqual(
+            result,
+            expected,
+            msg=(
+                f"Expected resolve_hooks_path to fall back to {expected} "
+                f"when core.hooksPath is absent. Got: {result}"
+            ),
+        )
+
+    def test_hooks_path_unreadable_raises_oserror(self):
+        # covers: UNKNOWN
+        """resolve_hooks_path raises OSError when .git/config is unreadable.
+
+        When .git/config exists but is not readable (permissions denied),
+        resolve_hooks_path must raise OSError (fail-closed: no silent fallback).
+        """
+        if not _IMPORT_OK:
+            self.fail("ImportError: cannot import verify_precommit_active.")
+        if not hasattr(_vpa, "resolve_hooks_path"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose resolve_hooks_path(). "
+                "Implement resolve_hooks_path(cwd: Path) -> Path."
+            )
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            git_dir = tmp_path / ".git"
+            git_dir.mkdir()
+            git_config = git_dir / "config"
+            git_config.write_text(
+                "[core]\n\thooksPath = /some/path\n",
+                encoding="utf-8",
+            )
+            # Make .git/config unreadable
+            os.chmod(git_config, 0o000)
+            try:
+                with self.assertRaises(OSError):
+                    _vpa.resolve_hooks_path(tmp_path)
+            finally:
+                # Restore permissions so tempfile cleanup succeeds
+                os.chmod(git_config, 0o644)
+
+
 if __name__ == "__main__":
     unittest.main()
