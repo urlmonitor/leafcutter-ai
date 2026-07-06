@@ -34,9 +34,8 @@ import subprocess
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import patch
 
-import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _SCRIPT = _REPO_ROOT / "scripts" / "commit_guardian" / "ensure_precommit_config.py"
@@ -242,8 +241,6 @@ class TestConfigMissingSymlinkFailsCopySucceeds(unittest.TestCase):
 
             # Patch os.symlink to simulate NTFS failure
             with patch("os.symlink", side_effect=OSError("NTFS: symlinks not supported")):
-                # Patch the git-common-dir resolver to return main_tree
-                resolver_target = f"scripts.commit_guardian.ensure_precommit_config._resolve_git_commondir"
                 try:
                     result = _epc.ensure_config(worktree)
                 except AttributeError:

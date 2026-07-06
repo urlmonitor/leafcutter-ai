@@ -46,7 +46,6 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
 
 # ---------------------------------------------------------------------------
 # Path setup — make scripts/ importable regardless of cwd.
