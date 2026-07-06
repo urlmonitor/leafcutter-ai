@@ -124,6 +124,11 @@ full phase set and closed signed-off in a single session.
   (25adec3). Root cause filed as TICKET-20260617-Worktree_Precommit_Bootstrap.md (open
   in inbox). This is the single highest-leverage systemic gap: zero hook coverage on
   every commit of every worktree-based epic drive.
+  **Architectural response:** [ADR-017 — Worktree Quality Gate Guard](../architecture/adrs/ADR-017-worktree-quality-gate-guard.md)
+  (2026-07-06) defines the durable fix: a four-check probe model (binary, config,
+  git_hook, canary — canary execution non-negotiable), fail-closed-on-self-error
+  invariant, index-0 self-healing hook, and dual create-time/pre-drive gates that close
+  both the "born unguarded" and "drifted to unguarded" windows.
 
 - **FINDING #3: DEPLOYMENT ACS VERIFIED COPY, NOT REACHABILITY.** Tickets 02 and 03
   each passed their ACs (file present in build output) but the actual consumer-facing
@@ -231,6 +236,8 @@ pre-commit hooks silently skipped. `.pre-commit-config.yaml` lives only in the m
 repo root (as a `.leafcutter` symlink created by `install_shims`). Worktrees do not
 inherit it. The gap is structural: zero hook coverage on every commit of every epic
 drive.
+
+**Durable architectural response:** [ADR-017 — Worktree Quality Gate Guard](../architecture/adrs/ADR-017-worktree-quality-gate-guard.md) supersedes the interim mitigation and provides the full execution-proof design. The Knowledge Items below describe the interim guidance; ADR-017 defines the permanent implementation.
 
 **Proposed Knowledge Item text:**
 

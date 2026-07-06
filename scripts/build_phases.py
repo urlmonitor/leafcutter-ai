@@ -925,10 +925,21 @@ def build_ticket_lifecycle(target_root: Path, config: dict[str, Any],
 
 def build_commit_guardian(target_root: Path, config: dict[str, Any],
                           dry_run: bool, force: bool) -> int:
-    """Copy commit guardian files to ``<target_root>/scripts/commit_guardian/``.
+    """Copy commit guardian files to the consumer directory structure.
+
+    Deploys all files from ``templates/scripts/commit_guardian/`` to
+    ``<target_root>/scripts/commit_guardian/``, then additionally copies the
+    manifest ``commit_guardian.json`` to ``<target_root>/config/commit_guardian/``
+    (BO-1700f-1-ii — manifest at canonical config path).
 
     Text files (``.json``, ``.py``, ``.yaml``, ``.yml``, ``.md``) have config
     placeholders injected; all other file types are copied verbatim.
+
+    The manifest is deployed to both locations so that:
+    - ``scripts/commit_guardian/commit_guardian.json`` serves the hook runner.
+    - ``config/commit_guardian/commit_guardian.json`` serves as the authoritative
+      "guardian installed" indicator for ``check_guardian_scripts_complete()``
+      (BO-1700e-5 — no-config detection).
 
     Args:
         target_root: Absolute path to the target project root directory.
@@ -974,6 +985,30 @@ def build_commit_guardian(target_root: Path, config: dict[str, Any],
                 shutil.copy2(template_file, output_path)
                 print(f"  scripts/commit_guardian/{rel}")
                 written += 1
+
+    # Deploy manifest to config/commit_guardian/ (BO-1700f-1-ii).
+    # The manifest is the authoritative hook registry; deploying it to config/
+    # separates configuration from scripts and enables the authoritative
+    # "no config" detection check_guardian_scripts_complete() in
+    # verify_precommit_active.py (BO-1700e-5).
+    manifest_src = cg_dir / "commit_guardian.json"
+    if manifest_src.exists():
+        config_guardian_dir = target_root / "config" / "commit_guardian"
+        config_dest = config_guardian_dir / "commit_guardian.json"
+        try:
+            raw = manifest_src.read_text(encoding="utf-8")
+        except OSError as exc:
+            _log.warning(
+                "build_commit_guardian: cannot read manifest source %s: %s",
+                manifest_src,
+                exc,
+            )
+        else:
+            text = inject_config(raw, config)
+            if _write(config_dest, text, dry_run, force):
+                written += 1
+                if not dry_run:
+                    print("  config/commit_guardian/commit_guardian.json")
 
     return written
 

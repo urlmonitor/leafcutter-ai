@@ -1,6 +1,6 @@
 ---
 title: "Probe Core + Canary + Git-Common-Dir Resolution"
-status: todo
+status: done
 components:
   - build-orchestration
 created: 2026-07-02
@@ -24,12 +24,13 @@ files_touched:
   - scripts/build_precommit.py
   - unit_tests/commit_guardian/test_verify_precommit_active.py
   - unit_tests/commit_guardian/test_precommit_canary.py
+  - unit_tests/commit_guardian/conftest.py
 agents:
-  python-coder: needed
-  test-writer: needed
-  pr-reviewer: needed
-  commit: needed
-  pull-request: needed
+  python-coder: signed_off
+  test-writer: signed_off
+  pr-reviewer: signed_off
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 02: Probe Core + Canary + Git-Common-Dir Resolution
@@ -51,18 +52,163 @@ This is the single producer consumed by all gates (BO-1700b/d families).
 (To be filled in by create-ticket hardening pass.)
 
 ## Sign-offs
-- [ ] python-coder
-- [ ] test-writer
-- [ ] pr-reviewer
-- [ ] commit
-- [ ] pull-request
+- [x] python-coder — 2026-07-06 15:45
+- [x] test-writer — 2026-07-06 14:40
+- [x] pr-reviewer — 2026-07-06 16:45
+- [x] commit — 2026-07-06 16:50
+- [x] pull-request — 2026-07-06 17:15
 
 ## Comments
+
+### 2026-07-06 15:45 — python-coder (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  verify_precommit_active_created: true
+  precommit_canary_created: true
+  canary_manifest_entry_added: true
+  template_mirrors_created: true
+  git_commondir_resolution_implemented: true
+  all_15_red_baseline_tests_green: true
+red_baseline_results:
+  - test_name: test_all_checks_pass
+    result: green
+  - test_name: test_check_a_fails_binary_not_found
+    result: green
+  - test_name: test_check_b_fails_config_not_found
+    result: green
+  - test_name: test_check_b_fails_config_invalid_yaml
+    result: green
+  - test_name: test_check_c_fails_hook_missing_sentinel
+    result: green
+  - test_name: test_check_d_fails_canary_no_output
+    result: green
+  - test_name: test_timeout_handling
+    result: green
+  - test_name: test_uncaught_exception_handling
+    result: green
+  - test_name: test_json_output_structure
+    result: green
+  - test_name: test_exit_code_all_pass
+    result: green
+  - test_name: test_exit_code_any_failure
+    result: green
+  - test_name: test_direct_invocation_emits_canary_ok
+    result: green
+  - test_name: test_hook_manifest_stages
+    result: green
+  - test_name: test_hook_manifest_always_run
+    result: green
+  - test_name: test_hook_manifest_pass_filenames
+    result: green
+All 15 red-baseline tests are now green (11 verify_precommit_active + 4 precommit_canary). Key challenge: scripts.commit_guardian namespace resolved to the parent leafcutter/ workspace's regular package because it had __init__.py, shadowing the worktree. Fixed by adding __init__.py to scripts/commit_guardian/ in the worktree AND a conftest.py in unit_tests/commit_guardian/ that inserts the worktree root first in sys.path (matching the pattern in unit_tests/agents/conftest.py). The canary hook entry was added to both scripts/ and templates/ versions of commit_guardian.json; build_precommit.py already handles stages/always_run/pass_filenames so no code changes to that file were needed.
+
+### 2026-07-06 16:20 — ticket-supervisor (status: ok)
+feedback-id: (submit-failed)
+§3.1 mechanical retry: pr-reviewer found 4 staging gaps (template files + conftest.py not staged). Supervisor staged all 4 missing files, reset pr-reviewer → needed, added conftest.py to files_touched. Respawning pr-reviewer (retry 1/1).
+
+### 2026-07-06 16:45 — pr-reviewer (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  staged_set_complete: true
+  all_15_tests_green: true
+  implementation_correct: true
+  template_mirrors_present: true
+  canary_manifest_entry_correct: true
+  conftest_sys_path_correct: true
+All staging gaps from the first review are resolved: 7 files staged (templates/scripts/commit_guardian/verify_precommit_active.py, templates/scripts/commit_guardian/precommit_canary.py, templates/scripts/commit_guardian/commit_guardian.json, unit_tests/commit_guardian/conftest.py now included). All 15 tests pass (11 verify_precommit_active + 4 precommit_canary). Implementation is fail-closed, error handling follows project policy, JSON output structure is correct, and the canary manifest entry carries stages: [manual], always_run: true, pass_filenames: false as specified. No high-confidence findings.
+
+### 2026-07-06 16:15 — pr-reviewer (status: blocker)
+feedback-id: (submit-failed)
+completion_manifest:
+  tests_green: true
+  implementation_correct: true
+  staged_set_complete:
+    result: false
+    reason: "Four blocking staging gaps found: (1) templates/scripts/commit_guardian/verify_precommit_active.py is untracked/not staged — primary source file for consumer deploys; (2) templates/scripts/commit_guardian/precommit_canary.py is untracked/not staged — same; (3) templates/scripts/commit_guardian/commit_guardian.json is modified (canary hook entry added) but not staged; (4) unit_tests/commit_guardian/conftest.py is untracked/not staged AND absent from files_touched — sys.path fixture required for all import-based tests. Additionally, scripts/commit_guardian/ is gitignored (build output), so verify_precommit_active.py and precommit_canary.py in that directory will never be committed — the canonical sources are the templates/ versions."
+    remediation: "Stage all four missing files via git add before commit: templates/scripts/commit_guardian/verify_precommit_active.py, templates/scripts/commit_guardian/precommit_canary.py, templates/scripts/commit_guardian/commit_guardian.json, unit_tests/commit_guardian/conftest.py. Also update files_touched to add unit_tests/commit_guardian/conftest.py."
+All 15 tests pass on the working tree. The implementation logic (four-check probe, canary, git-common-dir resolution, error handling) is correct. Blocker is staging completeness only — the three new template-source files and conftest are absent from the staged set. The commit agent must stage them before proceeding.
+
+### 2026-07-06 14:40 — test-writer (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  tests_written_verify_precommit_active: true
+  tests_written_precommit_canary: true
+  all_tests_red_confirmed: true
+  no_syntax_errors: true
+Wrote 11 failing tests in test_verify_precommit_active.py (covering all four check
+failure modes, timeout/exception fail-closed, JSON output structure, and exit codes)
+and 4 failing tests in test_precommit_canary.py (direct invocation output, and
+three manifest field assertions). All 15 tests are RED: import-based tests fail with
+ImportError (module not yet implemented); subprocess tests fail because the script
+files do not exist yet (AssertionError from self.fail inside _json_or_fail); manifest
+tests fail because no canary entry exists in commit_guardian.json hooks_manifest.
+red_baseline:
+  - test_name: test_all_checks_pass
+    file: unit_tests/commit_guardian/test_verify_precommit_active.py
+    error: "AssertionError: ImportError: cannot import scripts.commit_guardian.verify_precommit_active. Implement the module first."
+  - test_name: test_check_a_fails_binary_not_found
+    file: unit_tests/commit_guardian/test_verify_precommit_active.py
+    error: "AssertionError: Expected valid JSON on stdout from verify_precommit_active.py — script at ... may not exist yet (TDD red-baseline). returncode=2 stdout='' stderr=\"can't open file ...\""
+  - test_name: test_check_b_fails_config_not_found
+    file: unit_tests/commit_guardian/test_verify_precommit_active.py
+    error: "AssertionError: Expected valid JSON on stdout from verify_precommit_active.py — script at ... may not exist yet (TDD red-baseline). returncode=2 stdout='' stderr=\"can't open file ...\""
+  - test_name: test_check_b_fails_config_invalid_yaml
+    file: unit_tests/commit_guardian/test_verify_precommit_active.py
+    error: "AssertionError: Expected valid JSON on stdout from verify_precommit_active.py — script at ... may not exist yet (TDD red-baseline). returncode=2 stdout='' stderr=\"can't open file ...\""
+  - test_name: test_check_c_fails_hook_missing_sentinel
+    file: unit_tests/commit_guardian/test_verify_precommit_active.py
+    error: "AssertionError: ImportError: cannot import verify_precommit_active. Implement the module first."
+  - test_name: test_check_d_fails_canary_no_output
+    file: unit_tests/commit_guardian/test_verify_precommit_active.py
+    error: "AssertionError: ImportError: cannot import verify_precommit_active. Implement the module first."
+  - test_name: test_timeout_handling
+    file: unit_tests/commit_guardian/test_verify_precommit_active.py
+    error: "AssertionError: ImportError: cannot import verify_precommit_active. Implement the module first."
+  - test_name: test_uncaught_exception_handling
+    file: unit_tests/commit_guardian/test_verify_precommit_active.py
+    error: "AssertionError: ImportError: cannot import verify_precommit_active. Implement the module first."
+  - test_name: test_json_output_structure
+    file: unit_tests/commit_guardian/test_verify_precommit_active.py
+    error: "AssertionError: ImportError: cannot import scripts.commit_guardian.verify_precommit_active. Implement the module so run_checks() is importable and callable."
+  - test_name: test_exit_code_all_pass
+    file: unit_tests/commit_guardian/test_verify_precommit_active.py
+    error: "AssertionError: ImportError: cannot import verify_precommit_active. Implement the module so main() can be called."
+  - test_name: test_exit_code_any_failure
+    file: unit_tests/commit_guardian/test_verify_precommit_active.py
+    error: "AssertionError: Expected valid JSON on stdout from verify_precommit_active.py — script at ... may not exist yet (TDD red-baseline). returncode=2 stdout='' stderr=\"can't open file ...\""
+  - test_name: test_direct_invocation_emits_canary_ok
+    file: unit_tests/commit_guardian/test_precommit_canary.py
+    error: "AssertionError: 2 != 0 : Expected exit 0 from precommit_canary.py, got 2. Script path: .../precommit_canary.py stdout: '' stderr: \"can't open file ...: [Errno 2] No such file or directory\""
+  - test_name: test_hook_manifest_stages
+    file: unit_tests/commit_guardian/test_precommit_canary.py
+    error: "AssertionError: No canary hook entry found in commit_guardian.json hooks_manifest.hooks (looked for id containing 'canary'). Add the precommit-canary entry ..."
+  - test_name: test_hook_manifest_always_run
+    file: unit_tests/commit_guardian/test_precommit_canary.py
+    error: "AssertionError: No canary hook entry found in commit_guardian.json hooks_manifest.hooks (looked for id containing 'canary'). Add the precommit-canary entry ..."
+  - test_name: test_hook_manifest_pass_filenames
+    file: unit_tests/commit_guardian/test_precommit_canary.py
+    error: "AssertionError: No canary hook entry found in commit_guardian.json hooks_manifest.hooks (looked for id containing 'canary'). Add the precommit-canary entry ..."
+
+### 2026-07-06 17:15 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+PR: https://github.com/urlmonitor/leafcutter-ai/pull/204
+
+### 2026-07-06 16:50 — commit (status: ok)
+feedback-id: (commit-agent)
+Auto-authorized commit gate: subject "feat(commit-guardian): add precommit probe (verify_precommit_active) + canary hook"; staged files: templates/scripts/commit_guardian/commit_guardian.json, templates/scripts/commit_guardian/precommit_canary.py, templates/scripts/commit_guardian/verify_precommit_active.py, tickets/00_inbox/epics/EPIC-WorktreeQualityGateGuard/02_probe_core_canary_git_common_dir.md, unit_tests/commit_guardian/conftest.py, unit_tests/commit_guardian/test_precommit_canary.py, unit_tests/commit_guardian/test_verify_precommit_active.py.
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
 
 ## Implementation Tasks
 
 ### python-coder
-- [ ] Create verify_precommit_active.py (scripts/commit_guardian/) with checks A-B-C-D
+- [x] Create verify_precommit_active.py (scripts/commit_guardian/) with checks A-B-C-D
   - Check A: pre-commit binary on PATH
   - Check B: .pre-commit-config.yaml resolves via .leafcutter symlink, parses as YAML, passes validation
   - Check C: shared git hook contains pre-commit sentinel
@@ -70,27 +216,27 @@ This is the single producer consumed by all gates (BO-1700b/d families).
   - Output: JSON {binary, config, git_hook, canary, failing_checks}
   - Exit 0 if all pass, non-zero on first failure
   - Fail CLOSED: uncaught exception, timeout, or subprocess error → non-zero exit
-- [ ] Create precommit_canary.py (scripts/commit_guardian/)
+- [x] Create precommit_canary.py (scripts/commit_guardian/)
   - Prints exactly PRECOMMIT_CANARY_OK to stdout
   - Exits 0
   - Add entry to commit_guardian.json with stages: [manual], always_run: true, pass_filenames: false
-- [ ] Update build_precommit.py to emit canary entry into generated pre-commit config
-- [ ] Create templates/ mirrors: templates/scripts/commit_guardian/verify_precommit_active.py and templates/scripts/commit_guardian/precommit_canary.py
+- [x] Update build_precommit.py to emit canary entry into generated pre-commit config
+- [x] Create templates/ mirrors: templates/scripts/commit_guardian/verify_precommit_active.py and templates/scripts/commit_guardian/precommit_canary.py
   - Verify byte-for-byte parity via build.py round-trip per ADR-001
-- [ ] Implement git-common-dir resolution logic (used by ensure_precommit_config.py later, but core logic lives here)
+- [x] Implement git-common-dir resolution logic (used by ensure_precommit_config.py later, but core logic lives here)
   - Resolve .git directory
   - Extract commondir from .git/config or .git/commondir
   - Locate main tree's .leafcutter via the resolved common directory
 
 ### test-writer
-- [ ] Add unit tests in unit_tests/commit_guardian/test_verify_precommit_active.py
+- [x] Add unit tests in unit_tests/commit_guardian/test_verify_precommit_active.py
   - Test all four checks passing
   - Test each check failing independently
   - Test timeout handling
   - Test uncaught exception handling
   - Test JSON output structure
   - Test exit codes (0 on all-pass, non-zero on any failure)
-- [ ] Add unit tests in unit_tests/commit_guardian/test_precommit_canary.py
+- [x] Add unit tests in unit_tests/commit_guardian/test_precommit_canary.py
   - Test direct invocation emits PRECOMMIT_CANARY_OK and exits 0
   - Test hook manifest entry has correct stages, always_run, pass_filenames
 
