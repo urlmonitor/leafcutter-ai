@@ -257,9 +257,10 @@ def _check_card_registry_mirror(
     The same two-direction check is applied to both spawn_allowlist (``-->|spawns|``)
     and spawned_by (``-->|dispatches|``) edges.
 
-    Silently skips agents whose card file does not exist. Skips
-    __ticket_phase_agents__ and external callers in the same way as
-    _check_asymmetric_spawns().
+    Emits an advisory note to stderr for agents whose card file does not exist
+    (naming the agent and path) then skips them — the absence of a card file
+    is not treated as a mismatch. Skips __ticket_phase_agents__ and external
+    callers in the same way as _check_asymmetric_spawns().
 
     Args:
         agents: List of agent dicts from the registry.
@@ -278,6 +279,11 @@ def _check_card_registry_mirror(
 
         card_path = cards_dir / f"{agent_id}.card.md"
         if not card_path.exists():
+            print(
+                f"[check-agent-spawn-consistency] ADVISORY: card for '{agent_id}' not found at "
+                f"{card_path} — mirror comparison skipped for this agent",
+                file=sys.stderr,
+            )
             continue
 
         try:
@@ -449,4 +455,15 @@ if __name__ == "__main__":
 #   _node_id_to_agent_id() identity case. Asymmetric registry check still
 #   only runs when the registry itself is staged (cards_staged-only runs skip it).
 #   (#EPIC-RegistryCardMirror/01)
+#
+# - 2026-07-06 [python-coder/EPIC-RegistryCardMirror/02]: Absent-card advisory
+#   (AC INF-600l-1-i). When _check_card_registry_mirror() encounters an agent
+#   whose card file does not exist on disk, it now emits an ADVISORY message to
+#   stderr naming the agent and path before continuing, instead of silently
+#   skipping. This makes the skip visible without treating the absence as a
+#   mismatch. Registry-internal spawn-consistency check is unaffected.
+#   Message format:
+#   "[check-agent-spawn-consistency] ADVISORY: card for '{id}' not found at
+#   {path} — mirror comparison skipped for this agent"
+#   (#EPIC-RegistryCardMirror/02)
 # ====================================================================

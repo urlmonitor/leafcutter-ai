@@ -714,5 +714,167 @@ class TestMainCardMirrorTrigger(unittest.TestCase):
         self.assertIn("config/agent_registry.json", err_output)
 
 
+# ---------------------------------------------------------------------------
+# Tests for AC INF-600l-1-i: absent cards → no-op + advisory note
+# ---------------------------------------------------------------------------
+
+class TestAbsentCardAdvisoryNote(unittest.TestCase):
+    """Tests for AC INF-600l-1-i: when agent cards are absent on disk, the mirror
+    check treats them as 'nothing to compare' (no mismatch/error) and emits an
+    advisory note to stderr naming the skipped agents.
+
+    All three tests are expected to be RED until python-coder implements the
+    advisory-note emission in _check_card_registry_mirror().
+    """
+
+    def setUp(self) -> None:
+        # covers: INF-600l-1-i
+        self.module = _load_hook_module()
+
+    def test_absent_card_emits_advisory_note_to_stderr(self) -> None:
+        """AC INF-600l-1-i: _check_card_registry_mirror() must emit an advisory
+        message to stderr naming each agent whose card file was absent (skipped).
+
+        The current implementation does a bare 'continue' when card_path does not
+        exist — it emits nothing.  This test will be RED until the advisory print
+        is added.
+        """
+        # covers: INF-600l-1-i
+        agents = [
+            {"id": "ghost-agent", "spawn_allowlist": ["other-agent"], "spawned_by": []},
+        ]
+
+        import io
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as cards_dir_str:
+            cards_dir = Path(cards_dir_str)
+            # Deliberately do NOT write any card file for ghost-agent
+
+            err_buf = io.StringIO()
+            with __import__("unittest.mock", fromlist=["patch"]).patch(
+                "sys.stderr", err_buf
+            ):
+                errors = self.module._check_card_registry_mirror(agents, cards_dir)
+
+        # Must still produce no mismatch errors (no-op on absent card)
+        self.assertEqual(
+            errors,
+            [],
+            f"Absent card must not produce mismatch errors, got: {errors}",
+        )
+
+        # Must produce an advisory note to stderr naming the skipped agent
+        err_output = err_buf.getvalue()
+        self.assertGreater(
+            len(err_output),
+            0,
+            "Expected an advisory note to stderr when a card is absent; got empty stderr",
+        )
+        self.assertIn(
+            "ghost-agent",
+            err_output,
+            f"Advisory note must name the skipped agent; stderr was: {err_output!r}",
+        )
+
+    def test_advisory_note_names_multiple_absent_agents(self) -> None:
+        """AC INF-600l-1-i: advisory note must name ALL agents whose cards were absent,
+        not just the first one.  This verifies the skip is visible for each absent card.
+        """
+        # covers: INF-600l-1-i
+        agents = [
+            {"id": "missing-alpha", "spawn_allowlist": [], "spawned_by": []},
+            {"id": "missing-beta", "spawn_allowlist": [], "spawned_by": []},
+        ]
+
+        import io
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as cards_dir_str:
+            cards_dir = Path(cards_dir_str)
+            # No card files at all — both agents absent
+
+            err_buf = io.StringIO()
+            with __import__("unittest.mock", fromlist=["patch"]).patch(
+                "sys.stderr", err_buf
+            ):
+                errors = self.module._check_card_registry_mirror(agents, cards_dir)
+
+        self.assertEqual(errors, [], f"Absent cards must not produce mismatch errors: {errors}")
+
+        err_output = err_buf.getvalue()
+        self.assertIn(
+            "missing-alpha",
+            err_output,
+            f"Advisory must name missing-alpha; stderr: {err_output!r}",
+        )
+        self.assertIn(
+            "missing-beta",
+            err_output,
+            f"Advisory must name missing-beta; stderr: {err_output!r}",
+        )
+
+    def test_absent_cards_do_not_disable_registry_internal_check(self) -> None:
+        """AC INF-600l-1-i: when all card files are absent, the pre-existing
+        registry-internal spawn-consistency check (_check_asymmetric_spawns) must
+        still execute and catch real asymmetric mismatches.
+
+        This test asserts BOTH:
+        (a) exit code 1 — registry asymmetric mismatch is caught even with no cards
+        (b) advisory note emitted — absent agents are named in stderr
+
+        Part (b) is the RED driver: the current implementation exits 1 on the registry
+        mismatch (part a is already green) but emits no advisory (part b is missing).
+        """
+        # covers: INF-600l-1-i
+        # Registry has an asymmetric mismatch: agent-a lists agent-b but agent-b
+        # does not list agent-a in spawned_by.
+        registry = _build_registry([
+            _make_agent("agent-a", spawn_allowlist=["agent-b"], spawned_by=[]),
+            _make_agent("agent-b", spawn_allowlist=[], spawned_by=[]),  # missing agent-a
+        ])
+        registry_json = __import__("json").dumps(registry)
+
+        import io
+        import tempfile
+
+        staged = [REGISTRY_PATH_IN_REPO]
+
+        with tempfile.TemporaryDirectory() as tmp_root:
+            tmp_root_path = Path(tmp_root)
+            # Cards directory exists but is empty — no card files on disk
+            empty_cards_dir = tmp_root_path / "docs" / "agents" / "cards"
+            empty_cards_dir.mkdir(parents=True)
+
+            err_buf = io.StringIO()
+            with patch.object(self.module, "_get_staged_files", return_value=staged):
+                with patch.object(self.module, "_read_registry_json", return_value=registry_json):
+                    with patch.object(
+                        self.module, "_get_repo_root", return_value=tmp_root_path
+                    ):
+                        with __import__("unittest.mock", fromlist=["patch"]).patch(
+                            "sys.stderr", err_buf
+                        ):
+                            result = self.module.main()
+
+        # (a) Registry-internal check must still catch the mismatch → exit 1
+        self.assertEqual(
+            result,
+            1,
+            "Registry asymmetric mismatch must be caught even when all card files are absent",
+        )
+
+        # (b) Advisory note must be emitted naming the agent(s) whose cards were absent
+        err_output = err_buf.getvalue()
+        # Look for any indication that absent cards were noted
+        # The advisory should mention the agents that had no card file
+        advisory_keywords = ["skipped", "absent", "no card", "card not found", "card missing"]
+        has_advisory = any(kw in err_output.lower() for kw in advisory_keywords)
+        self.assertTrue(
+            has_advisory,
+            f"Expected advisory note about absent cards in stderr; got: {err_output!r}",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
