@@ -27,7 +27,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 10: Wire the E2 commands correctly (build-feature.js dispatcher, arg + guard fixes)
@@ -109,7 +109,7 @@ Scenario: unique run-id and baseline path
 - [x] test-runner — 2026-07-06 13:41
 - [x] pr-reviewer — 2026-07-06 16:05
 - [x] commit — 2026-07-06 17:30
-- [ ] pull-request
+- [x] pull-request — 2026-07-06 17:45
 
 ## Comments
 
@@ -242,3 +242,9 @@ All 5 ACs verified in diff. No high-confidence blockers found.
 feedback-id: fb_2026-07-06_f4ca39da
 
 Committed 6 staged files as `3def564b`. Pre-commit hook `check-feedback-id` initially blocked due to missing feedback-id lines in prior phase comment headings; resolved by adding feedback-id entries to all 5 existing comment headings before the commit succeeded.
+
+### 2026-07-06 17:45 — pull-request (status: ok)
+feedback-id: fb_2026-07-06_c6e872cd
+
+Branch `EPIC-DualEngineWorkflowSupport` pushed to origin. Epic PR #198 updated.
+PR URL: https://github.com/urlmonitor/leafcutter-ai/pull/198
