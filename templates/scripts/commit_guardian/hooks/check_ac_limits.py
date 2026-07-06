@@ -6,8 +6,9 @@ BUSINESS CONTEXT: Oversized tickets (>7 ACs for one agent or >20 total) are
     too large for safe atomic implementation. This hook detects bloated tickets
     at commit time so the IT PO can split them before they enter the
     implementation pipeline. Tickets with `ac_limit_override: true` in
-    frontmatter are warned but not blocked. v1 tickets (no `## Agent Contracts`
-    section) are skipped transparently. Structured JSON on stderr enables
+    frontmatter are warned but not blocked. v1-flat tickets (no `## Agent
+    Contracts` section) are subject to the 20-total cap but not the per-agent
+    cap. Structured JSON on stderr enables
     `precommit-autofix` to route the failure to the IT PO agent automatically.
 ARCHITECTURE: Reads the staged diff via `git diff --cached` (or HOOK_TEST_DIFF
     env var for unit testing), extracts paths of staged `.md` ticket files,

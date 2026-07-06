@@ -307,3 +307,23 @@ files: templates/scripts/commit_guardian/hooks/check_ac_limits.py, unit_tests/co
 ### 2026-07-06 — pull-request (status: ok)
 pr_url: https://github.com/urlmonitor/leafcutter-ai/pull/207
 pr_title: "fix(guardrail-engine): enforce 20-total AC cap on v1-flat ticket format (GE-114)"
+
+### 2026-07-06 16:05 — test-runner (status: ok)
+feedback-id: fb_2026-07-06_10421088
+completion_manifest:
+  test_suite_executed: true
+  all_tests_passing: true
+  failure_report_structured: true
+6/6 new tests in test_check_ac_count_limits.py pass; 43/43 pre-existing tree-depth hook tests in test_check_ac_limits.py pass with no regression; 6 failures in the broader commit_guardian suite are pre-existing and unrelated to GE-114 (affected files not in diff: test_build_precommit.py, test_check_ac_governance.py, test_check_ticket_signoff_parity_done_folder.py, test_transform_hooks_and_autofix_emission.py).
+
+### 2026-07-06 16:15 — pr-reviewer (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  no_high_confidence_blockers: true
+  medium_findings_documented: true
+  v2_path_regression_checked: true
+  skipped_semantics_verified: true
+  json_payload_shape_verified: true
+  error_handling_compliant: true
+  ac_coverage_all_7_verified: true
+Review of diff on branch fix/GE-114-ac-limits-flat-format vs origin/main. No high-confidence blocking issues found. Two medium-confidence findings documented: (1) the BUSINESS CONTEXT docstring in check_ac_limits.py (line 9) still says "v1 tickets are skipped transparently" — stale after the fix; ARCHITECTURE section was updated but BUSINESS CONTEXT was not. (2) AC-4's documented JSON shape is a simplified representation that omits the per-ticket wrapper present in `_build_json_payload` output — the implementation and test are correct but the AC text could mislead a future payload consumer. Medium count = 2, below the >3 Opus escalation threshold; no escalation performed. All AC-1 through AC-7 verified against implementation: skipped=True is reserved exclusively to the OSError path, flat-body count is applied correctly on the no-Agent-Contracts path, per-agent cap is not applied on the flat path, override branch populates total_ac_count, JSON payload omits per_agent violations on flat path, v2 path is unmodified. Ruff and 6/6 unit tests confirmed green by test-runner.
