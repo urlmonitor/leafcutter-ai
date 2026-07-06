@@ -17,7 +17,9 @@ ARCHITECTURE: Reads the staged diff via `git diff --cached` (or HOOK_TEST_DIFF
     counts `- [ ] AC-N:` lines per agent (excluding `<!-- scope: integration -->`
     lines from per-agent counts), and also tallies a ticket-level total.
     Exits non-zero with a structured JSON payload on stderr when limits are
-    exceeded.
+    exceeded. v1-flat tickets (no `## Agent Contracts` section) are now
+    subject to the 20-total cap; the per-agent cap (7) is not applied because
+    there are no `### <agent>` subsections to parse.
 DOC_LINKS:
   - tickets/00_inbox/epics/EPIC-ContractDrivenACs/02b_ac_count_hook.md
 
@@ -328,12 +330,21 @@ def _analyse_ticket(path: str, project_root: Path) -> TicketResult:
         if contracts_block:
             result.per_agent = _count_acs_per_agent(contracts_block)
             result.total_ac_count = _count_total_acs(contracts_block)
+        else:
+            # v1-flat format with override: count full-body ACs for the warning
+            result.total_ac_count = _count_acs_in_block(content)
         return result
 
-    # No Agent Contracts section → skip (v1 backward compatibility)
+    # Extract the ## Agent Contracts section (present on v2 tickets).
     contracts_block = _extract_agent_contracts_block(content)
     if contracts_block is None:
-        result.skipped = True
+        # v1-flat format: no ## Agent Contracts section. Count all _AC_LINE_RE
+        # matches across the full ticket body and apply the 20-total cap.
+        # The per-agent cap (7) is NOT applied on this path — it requires
+        # ### <agent> subsection structure.
+        result.total_ac_count = _count_acs_in_block(content)
+        if result.total_ac_count > _MAX_ACS_TOTAL:
+            result.total_violation = True
         return result
 
     result.per_agent = _count_acs_per_agent(contracts_block)
@@ -514,6 +525,13 @@ DECISION HISTORY
     Integration-scoped ACs excluded from per-agent counts.
     Structured JSON payload on stderr for precommit-autofix routing.
     ac_limit_override: true in frontmatter warns but does not block.
-    v1 tickets (no ## Agent Contracts section) are skipped silently.
+    v1 tickets (no ## Agent Contracts section) were originally skipped silently.
+- 2026-07-06 [GE-114]: Fixed silent skip of 20-total AC cap for v1-flat tickets.
+    When ## Agent Contracts is absent, _analyse_ticket now counts all _AC_LINE_RE
+    matches across the full body and applies the 20-total cap. result.skipped=True
+    is now reserved exclusively for the OSError (unreadable file) path.
+    The per-agent cap (7) is NOT applied on the v1-flat path.
+    The ac_limit_override: true branch also populates total_ac_count for flat
+    tickets so the override warning can report the excess count.
 ====================================================================
 """

@@ -1,16 +1,16 @@
 ---
-ac_coverage: 0/7
+ac_coverage: 7/7
 advances_current_outcome: true
 agents:
   architect-review: not_needed
   commit: needed
   documentation-expert: not_needed
   frontend-coder: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   pull-request: needed
-  python-coder: needed
-  test-runner: needed
-  test-writer: needed
+  python-coder: signed_off
+  test-runner: signed_off
+  test-writer: signed_off
   user-surface-smoker: not_needed
 complexity: simple
 components:
@@ -73,32 +73,32 @@ HOOK_TEST_DIFF=/path/to/fixture-diff.txt python templates/scripts/commit_guardia
 
 ## Acceptance Criteria
 
-- [ ] AC-1: Given a staged ticket `.md` with no `## Agent Contracts` section and more than 20 lines
+- [x] AC-1: Given a staged ticket `.md` with no `## Agent Contracts` section and more than 20 lines
   matching `^\s*-\s*\[\s*\]\s*AC-\d+:` anywhere in the body, when `_analyse_ticket` runs, then
   `result.skipped` is `False`, `result.total_ac_count` is greater than 20, `result.total_violation`
   is `True`, and the hook exits 1.
 
-- [ ] AC-2: Given a staged v1-flat ticket with no `## Agent Contracts` section and 20 or fewer
+- [x] AC-2: Given a staged v1-flat ticket with no `## Agent Contracts` section and 20 or fewer
   `- [ ] AC-N:` lines in the body, when `_analyse_ticket` runs, then `result.skipped` is `False`,
   `result.total_violation` is `False`, `result.violations` is empty, and the hook exits 0.
 
-- [ ] AC-3: Given a staged v1-flat ticket whose body exceeds 20 flat ACs and whose frontmatter
+- [x] AC-3: Given a staged v1-flat ticket whose body exceeds 20 flat ACs and whose frontmatter
   contains `ac_limit_override: true`, when the hook runs, then `override_active` is `True`, the
   commit is not blocked (exit 0), and a warn-only message identifying the ticket is emitted to stderr.
 
-- [ ] AC-4: Given a staged v1-flat ticket exceeding 20 flat ACs without the override flag, when the
+- [x] AC-4: Given a staged v1-flat ticket exceeding 20 flat ACs without the override flag, when the
   hook emits the JSON violation payload to stderr, then the shape is
   `{"hook": "check_ac_limits", "fix_agent": "it-po", "violations": [{"type": "total", "count": N, "limit": 20}]}`
   with no `per_agent` violation entries, so precommit-autofix routing is unchanged.
 
-- [ ] AC-5: Given a staged ticket containing a `## Agent Contracts` section with `### <agent>`
+- [x] AC-5: Given a staged ticket containing a `## Agent Contracts` section with `### <agent>`
   subsections, when `_analyse_ticket` runs after the fix, then per-agent counts and the total are
   computed identically to pre-fix behaviour — no regression on the v2 Agent Contracts path.
 
-- [ ] AC-6: `result.skipped = True` is set only when the ticket file cannot be read from disk
+- [x] AC-6: `result.skipped = True` is set only when the ticket file cannot be read from disk
   (`OSError`) — never solely because `## Agent Contracts` is absent from the ticket body.
 
-- [ ] AC-7: All six new unit tests in `unit_tests/commit_guardian/test_check_ac_count_limits.py`
+- [x] AC-7: All six new unit tests in `unit_tests/commit_guardian/test_check_ac_count_limits.py`
   pass under `pytest`; `ruff check templates/scripts/commit_guardian/hooks/check_ac_limits.py`
   exits 0 with no new E722/BLE001/TRY violations.
 
@@ -106,56 +106,56 @@ HOOK_TEST_DIFF=/path/to/fixture-diff.txt python templates/scripts/commit_guardia
 
 | AC   | Test | Implementation | Validated |
 |------|------|----------------|-----------|
-| AC-1 |      |                |           |
-| AC-2 |      |                |           |
-| AC-3 |      |                |           |
-| AC-4 |      |                |           |
-| AC-5 |      |                |           |
-| AC-6 |      |                |           |
-| AC-7 |      |                |           |
+| AC-1 | test_check_ac_count_limits.py::test_v1_flat_over_20_acs_not_skipped | _analyse_ticket: v1-flat branch counts body ACs, sets total_violation=True | pytest green; e2e exit 1 |
+| AC-2 | test_check_ac_count_limits.py::test_v1_flat_within_20_acs_passes | _analyse_ticket: v1-flat branch, skipped=False, no violation at <=20 | pytest green |
+| AC-3 | test_check_ac_count_limits.py::test_v1_flat_override_warns_not_blocks | override+v1-flat else branch: total_ac_count set from _count_acs_in_block | pytest green |
+| AC-4 | test_check_ac_count_limits.py::test_json_payload_shape_v1_flat_violation | _build_json_payload: total violation, no per_agent entries | pytest green; stderr JSON verified |
+| AC-5 | test_check_ac_count_limits.py::test_v2_agent_contracts_path_regression | v2 path unchanged: per_agent + total_ac_count via contracts_block | pytest green |
+| AC-6 | test_check_ac_count_limits.py::test_oserror_sets_skipped_not_missing_contracts | skipped=True only in OSError except block | pytest green |
+| AC-7 | (not testable: requires implementation + ruff to exist; verified by test-runner post-fix) | 6/6 tests pass; ruff check exits 0 | pytest 6/6 green; ruff exit 0 |
 
 ## Implementation Tasks
 
 ### python-coder
 
-- [ ] Confirm which copy of `check_ac_limits.py` is the canonical source that `build.py` reads; edit
+- [x] Confirm which copy of `check_ac_limits.py` is the canonical source that `build.py` reads; edit
   only that copy. (The ticket-body hook with `_analyse_ticket` lives in
   `templates/scripts/commit_guardian/hooks/check_ac_limits.py`.)
-- [ ] Scan `tickets/` for any v1-flat ticket currently exceeding 20 `- [ ] AC-N:` lines and add
+- [x] Scan `tickets/` for any v1-flat ticket currently exceeding 20 `- [ ] AC-N:` lines and add
   `ac_limit_override: true` to those tickets' frontmatter before the hard-block behaviour is
   finalised. Report the count in the sign-off comment.
-- [ ] In `_analyse_ticket`: when the Agent Contracts section is absent, count `_AC_LINE_RE` matches
+- [x] In `_analyse_ticket`: when the Agent Contracts section is absent, count `_AC_LINE_RE` matches
   across the full ticket body (not just the AC section) and apply the 20-total cap
   (`_MAX_ACS_TOTAL`). Set `result.total_violation = True` and populate `result.total_ac_count`.
   Do NOT set `result.skipped = True` on this path.
-- [ ] Ensure the `ac_limit_override: true` branch also runs the flat AC count so the override path
+- [x] Ensure the `ac_limit_override: true` branch also runs the flat AC count so the override path
   correctly identifies whether the total exceeds 20 (mirrors existing v2 override path behaviour).
-- [ ] Verify the fix by invoking the hook directly with a test diff fixture (not via precommit
+- [x] Verify the fix by invoking the hook directly with a test diff fixture (not via precommit
   wiring) — see the Goal section for the invocation form.
-- [ ] Run `ruff check templates/scripts/commit_guardian/hooks/check_ac_limits.py` and confirm exit 0
+- [x] Run `ruff check templates/scripts/commit_guardian/hooks/check_ac_limits.py` and confirm exit 0
   with no new E722/BLE001/TRY violations.
 
 ### test-writer
 
-- [ ] Create `unit_tests/commit_guardian/test_check_ac_count_limits.py`; load the ticket-body hook
+- [x] Create `unit_tests/commit_guardian/test_check_ac_count_limits.py`; load the ticket-body hook
   from `templates/scripts/commit_guardian/hooks/check_ac_limits.py` via `importlib` (same pattern as
   `test_check_ac_limits.py` uses for the tree-depth hook — see lines 31–40 of that file for the
   shim pattern).
-- [ ] Confirm RED baseline for each new test before the fix is applied; record the RED baseline in
+- [x] Confirm RED baseline for each new test before the fix is applied; record the RED baseline in
   the sign-off comment.
-- [ ] Write `test_v1_flat_over_20_acs_not_skipped`: v1-flat ticket body with 21 `- [ ] AC-N:` lines
+- [x] Write `test_v1_flat_over_20_acs_not_skipped`: v1-flat ticket body with 21 `- [ ] AC-N:` lines
   → `skipped=False`, `total_ac_count=21`, `total_violation=True`.
-- [ ] Write `test_v1_flat_within_20_acs_passes`: v1-flat ticket with exactly 20 such lines →
+- [x] Write `test_v1_flat_within_20_acs_passes`: v1-flat ticket with exactly 20 such lines →
   `skipped=False`, `total_violation=False`, `violations=[]`.
-- [ ] Write `test_oserror_sets_skipped_not_missing_contracts`: monkeypatch `Path.read_text` to raise
+- [x] Write `test_oserror_sets_skipped_not_missing_contracts`: monkeypatch `Path.read_text` to raise
   `OSError` → `skipped=True`; AND assert that a successful read with no Agent Contracts does NOT
   produce `skipped=True` after the fix.
-- [ ] Write `test_v1_flat_override_warns_not_blocks`: v1-flat with 21 ACs and
+- [x] Write `test_v1_flat_override_warns_not_blocks`: v1-flat with 21 ACs and
   `ac_limit_override: true` in frontmatter → `override_active=True`, hook exits 0.
-- [ ] Write `test_json_payload_shape_v1_flat_violation`: `_build_json_payload` (or equivalent) for a
+- [x] Write `test_json_payload_shape_v1_flat_violation`: `_build_json_payload` (or equivalent) for a
   v1-flat total violation produces `{"hook": "check_ac_limits", "fix_agent": "it-po", "violations": [{"type": "total", "count": N, "limit": 20}]}`
   with no `per_agent` entries.
-- [ ] Write `test_v2_agent_contracts_path_regression`: ticket with `## Agent Contracts` and a
+- [x] Write `test_v2_agent_contracts_path_regression`: ticket with `## Agent Contracts` and a
   `### python-coder` subsection of 3 ACs → `per_agent = {"python-coder": 3}`, `total_ac_count=3`,
   `skipped=False`, `total_violation=False`.
 
@@ -218,11 +218,83 @@ test_requirements:
 
 ## Sign-offs
 
-- [ ] python-coder
-- [ ] test-writer
-- [ ] test-runner
-- [ ] pr-reviewer
+- [x] python-coder — 2026-07-06
+- [x] test-writer — 2026-07-06 10:42
+- [x] test-runner — 2026-07-06
+- [x] pr-reviewer — 2026-07-06
 - [ ] commit
 - [ ] pull-request
 
 ## Comments
+
+### 2026-07-06 — python-coder (status: ok)
+canonical_source_path: templates/scripts/commit_guardian/hooks/check_ac_limits.py
+canonical_source_confirmed: >
+  build_commit_guardian() in scripts/build_phases.py reads from
+  TEMPLATES_DIR / "scripts" / "commit_guardian" and uses rglob("*") —
+  this copies the hooks/ subdirectory too. So the canonical template is
+  templates/scripts/commit_guardian/hooks/check_ac_limits.py. The other
+  candidates (templates/scripts/commit_guardian/check_ac_limits.py = tree-depth
+  hook; scripts/commit_guardian/hooks/check_ac_limits.py = built output) were
+  NOT edited.
+pre_fix_scan:
+  v1_flat_tickets_over_20_acs: 0
+  tickets_requiring_override: []
+  note: "No existing ticket needs ac_limit_override: true — safe to enable hard-block."
+red_baseline_results:
+  - test_name: test_v1_flat_over_20_acs_not_skipped
+    result: green
+  - test_name: test_v1_flat_within_20_acs_passes
+    result: green
+  - test_name: test_oserror_sets_skipped_not_missing_contracts
+    result: green
+  - test_name: test_v1_flat_override_warns_not_blocks
+    result: green
+  - test_name: test_json_payload_shape_v1_flat_violation
+    result: green
+  - test_name: test_v2_agent_contracts_path_regression
+    result: green (was already green — regression guard preserved)
+e2e_fixture_invocation:
+  over_20_flat_acs: "exit 1 (BLOCKED, JSON payload confirmed, type=total, no per_agent entries)"
+  within_20_flat_acs: "exit 0 (passes)"
+ruff_check: "exit 0, no violations"
+doc_enforcer: "all 14 functions have docstrings; MODULE/GOAL/BUSINESS CONTEXT/ARCHITECTURE present"
+complexity_reduction: "ruff C901 exit 0; _analyse_ticket complexity unchanged vs pre-fix (added 1 branch)"
+
+### 2026-07-06 10:42 — test-writer (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  test_file_created: true
+  red_baseline_confirmed: true
+  all_six_tests_written: true
+  v2_regression_guard_green: true
+  implementation_tasks_checked: true
+Created `unit_tests/commit_guardian/test_check_ac_count_limits.py` with 6 tests loading
+the ticket-body hook via importlib shim. 5 tests are RED (implementation not yet written);
+1 test (v2 regression guard) is GREEN (existing behavior). Exit code: 1 (non-zero).
+red_baseline:
+  - test_name: test_v1_flat_over_20_acs_not_skipped
+    file: unit_tests/commit_guardian/test_check_ac_count_limits.py
+    error: "AssertionError: True is not false : v1-flat ticket with 21 ACs must NOT be skipped (skipped=True reserved for OSError only)"
+  - test_name: test_v1_flat_within_20_acs_passes
+    file: unit_tests/commit_guardian/test_check_ac_count_limits.py
+    error: "AssertionError: True is not false : v1-flat ticket with exactly 20 ACs must NOT be skipped"
+  - test_name: test_oserror_sets_skipped_not_missing_contracts
+    file: unit_tests/commit_guardian/test_check_ac_count_limits.py
+    error: "AssertionError: True is not false : A readable ticket with no ## Agent Contracts section must NOT set skipped=True. skipped=True must be reserved exclusively for OSError."
+  - test_name: test_v1_flat_override_warns_not_blocks
+    file: unit_tests/commit_guardian/test_check_ac_count_limits.py
+    error: "AssertionError: 0 != 21 : total_ac_count must be 21 (the flat AC count) even when override is active so the warning emission can identify the excess; got 0"
+  - test_name: test_json_payload_shape_v1_flat_violation
+    file: unit_tests/commit_guardian/test_check_ac_count_limits.py
+    error: "AssertionError: 0 != 1 : Expected 1 ticket entry in payload violations for the v1-flat total violation; got 0. Currently FAILS because _analyse_ticket skips v1-flat tickets, leaving payload violations empty."
+
+### 2026-07-06 — test-runner (status: ok)
+suite: unit_tests/commit_guardian/test_check_ac_count_limits.py
+result: 6/6 passed
+exit_code: 0
+ruff_check: "templates/scripts/commit_guardian/hooks/check_ac_limits.py — exit 0, no violations"
+
+### 2026-07-06 — pr-reviewer (status: ok)
+verdict: approved
+findings: none — implementation is a clean additive branch in _analyse_ticket; no regression on v2 path; ruff and tests green; scope matches files_touched exactly
