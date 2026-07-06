@@ -739,6 +739,290 @@ def test_missing_worktree_dispatch_fails_build_feature_guard() -> None:
 
 
 # ---------------------------------------------------------------------------
+# AC-4 (ticket 13): planner + ticket-supervisor prompts reference worktree path
+#
+# build-feature.js must derive a worktree-resident path via toWorktreePath()
+# and pass it to both the planner and every ticket-supervisor dispatch.  A
+# dispatch that still references the main-clone path (the OLD behaviour) must
+# FAIL these guards.
+# ---------------------------------------------------------------------------
+
+
+def test_build_feature_single_ticket_prompt_references_worktree_path() -> None:
+    """ticket-supervisor prompt uses the worktree path, not the main-clone path (AC-4).
+
+    Injects a resolve-target response that returns an absolute main-clone
+    ticket path and a worktree-setup response with a distinct worktree_path.
+    After the fix (toWorktreePath), the ticket-supervisor dispatch prompt must
+    reference the worktree path, not the original main-clone path.
+
+    AC-4: single-ticket path uses worktree-resident path everywhere downstream.
+    """
+    build_feature = _WORKFLOWS_DIR / "build-feature.js"
+    if not build_feature.exists():
+        pytest.skip(f"build-feature.js not found at {build_feature}")
+
+    main_clone_prefix = "/main-clone-root"
+    worktree_path = "/tmp/test-worktree-ac4-single"
+    main_clone_ticket = (
+        f"{main_clone_prefix}/tickets/00_inbox/epics/EPIC-Test/01_test.md"
+    )
+
+    label_responses = {
+        "resolve-target": {
+            "target_type": "ticket",
+            "ticket_path": main_clone_ticket,
+        },
+        "worktree-setup": {
+            "worktree_path": worktree_path,
+            "status": "reused",
+        },
+    }
+
+    result = run_workflow_under_e2(build_feature, label_responses=label_responses)
+
+    assert result.error == "", (
+        f"build-feature.js harness error: {result.error}\n"
+        f"stderr: {result.stderr[:300]}"
+    )
+
+    # Find the ticket-supervisor (build-ticket) dispatch.
+    build_ticket_call = next(
+        (c for c in result.agent_calls if c.label == "build-ticket"),
+        None,
+    )
+    assert build_ticket_call is not None, (
+        "build-feature.js did not dispatch ticket-supervisor (label='build-ticket'). "
+        f"Calls: {[(c.agent_type, c.label) for c in result.agent_calls]}"
+    )
+
+    prompt = build_ticket_call.prompt
+    assert isinstance(prompt, str), (
+        f"Expected a string prompt for build-ticket dispatch, got: {type(prompt)}"
+    )
+
+    assert worktree_path in prompt, (
+        f"AC-4 FAILED: ticket-supervisor prompt does not reference the worktree path.\n"
+        f"Expected worktree_path {worktree_path!r} to appear in the prompt.\n"
+        f"Prompt: {prompt!r}"
+    )
+    assert main_clone_prefix not in prompt, (
+        f"AC-4 FAILED: ticket-supervisor prompt still references the main-clone path.\n"
+        f"main_clone_prefix {main_clone_prefix!r} must NOT appear in the prompt.\n"
+        f"Prompt: {prompt!r}"
+    )
+
+
+def test_build_feature_epic_planner_prompt_references_worktree_path() -> None:
+    """Planner + ticket-supervisor prompts use worktree path for epic target (AC-4).
+
+    Injects a resolve-target response with an absolute main-clone epic path.
+    After the fix, the planner dispatch prompt must reference the worktree epic
+    path (not the main-clone path).  When the planner returns a batch with a
+    repo-relative ticket path, the ticket-supervisor prompt must also reference
+    a path UNDER worktree_path.
+
+    AC-4: planner reads the epic from the worktree; ticket-supervisor receives
+    worktree-resident ticket paths.
+    """
+    build_feature = _WORKFLOWS_DIR / "build-feature.js"
+    if not build_feature.exists():
+        pytest.skip(f"build-feature.js not found at {build_feature}")
+
+    main_clone_prefix = "/main-clone-root"
+    worktree_path = "/tmp/test-worktree-ac4-epic"
+    main_clone_epic = (
+        f"{main_clone_prefix}/tickets/00_inbox/epics/EPIC-Test"
+    )
+
+    label_responses = {
+        "resolve-target": {
+            "target_type": "epic",
+            "epic_path": main_clone_epic,
+        },
+        "worktree-setup": {
+            "worktree_path": worktree_path,
+            "status": "reused",
+        },
+        # Return a non-empty batch so the script proceeds to dispatch ticket-supervisor.
+        "epic-planner": {
+            "epic_path": f"{worktree_path}/tickets/00_inbox/epics/EPIC-Test",
+            "title": "Test Epic",
+            "batches": [
+                {
+                    "batch_number": 1,
+                    "tickets": [
+                        {
+                            "path": (
+                                "tickets/00_inbox/epics/EPIC-Test/01_test.md"
+                            ),
+                            "status": "todo",
+                        }
+                    ],
+                }
+            ],
+        },
+    }
+
+    result = run_workflow_under_e2(build_feature, label_responses=label_responses)
+
+    assert result.error == "", (
+        f"build-feature.js harness error: {result.error}\n"
+        f"stderr: {result.stderr[:300]}"
+    )
+
+    # The planner must be dispatched with the worktree epic path.
+    planner_call = next(
+        (c for c in result.agent_calls if c.label == "epic-planner"),
+        None,
+    )
+    assert planner_call is not None, (
+        "build-feature.js did not dispatch the planner (label='epic-planner'). "
+        f"Calls: {[(c.agent_type, c.label) for c in result.agent_calls]}"
+    )
+
+    planner_prompt = planner_call.prompt
+    assert isinstance(planner_prompt, str), (
+        f"Expected a string prompt for epic-planner dispatch, got: {type(planner_prompt)}"
+    )
+
+    assert worktree_path in planner_prompt, (
+        f"AC-4 FAILED: planner prompt does not reference the worktree path.\n"
+        f"Expected worktree_path {worktree_path!r} in the prompt.\n"
+        f"Prompt: {planner_prompt!r}"
+    )
+    assert main_clone_prefix not in planner_prompt, (
+        f"AC-4 FAILED: planner prompt still references the main-clone path.\n"
+        f"main_clone_prefix {main_clone_prefix!r} must NOT appear in the prompt.\n"
+        f"Prompt: {planner_prompt!r}"
+    )
+
+    # The ticket-supervisor must be dispatched with a path UNDER worktree_path.
+    # Label is 'ticket:<original_ticket.path>' per build-feature.js convention.
+    sup_calls = [
+        c for c in result.agent_calls if c.agent_type == "ticket-supervisor"
+    ]
+    assert len(sup_calls) >= 1, (
+        "build-feature.js must dispatch at least one ticket-supervisor for the "
+        "non-empty planner batch. "
+        f"Calls: {[(c.agent_type, c.label) for c in result.agent_calls]}"
+    )
+
+    for sup_call in sup_calls:
+        sup_prompt = sup_call.prompt
+        assert isinstance(sup_prompt, str), (
+            f"ticket-supervisor prompt is not a string: {type(sup_prompt)}"
+        )
+        assert worktree_path in sup_prompt, (
+            f"AC-4 FAILED: ticket-supervisor prompt does not reference the worktree.\n"
+            f"Expected {worktree_path!r} in prompt.\n"
+            f"Prompt: {sup_prompt!r}"
+        )
+        assert main_clone_prefix not in sup_prompt, (
+            f"AC-4 FAILED: ticket-supervisor prompt references the main-clone path.\n"
+            f"main_clone_prefix {main_clone_prefix!r} must NOT appear in the prompt.\n"
+            f"Prompt: {sup_prompt!r}"
+        )
+
+    # No contract violations must occur (array-form parallel preserved).
+    assert len(result.contract_violations) == 0, (
+        f"build-feature.js recorded unexpected parallel() contract violations:\n"
+        f"{result.contract_violations}"
+    )
+
+
+def test_build_feature_main_clone_path_dispatch_fails_guard() -> None:
+    """Guard FAILS if ticket-supervisor is dispatched with the main-clone path (AC-4).
+
+    Creates a minimal synthetic build-feature script that dispatches
+    ticket-supervisor using the raw main-clone path (the OLD behaviour, before
+    the toWorktreePath() fix) and confirms that the distinguishing guard
+    assertion — ``assert main_clone_prefix not in prompt`` — would fail for it.
+
+    The ticket-supervisor prompt always includes a ``Worktree: <path>`` suffix,
+    so ``worktree_path in prompt`` is true in both old and new behaviour.  The
+    guard that distinguishes the two is the negative check:
+    ``main_clone_prefix not in prompt``.  This meta-test proves that a script
+    emitting the raw main-clone ticket path violates that guard.
+
+    AC-4 meta-test: dispatching with the main-clone path FAILS the guard.
+    """
+    main_clone_prefix = "/main-clone-root"
+    main_clone_ticket = (
+        f"{main_clone_prefix}/tickets/00_inbox/epics/EPIC-Test/01_test.md"
+    )
+    worktree_path = "/tmp/test-worktree-ac4-meta"
+
+    # Synthetic old-style script: dispatches ticket-supervisor with the raw
+    # main-clone ticket path (NOT converted through toWorktreePath).  The
+    # Worktree: suffix is included (as in the real script) so that the prompt
+    # matches the real format — except the TICKET path is the main-clone path.
+    old_style_script = (
+        "// Synthetic old-style build-feature: uses main-clone path (AC-4 meta-test)\n"
+        f"const worktreePath = '{worktree_path}';\n"
+        f"const mainClonePath = '{main_clone_ticket}';\n"
+        "const ticketResult = await agent(\n"
+        f"  'Drive ticket to completion: \"' + mainClonePath + '\". "
+        f"Worktree: ' + worktreePath + '.',\n"
+        "  { agentType: 'ticket-supervisor', label: 'build-ticket', phase: 'Build' }\n"
+        ");\n"
+    )
+
+    with tempfile.NamedTemporaryFile(
+        mode="w",
+        suffix=".js",
+        prefix="ac4_meta_test_",
+        delete=False,
+        encoding="utf-8",
+    ) as tmp:
+        tmp.write(old_style_script)
+        tmp_path = Path(tmp.name)
+
+    try:
+        result = run_workflow_under_e2(tmp_path)
+    finally:
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+    assert result.error == "", (
+        f"Harness error during AC-4 meta-test: {result.error}"
+    )
+    assert result.dispatch_count >= 1, (
+        "AC-4 meta-test script must dispatch at least 1 agent. "
+        f"Got {result.dispatch_count}."
+    )
+
+    build_ticket_call = result.agent_calls[0]
+    prompt = build_ticket_call.prompt
+    prompt_str = prompt if isinstance(prompt, str) else ""
+
+    # The main-clone path MUST appear in the prompt — this represents the OLD
+    # (unfixed) behaviour that the guard is designed to catch.
+    assert main_clone_prefix in prompt_str, (
+        "AC-4 guard meta-test setup error: the synthetic old-style script prompt "
+        "does not contain the main-clone path — the meta-test is misconfigured.\n"
+        f"Expected {main_clone_prefix!r} to appear in the prompt.\n"
+        f"Prompt: {prompt_str!r}"
+    )
+    # Because main_clone_prefix IS in the prompt, the guard assertion
+    #   ``assert main_clone_prefix not in prompt``
+    # from test_build_feature_single_ticket_prompt_references_worktree_path
+    # would raise AssertionError for this script.  This confirms the guard is
+    # not vacuously passing — it catches the main-clone regression.
+    guard_would_pass = main_clone_prefix not in prompt_str
+    assert not guard_would_pass, (
+        "AC-4 guard meta-test FAILED: the guard assertion "
+        "(main_clone_prefix not in prompt) passes for a script that uses the "
+        "main-clone path — the guard is vacuously passing and would NOT catch "
+        "the regression.\n"
+        f"main_clone_prefix {main_clone_prefix!r} was expected to be in the prompt.\n"
+        f"Prompt: {prompt_str!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
 # M-2: no-commit-to-main guard must be fail-CLOSED (RED baseline — ticket 10)
 # ---------------------------------------------------------------------------
 
