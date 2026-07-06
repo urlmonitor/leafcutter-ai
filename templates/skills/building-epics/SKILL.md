@@ -76,6 +76,54 @@ retrospective. This pre-flight step closes that gap.
 
 ---
 
+### §1.0.1 Pre-Commit Hook Probe Pre-flight (runs after §1.0)
+
+Before entering the main epic loop (§1.1), verify that the pre-commit hooks
+are active and wired up in the epic worktree. This prevents the scenario where
+a hook silently skips for the entire drive because the config was lost between
+the worktree bootstrap and the drive start.
+
+**Check (POSIX):**
+
+```bash
+python3 scripts/commit_guardian/verify_precommit_active.py --json 2>/tmp/probe_pre_drive.txt
+```
+
+Parse the JSON stdout: `{"all_pass": bool, "failing_checks": [...], "results": {...}}`.
+
+**Failure behaviour (surface-and-offer, not hard-halt):**
+
+If `all_pass` is `false` OR the script exits non-zero:
+
+1. Emit the structured warning block to the user, listing each failing check:
+   ```
+   ## Warning: Pre-commit hook probe failed
+   Worktree: <worktree_root>
+   Failing checks: <list>
+   Pre-commit hooks may silently skip during this drive.
+   ```
+2. Offer the user **three options**:
+   a. **Fix and retry** — resolve the config/hooks issue (the probe describes what to fix), then re-invoke `/build-feature`. Typical fix: `build.py` wasn't run, or `.pre-commit-config.yaml` is absent.
+   b. **Investigate** — inspect `probe_pre_drive.txt` and the worktree hook installation manually before deciding.
+   c. **Override** — proceed despite the failing probe, accepting the risk that hooks may silently skip. This requires an explicit confirmation: "I understand hooks may skip — proceed".
+3. On option (a) or (b): halt with `{status: "blocked", blocker_summary: "pre-commit hook probe failed — user must fix or override"}`.
+4. On option (c) only: log `[probe-override] User accepted hook-skip risk for this drive` and continue to §1.1.
+
+Do NOT silently continue when `all_pass` is false — the warning must be surfaced.
+
+If `verify_precommit_active.py` is absent (graceful_skip_if_incomplete pattern), emit:
+```
+INFO: verify_precommit_active.py not found — probe skipped (incomplete guardian install).
+```
+and continue to §1.1 without blocking.
+
+**Why this gate exists:** A worktree bootstrap can succeed (config file copied/symlinked)
+but the hooks can still fail to fire if the binary is missing, the hook is not installed,
+or the config is malformed. This probe checks all four conditions simultaneously.
+(Source: EPIC-WorktreeQualityGateGuard, BO-1700d-2)
+
+---
+
 ### §1.1 Pseudocode
 
 ```
