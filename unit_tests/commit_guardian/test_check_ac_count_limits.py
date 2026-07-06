@@ -25,6 +25,8 @@ NOTE: This file tests a DIFFERENT hook from test_check_ac_limits.py.
 from __future__ import annotations
 
 import importlib.util
+import io
+import os
 import pathlib
 import sys
 import tempfile
@@ -418,6 +420,296 @@ class TestV2AgentContractsRegression(unittest.TestCase):
         self.assertFalse(
             result.total_violation,
             "total_violation must be False when 3 ACs are well within the 20-total cap",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Helper: ticket body with fenced code block AC lines (H-1 fixture)
+# ---------------------------------------------------------------------------
+
+
+def _make_v1_flat_ticket_with_fenced_acs(
+    num_real_acs: int, num_fenced_acs: int, override: bool = False
+) -> str:
+    """Build a v1-flat ticket with real ACs and ACs inside a fenced code block.
+
+    The fenced block uses triple-backtick delimiters. After the H-1 fix, lines
+    inside fenced blocks must NOT be counted by _count_acs_in_block.
+
+    Args:
+        num_real_acs: Number of real ``- [ ] AC-N:`` lines outside any fenced block.
+        num_fenced_acs: Number of ``- [ ] AC-N:`` lines inside a ``` fenced block.
+        override: If True, insert ``ac_limit_override: true`` into the frontmatter.
+
+    Returns:
+        Full ticket file content as a string, suitable for writing to disk.
+    """
+    real_ac_lines = "\n".join(
+        f"- [ ] AC-{i}: Real acceptance criterion {i}"
+        for i in range(1, num_real_acs + 1)
+    )
+    fenced_ac_lines = "\n".join(
+        f"- [ ] AC-{i}: Fenced example criterion {i}"
+        for i in range(1, num_fenced_acs + 1)
+    )
+    override_line = "ac_limit_override: true\n" if override else ""
+    return (
+        f"---\ntitle: Test ticket with fenced ACs\n{override_line}---\n\n"
+        f"## Acceptance Criteria\n\n{real_ac_lines}\n\n"
+        f"## Example Usage\n\n"
+        f"```\n{fenced_ac_lines}\n```\n"
+    )
+
+
+# ---------------------------------------------------------------------------
+# H-1 tests: fenced code block AC lines must not be counted
+# ---------------------------------------------------------------------------
+
+
+class TestH1FenceStripping(unittest.TestCase):
+    """H-1 regression tests: AC lines inside fenced code blocks must not be counted.
+
+    Tests test_fenced_acs_not_counted and test_fenced_acs_do_not_cause_false_block
+    are RED with the current hook code (no fence stripping in _count_acs_in_block).
+    They become GREEN only after the H-1 fix strips fenced blocks from content
+    before counting AC lines.
+    """
+
+    @_requires_import
+    def test_fenced_acs_not_counted(self) -> None:
+        # covers: UNKNOWN
+        """H-1: v1-flat ticket with 3 real + 3 fenced ACs produces total_ac_count == 3 (not 6).
+
+        Must implement: strip ``` fenced code blocks from content before counting
+        _AC_LINE_RE matches in _count_acs_in_block (or equivalently in the v1-flat
+        branch of _analyse_ticket).
+
+        RED with current code: no fence stripping → total_ac_count == 6.
+        """
+        content = _make_v1_flat_ticket_with_fenced_acs(num_real_acs=3, num_fenced_acs=3)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            ticket_path = root / "tickets" / "fenced_3_3_test.md"
+            ticket_path.parent.mkdir(parents=True, exist_ok=True)
+            ticket_path.write_text(content, encoding="utf-8")
+
+            result = _analyse_ticket("tickets/fenced_3_3_test.md", root)
+
+        self.assertEqual(
+            result.total_ac_count,
+            3,
+            (
+                f"total_ac_count must be 3 (only real ACs outside fenced blocks); "
+                f"got {result.total_ac_count}. "
+                "Current code counts all AC lines including those inside ``` fenced blocks."
+            ),
+        )
+        self.assertFalse(
+            result.total_violation,
+            "total_violation must be False when only 3 real ACs exist (fenced lines excluded)",
+        )
+
+    @_requires_import
+    def test_fenced_acs_do_not_cause_false_block(self) -> None:
+        # covers: UNKNOWN
+        """H-1: 18 real ACs + 3 fenced ACs → total_ac_count == 18, no false block via main().
+
+        Before the H-1 fix: 18 + 3 = 21 counted → total_violation=True → main() exits 1
+        (false block on a legitimate ticket that only has 18 real ACs).
+        After the H-1 fix: fenced lines excluded → 18 counted → no violation → exit 0.
+
+        RED with current code: total_ac_count == 21, total_violation == True, exit 1.
+        """
+        content = _make_v1_flat_ticket_with_fenced_acs(num_real_acs=18, num_fenced_acs=3)
+
+        # Part 1: unit-level check via _analyse_ticket
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            ticket_path = root / "tickets" / "fenced_18_3_unit.md"
+            ticket_path.parent.mkdir(parents=True, exist_ok=True)
+            ticket_path.write_text(content, encoding="utf-8")
+
+            result = _analyse_ticket("tickets/fenced_18_3_unit.md", root)
+
+        self.assertEqual(
+            result.total_ac_count,
+            18,
+            (
+                f"total_ac_count must be 18 (real ACs only, fenced excluded); "
+                f"got {result.total_ac_count}. "
+                "Before fix: 21 counted (18 real + 3 fenced lines inside ``` block)."
+            ),
+        )
+        self.assertFalse(
+            result.total_violation,
+            "total_violation must be False when 18 real ACs are within the 20-total cap",
+        )
+
+        # Part 2: end-to-end via main() — confirms the false block does not occur
+        with tempfile.TemporaryDirectory() as tmp2:
+            root2 = Path(tmp2)
+            ticket_path2 = root2 / "tickets" / "fenced_18_3_e2e.md"
+            ticket_path2.parent.mkdir(parents=True, exist_ok=True)
+            ticket_path2.write_text(content, encoding="utf-8")
+
+            diff_file = root2 / "test_diff.txt"
+            diff_file.write_text("tickets/fenced_18_3_e2e.md\n", encoding="utf-8")
+
+            with patch.object(_mod, "_find_project_root", return_value=root2):
+                with patch.dict(os.environ, {"HOOK_TEST_DIFF": str(diff_file)}):
+                    with patch("sys.stderr", io.StringIO()):
+                        exit_code = _mod.main()
+
+        self.assertEqual(
+            exit_code,
+            0,
+            (
+                f"main() must exit 0 for a ticket with 18 real ACs + 3 fenced ACs; "
+                f"got exit code {exit_code}. "
+                "Before fix: exits 1 because it counts 21 and triggers total_violation."
+            ),
+        )
+
+
+# ---------------------------------------------------------------------------
+# Tests: main() end-to-end exit-code paths (M-2 and M-3 gap closers)
+# ---------------------------------------------------------------------------
+
+
+class TestMainEndToEnd(unittest.TestCase):
+    """End-to-end tests for main() covering AC-1 (exit 1), AC-2 (exit 0), AC-3 (override + warning).
+
+    These tests invoke the hook's main() function directly with HOOK_TEST_DIFF
+    wired to a synthetic fixture file and _find_project_root mocked to a temp
+    directory. They close the gap identified in the H-1 code review: AC-1, AC-2,
+    and AC-3 were tested only at _analyse_ticket unit level; main() exit-code
+    paths and the override warning output were never exercised.
+
+    Tests test_main_exits_1_on_flat_over_limit, test_main_exits_0_on_flat_within_limit,
+    and test_override_warning_message_emitted are expected GREEN with the current
+    hook code (GE-114 fix already shipped). If any of them fail, it is a real
+    regression — not a test authoring issue.
+    """
+
+    def _run_main_with_ticket(
+        self, content: str, ticket_rel_path: str = "tickets/main_e2e_test.md"
+    ) -> tuple[int, str]:
+        """Write content to a temp ticket, invoke main(), return (exit_code, stderr).
+
+        Args:
+            content: Full ticket file content to write to disk.
+            ticket_rel_path: Relative path under the temp root. Must match
+                the _TICKET_PATH_RE pattern (tickets/*.md).
+
+        Returns:
+            Tuple of (exit_code, captured_stderr_text).
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            ticket_path = root / ticket_rel_path
+            ticket_path.parent.mkdir(parents=True, exist_ok=True)
+            ticket_path.write_text(content, encoding="utf-8")
+
+            diff_file = root / "test_diff.txt"
+            diff_file.write_text(f"{ticket_rel_path}\n", encoding="utf-8")
+
+            fake_stderr = io.StringIO()
+            with patch.object(_mod, "_find_project_root", return_value=root):
+                with patch.dict(os.environ, {"HOOK_TEST_DIFF": str(diff_file)}):
+                    with patch("sys.stderr", fake_stderr):
+                        exit_code = _mod.main()
+
+            stderr_text = fake_stderr.getvalue()
+
+        return exit_code, stderr_text
+
+    @_requires_import
+    def test_main_exits_1_on_flat_over_limit(self) -> None:
+        # covers: UNKNOWN
+        """AC-1 end-to-end: main() returns 1 for a v1-flat ticket with 21 real ACs.
+
+        Closes the M-2 gap: AC-1 was tested only at _analyse_ticket unit level.
+        This test confirms the hook's exit-code path through main().
+
+        Expected GREEN with current code (GE-114 fix already shipped).
+        A failure here is a real regression in the v1-flat violation path.
+        """
+        content = _make_v1_flat_ticket(num_acs=21)
+        exit_code, _ = self._run_main_with_ticket(
+            content, "tickets/over_limit_main_test.md"
+        )
+        self.assertEqual(
+            exit_code,
+            1,
+            (
+                f"main() must return 1 for a v1-flat ticket with 21 ACs; "
+                f"got exit code {exit_code}"
+            ),
+        )
+
+    @_requires_import
+    def test_main_exits_0_on_flat_within_limit(self) -> None:
+        # covers: UNKNOWN
+        """AC-2 end-to-end: main() returns 0 for a v1-flat ticket with exactly 20 ACs.
+
+        Closes the M-2 happy-path gap: confirms main() returns 0 for within-limit
+        v1-flat tickets.
+
+        Expected GREEN with current code (GE-114 fix already shipped).
+        A failure here is a real regression in the v1-flat non-violation path.
+        """
+        content = _make_v1_flat_ticket(num_acs=20)
+        exit_code, _ = self._run_main_with_ticket(
+            content, "tickets/within_limit_main_test.md"
+        )
+        self.assertEqual(
+            exit_code,
+            0,
+            (
+                f"main() must return 0 for a v1-flat ticket with exactly 20 ACs; "
+                f"got exit code {exit_code}"
+            ),
+        )
+
+    @_requires_import
+    def test_override_warning_message_emitted(self) -> None:
+        # covers: UNKNOWN
+        """AC-3 end-to-end: override path exits 0 and emits a warning to stderr naming the ticket.
+
+        Closes the M-3 gap: _print_override_warning was never exercised via main().
+        Asserts: (a) exit code 0 when ac_limit_override: true is active, and
+        (b) the warning message names the ticket path and mentions the total AC count.
+
+        Expected GREEN with current code (GE-114 fix already shipped).
+        A failure here is a real regression in the override warning path.
+        """
+        content = _make_v1_flat_ticket(num_acs=21, override=True)
+        exit_code, stderr_text = self._run_main_with_ticket(
+            content, "tickets/override_warning_main_test.md"
+        )
+        self.assertEqual(
+            exit_code,
+            0,
+            (
+                f"main() must return 0 when ac_limit_override: true is active; "
+                f"got exit code {exit_code}"
+            ),
+        )
+        self.assertIn(
+            "override_warning_main_test.md",
+            stderr_text,
+            (
+                "Override warning must name the ticket file in stderr output; "
+                f"stderr was: {stderr_text!r}"
+            ),
+        )
+        self.assertIn(
+            "21",
+            stderr_text,
+            (
+                "Override warning must mention the total AC count (21) in stderr; "
+                f"stderr was: {stderr_text!r}"
+            ),
         )
 
 

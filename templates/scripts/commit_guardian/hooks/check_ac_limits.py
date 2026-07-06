@@ -74,6 +74,12 @@ _AGENT_CONTRACTS_H2_RE = re.compile(r"^##\s+Agent Contracts\s*$", re.MULTILINE)
 # Detects any h2 section start (to find the end of Agent Contracts)
 _H2_RE = re.compile(r"^##\s+\S", re.MULTILINE)
 
+# Fenced code block pattern — used by _strip_fenced_code to remove ``` ... ```
+# blocks from ticket content before counting AC lines on the v1-flat path and
+# the flat-override path, preventing example ACs inside code blocks from being
+# counted as real acceptance criteria.
+_FENCED_BLOCK_RE = re.compile(r"```.*?```", re.DOTALL)
+
 
 # ---------------------------------------------------------------------------
 # Data classes
@@ -216,6 +222,25 @@ def _extract_agent_contracts_block(content: str) -> str | None:
     return content[start:]
 
 
+def _strip_fenced_code(text: str) -> str:
+    """Remove triple-backtick fenced code blocks from text before AC counting.
+
+    Fenced code blocks may contain example ``- [ ] AC-N:`` lines that look like
+    real acceptance criteria but are illustrative only (e.g. in a "Usage" or
+    "Example" section of a ticket). Stripping them before counting prevents
+    false-positives in the 20-total-cap check on the v1-flat path.
+
+    Pure function — no I/O, no side effects. May be called on any substring.
+
+    Args:
+        text: Input text, possibly containing ``` ... ``` fenced code blocks.
+
+    Returns:
+        Text with all fenced code blocks (triple-backtick delimited) removed.
+    """
+    return _FENCED_BLOCK_RE.sub("", text)
+
+
 def _count_acs_in_block(block: str) -> int:
     """Count total unchecked AC lines in a block, including integration-scoped ones.
 
@@ -332,8 +357,10 @@ def _analyse_ticket(path: str, project_root: Path) -> TicketResult:
             result.per_agent = _count_acs_per_agent(contracts_block)
             result.total_ac_count = _count_total_acs(contracts_block)
         else:
-            # v1-flat format with override: count full-body ACs for the warning
-            result.total_ac_count = _count_acs_in_block(content)
+            # v1-flat format with override: count full-body ACs for the warning.
+            # Strip fenced code blocks first so example AC lines inside ``` blocks
+            # are not counted as real acceptance criteria (H-1 fix).
+            result.total_ac_count = _count_acs_in_block(_strip_fenced_code(content))
         return result
 
     # Extract the ## Agent Contracts section (present on v2 tickets).
@@ -343,7 +370,9 @@ def _analyse_ticket(path: str, project_root: Path) -> TicketResult:
         # matches across the full ticket body and apply the 20-total cap.
         # The per-agent cap (7) is NOT applied on this path — it requires
         # ### <agent> subsection structure.
-        result.total_ac_count = _count_acs_in_block(content)
+        # Strip fenced code blocks before counting so that example AC lines
+        # inside ``` blocks are not counted as real ACs (H-1 fix).
+        result.total_ac_count = _count_acs_in_block(_strip_fenced_code(content))
         if result.total_ac_count > _MAX_ACS_TOTAL:
             result.total_violation = True
         return result
@@ -534,5 +563,13 @@ DECISION HISTORY
     The per-agent cap (7) is NOT applied on the v1-flat path.
     The ac_limit_override: true branch also populates total_ac_count for flat
     tickets so the override warning can report the excess count.
+- 2026-07-06 [GE-114 H-1]: Added fenced code block exclusion on the flat path.
+    A compiled _FENCED_BLOCK_RE constant and a _strip_fenced_code() pure helper
+    were added. Both the v1-flat path and the flat-override path now call
+    _strip_fenced_code(content) before passing to _count_acs_in_block, so that
+    example ``- [ ] AC-N:`` lines inside ``` fenced blocks are not counted as
+    real ACs. The v2 Agent Contracts path is unaffected — it counts only within
+    the extracted contracts_block which is already a sub-section of the ticket
+    body and does not undergo fence-stripping at the total-count level.
 ====================================================================
 """

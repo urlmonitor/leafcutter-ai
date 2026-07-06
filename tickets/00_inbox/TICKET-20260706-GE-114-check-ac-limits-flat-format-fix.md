@@ -219,9 +219,9 @@ test_requirements:
 ## Sign-offs
 
 - [x] python-coder — 2026-07-06
-- [x] test-writer — 2026-07-06 10:42
+- [x] test-writer — 2026-07-06 17:01
 - [x] test-runner — 2026-07-06
-- [x] pr-reviewer — 2026-07-06
+- [x] pr-reviewer — 2026-07-06 18:30
 - [x] commit — 2026-07-06 16:29
 - [x] pull-request — 2026-07-06
 
@@ -335,3 +335,70 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Committed SHA 44a6ff90: docstring correction to BUSINESS CONTEXT section (stale "v1 tickets skipped transparently" → correct flat-ticket cap description), plus test-runner and pr-reviewer sign-off entries. All 34 pre-commit hooks passed (most skipped as file-type filters; Check Feedback ID, Check Secrets, Check ADR Coverage, Check Agent Registry, Check Exception Handling, Check Contract Shrinking, Check Mermaid Diagram Complexity all passed explicitly). No hook failures, no autofix required.
+
+### 2026-07-06 — test-writer (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  h1_tests_added: true
+  original_6_still_passing: true
+  two_red_tests_confirmed: true
+  three_green_tests_confirmed: true
+Added 5 H-1 tests to unit_tests/commit_guardian/test_check_ac_count_limits.py.
+Tests 1–2 (fence-stripping) are RED — the H-1 fix (strip ``` blocks before counting)
+is not yet implemented. Tests 3–5 (main() end-to-end) are GREEN — they confirm
+existing GE-114 behavior through main() for the first time. All original 6 tests
+continue to pass (9 passed, 2 failed, exit 1).
+red_baseline:
+  - test_name: TestH1FenceStripping::test_fenced_acs_not_counted
+    file: unit_tests/commit_guardian/test_check_ac_count_limits.py
+    error: "AssertionError: 6 != 3 : total_ac_count must be 3 (only real ACs outside fenced blocks); got 6. Current code counts all AC lines including those inside ``` fenced blocks."
+  - test_name: TestH1FenceStripping::test_fenced_acs_do_not_cause_false_block
+    file: unit_tests/commit_guardian/test_check_ac_count_limits.py
+    error: "AssertionError: 21 != 18 : total_ac_count must be 18 (real ACs only, fenced excluded); got 21. Before fix: 21 counted (18 real + 3 fenced lines inside ``` block)."
+green_baseline_tests_3_4_5:
+  - test_name: TestMainEndToEnd::test_main_exits_1_on_flat_over_limit
+    status: green (existing behavior confirmed via main())
+  - test_name: TestMainEndToEnd::test_main_exits_0_on_flat_within_limit
+    status: green (existing behavior confirmed via main())
+  - test_name: TestMainEndToEnd::test_override_warning_message_emitted
+    status: green (existing behavior confirmed via main())
+
+### 2026-07-06 — python-coder (status: ok) [H-1 follow-up fix]
+h1_fix_description: >
+  Strip fenced code blocks before counting AC lines on the v1-flat path and
+  flat-override path. Added _FENCED_BLOCK_RE compiled regex constant and
+  _strip_fenced_code() pure helper. Both call sites in _analyse_ticket that
+  count flat ACs now call _count_acs_in_block(_strip_fenced_code(content)).
+  v2 Agent Contracts path is unaffected (counts within contracts_block only).
+  DECISION HISTORY updated with H-1 entry.
+red_baseline_results:
+  - test_name: TestH1FenceStripping::test_fenced_acs_not_counted
+    result: green (was: AssertionError 6 != 3; now passes — 3 real ACs counted, 3 fenced excluded)
+  - test_name: TestH1FenceStripping::test_fenced_acs_do_not_cause_false_block
+    result: green (was: AssertionError 21 != 18 + exit 1; now passes — 18 real ACs, exit 0)
+original_6_still_green: true
+total_suite: 11/11 passed
+direct_invocation:
+  fixture_18_real_3_fenced: "exit 0 (correct — fenced lines excluded, 18 < 20 cap)"
+  fixture_21_real_no_fenced: "exit 1 (correct — genuine over-limit ticket still blocked)"
+ruff_check: "exit 0, no violations (E/F/E722 rules per ruff.toml)"
+doc_enforcer: "module docstring has MODULE/GOAL/BUSINESS CONTEXT/ARCHITECTURE; _strip_fenced_code has full docstring with Args/Returns; all other functions unchanged"
+complexity_reduction: "ruff C901 exit 0; _strip_fenced_code is complexity 1 (single return)"
+
+### 2026-07-06 17:53 — test-runner (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  test_suite_executed: true
+  all_tests_passing: true
+  failure_report_structured: true
+H-1 fence-stripping re-verification: 11/11 tests in test_check_ac_count_limits.py pass (includes 2 new TestH1FenceStripping tests and 3 new TestMainEndToEnd tests added by test-writer for the H-1 followup); 43/43 pre-existing tree-depth hook tests in test_check_ac_limits.py unchanged; full commit_guardian directory suite yields 464 passed, 50 skipped, 6 failed. The 6 failures are exactly the known pre-existing baseline (test_build_precommit.py x2: import-error on scripts.build_precommit; test_check_ac_governance.py x1: hook script not found at scripts/commit_guardian/check_ac_governance.py; test_check_ticket_signoff_parity_done_folder.py x1: done-folder-move check not yet implemented; test_transform_hooks_and_autofix_emission.py x2: transform hooks absent from manifest). No new failures introduced by the H-1 change. Verdict: GREEN.
+
+### 2026-07-06 18:30 — pr-reviewer (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  h1_delta_reviewed: true
+  high_confidence_findings: false
+  medium_findings_count: 2
+  opus_escalation: false
+  unterminated_fence_risk_assessed: true
+H-1 re-review (fence-stripping delta only): no high-confidence blockers found. Fix is correct for all well-formed ticket inputs. Two medium findings noted: [M-1] unterminated fence cross-boundary over-stripping — when a ticket has a stray opening ` ``` ` with no close and a later fence's opening acts as the regex close, real ACs between them are eaten (false NEGATIVE, under-count); this requires malformed markdown and is unlikely in production; [M-2] override+fenced-AC test gap — neither H-1 test exercises the override path with fenced content, though the code change is symmetric and correct by inspection. The non-greedy `.*?` pattern is confirmed correct for terminated fences (language tags, adjacent blocks, inline code all handled correctly). The v2 Agent Contracts path is confirmed unaffected. Error-handling Rule 4 satisfied (pure function, no try/except). 11/11 tests green per test-runner. Medium count = 2, below the 3-finding Opus escalation threshold.
