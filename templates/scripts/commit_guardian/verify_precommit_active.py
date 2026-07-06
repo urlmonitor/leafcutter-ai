@@ -29,6 +29,11 @@ DECISION HISTORY
   Added assert_no_allow_no_config_env (BO-1700b-2) and remove_canary_from_manifest (BO-1700b-4).
   PRE_COMMIT_ALLOW_NO_CONFIG is documented as a fatal invariant break.
   Canary removal is idempotent and fail-safe (returns False, not raise).
+- 2026-07-06 [EPIC-WorktreeQualityGateGuard/07]: Portability + graceful no-op pass.
+  Added is_worktree() (BO-1700e-4 — file-based worktree detection),
+  is_guardian_complete() (BO-1700e-3 — partial-build detection),
+  check_guardian_scripts_complete() (BO-1700e-5 — authoritative no-config detection),
+  and graceful_skip_if_incomplete() (BO-1700e-3 — gate guard rail with WARNING log).
 ====================================================================
 """
 
@@ -419,6 +424,122 @@ def remove_canary_from_manifest(config_path: Path) -> bool:
         return False
 
     return True
+
+
+def is_worktree(root: Path) -> bool:
+    """Return True if root is inside a git worktree (not a main-tree checkout).
+
+    Detection is purely file-based — no subprocess is required:
+
+    - If ``.git`` does not exist under root → not a git repo → False.
+    - If ``.git`` is a directory → main working tree checkout → False.
+    - If ``.git`` is a file whose content starts with ``gitdir:`` and the
+      referenced path contains ``/worktrees/`` → worktree topology → True.
+    - Any other ``.git`` file content → False.
+
+    Args:
+        root: Path to the directory to probe.
+
+    Returns:
+        True if root is a git worktree, False for a main tree or non-git directory.
+    """
+    git_path = root / ".git"
+
+    if not git_path.exists():
+        return False
+
+    if git_path.is_dir():
+        # .git is a directory — this is a plain main-tree checkout.
+        return False
+
+    # .git is a file — read its content to determine the topology.
+    try:
+        content = git_path.read_text(encoding="utf-8").strip()
+    except OSError as exc:
+        _log.warning("is_worktree: cannot read .git file at %s: %s", git_path, exc)
+        return False
+
+    if not content.startswith("gitdir:"):
+        return False
+
+    gitdir_str = content[len("gitdir:"):].strip()
+    # In a worktree the gitdir path contains '.git/worktrees/<name>'.
+    return "/worktrees/" in gitdir_str or "\\worktrees\\" in gitdir_str
+
+
+def is_guardian_complete(root: Path) -> bool:
+    """Return True if all 3 guard scripts are present in <root>/scripts/commit_guardian/.
+
+    Checks for the three required guard scripts:
+
+    - ``verify_precommit_active.py`` (four-check probe orchestrator)
+    - ``precommit_canary.py`` (canary emitter)
+    - ``ensure_precommit_config.py`` (self-healing config installer)
+
+    Args:
+        root: Path to the consumer project root.
+
+    Returns:
+        True if all three scripts exist under scripts/commit_guardian/,
+        False if any are absent.
+    """
+    guardian_dir = root / "scripts" / "commit_guardian"
+    required = [
+        "verify_precommit_active.py",
+        "precommit_canary.py",
+        "ensure_precommit_config.py",
+    ]
+    return all((guardian_dir / s).exists() for s in required)
+
+
+def check_guardian_scripts_complete(root: Path) -> bool:
+    """Check if the full guardian installation is deployed at root.
+
+    Returns True only when all three guard scripts are present in
+    ``scripts/commit_guardian/`` AND the manifest exists at
+    ``config/commit_guardian/commit_guardian.json``. Returns False in all
+    other cases — including when the ``config/`` directory is entirely absent.
+
+    This function never raises. It is designed as the authoritative "no config"
+    detector: if it returns False the guardian was never installed and gates
+    must not run.
+
+    Args:
+        root: Path to the consumer project root.
+
+    Returns:
+        True if the full guardian installation is complete, False otherwise.
+    """
+    if not is_guardian_complete(root):
+        return False
+    manifest = root / "config" / "commit_guardian" / "commit_guardian.json"
+    return manifest.exists()
+
+
+def graceful_skip_if_incomplete(root: Path) -> bool:
+    """Log a WARNING and return True when guardian scripts are incomplete.
+
+    Use this as a guard rail at the top of any gate function. When this
+    returns True the gate MUST return 0 / permit the operation without running
+    any checks. When this returns False all scripts are present and the gate
+    should proceed normally.
+
+    Args:
+        root: Path to the consumer project root.
+
+    Returns:
+        True if the gate should skip (incomplete installation — graceful no-op).
+        False if all scripts are present and the gate should run.
+    """
+    if not is_guardian_complete(root):
+        _log.warning(
+            "commit-guardian: guardian scripts missing at %s — "
+            "skipping gate (graceful no-op). "
+            "Run build.py to deploy the guardian scripts.",
+            root,
+        )
+        return True
+    return False
 
 
 def run_checks() -> dict[str, Any]:
