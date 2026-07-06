@@ -26,7 +26,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -108,7 +108,7 @@ Scenario: unique run-id and baseline path
 - [x] python-coder — 2026-07-06 15:30
 - [x] test-runner — 2026-07-06 13:41
 - [x] pr-reviewer — 2026-07-06 16:05
-- [ ] commit
+- [x] commit — 2026-07-06 17:30
 - [ ] pull-request
 
 ## Comments
@@ -237,3 +237,8 @@ All 5 ACs verified in diff. No high-confidence blockers found.
 - plan-feature.js branch-check dispatches `agent()` even when `authoringWorktreePath` is null ✓
 - build-epic.js parallel call uses array form (no spread) ✓
 - All scripts dispatch >= 1 agent: confirmed by test-runner (15 passed, 1 xfailed) ✓
+
+### 2026-07-06 17:30 — commit (status: ok)
+feedback-id: fb_2026-07-06_f4ca39da
+
+Committed 6 staged files as `3def564b`. Pre-commit hook `check-feedback-id` initially blocked due to missing feedback-id lines in prior phase comment headings; resolved by adding feedback-id entries to all 5 existing comment headings before the commit succeeded.
