@@ -33,6 +33,7 @@ ARCHITECTURE: Pure Python test — uses the _workflow_engine_harness module to
 
 from __future__ import annotations
 
+import re
 import shutil
 import tempfile
 from pathlib import Path
@@ -669,5 +670,310 @@ def test_plan_feature_commit_guard_fail_closed_when_worktree_unparseable() -> No
         f"even though the worktree payload was unparseable (authoringWorktreePath=null). "
         f"The guard must be fail-CLOSED: refuse to commit when branch cannot be confirmed.\n"
         f"All calls: {[(c.agent_type, c.label) for c in result.agent_calls]}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# AC-1/AC-2/AC-3: meta-pure-literal guard
+#
+# The Claude Code Workflow engine statically parses `export const meta` and
+# rejects any non-literal node type (BinaryExpression, Identifier,
+# CallExpression, TemplateLiteral with substitutions). A script whose meta
+# contains string concatenation (`"a" + "b"`) will FAIL TO LOAD under the
+# real engine, silently passing the stub-harness dispatch tests.
+#
+# This guard catches that class of failure statically in CI.
+# ---------------------------------------------------------------------------
+
+
+def _extract_meta_block(source: str) -> str | None:
+    """Extract the text of the `export const meta = { ... }` block.
+
+    Uses a character-level state machine to handle nested braces and string
+    literals correctly. Returns None if no meta block is found.
+
+    Args:
+        source: JavaScript source text to search.
+
+    Returns:
+        The meta block text (from the opening ``{`` through the closing ``}``),
+        or None if no ``export const meta`` declaration is found.
+    """
+    match = re.search(r"\bexport\s+const\s+meta\s*=\s*\{", source)
+    if not match:
+        return None
+
+    brace_start = source.index("{", match.start())
+    depth = 0
+    in_str = False
+    str_char: str | None = None
+    i = brace_start
+    while i < len(source):
+        c = source[i]
+        if in_str:
+            # Escape sequences: skip the next character (not inside template literals).
+            if c == "\\" and str_char != "`":
+                i += 2
+                continue
+            if c == str_char:
+                in_str = False
+        else:
+            if c in ('"', "'", "`"):
+                in_str = True
+                str_char = c
+            elif c == "{":
+                depth += 1
+            elif c == "}":
+                depth -= 1
+                if depth == 0:
+                    return source[brace_start : i + 1]
+        i += 1
+    return None  # Unbalanced braces
+
+
+def _check_meta_pure_literal_violations(script_path: Path) -> list[str]:
+    """Return violations if ``meta.description`` is not a pure string literal.
+
+    Statically analyses the ``export const meta`` block to detect:
+    - BinaryExpression concatenation: ``+`` operator between string literals.
+    - Template literal substitutions: ``${...}`` inside a backtick string.
+    - Non-literal identifiers or call expressions (bare names after stripping
+      string literal contents).
+
+    This mirrors the Claude Code Workflow engine rule that rejects any
+    non-literal node type in ``meta`` at script-load time.
+
+    Args:
+        script_path: Path to the ``.js`` workflow script.
+
+    Returns:
+        A list of human-readable violation strings. An empty list means
+        ``meta.description`` is a pure literal (no violations detected).
+    """
+    try:
+        source = script_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return [f"Could not read {script_path.name}: {exc}"]
+
+    meta_text = _extract_meta_block(source)
+    if meta_text is None:
+        return []  # No meta block — nothing to check.
+
+    # Find the description: property inside the meta block.
+    desc_match = re.search(r"\bdescription\s*:\s*", meta_text)
+    if not desc_match:
+        return []  # No description property — nothing to check.
+
+    value_start = desc_match.end()
+
+    # Extract the raw description value using a state machine.
+    # The value ends at the first ``},`` or ``}`` at depth 0 (outside strings).
+    in_str2 = False
+    str_char2: str | None = None
+    depth2 = 0
+    value_chars: list[str] = []
+    i = value_start
+    while i < len(meta_text):
+        c = meta_text[i]
+        if in_str2:
+            if c == "\\" and str_char2 != "`":
+                # Escape: include both characters.
+                value_chars.append(c)
+                if i + 1 < len(meta_text):
+                    value_chars.append(meta_text[i + 1])
+                i += 2
+                continue
+            if c == str_char2:
+                in_str2 = False
+            value_chars.append(c)
+        else:
+            if c in ('"', "'"):
+                in_str2 = True
+                str_char2 = c
+                value_chars.append(c)
+            elif c == "`":
+                in_str2 = True
+                str_char2 = c
+                value_chars.append(c)
+            elif c == "{":
+                depth2 += 1
+                value_chars.append(c)
+            elif c == "}":
+                if depth2 == 0:
+                    break  # End of meta block reached before a terminating comma.
+                depth2 -= 1
+                value_chars.append(c)
+            elif c == "," and depth2 == 0:
+                break  # End of this property value.
+            else:
+                value_chars.append(c)
+        i += 1
+
+    value_text = "".join(value_chars)
+
+    # Build a "stripped" version with string literal CONTENTS removed.
+    # This exposes operators, identifiers, and call expressions that would
+    # make the value a non-literal (rejected by the Workflow engine).
+    stripped_chars: list[str] = []
+    in_str3 = False
+    str_char3: str | None = None
+    j = 0
+    while j < len(value_text):
+        c = value_text[j]
+        if in_str3:
+            if c == "\\" and str_char3 != "`":
+                j += 2
+                continue
+            if c == str_char3:
+                in_str3 = False
+        else:
+            if c in ('"', "'"):
+                in_str3 = True
+                str_char3 = c
+            elif c == "`":
+                in_str3 = True
+                str_char3 = c
+            else:
+                stripped_chars.append(c)
+        j += 1
+
+    stripped = "".join(stripped_chars)
+    violations: list[str] = []
+
+    # AC-2 check 1: BinaryExpression — `+` concatenation operator outside strings.
+    if "+" in stripped:
+        violations.append(
+            f"{script_path.name}: meta.description is a BinaryExpression — "
+            "contains '+' concatenation operator. "
+            "The Workflow engine statically parses meta and rejects BinaryExpression nodes. "
+            f"Value preview: {value_text.strip()[:80]!r}"
+        )
+
+    # AC-2 check 2: TemplateLiteral with substitution — ${...} in raw value.
+    if "${" in value_text:
+        violations.append(
+            f"{script_path.name}: meta.description contains a template literal "
+            "substitution (${{...}}). The Workflow engine requires a pure literal "
+            "with no substitutions. "
+            f"Value preview: {value_text.strip()[:80]!r}"
+        )
+
+    # AC-2 check 3: Identifier or CallExpression — non-whitespace, non-operator
+    # content after stripping strings.  ``+`` is already caught above; after
+    # removing it and all whitespace/punctuation, any remaining word characters
+    # indicate an identifier or call (both disallowed in meta).
+    stripped_clean = re.sub(r"[\s+\-*/()[\]{},;]", "", stripped)
+    if stripped_clean:
+        violations.append(
+            f"{script_path.name}: meta.description contains a non-literal "
+            "identifier or call expression. "
+            f"Non-string, non-operator content: {stripped_clean[:40]!r}. "
+            "The Workflow engine requires a pure literal (single quoted string)."
+        )
+
+    return violations
+
+
+# ---------------------------------------------------------------------------
+# AC-3: Parametrized guard across the whole fleet
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "script_path",
+    _collect_workflow_scripts(),
+    ids=_script_id,
+)
+def test_meta_description_is_pure_literal(script_path: Path) -> None:
+    """Every workflow script's meta.description must be a pure string literal.
+
+    The Claude Code Workflow engine statically parses ``export const meta``
+    and rejects any non-literal node type (BinaryExpression, Identifier,
+    CallExpression, TemplateLiteral with substitutions). A script whose
+    meta.description uses string concatenation (``"a" + "b"``) fails to load
+    under the real engine, silently passing stub-harness dispatch tests.
+
+    This guard catches that class of failure deterministically in CI.
+
+    AC-1: pure-literal description is accepted (no violations).
+    AC-2: non-literal description is rejected (violations listed, test fails).
+    AC-3: every *.js in templates/workflows-js/ is checked.
+
+    Args:
+        script_path: Parametrized path to the workflow script under test.
+    """
+    violations = _check_meta_pure_literal_violations(script_path)
+    assert violations == [], (
+        f"{script_path.name}: meta.description is not a pure literal.\n\n"
+        "The Workflow engine statically parses export const meta and rejects\n"
+        "any non-literal node type (BinaryExpression, Identifier, CallExpression,\n"
+        "TemplateLiteral with substitutions).\n\n"
+        "Violations detected:\n"
+        + "\n".join(f"  - {v}" for v in violations)
+        + "\n\nFix: collapse the description into a single quoted string literal."
+    )
+
+
+# ---------------------------------------------------------------------------
+# AC-2: Standalone negative test — guard rejects concatenated description
+# ---------------------------------------------------------------------------
+
+
+def test_meta_guard_rejects_concatenated_description() -> None:
+    """meta-pure-literal guard FAILS for a script with concatenated meta.description.
+
+    Creates a synthetic workflow script whose ``export const meta`` uses
+    string concatenation (``'first part ' + 'second part'``) and asserts the
+    guard returns at least one violation. This is the AC-2 "guard rejects
+    non-literal meta" meta-test that proves the guard is not vacuously passing.
+
+    AC-2: the guard must name the script and describe the BinaryExpression
+    violation when concatenation is present.
+    """
+    # Synthetic E2 workflow script with a concatenated meta.description.
+    synthetic_source = (
+        "export const meta = {\n"
+        "  name: 'test-workflow',\n"
+        "  description: 'first part of the description ' +\n"
+        "    'second part of the description',\n"
+        "  phases: [],\n"
+        "};\n"
+        "\n"
+        "// top-level body: dispatch at least one agent\n"
+        "const result = await agent('stub prompt', {agentType: 'status-checker', label: 'stub'});\n"
+    )
+
+    with tempfile.NamedTemporaryFile(
+        mode="w",
+        suffix=".js",
+        prefix="meta_guard_test_",
+        delete=False,
+        encoding="utf-8",
+    ) as tmp:
+        tmp.write(synthetic_source)
+        tmp_path = Path(tmp.name)
+
+    try:
+        violations = _check_meta_pure_literal_violations(tmp_path)
+    finally:
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+    assert len(violations) > 0, (
+        "meta-pure-literal guard must detect concatenation in meta.description. "
+        "A description with 'first part ' + 'second part' must be flagged as "
+        "a BinaryExpression (non-pure literal)."
+    )
+
+    # The violation message must describe the problem clearly.
+    violation_text = " ".join(violations)
+    assert any(
+        kw in violation_text
+        for kw in ("BinaryExpression", "concatenat", "+")
+    ), (
+        f"Violation message must mention BinaryExpression, concatenation, or '+'. "
+        f"Got: {violations!r}"
     )
 
