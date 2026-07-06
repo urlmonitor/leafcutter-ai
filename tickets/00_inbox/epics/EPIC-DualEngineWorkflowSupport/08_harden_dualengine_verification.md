@@ -19,7 +19,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -92,7 +92,7 @@ Scenario: E1 emission is validated by real import, not node --check
 - [x] python-coder — 2026-07-06 11:45
 - [x] test-runner — 2026-07-06 12:00
 - [x] pr-reviewer — 2026-07-06 12:30
-- [ ] commit
+- [x] commit — 2026-07-06 13:00
 - [ ] pull-request
 
 ## Comments
@@ -139,6 +139,11 @@ completion_manifest:
   error_handling_policy_compliant: true
   ruff_clean_confirmed: true
 Reviewed diff for all 4 ACs. AC-1: parallel() mock correctly records contract violations for spread-form calls and runs all thunks for array-form; covered by two dedicated tests. AC-2: AgentCall.agent_type/.label properties enable ordered-sequence assertions; build-epic.js (2-call) and plan-feature.js (7-call) sequences are asserted exactly. AC-3: test_build_epic_parallel_contract_baseline reaches parallel() via label_responses{"epic-planner": fake_planner_response} and is correctly marked xfail(strict=True) as the H-5 RED baseline. AC-4: run_e1_import_check() uses node --check --input-type=module piped via stdin; test_e1_import_validity is parametrized over all scripts with _E1_INVALID_SCRIPTS marked xfail(strict=True) as the H-6 baseline. Error handling in run_e1_import_check() wraps read_text (OSError), subprocess.run (TimeoutExpired, FileNotFoundError, OSError) — no bare except, no silent swallow — compliant with project error-handling policy. Minor cosmetic note (already flagged by python-coder): _strip_exports line 330 has a duplicate startswith("export {") condition — harmless.
+
+### 2026-07-06 13:00 — commit (status: ok)
+feedback-id: (submit-failed)
+sha: 1797326a5a0e5d49ebea7ba99c58765f21d79c47
+3 files changed, 890 insertions(+), 51 deletions(+)
 
 ## Implementation Tasks
 - [x] Rewrite the harness `parallel()` mock to require an array of thunks; a non-array arg is a recorded contract violation, not a silent single-run.
