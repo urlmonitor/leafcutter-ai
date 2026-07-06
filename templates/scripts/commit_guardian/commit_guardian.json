@@ -806,6 +806,16 @@
                 ],
                 "pass_filenames": false,
                 "_comment": "ACS-500f-1: (1) Validates every staged AC YAML file against config/ac_store_schema.json (JSON Schema draft-07). (2) Blocks commits where a consuming AC's pattern_bindings is missing at least one slot declared by the referenced pattern AC — error names the missing binding key and the pattern AC id. (3) Blocks commits where implements_pattern was present in HEAD but is absent in the staged modification — error identifies the file and states that implements_pattern was dropped. Fail-open on unexpected errors. Scoped to docs/acceptance-criteria/ staged files."
+            },
+            {
+                "id": "precommit-canary",
+                "name": "Pre-commit canary (PRECOMMIT_CANARY_OK probe)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/precommit_canary.py",
+                "language": "system",
+                "stages": ["manual"],
+                "always_run": true,
+                "pass_filenames": false,
+                "_comment": "EPIC-WorktreeQualityGateGuard/02: Manual-stage-only canary hook. Emits PRECOMMIT_CANARY_OK to stdout and exits 0. Invoked by verify_precommit_active.py check D to confirm pre-commit hooks can fire in the worktree environment. stages: [manual] means it never runs automatically on git commit."
             }
         ]
     },
