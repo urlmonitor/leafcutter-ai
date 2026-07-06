@@ -1,6 +1,6 @@
 ---
 title: "Fix build-feature.js meta to a pure literal; guard meta-pure-literal for all workflows"
-status: todo
+status: done
 components:
   - build_orchestration
   - testing_quality
@@ -21,8 +21,8 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
-  pull-request: needed
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 11: Fix build-feature.js meta to a pure literal; guard meta-pure-literal for all workflows
@@ -88,8 +88,8 @@ Scenario: guard covers the whole fleet and passes post-fix
 - [x] python-coder
 - [x] test-runner
 - [x] pr-reviewer
-- [ ] commit
-- [ ] pull-request
+- [x] commit
+- [x] pull-request
 
 ## Comments
 
