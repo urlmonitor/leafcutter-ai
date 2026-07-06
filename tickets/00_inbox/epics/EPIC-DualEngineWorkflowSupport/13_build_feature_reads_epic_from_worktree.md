@@ -1,6 +1,6 @@
 ---
 title: "build-feature.js reads the epic/ticket from the worktree, not the main clone"
-status: in_progress
+status: done
 components:
   - build_orchestration
 created: 2026-07-02
@@ -21,7 +21,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 13: build-feature.js reads the epic/ticket from the worktree, not the main clone
@@ -92,7 +92,7 @@ Scenario: guard asserts worktree-relative epic path
 - [x] test-runner — 2026-07-06 17:12
 - [x] pr-reviewer — 2026-07-06 17:48
 - [x] commit — 2026-07-06 17:51
-- [ ] pull-request
+- [x] pull-request — 2026-07-06 18:15
 
 ## Comments
 
@@ -134,6 +134,14 @@ completion_manifest:
   pre_commit_hooks_pass: true
   commit_message_valid: true
   ticket_staged: true
+
+### 2026-07-06 18:15 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_exists: true
+  pr_body_complete: true
+Pushed ticket-13 commits (2d6314c8) to existing PR #198 (feat(config): add workflows.enabled + workflows.engine — EPIC-DualEngineWorkflowSupport). Merge state: MERGEABLE/BLOCKED (ruff CI gate — expected). All prior agents signed_off; status flipped to done.
 
 ## Implementation Tasks
 - [x] In build-feature.js, after worktree-agent returns worktree_path, derive the worktree-relative epic/ticket path: take the repo-relative path of the resolved target (strip any main-clone prefix) and join it under worktree_path. Use this `worktreeEpicPath` / `worktreeTicketPath` for the planner prompt and every ticket-supervisor dispatch.
