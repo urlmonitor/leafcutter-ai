@@ -22,7 +22,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 12: build-feature.js creates/reuses an isolated worktree before driving
@@ -90,7 +90,7 @@ Scenario: guard enforces the worktree step in the dispatch sequence
 - [x] test-runner — 2026-07-06 16:03
 - [x] pr-reviewer — 2026-07-06 16:06
 - [x] commit — 2026-07-06 16:10
-- [ ] pull-request
+- [x] pull-request — 2026-07-06 16:15
 
 ## Comments
 
@@ -129,6 +129,15 @@ completion_manifest:
   test_ac3_guard_is_not_vacuous: true
   worktree_schema_well_formed: true
 Reviewed worktree-agent dispatch in build-feature.js and the two new test functions. All eight checklist items passed: worktree-agent dispatched before epic-planner and ticket-supervisor; abort fires on null result, status==="failed", and truthy error field plus a separate realWorktreePath guard; realWorktreePath threaded into both ticket-supervisor call sites; meta.description is a clean single-string literal; parallel() uses array form; both test functions enforce and non-vacuously verify the worktree dispatch requirement; WORKTREE_SCHEMA has required: ["worktree_path", "status"]. Two low-confidence observations noted but neither is a blocker: (1) WORKTREE_SCHEMA enum omits "failed" — safe because !worktreeResult covers that path in strict-schema engines; (2) planner prompt does not receive realWorktreePath — appropriate because the planner is a read-only batch-computation step, not an implementation step.
+
+### 2026-07-06 16:15 — pull-request (status: ok)
+feedback-id: fb_2026-07-06_pr12_signoff
+completion_manifest:
+  branch_pushed: true
+  pr_url: https://github.com/urlmonitor/leafcutter-ai/pull/198
+  pr_status: open
+  new_commits_pushed: c117db69
+Pushed EPIC-DualEngineWorkflowSupport branch to origin (14d0cc8c..c117db69); ticket 12 commits included in PR #198.
 
 ### 2026-07-06 16:10 — commit (status: ok)
 feedback-id: fb_2026-07-06_baed2539
