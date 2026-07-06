@@ -1,0 +1,21 @@
+id: "GE-114-1"
+title: "v1-flat tickets are counted against the 20-total AC cap instead of being silently skipped"
+component: guardrail-engine
+status: active
+level: L2
+readiness: draft
+work_status: todo
+priority: high
+criteria: |
+  Given a staged ticket .md file that has no `## Agent Contracts` section
+  And the ticket body contains more than 20 lines matching `- [ ] AC-N:`
+  When the ticket-body check_ac_limits hook analyses the file
+  Then the ticket is not marked skipped
+  And the total AC count is computed from the flat `- [ ] AC-N:` lines across the whole body
+  And a total-cap violation is recorded because the count exceeds 20
+  And the hook exits 1 (hard-block).
+origin_agent: "business-analyst-v2"
+created: 2026-07-06
+created_by_ticket: "tickets/00_inbox/TICKET-20260706-GE-114-check-ac-limits-flat-format-fix.md"
+covered_by: []
+implemented_by: []
