@@ -21,7 +21,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -89,7 +89,7 @@ Scenario: guard enforces the worktree step in the dispatch sequence
 - [x] python-coder — 2026-07-06 10:45
 - [x] test-runner — 2026-07-06 16:03
 - [x] pr-reviewer — 2026-07-06 16:06
-- [ ] commit
+- [x] commit — 2026-07-06 16:10
 - [ ] pull-request
 
 ## Comments
@@ -129,6 +129,15 @@ completion_manifest:
   test_ac3_guard_is_not_vacuous: true
   worktree_schema_well_formed: true
 Reviewed worktree-agent dispatch in build-feature.js and the two new test functions. All eight checklist items passed: worktree-agent dispatched before epic-planner and ticket-supervisor; abort fires on null result, status==="failed", and truthy error field plus a separate realWorktreePath guard; realWorktreePath threaded into both ticket-supervisor call sites; meta.description is a clean single-string literal; parallel() uses array form; both test functions enforce and non-vacuously verify the worktree dispatch requirement; WORKTREE_SCHEMA has required: ["worktree_path", "status"]. Two low-confidence observations noted but neither is a blocker: (1) WORKTREE_SCHEMA enum omits "failed" — safe because !worktreeResult covers that path in strict-schema engines; (2) planner prompt does not receive realWorktreePath — appropriate because the planner is a read-only batch-computation step, not an implementation step.
+
+### 2026-07-06 16:10 — commit (status: ok)
+feedback-id: fb_2026-07-06_baed2539
+completion_manifest:
+  commit_sha: 696e0ba6
+  files_committed: [templates/workflows-js/build-feature.js, unit_tests/test_workflow_dual_engine.py, tickets/00_inbox/epics/EPIC-DualEngineWorkflowSupport/12_build_feature_worktree_creation.md]
+  hooks_passed: true
+  pre_commit_hook_fix: feedback-id added to ticket-supervisor comment heading
+Committed ticket 12 changes: worktree-agent dispatch in build-feature.js + guard tests. All pre-commit hooks passed after adding missing feedback-id to ticket-supervisor comment.
 
 ## Implementation Tasks
 - [x] In build-feature.js, after resolving target_type, dispatch `agent(prompt, { agentType: "worktree-agent" })` with a create/reuse action for the epic/ticket target; capture the REAL worktree_path it returns. Mirror the original Step A (create off origin/main, reuse if present, bootstrap).
