@@ -25,7 +25,7 @@ agents:
   llm-expert: signed_off
   test-writer: signed_off
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -60,7 +60,7 @@ All three gates consume ONLY the probe result from ticket 02; they do not reimpl
 - [x] llm-expert — 2026-07-06 16:00
 - [x] test-writer — 2026-07-06 14:30
 - [x] pr-reviewer — 2026-07-06 15:15
-- [ ] commit
+- [x] commit — 2026-07-06 15:18
 - [ ] pull-request
 
 ## Comments
@@ -129,6 +129,14 @@ the create-time gate that python-coder must implement in _bootstrap(). All 4 tes
 import correctly (no SyntaxError or ImportError) and fail with AssertionError at
 non-zero exit — valid RED state. The commit-phase gate tests are out of scope for
 unittest stubs (behavior lives in templates/agents/commit.md, an LLM instruction file).
+
+### 2026-07-06 15:18 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Auto-authorized commit gate: subject "feat(gates): wire create-time + pre-drive + commit-phase probe gates (ticket 06)"; staged files: scripts/setup_ticket_worktree.py, templates/agents/commit.md, templates/skills/building-epics/SKILL.md, tickets/00_inbox/epics/EPIC-WorktreeQualityGateGuard/06_gates_create_time_pre_drive_commit_phase.md, unit_tests/setup/__init__.py, unit_tests/setup/test_setup_ticket_worktree.py. Commit SHA: 2f061f7bc005745fac919aed6e11cafbb977ad36. 6 files, 624 insertions, no hook failures.
 red_baseline:
   - test_name: test_bootstrap_gate_passes_when_probe_passes
     file: unit_tests/setup/test_setup_ticket_worktree.py
