@@ -42,7 +42,7 @@ const RESOLVE_SCHEMA = {
     ticket_path: { type: "string" },
     worktree_path: { type: "string" },
   },
-  required: ["target_type", "worktree_path"],
+  required: ["target_type"],
 };
 
 const PLANNER_SCHEMA = {
@@ -83,6 +83,16 @@ const TICKET_RESULT_SCHEMA = {
     ticket_path: { type: "string" },
   },
   required: ["status"],
+};
+
+const WORKTREE_SCHEMA = {
+  type: "object",
+  required: ["worktree_path", "status"],
+  properties: {
+    worktree_path: { type: "string" },
+    status: { type: "string", enum: ["created", "reused"] },
+    error: { type: "string" },
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -134,7 +144,56 @@ if (!resolveResult) {
   };
 }
 
-const { target_type, epic_path, ticket_path, worktree_path } = resolveResult;
+const { target_type, epic_path, ticket_path } = resolveResult;
+
+// Establish the isolated worktree (create or reuse) before any build work.
+const worktreeTarget = target_type === "epic"
+  ? (epic_path || target)
+  : (ticket_path || target);
+
+const worktreeResult = await agent(
+  `Create or reuse the isolated git worktree for the build target.\n\n` +
+  `Target: "${worktreeTarget}"\n` +
+  `Target type: "${target_type}"\n\n` +
+  `Instructions:\n` +
+  `1. Run 'git worktree list --porcelain' to check if a worktree for this target already exists.\n` +
+  `2. If it exists: REUSE it — report the existing absolute path as worktree_path, status "reused".\n` +
+  `3. If it does not exist: CREATE it from origin/main.\n` +
+  `   For epics: 'git worktree add <path> -b <branch-name> origin/main'\n` +
+  `   Report the new absolute path as worktree_path, status "created".\n` +
+  `4. On any error: report status "failed" with an error message.\n\n` +
+  `IMPORTANT: After creating, bootstrap the worktree: copy/symlink .leafcutter from the main clone so hooks are present.\n\n` +
+  `Return JSON: { "worktree_path": "<absolute path>", "status": "created"|"reused", "error": "<if failed, else omit>" }`,
+  {
+    agentType: "worktree-agent",
+    schema: WORKTREE_SCHEMA,
+    label: "worktree-setup",
+    phase: "Resolve Target",
+  }
+);
+
+if (!worktreeResult || worktreeResult.status === "failed" || worktreeResult.error) {
+  return {
+    status: "error",
+    message:
+      `worktree-agent failed to create/reuse isolated worktree for "${worktreeTarget}". ` +
+      `Error: ${(worktreeResult && worktreeResult.error) || "worktree-agent returned null or failed"}. ` +
+      `Safety abort: /build-feature will NOT fall back to driving ticket-supervisors ` +
+      `against the main clone. Fix the worktree issue and re-run.`,
+    abort_reason: "worktree-setup-failed",
+  };
+}
+
+const realWorktreePath = worktreeResult.worktree_path;
+if (!realWorktreePath) {
+  return {
+    status: "error",
+    message:
+      "worktree-agent returned no worktree_path. Cannot drive ticket-supervisors without " +
+      "a confirmed isolated worktree path.",
+    abort_reason: "worktree-path-missing",
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Phase 1 — Build: route to epic or single-ticket flow
@@ -197,7 +256,7 @@ if (target_type === "epic") {
       const chunkResults = await parallel(
         chunk.map((ticket) => async () => {
           const result = await agent(
-            `Drive ticket to completion: ${ticket.path}. Worktree: ${worktree_path}. Execute all needed phase agents in order. worktree_path: ${worktree_path}`,
+            `Drive ticket to completion: ${ticket.path}. Worktree: ${realWorktreePath}. Execute all needed phase agents in order. worktree_path: ${realWorktreePath}`,
             {
               agentType: "ticket-supervisor",
               schema: TICKET_RESULT_SCHEMA,
@@ -266,7 +325,7 @@ if (target_type === "epic") {
     status: "ok",
     epic_path: epicPath,
     title: epicTitle,
-    worktree_path,
+    worktree_path: realWorktreePath,
     batches_run: completedBatches.length,
     tickets_completed: totalTickets,
     completed_batches: completedBatches,
@@ -281,8 +340,8 @@ if (target_type === "epic") {
   const singleTicketPath = ticket_path || target;
 
   const ticketResult = await agent(
-    `Drive ticket to completion: "${singleTicketPath}". Worktree: ${worktree_path}. ` +
-    `Execute all needed phase agents in order. worktree_path: ${worktree_path}`,
+    `Drive ticket to completion: "${singleTicketPath}". Worktree: ${realWorktreePath}. ` +
+    `Execute all needed phase agents in order. worktree_path: ${realWorktreePath}`,
     {
       agentType: "ticket-supervisor",
       schema: TICKET_RESULT_SCHEMA,

@@ -601,6 +601,143 @@ def test_dispatch_order_plan_feature() -> None:
     )
 
 
+def test_dispatch_order_build_feature() -> None:
+    """build-feature.js dispatches worktree-agent before ticket-supervisor (ticket 12).
+
+    With a custom label_response injecting a valid worktree-setup result,
+    build-feature.js must dispatch in this order:
+
+      Phase Resolve Target:
+        1. status-checker   label='resolve-target'   — determines target type
+        2. worktree-agent   label='worktree-setup'   — creates/reuses isolated worktree
+
+      Phase Build (single-ticket path with default stub args):
+        3. ticket-supervisor  label='build-ticket'
+
+    A missing or reordered worktree-agent dispatch FAILS this test (AC-2 / AC-3 from ticket 12).
+    """
+    build_feature = _WORKFLOWS_DIR / "build-feature.js"
+    if not build_feature.exists():
+        pytest.skip(f"build-feature.js not found at {build_feature}")
+
+    # Inject a valid worktree-setup response so the script proceeds past the
+    # worktree-path guard and dispatches ticket-supervisor.
+    label_responses = {
+        "worktree-setup": {
+            "worktree_path": "/tmp/test-worktree",
+            "status": "reused",
+        }
+    }
+
+    result = run_workflow_under_e2(build_feature, label_responses=label_responses)
+
+    assert result.error == "", (
+        f"build-feature.js harness error: {result.error}\nstderr: {result.stderr[:300]}"
+    )
+
+    # Must dispatch at least 3 agents: resolve-target, worktree-setup, build-ticket.
+    assert result.dispatch_count >= 3, (
+        f"build-feature.js must dispatch >= 3 agents with valid worktree-setup response "
+        f"(resolve-target + worktree-setup + build-ticket). "
+        f"Got {result.dispatch_count}.\n"
+        f"Calls: {[(c.agent_type, c.label) for c in result.agent_calls]}"
+    )
+
+    expected_sequence = [
+        ("status-checker", "resolve-target"),
+        ("worktree-agent", "worktree-setup"),
+        ("ticket-supervisor", "build-ticket"),
+    ]
+    actual_sequence = [
+        (c.agent_type, c.label) for c in result.agent_calls[:3]
+    ]
+
+    assert actual_sequence == expected_sequence, (
+        f"build-feature.js dispatch order wrong (ticket 12 / AC-3).\n"
+        f"Expected: {expected_sequence}\n"
+        f"Actual:   {actual_sequence}\n"
+        f"Full sequence: {[(c.agent_type, c.label) for c in result.agent_calls]}"
+    )
+
+    # Also verify no parallel() contract violations.
+    assert len(result.contract_violations) == 0, (
+        f"build-feature.js recorded unexpected parallel() contract violations:\n"
+        f"{result.contract_violations}"
+    )
+
+
+def test_missing_worktree_dispatch_fails_build_feature_guard() -> None:
+    """Guard FAILS if worktree-agent dispatch is removed from build-feature (AC-3 ticket 12).
+
+    Creates a minimal synthetic build-feature script that skips the worktree-agent
+    step (goes directly from resolve-target to ticket-supervisor) and asserts that
+    its dispatch sequence does NOT match the expected guard sequence (which requires
+    worktree-agent at position 2).
+
+    This is the AC-3 meta-test: removing the worktree-agent dispatch from
+    build-feature.js MUST cause the ordered dispatch guard to fail.
+    """
+    # Synthetic build-feature WITHOUT worktree-agent dispatch (the regression pattern).
+    no_worktree_script = (
+        "// Synthetic build-feature missing the worktree-agent step (AC-3 test)\n"
+        "export const meta = {\n"
+        "  name: 'build-feature-no-worktree',\n"
+        "  description: 'Synthetic script missing worktree-agent dispatch for AC-3 guard test.',\n"
+        "  phases: [],\n"
+        "};\n"
+        "\n"
+        "const resolveResult = await agent(\n"
+        "  'Resolve target',\n"
+        "  { agentType: 'status-checker', label: 'resolve-target', phase: 'Resolve Target' }\n"
+        ");\n"
+        "// Note: worktree-agent dispatch deliberately OMITTED here\n"
+        "const ticketResult = await agent(\n"
+        "  'Drive ticket',\n"
+        "  { agentType: 'ticket-supervisor', label: 'build-ticket', phase: 'Build' }\n"
+        ");\n"
+    )
+
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".js", prefix="no_worktree_test_", delete=False, encoding="utf-8"
+    ) as tmp:
+        tmp.write(no_worktree_script)
+        tmp_path = Path(tmp.name)
+
+    try:
+        result = run_workflow_under_e2(tmp_path)
+    finally:
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+    assert result.error == "", (
+        f"Harness error during no-worktree test: {result.error}"
+    )
+
+    # The expected sequence (what the real build-feature.js should dispatch)
+    # includes worktree-agent at position 2.
+    expected_sequence_with_worktree = [
+        ("status-checker", "resolve-target"),
+        ("worktree-agent", "worktree-setup"),
+        ("ticket-supervisor", "build-ticket"),
+    ]
+    actual_sequence = [
+        (c.agent_type, c.label) for c in result.agent_calls[:3]
+    ]
+
+    # The synthetic script WITHOUT worktree-agent must NOT match the expected sequence.
+    # This proves the guard (test_dispatch_order_build_feature) is not vacuously passing.
+    assert actual_sequence != expected_sequence_with_worktree, (
+        "AC-3 guard meta-test FAILED: a script missing the worktree-agent dispatch "
+        "matches the expected sequence — the guard is vacuously passing and would "
+        "not catch the regression. The expected sequence must include "
+        "('worktree-agent', 'worktree-setup') at position 2.\n"
+        f"Actual sequence: {actual_sequence}\n"
+        f"Expected (with worktree): {expected_sequence_with_worktree}"
+    )
+
+
 # ---------------------------------------------------------------------------
 # M-2: no-commit-to-main guard must be fail-CLOSED (RED baseline — ticket 10)
 # ---------------------------------------------------------------------------
