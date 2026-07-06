@@ -7,7 +7,7 @@ agents:
   documentation-expert: not_needed
   frontend-coder: not_needed
   pr-reviewer: signed_off
-  pull-request: needed
+  pull-request: signed_off
   python-coder: signed_off
   test-runner: signed_off
   test-writer: signed_off
@@ -29,7 +29,7 @@ priority: high
 requires_adr: false
 requires_diagram: false
 roadmap_phase: phase_1
-status: todo
+status: done
 title: "Fix silent skip of 20-total AC cap for v1-flat ticket format in check_ac_limits hook"
 user_facing_surface: null
 ---
@@ -222,8 +222,8 @@ test_requirements:
 - [x] test-writer — 2026-07-06 10:42
 - [x] test-runner — 2026-07-06
 - [x] pr-reviewer — 2026-07-06
-- [ ] commit
-- [ ] pull-request
+- [x] commit — 2026-07-06
+- [x] pull-request — 2026-07-06
 
 ## Comments
 
@@ -298,3 +298,12 @@ ruff_check: "templates/scripts/commit_guardian/hooks/check_ac_limits.py — exit
 ### 2026-07-06 — pr-reviewer (status: ok)
 verdict: approved
 findings: none — implementation is a clean additive branch in _analyse_ticket; no regression on v2 path; ruff and tests green; scope matches files_touched exactly
+
+### 2026-07-06 — commit (status: ok)
+commit: feee67e4
+message: "fix(guardrail-engine): enforce 20-total AC cap on v1-flat ticket format (GE-114)"
+files: templates/scripts/commit_guardian/hooks/check_ac_limits.py, unit_tests/commit_guardian/test_check_ac_count_limits.py, tickets/00_inbox/TICKET-20260706-GE-114-check-ac-limits-flat-format-fix.md
+
+### 2026-07-06 — pull-request (status: ok)
+pr_url: https://github.com/urlmonitor/leafcutter-ai/pull/207
+pr_title: "fix(guardrail-engine): enforce 20-total AC cap on v1-flat ticket format (GE-114)"
