@@ -45,15 +45,6 @@ export const meta = {
 // JSON Schemas for structured agent() responses
 // ---------------------------------------------------------------------------
 
-const GATE_SCHEMA = {
-  type: 'object',
-  properties: {
-    status: { type: 'string', enum: ['ok', 'blocked'] },
-    message: { type: 'string' },
-  },
-  required: ['status'],
-}
-
 /** Maximum retry count for a single authoring agent on edit-path. */
 const MAX_EDIT_RETRIES = 1;
 
@@ -170,17 +161,24 @@ async function commitStageOutput(written, stageName, component, isFinal, runId, 
   // ---------------------------------------------------------------------------
   // AC BO-1500c-3 — NO-MAIN-COMMIT DEFENSIVE GUARD (fail-CLOSED)
   //
-  // Before staging or committing anything, verify that the authoring worktree is
-  // NOT on the main branch. Fail-CLOSED: all failure paths abort the commit.
+  // Always run the branch check, regardless of whether authoringWorktreePath
+  // is set. When null, use `git branch --show-current` without -C.
+  // ALL failure paths abort the commit — cannot risk committing to main or
+  // an unconfirmable branch.
   // ---------------------------------------------------------------------------
-  if (authoringWorktreePath) {
+  {
     let branchConfirmed = false;
     let branchCheckError = "unknown error during branch check";
+
+    // Build git command: with -C if worktree path is known; bare otherwise.
+    const branchCheckCmd = authoringWorktreePath
+      ? `git -C "${authoringWorktreePath}" branch --show-current`
+      : `git branch --show-current`;
 
     try {
       const branchCheckResult = await agent(
         `Run the following command and return its raw stdout output:\n` +
-        `git -C "${authoringWorktreePath}" branch --show-current\n` +
+        `${branchCheckCmd}\n` +
         `Return JSON: { "output": "<raw stdout line>", "exit_code": <number> }`,
         { agentType: "status-checker", label: "branch-check" }
       );

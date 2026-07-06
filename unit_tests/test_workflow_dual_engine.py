@@ -410,17 +410,6 @@ def test_parallel_array_form_runs_thunks() -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "H-5 baseline: build-epic.js uses spread-form parallel "
-        "(parallel(...chunk.map(...))) instead of array-form parallel([...]). "
-        "The hardened harness records a contract violation; the assertion "
-        "that no violations exist therefore FAILS. "
-        "This XPASS will fire when ticket 10 fixes build-epic.js to use array-form "
-        "parallel — at which point remove this xfail marker."
-    ),
-)
 def test_build_epic_parallel_contract_baseline() -> None:
     """RED baseline: build-epic.js uses spread-form parallel (H-5 defect).
 
@@ -610,4 +599,75 @@ def test_dispatch_order_plan_feature() -> None:
         f"{result.contract_violations}"
     )
 
+
+# ---------------------------------------------------------------------------
+# M-2: no-commit-to-main guard must be fail-CLOSED (RED baseline — ticket 10)
+# ---------------------------------------------------------------------------
+
+
+def test_plan_feature_commit_guard_fail_closed_when_worktree_unparseable() -> None:
+    """plan-feature.js no-commit-to-main guard must be fail-CLOSED (M-2).
+
+    When the worktree setup returns an unparseable payload (null/malformed), the
+    commit guard must REFUSE to commit rather than proceeding on an unconfirmable
+    branch. This is a safety control — fail-closed is mandatory.
+
+    RED baseline (ticket 10): the current implementation skips the branch check
+    entirely when authoringWorktreePath is null, allowing a commit on unknown branch.
+    The test asserts the script refuses; the current code violates this — test is RED.
+    After ticket 10 fixes the guard, this test should turn GREEN.
+    """
+    plan_feature = _WORKFLOWS_DIR / "plan-feature.js"
+    if not plan_feature.exists():
+        pytest.skip(f"plan-feature.js not found at {plan_feature}")
+
+    # Inject a worktree-setup response that returns unparseable output (exit_code 0
+    # but output is empty/unparseable JSON) — simulates a broken worktree payload.
+    # The branch-check agent should then refuse to commit (fail-closed).
+    # Note: we also need to inject the detect-current-branch response so the script
+    # doesn't short-circuit before reaching commitStageOutput.
+    label_responses = {
+        "worktree-setup": {
+            "exit_code": 0,
+            "output": "",  # unparseable — wtPayload will be null
+            "stderr": "",
+        },
+        # The scan-orphans step needs a git status response.
+        "scan-orphans-git-status": {"exit_code": 0, "output": ""},
+        # The scan-committed-stages step needs a git log response.
+        "scan-committed-stages": {"exit_code": 0, "output": ""},
+        # The final-gate: return 'approve' so the script reaches the commit path.
+        "final-gate": {"action": "approve", "priority": "medium"},
+        # The apply-approval step: return ok.
+        "apply-approval": {"status": "ok", "updated": []},
+        # The commit-stage-output agent (label: 'commit-stage-output'):
+        # We want to see that the branch check fires BEFORE the commit agent.
+        # If the guard is fail-closed, it should return error before calling commit.
+        # Leave as default (status: ok) — the test asserts the GUARD fires, not the commit.
+    }
+
+    result = run_workflow_under_e2(plan_feature, label_responses=label_responses)
+
+    assert result.error == "", (
+        f"Harness error: {result.error}\nstderr: {result.stderr[:300]}"
+    )
+
+    # Verify the script dispatched at least the expected early agents.
+    assert result.dispatch_count >= 1, (
+        f"plan-feature.js must dispatch at least 1 agent. Got {result.dispatch_count}."
+    )
+
+    # The commit should NOT have been dispatched when worktree is unparseable.
+    # A fail-closed guard returns error before calling the commit agent.
+    commit_calls = [
+        c for c in result.agent_calls
+        if c.label == "commit-stage-output"
+    ]
+    assert len(commit_calls) == 0, (
+        f"M-2: no-commit-to-main guard is fail-OPEN. "
+        f"plan-feature.js dispatched 'commit-stage-output' ({len(commit_calls)} time(s)) "
+        f"even though the worktree payload was unparseable (authoringWorktreePath=null). "
+        f"The guard must be fail-CLOSED: refuse to commit when branch cannot be confirmed.\n"
+        f"All calls: {[(c.agent_type, c.label) for c in result.agent_calls]}"
+    )
 

@@ -296,7 +296,7 @@ for (const batch of batches) {
     const chunk = tickets.slice(i, i + BATCH_SIZE);
 
     const chunkResults = await parallel(
-      ...chunk.map((ticket) => async () => {
+      chunk.map((ticket) => async () => {
         const result = await agent(
           `Drive ticket to completion: ${ticket.path}. Worktree: ${worktreePath}. Execute all needed phase agents in order. worktree_path: ${worktreePath}`,
           { agentType: "ticket-supervisor", schema: TICKET_RESULT_SCHEMA, label: `ticket:${ticket.path}`, phase: 'Batch Dispatch' }
