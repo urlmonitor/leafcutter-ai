@@ -402,3 +402,11 @@ completion_manifest:
   opus_escalation: false
   unterminated_fence_risk_assessed: true
 H-1 re-review (fence-stripping delta only): no high-confidence blockers found. Fix is correct for all well-formed ticket inputs. Two medium findings noted: [M-1] unterminated fence cross-boundary over-stripping — when a ticket has a stray opening ` ``` ` with no close and a later fence's opening acts as the regex close, real ACs between them are eaten (false NEGATIVE, under-count); this requires malformed markdown and is unlikely in production; [M-2] override+fenced-AC test gap — neither H-1 test exercises the override path with fenced content, though the code change is symmetric and correct by inspection. The non-greedy `.*?` pattern is confirmed correct for terminated fences (language tags, adjacent blocks, inline code all handled correctly). The v2 Agent Contracts path is confirmed unaffected. Error-handling Rule 4 satisfied (pure function, no try/except). 11/11 tests green per test-runner. Medium count = 2, below the 3-finding Opus escalation threshold.
+
+### 2026-07-06 18:03 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+H-1 follow-up commit (SHA ef96ea9e): fix(commit-guardian): exclude fenced code blocks from v1-flat AC count (GE-114 H-1). Staged files: templates/scripts/commit_guardian/hooks/check_ac_limits.py, unit_tests/commit_guardian/test_check_ac_count_limits.py, tickets/00_inbox/TICKET-20260706-GE-114-check-ac-limits-flat-format-fix.md. All 33 pre-commit hooks passed on first attempt — no hook failures, no autofix required. This commit supersedes the docstring-only follow-up (44a6ff90) by adding the substantive H-1 fix (fence stripping) + 5 new tests (11 total, all green).
