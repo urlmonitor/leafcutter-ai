@@ -1,39 +1,35 @@
 """Unit tests for the build-time _emit_workflow_variant transform.
 
 MODULE GOAL: Verify that _emit_workflow_variant produces the correct output
-    for each supported engine target (e2, auto, e1) and that the build pipeline
-    correctly reads the engine from config and preserves the SHA-256 idempotency
-    guard.
+    for each supported engine target (e2, auto) and raises an explicit
+    ValueError when the unsupported "e1" engine is requested. Also verifies
+    that the build pipeline correctly reads the engine from config and preserves
+    the SHA-256 idempotency guard.
 
-BUSINESS CONTEXT: The build pipeline must emit engine-specific variants of
-    canonical E2 workflow scripts at deploy time. E2 and auto targets receive a
-    byte-identical copy of the source; E1 targets receive the source prepended
-    with a shim that adds an engine-detection predicate, a callAgent adapter,
-    and an exported run() entry point. This allows a single canonical source
-    to be deployed to both engine versions without hand-maintaining two files.
+BUSINESS CONTEXT: The build pipeline must emit E2-only workflow scripts at
+    deploy time. E2 and auto targets receive a byte-identical copy of the
+    source. The "e1" engine is unsupported — it produces an unloadable module
+    (top-level `return` inside `export async function run`) — and must raise a
+    clear, explicit ValueError rather than silently emitting a corrupt module.
 
 ARCHITECTURE: _emit_workflow_variant is a pure function in scripts/build_phases.py.
     It is called by build_workflow_scripts inside the copy loop. The SHA-256
     idempotency guard compares emitted bytes (post-transform) against the
     existing deployed file, not the raw source bytes.
 
-Ticket: 04_build_time_variant_transform
+Ticket: 09_e2_only_transform
 Covers:
   - AC-1: E2 target is byte-identity (also tests "auto")
-  - AC-2: E1 target is a valid wrap (node --check + dispatch-equivalence)
+  - AC-2: E1 target raises an explicit unsupported error (no corrupt module)
   - AC-3: engine selected from config + SHA-256 idempotency short-circuits
   - AC-4: reachability (deployed workflow loads without error)
 """
 
 from __future__ import annotations
 
-import hashlib
-import json
 import pathlib
 import shutil
-import subprocess
 import sys
-import tempfile
 
 import pytest
 
@@ -45,13 +41,7 @@ _SCRIPTS_DIR = _REPO_ROOT / "scripts"
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
-# Also ensure unit_tests/ is importable (for the harness).
-_UNIT_TESTS_DIR = pathlib.Path(__file__).parent
-if str(_UNIT_TESTS_DIR) not in sys.path:
-    sys.path.insert(0, str(_UNIT_TESTS_DIR))
-
 from build_phases import _emit_workflow_variant, build_workflow_scripts  # noqa: E402
-from _workflow_engine_harness import run_workflow_under_e2  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Canonical workflow source fixture
@@ -114,119 +104,73 @@ class TestE2Identity:
 
 
 # ---------------------------------------------------------------------------
-# AC-2: E1 target is a valid wrap
+# AC-2: E1 target raises an explicit unsupported error (no corrupt module)
 # ---------------------------------------------------------------------------
 
 
-class TestE1Wrap:
-    """AC-2 — E1 target prepends a valid shim (node --check + dispatch-equivalence)."""
+class TestE1Unsupported:
+    """AC-2 — 'e1' engine raises an explicit ValueError (no shim emitted).
 
-    def test_e1_wrap_contains_shim_markers(self):
-        """Emitted E1 variant must include the three shim sections."""
+    Implementation requirement: _emit_workflow_variant(raw, "e1") must raise
+    ValueError naming E1 as unsupported instead of prepending the broken shim.
+    The shim produces an UNLOADABLE module (top-level `return` inside
+    `export async function run`) — removing it is the safe default.
+    """
+
+    def test_e1_raises_unsupported_error(self):
+        # covers: UNKNOWN
+        """_emit_workflow_variant(src, 'e1') must raise ValueError.
+
+        Must be made green by: removing the E1 shim branch in _emit_workflow_variant
+        and replacing it with `raise ValueError("E1 workflow engine is not supported")`.
+        """
         src = _MINIMAL_E2_SRC
-        result = _emit_workflow_variant(src, "e1")
-        text = result.decode("utf-8")
-        assert "IS_E2" in text, "E1 shim must define IS_E2"
-        assert "callAgent" in text, "E1 shim must define callAgent adapter"
-        assert "export async function run" in text, "E1 shim must export run()"
+        with pytest.raises(ValueError):
+            _emit_workflow_variant(src, "e1")
 
-    def test_e1_wrap_includes_original_source(self):
-        """Emitted E1 variant must contain the original source bytes."""
-        src = _MINIMAL_E2_SRC
-        result = _emit_workflow_variant(src, "e1")
-        assert src in result, "Original E2 source must be preserved in E1 variant"
+    def test_e1_error_message_names_e1_as_unsupported(self):
+        # covers: UNKNOWN
+        """ValueError raised for 'e1' must contain a message naming E1 as unsupported.
 
-    def test_e1_wrap_is_longer_than_source(self):
-        """E1 variant must be longer than the source (shim was prepended)."""
-        src = _MINIMAL_E2_SRC
-        result = _emit_workflow_variant(src, "e1")
-        assert len(result) > len(src), "E1 variant must be longer than source"
-
-    def test_e1_wrap_starts_with_shim(self):
-        """E1 variant must start with the shim, not the original source."""
-        src = b"// original source\n"
-        result = _emit_workflow_variant(src, "e1")
-        text = result.decode("utf-8")
-        assert text.startswith("// ---"), (
-            "E1 variant must start with the shim comment block"
+        The error message must reference "E1" (or "e1") and indicate it is not
+        supported, so build operators receive a clear, actionable error.
+        """
+        src = b"const x = 1\n"
+        with pytest.raises(ValueError) as exc_info:
+            _emit_workflow_variant(src, "e1")
+        msg = str(exc_info.value).lower()
+        assert "e1" in msg or "unsupport" in msg or "not support" in msg, (
+            f"ValueError message must name E1 as unsupported; got: {exc_info.value!r}"
         )
 
-    @pytest.mark.skipif(
-        not shutil.which("node"),
-        reason="node binary not available",
-    )
-    @pytest.mark.skipif(
-        not _QUICK_FIX_JS.exists(),
-        reason="quick-fix.js not found in templates/workflows-js/",
-    )
-    def test_e1_wrap_parses_with_node_check(self):
-        """Emitted E1 variant must pass `node --check` (syntax validation)."""
-        src = _QUICK_FIX_JS.read_bytes()
-        emitted = _emit_workflow_variant(src, "e1")
+    def test_e1_raises_for_any_source(self):
+        # covers: UNKNOWN
+        """ValueError must be raised regardless of the source content."""
+        for src in [b"", b"// minimal\n", _MINIMAL_E2_SRC, b"\x00\x01\x02"]:
+            with pytest.raises(ValueError, match="(?i)e1|unsupport|not support"):
+                _emit_workflow_variant(src, "e1")
 
-        with tempfile.NamedTemporaryFile(
-            mode="wb", suffix=".js", prefix="e1_variant_", delete=False
-        ) as tmp:
-            tmp_path = pathlib.Path(tmp.name)
-            try:
-                tmp.write(emitted)
-            except OSError as exc:
-                pytest.fail(f"Could not write temp file: {exc}")
+    def test_e1_no_shim_content_emitted(self):
+        # covers: UNKNOWN
+        """After the fix, E1 shim markers must never appear in the function's output.
 
+        If ValueError is raised (correct), no output is produced — test passes.
+        If ValueError is NOT raised (current broken state), the function returns
+        shim bytes that contain "export async function run" — the assertion
+        fails, making this test RED today.
+        """
+        src = _MINIMAL_E2_SRC
         try:
-            proc = subprocess.run(
-                ["node", "--check", str(tmp_path)],
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
-            assert proc.returncode == 0, (
-                f"node --check failed for E1 variant:\nstdout: {proc.stdout}\nstderr: {proc.stderr}"
-            )
-        except subprocess.TimeoutExpired:
-            pytest.fail("node --check timed out")
-        except FileNotFoundError:
-            pytest.skip("node binary not found")
-        finally:
-            try:
-                tmp_path.unlink(missing_ok=True)
-            except OSError:
-                pass
-
-    @pytest.mark.skipif(
-        not shutil.which("node"),
-        reason="node binary not available",
-    )
-    @pytest.mark.skipif(
-        not _QUICK_FIX_JS.exists(),
-        reason="quick-fix.js not found in templates/workflows-js/",
-    )
-    def test_e1_wrap_dispatch_equivalence_via_harness(self):
-        """E1 variant executed under E2 harness must capture >= 1 agent() call."""
-        src = _QUICK_FIX_JS.read_bytes()
-        emitted = _emit_workflow_variant(src, "e1")
-
-        with tempfile.NamedTemporaryFile(
-            mode="wb", suffix=".js", prefix="e1_harness_", delete=False
-        ) as tmp:
-            tmp_path = pathlib.Path(tmp.name)
-            try:
-                tmp.write(emitted)
-            except OSError as exc:
-                pytest.fail(f"Could not write temp file: {exc}")
-
-        try:
-            result = run_workflow_under_e2(tmp_path, timeout=20)
-        finally:
-            try:
-                tmp_path.unlink(missing_ok=True)
-            except OSError:
-                pass
-
-        assert result.dispatch_count >= 1, (
-            f"E1 variant must dispatch at least one agent() call under the E2 harness."
-            f"\nstdout: {result.stdout[:300]}"
-            f"\nstderr: {result.stderr[:300]}"
+            result = _emit_workflow_variant(src, "e1")
+        except ValueError:
+            # Correct behavior: ValueError raised, no shim bytes produced.
+            return
+        # If we reach this point, no exception was raised — inspect the result.
+        # Currently the shim IS returned, so this assertion fails → RED.
+        text = result.decode("utf-8", errors="replace")
+        assert "export async function run" not in text, (
+            "E1 shim must not be emitted. Expected ValueError to be raised, "
+            "but _emit_workflow_variant returned bytes containing the corrupt shim."
         )
 
 
@@ -305,22 +249,24 @@ class TestBuildWorkflowScriptsEngineFromConfig:
             "SHA-256 guard must prevent rewrite of byte-identical file"
         )
 
-    def test_e1_engine_emits_wrapped_file(self, monkeypatch, tmp_dirs):
-        """build_workflow_scripts with engine=e1 must prepend the E1 shim."""
+    def test_e1_engine_raises_value_error(self, monkeypatch, tmp_dirs):
+        # covers: UNKNOWN
+        """build_workflow_scripts with engine=e1 must propagate ValueError — no shim written.
+
+        After the fix, _emit_workflow_variant raises ValueError for 'e1'. Since
+        build_workflow_scripts only catches UnicodeDecodeError, the ValueError
+        propagates to the caller. This test is RED today (no exception raised;
+        shim bytes are written instead). It becomes GREEN when python-coder removes
+        the E1 shim branch.
+        """
         import build_phases
         tmp_path, src_dir, js_file, output_dir = tmp_dirs
         monkeypatch.setattr(build_phases, "TEMPLATES_DIR", tmp_path / "templates")
         monkeypatch.setenv("CLAUDE_CODE_VERSION", "9.9.999")
         config = {"workflows": {"enabled": True, "engine": "e1"}}
 
-        written = build_workflow_scripts(output_dir, config, dry_run=False, force=True)
-        assert written >= 1, "At least one file must be written for e1"
-
-        deployed = output_dir / "workflows" / "stub.js"
-        assert deployed.exists(), "Deployed file must exist"
-        text = deployed.read_bytes().decode("utf-8")
-        assert "IS_E2" in text, "E1 variant must contain engine-detection predicate"
-        assert "export async function run" in text, "E1 variant must export run()"
+        with pytest.raises(ValueError):
+            build_workflow_scripts(output_dir, config, dry_run=False, force=True)
 
     def test_auto_engine_defaults_to_identity(self, monkeypatch, tmp_dirs):
         """build_workflow_scripts with engine=auto must write byte-identical file."""

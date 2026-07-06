@@ -1,14 +1,15 @@
 """
 MODULE: test_workflow_dual_engine
 GOAL: Order-aware CI guard — asserts that every *.js in templates/workflows-js/
-    dispatches agents in the expected sequence under a stub E2 engine, uses
-    array-form parallel() (not spread form), and is valid ES module syntax.
+    dispatches agents in the expected sequence under a stub E2 engine and uses
+    array-form parallel() (not spread form).
 BUSINESS CONTEXT: The live E2 workflow engine executes each script's top-level
     body with injected globals (agent, parallel, phase, log, args). Scripts that
     only define a `run()` function and never call agent() at the top level are
     silently inert under E2. This suite makes that failure CI-visible.
 
-HARDENING (ticket 08) — three new guard layers added on top of ticket 02:
+HARDENING (ticket 08) — two guard layers active (E1 ESM validity removed by
+ticket 09 since the build is now E2-only):
 
   1. Parallel contract (AC-1 / H-5): The hardened harness parallel() mock
      requires an ARRAY of thunks. Spread-form calls record a contract violation.
@@ -19,10 +20,11 @@ HARDENING (ticket 08) — three new guard layers added on top of ticket 02:
      guard now asserts the FULL ordered (agentType, label) sequence, not just
      dispatch_count >= 1. A missing or reordered dispatch fails the test.
 
-  3. E1 ESM validity (AC-4 / H-6): A new parametrized test tries every script
-     under node --check --input-type=module (ES-module parse mode, which rejects
-     top-level `return`). Scripts in E2 canonical form (all non-create-ticket.js)
-     fail this check and are marked xfail(strict=True) as the H-6 baseline.
+Note (ticket 09): The E1 ESM validity tests (test_e1_import_validity, H-6
+    baseline) have been removed. They tested raw E2 scripts under
+    --input-type=module, which always xfailed because E2 scripts use top-level
+    `return` (valid in E2 IIFE, invalid as ESM). In an E2-only build world,
+    these tests are permanently moot and were removed to reduce noise.
 
 ARCHITECTURE: Pure Python test — uses the _workflow_engine_harness module to
     run each script via a Node.js subprocess with no claude binary required.
@@ -38,9 +40,7 @@ from pathlib import Path
 import pytest
 
 from _workflow_engine_harness import (
-    E1CheckResult,
     HarnessResult,
-    run_e1_import_check,
     run_workflow_under_e2,
 )
 
@@ -60,23 +60,6 @@ _WORKFLOWS_DIR = _REPO_ROOT / "templates" / "workflows-js"
 _E1_ONLY_SCRIPTS = frozenset(
     [
         "create-ticket.js",
-    ]
-)
-
-# ---------------------------------------------------------------------------
-# Scripts that are E2-form but use top-level `return` (invalid ES module syntax).
-# These fail `node --check --input-type=module` (H-6 baseline).
-# Marked xfail(strict=True) so an XPASS triggers an error when ticket 09 fixes
-# the E1 emission or the scripts are migrated to valid ESM form.
-# ---------------------------------------------------------------------------
-
-_E1_INVALID_SCRIPTS = frozenset(
-    [
-        "build-epic.js",
-        "build-ticket.js",
-        "finalize-feature.js",
-        "plan-feature.js",
-        "quick-fix.js",
     ]
 )
 
@@ -124,46 +107,6 @@ def _make_params(scripts: list[Path]) -> list[pytest.param]:
                             f"{name} uses the E1 contract (defines run() only). "
                             "It dispatches 0 agents under E2. "
                             "Port to E2 in EPIC-DualEngineWorkflowSupport tickets 05/06."
-                        ),
-                    ),
-                )
-            )
-        else:
-            params.append(pytest.param(script_path))
-    return params
-
-
-def _make_e1_params(scripts: list[Path]) -> list[pytest.param]:
-    """Build a pytest.param list for E1 import validity tests.
-
-    Scripts in ``_E1_INVALID_SCRIPTS`` are marked xfail(strict=True): they
-    currently fail ``node --check --input-type=module`` because they contain
-    top-level ``return`` statements (valid in E2 engine IIFE wrapping but not
-    in ES module parsing). When ticket 09 fixes the E1 emission to wrap these
-    properly, the XPASS becomes an error and the script is removed from the set.
-
-    ``create-ticket.js`` is E1 form (valid ESM) and is expected to pass.
-
-    Args:
-        scripts: Sorted list of .js file paths to parametrize.
-
-    Returns:
-        List of ``pytest.param`` instances, one per script.
-    """
-    params = []
-    for script_path in scripts:
-        name = script_path.name
-        if name in _E1_INVALID_SCRIPTS:
-            params.append(
-                pytest.param(
-                    script_path,
-                    marks=pytest.mark.xfail(
-                        strict=True,
-                        reason=(
-                            f"{name} is E2-form with top-level `return` — invalid ESM "
-                            "(node --check --input-type=module fails with SyntaxError: "
-                            "Illegal return statement). H-6 baseline: will XPASS once "
-                            "ticket 09 fixes the E1 emission or migrates to valid ESM form."
                         ),
                     ),
                 )
@@ -244,7 +187,6 @@ def _make_e2_dispatch_test(script_path: Path) -> None:
 
 _ALL_SCRIPTS = _collect_workflow_scripts()
 _ALL_PARAMS = _make_params(_ALL_SCRIPTS)
-_ALL_E1_PARAMS = _make_e1_params(_ALL_SCRIPTS)
 
 # Emit a clear collection-time warning if the fleet is empty so CI does not
 # silently pass with no tests.
@@ -669,52 +611,3 @@ def test_dispatch_order_plan_feature() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# AC-4 / H-6: E1 ESM validity — real import-mode check for all scripts
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.skipif(
-    not shutil.which("node"),
-    reason="node binary not available — E1 import check requires Node.js",
-)
-@pytest.mark.parametrize("script_path", _ALL_E1_PARAMS, ids=_script_id)
-def test_e1_import_validity(script_path: Path) -> None:
-    """Every workflow script must be valid ES module syntax.
-
-    Uses ``node --check --input-type=module`` to parse the script in ES-module
-    mode. This is stricter than ``node --check`` (script mode, which tolerates
-    top-level ``return``): ES-module mode rejects top-level ``return`` with
-    SyntaxError — matching what the E1 engine sees when it ``import()``s the script.
-
-    Scripts in ``_E1_INVALID_SCRIPTS`` are currently E2-form and contain top-level
-    ``return`` statements (valid under the E2 IIFE wrapping, but invalid ESM).
-    They are marked ``xfail(strict=True)`` as the H-6 RED baseline. They will
-    XPASS — becoming test errors — once ticket 09 fixes the E1 emission to produce
-    valid ESM (wrapping the E2 body inside ``export async function run()``).
-
-    ``create-ticket.js`` is already E1-form (no top-level ``return``) and is
-    expected to pass this check unconditionally.
-
-    AC-4: covers every *.js in templates/workflows-js/, not just quick-fix.js.
-    H-6: uses real module-mode parse rather than permissive script-mode ``--check``.
-
-    Args:
-        script_path: Parametrized path to the workflow script under test.
-    """
-    result: E1CheckResult = run_e1_import_check(script_path)
-
-    if not result.valid:
-        # Surface the exact error so developers know which SyntaxError to fix.
-        error_detail = result.error[:500] if result.error else "(no error detail)"
-        assert result.valid, (
-            f"{script_path.name} fails ES-module syntax check (H-6).\n\n"
-            f"node --check --input-type=module reported:\n  {error_detail}\n\n"
-            f"This usually indicates a top-level `return` statement, which is "
-            f"illegal in ES modules. The E1 engine imports scripts as ESM and "
-            f"will fail with the same error at runtime.\n\n"
-            f"Fix: either (a) wrap the top-level body in an IIFE before the "
-            f"export async function run(), or (b) ensure the E1 emission shim "
-            f"in build_phases._emit_workflow_variant moves top-level `return` "
-            f"inside the exported run() function (ticket 09)."
-        )
