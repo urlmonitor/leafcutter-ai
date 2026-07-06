@@ -372,6 +372,16 @@
         "_comment": "build_precommit_config() uses this to generate/update .pre-commit-config.yaml. Each entry describes one hook. Package-managed entries are identified by the '@package-managed' marker and are replaced on each build. Project-specific entries (no marker) are preserved.",
         "hooks": [
             {
+                "id": "ensure-precommit-config",
+                "name": "Ensure Pre-commit Config (self-healing hook)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/ensure_precommit_config.py",
+                "language": "system",
+                "stages": ["pre-commit"],
+                "pass_filenames": false,
+                "always_run": true,
+                "_comment": "EPIC-WorktreeQualityGateGuard/05: Re-materializes .pre-commit-config.yaml via .leafcutter symlink or file copy when absent. Registered at index 0 (FIRST) so it runs before all other hooks. Fail-closed: exits 1 when config cannot be established. Idempotent: exits 0 immediately when config already present. See ADR-017."
+            },
+            {
                 "id": "check-build-drift",
                 "name": "Check Build Drift (leafcutter)",
                 "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_build_drift.py",
