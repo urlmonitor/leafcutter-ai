@@ -46,7 +46,8 @@ amended_by:
     confirmed_at: 2026-07-01
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-GuidedGitRecovery/08_TICKET-20260706-BO-1600d-3-v.md
 notes: |
   Mirrors the incident's own recovery (a fresh worktree was created when the
   shared worktree's cache-tree stayed poisoned). Kept as an L3 because it is a

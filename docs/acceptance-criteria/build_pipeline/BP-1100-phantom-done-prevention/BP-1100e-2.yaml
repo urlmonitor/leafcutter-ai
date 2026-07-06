@@ -49,7 +49,8 @@ amended_by:
     confirmed_at: 2026-07-01
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-PhantomDoneFilesTouched/06_TICKET-20260706-BP-1100e-2.md
 notes: |
   The user called out advisory/fail-open default with strict opt-in so the check
   never hard-blocks by default. Distinct from BP-1100e-1-iv (no-op when no

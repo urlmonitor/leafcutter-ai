@@ -48,6 +48,7 @@ amended_by:
     confirmed_at: 2026-07-01
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-PhantomDoneFilesTouched/07_TICKET-20260706-BP-1100e-3.md
 notes: |
   Satisfies the BP-1100e documentation_trigger: sequence-diagram.
