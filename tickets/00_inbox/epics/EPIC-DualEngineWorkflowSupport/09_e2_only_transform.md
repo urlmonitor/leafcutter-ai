@@ -1,6 +1,6 @@
 ---
 title: "Make workflow build E2-only; remove the broken E1 wrap"
-status: in_progress
+status: done
 components:
   - build_pipeline
 created: 2026-07-02
@@ -22,7 +22,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # 09: Make workflow build E2-only; remove the broken E1 wrap
@@ -87,7 +87,7 @@ Scenario: build deploys E2 scripts that load
 - [x] test-runner — 2026-07-06 12:49
 - [x] pr-reviewer — 2026-07-06 17:00
 - [x] commit — 2026-07-06 17:15
-- [ ] pull-request
+- [x] pull-request — 2026-07-06 13:11
 
 ## Comments
 
@@ -178,3 +178,11 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Auto-authorized commit gate: subject "feat(build_phases): make workflow build E2-only; remove broken E1 wrap"; staged files: scripts/build_phases.py, tickets/00_inbox/epics/EPIC-DualEngineWorkflowSupport/09_e2_only_transform.md, unit_tests/test_workflow_dual_engine.py, unit_tests/test_workflow_variant_transform.py.
+
+### 2026-07-06 13:11 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_exists: true
+  pr_body_complete: true
+Branch EPIC-DualEngineWorkflowSupport pushed to origin (daccf4e2..c9b17787). PR #198 (feat(config): add workflows.enabled + workflows.engine) confirmed OPEN on urlmonitor/leafcutter-ai. No new PR created — existing epic PR reused per instructions. Ticket status flipped to done (last needed agent signed off).
