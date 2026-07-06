@@ -1,0 +1,46 @@
+id: BO-1800
+title: "Build many features in parallel, safely, like a real team"
+component: build-orchestration
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Build many features at the same time, safely -- like a real team, without an artificial limit.
+
+  Your agents can work on many features at once and the repository never gets
+  corrupted, because each parallel effort runs in its own separate copy instead
+  of sharing one. Your main branch can only ever change through the proper
+  reviewed-and-checked process -- nothing can slip in outside that gate, no
+  matter how an agent misbehaves. And you are never held back by an arbitrary
+  cap on how much can run at once: the only ceiling is your machine. The old,
+  fragile habit of writing straight into one shared main is gone for good.
+depends_on: []
+doc_links:
+  - docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+  - docs/architecture/agent_delivery_workflows.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-06
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1800a
+  - BO-1800b
+  - BO-1800c
+  - BO-1800d
+  - BO-1800e
+implemented_by: []
+notes: |
+  Strategic capability from ADR-018 (agent isolation topology). Intended to
+  supersede the shared-workspace model behind BO-1600 (safe-concurrent-dispatch):
+  BO-1600 protects one SHARED store when many deliveries land at once; BO-1800
+  removes the sharing entirely by giving every drive its own isolated copy, and
+  adds a server-side guarantee that main changes only through the gated workflow.
+  Supersession of BO-1600 is handled separately -- do NOT edit BO-1600 here.
