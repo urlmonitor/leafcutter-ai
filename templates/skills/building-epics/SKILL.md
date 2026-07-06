@@ -925,6 +925,28 @@ interactive confirmation gate and record the token in its sign-off comment inste
 token is implemented in the agent templates for `commit`, `worktree-agent`, and
 `finalize-feature`, the interim protocol above applies.
 
+### §5.8 --no-verify Override Policy (BO-1700b-3)
+
+`git commit --no-verify` is a **last-resort emergency override only**. It is NOT a
+routine escape hatch for fixing hook failures.
+
+**Trade-off**: `--no-verify` skips ALL pre-commit hooks simultaneously. This disables
+the WorktreeQualityGateGuard canary, feedback-id checks, doc compliance hooks, and every
+other quality gate in one command. Commits that bypass hooks may contain:
+- Missing feedback-id entries (breaking retrospective tooling)
+- Un-validated test contracts (allowing regression)
+- Security suppressions bypassed
+
+**Recommended resolution path** (in priority order):
+1. Fix the hook failure (preferred — hooks exist to catch real problems).
+2. Suppress the specific hook for this commit: `SKIP=<hook-id> git commit`.
+3. Use `--no-verify` ONLY when: hook infrastructure itself is broken (not the code
+   being committed), AND the commit is strictly chore/emergency, AND the bypass is
+   documented in the commit message with `[NO-HOOKS-OVERRIDE: <reason>]`.
+
+**The `commit` agent enforces this policy** — it refuses `--no-verify` absent explicit
+user authorization in the current conversation (relayed approval does not count).
+
 ---
 
 ## §6 User Escalation Contract

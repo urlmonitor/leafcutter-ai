@@ -1162,5 +1162,631 @@ class TestResolveHooksPath(unittest.TestCase):
                 os.chmod(git_config, 0o644)
 
 
+# ---------------------------------------------------------------------------
+# TICKET 04 ADDITIONS — BO-1700b-1, BO-1700b-2, BO-1700b-4
+# Added: 2026-07-06 [EPIC-WorktreeQualityGateGuard/04]
+# Tests in Groups 2 and 3 are RED until the following functions are implemented
+# in verify_precommit_active.py:
+#   assert_no_allow_no_config_env() -> bool
+#   remove_canary_from_manifest(config_path: Path) -> bool
+# Group 1 tests exercise explicit fail-closed invariants at the import and
+# subprocess level, including some combinations not covered by tickets 02/03.
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Group 1: Fail-closed explicit tests (BO-1700b-1)
+# ---------------------------------------------------------------------------
+
+
+class TestFailClosedCheckA(unittest.TestCase):
+    """BO-1700b-1: Fail-closed when check_a raises RuntimeError."""
+
+    def test_check_a_runtime_error_marks_binary_false(self):
+        # covers: BO-1700b-1
+        """When check_a_binary_on_path raises RuntimeError → run_checks marks binary=False,
+        'binary' in failing_checks, AND failing_checks is non-empty.
+
+        Verifies the fail-closed invariant for check A specifically: a RuntimeError
+        inside the probe cannot produce a passing result.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module first."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks(). "
+                "Implement run_checks()."
+            )
+        with (
+            patch.object(
+                _vpa,
+                "check_a_binary_on_path",
+                side_effect=RuntimeError("binary check exploded"),
+            ),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            result = _vpa.run_checks()
+        self.assertFalse(
+            result.get("binary"),
+            msg=f"Expected binary=False when check_a raises RuntimeError. Got: {result}",
+        )
+        self.assertIn(
+            "binary",
+            result.get("failing_checks", []),
+            msg=f"Expected 'binary' in failing_checks when check_a raises RuntimeError. Got: {result}",
+        )
+        self.assertGreater(
+            len(result.get("failing_checks", [])),
+            0,
+            msg=f"Expected failing_checks non-empty when check_a raises. Got: {result}",
+        )
+
+
+class TestFailClosedCheckBException(unittest.TestCase):
+    """BO-1700b-1: Fail-closed when check_b raises OSError (not just RuntimeError)."""
+
+    def test_check_b_oserror_marks_config_false(self):
+        # covers: BO-1700b-1
+        """When check_b_config raises OSError → run_checks marks config=False,
+        'config' in failing_checks, AND failing_checks is non-empty.
+
+        Existing TestUncaughtExceptionHandling covers RuntimeError on check_b.
+        This test explicitly verifies the OSError case so that OS-level errors
+        (file unreadable, permission denied) are also caught and fail-closed.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module first."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+        if not hasattr(_vpa, "check_b_config"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose check_b_config()."
+            )
+        with (
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            patch.object(
+                _vpa, "check_b_config", side_effect=OSError("permission denied on config")
+            ),
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            result = _vpa.run_checks()
+        self.assertFalse(
+            result.get("config"),
+            msg=f"Expected config=False when check_b raises OSError. Got: {result}",
+        )
+        self.assertIn(
+            "config",
+            result.get("failing_checks", []),
+            msg=f"Expected 'config' in failing_checks when check_b raises OSError. Got: {result}",
+        )
+        self.assertGreater(
+            len(result.get("failing_checks", [])),
+            0,
+            msg=f"Expected failing_checks non-empty when check_b raises OSError. Got: {result}",
+        )
+
+
+class TestFailClosedNoGreenOnError(unittest.TestCase):
+    """BO-1700b-1: Critical — no branch allows proceed when any check errors internally."""
+
+    def test_check_a_raises_any_exception_binary_false_failing_nonempty(self):
+        # covers: BO-1700b-1
+        """When check_a raises any exception (ValueError here), binary must be False
+        AND failing_checks must be non-empty — no proceed path can survive.
+
+        Verifies the critical invariant: the probe cannot produce an all-true result
+        when any individual check raises internally.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module first."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+        with (
+            patch.object(
+                _vpa,
+                "check_a_binary_on_path",
+                side_effect=ValueError("unexpected internal error in A"),
+            ),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            result = _vpa.run_checks()
+        self.assertFalse(
+            result.get("binary"),
+            msg=f"Expected binary=False when check_a raises any exception. Got: {result}",
+        )
+        self.assertGreater(
+            len(result.get("failing_checks", [])),
+            0,
+            msg=(
+                "Expected failing_checks non-empty when check_a raises — "
+                f"no proceed path is allowed. Got: {result}"
+            ),
+        )
+
+    def test_check_c_raises_any_exception_git_hook_false_failing_nonempty(self):
+        # covers: BO-1700b-1
+        """When check_c raises any exception (PermissionError here), git_hook must be False
+        AND failing_checks must be non-empty — no proceed path can survive.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module first."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+        if not hasattr(_vpa, "check_c_git_hook"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose check_c_git_hook()."
+            )
+        with (
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(
+                _vpa,
+                "check_c_git_hook",
+                side_effect=PermissionError("hooks dir unreadable"),
+            ),
+            patch.object(_vpa, "check_d_canary", return_value=True),
+        ):
+            result = _vpa.run_checks()
+        self.assertFalse(
+            result.get("git_hook"),
+            msg=f"Expected git_hook=False when check_c raises any exception. Got: {result}",
+        )
+        self.assertGreater(
+            len(result.get("failing_checks", [])),
+            0,
+            msg=(
+                "Expected failing_checks non-empty when check_c raises — "
+                f"no proceed path is allowed. Got: {result}"
+            ),
+        )
+
+
+class TestFailClosedSubprocessExitNonZero(unittest.TestCase):
+    """BO-1700b-1: Subprocess-level fail-closed — non-zero exit when any check fails."""
+
+    def test_empty_path_returncode_nonzero(self):
+        # covers: BO-1700b-1
+        """When run as a subprocess with empty PATH (check A fails), returncode must be
+        non-zero. Subprocess-level verification that the main() CLI entry point exits 1,
+        not 0, when a check fails.
+        """
+        result = _run_probe(env_override={"PATH": ""})
+        output = _json_or_fail(self, result)
+        self.assertNotEqual(
+            result.returncode,
+            0,
+            msg=(
+                f"Expected non-zero exit from subprocess when PATH='' (binary absent). "
+                f"Got returncode={result.returncode}. output={output}"
+            ),
+        )
+        self.assertFalse(
+            output.get("binary"),
+            msg=f"Expected binary=false with empty PATH in subprocess. Got: {output}",
+        )
+        self.assertGreater(
+            len(output.get("failing_checks", [])),
+            0,
+            msg=f"Expected failing_checks non-empty in subprocess output. Got: {output}",
+        )
+
+
+class TestFailClosedTimeoutProducesNonZeroExit(unittest.TestCase):
+    """BO-1700b-1: TimeoutExpired on check_d → canary=False, 'canary' in failing_checks."""
+
+    def test_timeout_marks_canary_false_and_failing_nonempty(self):
+        # covers: BO-1700b-1
+        """Via mock: when check_d_canary raises TimeoutExpired, run_checks() must mark
+        canary=False AND 'canary' must be in failing_checks AND failing_checks must be
+        non-empty.
+
+        Complementary to TestTimeoutHandling (ticket 02) and TestCheckDCanaryTimeout
+        (ticket 03) — this version adds an explicit failing_checks length assertion to
+        ensure the non-empty condition is explicitly tested.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module first."
+            )
+        if not hasattr(_vpa, "run_checks"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose run_checks()."
+            )
+        if not hasattr(_vpa, "check_d_canary"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose check_d_canary()."
+            )
+        timeout_exc = subprocess.TimeoutExpired(cmd="pre-commit run canary", timeout=10)
+        with (
+            patch.object(_vpa, "check_a_binary_on_path", return_value=True),
+            patch.object(_vpa, "check_b_config", return_value=True),
+            patch.object(_vpa, "check_c_git_hook", return_value=True),
+            patch.object(_vpa, "check_d_canary", side_effect=timeout_exc),
+        ):
+            result = _vpa.run_checks()
+        self.assertFalse(
+            result.get("canary"),
+            msg=f"Expected canary=False on TimeoutExpired (fail-closed). Got: {result}",
+        )
+        self.assertIn(
+            "canary",
+            result.get("failing_checks", []),
+            msg=f"Expected 'canary' in failing_checks on timeout. Got: {result}",
+        )
+        self.assertGreater(
+            len(result.get("failing_checks", [])),
+            0,
+            msg=f"Expected failing_checks non-empty on timeout. Got: {result}",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Group 2: PRE_COMMIT_ALLOW_NO_CONFIG detection (BO-1700b-2)
+# RED: assert_no_allow_no_config_env() does not exist in production code yet.
+# ---------------------------------------------------------------------------
+
+
+class TestPRECommitAllowNoConfigNotSet(unittest.TestCase):
+    """BO-1700b-2: When PRE_COMMIT_ALLOW_NO_CONFIG is NOT set, function returns True (safe)."""
+
+    def test_env_var_absent_returns_true(self):
+        # covers: BO-1700b-2
+        """assert_no_allow_no_config_env() returns True when PRE_COMMIT_ALLOW_NO_CONFIG
+        is not present in os.environ.
+
+        Must implement assert_no_allow_no_config_env() -> bool that reads os.environ
+        and returns True when PRE_COMMIT_ALLOW_NO_CONFIG is absent (safe state).
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module first."
+            )
+        if not hasattr(_vpa, "assert_no_allow_no_config_env"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose "
+                "assert_no_allow_no_config_env(). Implement this function."
+            )
+        # Patch out the env var so it is definitely absent
+        clean_env = {k: v for k, v in os.environ.items() if k != "PRE_COMMIT_ALLOW_NO_CONFIG"}
+        with patch.dict(os.environ, clean_env, clear=True):
+            result = _vpa.assert_no_allow_no_config_env()
+        self.assertTrue(
+            result,
+            msg=(
+                "Expected assert_no_allow_no_config_env() == True "
+                f"when PRE_COMMIT_ALLOW_NO_CONFIG is absent. Got: {result}"
+            ),
+        )
+
+
+class TestPRECommitAllowNoConfigSet(unittest.TestCase):
+    """BO-1700b-2: When PRE_COMMIT_ALLOW_NO_CONFIG='1', function returns False or raises ValueError."""
+
+    def test_env_var_set_to_one_returns_false_or_raises(self):
+        # covers: BO-1700b-2
+        """assert_no_allow_no_config_env() returns False OR raises ValueError when
+        PRE_COMMIT_ALLOW_NO_CONFIG='1'.
+
+        Setting this variable bypasses config-check and is a fatal invariant break.
+        The function must signal failure by returning False or raising ValueError —
+        either response is acceptable as long as it is not a truthy return.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module first."
+            )
+        if not hasattr(_vpa, "assert_no_allow_no_config_env"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose "
+                "assert_no_allow_no_config_env(). Implement this function."
+            )
+        with patch.dict(os.environ, {"PRE_COMMIT_ALLOW_NO_CONFIG": "1"}):
+            try:
+                result = _vpa.assert_no_allow_no_config_env()
+            except ValueError:
+                return  # raising ValueError is an acceptable fail-safe signal
+        self.assertFalse(
+            result,
+            msg=(
+                "Expected assert_no_allow_no_config_env() to return False "
+                f"when PRE_COMMIT_ALLOW_NO_CONFIG='1'. Got: {result}"
+            ),
+        )
+
+
+class TestPRECommitAllowNoConfigEmptyString(unittest.TestCase):
+    """BO-1700b-2: When PRE_COMMIT_ALLOW_NO_CONFIG='', function returns True (empty = safe)."""
+
+    def test_env_var_empty_string_returns_true(self):
+        # covers: BO-1700b-2
+        """assert_no_allow_no_config_env() returns True when PRE_COMMIT_ALLOW_NO_CONFIG=''
+        (empty string). An empty value is semantically equivalent to 'not set' for this
+        guard: the bypass effect only activates when the variable has a non-empty value.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module first."
+            )
+        if not hasattr(_vpa, "assert_no_allow_no_config_env"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose "
+                "assert_no_allow_no_config_env(). Implement this function."
+            )
+        with patch.dict(os.environ, {"PRE_COMMIT_ALLOW_NO_CONFIG": ""}):
+            result = _vpa.assert_no_allow_no_config_env()
+        self.assertTrue(
+            result,
+            msg=(
+                "Expected assert_no_allow_no_config_env() == True "
+                f"when PRE_COMMIT_ALLOW_NO_CONFIG='' (empty = safe). Got: {result}"
+            ),
+        )
+
+
+class TestNoBuildFunctionSetsAllowNoConfig(unittest.TestCase):
+    """BO-1700b-2: Verify that no function in verify_precommit_active.py sets PRE_COMMIT_ALLOW_NO_CONFIG."""
+
+    def test_source_does_not_assign_allow_no_config(self):
+        # covers: BO-1700b-2
+        """Source inspection: the module must not assign PRE_COMMIT_ALLOW_NO_CONFIG
+        into os.environ anywhere in its body. This is a static guard — no combination
+        of runtime branching should produce a path that sets the bypass variable.
+
+        The module may reference the variable name in a comment or guard read, but
+        must never write it into os.environ.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module first."
+            )
+        import inspect
+        source = inspect.getsource(_vpa)
+        # Forbidden: any direct assignment into os.environ for the bypass var.
+        # Using string search on key patterns to catch all common assignment forms.
+        forbidden_patterns = [
+            'os.environ["PRE_COMMIT_ALLOW_NO_CONFIG"]',
+            "os.environ['PRE_COMMIT_ALLOW_NO_CONFIG']",
+            'os.environ.update({"PRE_COMMIT_ALLOW_NO_CONFIG"',
+            "os.environ.update({'PRE_COMMIT_ALLOW_NO_CONFIG'",
+            'os.putenv("PRE_COMMIT_ALLOW_NO_CONFIG"',
+            "os.putenv('PRE_COMMIT_ALLOW_NO_CONFIG'",
+        ]
+        for pattern in forbidden_patterns:
+            self.assertNotIn(
+                pattern,
+                source,
+                msg=(
+                    "verify_precommit_active.py must NOT write PRE_COMMIT_ALLOW_NO_CONFIG "
+                    f"into os.environ. Found forbidden assignment pattern: {pattern!r}"
+                ),
+            )
+
+
+# ---------------------------------------------------------------------------
+# Group 3: Canary removal / cleanup (BO-1700b-4)
+# RED: remove_canary_from_manifest() does not exist in production code yet.
+# ---------------------------------------------------------------------------
+
+
+class TestRemoveCanaryFromManifest(unittest.TestCase):
+    """BO-1700b-4: remove_canary_from_manifest removes the canary entry when present."""
+
+    def _write_registry(self, tmp_dir: Path, hooks: list) -> Path:
+        """Write a minimal commit_guardian.json registry to tmp_dir and return its path."""
+        registry = {"hooks": hooks}
+        config_path = tmp_dir / "commit_guardian.json"
+        config_path.write_text(json.dumps(registry), encoding="utf-8")
+        return config_path
+
+    def test_canary_entry_removed(self):
+        # covers: BO-1700b-4
+        """When the precommit-canary entry exists with stages=['manual'], calling
+        remove_canary_from_manifest removes it. After the call, validate_canary_stage
+        returns False (the entry is gone or stages are empty).
+
+        Must implement remove_canary_from_manifest(config_path: Path) -> bool that:
+        - Reads commit_guardian.json at config_path
+        - Finds the 'precommit-canary' entry
+        - Removes it entirely (or empties its stages to [])
+        - Writes the modified JSON back to disk
+        - Returns True (entry was found and removed)
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module first."
+            )
+        if not hasattr(_vpa, "remove_canary_from_manifest"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose "
+                "remove_canary_from_manifest(). Implement this function."
+            )
+        if not hasattr(_vpa, "validate_canary_stage"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose "
+                "validate_canary_stage(). Implement this function first (ticket 03)."
+            )
+        with tempfile.TemporaryDirectory() as tmp:
+            config_path = self._write_registry(
+                Path(tmp),
+                [{"id": "precommit-canary", "stages": ["manual"]}],
+            )
+            removed = _vpa.remove_canary_from_manifest(config_path)
+            self.assertTrue(
+                removed,
+                msg=(
+                    "Expected remove_canary_from_manifest to return True "
+                    f"when canary entry is present. Got: {removed}"
+                ),
+            )
+            # After removal, validate_canary_stage must return False (entry gone/empty)
+            still_valid = _vpa.validate_canary_stage(config_path)
+        self.assertFalse(
+            still_valid,
+            msg=(
+                "Expected validate_canary_stage to return False after "
+                f"remove_canary_from_manifest — entry must be absent or stages=[]. "
+                f"Got: {still_valid}"
+            ),
+        )
+
+
+class TestRemoveCanaryFromManifestAlreadyAbsent(unittest.TestCase):
+    """BO-1700b-4: When no canary entry exists, remove_canary_from_manifest returns False."""
+
+    def _write_registry(self, tmp_dir: Path, hooks: list) -> Path:
+        """Write a minimal commit_guardian.json registry to tmp_dir and return its path."""
+        registry = {"hooks": hooks}
+        config_path = tmp_dir / "commit_guardian.json"
+        config_path.write_text(json.dumps(registry), encoding="utf-8")
+        return config_path
+
+    def test_absent_canary_returns_false(self):
+        # covers: BO-1700b-4
+        """When no 'precommit-canary' entry exists in the registry, calling
+        remove_canary_from_manifest returns False (idempotent: nothing to remove,
+        no error).
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module first."
+            )
+        if not hasattr(_vpa, "remove_canary_from_manifest"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose "
+                "remove_canary_from_manifest(). Implement this function."
+            )
+        with tempfile.TemporaryDirectory() as tmp:
+            config_path = self._write_registry(
+                Path(tmp),
+                [{"id": "some-other-hook", "stages": ["pre-commit"]}],
+            )
+            result = _vpa.remove_canary_from_manifest(config_path)
+        self.assertFalse(
+            result,
+            msg=(
+                "Expected remove_canary_from_manifest to return False "
+                f"when no canary entry is present (idempotent). Got: {result}"
+            ),
+        )
+
+
+class TestRemoveCanaryFromManifestIdempotent(unittest.TestCase):
+    """BO-1700b-4: Calling remove_canary_from_manifest twice is safe; second call returns False."""
+
+    def _write_registry(self, tmp_dir: Path, hooks: list) -> Path:
+        """Write a minimal commit_guardian.json registry to tmp_dir and return its path."""
+        registry = {"hooks": hooks}
+        config_path = tmp_dir / "commit_guardian.json"
+        config_path.write_text(json.dumps(registry), encoding="utf-8")
+        return config_path
+
+    def test_second_call_returns_false_no_error(self):
+        # covers: BO-1700b-4
+        """Calling remove_canary_from_manifest twice on the same registry is safe:
+        the first call returns True (removed), the second call returns False
+        (entry already gone) and does not raise.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module first."
+            )
+        if not hasattr(_vpa, "remove_canary_from_manifest"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose "
+                "remove_canary_from_manifest(). Implement this function."
+            )
+        with tempfile.TemporaryDirectory() as tmp:
+            config_path = self._write_registry(
+                Path(tmp),
+                [{"id": "precommit-canary", "stages": ["manual"]}],
+            )
+            first = _vpa.remove_canary_from_manifest(config_path)
+            self.assertTrue(
+                first,
+                msg=f"Expected first call to return True (entry found). Got: {first}",
+            )
+            try:
+                second = _vpa.remove_canary_from_manifest(config_path)
+            except Exception as exc:  # noqa: BLE001
+                self.fail(
+                    f"Expected second call to be idempotent (no raise). "
+                    f"Got exception: {type(exc).__name__}: {exc}"
+                )
+        self.assertFalse(
+            second,
+            msg=(
+                "Expected second call to remove_canary_from_manifest to return False "
+                f"(entry already gone). Got: {second}"
+            ),
+        )
+
+
+class TestRemoveCanaryFromManifestFileNotFound(unittest.TestCase):
+    """BO-1700b-4: When config_path doesn't exist, remove_canary_from_manifest returns False."""
+
+    def test_missing_file_returns_false(self):
+        # covers: BO-1700b-4
+        """When the config_path doesn't exist, remove_canary_from_manifest must return
+        False (fail-safe: no raise, no crash). The caller may not have installed the
+        registry yet, and that is not an error condition.
+        """
+        if not _IMPORT_OK:
+            self.fail(
+                "ImportError: cannot import verify_precommit_active. "
+                "Implement the module first."
+            )
+        if not hasattr(_vpa, "remove_canary_from_manifest"):
+            self.fail(
+                "AttributeError: verify_precommit_active does not expose "
+                "remove_canary_from_manifest(). Implement this function."
+            )
+        nonexistent = Path("/tmp/nonexistent_commit_guardian_xyzzy_12345.json")
+        try:
+            result = _vpa.remove_canary_from_manifest(nonexistent)
+        except Exception as exc:  # noqa: BLE001
+            self.fail(
+                f"Expected remove_canary_from_manifest to return False (not raise) "
+                f"when config_path doesn't exist. Got exception: {type(exc).__name__}: {exc}"
+            )
+        self.assertFalse(
+            result,
+            msg=(
+                "Expected remove_canary_from_manifest to return False "
+                f"when config_path doesn't exist. Got: {result}"
+            ),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

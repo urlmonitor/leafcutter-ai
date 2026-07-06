@@ -25,6 +25,10 @@ DECISION HISTORY
   (stage attribution validator), check_hook_freshness (drift detector), and
   resolve_hooks_path (hooksPath edge-case resolution). Raised check_d_canary
   subprocess timeout from 5s to 10s (BO-1700h-2).
+- 2026-07-06 [EPIC-WorktreeQualityGateGuard/04]: Fail-closed invariant + anti-bypass pass.
+  Added assert_no_allow_no_config_env (BO-1700b-2) and remove_canary_from_manifest (BO-1700b-4).
+  PRE_COMMIT_ALLOW_NO_CONFIG is documented as a fatal invariant break.
+  Canary removal is idempotent and fail-safe (returns False, not raise).
 ====================================================================
 """
 
@@ -33,6 +37,7 @@ from __future__ import annotations
 import configparser
 import json
 import logging
+import os
 import shutil
 import subprocess
 import sys
@@ -338,6 +343,82 @@ def resolve_hooks_path(cwd: Path) -> Path:
 
     commondir = _resolve_git_commondir(cwd)
     return commondir / "hooks"
+
+
+def assert_no_allow_no_config_env() -> bool:
+    """Verify that PRE_COMMIT_ALLOW_NO_CONFIG is not set in the environment.
+
+    PRE_COMMIT_ALLOW_NO_CONFIG bypasses the pre-commit config check (check B) at
+    the pre-commit framework level, allowing hooks to run without a config file.
+    Setting this variable is a fatal invariant break for the WorktreeQualityGateGuard
+    — it would produce false-pass results from check B.
+
+    Returns:
+        True if PRE_COMMIT_ALLOW_NO_CONFIG is absent or empty (safe state).
+        False if PRE_COMMIT_ALLOW_NO_CONFIG is set to any non-empty value.
+    """
+    value = os.environ.get("PRE_COMMIT_ALLOW_NO_CONFIG", "")
+    if value:
+        _log.warning(
+            "assert_no_allow_no_config_env: PRE_COMMIT_ALLOW_NO_CONFIG is set to %r — "
+            "this bypasses the pre-commit config check and is a fatal invariant break",
+            value,
+        )
+        return False
+    return True
+
+
+def remove_canary_from_manifest(config_path: Path) -> bool:
+    """Remove the precommit-canary entry from the commit_guardian.json registry.
+
+    Reads the JSON registry at config_path, finds the entry with id='precommit-canary',
+    removes it from the hooks list, and writes the modified JSON back to disk.
+    Idempotent: safe to call multiple times; returns False when the entry is already absent.
+
+    Args:
+        config_path: Path to the commit_guardian.json registry file.
+
+    Returns:
+        True if the canary entry was found and removed.
+        False if the entry was absent (idempotent), the file does not exist,
+        or parsing or writing fails.
+    """
+    if not config_path.exists():
+        _log.warning(
+            "remove_canary_from_manifest: config_path does not exist: %s", config_path
+        )
+        return False
+
+    try:
+        content = config_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        _log.warning("remove_canary_from_manifest: cannot read %s: %s", config_path, exc)
+        return False
+
+    try:
+        data = json.loads(content)
+    except json.JSONDecodeError as exc:
+        _log.warning(
+            "remove_canary_from_manifest: JSON parse error in %s: %s", config_path, exc
+        )
+        return False
+
+    hooks = data.get("hooks", [])
+    filtered = [h for h in hooks if h.get("id") != "precommit-canary"]
+
+    if len(filtered) == len(hooks):
+        # Entry was not found; idempotent — nothing to remove
+        return False
+
+    data["hooks"] = filtered
+
+    try:
+        config_path.write_text(json.dumps(data), encoding="utf-8")
+    except OSError as exc:
+        _log.warning("remove_canary_from_manifest: cannot write %s: %s", config_path, exc)
+        return False
+
+    return True
 
 
 def run_checks() -> dict[str, Any]:
