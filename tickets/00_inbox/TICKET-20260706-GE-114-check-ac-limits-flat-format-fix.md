@@ -3,7 +3,7 @@ ac_coverage: 7/7
 advances_current_outcome: true
 agents:
   architect-review: not_needed
-  commit: needed
+  commit: signed_off
   documentation-expert: not_needed
   frontend-coder: not_needed
   pr-reviewer: signed_off
@@ -222,7 +222,7 @@ test_requirements:
 - [x] test-writer — 2026-07-06 10:42
 - [x] test-runner — 2026-07-06
 - [x] pr-reviewer — 2026-07-06
-- [x] commit — 2026-07-06
+- [x] commit — 2026-07-06 16:29
 - [x] pull-request — 2026-07-06
 
 ## Comments
@@ -327,3 +327,11 @@ completion_manifest:
   error_handling_compliant: true
   ac_coverage_all_7_verified: true
 Review of diff on branch fix/GE-114-ac-limits-flat-format vs origin/main. No high-confidence blocking issues found. Two medium-confidence findings documented: (1) the BUSINESS CONTEXT docstring in check_ac_limits.py (line 9) still says "v1 tickets are skipped transparently" — stale after the fix; ARCHITECTURE section was updated but BUSINESS CONTEXT was not. (2) AC-4's documented JSON shape is a simplified representation that omits the per-ticket wrapper present in `_build_json_payload` output — the implementation and test are correct but the AC text could mislead a future payload consumer. Medium count = 2, below the >3 Opus escalation threshold; no escalation performed. All AC-1 through AC-7 verified against implementation: skipped=True is reserved exclusively to the OSError path, flat-body count is applied correctly on the no-Agent-Contracts path, per-agent cap is not applied on the flat path, override branch populates total_ac_count, JSON payload omits per_agent violations on flat path, v2 path is unmodified. Ruff and 6/6 unit tests confirmed green by test-runner.
+
+### 2026-07-06 16:29 — commit (status: ok)
+feedback-id: fb_2026-07-06_b739e9ca
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Committed SHA 44a6ff90: docstring correction to BUSINESS CONTEXT section (stale "v1 tickets skipped transparently" → correct flat-ticket cap description), plus test-runner and pr-reviewer sign-off entries. All 34 pre-commit hooks passed (most skipped as file-type filters; Check Feedback ID, Check Secrets, Check ADR Coverage, Check Agent Registry, Check Exception Handling, Check Contract Shrinking, Check Mermaid Diagram Complexity all passed explicitly). No hook failures, no autofix required.
