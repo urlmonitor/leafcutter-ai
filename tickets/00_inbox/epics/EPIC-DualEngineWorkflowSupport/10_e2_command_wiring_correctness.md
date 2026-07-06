@@ -1,6 +1,6 @@
 ---
 title: "Wire the E2 commands correctly (build-feature.js dispatcher, arg + guard fixes)"
-status: in_progress
+status: done
 components:
   - build_orchestration
 created: 2026-07-02
