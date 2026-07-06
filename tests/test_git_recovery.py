@@ -18,9 +18,10 @@ from __future__ import annotations
 import importlib.util
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 
 # ---------------------------------------------------------------------------
@@ -38,6 +39,10 @@ spec.loader.exec_module(_mod)
 main = _mod.main
 run_status_probe = _mod.run_status_probe
 parse_args = _mod.parse_args
+plan_recovery_actions = _mod.plan_recovery_actions
+print_recovery_plan = _mod.print_recovery_plan
+execute_recovery_plan = _mod.execute_recovery_plan
+RecoveryAction = _mod.RecoveryAction
 
 
 # ---------------------------------------------------------------------------
@@ -249,6 +254,201 @@ class TestErrorHandlingSubprocessFailure(unittest.TestCase):
 
         # main() returns None on graceful abort.
         self.assertIsNone(result)
+
+
+# ---------------------------------------------------------------------------
+# Test 6: Dry-run-first behavior (BO-1600d-2)
+# ---------------------------------------------------------------------------
+
+class TestDryRunFirstBehavior(unittest.TestCase):
+    """Verify the dry-run-first behavior introduced by BO-1600d-2.
+
+    In default mode (no --execute):
+    - The plan is always printed before any git write.
+    - Answering anything other than "yes" makes zero post-probe git writes.
+    - Answering "yes" triggers execution (more than one subprocess.run call).
+
+    With --execute flag:
+    - No interactive prompt is shown.
+    - Recovery steps are executed (more than one subprocess.run call).
+
+    Invariant:
+    - The exact same plan object is passed to both print_recovery_plan and
+      execute_recovery_plan, guaranteeing what was printed is what is executed.
+    """
+
+    def _make_probe_result(self):
+        """Return a MagicMock that mimics a successful subprocess.run result."""
+        mock_result = MagicMock()
+        mock_result.stdout = ""
+        mock_result.returncode = 0
+        return mock_result
+
+    # ------------------------------------------------------------------
+    # Test 6-1: default mode prints the plan
+    # ------------------------------------------------------------------
+
+    @patch("git_recovery.print_recovery_plan")
+    @patch("subprocess.run")
+    @patch("builtins.input", return_value="no")
+    @patch("sys.stdin")
+    def test_default_mode_prints_plan(
+        self, mock_stdin, mock_input, mock_subprocess_run, mock_print_plan
+    ):
+        """In default mode, print_recovery_plan must be called at least once."""
+        mock_stdin.isatty.return_value = True
+        mock_subprocess_run.return_value = self._make_probe_result()
+
+        main(["--repo", "/tmp"])
+
+        self.assertGreaterEqual(
+            mock_print_plan.call_count,
+            1,
+            "print_recovery_plan was not called in default (no --execute) mode",
+        )
+
+    # ------------------------------------------------------------------
+    # Test 6-2: default mode with "no" answer makes no git writes
+    # ------------------------------------------------------------------
+
+    @patch("subprocess.run")
+    @patch("builtins.input", return_value="no")
+    @patch("sys.stdin")
+    def test_default_mode_no_git_writes_on_no(
+        self, mock_stdin, mock_input, mock_subprocess_run
+    ):
+        """Answering 'no' must result in exactly one subprocess.run call (the probe)."""
+        mock_stdin.isatty.return_value = True
+        mock_subprocess_run.return_value = self._make_probe_result()
+
+        main(["--repo", "/tmp"])
+
+        # Only the status probe — no execute calls.
+        mock_subprocess_run.assert_called_once()
+
+    # ------------------------------------------------------------------
+    # Test 6-3: interactive "yes" executes the plan
+    # ------------------------------------------------------------------
+
+    @patch("subprocess.run")
+    @patch("builtins.input", return_value="yes")
+    @patch("sys.stdin")
+    def test_interactive_yes_executes_plan(
+        self, mock_stdin, mock_input, mock_subprocess_run
+    ):
+        """Answering 'yes' must trigger execution: subprocess.run called > once."""
+        mock_stdin.isatty.return_value = True
+        mock_subprocess_run.return_value = self._make_probe_result()
+
+        main(["--repo", "/tmp"])
+
+        self.assertGreater(
+            mock_subprocess_run.call_count,
+            1,
+            "Expected more than one subprocess.run call after 'yes' (probe + execute steps)",
+        )
+
+    # ------------------------------------------------------------------
+    # Test 6-4: --execute flag skips interactive prompt
+    # ------------------------------------------------------------------
+
+    @patch("subprocess.run")
+    @patch("builtins.input")
+    @patch("sys.stdin")
+    def test_execute_flag_skips_interactive_prompt(
+        self, mock_stdin, mock_input, mock_subprocess_run
+    ):
+        """With --execute, builtins.input must NOT be called (no interactive prompt)."""
+        mock_stdin.isatty.return_value = False  # non-TTY; --execute bypasses the guard
+        mock_subprocess_run.return_value = self._make_probe_result()
+
+        main(["--repo", "/tmp", "--execute"])
+
+        mock_input.assert_not_called()
+
+    # ------------------------------------------------------------------
+    # Test 6-5: --execute flag makes git writes
+    # ------------------------------------------------------------------
+
+    @patch("subprocess.run")
+    @patch("sys.stdin")
+    def test_execute_flag_makes_writes(self, mock_stdin, mock_subprocess_run):
+        """With --execute, subprocess.run must be called more than once (probe + steps)."""
+        mock_stdin.isatty.return_value = False  # non-TTY; --execute bypasses the guard
+        mock_subprocess_run.return_value = self._make_probe_result()
+
+        main(["--repo", "/tmp", "--execute"])
+
+        self.assertGreater(
+            mock_subprocess_run.call_count,
+            1,
+            "Expected more than one subprocess.run call with --execute (probe + fetch step)",
+        )
+
+    # ------------------------------------------------------------------
+    # Test 6-6: the same plan object is passed to print and execute
+    # ------------------------------------------------------------------
+
+    @patch("git_recovery.execute_recovery_plan")
+    @patch("git_recovery.print_recovery_plan")
+    @patch("subprocess.run")
+    @patch("builtins.input", return_value="yes")
+    @patch("sys.stdin")
+    def test_executed_plan_is_same_object_as_printed_plan(
+        self,
+        mock_stdin,
+        mock_input,
+        mock_subprocess_run,
+        mock_print_plan,
+        mock_execute_plan,
+    ):
+        """The plan object passed to print_recovery_plan must be identical (is) to
+        the one passed to execute_recovery_plan."""
+        mock_stdin.isatty.return_value = True
+        mock_subprocess_run.return_value = self._make_probe_result()
+
+        main(["--repo", "/tmp"])
+
+        # Both must have been called.
+        self.assertTrue(mock_print_plan.called, "print_recovery_plan was not called")
+        self.assertTrue(mock_execute_plan.called, "execute_recovery_plan was not called")
+
+        captured_print = mock_print_plan.call_args[0][0]
+        captured_execute = mock_execute_plan.call_args[0][0]
+
+        self.assertIs(
+            captured_print,
+            captured_execute,
+            "print_recovery_plan and execute_recovery_plan received different plan objects",
+        )
+
+    # ------------------------------------------------------------------
+    # Test 6-7: plan describes zero-byte objects by path
+    # ------------------------------------------------------------------
+
+    def test_plan_describes_zero_byte_objects_by_path(self):
+        """plan_recovery_actions must include the full path of every zero-byte object
+        in the description of the first action when zero-byte objects are present."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            # Construct a fake .git/objects/<2-char-hex-dir>/<file>
+            obj_dir = repo / ".git" / "objects" / "ab"
+            obj_dir.mkdir(parents=True)
+            zero_byte_file = obj_dir / "cd1234deadbeef"
+            zero_byte_file.write_bytes(b"")  # zero bytes
+
+            plan = plan_recovery_actions(repo)
+
+        # At least one action in the plan.
+        self.assertGreater(len(plan), 0, "plan_recovery_actions returned an empty plan")
+
+        # The first action's description must mention the zero-byte file path.
+        first_description = plan[0].description
+        self.assertIn(
+            str(zero_byte_file),
+            first_description,
+            f"Expected zero-byte file path in description; got: {first_description!r}",
+        )
 
 
 if __name__ == "__main__":
