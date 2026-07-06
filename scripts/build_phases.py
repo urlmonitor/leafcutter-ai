@@ -264,71 +264,43 @@ def build_agents(target_root: Path, config: dict[str, Any],
     return written
 
 
-# ---------------------------------------------------------------------------
-# E1-wrap shim prepended by _emit_workflow_variant when engine == "e1".
-# ---------------------------------------------------------------------------
-_E1_SHIM = """\
-// ---------------------------------------------------------------------------
-// Engine-detection predicate
-// ---------------------------------------------------------------------------
-const IS_E2 = (function detectEngine() {
-  try { workflow(); return false } catch (_) { return true }
-})()
-
-// ---------------------------------------------------------------------------
-// callAgent adapter
-// ---------------------------------------------------------------------------
-async function callAgent(prompt, opts = {}) {
-  if (IS_E2) {
-    return agent(prompt, opts)
-  } else {
-    const raw = await agent({
-      agentType: opts.agentType || 'general-purpose',
-      input: prompt,
-    })
-    return opts.schema ? JSON.parse(raw) : raw
-  }
-}
-
-// ---------------------------------------------------------------------------
-// E1 export shim
-// ---------------------------------------------------------------------------
-export async function run({ agent: _agentE1, workflow: _wf, parallel: _par, userInput }) {
-  const result = await callAgent(
-    typeof userInput === 'string' ? userInput : JSON.stringify(userInput),
-    { agentType: 'general-purpose' }
-  )
-  return result
-}
-
-"""
-
-
 def _emit_workflow_variant(raw: bytes, engine: str) -> bytes:
     """Return engine-specific bytes for a canonical E2 workflow source.
 
-    The ``engine`` parameter received here is the *resolved* engine (i.e.
-    ``"auto"`` has already been resolved to ``"e2"`` by the caller before this
-    function is invoked — see ``build_workflow_scripts``).
+    The build pipeline is E2-only. Only ``"e2"`` and ``"auto"`` are supported
+    (``"auto"`` is resolved to ``"e2"`` upstream by ``build_workflow_scripts``
+    before this function is invoked, but ``"auto"`` is also accepted here for
+    callers that invoke this function directly).
+
+    Requesting ``"e1"`` raises ``ValueError``. The E1 wrap was fundamentally
+    broken — it prepended ``export async function run`` over a top-level body
+    that contains a bare ``return`` statement, producing an ESM module that
+    throws ``SyntaxError: Illegal return statement`` on import. It has been
+    removed per the decision recorded in
+    EPIC-DualEngineWorkflowSupport ticket 09 (2026-07-06).
 
     Args:
         raw: Raw bytes of the canonical E2 workflow script.
-        engine: Resolved target engine identifier. ``"e2"`` produces the
-            identity transform (raw bytes unchanged). ``"e1"`` prepends the
-            E1-wrap shim (engine-detection predicate, callAgent adapter,
-            exported run() entry point).
+        engine: Target engine identifier. ``"e2"`` and ``"auto"`` produce the
+            identity transform (raw bytes returned unchanged). ``"e1"`` raises
+            ``ValueError`` (unsupported — see above). Any other unknown value
+            also returns raw bytes unchanged (safe identity default).
 
     Returns:
         Transformed bytes ready to write to the output directory.
+
+    Raises:
+        ValueError: When ``engine`` is ``"e1"`` — E1 is not supported.
     """
-    if engine == "e2":
-        return raw
     if engine == "e1":
-        shim_bytes = _E1_SHIM.encode("utf-8")
-        # decode() uses errors='strict' — caller handles UnicodeDecodeError.
-        _ = raw.decode("utf-8")
-        return shim_bytes + raw
-    # Unknown engine — fall back to identity (safe default).
+        raise ValueError(
+            "E1 workflow engine is not supported. "
+            "Use engine='e2' or engine='auto' (resolves to e2). "
+            "The E1 wrap was removed in EPIC-DualEngineWorkflowSupport/09 "
+            "because it produced an unloadable ESM module."
+        )
+    # "e2", "auto", and any unknown value all return raw bytes unchanged.
+    # (The identity transform is the correct E2 contract.)
     return raw
 
 
@@ -353,9 +325,11 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
 
     **Engine resolution**: ``config["workflows"]["engine"]`` is resolved before
     any file is written. The value ``"auto"`` resolves to ``"e2"`` (the
-    deterministic E2 top-level-body engine, per ADR-017). Explicit ``"e1"`` or
-    ``"e2"`` values are used as-is. The resolved engine is passed to
-    ``_emit_workflow_variant`` to apply the correct build-time transform.
+    deterministic E2 top-level-body engine, per ADR-017 and ticket 09). The
+    resolved engine is passed to ``_emit_workflow_variant``. Only ``"e2"`` and
+    ``"auto"`` are supported; ``"e1"`` raises ``ValueError`` (the E1 wrap was
+    removed in EPIC-DualEngineWorkflowSupport ticket 09 — it produced an
+    unloadable ESM module).
 
     Applies the compare-before-write guard so that identical files are skipped
     on subsequent runs, satisfying the idempotency requirement.
@@ -451,7 +425,7 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
             emitted = _emit_workflow_variant(content, engine)
         except UnicodeDecodeError as exc:
             _log.warning(
-                "Skipping %s: E1 transform failed (non-UTF-8 source): %s",
+                "Skipping %s: workflow transform failed (non-UTF-8 source): %s",
                 js_file.name,
                 exc,
             )
@@ -2117,4 +2091,15 @@ def clean_stale_artifacts(
 #   selection. Updated _emit_workflow_variant docstring to reflect that "auto"
 #   is resolved upstream and no longer reaches the transform function.
 #   (#EPIC-DualEngineWorkflowSupport/07)
+# - 2026-07-06 [python-coder/EPIC-DualEngineWorkflowSupport/09]:
+#   Removed _E1_SHIM constant and the E1-wrap branch from
+#   _emit_workflow_variant. "e1" now raises ValueError("E1 workflow engine is
+#   not supported") — no file is ever written for e1. The E1 wrap was
+#   fundamentally broken: it prepended `export async function run` over a
+#   top-level body containing a bare `return` statement, producing an ESM
+#   module that throws SyntaxError: Illegal return statement on import.
+#   "e2" and "auto" both return raw bytes unchanged (identity transform).
+#   Updated build_workflow_scripts docstring to reflect E1 is unsupported.
+#   Ruff F401 clean: hashlib and json remain used elsewhere in this module.
+#   (#EPIC-DualEngineWorkflowSupport/09)
 # ====================================================================
