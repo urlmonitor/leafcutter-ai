@@ -407,6 +407,25 @@ and halt the ticket run. Do NOT spawn any phase agent if the status transition f
 
 ### §2.1 Pseudocode
 
+> **§2.1-R1 — Synchronous phase dispatch (MANDATORY).** Every `Agent(...)` call
+> that spawns a phase agent is BLOCKING: the ticket-supervisor MUST wait for the
+> call to return and parse its result before doing anything else. The
+> supervisor's turn MUST NOT end while a phase agent is still running. Dispatching
+> a phase agent "in the background" and returning — or describing a dispatch and
+> stopping — leaves the ticket half-driven and forces a re-drive.
+> (Source: EPIC-WorktreeQualityGateGuard retrospective KI-1, 2026-07-06 — ticket 07's
+> first supervisor ended its turn with test-writer still running.)
+>
+> **§2.1-R2 — Commit phase required for code-producing tickets (MANDATORY).** Any
+> ticket whose `files_touched` includes source files (`.py`, `.sql`, `.js`, `.ts`,
+> config, etc.) MUST list `commit: needed` in its `agents` map so the commit phase
+> runs inside the drive — where the pre-commit hooks fire and the staged set is
+> validated. When `commit` is absent from the map, changes are left staged and the
+> caller must commit them out-of-band, bypassing the hook path. Docs-only /
+> AC-only tickets may omit `commit`.
+> (Source: EPIC-WorktreeQualityGateGuard retrospective KI-2, 2026-07-06 — 6 of 8
+> tickets lacked `commit:` in their map, forcing per-ticket main-loop commits.)
+
 ```
 1.  READ ticket frontmatter `agents` map.
     LET pending = [ name for name, status in agents
