@@ -21,7 +21,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 
 # ---------------------------------------------------------------------------
@@ -119,7 +119,7 @@ class TestNonTTYExitsWithoutGitWrite(unittest.TestCase):
 
         # Collect all print calls
         printed = " ".join(
-            str(call) for call in mock_print.call_args_list
+            str(c) for c in mock_print.call_args_list
         )
         self.assertIn("interactive", printed.lower())
 
@@ -138,14 +138,25 @@ class TestConfirmationGateBlocks(unittest.TestCase):
     def test_answer_no_makes_no_post_gate_subprocess_call(
         self, mock_stdin, mock_input, mock_subprocess_run
     ):
-        """Answering 'no' must not trigger any subprocess call after the probe."""
+        """Answering 'no' must not trigger any git WRITE subprocess call.
+
+        Note: plan_recovery_actions() now also calls 'git --version' (read-only)
+        in addition to the status probe, so we check for absence of write
+        commands rather than asserting a specific total call count.
+        """
         mock_stdin.isatty.return_value = True
         mock_subprocess_run.return_value = _make_probe_result()
 
         main(["--repo", "/tmp"])
 
-        # subprocess.run called exactly once (the read-only probe) — no post-gate calls.
-        mock_subprocess_run.assert_called_once()
+        # No write-capable commands may have been called.
+        write_cmds = {"fetch", "update-ref", "read-tree"}
+        for c in mock_subprocess_run.call_args_list:
+            cmd = c[0][0] if c[0] else []
+            self.assertFalse(
+                any(w in cmd for w in write_cmds),
+                f"Write command must not be called when gate is not passed; got: {cmd}",
+            )
 
     @patch("subprocess.run")
     @patch("builtins.input")
@@ -153,15 +164,26 @@ class TestConfirmationGateBlocks(unittest.TestCase):
     def test_answer_empty_makes_no_post_gate_subprocess_call(
         self, mock_stdin, mock_input, mock_subprocess_run
     ):
-        """Answering with an empty string must not proceed past the gate."""
+        """Answering with an empty string must not proceed past the gate.
+
+        Note: plan_recovery_actions() now also calls 'git --version' (read-only)
+        in addition to the status probe, so we check for absence of write
+        commands rather than asserting a specific total call count.
+        """
         mock_stdin.isatty.return_value = True
         mock_input.return_value = ""
         mock_subprocess_run.return_value = _make_probe_result()
 
         main(["--repo", "/tmp"])
 
-        # Only the probe — no additional subprocess calls after the gate.
-        mock_subprocess_run.assert_called_once()
+        # No write-capable commands may have been called.
+        write_cmds = {"fetch", "update-ref", "read-tree"}
+        for c in mock_subprocess_run.call_args_list:
+            cmd = c[0][0] if c[0] else []
+            self.assertFalse(
+                any(w in cmd for w in write_cmds),
+                f"Write command must not be called when gate is not passed; got: {cmd}",
+            )
 
     @patch("subprocess.run")
     @patch("builtins.input", return_value="YES")
@@ -169,13 +191,25 @@ class TestConfirmationGateBlocks(unittest.TestCase):
     def test_answer_uppercase_yes_makes_no_post_gate_subprocess_call(
         self, mock_stdin, mock_input, mock_subprocess_run
     ):
-        """Gate must be case-sensitive: 'YES' is not accepted as confirmation."""
+        """Gate must be case-sensitive: 'YES' is not accepted as confirmation.
+
+        Note: plan_recovery_actions() now also calls 'git --version' (read-only)
+        in addition to the status probe, so we check for absence of write
+        commands rather than asserting a specific total call count.
+        """
         mock_stdin.isatty.return_value = True
         mock_subprocess_run.return_value = _make_probe_result()
 
         main(["--repo", "/tmp"])
 
-        mock_subprocess_run.assert_called_once()
+        # No write-capable commands may have been called.
+        write_cmds = {"fetch", "update-ref", "read-tree"}
+        for c in mock_subprocess_run.call_args_list:
+            cmd = c[0][0] if c[0] else []
+            self.assertFalse(
+                any(w in cmd for w in write_cmds),
+                f"Write command must not be called when gate is not passed; got: {cmd}",
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -333,14 +367,25 @@ class TestDryRunFirstBehavior(unittest.TestCase):
     def test_default_mode_no_git_writes_on_no(
         self, mock_stdin, mock_input, mock_subprocess_run
     ):
-        """Answering 'no' must result in exactly one subprocess.run call (the probe)."""
+        """Answering 'no' must trigger no git WRITE operations.
+
+        Note: plan_recovery_actions() now also calls 'git --version' (read-only)
+        in addition to the status probe, so we check for absence of write
+        commands rather than asserting a specific total call count.
+        """
         mock_stdin.isatty.return_value = True
         mock_subprocess_run.return_value = self._make_probe_result()
 
         main(["--repo", "/tmp"])
 
-        # Only the status probe — no execute calls.
-        mock_subprocess_run.assert_called_once()
+        # No write-capable commands may have been called.
+        write_cmds = {"fetch", "update-ref", "read-tree"}
+        for c in mock_subprocess_run.call_args_list:
+            cmd = c[0][0] if c[0] else []
+            self.assertFalse(
+                any(w in cmd for w in write_cmds),
+                f"Write command must not be called when gate is not passed; got: {cmd}",
+            )
 
     # ------------------------------------------------------------------
     # Test 6-3: interactive "yes" executes the plan
@@ -994,6 +1039,222 @@ class TestPostExecutionIntegrityVerification(unittest.TestCase):
             captured.get("plan"),
             list,
             "The plan argument passed to verify_recovery_integrity must be a list",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Test Group (f): Git version guard — AC BO-1600d-3-i
+# ---------------------------------------------------------------------------
+
+class TestGitVersionGuard(unittest.TestCase):
+    """Tests for git version guard — AC BO-1600d-3-i.
+
+    Verifies that plan_recovery_actions() checks the installed git version
+    before the zero-byte detection block, and that on git < 2.36:
+    - The remove action is NOT added to the plan (critical safety invariant).
+    - The refetch action is NOT added to the plan.
+    - A BLOCKED action is added when zero-byte objects exist.
+    - The BLOCKED action raises RuntimeError (with version info) when executed.
+
+    On git >= 2.36:
+    - The refetch action IS added.
+    - The remove action IS added when zero-byte objects exist and appears BEFORE refetch.
+    """
+
+    def test_git_version_function_exists(self):
+        """_git_version must be defined in git_recovery.py."""
+        fn = getattr(_mod, "_git_version", None)
+        self.assertIsNotNone(
+            fn,
+            "_git_version must be defined in git_recovery.py but was not found",
+        )
+
+    def test_git_version_parses_standard_output(self):
+        """_git_version must parse 'git version 2.41.0' → (2, 41, 0)."""
+        _git_version = getattr(_mod, "_git_version", None)
+        self.assertIsNotNone(_git_version, "_git_version not found in module")
+
+        mock_result = MagicMock()
+        mock_result.stdout = "git version 2.41.0\n"
+        mock_result.returncode = 0
+
+        with patch("subprocess.run", return_value=mock_result):
+            result = _git_version()
+
+        self.assertEqual(result, (2, 41, 0))
+
+    def test_git_version_parses_short_output(self):
+        """_git_version must parse 'git version 2.36' (no patch) → (2, 36, 0)."""
+        _git_version = getattr(_mod, "_git_version", None)
+        self.assertIsNotNone(_git_version, "_git_version not found in module")
+
+        mock_result = MagicMock()
+        mock_result.stdout = "git version 2.36\n"
+        mock_result.returncode = 0
+
+        with patch("subprocess.run", return_value=mock_result):
+            result = _git_version()
+
+        self.assertEqual(result, (2, 36, 0))
+
+    def test_git_version_subprocess_error_propagates(self):
+        """CalledProcessError from git --version must be logged at WARNING and re-raised."""
+        _git_version = getattr(_mod, "_git_version", None)
+        self.assertIsNotNone(_git_version, "_git_version not found in module")
+
+        exc = subprocess.CalledProcessError(127, ["git", "--version"])
+
+        with patch("subprocess.run", side_effect=exc):
+            with self.assertLogs("git_recovery", level="WARNING") as log_ctx:
+                with self.assertRaises(subprocess.CalledProcessError):
+                    _git_version()
+
+        self.assertTrue(
+            any("WARNING" in line for line in log_ctx.output),
+            "Expected at least one WARNING log entry when git --version fails",
+        )
+
+    def test_old_git_plan_excludes_remove_action_for_zero_byte_objects(self):
+        """On old git (2.35.0), plan must NOT include a remove action for zero-byte objects."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            obj_dir = repo / ".git" / "objects" / "ab"
+            obj_dir.mkdir(parents=True)
+            (obj_dir / "cd1234deadbeef").write_bytes(b"")  # zero-byte object
+
+            with patch.object(_mod, "_git_version", return_value=(2, 35, 0)):
+                plan = plan_recovery_actions(repo)
+
+        descriptions = [a.description.lower() for a in plan]
+        # A real remove action starts with "remove". The BLOCKED action starts
+        # with "blocked" — exclude it to avoid a false positive from the BLOCKED
+        # description's prose which mentions "remove step is not applied".
+        has_remove = any(
+            d.startswith("remove")
+            for d in descriptions
+        )
+        self.assertFalse(
+            has_remove,
+            f"Plan must NOT include a remove action when git is too old; got: {descriptions}",
+        )
+
+    def test_old_git_plan_excludes_refetch_action(self):
+        """On old git (2.35.0), plan must NOT include any refetch action."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            (repo / ".git" / "objects").mkdir(parents=True)
+
+            with patch.object(_mod, "_git_version", return_value=(2, 35, 0)):
+                plan = plan_recovery_actions(repo)
+
+        descriptions = [a.description.lower() for a in plan]
+        has_refetch = any("refetch" in d or "re-fetch" in d for d in descriptions)
+        self.assertFalse(
+            has_refetch,
+            f"Plan must NOT include a refetch action when git is too old; got: {descriptions}",
+        )
+
+    def test_old_git_plan_includes_blocked_description(self):
+        """On old git with zero-byte objects, plan must include a BLOCKED action mentioning 2.36."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            obj_dir = repo / ".git" / "objects" / "ab"
+            obj_dir.mkdir(parents=True)
+            (obj_dir / "cd1234deadbeef").write_bytes(b"")  # zero-byte object
+
+            with patch.object(_mod, "_git_version", return_value=(2, 35, 0)):
+                plan = plan_recovery_actions(repo)
+
+        descriptions = [a.description for a in plan]
+        blocked_actions = [d for d in descriptions if "BLOCKED" in d]
+        self.assertGreater(
+            len(blocked_actions),
+            0,
+            f"Plan must include a BLOCKED action when git is too old; got: {descriptions}",
+        )
+        blocked_desc = blocked_actions[0]
+        self.assertIn(
+            "2.36",
+            blocked_desc,
+            f"BLOCKED description must mention minimum version 2.36; got: {blocked_desc!r}",
+        )
+
+    def test_old_git_blocked_action_raises_on_execute(self):
+        """Executing the BLOCKED action must raise RuntimeError with version info."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            obj_dir = repo / ".git" / "objects" / "ab"
+            obj_dir.mkdir(parents=True)
+            (obj_dir / "cd1234deadbeef").write_bytes(b"")  # zero-byte object
+
+            with patch.object(_mod, "_git_version", return_value=(2, 35, 0)):
+                plan = plan_recovery_actions(repo)
+
+        blocked_actions = [a for a in plan if "BLOCKED" in a.description]
+        self.assertGreater(
+            len(blocked_actions),
+            0,
+            "No BLOCKED action found; cannot test execute raises",
+        )
+
+        with self.assertRaises(RuntimeError) as ctx:
+            blocked_actions[0].execute()
+
+        error_msg = str(ctx.exception)
+        self.assertIn(
+            "2.36",
+            error_msg,
+            f"RuntimeError must mention minimum version 2.36; got: {error_msg!r}",
+        )
+
+    def test_new_git_plan_includes_refetch_action(self):
+        """On new git (2.41.0), plan must include a refetch action."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            (repo / ".git" / "objects").mkdir(parents=True)
+
+            with patch.object(_mod, "_git_version", return_value=(2, 41, 0)):
+                plan = plan_recovery_actions(repo)
+
+        descriptions = [a.description.lower() for a in plan]
+        has_refetch = any("fetch" in d for d in descriptions)
+        self.assertTrue(
+            has_refetch,
+            f"Plan must include a refetch action when git >= 2.36; got: {descriptions}",
+        )
+
+    def test_new_git_plan_includes_remove_action_with_zero_byte_objects(self):
+        """On new git (2.41.0) with zero-byte objects, plan includes remove BEFORE refetch."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            obj_dir = repo / ".git" / "objects" / "ab"
+            obj_dir.mkdir(parents=True)
+            (obj_dir / "cd1234deadbeef").write_bytes(b"")  # zero-byte object
+
+            with patch.object(_mod, "_git_version", return_value=(2, 41, 0)):
+                plan = plan_recovery_actions(repo)
+
+        descriptions = [a.description.lower() for a in plan]
+        # A real remove action starts with "remove" (not "blocked").
+        remove_idx = next(
+            (i for i, d in enumerate(descriptions) if d.startswith("remove")),
+            None,
+        )
+        fetch_idx = next(
+            (i for i, d in enumerate(descriptions) if "fetch" in d), None
+        )
+        self.assertIsNotNone(
+            remove_idx,
+            f"Plan must include a remove action when git >= 2.36 and zero-byte objects exist; got: {descriptions}",
+        )
+        self.assertIsNotNone(
+            fetch_idx,
+            f"Plan must include a refetch action when git >= 2.36; got: {descriptions}",
+        )
+        self.assertLess(
+            remove_idx,
+            fetch_idx,
+            f"Remove action (index {remove_idx}) must appear before refetch (index {fetch_idx})",
         )
 
 

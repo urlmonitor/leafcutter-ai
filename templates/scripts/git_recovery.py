@@ -46,6 +46,8 @@ from typing import Callable
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 
+_GIT_REFETCH_MIN_VERSION: tuple = (2, 36, 0)
+
 
 def parse_args(args=None):
     """Parse command-line arguments for the recovery entry point.
@@ -173,6 +175,74 @@ def _is_hex(s: str) -> bool:
     Pure function — no I/O, no try/except.
     """
     return all(c in "0123456789abcdefABCDEF" for c in s)
+
+
+def _git_version() -> tuple:
+    """Return the installed git version as a 3-int tuple (major, minor, patch).
+
+    Runs ``git --version``, parses the output, and returns a tuple of exactly
+    3 ints.  Handles both ``"git version 2.41.0"`` and Apple-style outputs
+    such as ``"2.39.2 (Apple Git-143)"`` — takes the first ``N.N[.N]`` numeric
+    token and pads patch to 0 when absent.
+
+    Returns
+    -------
+    tuple
+        Three-element tuple of ints ``(major, minor, patch)``.
+
+    Raises
+    ------
+    subprocess.CalledProcessError
+        Re-raised (after logging at WARNING) if ``git --version`` exits
+        non-zero or cannot be launched.
+    ValueError
+        Raised when the version string cannot be parsed into at least two
+        numeric components.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "--version"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        logger.warning("git --version failed: %s", exc)
+        raise
+
+    raw = result.stdout.strip()
+    # Strip leading "git version " prefix if present, then tokenise.
+    text = raw.replace("git version ", "")
+    # Take the first whitespace-separated token to strip Apple annotations.
+    first_token = text.split()[0] if text.split() else ""
+    # Split on dots and take only leading digit groups.
+    parts = first_token.split(".")
+    numeric: list = []
+    for part in parts:
+        # Strip any trailing non-digit characters (e.g. "(Apple").
+        digits = ""
+        for ch in part:
+            if ch.isdigit():
+                digits += ch
+            else:
+                break
+        if not digits:
+            break
+        numeric.append(int(digits))
+        if len(numeric) == 3:
+            break
+
+    if len(numeric) < 2:
+        raise ValueError(
+            f"Cannot parse git version from output: {raw!r}; "
+            f"expected at least major.minor"
+        )
+
+    # Pad patch to 0 when absent.
+    while len(numeric) < 3:
+        numeric.append(0)
+
+    return (numeric[0], numeric[1], numeric[2])
 
 
 def detect_corrupt_branch_refs(repo_path: Path) -> list:
@@ -420,36 +490,78 @@ def plan_recovery_actions(repo_path: Path) -> list:
     """
     plan: list = []
 
+    # Check git version before the zero-byte detection block.
+    # If the version check fails or the version is too old, the refetch path is
+    # not viable and the remove step must also be suppressed (to avoid leaving
+    # the store in a worse state than the halted state — see AC invariant).
+    refetch_viable: bool
+    detected_ver: tuple = (0, 0, 0)
+    try:
+        detected_ver = _git_version()
+        refetch_viable = detected_ver >= _GIT_REFETCH_MIN_VERSION
+    except (subprocess.CalledProcessError, ValueError) as exc:
+        logger.warning(
+            "Cannot determine git version; disabling refetch path: %s", exc
+        )
+        refetch_viable = False
+
     zero_byte = detect_zero_byte_objects(repo_path)
     if zero_byte:
-        paths_str = ", ".join(str(p) for p in zero_byte)
-        description = f"Remove {len(zero_byte)} zero-byte loose object(s): {paths_str}"
+        if refetch_viable:
+            paths_str = ", ".join(str(p) for p in zero_byte)
+            description = f"Remove {len(zero_byte)} zero-byte loose object(s): {paths_str}"
 
-        # Capture zero_byte in the closure — we must not re-detect at execute time
-        # so the executed set matches the printed plan exactly.
-        def _make_delete_fn(paths):
-            def _delete_fn():
-                for path in paths:
-                    try:
-                        path.unlink()
-                    except OSError as exc:
-                        logger.warning("Failed to remove %s: %s", path, exc)
-                        raise
-            return _delete_fn
+            # Capture zero_byte in the closure — we must not re-detect at execute time
+            # so the executed set matches the printed plan exactly.
+            def _make_delete_fn(paths):
+                def _delete_fn():
+                    for path in paths:
+                        try:
+                            path.unlink()
+                        except OSError as exc:
+                            logger.warning("Failed to remove %s: %s", path, exc)
+                            raise
+                return _delete_fn
 
-        plan.append(RecoveryAction(description, _make_delete_fn(zero_byte)))
-
-    def _refetch_fn():
-        try:
-            subprocess.run(
-                ["git", "-C", str(repo_path), "fetch", "--refetch", "origin"],
-                check=True,
+            plan.append(RecoveryAction(description, _make_delete_fn(zero_byte)))
+        else:
+            # Refuse path: do NOT remove objects (would leave store worse off).
+            ver_str = ".".join(str(v) for v in detected_ver)
+            min_ver_str = ".".join(str(v) for v in _GIT_REFETCH_MIN_VERSION)
+            n = len(zero_byte)
+            blocked_description = (
+                f"BLOCKED — git {ver_str} does not support fetch --refetch "
+                f"(minimum required: {min_ver_str}). "
+                f"{n} zero-byte object(s) detected but the remove step is not applied: "
+                f"without --refetch the objects cannot be restored from origin and the "
+                f"object store would be left in a worse state. "
+                f"Upgrade git to 2.36 or later and re-run recovery."
             )
-        except subprocess.CalledProcessError as exc:
-            logger.warning("git fetch --refetch failed for %s: %s", repo_path, exc)
-            raise
 
-    plan.append(RecoveryAction("Re-fetch objects from origin", _refetch_fn))
+            def _make_blocked_fn(ver, min_ver):
+                def _blocked_fn():
+                    raise RuntimeError(
+                        f"Recovery blocked: installed git {'.'.join(str(v) for v in ver)} "
+                        f"does not support fetch --refetch (minimum required: "
+                        f"{'.'.join(str(v) for v in min_ver)}). "
+                        f"Upgrade git to {'.'.join(str(v) for v in min_ver)} or later."
+                    )
+                return _blocked_fn
+
+            plan.append(RecoveryAction(blocked_description, _make_blocked_fn(detected_ver, _GIT_REFETCH_MIN_VERSION)))
+
+    if refetch_viable:
+        def _refetch_fn():
+            try:
+                subprocess.run(
+                    ["git", "-C", str(repo_path), "fetch", "--refetch", "origin"],
+                    check=True,
+                )
+            except subprocess.CalledProcessError as exc:
+                logger.warning("git fetch --refetch failed for %s: %s", repo_path, exc)
+                raise
+
+        plan.append(RecoveryAction("Re-fetch objects from origin", _refetch_fn))
 
     # (b) Branch ref reset — AFTER remove+refetch so the object store is clean first.
     try:
