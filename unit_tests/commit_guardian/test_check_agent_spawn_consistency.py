@@ -876,5 +876,172 @@ class TestAbsentCardAdvisoryNote(unittest.TestCase):
         )
 
 
+# ---------------------------------------------------------------------------
+# Tests for AC INF-600l-1-ii: registry absent entirely → no-op + advisory
+# ---------------------------------------------------------------------------
+
+class TestRegistryAbsentNoOp(unittest.TestCase):
+    """Tests for AC INF-600l-1-ii: when the agent registry file is entirely absent
+    (the project has no agent subsystem at all), the hook must:
+      - exit 0 (no failure)
+      - emit an ADVISORY note to stderr (not an ERROR), naming the skipped check
+      - not report any mismatch
+
+    These tests are RED until python-coder modifies main() to treat a
+    FileNotFoundError from _read_registry_json() as a no-op rather than an error.
+    The current implementation catches all OSError subclasses (including
+    FileNotFoundError) and returns 1 with an "ERROR:" message.
+    """
+
+    def setUp(self) -> None:
+        # covers: INF-600l-1-ii
+        self.module = _load_hook_module()
+
+    def test_exits_0_when_card_staged_but_registry_file_absent(self) -> None:
+        """AC INF-600l-1-ii: when a card file is staged but the agent registry does
+        not exist on disk or in the git index, the hook must exit 0 (no-op).
+
+        Current behavior: _read_registry_json() raises FileNotFoundError (a subclass
+        of OSError), main() catches it as OSError and returns 1 with an "ERROR:" line.
+        After the fix, FileNotFoundError must produce exit 0 + advisory note.
+        """
+        # covers: INF-600l-1-ii
+        staged = ["docs/agents/cards/python-coder.card.md"]
+        with patch.object(self.module, "_get_staged_files", return_value=staged):
+            with patch.object(
+                self.module,
+                "_read_registry_json",
+                side_effect=FileNotFoundError(
+                    "config/agent_registry.json: No such file or directory"
+                ),
+            ):
+                result = self.module.main()
+
+        self.assertEqual(
+            result,
+            0,
+            "Expected exit 0 when the agent registry is absent; hook must no-op, not error",
+        )
+
+    def test_emits_advisory_not_error_when_registry_absent(self) -> None:
+        """AC INF-600l-1-ii: the hook must emit an ADVISORY message (not an ERROR)
+        to stderr explaining that the check was skipped because no registry was found.
+
+        Current behavior: emits "[check-agent-spawn-consistency] ERROR: Cannot read
+        config/agent_registry.json: ..." and returns 1.
+        After the fix, stderr must contain "ADVISORY" (not just "ERROR").
+        """
+        # covers: INF-600l-1-ii
+        import io
+
+        staged = ["docs/agents/cards/python-coder.card.md"]
+        with patch.object(self.module, "_get_staged_files", return_value=staged):
+            with patch.object(
+                self.module,
+                "_read_registry_json",
+                side_effect=FileNotFoundError(
+                    "config/agent_registry.json: No such file or directory"
+                ),
+            ):
+                err_buf = io.StringIO()
+                with patch("sys.stderr", err_buf):
+                    self.module.main()
+
+        err_output = err_buf.getvalue()
+        self.assertGreater(
+            len(err_output),
+            0,
+            "Expected at least one advisory line to stderr when registry is absent",
+        )
+        self.assertIn(
+            "ADVISORY",
+            err_output,
+            f"stderr must contain 'ADVISORY' when registry is absent (not just 'ERROR'); "
+            f"got: {err_output!r}",
+        )
+
+    def test_no_mismatch_reported_when_registry_absent(self) -> None:
+        """AC INF-600l-1-ii: when the registry is absent, the hook must not report
+        any mismatch or asymmetric spawn error — the absent registry is treated as
+        'nothing to compare against', not as a mismatch condition.
+
+        Both exit code (must be 0) and stderr content (must not contain mismatch
+        language) are asserted.
+        """
+        # covers: INF-600l-1-ii
+        import io
+
+        staged = ["docs/agents/cards/some-agent.card.md"]
+        with patch.object(self.module, "_get_staged_files", return_value=staged):
+            with patch.object(
+                self.module,
+                "_read_registry_json",
+                side_effect=FileNotFoundError("No registry file"),
+            ):
+                err_buf = io.StringIO()
+                with patch("sys.stderr", err_buf):
+                    result = self.module.main()
+
+        err_output = err_buf.getvalue()
+        self.assertEqual(
+            result,
+            0,
+            f"Exit code must be 0 when registry is absent; got {result}",
+        )
+        self.assertNotIn(
+            "mismatch",
+            err_output.lower(),
+            f"No mismatch language should appear in stderr when registry is absent; "
+            f"stderr: {err_output!r}",
+        )
+        self.assertNotIn(
+            "asymmetric spawn",
+            err_output,
+            f"No asymmetric spawn errors must appear when registry is absent; "
+            f"stderr: {err_output!r}",
+        )
+
+    def test_absent_registry_distinguishable_from_unreadable_registry(self) -> None:
+        """AC INF-600l-1-ii: a missing registry (FileNotFoundError) must produce
+        exit 0, while an unreadable registry (generic OSError, e.g. PermissionError)
+        must still produce exit 1.
+
+        This ensures the no-op behaviour is scoped to 'registry absent' and does
+        not silently swallow genuine I/O errors on existing files.
+        """
+        # covers: INF-600l-1-ii
+        staged = [REGISTRY_PATH_IN_REPO]
+
+        # FileNotFoundError (absent registry) must exit 0 after the fix
+        with patch.object(self.module, "_get_staged_files", return_value=staged):
+            with patch.object(
+                self.module,
+                "_read_registry_json",
+                side_effect=FileNotFoundError("No such file or directory"),
+            ):
+                result_absent = self.module.main()
+
+        self.assertEqual(
+            result_absent,
+            0,
+            "FileNotFoundError (absent registry) must produce exit 0, not 1",
+        )
+
+        # PermissionError (present but unreadable) must still exit 1 (existing behaviour)
+        with patch.object(self.module, "_get_staged_files", return_value=staged):
+            with patch.object(
+                self.module,
+                "_read_registry_json",
+                side_effect=PermissionError("Permission denied"),
+            ):
+                result_unreadable = self.module.main()
+
+        self.assertEqual(
+            result_unreadable,
+            1,
+            "PermissionError (unreadable registry) must still produce exit 1",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

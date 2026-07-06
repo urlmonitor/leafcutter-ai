@@ -367,6 +367,13 @@ def main() -> int:
 
     try:
         registry_json = _read_registry_json()
+    except FileNotFoundError:
+        print(
+            f"[check-agent-spawn-consistency] ADVISORY: No agent registry found at "
+            f"{_REGISTRY_PATH}. Check skipped for projects without the agent subsystem.",
+            file=sys.stderr,
+        )
+        return 0
     except OSError as exc:
         print(
             f"[check-agent-spawn-consistency] ERROR: Cannot read {_REGISTRY_PATH}: {exc}",
@@ -466,4 +473,17 @@ if __name__ == "__main__":
 #   "[check-agent-spawn-consistency] ADVISORY: card for '{id}' not found at
 #   {path} — mirror comparison skipped for this agent"
 #   (#EPIC-RegistryCardMirror/02)
+#
+# - 2026-07-06 [python-coder/EPIC-RegistryCardMirror/03]: Registry-absent no-op
+#   (AC INF-600l-1-ii). When the agent registry is entirely absent (FileNotFoundError
+#   from _read_registry_json()), main() now exits 0 with an ADVISORY message
+#   instead of exiting 1 with an ERROR. This prevents the hook from blocking
+#   projects that do not use the leafcutter agent subsystem at all.
+#   FileNotFoundError is caught before the generic OSError clause so that
+#   genuinely unreadable registries (PermissionError etc.) still exit 1.
+#   Advisory message format:
+#   "[check-agent-spawn-consistency] ADVISORY: No agent registry found at
+#   config/agent_registry.json. Check skipped for projects without the agent
+#   subsystem."
+#   (#EPIC-RegistryCardMirror/03)
 # ====================================================================
