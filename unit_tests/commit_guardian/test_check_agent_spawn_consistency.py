@@ -4,13 +4,17 @@ GOAL: Unit tests for scripts/commit_guardian/hooks/check_agent_spawn_consistency
 BUSINESS CONTEXT: Verifies the bidirectional spawn consistency hook correctly
     detects mismatches in agent_registry.json at commit time, so engineers
     receive immediate named-pair error messages before bad registry state
-    reaches main.
+    reaches main.  Also verifies the card<->registry mirror check added in
+    EPIC-RegistryCardMirror/01 (AC INF-600l-1): generated agent cards must
+    agree with the registry's spawn relationships in both directions.
 ARCHITECTURE: Tests invoke the hook's main() function directly by importing it,
-    with mocked staged-file list and in-memory registry JSON.  The hook script
-    does not exist yet — these tests are intentionally RED (TDD red-baseline phase).
+    with mocked staged-file list and in-memory registry JSON.  New card-mirror
+    tests call _parse_card_spawn_edges() and _check_card_registry_mirror()
+    directly, using temporary directories with synthetic .card.md fixtures.
 
 These tests cover the 8 Acceptance Criteria from
-TICKET-20260604-AgentRegistrySpawnValidationHook.
+TICKET-20260604-AgentRegistrySpawnValidationHook, plus 3 new AC tests for
+INF-600l-1 (card<->registry mirror mismatch detection).
 """
 
 from __future__ import annotations
@@ -319,6 +323,395 @@ class TestCheckAgentSpawnConsistency(unittest.TestCase):
             source_code,
             "Hook script must contain a '# DECISION HISTORY' block",
         )
+
+
+# ---------------------------------------------------------------------------
+# Helpers for card-mirror tests
+# ---------------------------------------------------------------------------
+
+def _make_card_text(
+    agent_id: str,
+    spawns: list[str] | None = None,
+    dispatched_by: list[str] | None = None,
+) -> str:
+    """Build a minimal .card.md string with a mermaid Spawn and Dependency block.
+
+    Args:
+        agent_id: The agent identifier for this card (used as self_id).
+        spawns: List of agent IDs this agent spawns (-->|spawns|).
+        dispatched_by: List of agent IDs that dispatch this agent (-->|dispatches|).
+
+    Returns:
+        Minimal card text containing a mermaid block with the requested edges.
+    """
+    spawns = spawns or []
+    dispatched_by = dispatched_by or []
+    self_node = agent_id.replace("-", "_")
+
+    lines = [
+        "---",
+        f"agent_id: {agent_id}",
+        "type: card",
+        "---",
+        "",
+        f"# {agent_id}",
+        "",
+        "## Spawn and Dependency",
+        "",
+        "```mermaid",
+        "flowchart TD",
+    ]
+
+    # Parent nodes
+    for parent in dispatched_by:
+        parent_node = parent.replace("-", "_")
+        lines.append(f'    {parent_node}["{parent}\\n(supervisor tier)"]:::supervisor')
+
+    # Self node
+    lines.append(f'    {self_node}["{agent_id}\\n(phase tier, priority 1)"]:::target')
+
+    # Child nodes
+    for child in spawns:
+        child_node = child.replace("-", "_")
+        lines.append(f'    {child_node}["{child}\\n(phase tier)"]:::phase')
+
+    lines.append("")
+
+    # Edges
+    for parent in dispatched_by:
+        parent_node = parent.replace("-", "_")
+        lines.append(f"    {parent_node} -->|dispatches| {self_node}")
+    for child in spawns:
+        child_node = child.replace("-", "_")
+        lines.append(f"    {self_node} -->|spawns| {child_node}")
+
+    lines.append("```")
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Tests for _parse_card_spawn_edges
+# ---------------------------------------------------------------------------
+
+class TestParseCardSpawnEdges(unittest.TestCase):
+    """Tests for _parse_card_spawn_edges() — the mermaid edge parser."""
+
+    def setUp(self) -> None:
+        self.module = _load_hook_module()
+
+    def test_parses_spawn_edge(self) -> None:
+        """parse returns the spawned child in spawn_allowlist_set."""
+        card_text = _make_card_text(
+            "python-coder",
+            spawns=["sql-coder"],
+            dispatched_by=["ticket-supervisor"],
+        )
+        spawn_set, _ = self.module._parse_card_spawn_edges(card_text, "python-coder")
+        self.assertIn(
+            "sql-coder",
+            spawn_set,
+            "sql-coder must appear in spawn_allowlist_set",
+        )
+
+    def test_parses_dispatches_edge(self) -> None:
+        """parse returns the dispatcher in spawned_by_set."""
+        card_text = _make_card_text(
+            "python-coder",
+            spawns=["research-agent"],
+            dispatched_by=["ticket-supervisor", "sql-coder"],
+        )
+        _, spawned_by_set = self.module._parse_card_spawn_edges(card_text, "python-coder")
+        self.assertIn("ticket-supervisor", spawned_by_set)
+        self.assertIn("sql-coder", spawned_by_set)
+
+    def test_empty_card_returns_empty_sets(self) -> None:
+        """parse returns empty sets when there are no mermaid edges."""
+        card_text = "# bare-agent\n\nNo mermaid block here.\n"
+        spawn_set, spawned_by_set = self.module._parse_card_spawn_edges(card_text, "bare-agent")
+        self.assertEqual(spawn_set, set())
+        self.assertEqual(spawned_by_set, set())
+
+    def test_does_not_pick_up_other_agents_edges(self) -> None:
+        """parse only picks up edges involving the target agent."""
+        # Card for python-coder, but we parse as if agent_id is sql-coder
+        card_text = _make_card_text(
+            "python-coder",
+            spawns=["sql-coder"],
+            dispatched_by=["ticket-supervisor"],
+        )
+        # Parsing as sql-coder — the python-coder edges should not be captured
+        spawn_set, spawned_by_set = self.module._parse_card_spawn_edges(card_text, "sql-coder")
+        self.assertNotIn("sql-coder", spawn_set)
+        self.assertNotIn("ticket-supervisor", spawned_by_set)
+
+
+# ---------------------------------------------------------------------------
+# Tests for _check_card_registry_mirror
+# ---------------------------------------------------------------------------
+
+class TestCheckCardRegistryMirror(unittest.TestCase):
+    """Tests for _check_card_registry_mirror() — the card vs. registry comparator.
+
+    Covers AC INF-600l-1: card<->registry mirror mismatch detection in both
+    directions for spawn_allowlist and spawned_by.
+    """
+
+    def setUp(self) -> None:
+        self.module = _load_hook_module()
+
+    # -- AC INF-600l-1 (direction 1a): card has spawn edge registry does not -----
+
+    def test_card_spawn_edge_missing_from_registry_reported(self) -> None:
+        # covers: INF-600l-1
+        """Card shows python-coder spawning sql-coder, but registry has no such edge.
+
+        Expected error names both agents and states which side is missing the edge.
+        """
+        agents = [
+            {"id": "python-coder", "spawn_allowlist": ["research-agent"], "spawned_by": ["ticket-supervisor"]},
+            {"id": "sql-coder", "spawn_allowlist": [], "spawned_by": []},
+        ]
+
+        import tempfile
+        with tempfile.TemporaryDirectory() as cards_dir_str:
+            cards_dir = Path(cards_dir_str)
+            # Card for python-coder shows it spawning sql-coder (extra edge)
+            card_text = _make_card_text(
+                "python-coder",
+                spawns=["research-agent", "sql-coder"],  # sql-coder is the extra edge
+                dispatched_by=["ticket-supervisor"],
+            )
+            (cards_dir / "python-coder.card.md").write_text(card_text, encoding="utf-8")
+
+            errors = self.module._check_card_registry_mirror(agents, cards_dir)
+
+        self.assertTrue(
+            any("python-coder" in e and "sql-coder" in e for e in errors),
+            f"Expected error mentioning both python-coder and sql-coder, got: {errors}",
+        )
+        self.assertTrue(
+            any("registry has no such edge" in e for e in errors),
+            f"Expected 'registry has no such edge' in errors, got: {errors}",
+        )
+
+    # -- AC INF-600l-1 (direction 1b): registry has spawn edge card does not ----
+
+    def test_registry_spawn_edge_missing_from_card_reported(self) -> None:
+        # covers: INF-600l-1
+        """Registry lists sql-coder in python-coder spawn_allowlist, but card does not show it.
+
+        Expected error names both agents and states which side is missing the edge.
+        """
+        agents = [
+            {"id": "python-coder", "spawn_allowlist": ["research-agent", "sql-coder"], "spawned_by": ["ticket-supervisor"]},
+            {"id": "sql-coder", "spawn_allowlist": [], "spawned_by": []},
+        ]
+
+        import tempfile
+        with tempfile.TemporaryDirectory() as cards_dir_str:
+            cards_dir = Path(cards_dir_str)
+            # Card for python-coder only shows research-agent (missing sql-coder)
+            card_text = _make_card_text(
+                "python-coder",
+                spawns=["research-agent"],  # sql-coder missing from card
+                dispatched_by=["ticket-supervisor"],
+            )
+            (cards_dir / "python-coder.card.md").write_text(card_text, encoding="utf-8")
+
+            errors = self.module._check_card_registry_mirror(agents, cards_dir)
+
+        self.assertTrue(
+            any("python-coder" in e and "sql-coder" in e for e in errors),
+            f"Expected error mentioning both python-coder and sql-coder, got: {errors}",
+        )
+        self.assertTrue(
+            any("card does not show it" in e for e in errors),
+            f"Expected 'card does not show it' in errors, got: {errors}",
+        )
+
+    # -- AC INF-600l-1 (agree case): card and registry agree → no mismatch ------
+
+    def test_card_and_registry_agree_no_error(self) -> None:
+        # covers: INF-600l-1
+        """When card and registry agree on all spawn relationships, no errors are reported."""
+        agents = [
+            {"id": "python-coder", "spawn_allowlist": ["research-agent"], "spawned_by": ["ticket-supervisor"]},
+        ]
+
+        import tempfile
+        with tempfile.TemporaryDirectory() as cards_dir_str:
+            cards_dir = Path(cards_dir_str)
+            # Card exactly matches registry
+            card_text = _make_card_text(
+                "python-coder",
+                spawns=["research-agent"],
+                dispatched_by=["ticket-supervisor"],
+            )
+            (cards_dir / "python-coder.card.md").write_text(card_text, encoding="utf-8")
+
+            errors = self.module._check_card_registry_mirror(agents, cards_dir)
+
+        self.assertEqual(
+            errors,
+            [],
+            f"Expected no errors when card and registry agree, got: {errors}",
+        )
+
+    def test_no_card_file_silently_skipped(self) -> None:
+        """Agents without a card file are silently skipped — no errors."""
+        agents = [
+            {"id": "nonexistent-agent", "spawn_allowlist": ["other-agent"], "spawned_by": []},
+        ]
+
+        import tempfile
+        with tempfile.TemporaryDirectory() as cards_dir_str:
+            cards_dir = Path(cards_dir_str)
+            # No card file written for nonexistent-agent
+
+            errors = self.module._check_card_registry_mirror(agents, cards_dir)
+
+        self.assertEqual(
+            errors,
+            [],
+            f"Expected no errors when card file is absent, got: {errors}",
+        )
+
+    def test_special_token_in_registry_skipped(self) -> None:
+        """__ticket_phase_agents__ in registry spawn_allowlist is not reported as a mismatch."""
+        agents = [
+            {"id": "ticket-supervisor", "spawn_allowlist": ["__ticket_phase_agents__"], "spawned_by": ["user"]},
+        ]
+
+        import tempfile
+        with tempfile.TemporaryDirectory() as cards_dir_str:
+            cards_dir = Path(cards_dir_str)
+            # Card has no spawns (special token not shown as individual edge)
+            card_text = _make_card_text(
+                "ticket-supervisor",
+                spawns=[],
+                dispatched_by=[],  # 'user' is external, skip
+            )
+            (cards_dir / "ticket-supervisor.card.md").write_text(card_text, encoding="utf-8")
+
+            errors = self.module._check_card_registry_mirror(agents, cards_dir)
+
+        # __ticket_phase_agents__ must not produce a mismatch error
+        self.assertFalse(
+            any("__ticket_phase_agents__" in e for e in errors),
+            f"Special token must not cause mismatch errors, got: {errors}",
+        )
+
+    def test_external_caller_user_in_spawned_by_skipped(self) -> None:
+        """'user' in registry spawned_by is skipped — not reported as a mismatch."""
+        agents = [
+            {"id": "some-agent", "spawn_allowlist": [], "spawned_by": ["user"]},
+        ]
+
+        import tempfile
+        with tempfile.TemporaryDirectory() as cards_dir_str:
+            cards_dir = Path(cards_dir_str)
+            # Card does not show user as dispatcher (user is external, expect it to be skipped)
+            card_text = _make_card_text(
+                "some-agent",
+                spawns=[],
+                dispatched_by=[],
+            )
+            (cards_dir / "some-agent.card.md").write_text(card_text, encoding="utf-8")
+
+            errors = self.module._check_card_registry_mirror(agents, cards_dir)
+
+        self.assertEqual(
+            errors,
+            [],
+            f"'user' in spawned_by must be skipped — no errors expected, got: {errors}",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Tests for main() with card-file trigger
+# ---------------------------------------------------------------------------
+
+class TestMainCardMirrorTrigger(unittest.TestCase):
+    """Tests for the extended main() that also triggers on staged card files."""
+
+    def setUp(self) -> None:
+        self.module = _load_hook_module()
+
+    def test_exits_0_when_neither_registry_nor_cards_staged(self) -> None:
+        """main() exits 0 immediately when neither registry nor card files are staged."""
+        staged = ["docs/some-doc.md", "scripts/build.py"]
+        with patch.object(self.module, "_get_staged_files", return_value=staged):
+            result = self.module.main()
+        self.assertEqual(result, 0, "Expected exit 0 when nothing relevant is staged")
+
+    def test_triggers_when_card_staged_without_registry(self) -> None:
+        """main() does not skip immediately when a card file is staged (no registry staged)."""
+        import tempfile
+        staged = ["docs/agents/cards/python-coder.card.md"]
+        # Registry with consistent state (fake agents so card check finds no cards)
+        registry = _build_registry([
+            _make_agent("fake-agent-only", spawn_allowlist=[], spawned_by=[]),
+        ])
+        registry_json = json.dumps(registry)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            # Patch _get_repo_root to return temp dir (no card files → card check passes)
+            with patch.object(self.module, "_get_staged_files", return_value=staged):
+                with patch.object(self.module, "_read_registry_json", return_value=registry_json):
+                    with patch.object(
+                        self.module,
+                        "_get_repo_root",
+                        return_value=Path(tmp),
+                    ):
+                        result = self.module.main()
+
+        # Should proceed (not short-circuit on registry check) and pass with no errors
+        self.assertEqual(result, 0, "Expected exit 0: cards staged, registry consistent")
+
+    def test_main_reports_card_mirror_mismatch_on_registry_staged(self) -> None:
+        """main() reports card<->registry mismatch when registry is staged and card disagrees."""
+        import tempfile
+
+        # Registry: python-coder can only spawn research-agent
+        registry = _build_registry([
+            _make_agent("python-coder", spawn_allowlist=["research-agent"], spawned_by=["ticket-supervisor"]),
+            _make_agent("research-agent", spawn_allowlist=[], spawned_by=["python-coder"]),
+            _make_agent("ticket-supervisor", spawn_allowlist=["python-coder"], spawned_by=["user"]),
+            _make_agent("sql-coder", spawn_allowlist=[], spawned_by=[]),
+        ])
+        registry_json = json.dumps(registry)
+
+        staged = [REGISTRY_PATH_IN_REPO]
+
+        with tempfile.TemporaryDirectory() as tmp_root:
+            tmp_root_path = Path(tmp_root)
+            cards_dir = tmp_root_path / "docs" / "agents" / "cards"
+            cards_dir.mkdir(parents=True)
+
+            # Card for python-coder shows it spawning sql-coder (not in registry)
+            card_text = _make_card_text(
+                "python-coder",
+                spawns=["research-agent", "sql-coder"],  # sql-coder is extra
+                dispatched_by=["ticket-supervisor"],
+            )
+            (cards_dir / "python-coder.card.md").write_text(card_text, encoding="utf-8")
+
+            with patch.object(self.module, "_get_staged_files", return_value=staged):
+                with patch.object(self.module, "_read_registry_json", return_value=registry_json):
+                    with patch.object(
+                        self.module, "_get_repo_root", return_value=tmp_root_path
+                    ):
+                        import io
+                        err_buf = io.StringIO()
+                        with patch("sys.stderr", err_buf):
+                            result = self.module.main()
+
+        self.assertEqual(result, 1, "Expected exit 1 on card<->registry mismatch")
+        err_output = err_buf.getvalue()
+        self.assertIn("python-coder", err_output)
+        self.assertIn("sql-coder", err_output)
+        self.assertIn("[check-agent-spawn-consistency]", err_output)
+        self.assertIn("config/agent_registry.json", err_output)
 
 
 if __name__ == "__main__":
