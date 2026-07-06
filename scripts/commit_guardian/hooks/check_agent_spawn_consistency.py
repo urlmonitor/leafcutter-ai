@@ -173,6 +173,49 @@ def _get_repo_root() -> Path:
     return Path(result.stdout.strip())
 
 
+def _resolve_cards_dir(repo_root: Path) -> Path:
+    """Resolve the agent cards directory from the card-path convention.
+
+    Checks for 'agent_cards_path' in skills_config.json at the repo root or
+    under .leafcutter/. Falls back to the hardcoded default 'docs/agents/cards'
+    when absent or unreadable.
+
+    Args:
+        repo_root: Absolute path to the repository root.
+
+    Returns:
+        Absolute path to the agent cards directory (may not exist on disk).
+    """
+    _DEFAULT_CARDS_SUBDIR = "docs/agents/cards"
+    config_locations = [
+        repo_root / "skills_config.json",
+        repo_root / ".leafcutter" / "skills_config.json",
+    ]
+    for config_path in config_locations:
+        if not config_path.exists():
+            continue
+        try:
+            config_text = config_path.read_text(encoding="utf-8")
+        except OSError as exc:
+            print(
+                f"[check-agent-spawn-consistency] WARNING: Cannot read {config_path}: {exc}",
+                file=sys.stderr,
+            )
+            continue
+        try:
+            config_data = json.loads(config_text)
+        except json.JSONDecodeError as exc:
+            print(
+                f"[check-agent-spawn-consistency] WARNING: {config_path} is not valid JSON: {exc}",
+                file=sys.stderr,
+            )
+            continue
+        agent_cards_path = config_data.get("agent_cards_path")
+        if agent_cards_path:
+            return repo_root / agent_cards_path
+    return repo_root / _DEFAULT_CARDS_SUBDIR
+
+
 def _node_id_to_agent_id(node_id: str) -> str:
     """Convert a mermaid node ID back to an agent ID.
 
@@ -412,8 +455,15 @@ def main() -> int:
         repo_root = None
 
     if repo_root is not None:
-        cards_dir = repo_root / _CARDS_DIR_PATH
-        errors.extend(_check_card_registry_mirror(agents, cards_dir))
+        cards_dir = _resolve_cards_dir(repo_root)
+        if not cards_dir.exists():
+            print(
+                f"[check-agent-spawn-consistency] ADVISORY: Agent cards directory not found at "
+                f"{cards_dir}. Mirror check skipped — project may not use the leafcutter agent subsystem.",
+                file=sys.stderr,
+            )
+        else:
+            errors.extend(_check_card_registry_mirror(agents, cards_dir))
 
     if not errors:
         return 0
@@ -486,4 +536,13 @@ if __name__ == "__main__":
 #   config/agent_registry.json. Check skipped for projects without the agent
 #   subsystem."
 #   (#EPIC-RegistryCardMirror/03)
+#
+# - 2026-07-06 [python-coder/EPIC-RegistryCardMirror/04]: Convention-based card-path
+#   resolution and opt-in subsystem scoping (AC INF-600l-2). Added _resolve_cards_dir()
+#   helper that reads agent_cards_path from skills_config.json (at repo root or .leafcutter/)
+#   and falls back to 'docs/agents/cards' when absent. main() now uses _resolve_cards_dir()
+#   instead of hardcoded _CARDS_DIR_PATH for the mirror check. Added opt-in gate: when
+#   the resolved cards directory does not exist on disk, main() emits an ADVISORY and
+#   skips the mirror check (project does not use the leafcutter agent subsystem).
+#   (#EPIC-RegistryCardMirror/04)
 # ====================================================================

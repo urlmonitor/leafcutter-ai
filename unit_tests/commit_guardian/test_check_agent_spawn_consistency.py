@@ -1043,5 +1043,139 @@ class TestRegistryAbsentNoOp(unittest.TestCase):
         )
 
 
+# ---------------------------------------------------------------------------
+# Tests for AC INF-600l-2: convention-based card path resolution
+# ---------------------------------------------------------------------------
+
+class TestConventionBasedCardPath(unittest.TestCase):
+    """Tests for _resolve_cards_dir() — convention-based card path resolution (AC INF-600l-2)."""
+
+    def setUp(self) -> None:
+        self.module = _load_hook_module()
+
+    def test_uses_agent_cards_path_from_skills_config_json(self) -> None:
+        """AC INF-600l-2: When skills_config.json has agent_cards_path, use it instead of default."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_root = Path(tmp)
+            config = {"agent_cards_path": "custom/cards/dir"}
+            (tmp_root / "skills_config.json").write_text(
+                json.dumps(config), encoding="utf-8"
+            )
+            result = self.module._resolve_cards_dir(tmp_root)
+        self.assertEqual(result, tmp_root / "custom/cards/dir")
+
+    def test_falls_back_to_default_when_no_skills_config(self) -> None:
+        """AC INF-600l-2: When no skills_config.json exists, fall back to docs/agents/cards."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_root = Path(tmp)
+            result = self.module._resolve_cards_dir(tmp_root)
+        self.assertEqual(result, tmp_root / "docs" / "agents" / "cards")
+
+    def test_falls_back_to_default_when_key_absent_from_config(self) -> None:
+        """AC INF-600l-2: When skills_config.json lacks agent_cards_path, use default."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_root = Path(tmp)
+            (tmp_root / "skills_config.json").write_text(
+                json.dumps({"some_other_key": "value"}), encoding="utf-8"
+            )
+            result = self.module._resolve_cards_dir(tmp_root)
+        self.assertEqual(result, tmp_root / "docs" / "agents" / "cards")
+
+    def test_reads_skills_config_from_leafcutter_subdir(self) -> None:
+        """AC INF-600l-2: skills_config.json under .leafcutter/ is also accepted."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_root = Path(tmp)
+            leafcutter_dir = tmp_root / ".leafcutter"
+            leafcutter_dir.mkdir()
+            config = {"agent_cards_path": "custom/leafcutter/cards"}
+            (leafcutter_dir / "skills_config.json").write_text(
+                json.dumps(config), encoding="utf-8"
+            )
+            result = self.module._resolve_cards_dir(tmp_root)
+        self.assertEqual(result, tmp_root / "custom" / "leafcutter" / "cards")
+
+
+# ---------------------------------------------------------------------------
+# Tests for AC INF-600l-2: opt-in scoping — absent cards dir → no-op
+# ---------------------------------------------------------------------------
+
+class TestOptInScopingNoSubsystem(unittest.TestCase):
+    """Tests for opt-in scoping: when the cards directory does not exist,
+    the mirror check skips gracefully (AC INF-600l-2)."""
+
+    def setUp(self) -> None:
+        self.module = _load_hook_module()
+
+    def test_exits_0_when_cards_dir_does_not_exist(self) -> None:
+        """AC INF-600l-2: main() exits 0 when resolved cards dir does not exist on disk."""
+        import tempfile
+        registry = _build_registry([
+            _make_agent("agent-a", spawn_allowlist=[], spawned_by=[]),
+        ])
+        registry_json = json.dumps(registry)
+        staged = [REGISTRY_PATH_IN_REPO]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_root = Path(tmp)
+            # cards dir does NOT exist under tmp_root
+            with patch.object(self.module, "_get_staged_files", return_value=staged):
+                with patch.object(self.module, "_read_registry_json", return_value=registry_json):
+                    with patch.object(self.module, "_get_repo_root", return_value=tmp_root):
+                        result = self.module.main()
+
+        self.assertEqual(result, 0, "Expected exit 0 when cards directory does not exist")
+
+    def test_emits_advisory_when_cards_dir_does_not_exist(self) -> None:
+        """AC INF-600l-2: main() emits ADVISORY to stderr when cards dir is absent."""
+        import io
+        import tempfile
+        registry = _build_registry([
+            _make_agent("agent-a", spawn_allowlist=[], spawned_by=[]),
+        ])
+        registry_json = json.dumps(registry)
+        staged = [REGISTRY_PATH_IN_REPO]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_root = Path(tmp)
+            err_buf = io.StringIO()
+            with patch.object(self.module, "_get_staged_files", return_value=staged):
+                with patch.object(self.module, "_read_registry_json", return_value=registry_json):
+                    with patch.object(self.module, "_get_repo_root", return_value=tmp_root):
+                        with patch("sys.stderr", err_buf):
+                            self.module.main()
+
+        err_output = err_buf.getvalue()
+        self.assertIn(
+            "ADVISORY", err_output,
+            f"Expected ADVISORY in stderr when cards dir absent; got: {err_output!r}",
+        )
+
+    def test_mirror_check_still_runs_when_cards_dir_exists(self) -> None:
+        """AC INF-600l-2: when cards dir exists, the mirror check proceeds normally."""
+        import tempfile
+        registry = _build_registry([
+            _make_agent("python-coder", spawn_allowlist=["research-agent"], spawned_by=[]),
+        ])
+        registry_json = json.dumps(registry)
+        staged = [REGISTRY_PATH_IN_REPO]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_root = Path(tmp)
+            # Create the cards directory (empty)
+            cards_dir = tmp_root / "docs" / "agents" / "cards"
+            cards_dir.mkdir(parents=True)
+            with patch.object(self.module, "_get_staged_files", return_value=staged):
+                with patch.object(self.module, "_read_registry_json", return_value=registry_json):
+                    with patch.object(self.module, "_get_repo_root", return_value=tmp_root):
+                        result = self.module.main()
+
+        # Cards dir exists but is empty — all agents have no card, all skipped → 0
+        self.assertEqual(result, 0, "Expected exit 0 when cards dir exists but empty")
+
+
 if __name__ == "__main__":
     unittest.main()
