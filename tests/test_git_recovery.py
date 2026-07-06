@@ -44,6 +44,22 @@ print_recovery_plan = _mod.print_recovery_plan
 execute_recovery_plan = _mod.execute_recovery_plan
 RecoveryAction = _mod.RecoveryAction
 
+# detect_zero_byte_objects is safe to bind at module level — it EXISTS in the
+# current implementation.  detect_corrupt_branch_refs, detect_poisoned_index, and
+# verify_recovery_integrity are accessed via getattr() INSIDE test bodies because
+# they are NOT yet implemented; binding them here would raise AttributeError and
+# break all 18 existing tests.
+detect_zero_byte_objects = _mod.detect_zero_byte_objects
+
+
+# ---------------------------------------------------------------------------
+# Test-only exception — used by test_ac4_failed_step_halts_plan_execution
+# to avoid TRY003 (inline string in raise) and BLE001 (blind except).
+# ---------------------------------------------------------------------------
+
+class _SimulatedStepFailure(RuntimeError):
+    """Raised by a mock recovery step to simulate step failure during tests."""
+
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -448,6 +464,536 @@ class TestDryRunFirstBehavior(unittest.TestCase):
             str(zero_byte_file),
             first_description,
             f"Expected zero-byte file path in description; got: {first_description!r}",
+        )
+
+
+# ===========================================================================
+# NEW TEST GROUPS — BO-1600d-3 (real repair-step engine)
+# Tests written BEFORE implementation: all new groups must be RED until
+# python-coder implements detect_corrupt_branch_refs, detect_poisoned_index,
+# get_reflog_tip, and verify_recovery_integrity in git_recovery.py.
+# ===========================================================================
+
+
+# ---------------------------------------------------------------------------
+# Test Group (a): Zero-byte detection and removal + re-fetch ordering
+# ---------------------------------------------------------------------------
+
+class TestZeroByteDetectionAndRemovalOrder(unittest.TestCase):
+    """Detailed tests for the zero-byte detection, removal, and re-fetch pipeline.
+
+    These tests verify:
+    - detect_zero_byte_objects returns only zero-byte paths.
+    - plan_recovery_actions includes a remove action when zero-byte objects exist.
+    - The refetch action appears AFTER the remove action in the plan.
+    - execute_recovery_plan calls the remove callable before the fetch callable.
+    """
+
+    def test_ac1_detect_returns_only_zero_byte_paths(self):
+        # covers: UNKNOWN
+        """detect_zero_byte_objects must return zero-byte paths and exclude non-zero files."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            obj_dir = repo / ".git" / "objects" / "ab"
+            obj_dir.mkdir(parents=True)
+            zero_file = obj_dir / "cd1234deadbeef"
+            zero_file.write_bytes(b"")
+            nonzero_file = obj_dir / "ef5678deadbeef"
+            nonzero_file.write_bytes(b"git object content")
+
+            result = detect_zero_byte_objects(repo)
+
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 1, f"Expected exactly 1 zero-byte path; got {result}")
+        self.assertIn(zero_file, result)
+        self.assertNotIn(nonzero_file, result)
+
+    def test_ac1_plan_includes_remove_action_for_zero_byte_objects(self):
+        # covers: UNKNOWN
+        """plan_recovery_actions must include a remove action when zero-byte objects exist."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            obj_dir = repo / ".git" / "objects" / "ab"
+            obj_dir.mkdir(parents=True)
+            (obj_dir / "cd1234deadbeef").write_bytes(b"")
+
+            plan = plan_recovery_actions(repo)
+
+        descriptions = [a.description.lower() for a in plan]
+        has_remove = any("remove" in d or "zero" in d for d in descriptions)
+        self.assertTrue(
+            has_remove,
+            f"Plan must include a remove action for zero-byte objects; got: {descriptions}",
+        )
+
+    def test_ac1_plan_refetch_appears_after_remove_action(self):
+        # covers: UNKNOWN
+        """The refetch action must appear at a higher index than the remove action in the plan."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            obj_dir = repo / ".git" / "objects" / "ab"
+            obj_dir.mkdir(parents=True)
+            (obj_dir / "cd1234deadbeef").write_bytes(b"")
+
+            plan = plan_recovery_actions(repo)
+
+        descriptions = [a.description.lower() for a in plan]
+        remove_idx = next(
+            (i for i, d in enumerate(descriptions) if "remove" in d or "zero" in d), None
+        )
+        fetch_idx = next(
+            (i for i, d in enumerate(descriptions) if "fetch" in d), None
+        )
+        self.assertIsNotNone(remove_idx, "No remove action found in plan")
+        self.assertIsNotNone(fetch_idx, "No refetch action found in plan")
+        self.assertLess(
+            remove_idx,
+            fetch_idx,
+            f"Remove action (index {remove_idx}) must precede refetch (index {fetch_idx})",
+        )
+
+    def test_ac1_execute_calls_removal_before_fetch(self):
+        # covers: UNKNOWN
+        """execute_recovery_plan must invoke the remove callable before the fetch callable."""
+        call_order: list = []
+
+        def mock_remove() -> None:
+            call_order.append("remove")
+
+        def mock_fetch() -> None:
+            call_order.append("fetch")
+
+        plan = [
+            RecoveryAction("Remove zero-byte objects", mock_remove),
+            RecoveryAction("Re-fetch from origin", mock_fetch),
+        ]
+
+        execute_recovery_plan(plan)
+
+        self.assertEqual(
+            call_order,
+            ["remove", "fetch"],
+            f"Expected call order ['remove', 'fetch'], got {call_order}",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Test Group (b): Branch ref reset to reflog tip
+# ---------------------------------------------------------------------------
+
+class TestPlanBranchRefReset(unittest.TestCase):
+    """Tests for branch ref reset functionality — AC part (b).
+
+    All tests in this class are expected to be RED until python-coder adds:
+    - detect_corrupt_branch_refs(repo_path) -> list[tuple[str, str]]
+    - get_reflog_tip(repo_path, branch_name) -> str
+    - plan_recovery_actions() wired to use both functions.
+    """
+
+    def test_ac2_detect_corrupt_branch_refs_function_exists(self):
+        # covers: UNKNOWN
+        """detect_corrupt_branch_refs must be defined in git_recovery.py."""
+        fn = getattr(_mod, "detect_corrupt_branch_refs", None)
+        self.assertIsNotNone(
+            fn,
+            "detect_corrupt_branch_refs must be defined in git_recovery.py but was not found",
+        )
+
+    def test_ac2_plan_includes_reset_action_when_corrupt_ref_detected(self):
+        # covers: UNKNOWN
+        """plan_recovery_actions must include a branch-ref reset action when detect_corrupt_branch_refs returns a corrupt ref."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            (repo / ".git" / "objects").mkdir(parents=True)
+
+            with patch.object(
+                _mod,
+                "detect_corrupt_branch_refs",
+                return_value=[("feature-branch", "deadbeefdeadbeef")],
+            ):
+                plan = plan_recovery_actions(repo)
+
+        descriptions = [a.description.lower() for a in plan]
+        has_ref_reset = any(
+            ("reset" in d) and ("ref" in d or "branch" in d) for d in descriptions
+        )
+        self.assertTrue(
+            has_ref_reset,
+            f"Plan must include a branch-ref reset action; got: {descriptions}",
+        )
+
+    def test_ac2_affected_branch_name_appears_in_action_description(self):
+        # covers: UNKNOWN
+        """The affected branch name must appear in the plan action description (not hardcoded)."""
+        arbitrary_branch = "epic-concurrent-dispatch-x47"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            (repo / ".git" / "objects").mkdir(parents=True)
+
+            with patch.object(
+                _mod,
+                "detect_corrupt_branch_refs",
+                return_value=[(arbitrary_branch, "abc123")],
+            ):
+                plan = plan_recovery_actions(repo)
+
+        descriptions = [a.description for a in plan]
+        has_branch_in_desc = any(arbitrary_branch in d for d in descriptions)
+        self.assertTrue(
+            has_branch_in_desc,
+            f"Branch name '{arbitrary_branch}' must appear in action description; "
+            f"got: {descriptions}",
+        )
+
+    def test_ac2_reflog_tip_sha_used_as_reset_target(self):
+        # covers: UNKNOWN
+        """The reflog tip SHA (from get_reflog_tip) must appear in the ref-reset action description."""
+        corrupt_branch = "my-feature-branch"
+        reflog_tip_sha = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            (repo / ".git" / "objects").mkdir(parents=True)
+
+            with patch.object(
+                _mod,
+                "detect_corrupt_branch_refs",
+                return_value=[(corrupt_branch, "deadbeef")],
+            ):
+                with patch.object(_mod, "get_reflog_tip", return_value=reflog_tip_sha):
+                    plan = plan_recovery_actions(repo)
+
+        ref_reset_actions = [
+            a
+            for a in plan
+            if "reset" in a.description.lower()
+            and ("ref" in a.description.lower() or "branch" in a.description.lower())
+        ]
+        self.assertGreater(
+            len(ref_reset_actions), 0, "No ref-reset action found in plan"
+        )
+        ref_desc = ref_reset_actions[0].description
+        self.assertIn(
+            reflog_tip_sha,
+            ref_desc,
+            f"Reflog tip SHA must appear in action description; got: {ref_desc!r}",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Test Group (c): Index cache-tree rebuild
+# ---------------------------------------------------------------------------
+
+class TestPlanCacheTreeRebuild(unittest.TestCase):
+    """Tests for index cache-tree rebuild functionality — AC part (c).
+
+    All tests in this class are expected to be RED until python-coder adds:
+    - detect_poisoned_index(repo_path) -> bool
+    - plan_recovery_actions() wired to use detect_poisoned_index.
+    - The cache-tree rebuild action must invoke 'git read-tree HEAD'.
+    """
+
+    def test_ac3_detect_poisoned_index_function_exists(self):
+        # covers: UNKNOWN
+        """detect_poisoned_index must be defined in git_recovery.py."""
+        fn = getattr(_mod, "detect_poisoned_index", None)
+        self.assertIsNotNone(
+            fn,
+            "detect_poisoned_index must be defined in git_recovery.py but was not found",
+        )
+
+    def test_ac3_plan_includes_cache_tree_rebuild_when_poisoned(self):
+        # covers: UNKNOWN
+        """plan_recovery_actions must include a cache-tree rebuild action when detect_poisoned_index returns True."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            (repo / ".git" / "objects").mkdir(parents=True)
+
+            with patch.object(_mod, "detect_poisoned_index", return_value=True):
+                plan = plan_recovery_actions(repo)
+
+        descriptions = [a.description.lower() for a in plan]
+        has_cache_tree = any(
+            ("cache" in d and "tree" in d)
+            or ("rebuild" in d and "index" in d)
+            or "read-tree" in d
+            for d in descriptions
+        )
+        self.assertTrue(
+            has_cache_tree,
+            f"Plan must include a cache-tree rebuild action when index is poisoned; "
+            f"got: {descriptions}",
+        )
+
+    def test_ac3_cache_tree_action_calls_git_read_tree_head(self):
+        # covers: UNKNOWN
+        """Executing the cache-tree rebuild action must invoke 'git read-tree HEAD'."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            (repo / ".git" / "objects").mkdir(parents=True)
+
+            with patch.object(_mod, "detect_poisoned_index", return_value=True):
+                plan = plan_recovery_actions(repo)
+
+        cache_tree_actions = [
+            a
+            for a in plan
+            if ("cache" in a.description.lower() and "tree" in a.description.lower())
+            or ("rebuild" in a.description.lower() and "index" in a.description.lower())
+            or "read-tree" in a.description.lower()
+        ]
+        self.assertGreater(
+            len(cache_tree_actions),
+            0,
+            f"No cache-tree rebuild action in plan; got: {[a.description for a in plan]}",
+        )
+
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            cache_tree_actions[0].execute()
+
+        self.assertTrue(mock_run.called, "subprocess.run was not called by the cache-tree rebuild action")
+        all_calls_str = str(mock_run.call_args_list)
+        self.assertIn(
+            "read-tree",
+            all_calls_str,
+            f"'git read-tree HEAD' must appear in subprocess call; got: {all_calls_str}",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Test Group (d): Dependency ordering
+# ---------------------------------------------------------------------------
+
+class TestDependencyOrdering(unittest.TestCase):
+    """Tests for dependency ordering — AC part (d).
+
+    Ordering rule: remove+refetch (a) BEFORE branch-ref reset (b) BEFORE cache-tree rebuild (c).
+    Skipping rule: absent precondition → action absent from plan.
+    Halt rule: a failing step stops execution; remaining steps are NOT executed.
+    """
+
+    def test_ac4_remove_and_refetch_before_branch_ref_reset(self):
+        # covers: UNKNOWN
+        """Remove+refetch steps must appear before branch-ref reset in the plan."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            obj_dir = repo / ".git" / "objects" / "ab"
+            obj_dir.mkdir(parents=True)
+            (obj_dir / "cd1234deadbeef").write_bytes(b"")  # zero-byte object
+
+            with patch.object(
+                _mod,
+                "detect_corrupt_branch_refs",
+                return_value=[("main", "deadbeef")],
+            ):
+                with patch.object(_mod, "get_reflog_tip", return_value="abc1234"):
+                    plan = plan_recovery_actions(repo)
+
+        descriptions = [a.description.lower() for a in plan]
+        remove_idx = next(
+            (i for i, d in enumerate(descriptions) if "remove" in d or "zero" in d), None
+        )
+        fetch_idx = next(
+            (i for i, d in enumerate(descriptions) if "fetch" in d), None
+        )
+        reset_idx = next(
+            (i for i, d in enumerate(descriptions) if "reset" in d and ("ref" in d or "branch" in d)),
+            None,
+        )
+        self.assertIsNotNone(remove_idx, "No remove action in plan")
+        self.assertIsNotNone(fetch_idx, "No refetch action in plan")
+        self.assertIsNotNone(reset_idx, "No branch-ref reset action in plan")
+        self.assertLess(remove_idx, reset_idx, "Remove must precede branch-ref reset")
+        self.assertLess(fetch_idx, reset_idx, "Refetch must precede branch-ref reset")
+
+    def test_ac4_remove_and_refetch_before_cache_tree_rebuild(self):
+        # covers: UNKNOWN
+        """Remove+refetch steps must appear before cache-tree rebuild in the plan."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            obj_dir = repo / ".git" / "objects" / "ab"
+            obj_dir.mkdir(parents=True)
+            (obj_dir / "cd1234deadbeef").write_bytes(b"")
+
+            with patch.object(_mod, "detect_poisoned_index", return_value=True):
+                plan = plan_recovery_actions(repo)
+
+        descriptions = [a.description.lower() for a in plan]
+        remove_idx = next(
+            (i for i, d in enumerate(descriptions) if "remove" in d or "zero" in d), None
+        )
+        fetch_idx = next(
+            (i for i, d in enumerate(descriptions) if "fetch" in d), None
+        )
+        cache_idx = next(
+            (
+                i
+                for i, d in enumerate(descriptions)
+                if ("cache" in d and "tree" in d) or ("rebuild" in d and "index" in d)
+            ),
+            None,
+        )
+        self.assertIsNotNone(remove_idx, "No remove action in plan")
+        self.assertIsNotNone(fetch_idx, "No refetch action in plan")
+        self.assertIsNotNone(cache_idx, "No cache-tree rebuild action in plan")
+        self.assertLess(remove_idx, cache_idx, "Remove must precede cache-tree rebuild")
+        self.assertLess(fetch_idx, cache_idx, "Refetch must precede cache-tree rebuild")
+
+    def test_ac4_ref_reset_excluded_when_no_corrupt_refs(self):
+        # covers: UNKNOWN
+        """Branch-ref reset action must be ABSENT from plan when detect_corrupt_branch_refs returns empty list."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            (repo / ".git" / "objects").mkdir(parents=True)
+
+            with patch.object(_mod, "detect_corrupt_branch_refs", return_value=[]):
+                plan = plan_recovery_actions(repo)
+
+        descriptions = [a.description.lower() for a in plan]
+        has_reset = any(
+            "reset" in d and ("ref" in d or "branch" in d) for d in descriptions
+        )
+        self.assertFalse(
+            has_reset,
+            f"Plan must NOT include ref-reset when no corrupt refs exist; got: {descriptions}",
+        )
+
+    def test_ac4_cache_tree_excluded_when_index_clean(self):
+        # covers: UNKNOWN
+        """Cache-tree rebuild action must be ABSENT from plan when detect_poisoned_index returns False."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            (repo / ".git" / "objects").mkdir(parents=True)
+
+            with patch.object(_mod, "detect_poisoned_index", return_value=False):
+                plan = plan_recovery_actions(repo)
+
+        descriptions = [a.description.lower() for a in plan]
+        has_cache_tree = any(
+            ("cache" in d and "tree" in d) or ("rebuild" in d and "index" in d)
+            for d in descriptions
+        )
+        self.assertFalse(
+            has_cache_tree,
+            f"Plan must NOT include cache-tree rebuild when index is clean; got: {descriptions}",
+        )
+
+    def test_ac4_failed_step_halts_plan_execution(self):
+        # covers: UNKNOWN
+        """A failing step must halt execute_recovery_plan; remaining steps must NOT be executed."""
+        executed: list = []
+
+        def step1_fails() -> None:
+            executed.append("step1")
+            raise _SimulatedStepFailure
+
+        def step2_must_not_run() -> None:
+            executed.append("step2")
+
+        plan = [
+            RecoveryAction("Step that fails", step1_fails),
+            RecoveryAction("Step that must not run after failure", step2_must_not_run),
+        ]
+
+        try:
+            execute_recovery_plan(plan)
+        except _SimulatedStepFailure:
+            pass  # Expected — the failure propagates, halting remaining steps.
+
+        self.assertIn("step1", executed, "Step 1 must have been attempted")
+        self.assertNotIn(
+            "step2", executed, "Step 2 must NOT execute after step 1 raises"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Test Group (e): Post-execution integrity verification
+# ---------------------------------------------------------------------------
+
+class TestPostExecutionIntegrityVerification(unittest.TestCase):
+    """Tests for post-execution integrity check — AC part (e).
+
+    All tests in this class are expected to be RED until python-coder adds:
+    - verify_recovery_integrity(repo_path, plan) -> bool
+    - main() wired to call verify_recovery_integrity after execute_recovery_plan.
+    """
+
+    def test_ac5_verify_recovery_integrity_function_exists(self):
+        # covers: UNKNOWN
+        """verify_recovery_integrity must be defined in git_recovery.py."""
+        fn = getattr(_mod, "verify_recovery_integrity", None)
+        self.assertIsNotNone(
+            fn,
+            "verify_recovery_integrity must be defined in git_recovery.py but was not found",
+        )
+
+    def test_ac5_integrity_check_called_after_execute_recovery_plan(self):
+        # covers: UNKNOWN
+        """verify_recovery_integrity must be called after execute_recovery_plan completes successfully."""
+        verify_fn = getattr(_mod, "verify_recovery_integrity", None)
+        self.assertIsNotNone(
+            verify_fn,
+            "verify_recovery_integrity must exist before this test can proceed",
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            (repo / ".git" / "objects").mkdir(parents=True)
+
+            call_log: list = []
+
+            def mock_verify(repo_path: Path, plan: list) -> bool:
+                call_log.append((str(repo_path), len(plan)))
+                return True
+
+            with patch.object(_mod, "verify_recovery_integrity", side_effect=mock_verify):
+                with patch("subprocess.run") as mock_run:
+                    mock_run.return_value = MagicMock(returncode=0, stdout="")
+                    with patch("sys.stdin") as mock_stdin:
+                        mock_stdin.isatty.return_value = False
+                        main(["--repo", str(repo), "--execute"])
+
+        self.assertGreater(
+            len(call_log),
+            0,
+            "verify_recovery_integrity must be called after execute_recovery_plan",
+        )
+
+    def test_ac5_integrity_check_receives_executed_plan(self):
+        # covers: UNKNOWN
+        """verify_recovery_integrity must receive the executed plan so it can scope its checks."""
+        verify_fn = getattr(_mod, "verify_recovery_integrity", None)
+        self.assertIsNotNone(
+            verify_fn,
+            "verify_recovery_integrity must exist before this test can proceed",
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            (repo / ".git" / "objects").mkdir(parents=True)
+
+            captured: dict = {}
+
+            def mock_verify(repo_path: Path, plan: list) -> bool:
+                captured["plan"] = plan
+                return True
+
+            with patch.object(_mod, "verify_recovery_integrity", side_effect=mock_verify):
+                with patch("subprocess.run") as mock_run:
+                    mock_run.return_value = MagicMock(returncode=0, stdout="")
+                    with patch("sys.stdin") as mock_stdin:
+                        mock_stdin.isatty.return_value = False
+                        main(["--repo", str(repo), "--execute"])
+
+        self.assertIn(
+            "plan", captured, "verify_recovery_integrity must be called with the plan argument"
+        )
+        self.assertIsInstance(
+            captured.get("plan"),
+            list,
+            "The plan argument passed to verify_recovery_integrity must be a list",
         )
 
 

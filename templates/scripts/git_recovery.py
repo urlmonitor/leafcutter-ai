@@ -175,6 +175,231 @@ def _is_hex(s: str) -> bool:
     return all(c in "0123456789abcdefABCDEF" for c in s)
 
 
+def detect_corrupt_branch_refs(repo_path: Path) -> list:
+    """Detect branch refs that point at corrupt (unreadable) commits.
+
+    Enumerates all local branch refs via ``git for-each-ref`` and probes each
+    tip commit with ``git cat-file -t``. A branch is considered corrupt when
+    its tip commit SHA cannot be read.  NEVER hardcodes branch names.
+
+    Parameters
+    ----------
+    repo_path:
+        Absolute path to the git repository root.
+
+    Returns
+    -------
+    list[tuple[str, str]]
+        List of ``(branch_name, sha)`` tuples for each branch whose tip commit
+        cannot be read by ``git cat-file``. Empty list when no corrupt refs are
+        found.
+
+    Raises
+    ------
+    subprocess.CalledProcessError
+        Re-raised if ``git for-each-ref`` itself fails (e.g. not a git repo).
+    """
+    corrupt: list = []
+    if not (repo_path / ".git").is_dir():
+        return corrupt
+    try:
+        result = subprocess.run(
+            [
+                "git", "-C", str(repo_path), "for-each-ref",
+                "--format=%(refname:short) %(objectname)", "refs/heads/",
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        logger.warning("git for-each-ref failed for %s: %s", repo_path, exc)
+        raise
+
+    for line in result.stdout.strip().splitlines():
+        if not line.strip():
+            continue
+        parts = line.split()
+        if len(parts) != 2:
+            continue
+        branch_name, sha = parts
+        try:
+            subprocess.run(
+                ["git", "-C", str(repo_path), "cat-file", "-t", sha],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+        except subprocess.CalledProcessError:
+            corrupt.append((branch_name, sha))
+
+    return corrupt
+
+
+def get_reflog_tip(repo_path: Path, branch_name: str) -> str:
+    """Return the first readable commit SHA from the branch's reflog.
+
+    Iterates the branch reflog in order (most-recent first) and returns the
+    first SHA that ``git cat-file -t`` can read.  Skips entries that are
+    themselves corrupt.
+
+    Parameters
+    ----------
+    repo_path:
+        Absolute path to the git repository root.
+    branch_name:
+        Local branch name (no ``refs/heads/`` prefix).
+
+    Returns
+    -------
+    str
+        A readable commit SHA from the reflog.
+
+    Raises
+    ------
+    subprocess.CalledProcessError
+        Re-raised if ``git reflog show`` itself fails.
+    ValueError
+        Raised when no readable reflog entry exists for the branch.
+    """
+    try:
+        result = subprocess.run(
+            [
+                "git", "-C", str(repo_path), "reflog", "show",
+                "--format=%H", branch_name,
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        logger.warning(
+            "git reflog failed for %s branch %s: %s", repo_path, branch_name, exc
+        )
+        raise
+
+    for sha in result.stdout.strip().splitlines():
+        sha = sha.strip()
+        if not sha:
+            continue
+        try:
+            subprocess.run(
+                ["git", "-C", str(repo_path), "cat-file", "-t", sha],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            return sha
+        except subprocess.CalledProcessError:
+            continue
+
+    raise ValueError(
+        f"No readable reflog entry found for branch {branch_name!r} in {repo_path}"
+    )
+
+
+def detect_poisoned_index(repo_path: Path) -> bool:
+    """Detect whether the git index cache-tree is poisoned.
+
+    Runs ``git status --short`` and inspects stderr for well-known
+    cache-tree corruption signals.  Returns ``True`` if the index appears
+    poisoned, ``False`` if it reads cleanly.
+
+    Parameters
+    ----------
+    repo_path:
+        Absolute path to the git repository root.
+
+    Returns
+    -------
+    bool
+        ``True`` when a corruption signal is found in stderr; ``False``
+        otherwise.
+
+    Raises
+    ------
+    OSError
+        Re-raised when the OS cannot even launch the git subprocess (e.g.
+        ``git`` binary missing).
+    """
+    if not (repo_path / ".git").is_dir():
+        return False
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(repo_path), "status", "--short"],
+            capture_output=True,
+            text=True,
+        )
+    except OSError as exc:
+        logger.warning("OS error running git status for %s: %s", repo_path, exc)
+        raise
+
+    stderr_lower = result.stderr.lower() if isinstance(result.stderr, str) else ""
+    corruption_signals = [
+        "error: invalid object",
+        "fatal: ",
+        "error: cache-tree",
+        "error: object file",
+    ]
+    return any(signal in stderr_lower for signal in corruption_signals)
+
+
+def verify_recovery_integrity(repo_path: Path, plan: list) -> bool:
+    """Verify that the items addressed by *plan* are now clean.
+
+    Scopes its checks to only the facets the plan explicitly addressed,
+    avoiding false positives from unrelated repository state.
+
+    Parameters
+    ----------
+    repo_path:
+        Absolute path to the git repository root.
+    plan:
+        The same ``list[RecoveryAction]`` that was executed; used to
+        determine which integrity checks are relevant.
+
+    Returns
+    -------
+    bool
+        ``True`` when all addressed items are clean, ``False`` when at least
+        one addressed item remains corrupted.
+    """
+    plan_desc_lower = [a.description.lower() for a in plan]
+
+    # Check zero-byte objects are gone.
+    if any("remove" in d or "zero" in d for d in plan_desc_lower):
+        remaining = detect_zero_byte_objects(repo_path)
+        if remaining:
+            logger.warning(
+                "verify_recovery_integrity: %d zero-byte object(s) remain after recovery",
+                len(remaining),
+            )
+            return False
+
+    # Check branch refs are now readable.
+    if any("reset" in d and ("ref" in d or "branch" in d) for d in plan_desc_lower):
+        corrupt_refs = detect_corrupt_branch_refs(repo_path)
+        if corrupt_refs:
+            logger.warning(
+                "verify_recovery_integrity: %d branch ref(s) still corrupt after recovery",
+                len(corrupt_refs),
+            )
+            return False
+
+    # Check index cache-tree is clean.
+    if any(
+        ("cache" in d and "tree" in d) or ("rebuild" in d and "index" in d)
+        for d in plan_desc_lower
+    ):
+        if detect_poisoned_index(repo_path):
+            logger.warning(
+                "verify_recovery_integrity: index cache-tree still poisoned after recovery"
+            )
+            return False
+
+    return True
+
+
 def plan_recovery_actions(repo_path: Path) -> list:
     """Compute the ordered recovery plan without executing any git writes.
 
@@ -225,6 +450,115 @@ def plan_recovery_actions(repo_path: Path) -> list:
             raise
 
     plan.append(RecoveryAction("Re-fetch objects from origin", _refetch_fn))
+
+    # (b) Branch ref reset — AFTER remove+refetch so the object store is clean first.
+    try:
+        corrupt_refs = detect_corrupt_branch_refs(repo_path)
+    except subprocess.CalledProcessError:
+        corrupt_refs = []
+
+    def _make_ref_reset_fn(repo, branch, tip_sha):
+        def _ref_reset_fn():
+            try:
+                subprocess.run(
+                    [
+                        "git", "-C", str(repo), "update-ref",
+                        f"refs/heads/{branch}", tip_sha,
+                    ],
+                    check=True,
+                )
+            except subprocess.CalledProcessError as exc:
+                logger.warning(
+                    "Failed to reset branch ref %s to %s: %s",
+                    branch,
+                    tip_sha,
+                    exc,
+                )
+                raise
+        return _ref_reset_fn
+
+    def _make_deferred_ref_reset_fn(repo, branch):
+        def _deferred_ref_reset_fn():
+            try:
+                tip_sha = get_reflog_tip(repo, branch)
+            except (subprocess.CalledProcessError, ValueError) as exc:
+                logger.warning(
+                    "No readable reflog entry for branch %s at execute time: %s",
+                    branch,
+                    exc,
+                )
+                raise
+            try:
+                subprocess.run(
+                    [
+                        "git", "-C", str(repo), "update-ref",
+                        f"refs/heads/{branch}", tip_sha,
+                    ],
+                    check=True,
+                )
+            except subprocess.CalledProcessError as exc:
+                logger.warning(
+                    "Failed to reset branch ref %s to %s: %s",
+                    branch,
+                    tip_sha,
+                    exc,
+                )
+                raise
+        return _deferred_ref_reset_fn
+
+    for branch_name, corrupt_sha in corrupt_refs:
+        try:
+            reflog_tip = get_reflog_tip(repo_path, branch_name)
+            desc = (
+                f"Reset branch ref '{branch_name}' from corrupt {corrupt_sha[:8]} "
+                f"to reflog tip {reflog_tip}"
+            )
+            plan.append(
+                RecoveryAction(desc, _make_ref_reset_fn(repo_path, branch_name, reflog_tip))
+            )
+        except (subprocess.CalledProcessError, ValueError) as exc:
+            logger.warning(
+                "Cannot find reflog tip for branch %s at plan time: %s — "
+                "will retry at execution",
+                branch_name,
+                exc,
+            )
+            desc = (
+                f"Reset branch ref '{branch_name}' from corrupt {corrupt_sha[:8]} "
+                f"(reflog tip unavailable at plan time — will retry at execution)"
+            )
+            plan.append(
+                RecoveryAction(desc, _make_deferred_ref_reset_fn(repo_path, branch_name))
+            )
+
+    # (c) Cache-tree rebuild — AFTER remove+refetch so the object store is clean first.
+    try:
+        index_poisoned = detect_poisoned_index(repo_path)
+    except OSError:
+        index_poisoned = False
+
+    if index_poisoned:
+        def _make_cache_tree_fn(repo):
+            def _cache_tree_fn():
+                try:
+                    subprocess.run(
+                        ["git", "-C", str(repo), "read-tree", "HEAD"],
+                        check=True,
+                    )
+                except subprocess.CalledProcessError as exc:
+                    logger.warning(
+                        "git read-tree HEAD failed for %s: %s", repo, exc
+                    )
+                    raise
+            return _cache_tree_fn
+
+        plan.append(
+            RecoveryAction(
+                "Rebuild index cache-tree (git read-tree HEAD)",
+                _make_cache_tree_fn(repo_path),
+            )
+        )
+
     return plan
 
 
@@ -361,6 +695,11 @@ def main(args=None) -> None:
     # --execute flag: skip interactive prompt and execute immediately.
     if parsed.execute:
         execute_recovery_plan(plan)
+        if not verify_recovery_integrity(repo_path, plan):
+            print(
+                "Warning: Post-recovery integrity check found remaining issues. "
+                "Check the log above for details."
+            )
         print("Recovery complete.")
         return
 
@@ -373,6 +712,11 @@ def main(args=None) -> None:
 
     if answer == "yes":
         execute_recovery_plan(plan)
+        if not verify_recovery_integrity(repo_path, plan):
+            print(
+                "Warning: Post-recovery integrity check found remaining issues. "
+                "Check the log above for details."
+            )
         print("Recovery complete.")
     else:
         print("Recovery aborted — no changes made.")
