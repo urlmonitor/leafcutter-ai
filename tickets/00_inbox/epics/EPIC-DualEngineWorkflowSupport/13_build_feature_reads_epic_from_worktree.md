@@ -20,7 +20,7 @@ agents:
   test-runner: signed_off
   documentation-expert: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -91,7 +91,7 @@ Scenario: guard asserts worktree-relative epic path
 - [x] python-coder — 2026-07-06 17:10
 - [x] test-runner — 2026-07-06 17:12
 - [x] pr-reviewer — 2026-07-06 17:48
-- [ ] commit
+- [x] commit — 2026-07-06 17:51
 - [ ] pull-request
 
 ## Comments
@@ -130,6 +130,10 @@ Reviewed `toWorktreePath()` helper and the three new AC-4 guard tests. No high-c
 ### 2026-07-06 17:51 — commit (status: ok)
 feedback-id: (not-applicable)
 Auto-authorized commit gate: subject "fix(build-feature): read epic/ticket paths from worktree, not main clone"; staged files: templates/workflows-js/build-feature.js, unit_tests/test_workflow_dual_engine.py, tickets/00_inbox/epics/EPIC-DualEngineWorkflowSupport/13_build_feature_reads_epic_from_worktree.md.
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
 
 ## Implementation Tasks
 - [x] In build-feature.js, after worktree-agent returns worktree_path, derive the worktree-relative epic/ticket path: take the repo-relative path of the resolved target (strip any main-clone prefix) and join it under worktree_path. Use this `worktreeEpicPath` / `worktreeTicketPath` for the planner prompt and every ticket-supervisor dispatch.
