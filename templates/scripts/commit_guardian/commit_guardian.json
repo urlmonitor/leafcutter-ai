@@ -491,6 +491,18 @@
                 "pass_filenames": false
             },
             {
+                "id": "check-predone-scope",
+                "name": "Check Pre-Done Scope Reconciliation (files_touched vs actual diff)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/hooks/check_files_touched_reconciliation.py",
+                "language": "system",
+                "files": "^tickets/.*\\.md$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "BP-1100e-1: Blocks commits when a ticket transitioning to status: done has changed source files (.py/.sql/.ts/.tsx/.js) not declared in files_touched or out_of_scope. Fail-open on git errors. See docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e-1.yaml."
+            },
+            {
                 "id": "check-mermaid-drift",
                 "name": "Check Mermaid Diagram Drift",
                 "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_mermaid_drift.py",
