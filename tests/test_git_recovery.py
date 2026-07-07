@@ -1827,5 +1827,335 @@ class TestShallowOrBareClonesRefused(unittest.TestCase):
         )
 
 
+# ===========================================================================
+# NEW TEST GROUP — BO-1600d-3-iv (branch-ref reset never hardcodes a name)
+# Regression tests for the branch detection hierarchy:
+#   (a) corrupt ref name  →  (b) current HEAD  →  (c) remote default
+# and the unambiguous-detection stop guard.
+# ===========================================================================
+
+
+class TestBranchRefResetNonMain(unittest.TestCase):
+    """Regression tests for AC BO-1600d-3-iv.
+
+    Verifies that:
+    - When the corrupt ref belongs to "master", the reset targets "master",
+      never "main".
+    - When the corrupt ref belongs to an epic branch "EPIC-Foo", the reset
+      targets "EPIC-Foo".
+    - When the affected branch cannot be determined from any source, recovery
+      stops with a RecoveryError rather than guessing a name.
+    """
+
+    # ------------------------------------------------------------------
+    # Helper: bind module-level symbols at test runtime so this class loads
+    # even before python-coder adds the functions (guards keep tests
+    # discoverable without breaking the existing 66-test suite).
+    # ------------------------------------------------------------------
+
+    def _get_determine_fn(self):
+        fn = getattr(_mod, "_determine_branch_to_reset", None)
+        if fn is None:
+            self.skipTest("_determine_branch_to_reset not yet implemented")
+        return fn
+
+    def _get_recovery_error(self):
+        cls = getattr(_mod, "RecoveryError", None)
+        if cls is None:
+            self.skipTest("RecoveryError not yet implemented")
+        return cls
+
+    # ------------------------------------------------------------------
+    # 1. Existence checks
+    # ------------------------------------------------------------------
+
+    def test_recovery_error_class_exists(self):
+        # covers: BO-1600d-3-iv
+        """RecoveryError must be defined in git_recovery.py."""
+        cls = getattr(_mod, "RecoveryError", None)
+        self.assertIsNotNone(
+            cls,
+            "RecoveryError must be defined in git_recovery.py but was not found",
+        )
+
+    def test_determine_branch_to_reset_exists(self):
+        # covers: BO-1600d-3-iv
+        """_determine_branch_to_reset must be defined in git_recovery.py."""
+        fn = getattr(_mod, "_determine_branch_to_reset", None)
+        self.assertIsNotNone(
+            fn,
+            "_determine_branch_to_reset must be defined in git_recovery.py but was not found",
+        )
+
+    # ------------------------------------------------------------------
+    # 2. "master" default branch — reset must target "master", not "main"
+    # ------------------------------------------------------------------
+
+    def test_master_branch_reset_targets_master(self):
+        # covers: BO-1600d-3-iv
+        """When the corrupt ref belongs to 'master', the plan targets 'master' (not 'main')."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            (repo / ".git" / "objects").mkdir(parents=True)
+
+            with patch.object(
+                _mod,
+                "detect_corrupt_branch_refs",
+                return_value=[("master", "deadbeefdeadbeef")],
+            ):
+                with patch.object(_mod, "get_reflog_tip", return_value="a" * 40):
+                    plan = plan_recovery_actions(repo)
+
+        ref_reset_actions = [
+            a for a in plan
+            if "reset" in a.description.lower()
+            and ("ref" in a.description.lower() or "branch" in a.description.lower())
+        ]
+        self.assertGreater(
+            len(ref_reset_actions),
+            0,
+            "Plan must include a branch-ref reset action",
+        )
+        desc = ref_reset_actions[0].description
+        self.assertIn(
+            "master",
+            desc,
+            f"Action description must mention 'master'; got: {desc!r}",
+        )
+        self.assertNotIn(
+            "'main'",
+            desc,
+            f"Action description must NOT hardcode 'main'; got: {desc!r}",
+        )
+
+    def test_master_branch_reset_executes_update_ref_on_master(self):
+        # covers: BO-1600d-3-iv
+        """Executing the branch-ref reset action for 'master' must call
+        git update-ref refs/heads/master, never refs/heads/main."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            (repo / ".git" / "objects").mkdir(parents=True)
+
+            tip_sha = "b" * 40
+            with patch.object(
+                _mod,
+                "detect_corrupt_branch_refs",
+                return_value=[("master", "deadbeef")],
+            ):
+                with patch.object(_mod, "get_reflog_tip", return_value=tip_sha):
+                    plan = plan_recovery_actions(repo)
+
+        ref_reset_actions = [
+            a for a in plan
+            if "reset" in a.description.lower()
+            and ("ref" in a.description.lower() or "branch" in a.description.lower())
+        ]
+        self.assertGreater(len(ref_reset_actions), 0, "No ref-reset action in plan")
+
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            ref_reset_actions[0].execute()
+
+        all_calls_str = str(mock_run.call_args_list)
+        self.assertIn(
+            "refs/heads/master",
+            all_calls_str,
+            f"Must call git update-ref refs/heads/master; got: {all_calls_str}",
+        )
+        self.assertNotIn(
+            "refs/heads/main",
+            all_calls_str,
+            f"Must NOT call git update-ref refs/heads/main; got: {all_calls_str}",
+        )
+
+    # ------------------------------------------------------------------
+    # 3. Epic branch "EPIC-Foo" — reset must target "EPIC-Foo"
+    # ------------------------------------------------------------------
+
+    def test_epic_branch_reset_targets_epic_branch(self):
+        # covers: BO-1600d-3-iv
+        """When the corrupt ref belongs to 'EPIC-Foo', the plan targets 'EPIC-Foo'."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            (repo / ".git" / "objects").mkdir(parents=True)
+
+            with patch.object(
+                _mod,
+                "detect_corrupt_branch_refs",
+                return_value=[("EPIC-Foo", "cafebabecafebabe")],
+            ):
+                with patch.object(_mod, "get_reflog_tip", return_value="c" * 40):
+                    plan = plan_recovery_actions(repo)
+
+        ref_reset_actions = [
+            a for a in plan
+            if "reset" in a.description.lower()
+            and ("ref" in a.description.lower() or "branch" in a.description.lower())
+        ]
+        self.assertGreater(
+            len(ref_reset_actions),
+            0,
+            "Plan must include a branch-ref reset action for epic branch",
+        )
+        desc = ref_reset_actions[0].description
+        self.assertIn(
+            "EPIC-Foo",
+            desc,
+            f"Action description must mention 'EPIC-Foo'; got: {desc!r}",
+        )
+        self.assertNotIn(
+            "'main'",
+            desc,
+            f"Action description must NOT hardcode 'main'; got: {desc!r}",
+        )
+        self.assertNotIn(
+            "'master'",
+            desc,
+            f"Action description must NOT hardcode 'master'; got: {desc!r}",
+        )
+
+    def test_epic_branch_reset_executes_update_ref_on_epic_branch(self):
+        # covers: BO-1600d-3-iv
+        """Executing the reset action for 'EPIC-Foo' must call
+        git update-ref refs/heads/EPIC-Foo, never refs/heads/main."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            (repo / ".git" / "objects").mkdir(parents=True)
+
+            tip_sha = "d" * 40
+            with patch.object(
+                _mod,
+                "detect_corrupt_branch_refs",
+                return_value=[("EPIC-Foo", "cafebabe")],
+            ):
+                with patch.object(_mod, "get_reflog_tip", return_value=tip_sha):
+                    plan = plan_recovery_actions(repo)
+
+        ref_reset_actions = [
+            a for a in plan
+            if "reset" in a.description.lower()
+            and ("ref" in a.description.lower() or "branch" in a.description.lower())
+        ]
+        self.assertGreater(len(ref_reset_actions), 0, "No ref-reset action in plan")
+
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            ref_reset_actions[0].execute()
+
+        all_calls_str = str(mock_run.call_args_list)
+        self.assertIn(
+            "refs/heads/EPIC-Foo",
+            all_calls_str,
+            f"Must call git update-ref refs/heads/EPIC-Foo; got: {all_calls_str}",
+        )
+        self.assertNotIn(
+            "refs/heads/main",
+            all_calls_str,
+            f"Must NOT call git update-ref refs/heads/main; got: {all_calls_str}",
+        )
+
+    # ------------------------------------------------------------------
+    # 4. Ambiguous case — RecoveryError raised, not a guess
+    # ------------------------------------------------------------------
+
+    def test_ambiguous_branch_determination_raises_recovery_error(self):
+        # covers: BO-1600d-3-iv
+        """When no source yields an unambiguous branch name, RecoveryError
+        must be raised — never a hardcoded fallback to 'main' or 'master'."""
+        determine_fn = self._get_determine_fn()
+        recovery_error_cls = self._get_recovery_error()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+
+            def _mock_run(cmd, **kwargs):
+                """Simulate detached HEAD and missing origin/HEAD symbolic ref."""
+                mock = MagicMock()
+                mock.returncode = 0
+                if "--abbrev-ref" in cmd:
+                    mock.stdout = "HEAD\n"  # detached HEAD
+                elif "symbolic-ref" in cmd:
+                    # Simulate absence of origin/HEAD (non-zero exit)
+                    raise subprocess.CalledProcessError(128, cmd)
+                else:
+                    mock.stdout = ""
+                return mock
+
+            with patch("subprocess.run", side_effect=_mock_run):
+                with self.assertLogs("git_recovery", level="WARNING"):
+                    with self.assertRaises(recovery_error_cls) as ctx:
+                        determine_fn(repo, hint=None)
+
+        error_msg = str(ctx.exception)
+        self.assertIn(
+            "unambiguously",
+            error_msg.lower(),
+            f"RecoveryError message must mention 'unambiguously'; got: {error_msg!r}",
+        )
+        # Must NOT guess any hardcoded branch name
+        self.assertNotIn(
+            "main",
+            error_msg,
+            f"RecoveryError must not suggest hardcoded 'main'; got: {error_msg!r}",
+        )
+
+    def test_ambiguous_error_message_instructs_manual_recovery(self):
+        # covers: BO-1600d-3-iv
+        """The RecoveryError message must instruct the operator to take manual action,
+        not silently guess a branch name."""
+        determine_fn = self._get_determine_fn()
+        recovery_error_cls = self._get_recovery_error()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+
+            def _mock_run(cmd, **kwargs):
+                mock = MagicMock()
+                mock.returncode = 0
+                if "--abbrev-ref" in cmd:
+                    mock.stdout = "HEAD\n"
+                elif "symbolic-ref" in cmd:
+                    raise subprocess.CalledProcessError(128, cmd)
+                else:
+                    mock.stdout = ""
+                return mock
+
+            with patch("subprocess.run", side_effect=_mock_run):
+                with self.assertLogs("git_recovery", level="WARNING"):
+                    with self.assertRaises(recovery_error_cls) as ctx:
+                        determine_fn(repo, hint=None)
+
+        error_msg = str(ctx.exception)
+        # Message must contain actionable guidance (not just a bare assertion)
+        has_guidance = (
+            "manually" in error_msg.lower()
+            or "inspect" in error_msg.lower()
+            or "update-ref" in error_msg.lower()
+        )
+        self.assertTrue(
+            has_guidance,
+            f"RecoveryError message must contain manual recovery guidance; got: {error_msg!r}",
+        )
+
+    def test_hint_provided_returns_hint_directly(self):
+        # covers: BO-1600d-3-iv
+        """When a hint (corrupt ref branch name) is provided, _determine_branch_to_reset
+        returns it directly without any subprocess call."""
+        determine_fn = self._get_determine_fn()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+
+            with patch("subprocess.run") as mock_run:
+                result = determine_fn(repo, hint="EPIC-ConcurrentDispatch")
+
+        mock_run.assert_not_called()
+        self.assertEqual(
+            result,
+            "EPIC-ConcurrentDispatch",
+            f"Expected hint to be returned directly; got: {result!r}",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

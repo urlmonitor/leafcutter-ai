@@ -39,6 +39,15 @@ DECISION HISTORY:
     "missing_objects": [...], "message": str}; the plan action raises
     UnrecoverableOriginError and execution halts immediately. No further deletions
     are made on the unrecoverable path — the store is left in its pre-halt state.
+
+    BO-1600d-3-iv (2026-07-07): Hardened branch-ref reset to never use a hardcoded
+    branch name. Added RecoveryError, _get_current_head_branch,
+    _get_default_remote_branch, and _determine_branch_to_reset. Branch detection
+    now follows a strict priority order: (a) the corrupt ref name itself, (b) the
+    current HEAD branch, (c) the remote default branch. If none of the three sources
+    yield an unambiguous branch name, RecoveryError is raised with an explicit report
+    rather than guessing. The deferred-reset execution path uses this hierarchy so the
+    safety invariant holds even when plan-time reflog lookup fails.
 """
 
 from __future__ import annotations
@@ -75,6 +84,17 @@ class UnrecoverableOriginError(RuntimeError):
     def __init__(self, result: dict) -> None:
         self.result = result
         super().__init__(result.get("message", "origin cannot supply the needed objects"))
+
+
+class RecoveryError(RuntimeError):
+    """Raised when the affected branch cannot be determined unambiguously.
+
+    Used by :func:`_determine_branch_to_reset` when none of the three detection
+    sources (corrupt ref name, current HEAD branch, remote default branch) yield
+    an unambiguous branch name.  Propagates through
+    :func:`execute_recovery_plan` and :func:`main` so the operator sees a
+    structured stop-and-report rather than a raw exception traceback.
+    """
 
 
 def parse_args(args=None):
@@ -147,6 +167,144 @@ class RecoveryAction:
             decide how to handle or report the failure.
         """
         self._execute_fn()
+
+
+def _get_current_head_branch(repo_path: Path) -> str | None:
+    """Return the current HEAD branch name, or None if HEAD is detached or on error.
+
+    Runs ``git rev-parse --abbrev-ref HEAD``.  Returns ``None`` when the output
+    is the literal string ``"HEAD"`` (indicating a detached HEAD state), when the
+    subprocess exits non-zero, or when the output is empty.
+
+    Pure subprocess I/O — no try/except on the pure parsing step (Rule 4).
+
+    Parameters
+    ----------
+    repo_path:
+        Absolute path to the git repository root.
+
+    Returns
+    -------
+    str or None
+        Branch name string when HEAD is on a named branch, ``None`` otherwise.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(repo_path), "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        logger.warning(
+            "git rev-parse --abbrev-ref HEAD failed for %s: %s", repo_path, exc
+        )
+        return None
+
+    branch = result.stdout.strip()
+    # "HEAD" means detached HEAD — not a usable named branch.
+    if not branch or branch == "HEAD":
+        return None
+    return branch
+
+
+def _get_default_remote_branch(repo_path: Path) -> str | None:
+    """Return the repository's default remote branch name, or None if not determinable.
+
+    Runs ``git symbolic-ref refs/remotes/origin/HEAD`` and extracts the branch
+    name from output of the form ``refs/remotes/origin/<branch>``.  Returns
+    ``None`` when the symbolic ref is not set, when the subprocess exits
+    non-zero, or when the output cannot be parsed into a non-empty branch name.
+
+    Parameters
+    ----------
+    repo_path:
+        Absolute path to the git repository root.
+
+    Returns
+    -------
+    str or None
+        Default remote branch name, or ``None`` when not determinable.
+    """
+    try:
+        result = subprocess.run(
+            [
+                "git", "-C", str(repo_path), "symbolic-ref",
+                "refs/remotes/origin/HEAD",
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        logger.warning(
+            "git symbolic-ref refs/remotes/origin/HEAD failed for %s: %s",
+            repo_path,
+            exc,
+        )
+        return None
+
+    ref = result.stdout.strip()
+    prefix = "refs/remotes/origin/"
+    if ref.startswith(prefix):
+        branch = ref[len(prefix):]
+        if branch:
+            return branch
+    return None
+
+
+def _determine_branch_to_reset(repo_path: Path, hint: str | None = None) -> str:
+    """Determine the branch to reset without ever hardcoding or guessing a name.
+
+    Detection order (AC BO-1600d-3-iv):
+
+    1. ``hint`` — the branch name extracted from the corrupt ref itself.  When
+       provided and non-empty, returned immediately without any subprocess call.
+    2. Current HEAD branch — ``git rev-parse --abbrev-ref HEAD``.  Used only
+       when HEAD is on a named branch (not detached).
+    3. Remote default branch — ``git symbolic-ref refs/remotes/origin/HEAD``.
+
+    If none of the three sources yield an unambiguous branch name,
+    :exc:`RecoveryError` is raised.  The caller is responsible for logging and
+    displaying the structured stop-and-report to the operator.
+
+    Parameters
+    ----------
+    repo_path:
+        Absolute path to the git repository root.
+    hint:
+        Branch name derived from the corrupt ref itself.  When non-empty,
+        returned directly; no subprocess calls are made.
+
+    Returns
+    -------
+    str
+        The unambiguous branch name to reset.
+
+    Raises
+    ------
+    RecoveryError
+        When the branch cannot be determined from any of the three sources.
+        The message instructs the operator to inspect the repository manually
+        rather than letting the engine guess.
+    """
+    if hint:
+        return hint
+
+    head_branch = _get_current_head_branch(repo_path)
+    if head_branch:
+        return head_branch
+
+    default_branch = _get_default_remote_branch(repo_path)
+    if default_branch:
+        return default_branch
+
+    raise RecoveryError(
+        "Cannot identify affected branch unambiguously; stopping recovery rather "
+        "than guessing. HEAD is detached or not a named branch and no remote "
+        "default branch is configured. Inspect the repository manually and run "
+        "'git update-ref refs/heads/<branch> <sha>' directly."
+    )
 
 
 def detect_zero_byte_objects(repo_path: Path) -> list:
@@ -748,12 +906,20 @@ def plan_recovery_actions(repo_path: Path) -> list:
 
     def _make_deferred_ref_reset_fn(repo, branch):
         def _deferred_ref_reset_fn():
+            # Re-derive the target branch through the detection hierarchy at
+            # execution time.  ``branch`` captured in the closure is always the
+            # name from the corrupt ref, so _determine_branch_to_reset returns
+            # it immediately as the unambiguous hint.  This call is the explicit
+            # safeguard that prevents hardcoded fallbacks — if the hint were
+            # somehow empty, RecoveryError would propagate up rather than
+            # guessing "main" or "master".
+            resolved_branch = _determine_branch_to_reset(repo, hint=branch)
             try:
-                tip_sha = get_reflog_tip(repo, branch)
+                tip_sha = get_reflog_tip(repo, resolved_branch)
             except (subprocess.CalledProcessError, ValueError) as exc:
                 logger.warning(
                     "No readable reflog entry for branch %s at execute time: %s",
-                    branch,
+                    resolved_branch,
                     exc,
                 )
                 raise
@@ -761,14 +927,14 @@ def plan_recovery_actions(repo_path: Path) -> list:
                 subprocess.run(
                     [
                         "git", "-C", str(repo), "update-ref",
-                        f"refs/heads/{branch}", tip_sha,
+                        f"refs/heads/{resolved_branch}", tip_sha,
                     ],
                     check=True,
                 )
             except subprocess.CalledProcessError as exc:
                 logger.warning(
                     "Failed to reset branch ref %s to %s: %s",
-                    branch,
+                    resolved_branch,
                     tip_sha,
                     exc,
                 )
