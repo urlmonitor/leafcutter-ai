@@ -6,8 +6,9 @@ BUSINESS CONTEXT: Oversized tickets (>7 ACs for one agent or >20 total) are
     too large for safe atomic implementation. This hook detects bloated tickets
     at commit time so the IT PO can split them before they enter the
     implementation pipeline. Tickets with `ac_limit_override: true` in
-    frontmatter are warned but not blocked. v1 tickets (no `## Agent Contracts`
-    section) are skipped transparently. Structured JSON on stderr enables
+    frontmatter are warned but not blocked. v1-flat tickets (no `## Agent
+    Contracts` section) are subject to the 20-total cap but not the per-agent
+    cap. Structured JSON on stderr enables
     `precommit-autofix` to route the failure to the IT PO agent automatically.
 ARCHITECTURE: Reads the staged diff via `git diff --cached` (or HOOK_TEST_DIFF
     env var for unit testing), extracts paths of staged `.md` ticket files,
@@ -17,7 +18,9 @@ ARCHITECTURE: Reads the staged diff via `git diff --cached` (or HOOK_TEST_DIFF
     counts `- [ ] AC-N:` lines per agent (excluding `<!-- scope: integration -->`
     lines from per-agent counts), and also tallies a ticket-level total.
     Exits non-zero with a structured JSON payload on stderr when limits are
-    exceeded.
+    exceeded. v1-flat tickets (no `## Agent Contracts` section) are now
+    subject to the 20-total cap; the per-agent cap (7) is not applied because
+    there are no `### <agent>` subsections to parse.
 DOC_LINKS:
   - tickets/00_inbox/epics/EPIC-ContractDrivenACs/02b_ac_count_hook.md
 
@@ -70,6 +73,12 @@ _AGENT_CONTRACTS_H2_RE = re.compile(r"^##\s+Agent Contracts\s*$", re.MULTILINE)
 
 # Detects any h2 section start (to find the end of Agent Contracts)
 _H2_RE = re.compile(r"^##\s+\S", re.MULTILINE)
+
+# Fenced code block pattern — used by _strip_fenced_code to remove ``` ... ```
+# blocks from ticket content before counting AC lines on the v1-flat path and
+# the flat-override path, preventing example ACs inside code blocks from being
+# counted as real acceptance criteria.
+_FENCED_BLOCK_RE = re.compile(r"```.*?```", re.DOTALL)
 
 
 # ---------------------------------------------------------------------------
@@ -213,6 +222,25 @@ def _extract_agent_contracts_block(content: str) -> str | None:
     return content[start:]
 
 
+def _strip_fenced_code(text: str) -> str:
+    """Remove triple-backtick fenced code blocks from text before AC counting.
+
+    Fenced code blocks may contain example ``- [ ] AC-N:`` lines that look like
+    real acceptance criteria but are illustrative only (e.g. in a "Usage" or
+    "Example" section of a ticket). Stripping them before counting prevents
+    false-positives in the 20-total-cap check on the v1-flat path.
+
+    Pure function — no I/O, no side effects. May be called on any substring.
+
+    Args:
+        text: Input text, possibly containing ``` ... ``` fenced code blocks.
+
+    Returns:
+        Text with all fenced code blocks (triple-backtick delimited) removed.
+    """
+    return _FENCED_BLOCK_RE.sub("", text)
+
+
 def _count_acs_in_block(block: str) -> int:
     """Count total unchecked AC lines in a block, including integration-scoped ones.
 
@@ -328,12 +356,25 @@ def _analyse_ticket(path: str, project_root: Path) -> TicketResult:
         if contracts_block:
             result.per_agent = _count_acs_per_agent(contracts_block)
             result.total_ac_count = _count_total_acs(contracts_block)
+        else:
+            # v1-flat format with override: count full-body ACs for the warning.
+            # Strip fenced code blocks first so example AC lines inside ``` blocks
+            # are not counted as real acceptance criteria (H-1 fix).
+            result.total_ac_count = _count_acs_in_block(_strip_fenced_code(content))
         return result
 
-    # No Agent Contracts section → skip (v1 backward compatibility)
+    # Extract the ## Agent Contracts section (present on v2 tickets).
     contracts_block = _extract_agent_contracts_block(content)
     if contracts_block is None:
-        result.skipped = True
+        # v1-flat format: no ## Agent Contracts section. Count all _AC_LINE_RE
+        # matches across the full ticket body and apply the 20-total cap.
+        # The per-agent cap (7) is NOT applied on this path — it requires
+        # ### <agent> subsection structure.
+        # Strip fenced code blocks before counting so that example AC lines
+        # inside ``` blocks are not counted as real ACs (H-1 fix).
+        result.total_ac_count = _count_acs_in_block(_strip_fenced_code(content))
+        if result.total_ac_count > _MAX_ACS_TOTAL:
+            result.total_violation = True
         return result
 
     result.per_agent = _count_acs_per_agent(contracts_block)
@@ -514,6 +555,21 @@ DECISION HISTORY
     Integration-scoped ACs excluded from per-agent counts.
     Structured JSON payload on stderr for precommit-autofix routing.
     ac_limit_override: true in frontmatter warns but does not block.
-    v1 tickets (no ## Agent Contracts section) are skipped silently.
+    v1 tickets (no ## Agent Contracts section) were originally skipped silently.
+- 2026-07-06 [GE-114]: Fixed silent skip of 20-total AC cap for v1-flat tickets.
+    When ## Agent Contracts is absent, _analyse_ticket now counts all _AC_LINE_RE
+    matches across the full body and applies the 20-total cap. result.skipped=True
+    is now reserved exclusively for the OSError (unreadable file) path.
+    The per-agent cap (7) is NOT applied on the v1-flat path.
+    The ac_limit_override: true branch also populates total_ac_count for flat
+    tickets so the override warning can report the excess count.
+- 2026-07-06 [GE-114 H-1]: Added fenced code block exclusion on the flat path.
+    A compiled _FENCED_BLOCK_RE constant and a _strip_fenced_code() pure helper
+    were added. Both the v1-flat path and the flat-override path now call
+    _strip_fenced_code(content) before passing to _count_acs_in_block, so that
+    example ``- [ ] AC-N:`` lines inside ``` fenced blocks are not counted as
+    real ACs. The v2 Agent Contracts path is unaffected — it counts only within
+    the extracted contracts_block which is already a sub-section of the ticket
+    body and does not undergo fence-stripping at the total-count level.
 ====================================================================
 """

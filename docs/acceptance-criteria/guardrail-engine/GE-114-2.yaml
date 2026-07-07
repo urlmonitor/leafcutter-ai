@@ -1,0 +1,23 @@
+id: "GE-114-2"
+title: "v1-flat tickets within the cap pass, and the per-agent cap is not applied to the flat path"
+component: guardrail-engine
+status: active
+level: L2
+readiness: draft
+work_status: done
+priority: high
+criteria: |
+  Given a staged ticket .md file that has no `## Agent Contracts` section
+  And the ticket body contains 20 or fewer `- [ ] AC-N:` lines
+  When the ticket-body check_ac_limits hook analyses the file
+  Then no total-cap violation is recorded
+  And no per-agent cap is evaluated (the 7-per-agent limit applies only to `### <agent>`
+    subsections under `## Agent Contracts`)
+  And the hook exits 0.
+origin_agent: "business-analyst-v2"
+created: 2026-07-06
+created_by_ticket: "tickets/00_inbox/TICKET-20260706-GE-114-check-ac-limits-flat-format-fix.md"
+covered_by:
+  - "unit_tests/commit_guardian/test_check_ac_count_limits.py"
+implemented_by:
+  - "templates/scripts/commit_guardian/hooks/check_ac_limits.py"

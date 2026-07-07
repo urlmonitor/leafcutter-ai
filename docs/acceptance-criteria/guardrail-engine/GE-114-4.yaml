@@ -1,0 +1,23 @@
+id: "GE-114-4"
+title: "Existing v2 Agent Contracts counting behaviour is unchanged by the flat-path fallback"
+component: guardrail-engine
+status: active
+level: L2
+readiness: draft
+work_status: done
+priority: high
+criteria: |
+  Given a staged ticket .md file that contains a `## Agent Contracts` section
+    with per-agent `### <agent>` subsections
+  When the ticket-body check_ac_limits hook analyses the file
+  Then per-agent counts and the ticket-level total are computed exactly as before the
+    flat-path fallback was added
+  And any per-agent violation (>7) or total violation (>20) is reported identically to
+    pre-fix behaviour.
+origin_agent: "business-analyst-v2"
+created: 2026-07-06
+created_by_ticket: "tickets/00_inbox/TICKET-20260706-GE-114-check-ac-limits-flat-format-fix.md"
+covered_by:
+  - "unit_tests/commit_guardian/test_check_ac_count_limits.py"
+implemented_by:
+  - "templates/scripts/commit_guardian/hooks/check_ac_limits.py"
