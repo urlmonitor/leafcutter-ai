@@ -1258,5 +1258,314 @@ class TestGitVersionGuard(unittest.TestCase):
         )
 
 
+# ===========================================================================
+# NEW TEST GROUP — BO-1600d-3-ii (unrecoverable-origin detection)
+# Covers: fetch succeeds but objects still missing → unrecoverable; single
+# fetch only (no retry loop); no deletion on unrecoverable path; message
+# names the missing objects.
+# ===========================================================================
+
+
+class TestUnrecoverableOriginDetection(unittest.TestCase):
+    """Tests for AC BO-1600d-3-ii: When origin genuinely lacks the missing objects.
+
+    Verifies that step_refetch_and_verify:
+    - Returns {"status": "unrecoverable", "missing_objects": [...], "message": str}
+      when required objects are still absent after the fetch.
+    - Names each missing SHA in both missing_objects and the message.
+    - Issues exactly ONE fetch call — no retry loop.
+    - Does NOT issue any deletion commands during the unrecoverable path.
+    - Returns {"status": "ok"} when all required objects are restored.
+
+    Also verifies that UnrecoverableOriginError is raised when the plan's
+    refetch action detects an unrecoverable outcome.
+    """
+
+    def _get_fn(self):
+        """Return step_refetch_and_verify or skip the test if not implemented."""
+        fn = getattr(_mod, "step_refetch_and_verify", None)
+        if fn is None:
+            self.skipTest("step_refetch_and_verify not yet implemented")
+        return fn
+
+    # ------------------------------------------------------------------
+    # Existence checks
+    # ------------------------------------------------------------------
+
+    def test_step_refetch_and_verify_exists(self):
+        # covers: BO-1600d-3-ii
+        """step_refetch_and_verify must be defined in git_recovery.py."""
+        fn = getattr(_mod, "step_refetch_and_verify", None)
+        self.assertIsNotNone(
+            fn,
+            "step_refetch_and_verify must be defined in git_recovery.py but was not found",
+        )
+
+    def test_unrecoverable_origin_error_class_exists(self):
+        # covers: BO-1600d-3-ii
+        """UnrecoverableOriginError must be defined in git_recovery.py."""
+        cls = getattr(_mod, "UnrecoverableOriginError", None)
+        self.assertIsNotNone(
+            cls,
+            "UnrecoverableOriginError must be defined in git_recovery.py but was not found",
+        )
+
+    # ------------------------------------------------------------------
+    # Core unrecoverable-status behavior
+    # ------------------------------------------------------------------
+
+    def test_unrecoverable_status_returned_when_objects_still_missing(self):
+        # covers: BO-1600d-3-ii
+        """After fetch, if required objects are still absent, status must be 'unrecoverable'."""
+        fn = self._get_fn()
+
+        required_shas = ["a" * 40, "b" * 40]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            (repo / ".git").mkdir()
+
+            def _mock_run(cmd, **kwargs):
+                mock = MagicMock()
+                mock.stdout = ""
+                # fetch succeeds; cat-file reports objects not found
+                mock.returncode = 0 if "--refetch" in cmd else 1
+                return mock
+
+            with patch("subprocess.run", side_effect=_mock_run):
+                result = fn(repo, required_shas)
+
+        self.assertEqual(
+            result["status"],
+            "unrecoverable",
+            f"Expected status 'unrecoverable' when objects still missing after fetch; got: {result}",
+        )
+
+    def test_missing_sha_hashes_listed_in_result(self):
+        # covers: BO-1600d-3-ii
+        """The unrecoverable result must list the specific SHA hashes that could not be restored."""
+        fn = self._get_fn()
+
+        sha_a = "a" * 40
+        sha_b = "b" * 40
+        required_shas = [sha_a, sha_b]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            (repo / ".git").mkdir()
+
+            def _mock_run(cmd, **kwargs):
+                mock = MagicMock()
+                mock.stdout = ""
+                mock.returncode = 0 if "--refetch" in cmd else 1
+                return mock
+
+            with patch("subprocess.run", side_effect=_mock_run):
+                result = fn(repo, required_shas)
+
+        self.assertIn("missing_objects", result, "Result must contain 'missing_objects' key")
+        missing = result["missing_objects"]
+        self.assertIn(sha_a, missing, f"SHA {sha_a!r} must be in missing_objects")
+        self.assertIn(sha_b, missing, f"SHA {sha_b!r} must be in missing_objects")
+
+    # ------------------------------------------------------------------
+    # No retry loop
+    # ------------------------------------------------------------------
+
+    def test_single_fetch_call_no_retry_loop(self):
+        # covers: BO-1600d-3-ii
+        """step_refetch_and_verify must issue exactly one fetch — no retry loop."""
+        fn = self._get_fn()
+
+        required_shas = ["c" * 40]
+        fetch_calls = []
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            (repo / ".git").mkdir()
+
+            def _mock_run(cmd, **kwargs):
+                mock = MagicMock()
+                mock.stdout = ""
+                if "--refetch" in cmd:
+                    fetch_calls.append(list(cmd))
+                    mock.returncode = 0  # fetch exits 0 but objects not restored
+                else:
+                    mock.returncode = 1  # cat-file: not found
+                return mock
+
+            with patch("subprocess.run", side_effect=_mock_run):
+                fn(repo, required_shas)
+
+        self.assertEqual(
+            len(fetch_calls),
+            1,
+            f"Expected exactly 1 fetch call; got {len(fetch_calls)} (retry loop detected)",
+        )
+
+    # ------------------------------------------------------------------
+    # No deletion on unrecoverable path
+    # ------------------------------------------------------------------
+
+    def test_no_deletion_commands_when_unrecoverable(self):
+        # covers: BO-1600d-3-ii
+        """step_refetch_and_verify must not issue deletion commands when returning unrecoverable."""
+        fn = self._get_fn()
+
+        required_shas = ["d" * 40]
+        deletion_cmds_seen = []
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            (repo / ".git").mkdir()
+
+            def _mock_run(cmd, **kwargs):
+                mock = MagicMock()
+                mock.stdout = ""
+                cmd_str = str(cmd)
+                # Record any command that looks like a deletion operation
+                if any(kw in cmd_str for kw in ("rm ", "unlink", "hash-object")):
+                    deletion_cmds_seen.append(list(cmd))
+                mock.returncode = 0 if "--refetch" in cmd else 1
+                return mock
+
+            with patch("subprocess.run", side_effect=_mock_run):
+                with patch.object(Path, "unlink") as mock_unlink:
+                    fn(repo, required_shas)
+
+        self.assertEqual(
+            deletion_cmds_seen,
+            [],
+            f"step_refetch_and_verify must not issue deletion commands when unrecoverable; "
+            f"got: {deletion_cmds_seen}",
+        )
+        mock_unlink.assert_not_called()
+
+    # ------------------------------------------------------------------
+    # Message names the missing objects
+    # ------------------------------------------------------------------
+
+    def test_error_message_names_missing_objects(self):
+        # covers: BO-1600d-3-ii
+        """The message in the unrecoverable result must reference the missing SHA(s)."""
+        fn = self._get_fn()
+
+        specific_sha = "e" * 40
+        required_shas = [specific_sha]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            (repo / ".git").mkdir()
+
+            def _mock_run(cmd, **kwargs):
+                mock = MagicMock()
+                mock.stdout = ""
+                mock.returncode = 0 if "--refetch" in cmd else 1
+                return mock
+
+            with patch("subprocess.run", side_effect=_mock_run):
+                result = fn(repo, required_shas)
+
+        self.assertIn("message", result, "Result must contain 'message' key")
+        # The SHA must appear in the message OR in the missing_objects list
+        sha_identifiable = (
+            specific_sha in result.get("message", "")
+            or specific_sha in str(result.get("missing_objects", []))
+        )
+        self.assertTrue(
+            sha_identifiable,
+            f"Missing SHA {specific_sha!r} must be identifiable from result; got: {result}",
+        )
+
+    # ------------------------------------------------------------------
+    # OK path
+    # ------------------------------------------------------------------
+
+    def test_ok_status_returned_when_all_objects_restored(self):
+        # covers: BO-1600d-3-ii
+        """When origin supplies all required objects after the fetch, status must be 'ok'."""
+        fn = self._get_fn()
+
+        required_shas = ["f" * 40, "0" * 40]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            (repo / ".git").mkdir()
+
+            # All subprocess.run calls return 0: fetch succeeds, cat-file finds objects
+            mock_result = MagicMock()
+            mock_result.returncode = 0
+            mock_result.stdout = ""
+
+            with patch("subprocess.run", return_value=mock_result):
+                result = fn(repo, required_shas)
+
+        self.assertEqual(
+            result["status"],
+            "ok",
+            f"Expected status 'ok' when all objects are present after fetch; got: {result}",
+        )
+
+    # ------------------------------------------------------------------
+    # Integration: plan raises UnrecoverableOriginError
+    # ------------------------------------------------------------------
+
+    def test_plan_raises_unrecoverable_origin_error_when_fetch_cannot_restore(self):
+        # covers: BO-1600d-3-ii
+        """When step_refetch_and_verify returns unrecoverable, executing the plan must
+        raise UnrecoverableOriginError with a result carrying the missing objects."""
+        unrecoverable_cls = getattr(_mod, "UnrecoverableOriginError", None)
+        self.assertIsNotNone(
+            unrecoverable_cls,
+            "UnrecoverableOriginError must be defined in git_recovery.py",
+        )
+
+        missing_sha = "a" * 40
+        unrecoverable_result = {
+            "status": "unrecoverable",
+            "missing_objects": [missing_sha],
+            "message": f"Recovery unrecoverable: {missing_sha}",
+        }
+
+        # Keep ALL patches and the temp dir alive when execute() is called so the
+        # patched step_refetch_and_verify is still in effect at call time.
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            (repo / ".git").mkdir()
+
+            with patch.object(_mod, "step_refetch_and_verify", return_value=unrecoverable_result):
+                with patch.object(_mod, "_git_version", return_value=(2, 41, 0)):
+                    with patch.object(_mod, "detect_zero_byte_objects", return_value=[]):
+                        with patch.object(_mod, "detect_corrupt_branch_refs", return_value=[]):
+                            with patch.object(_mod, "detect_poisoned_index", return_value=False):
+                                plan = plan_recovery_actions(repo)
+
+                                fetch_actions = [
+                                    a for a in plan
+                                    if "fetch" in a.description.lower()
+                                    or "re-fetch" in a.description.lower()
+                                ]
+                                self.assertGreater(
+                                    len(fetch_actions),
+                                    0,
+                                    "Plan must include a refetch action when git >= 2.36",
+                                )
+
+                                with self.assertRaises(unrecoverable_cls) as ctx:
+                                    fetch_actions[0].execute()
+
+        exc = ctx.exception
+        self.assertTrue(
+            hasattr(exc, "result"),
+            "UnrecoverableOriginError must have a 'result' attribute",
+        )
+        self.assertEqual(exc.result["status"], "unrecoverable")
+        self.assertIn(
+            missing_sha,
+            exc.result.get("missing_objects", []),
+            "The missing SHA must be in UnrecoverableOriginError.result['missing_objects']",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

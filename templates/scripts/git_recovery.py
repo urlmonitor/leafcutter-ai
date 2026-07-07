@@ -31,6 +31,14 @@ DECISION HISTORY:
     plan to the operator. execute_recovery_plan() executes the same plan object,
     guaranteeing the executed set matches what was printed. --execute flag bypasses
     interactive confirmation for scripted use.
+
+    BO-1600d-3-ii (2026-07-06): Added unrecoverable-origin detection. After a
+    single git fetch --refetch origin attempt, step_refetch_and_verify() probes
+    each previously-zero-byte object SHA via git cat-file -e. If origin cannot
+    supply the needed objects, the function returns {"status": "unrecoverable",
+    "missing_objects": [...], "message": str}; the plan action raises
+    UnrecoverableOriginError and execution halts immediately. No further deletions
+    are made on the unrecoverable path — the store is left in its pre-halt state.
 """
 
 from __future__ import annotations
@@ -47,6 +55,26 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 
 _GIT_REFETCH_MIN_VERSION: tuple = (2, 36, 0)
+
+
+class UnrecoverableOriginError(RuntimeError):
+    """Raised when origin cannot supply the objects needed to repair the store.
+
+    The recovery step engine raises this after a single ``git fetch --refetch
+    origin`` attempt fails to restore the required objects.  The ``result``
+    attribute holds the structured unrecoverable payload so callers can display
+    the names of the missing objects.
+
+    Parameters
+    ----------
+    result:
+        Structured dict with keys ``status`` (``"unrecoverable"``),
+        ``missing_objects`` (list of SHA hex strings), and ``message`` (str).
+    """
+
+    def __init__(self, result: dict) -> None:
+        self.result = result
+        super().__init__(result.get("message", "origin cannot supply the needed objects"))
 
 
 def parse_args(args=None):
@@ -177,6 +205,28 @@ def _is_hex(s: str) -> bool:
     return all(c in "0123456789abcdefABCDEF" for c in s)
 
 
+def _sha_from_object_path(obj_path: Path) -> str:
+    """Extract the full 40-character SHA from a loose git object file path.
+
+    Combines the two-character parent directory name (first two hex digits of
+    the SHA) with the 38-character filename (remaining 38 hex digits) to form
+    the complete 40-character object SHA.
+
+    Pure function — no I/O, no try/except.
+
+    Parameters
+    ----------
+    obj_path:
+        Path of the form ``.../.git/objects/<2-char>/<38-char>``.
+
+    Returns
+    -------
+    str
+        Full 40-character hex SHA-1 string.
+    """
+    return obj_path.parent.name + obj_path.name
+
+
 def _git_version() -> tuple:
     """Return the installed git version as a 3-int tuple (major, minor, patch).
 
@@ -233,10 +283,8 @@ def _git_version() -> tuple:
             break
 
     if len(numeric) < 2:
-        raise ValueError(
-            f"Cannot parse git version from output: {raw!r}; "
-            f"expected at least major.minor"
-        )
+        msg = f"Cannot parse git version from output: {raw!r}; expected at least major.minor"
+        raise ValueError(msg)
 
     # Pad patch to 0 when absent.
     while len(numeric) < 3:
@@ -359,13 +407,13 @@ def get_reflog_tip(repo_path: Path, branch_name: str) -> str:
                 text=True,
                 check=True,
             )
-            return sha
         except subprocess.CalledProcessError:
             continue
+        else:
+            return sha
 
-    raise ValueError(
-        f"No readable reflog entry found for branch {branch_name!r} in {repo_path}"
-    )
+    msg = f"No readable reflog entry found for branch {branch_name!r} in {repo_path}"
+    raise ValueError(msg)
 
 
 def detect_poisoned_index(repo_path: Path) -> bool:
@@ -470,6 +518,101 @@ def verify_recovery_integrity(repo_path: Path, plan: list) -> bool:
     return True
 
 
+def check_object_present(repo_path: Path, sha: str) -> bool:
+    """Return True if the object identified by *sha* is accessible in the store.
+
+    Probes with ``git cat-file -e <sha>``, which exits 0 when the object exists
+    and is readable, non-zero otherwise.  Never writes to disk.
+
+    Parameters
+    ----------
+    repo_path:
+        Absolute path to the git repository root.
+    sha:
+        40-character hex SHA-1 (or any prefix accepted by git).
+
+    Returns
+    -------
+    bool
+        ``True`` when the object is present and readable; ``False`` otherwise.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(repo_path), "cat-file", "-e", sha],
+            capture_output=True,
+            text=True,
+        )
+    except OSError as exc:
+        logger.warning("OS error checking object %s in %s: %s", sha, repo_path, exc)
+        return False
+    else:
+        return result.returncode == 0
+
+
+def step_refetch_and_verify(repo_path: Path, required_sha_list: list) -> dict:
+    """Run a single ``git fetch --refetch origin`` then verify required objects.
+
+    Performs exactly **one** fetch attempt — no retry loop.  After the fetch,
+    probes each SHA in *required_sha_list* with :func:`check_object_present`.
+    Returns an ``"unrecoverable"`` payload when origin could not supply all
+    required objects; returns ``"ok"`` otherwise.
+
+    Does NOT delete any objects at any point — the store state before the call
+    is preserved when returning ``"unrecoverable"``.
+
+    Parameters
+    ----------
+    repo_path:
+        Absolute path to the git repository root.
+    required_sha_list:
+        List of 40-character SHA-1 hex strings to verify after the fetch.
+        Pass an empty list to perform the fetch without object verification.
+
+    Returns
+    -------
+    dict
+        ``{"status": "ok"}`` when all required objects are accessible after
+        the fetch, or ``{"status": "unrecoverable", "missing_objects": [...],
+        "message": str}`` when origin could not supply one or more objects.
+
+    Raises
+    ------
+    subprocess.CalledProcessError
+        Re-raised (after logging at WARNING) if ``git fetch --refetch`` exits
+        non-zero.
+    """
+    try:
+        subprocess.run(
+            ["git", "-C", str(repo_path), "fetch", "--refetch", "origin"],
+            check=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        logger.warning("git fetch --refetch failed for %s: %s", repo_path, exc)
+        raise
+
+    # Single pass — no retry loop.
+    still_missing = [
+        sha for sha in required_sha_list
+        if not check_object_present(repo_path, sha)
+    ]
+
+    if still_missing:
+        missing_str = ", ".join(still_missing)
+        msg = (
+            f"Recovery unrecoverable: origin did not supply {len(still_missing)} "
+            f"required object(s) after re-fetch: {missing_str}. "
+            "Cannot restore from origin — manual intervention required."
+        )
+        logger.warning("step_refetch_and_verify: %s", msg)
+        return {
+            "status": "unrecoverable",
+            "missing_objects": still_missing,
+            "message": msg,
+        }
+
+    return {"status": "ok"}
+
+
 def plan_recovery_actions(repo_path: Path) -> list:
     """Compute the ordered recovery plan without executing any git writes.
 
@@ -505,9 +648,16 @@ def plan_recovery_actions(repo_path: Path) -> list:
         )
         refetch_viable = False
 
+    # Collect SHAs of zero-byte objects at plan time so the refetch step can
+    # verify them after the fetch (before files are removed by the delete step).
+    zero_byte_shas: list = []
+
     zero_byte = detect_zero_byte_objects(repo_path)
     if zero_byte:
         if refetch_viable:
+            # Capture SHA hashes now — the delete step will remove the files,
+            # so we must extract them before execution begins.
+            zero_byte_shas = [_sha_from_object_path(p) for p in zero_byte]
             paths_str = ", ".join(str(p) for p in zero_byte)
             description = f"Remove {len(zero_byte)} zero-byte loose object(s): {paths_str}"
 
@@ -540,28 +690,35 @@ def plan_recovery_actions(repo_path: Path) -> list:
 
             def _make_blocked_fn(ver, min_ver):
                 def _blocked_fn():
-                    raise RuntimeError(
-                        f"Recovery blocked: installed git {'.'.join(str(v) for v in ver)} "
-                        f"does not support fetch --refetch (minimum required: "
-                        f"{'.'.join(str(v) for v in min_ver)}). "
-                        f"Upgrade git to {'.'.join(str(v) for v in min_ver)} or later."
+                    ver_str = ".".join(str(v) for v in ver)
+                    min_str = ".".join(str(v) for v in min_ver)
+                    msg = (
+                        f"Recovery blocked: installed git {ver_str} does not support "
+                        f"fetch --refetch (minimum required: {min_str}). "
+                        f"Upgrade git to {min_str} or later."
                     )
+                    raise RuntimeError(msg)
                 return _blocked_fn
 
             plan.append(RecoveryAction(blocked_description, _make_blocked_fn(detected_ver, _GIT_REFETCH_MIN_VERSION)))
 
     if refetch_viable:
-        def _refetch_fn():
-            try:
-                subprocess.run(
-                    ["git", "-C", str(repo_path), "fetch", "--refetch", "origin"],
-                    check=True,
-                )
-            except subprocess.CalledProcessError as exc:
-                logger.warning("git fetch --refetch failed for %s: %s", repo_path, exc)
-                raise
+        # After the fetch, step_refetch_and_verify checks whether the previously-
+        # zero-byte objects are now accessible.  If origin cannot supply them,
+        # UnrecoverableOriginError is raised — no retry, no further deletion.
+        def _make_refetch_and_verify_fn(repo, sha_list):
+            def _refetch_and_verify_fn():
+                result = step_refetch_and_verify(repo, sha_list)
+                if result["status"] == "unrecoverable":
+                    raise UnrecoverableOriginError(result)
+            return _refetch_and_verify_fn
 
-        plan.append(RecoveryAction("Re-fetch objects from origin", _refetch_fn))
+        plan.append(
+            RecoveryAction(
+                "Re-fetch objects from origin",
+                _make_refetch_and_verify_fn(repo_path, zero_byte_shas),
+            )
+        )
 
     # (b) Branch ref reset — AFTER remove+refetch so the object store is clean first.
     try:
@@ -749,6 +906,33 @@ def run_status_probe(repo_path: Path) -> str | None:
     )
 
 
+def _report_unrecoverable(result: dict) -> None:
+    """Print a structured unrecoverable-origin report to stdout.
+
+    Called by :func:`main` when :func:`execute_recovery_plan` raises
+    :exc:`UnrecoverableOriginError`.  Formats the result dict into a
+    human-readable message naming the objects that could not be restored from
+    origin so the operator knows exactly which SHAs require manual recovery.
+
+    Parameters
+    ----------
+    result:
+        Structured dict from :func:`step_refetch_and_verify` with keys
+        ``status``, ``missing_objects``, and ``message``.
+    """
+    print("\nRecovery halted — origin cannot supply the needed objects.")
+    print(result.get("message", "No additional details available."))
+    missing = result.get("missing_objects", [])
+    if missing:
+        print(f"\nObjects that could not be restored from origin ({len(missing)}):")
+        for sha in missing:
+            print(f"  {sha}")
+    print(
+        "\nThe object store is preserved in its current state. "
+        "Manual intervention is required to restore the missing objects."
+    )
+
+
 def main(args=None) -> None:
     """Entry point for the human-invoked git recovery script.
 
@@ -806,7 +990,11 @@ def main(args=None) -> None:
 
     # --execute flag: skip interactive prompt and execute immediately.
     if parsed.execute:
-        execute_recovery_plan(plan)
+        try:
+            execute_recovery_plan(plan)
+        except UnrecoverableOriginError as exc:
+            _report_unrecoverable(exc.result)
+            return
         if not verify_recovery_integrity(repo_path, plan):
             print(
                 "Warning: Post-recovery integrity check found remaining issues. "
@@ -823,7 +1011,11 @@ def main(args=None) -> None:
         return
 
     if answer == "yes":
-        execute_recovery_plan(plan)
+        try:
+            execute_recovery_plan(plan)
+        except UnrecoverableOriginError as exc:
+            _report_unrecoverable(exc.result)
+            return
         if not verify_recovery_integrity(repo_path, plan):
             print(
                 "Warning: Post-recovery integrity check found remaining issues. "
