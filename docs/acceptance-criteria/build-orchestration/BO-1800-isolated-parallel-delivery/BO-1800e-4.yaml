@@ -38,4 +38,5 @@ created: 2026-07-06
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-IsolatedParallelDelivery/28_TICKET-20260707-BO-1800e-4.md
