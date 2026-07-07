@@ -6,7 +6,7 @@ component: infrastructure
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600l.yaml"
 criteria: |
   Given a consumer project that uses the leafcutter agent subsystem (it has an agent
