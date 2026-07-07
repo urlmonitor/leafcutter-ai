@@ -20,6 +20,9 @@
  *
  * Minimum Claude Code version: 2.1.154 (workflow script support)
  * Fallback: for older installs, ticket-supervisor.md is used instead.
+ *
+ * E2 canonical form: top-level body, agent(prompt, opts), args global.
+ * No export async function run() — E2 executes the top-level body directly.
  */
 
 export const meta = {
@@ -32,6 +35,65 @@ export const meta = {
     "brainstorm-lead (conditional, on blocker result)",
   ],
 };
+
+// ---------------------------------------------------------------------------
+// JSON Schemas for agent() responses
+// The E2 engine enforces these and returns already-parsed objects.
+// Do NOT call JSON.parse() on agent() results when schema is provided.
+// ---------------------------------------------------------------------------
+
+const PLANNER_SCHEMA = {
+  type: 'object',
+  required: ['ticket_path', 'ordered_phases'],
+  properties: {
+    ticket_path: { type: 'string' },
+    title: { type: 'string' },
+    files_touched: { type: 'array', items: { type: 'string' } },
+    ordered_phases: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['agent', 'status'],
+        properties: {
+          agent: { type: 'string' },
+          status: { type: 'string', enum: ['needed', 'signed_off', 'not_needed', 'failed'] },
+        },
+      },
+    },
+  },
+}
+
+const PHASE_RESULT_SCHEMA = {
+  type: 'object',
+  properties: {
+    status: { type: 'string', enum: ['ok', 'blocker', 'failed', 'question', 'handoff'] },
+    result_status: { type: 'string' },
+    message: { type: 'string' },
+  },
+  required: ['status'],
+}
+
+const CLASSIFY_SCHEMA = {
+  type: 'object',
+  properties: {
+    classification: { type: 'string', enum: ['mechanical', 'cross_agent', 'design', 'halt'] },
+    reason: { type: 'string' },
+  },
+  required: ['classification'],
+}
+
+const WORKTREE_SCHEMA = {
+  type: 'object',
+  properties: {
+    git_type: { type: 'string' },
+    branch: { type: 'string' },
+  },
+  required: ['git_type', 'branch'],
+}
+
+// ---------------------------------------------------------------------------
+// Constants and helper functions (pure — no I/O)
+// ---------------------------------------------------------------------------
 
 /**
  * Maximum number of retry attempts for a single phase agent on a mechanical
@@ -95,264 +157,206 @@ function sortByCanonicalPriority(phases) {
   );
 }
 
-/**
- * Main entry point called by the Claude Code workflow runtime.
- *
- * @param {object} params
- * @param {string} params.userInput  - The ticket_path passed via $ARGUMENTS.
- * @param {Function} params.agent    - Runtime-provided agent dispatch function.
- */
-async function run({ userInput, agent }) {
-  const ticketPath = userInput.trim();
+// ---------------------------------------------------------------------------
+// Phase 0 — Worktree guard
+// ---------------------------------------------------------------------------
+// Read the worktree path from args if provided. If args.worktree_path is set,
+// the caller already resolved the worktree context — skip the ambient CWD check.
+// This fixes the false-halt that occurred when build-ticket was invoked from
+// the session root (where CWD is the main clone, not the worktree).
 
-  if (!ticketPath) {
-    return {
-      status: "error",
-      message:
-        "No ticket_path provided. Usage: /build-feature <ticket_path>",
-    };
-  }
+phase('Worktree Guard')
 
-  // -------------------------------------------------------------------------
-  // Step 0 — Worktree guard: refuse to run on the main clone
-  // -------------------------------------------------------------------------
-  // A git worktree's .git is a file (containing a gitdir: pointer); in the
-  // main clone .git is a directory. Running implementation work on main risks
-  // corrupting the shared working tree.
-  const worktreeCheck = await agent({
-    agentType: "status-checker",
-    input: {
-      instructions:
-        "Run these two shell commands and report the results as JSON:\n" +
-        "1. `test -f .git && echo file || echo directory` — determines if .git is a file (worktree) or directory (main clone)\n" +
-        "2. `git branch --show-current` — reports the current branch name\n" +
-        "Return ONLY a JSON object: { \"git_type\": \"file\"|\"directory\", \"branch\": \"<name>\" }",
-    },
-  });
+const ticketPath = (args && (args.ticket_path || args.userInput || '').trim()) || '';
 
-  let gitInfo;
-  try {
-    gitInfo =
-      typeof worktreeCheck === "string"
-        ? JSON.parse(worktreeCheck)
-        : worktreeCheck;
-  } catch (err) {
-    gitInfo = { git_type: "unknown", branch: "unknown" };
-  }
+if (!ticketPath) {
+  return {
+    status: "error",
+    message:
+      "No ticket_path provided. Pass args: { ticket_path: '<path>' }",
+  };
+}
 
-  if (gitInfo.git_type === "directory" || gitInfo.branch === "main" || gitInfo.branch === "master") {
+// If the caller already provided worktree_path in args, trust it — no ambient check.
+const callerWorktreePath = args && args.worktree_path;
+
+let gitInfo = null;
+
+if (!callerWorktreePath) {
+  // Fall back to the git info check when no worktree_path is provided in args.
+  const worktreeCheck = await agent(
+    "Run these two shell commands and report the results as JSON:\n" +
+    "1. `test -f .git && echo file || echo directory` — determines if .git is a file (worktree) or directory (main clone)\n" +
+    "2. `git branch --show-current` — reports the current branch name\n" +
+    "Return ONLY a JSON object: { \"git_type\": \"file\"|\"directory\", \"branch\": \"<name>\" }",
+    { agentType: "status-checker", schema: WORKTREE_SCHEMA, label: 'worktree-check', phase: 'Worktree Guard' }
+  );
+
+  gitInfo = worktreeCheck;
+
+  if (gitInfo && (gitInfo.git_type === "directory" || gitInfo.branch === "main" || gitInfo.branch === "master")) {
     return {
       status: "error",
       worktree_required: true,
       message:
         "build-ticket.js must run inside a git worktree, not the main clone. " +
-        "The current working directory has .git as a " + gitInfo.git_type +
-        " (branch: " + gitInfo.branch + "). " +
+        "The current working directory has .git as a " + (gitInfo.git_type || 'unknown') +
+        " (branch: " + (gitInfo.branch || 'unknown') + "). " +
         "Create a worktree first:\n" +
         "  /worktree create <branch-name>\n" +
         "Then re-run /build-feature from inside the worktree.",
       action_required: "create_worktree",
     };
   }
+}
 
-  // -------------------------------------------------------------------------
-  // Step 1 — Planner: read ticket frontmatter → ordered_phases JSON
-  // -------------------------------------------------------------------------
-  // The workflow script cannot read files directly. The status-checker agent
-  // reads the ticket frontmatter and returns a structured JSON plan.
-  const plannerResult = await agent({
-    agentType: "status-checker",
-    input: {
-      ticket_path: ticketPath,
-      instructions:
-        "Read the ticket at ticket_path. Extract the agents: map from the " +
-        "frontmatter and the files_touched list. Return a JSON object with " +
-        "exactly these keys: " +
-        '{ "ticket_path": "<path>", "title": "<ticket title>", ' +
-        '"files_touched": ["..."], ' +
-        '"ordered_phases": [{"agent": "<name>", "status": "<status>"}, ...] } ' +
-        "The ordered_phases array must list ALL agents from the agents: map, " +
-        "in canonical phase priority order (status-checker first, pull-request last). " +
-        "Each entry must include the agent name and its current status from the file " +
-        "(needed | signed_off | not_needed | failed). " +
-        "Return ONLY the JSON object, no prose.",
-    },
-  });
+// -------------------------------------------------------------------------
+// Phase 1 — Planner: read ticket frontmatter → ordered_phases JSON
+// -------------------------------------------------------------------------
 
-  // Parse the planner output.
-  let plan;
-  try {
-    plan =
-      typeof plannerResult === "string"
-        ? JSON.parse(plannerResult)
-        : plannerResult;
-  } catch (err) {
-    return {
-      status: "error",
-      message:
-        `Planner agent returned unparseable output: ${err.message}. ` +
-        `Raw output: ${JSON.stringify(plannerResult)}`,
-    };
-  }
+phase('Planner')
 
-  const orderedPhases = plan.ordered_phases || [];
-  const filesTouched = plan.files_touched || [];
-  const title = plan.title || ticketPath;
+const plannerResult = await agent(
+  `Read the ticket at "${ticketPath}". Extract the agents: map from the frontmatter and the files_touched list. Return a JSON object with exactly these keys: { "ticket_path": "<path>", "title": "<ticket title>", "files_touched": [...], "ordered_phases": [{"agent": "<name>", "status": "<status>"}, ...] }. The ordered_phases array must list ALL agents from the agents: map in canonical phase priority order. Each entry must include the agent name and its current status (needed | signed_off | not_needed | failed). Return ONLY the JSON object, no prose.`,
+  { agentType: "status-checker", schema: PLANNER_SCHEMA, label: 'ticket-planner', phase: 'Planner' }
+)
 
-  // -------------------------------------------------------------------------
-  // Step 2 — Guard: if no phases are needed, exit cleanly
-  // -------------------------------------------------------------------------
-  const neededPhases = sortByCanonicalPriority(
-    orderedPhases.filter((p) => p.status === "needed")
-  );
+const plan = plannerResult || {};
+const orderedPhases = plan.ordered_phases || [];
+const filesTouched = plan.files_touched || [];
+const title = plan.title || ticketPath;
 
-  if (neededPhases.length === 0) {
-    return {
-      status: "ok",
-      message: `No phases to run for ticket "${title}". All agents are already signed_off or not_needed.`,
-      ticket_path: ticketPath,
-    };
-  }
+// -------------------------------------------------------------------------
+// Phase 2 — Guard: if no phases are needed, exit cleanly
+// -------------------------------------------------------------------------
 
-  // -------------------------------------------------------------------------
-  // Step 3 — Sequential phase loop
-  // -------------------------------------------------------------------------
-  // Track retry counts per phase to enforce MAX_RETRIES cap.
-  const retryCounts = {};
+const neededPhases = sortByCanonicalPriority(
+  orderedPhases.filter((p) => p.status === "needed")
+);
 
-  // We iterate neededPhases but the planner may return stale state if a
-  // previous run partially completed. Phases already signed_off are skipped
-  // by the status filter above, so crash-resume is automatic.
-
-  const completedPhases = [];
-  const skippedPhases = [];
-
-  for (const phase of neededPhases) {
-    const phaseName = phase.agent;
-    retryCounts[phaseName] = retryCounts[phaseName] || 0;
-
-    let phaseResult;
-    let retryLoop = true;
-
-    while (retryLoop) {
-      retryLoop = false; // default: don't loop unless mechanical retry fires
-
-      // Dispatch the phase agent at depth 1 (dynamic: agentType is phaseName variable).
-      phaseResult = await agent({
-        agentType: phaseName,
-        input: {
-          ticket_path: ticketPath,
-          files_touched: filesTouched,
-        },
-      });
-
-      // ------------------------------------------------------------------
-      // Step 4 — Failure detection
-      // ------------------------------------------------------------------
-      const resultStatus =
-        phaseResult && (phaseResult.status || phaseResult.result_status);
-
-      if (resultStatus === "blocker" || resultStatus === "failed") {
-        // Invoke brainstorm-lead to classify the blocker type.
-        const classifyResult = await agent({
-          agentType: "brainstorm-lead",
-          input: {
-            ticket_path: ticketPath,
-            failing_phase: phaseName,
-            blocker_detail: phaseResult,
-            retry_count: retryCounts[phaseName],
-            max_retries: MAX_RETRIES,
-          },
-        });
-
-        const classification =
-          classifyResult && classifyResult.classification;
-
-        // ----------------------------------------------------------------
-        // Step 5 — Branch on classification
-        // ----------------------------------------------------------------
-        if (classification === "mechanical") {
-          // Retry the phase agent up to MAX_RETRIES times.
-          if (retryCounts[phaseName] < MAX_RETRIES) {
-            retryCounts[phaseName] += 1;
-            retryLoop = true; // re-enter while loop
-            continue;
-          } else {
-            // Retry cap exhausted — surface error and halt.
-            return {
-              status: "blocked",
-              message:
-                `Phase '${phaseName}' failed with a mechanical blocker and ` +
-                `exhausted retry cap (MAX_RETRIES=${MAX_RETRIES}). ` +
-                `Manual intervention required.`,
-              ticket_path: ticketPath,
-              failing_phase: phaseName,
-              blocker_detail: phaseResult,
-              classification: "mechanical",
-            };
-          }
-        } else if (classification === "cross_agent") {
-          // Log the blocker, skip the agent, and continue to the next phase.
-          skippedPhases.push({
-            agent: phaseName,
-            reason: "cross_agent blocker — phase skipped per protocol",
-            blocker_detail: phaseResult,
-          });
-          // Break out of the while loop to advance to next phase.
-          break;
-        } else if (classification === "design" || classification === "halt") {
-          // Terminal: emit structured error and stop the workflow.
-          return {
-            status: "blocked",
-            message:
-              `Phase '${phaseName}' returned a '${classification}' blocker that ` +
-              `requires user intervention. The workflow has stopped.`,
-            ticket_path: ticketPath,
-            failing_phase: phaseName,
-            blocker_detail: phaseResult,
-            classification,
-            suggested_action:
-              classification === "design"
-                ? "Review the design question in the ticket's ## Comments section and provide guidance before re-running /build-feature."
-                : "Inspect the ticket's ## Comments section for the blocker details. Manual resolution is required before re-running.",
-          };
-        } else {
-          // Unknown classification — treat as halt.
-          return {
-            status: "blocked",
-            message:
-              `Phase '${phaseName}' failed and failure-classifier returned ` +
-              `unknown classification '${classification}'. Treating as halt.`,
-            ticket_path: ticketPath,
-            failing_phase: phaseName,
-            blocker_detail: phaseResult,
-            classification: classification || "unknown",
-          };
-        }
-      }
-
-      // Phase completed successfully (or was not a blocker).
-      completedPhases.push({ agent: phaseName, result: phaseResult });
-    }
-  }
-
-  // -------------------------------------------------------------------------
-  // Step 6 — Return success summary
-  // -------------------------------------------------------------------------
+if (neededPhases.length === 0) {
   return {
     status: "ok",
+    message: `No phases to run for ticket "${title}". All agents are already signed_off or not_needed.`,
     ticket_path: ticketPath,
-    title,
-    completed_phases: completedPhases.map((p) => p.agent),
-    skipped_phases: skippedPhases.map((p) => ({
-      agent: p.agent,
-      reason: p.reason,
-    })),
-    message:
-      `Ticket "${title}" driven to completion. ` +
-      `${completedPhases.length} phase(s) completed` +
-      (skippedPhases.length > 0
-        ? `, ${skippedPhases.length} skipped (cross_agent blockers).`
-        : "."),
   };
 }
+
+// -------------------------------------------------------------------------
+// Phase 3 — Sequential phase loop
+// -------------------------------------------------------------------------
+
+phase('Phase Dispatch')
+
+const retryCounts = {};
+const completedPhases = [];
+const skippedPhases = [];
+
+for (const currentPhase of neededPhases) {
+  const phaseName = currentPhase.agent;
+  retryCounts[phaseName] = retryCounts[phaseName] || 0;
+
+  let phaseResult;
+  let retryLoop = true;
+
+  while (retryLoop) {
+    retryLoop = false;
+
+    phaseResult = await agent(
+      `You are the ${phaseName} phase agent for ticket: ${ticketPath}. Execute your phase. Files touched: ${JSON.stringify(filesTouched)}. Return a JSON result with at minimum { "status": "ok" | "blocker" | "failed" }.`,
+      { agentType: phaseName, schema: PHASE_RESULT_SCHEMA, label: phaseName, phase: 'Phase Dispatch' }
+    )
+
+    // ------------------------------------------------------------------
+    // Failure detection
+    // ------------------------------------------------------------------
+    const resultStatus =
+      phaseResult && (phaseResult.status || phaseResult.result_status);
+
+    if (resultStatus === "blocker" || resultStatus === "failed") {
+      const classifyResult = await agent(
+        `Classify this blocker for ticket ${ticketPath}, failing phase ${phaseName}. Retry count: ${retryCounts[phaseName]}/${MAX_RETRIES}. Blocker detail: ${JSON.stringify(phaseResult)}. Return classification as one of: mechanical | cross_agent | design | halt.`,
+        { agentType: "brainstorm-lead", schema: CLASSIFY_SCHEMA, label: 'failure-classifier', phase: 'Phase Dispatch' }
+      )
+
+      const classification =
+        classifyResult && classifyResult.classification;
+
+      if (classification === "mechanical") {
+        if (retryCounts[phaseName] < MAX_RETRIES) {
+          retryCounts[phaseName] += 1;
+          retryLoop = true;
+          continue;
+        } else {
+          return {
+            status: "blocked",
+            message:
+              `Phase '${phaseName}' failed with a mechanical blocker and ` +
+              `exhausted retry cap (MAX_RETRIES=${MAX_RETRIES}). ` +
+              `Manual intervention required.`,
+            ticket_path: ticketPath,
+            failing_phase: phaseName,
+            blocker_detail: phaseResult,
+            classification: "mechanical",
+          };
+        }
+      } else if (classification === "cross_agent") {
+        skippedPhases.push({
+          agent: phaseName,
+          reason: "cross_agent blocker — phase skipped per protocol",
+          blocker_detail: phaseResult,
+        });
+        break;
+      } else if (classification === "design" || classification === "halt") {
+        return {
+          status: "blocked",
+          message:
+            `Phase '${phaseName}' returned a '${classification}' blocker that ` +
+            `requires user intervention. The workflow has stopped.`,
+          ticket_path: ticketPath,
+          failing_phase: phaseName,
+          blocker_detail: phaseResult,
+          classification,
+          suggested_action:
+            classification === "design"
+              ? "Review the design question in the ticket's ## Comments section and provide guidance before re-running /build-feature."
+              : "Inspect the ticket's ## Comments section for the blocker details. Manual resolution is required before re-running.",
+        };
+      } else {
+        return {
+          status: "blocked",
+          message:
+            `Phase '${phaseName}' failed and failure-classifier returned ` +
+            `unknown classification '${classification}'. Treating as halt.`,
+          ticket_path: ticketPath,
+          failing_phase: phaseName,
+          blocker_detail: phaseResult,
+          classification: classification || "unknown",
+        };
+      }
+    }
+
+    completedPhases.push({ agent: phaseName, result: phaseResult });
+  }
+}
+
+// -------------------------------------------------------------------------
+// Phase 4 — Return success summary
+// -------------------------------------------------------------------------
+
+return {
+  status: "ok",
+  ticket_path: ticketPath,
+  title,
+  completed_phases: completedPhases.map((p) => p.agent),
+  skipped_phases: skippedPhases.map((p) => ({
+    agent: p.agent,
+    reason: p.reason,
+  })),
+  message:
+    `Ticket "${title}" driven to completion. ` +
+    `${completedPhases.length} phase(s) completed` +
+    (skippedPhases.length > 0
+      ? `, ${skippedPhases.length} skipped (cross_agent blockers).`
+      : "."),
+};
