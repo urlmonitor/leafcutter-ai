@@ -1,4 +1,6 @@
 ---
+title: "check_ac_limits: harden decoy-heading cap evasion (Gap 1), fence cross-boundary undercount (Gap 2), and add override+fence test coverage (Gap 3)"
+created: '2026-07-06'
 status: done
 priority: medium
 roadmap_phase: phase_1
