@@ -27,3 +27,5 @@ covered_by: [ACS-500c-1, ACS-500c-2, ACS-500c-3]
 implemented_by: []
 assigned_agent: null
 estimated_complexity: null
+change_target: prompt
+risk_surface: contract_boundary

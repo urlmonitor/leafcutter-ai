@@ -1,0 +1,326 @@
+# guardrail_gates.yaml
+#
+# Machine-readable mapping of (change_target, risk_surface) pairs to mandatory
+# guardrail agent names. Consumed by generate_ticket_from_ac.py::_build_agents_map
+# to compute the full agent map for generated tickets.
+#
+# Structure:
+#   <change_target>:          # 10 ADR-017 values: code, schema, ui, infrastructure,
+#                             #   pipeline, prompt, model, config, docs, dependency
+#     <risk_surface>:         # 6 ADR-017 values: internal, contract_boundary, auth,
+#                             #   privacy, safety, cost
+#       - <agent-name>        # must be a valid is_ticket_phase: true agent from agent_registry.json
+#
+# Multi-value targets (e.g. a change that touches both code and schema) union
+# their gate lists — the caller is responsible for deduplication.
+#
+# risk_surface semantics (ADR-017 vocabulary):
+#   internal          - internal-only change; lower scrutiny
+#   contract_boundary - change crosses a public API or system boundary; highest scrutiny
+#   auth              - change to authentication or authorisation logic
+#   privacy           - change that touches PII or private user data
+#   safety            - change that could cause harm, data loss, or irreversible state
+#   cost              - change with significant infrastructure cost implications
+#
+# Agent names must match agent IDs in config/agent_registry.json with is_ticket_phase: true.
+
+code:
+  internal:
+    - test-writer
+    - test-runner
+  contract_boundary:
+    - architect-review
+    - test-writer
+    - test-runner
+    - pr-reviewer
+  auth:
+    - architect-review
+    - test-writer
+    - test-runner
+    - pr-reviewer
+  privacy:
+    - architect-review
+    - test-writer
+    - test-runner
+    - pr-reviewer
+  safety:
+    - architect-review
+    - test-writer
+    - test-runner
+    - pr-reviewer
+  cost:
+    - architect-review
+    - test-writer
+    - test-runner
+    - pr-reviewer
+
+schema:
+  internal:
+    - architect-review
+    - test-writer
+  contract_boundary:
+    - architect-review
+    - test-writer
+    - test-runner
+    - pr-reviewer
+  auth:
+    - architect-review
+    - test-writer
+    - test-runner
+    - pr-reviewer
+  privacy:
+    - architect-review
+    - test-writer
+    - test-runner
+    - pr-reviewer
+  safety:
+    - architect-review
+    - test-writer
+    - test-runner
+    - pr-reviewer
+  cost:
+    - architect-review
+    - test-writer
+    - test-runner
+    - pr-reviewer
+
+ui:
+  internal:
+    - test-writer
+    - test-runner
+  contract_boundary:
+    - architect-review
+    - test-writer
+    - test-runner
+    - pr-reviewer
+  auth:
+    - architect-review
+    - test-writer
+    - test-runner
+    - pr-reviewer
+  privacy:
+    - test-writer
+    - test-runner
+    - pr-reviewer
+  safety:
+    - architect-review
+    - test-writer
+    - test-runner
+    - pr-reviewer
+  cost:
+    - pr-reviewer
+
+infrastructure:
+  internal:
+    - pr-reviewer
+  contract_boundary:
+    - architect-review
+    - pr-reviewer
+  auth:
+    - architect-review
+    - pr-reviewer
+  privacy:
+    - architect-review
+    - pr-reviewer
+  safety:
+    - architect-review
+    - pr-reviewer
+  cost:
+    - architect-review
+    - pr-reviewer
+
+pipeline:
+  internal:
+    - pr-reviewer
+  contract_boundary:
+    - architect-review
+    - pr-reviewer
+  auth:
+    - architect-review
+    - pr-reviewer
+  privacy:
+    - pr-reviewer
+  safety:
+    - architect-review
+    - pr-reviewer
+  cost:
+    - architect-review
+    - pr-reviewer
+
+prompt:
+  internal:
+    - llm-expert
+  contract_boundary:
+    - llm-expert
+    - architect-review
+    - pr-reviewer
+  auth:
+    - llm-expert
+    - architect-review
+    - pr-reviewer
+  privacy:
+    - llm-expert
+    - pr-reviewer
+  safety:
+    - llm-expert
+    - architect-review
+    - pr-reviewer
+  cost:
+    - llm-expert
+    - pr-reviewer
+
+model:
+  internal:
+    - architect-review
+  contract_boundary:
+    - architect-review
+    - status-checker
+    - pr-reviewer
+  auth:
+    - architect-review
+    - pr-reviewer
+  privacy:
+    - architect-review
+    - pr-reviewer
+  safety:
+    - architect-review
+    - pr-reviewer
+  cost:
+    - architect-review
+    - status-checker
+    - pr-reviewer
+
+config:
+  internal:
+    []
+  contract_boundary:
+    - status-checker
+    - pr-reviewer
+  auth:
+    - architect-review
+    - pr-reviewer
+  privacy:
+    - pr-reviewer
+  safety:
+    - pr-reviewer
+  cost:
+    - pr-reviewer
+
+docs:
+  internal:
+    - documentation-expert
+  contract_boundary:
+    - documentation-expert
+    - pr-reviewer
+  auth:
+    []
+  privacy:
+    []
+  safety:
+    []
+  cost:
+    []
+
+dependency:
+  internal:
+    []
+  contract_boundary:
+    - architect-review
+    - pr-reviewer
+  auth:
+    - architect-review
+    - pr-reviewer
+  privacy:
+    - pr-reviewer
+  safety:
+    - architect-review
+    - pr-reviewer
+  cost:
+    - architect-review
+    - pr-reviewer
+
+# ---------------------------------------------------------------------------
+# flow_change_gates
+#
+# Identifies (change_target, risk_surface) pairs that are "flow-change" — i.e.
+# structural or pipeline-modifying changes that require design review and
+# documentation planning BEFORE any coder runs.
+#
+# For these pairs, the mandatory_agents list is UNIONED into the computed agent
+# map on top of the per-surface gate list.
+#
+# risk_surface values MUST be from the ADR-017 blast-radius vocabulary:
+#   internal, contract_boundary, auth, privacy, safety, cost
+#
+# Migration note (ticket 08): legacy labels 'production' → 'contract_boundary'
+# and 'all' → 'safety'. 'contract_boundary' captures the highest-scrutiny
+# boundary-crossing scenario; 'safety' captures the cross-all-surfaces catch-all.
+#
+# mandatory_agents: agents that must appear in the computed agents map for this
+#   pair (deduplication against the per-surface gate list is the caller's
+#   responsibility).
+# phase_constraint: human-readable note on the ordering requirement (enforced
+#   by ticket-supervisor's canonical phase ordering, not by this YAML alone).
+# ---------------------------------------------------------------------------
+
+flow_change_gates:
+  - change_target: code
+    risk_surface: contract_boundary
+    mandatory_agents:
+      - architect-review
+      - documentation-expert
+      - python-coder
+      - test-writer
+      - test-runner
+      - pr-reviewer
+    phase_constraint: >
+      architect-review (priority 4) and documentation-expert (priority 10)
+      must be dispatched before python-coder (priority 6) and
+      sql-coder (priority 7).
+
+  - change_target: code
+    risk_surface: safety
+    mandatory_agents:
+      - architect-review
+      - documentation-expert
+      - python-coder
+      - test-writer
+      - test-runner
+      - pr-reviewer
+    phase_constraint: >
+      architect-review (priority 4) and documentation-expert (priority 10)
+      must be dispatched before python-coder (priority 6) and
+      sql-coder (priority 7).
+
+  - change_target: schema
+    risk_surface: contract_boundary
+    mandatory_agents:
+      - architect-review
+      - documentation-expert
+      - test-writer
+      - test-runner
+      - pr-reviewer
+    phase_constraint: >
+      architect-review (priority 4) and documentation-expert (priority 10)
+      must be dispatched before sql-coder (priority 7).
+
+  - change_target: schema
+    risk_surface: safety
+    mandatory_agents:
+      - architect-review
+      - documentation-expert
+      - test-writer
+      - test-runner
+      - pr-reviewer
+    phase_constraint: >
+      architect-review (priority 4) and documentation-expert (priority 10)
+      must be dispatched before sql-coder (priority 7).
+
+  - change_target: config
+    risk_surface: contract_boundary
+    mandatory_agents:
+      - status-checker
+      - pr-reviewer
+    phase_constraint: >
+      status-checker must verify boundary impact before
+      config changes are merged; pr-reviewer gates the merge.

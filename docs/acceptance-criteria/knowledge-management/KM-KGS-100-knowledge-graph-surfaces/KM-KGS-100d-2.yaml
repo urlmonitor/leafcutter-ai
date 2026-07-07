@@ -40,3 +40,5 @@ superseded_by: null
 covered_by: [KM-KGS-100d-2-i]
 implemented_by:
 - tickets/00_inbox/epics/EPIC-ACCodeTraceabilityGraph/14_TICKET-20260622-KM-KGS-100d-2.md
+change_target: code
+risk_surface: internal

@@ -21,3 +21,5 @@ amended_by: []
 superseded_by: null
 covered_by: [INF-600g-1, INF-600g-2, INF-600g-3]
 implemented_by: []
+change_target: code
+risk_surface: contract_boundary

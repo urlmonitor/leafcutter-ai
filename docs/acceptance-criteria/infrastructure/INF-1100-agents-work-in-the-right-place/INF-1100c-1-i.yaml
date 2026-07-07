@@ -43,3 +43,5 @@ superseded_by: null
 covered_by: []
 implemented_by: []
 notes: "Edge case: an unresolvable placeholder must fail loudly, never silently ship a raw or empty path into a prompt."
+change_target: pipeline
+risk_surface: internal

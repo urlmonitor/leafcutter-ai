@@ -38,3 +38,5 @@ notes: |
   Decomposed from ACS-800f. Target surface: docs/reference/ac-schema.md prose (the
   ID Format and Parent Derivation sections). Describes the new model rather than the
   old name-encodes-position mechanic. llm-expert work.
+change_target: docs
+risk_surface: internal

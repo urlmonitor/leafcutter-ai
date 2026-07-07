@@ -40,3 +40,5 @@ amended_by: []
 superseded_by: null
 covered_by: [ACD-1200d-1-i]
 implemented_by: []
+change_target: schema
+risk_surface: internal

@@ -41,3 +41,5 @@ covered_by:
   - GE-100h
 implemented_by:
   - GE-100h
+change_target: code
+risk_surface: contract_boundary

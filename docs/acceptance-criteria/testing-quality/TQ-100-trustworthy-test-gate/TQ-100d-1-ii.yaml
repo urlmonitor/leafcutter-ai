@@ -49,3 +49,5 @@ notes: |
   linger. Distinct from -i (time-based expiry); this is outcome-based staleness.
   RESOLVED (IT-PO): now-passing-but-allowlisted is a failing violation (hard),
   not a warning.
+change_target: code
+risk_surface: internal

@@ -62,3 +62,5 @@ notes: |
   dependency-free floor (substring search, no AST) in it_requirements so the
   python-coder does not reach for jcodemunch/parsing. delivers_to refined to a
   concrete verdict-map shape.
+change_target: code
+risk_surface: contract_boundary

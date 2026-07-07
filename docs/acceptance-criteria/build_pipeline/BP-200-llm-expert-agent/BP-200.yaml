@@ -32,3 +32,5 @@ implemented_by:
   - "docs/agents/llm-expert/PROJECT_CONTEXT.md"
   - "config/agent_registry.json"
   - "templates/skills/prompt-audit/SKILL.md"
+change_target: prompt
+risk_surface: contract_boundary

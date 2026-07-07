@@ -28,3 +28,5 @@ implemented_by:
   - docs/build-pipeline.md
   - docs/explanation/consolidated-output-root.md
   - docs/build-drift-hook.md
+change_target: docs
+risk_surface: internal

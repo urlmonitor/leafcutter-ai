@@ -60,3 +60,5 @@ notes: |
   re-flags when the confirmed source changes again — IT-PO decides the storage
   field); routes-presentation = GE-111d-3; docs = GE-111d-4 (how-to), GE-111d-5
   (sequence-diagram).
+change_target: code
+risk_surface: contract_boundary

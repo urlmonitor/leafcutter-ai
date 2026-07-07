@@ -67,3 +67,5 @@ notes: |
   authoritative command lives in .github/workflows/ci.yml (the CI job edited by
   BP-1200b-1); this AC's job is to DOCUMENT that command in prose. Surface =
   docs -> documentation-expert.
+change_target: docs
+risk_surface: contract_boundary

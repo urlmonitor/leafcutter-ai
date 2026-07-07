@@ -39,3 +39,5 @@ notes: |
       deleted — this MUST pass);
     - an empty implemented_by list (nothing was ever claimed -> nothing to block).
   This is the guardrail against the hook being so aggressive that teams disable it.
+change_target: code
+risk_surface: contract_boundary

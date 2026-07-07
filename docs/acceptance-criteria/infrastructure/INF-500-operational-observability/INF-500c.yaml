@@ -20,3 +20,7 @@ amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by: []
+change_target:
+  - code
+  - prompt
+risk_surface: contract_boundary

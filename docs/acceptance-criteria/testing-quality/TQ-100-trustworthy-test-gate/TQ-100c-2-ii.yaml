@@ -56,3 +56,5 @@ notes: |
   unavailable => fail-safe toward enforced. ID-derived parent is TQ-100c-2 (the
   AC-side tamper-resistance L2); sibling of the zero-coverage integrity edge case
   TQ-100c-2-i.
+change_target: code
+risk_surface: internal

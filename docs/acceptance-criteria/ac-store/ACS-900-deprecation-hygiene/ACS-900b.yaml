@@ -37,3 +37,5 @@ notes: |
   violation decision. Pair with ACS-900c (the message) and ACS-900d (the clean
   pass) so this AC owns ONLY the block decision, not the message text or the
   reconciliation rules.
+change_target: code
+risk_surface: contract_boundary

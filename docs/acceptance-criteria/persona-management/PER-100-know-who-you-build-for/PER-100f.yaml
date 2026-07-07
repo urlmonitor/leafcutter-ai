@@ -29,3 +29,5 @@ covered_by:
   - PER-100e-4
 implemented_by: []
 documentation_triggers: [how-to]
+change_target: code
+risk_surface: contract_boundary

@@ -32,3 +32,5 @@ covered_by:
   - BP-1100c-1
   - BP-1100c-2
 implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary

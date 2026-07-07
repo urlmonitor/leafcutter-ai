@@ -30,3 +30,5 @@ implemented_by: []
 documentation_triggers: []
 documentation_rationale: "Internal robustness fix to guard project-root resolution in the installed layout; no new user-facing behavior or workflow is introduced."
 notes: "User-authored intent: BrainCandy. Latent bug: check-components-integrity has a REPO_ROOT resolution bug in the deployed .leafcutter/ layout (an orphan component could not be registered)."
+change_target: code
+risk_surface: contract_boundary

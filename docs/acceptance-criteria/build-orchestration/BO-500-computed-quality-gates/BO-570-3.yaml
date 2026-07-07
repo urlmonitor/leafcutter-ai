@@ -76,3 +76,5 @@ notes: |
   never ran locally and the errors only appeared in CI. Re-parented + renamed to
   BO-570-3 in the Pattern C split that moved the local verification gates out of
   BO-530 into the new sibling L1 BO-570.
+change_target: code
+risk_surface: contract_boundary

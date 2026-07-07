@@ -42,3 +42,5 @@ notes: |
   forward — an over-cap branch is rebalanced by moving children, not by renaming them.
   The BA should specify at L2 the "no reference cascade" guarantee and the moved-child
   bookkeeping (parent's child list and the child's parent pointer stay consistent).
+change_target: code
+risk_surface: contract_boundary

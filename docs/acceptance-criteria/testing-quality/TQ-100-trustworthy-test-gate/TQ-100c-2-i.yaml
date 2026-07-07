@@ -51,3 +51,5 @@ notes: |
   RESOLVED (IT-PO): hard failure, done-scoped. check_ac_coverage.py does not
   currently exist; build the detection inside the TQ-100c-2 integrity module and
   reuse/extend any future check_ac_coverage.py rather than duplicating.
+change_target: code
+risk_surface: internal

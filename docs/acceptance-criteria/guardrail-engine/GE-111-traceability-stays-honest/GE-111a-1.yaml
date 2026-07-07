@@ -69,3 +69,5 @@ notes: |
   IT-PO enrichment (2026-06-22): this is the single hook entry point. The
   hook script orchestrates GE-111c (scope) -> GE-111b (verdict) -> GE-111a
   (block decision) -> GE-111e (message). One script, single non-zero/zero exit.
+change_target: code
+risk_surface: contract_boundary

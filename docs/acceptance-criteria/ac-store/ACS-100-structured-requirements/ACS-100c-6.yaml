@@ -62,3 +62,5 @@ notes: |
   child is supposed to free, so the override is not needed. This is the count
   rule; the child_limit_override escape hatch (ACS-100h-7a) still layers on top
   and is exercised in ACS-100c-6-ii.
+change_target: code
+risk_surface: internal

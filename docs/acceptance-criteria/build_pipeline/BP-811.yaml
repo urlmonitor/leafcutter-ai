@@ -30,3 +30,5 @@ superseded_by: null
 covered_by: []
 implemented_by: []
 notes: "Authored by /quick-fix. Root cause: build_workflow_scripts() in scripts/build_phases.py writes the .js files to <root>/.claude/workflows, but every other artifact phase writes to <output_root>/<name> and install_shims() maps the workflows shim source to output_root/workflows (see the line-353 comment, which already documents the intended output_root/workflows/ destination). Because the artifact phases are invoked with output_root as their first arg (build.py artifact_phases loop), the files land in output_root/.claude/workflows while the shim looks in output_root/workflows — so the .claude/workflows shim is skipped and deployed workflow scripts are unreachable in a consumer install. Fix: build_workflow_scripts() must write to target_root/'workflows' (matching the shim map and the sibling phases), not target_root/'.claude'/'workflows'. Found by manual behavioral spot-check during EPIC-AcPipelineDeployGaps."
+change_target: pipeline
+risk_surface: internal

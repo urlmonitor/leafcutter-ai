@@ -56,3 +56,5 @@ notes: |
   consumed by both surfaces. This is why BO-100d-1 and BO-100d-2 were each split
   across python-coder (build-epic.js + helper) and llm-expert (build-feature.md
   prose parity).
+change_target: pipeline
+risk_surface: contract_boundary

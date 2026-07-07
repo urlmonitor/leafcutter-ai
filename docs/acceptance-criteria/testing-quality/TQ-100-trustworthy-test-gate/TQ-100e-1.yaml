@@ -59,3 +59,7 @@ notes: |
   commit_guardian.json (canonical source templates/scripts/commit_guardian/
   commit_guardian.json) with an env-var override LEAFCUTTER_TEST_ENFORCEMENT_MODE
   for CI. Unrecognized value => rejected, never silent fallback.
+change_target:
+  - config
+  - code
+risk_surface: contract_boundary

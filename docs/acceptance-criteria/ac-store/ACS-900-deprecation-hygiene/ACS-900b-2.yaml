@@ -58,3 +58,5 @@ notes: |
   matching the package-managed siblings, and the build.py drift-guard verification
   (ADR-001 + BO-1400 fresh-install reachability). The criteria's reference to
   config/commit_guardian.json is preserved verbatim (consumer-facing view).
+change_target: config
+risk_surface: internal

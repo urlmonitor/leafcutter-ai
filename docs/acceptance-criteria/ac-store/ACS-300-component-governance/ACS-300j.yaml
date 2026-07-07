@@ -54,3 +54,5 @@ amended_by: []
 superseded_by: null
 covered_by: [ACS-300j-1, ACS-300j-2, ACS-300j-3]
 implemented_by: []
+change_target: schema
+risk_surface: contract_boundary

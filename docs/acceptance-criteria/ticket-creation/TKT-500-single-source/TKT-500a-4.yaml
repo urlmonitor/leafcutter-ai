@@ -27,3 +27,5 @@ covered_by: []
 implemented_by: []
 it_requirements:
   - "generate_ticket_from_ac.py must be retired or refactored to not copy criteria"
+change_target: pipeline
+risk_surface: internal

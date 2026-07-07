@@ -43,3 +43,5 @@ covered_by:
   - BO-1300c-1-i
 implemented_by:
 - tickets/00_inbox/epics/EPIC-IndependentSpotCheck/07_TICKET-20260618-BO-1300c-1.md
+change_target: prompt
+risk_surface: internal

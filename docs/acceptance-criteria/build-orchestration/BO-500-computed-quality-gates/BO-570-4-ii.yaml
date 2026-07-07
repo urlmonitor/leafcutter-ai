@@ -53,3 +53,5 @@ superseded_by: null
 covered_by: []
 implemented_by:
 - tickets/00_inbox/epics/EPIC-LocalSignoffGates/09_TICKET-20260624-BO-570-4-ii.md
+change_target: prompt
+risk_surface: internal

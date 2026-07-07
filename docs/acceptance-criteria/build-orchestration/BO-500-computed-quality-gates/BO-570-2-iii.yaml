@@ -67,3 +67,5 @@ notes: |
   (BO-570-2, BO-570-4) after the IT-PO split + Pattern C rename; expects_from
   keeps BO-570-2 as the single primary upstream (single-valued expects_from
   convention). Structurally this L3 is a child of BO-570-2 by id-derivation.
+change_target: prompt
+risk_surface: internal

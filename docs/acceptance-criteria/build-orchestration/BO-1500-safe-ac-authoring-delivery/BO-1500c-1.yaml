@@ -64,3 +64,5 @@ covered_by:
 - BO-1500c-1-i
 implemented_by:
 - tickets/00_inbox/epics/EPIC-SafeAcAuthoring/10_TICKET-20260624-BO-1500c-1.md
+change_target: pipeline
+risk_surface: safety

@@ -36,3 +36,5 @@ notes: |
   that distinguishes the new model from today's rename-and-chase-every-reference
   pain. Covers all five link kinds named in the L0/L1 notes: depends_on,
   covered_by, delivers_to, expects_from, superseded_by.
+change_target: code
+risk_surface: internal

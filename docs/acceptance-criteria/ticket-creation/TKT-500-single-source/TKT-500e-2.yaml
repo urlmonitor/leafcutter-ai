@@ -28,3 +28,5 @@ implemented_by: []
 it_requirements:
   - "Injection message format must include: AC file path, AC ID, phase instruction"
   - "Agent template must handle mid-session AC transitions"
+change_target: prompt
+risk_surface: internal

@@ -55,3 +55,5 @@ covered_by:
   - unit_tests/commit_guardian/test_check_exception_handling.py:TestOSErrorOnDirectoryPath::test_ac_ge107_directory_py_path_no_traceback_exits_zero
 implemented_by:
   - templates/commit-guardian/check_exception_handling.py
+change_target: code
+risk_surface: internal

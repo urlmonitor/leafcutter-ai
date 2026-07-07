@@ -36,3 +36,5 @@ notes: |
   Decomposed from ACS-800e. Updates goal_to_epic.py tree traversal to walk the
   parent-pointer + order metadata instead of decoding the id string. Depends on the
   parent-pointer (ACS-800b-1) and order (ACS-800b-3) fields.
+change_target: code
+risk_surface: internal

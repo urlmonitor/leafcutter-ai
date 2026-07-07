@@ -57,3 +57,5 @@ notes: |
   inline a second copy of the rule in the create-epic path. Mirrors the
   shared-deterministic-derivation pattern (one helper across commit-time +
   planning/scaffold-time) recorded in the IT-PO memory.
+change_target: code
+risk_surface: contract_boundary

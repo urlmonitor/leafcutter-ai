@@ -48,3 +48,5 @@ implemented_by: []
 notes: |
   Required-fields enforcement keeps every exemption accountable (who tracks the
   fix, when it expires). No nameless, undated entries.
+change_target: code
+risk_surface: internal

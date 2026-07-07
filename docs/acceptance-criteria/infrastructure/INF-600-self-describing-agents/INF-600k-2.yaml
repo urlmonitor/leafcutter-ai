@@ -42,3 +42,5 @@ superseded_by: null
 covered_by: []
 implemented_by:
   - "scripts/registry_validator.py"
+change_target: code
+risk_surface: internal

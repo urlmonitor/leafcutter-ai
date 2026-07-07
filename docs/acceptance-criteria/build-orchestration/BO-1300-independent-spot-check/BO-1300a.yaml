@@ -32,3 +32,5 @@ implemented_by: []
 documentation_triggers:
   - how-to
   - sequence-diagram
+change_target: prompt
+risk_surface: contract_boundary

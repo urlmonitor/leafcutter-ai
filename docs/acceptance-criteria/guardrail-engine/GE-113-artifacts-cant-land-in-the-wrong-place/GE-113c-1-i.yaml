@@ -40,3 +40,5 @@ superseded_by: null
 covered_by: []
 implemented_by: []
 notes: "Edge case: the fix for the deployed layout must not regress the source-repo layout — both must resolve project root correctly."
+change_target: code
+risk_surface: internal

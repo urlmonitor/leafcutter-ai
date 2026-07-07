@@ -59,3 +59,5 @@ notes: |
   IT-PO note: re-routed to test-runner because the behavior is "run the prepared
   suite N times across seeds and compare pass sets", which is verification, not
   source authoring. ADR-016 direction now decided = Approach 1.
+change_target: code
+risk_surface: internal

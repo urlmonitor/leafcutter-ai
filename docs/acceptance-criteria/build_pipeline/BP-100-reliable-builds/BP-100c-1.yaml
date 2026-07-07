@@ -33,3 +33,5 @@ superseded_by: null
 covered_by: [BP-100c-1-i]
 implemented_by:
   - "PR #53 — feat(build): hook integrity check + contract-shrinking self-exclusion"
+change_target: config
+risk_surface: contract_boundary

@@ -46,3 +46,5 @@ covered_by: []
 implemented_by:
 - tickets/00_inbox/TICKET-20260616-GE-100b-1.md
 - scripts/commit_guardian/check_duplicate_code.py
+change_target: code
+risk_surface: internal

@@ -29,3 +29,7 @@ covered_by:
   - UXP-100c-6
 implemented_by: []
 documentation_triggers: [how-to, sequence-diagram]
+change_target:
+  - docs
+  - pipeline
+risk_surface: contract_boundary

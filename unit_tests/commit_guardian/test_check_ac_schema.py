@@ -1930,5 +1930,433 @@ class TestAC6StagingSeamWiredForExistingExitOneTests(unittest.TestCase):
         )
 
 
+# ---------------------------------------------------------------------------
+# AC-1 / AC-2: change_target and risk_surface schema fields (ticket 08)
+# ---------------------------------------------------------------------------
+# AC-1: ac_store_schema.json accepts optional change_target (str or list of the
+#        10 blast-radius values) and risk_surface (str, 6 values). These tests are
+#        RED because ac_store_schema.json does not yet define these fields —
+#        jsonschema rejects them as additional properties.
+# AC-2: Validator rejects present-but-invalid values. These tests are RED because
+#        the "additional property" error does not name the bad enum value in stderr.
+# ---------------------------------------------------------------------------
+
+
+_VALID_AC_WITH_CHANGE_TARGET_CODE = textwrap.dedent("""\
+    id: FIN-050
+    title: "AC with valid change_target str"
+    component: finalize
+    status: active
+    created_by: "tickets/test.md"
+    criteria: |
+      Given something
+      When something
+      Then something
+    priority: medium
+    readiness: draft
+    change_target: code
+""")
+
+_VALID_AC_WITH_RISK_SURFACE_INTERNAL = textwrap.dedent("""\
+    id: FIN-051
+    title: "AC with valid risk_surface"
+    component: finalize
+    status: active
+    created_by: "tickets/test.md"
+    criteria: |
+      Given something
+      When something
+      Then something
+    priority: medium
+    readiness: draft
+    risk_surface: internal
+""")
+
+
+class TestAcChangeTargetSchemaValidationAc1(unittest.TestCase):
+    """AC-1: AC schema accepts valid change_target (str / list) and risk_surface values.
+
+    All tests are RED before the fix: ac_store_schema.json currently has
+    additionalProperties: false and does not define change_target or risk_surface.
+    jsonschema therefore rejects any AC that carries these fields as
+    "Additional properties are not allowed".
+    """
+
+    def test_ac1_valid_change_target_str_passes(self) -> None:
+        # covers: UNKNOWN
+        """AC-1: change_target: 'code' (valid scalar string) must exit 0.
+
+        RED before fix: the schema does not define change_target, so jsonschema
+        rejects it as an additional property → returncode 1.
+        Fix: add change_target (enum, optional) to ac_store_schema.json.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-050.yaml", _VALID_AC_WITH_CHANGE_TARGET_CODE)
+            result = _run_hook(root)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "AC with change_target: 'code' must be accepted by the schema validator. "
+                "Currently exits 1: 'change_target' is not in ac_store_schema.json "
+                f"(additionalProperties: false). Stderr: {result.stderr}"
+            ),
+        )
+
+    def test_ac1_valid_change_target_list_passes(self) -> None:
+        # covers: UNKNOWN
+        """AC-1: change_target: [code, schema] (valid list form) must exit 0.
+
+        RED before fix: list form also rejected as additional property.
+        """
+        content = textwrap.dedent("""\
+            id: FIN-052
+            title: "AC with change_target list"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+            change_target:
+              - code
+              - schema
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-052.yaml", content)
+            result = _run_hook(root)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "AC with change_target: [code, schema] (list form) must exit 0. "
+                "Currently fails because change_target is an additional property. "
+                f"Stderr: {result.stderr}"
+            ),
+        )
+
+    def test_ac1_valid_risk_surface_passes(self) -> None:
+        # covers: UNKNOWN
+        """AC-1: risk_surface: 'internal' (valid value) must exit 0.
+
+        RED before fix: risk_surface rejected as additional property.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-051.yaml", _VALID_AC_WITH_RISK_SURFACE_INTERNAL)
+            result = _run_hook(root)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "AC with risk_surface: 'internal' must exit 0. Currently fails because "
+                f"risk_surface is an additional property. Stderr: {result.stderr}"
+            ),
+        )
+
+    def test_ac1_both_axes_present_and_valid_passes(self) -> None:
+        # covers: UNKNOWN
+        """AC-1: AC carrying both change_target and risk_surface (valid values) exits 0.
+
+        RED before fix: both fields are additional properties — rejected by jsonschema.
+        """
+        content = textwrap.dedent("""\
+            id: FIN-056
+            title: "AC with both axes valid"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+            change_target: schema
+            risk_surface: contract_boundary
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-056.yaml", content)
+            result = _run_hook(root)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "AC with change_target: schema and risk_surface: contract_boundary must exit 0. "
+                f"Stderr: {result.stderr}"
+            ),
+        )
+
+
+class TestAcChangeTargetSchemaValidationAc2(unittest.TestCase):
+    """AC-2: Validator rejects change_target / risk_surface with out-of-enum value.
+
+    These tests are RED because, before the fix, the hook rejects the fields as
+    "additional properties" — an error that does NOT name the bad enum value.
+    The assertIn(bad_value, result.stderr) assertion fails, making the test RED.
+    """
+
+    def test_ac2_invalid_change_target_rejected_names_bad_value(self) -> None:
+        # covers: UNKNOWN
+        """AC-2: change_target: 'bogus_target' exits 1 and stderr names 'bogus_target'.
+
+        RED before fix: the hook exits 1 (correct) but for the wrong reason —
+        'Additional properties are not allowed (change_target was unexpected)' does not
+        contain 'bogus_target'. After the fix, the enum error names the bad value.
+        """
+        content = textwrap.dedent("""\
+            id: FIN-053
+            title: "AC with invalid change_target"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+            change_target: bogus_target
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-053.yaml", content)
+            result = _run_hook(root)
+        self.assertEqual(result.returncode, 1)
+        # This assertion is the RED indicator: the additional-property error does not
+        # mention 'bogus_target'. After the fix, the enum error will name the bad value.
+        self.assertIn(
+            "bogus_target",
+            result.stderr,
+            msg=(
+                "The enum error for change_target: 'bogus_target' must name the bad value. "
+                "Currently the hook rejects it as additional property without naming the value. "
+                f"Stderr: {result.stderr}"
+            ),
+        )
+
+    def test_ac2_invalid_risk_surface_rejected_names_bad_value(self) -> None:
+        # covers: UNKNOWN
+        """AC-2: risk_surface: 'bogus_surface' exits 1 and stderr names 'bogus_surface'.
+
+        RED before fix: additional-property error does not mention 'bogus_surface'.
+        """
+        content = textwrap.dedent("""\
+            id: FIN-054
+            title: "AC with invalid risk_surface"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+            risk_surface: bogus_surface
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-054.yaml", content)
+            result = _run_hook(root)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(
+            "bogus_surface",
+            result.stderr,
+            msg=(
+                "The enum error for risk_surface: 'bogus_surface' must name the bad value. "
+                f"Stderr: {result.stderr}"
+            ),
+        )
+
+    def test_ac2_change_target_list_with_invalid_entry_names_bad_value(self) -> None:
+        # covers: UNKNOWN
+        """AC-2: change_target: [code, bogus_target] exits 1 and names 'bogus_target'.
+
+        RED before fix: additional-property error does not name individual list items.
+        """
+        content = textwrap.dedent("""\
+            id: FIN-055
+            title: "AC with mixed valid/invalid change_target list"
+            component: finalize
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given something
+              When something
+              Then something
+            priority: medium
+            readiness: draft
+            change_target:
+              - code
+              - bogus_target
+        """)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "FIN-055.yaml", content)
+            result = _run_hook(root)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(
+            "bogus_target",
+            result.stderr,
+            msg=(
+                "The enum error for a list change_target with invalid entry must name "
+                "'bogus_target'. "
+                f"Stderr: {result.stderr}"
+            ),
+        )
+
+
+# ---------------------------------------------------------------------------
+# AC-3: vocabulary contract (ticket 08)
+# ---------------------------------------------------------------------------
+# Asserts that the enum values for both axes are identical across three
+# canonical sources: ac_store_schema.json, ticket_frontmatter_guard.py, and
+# guardrail_gates.yaml top-level keys.
+# RED: ac_store_schema.json does not yet define change_target or risk_surface.
+# ---------------------------------------------------------------------------
+
+
+class TestAcAxesVocabularyContractAc3(unittest.TestCase):
+    """AC-3: change_target and risk_surface enum identical in schema, guard, and gates YAML.
+
+    Tests are RED because ac_store_schema.json does not define these fields yet.
+    """
+
+    def test_ac3_change_target_enum_identical_across_sources(self) -> None:
+        # covers: UNKNOWN
+        """AC-3: The change_target enum in ac_store_schema.json, ALLOWED_CHANGE_TARGETS
+        in ticket_frontmatter_guard.py, and the non-flow-change top-level keys of
+        guardrail_gates.yaml must all be identical.
+
+        RED before fix: ac_store_schema.json does not define 'change_target' property
+        — assertIn('change_target', props) fails.
+        Fix: add change_target (enum, optional) to ac_store_schema.json.
+        """
+        import importlib.util
+        import json
+
+        import yaml as _yaml
+
+        repo_root = Path(__file__).resolve().parent.parent.parent
+
+        # 1. Load schema and check change_target property exists
+        schema_path = repo_root / "config" / "ac_store_schema.json"
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        props = schema.get("properties", {})
+
+        self.assertIn(
+            "change_target",
+            props,
+            msg=(
+                "ac_store_schema.json must define a 'change_target' property. "
+                "It is currently absent (additionalProperties: false rejects it). "
+                "Add change_target as an optional enum field (10 blast-radius values)."
+            ),
+        )
+
+        # Extract enum values from schema (handles str-only or anyOf/oneOf for str|list forms)
+        ct_prop = props["change_target"]
+        schema_ct_enum: set[str] = set()
+        if "enum" in ct_prop:
+            schema_ct_enum = set(ct_prop["enum"])
+        for container_key in ("anyOf", "oneOf"):
+            for sub in ct_prop.get(container_key, []):
+                if sub.get("type") == "string" and "enum" in sub:
+                    schema_ct_enum.update(sub["enum"])
+                elif sub.get("type") == "array":
+                    items = sub.get("items", {})
+                    if "enum" in items:
+                        schema_ct_enum.update(items["enum"])
+
+        # 2. Load ALLOWED_CHANGE_TARGETS from ticket_frontmatter_guard.py
+        guard_path = repo_root / "templates" / "hooks" / "ticket_frontmatter_guard.py"
+        spec = importlib.util.spec_from_file_location("ticket_frontmatter_guard", guard_path)
+        guard_mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(guard_mod)
+        guard_ct: set[str] = set(guard_mod.ALLOWED_CHANGE_TARGETS)
+
+        # 3. Load guardrail_gates.yaml top-level keys (excluding flow_change_gates)
+        guardrail_path = repo_root / "config" / "guardrail_gates.yaml"
+        gates = _yaml.safe_load(guardrail_path.read_text(encoding="utf-8"))
+        yaml_ct: set[str] = {k for k in gates if k != "flow_change_gates"}
+
+        self.assertEqual(
+            schema_ct_enum,
+            guard_ct,
+            msg=(
+                f"change_target enum in ac_store_schema.json ({sorted(schema_ct_enum)}) "
+                f"must equal ALLOWED_CHANGE_TARGETS from ticket_frontmatter_guard.py "
+                f"({sorted(guard_ct)}). Drift detected — single source of truth violated."
+            ),
+        )
+        self.assertEqual(
+            schema_ct_enum,
+            yaml_ct,
+            msg=(
+                f"change_target enum in ac_store_schema.json ({sorted(schema_ct_enum)}) "
+                f"must equal the non-flow-change top-level keys of guardrail_gates.yaml "
+                f"({sorted(yaml_ct)}). Drift detected."
+            ),
+        )
+
+    def test_ac3_risk_surface_enum_identical_across_sources(self) -> None:
+        # covers: UNKNOWN
+        """AC-3: The risk_surface enum in ac_store_schema.json must equal
+        ALLOWED_RISK_SURFACES in ticket_frontmatter_guard.py.
+
+        RED before fix: ac_store_schema.json does not define 'risk_surface' property.
+        Fix: add risk_surface (enum, optional) to ac_store_schema.json.
+        """
+        import importlib.util
+        import json
+
+        repo_root = Path(__file__).resolve().parent.parent.parent
+
+        schema_path = repo_root / "config" / "ac_store_schema.json"
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        props = schema.get("properties", {})
+
+        self.assertIn(
+            "risk_surface",
+            props,
+            msg=(
+                "ac_store_schema.json must define a 'risk_surface' property. "
+                "It is currently absent. Add risk_surface as optional enum (6 blast-radius values)."
+            ),
+        )
+
+        rs_prop = props["risk_surface"]
+        schema_rs_enum: set[str] = set()
+        if "enum" in rs_prop:
+            schema_rs_enum = set(rs_prop["enum"])
+        for container_key in ("anyOf", "oneOf"):
+            for sub in rs_prop.get(container_key, []):
+                if sub.get("type") == "string" and "enum" in sub:
+                    schema_rs_enum.update(sub["enum"])
+
+        guard_path = repo_root / "templates" / "hooks" / "ticket_frontmatter_guard.py"
+        spec = importlib.util.spec_from_file_location("ticket_frontmatter_guard_rs", guard_path)
+        guard_mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(guard_mod)
+        guard_rs: set[str] = set(guard_mod.ALLOWED_RISK_SURFACES)
+
+        self.assertEqual(
+            schema_rs_enum,
+            guard_rs,
+            msg=(
+                f"risk_surface enum in ac_store_schema.json ({sorted(schema_rs_enum)}) "
+                f"must equal ALLOWED_RISK_SURFACES from ticket_frontmatter_guard.py "
+                f"({sorted(guard_rs)}). Drift detected."
+            ),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

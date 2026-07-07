@@ -37,3 +37,5 @@ superseded_by: null
 covered_by: []
 implemented_by: []
 notes: "Edge case: a nested subdir under test_root (the real sibling layout tests/etl/) is a valid location, not a violation."
+change_target: code
+risk_surface: internal

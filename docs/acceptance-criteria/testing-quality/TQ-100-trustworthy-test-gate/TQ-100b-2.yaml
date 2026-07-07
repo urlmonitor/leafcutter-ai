@@ -51,3 +51,5 @@ notes: |
   drives for the not-done branch. Done AC => the covering test blocks on failure.
   The transition edge case (TQ-100b-1-i) is ID-derived under TQ-100b-1 and lists
   this AC in its depends_on for the done end-state contract.
+change_target: code
+risk_surface: contract_boundary

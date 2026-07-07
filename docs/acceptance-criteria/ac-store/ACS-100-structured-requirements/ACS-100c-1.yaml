@@ -37,3 +37,5 @@ covered_by:
   - unit_tests/commit_guardian/test_check_ac_limits.py::TestCheckAcLimitsCLI::test_overcrowded_l1_exits_one
 implemented_by:
   - scripts/commit_guardian/check_ac_limits.py#_check_limits
+change_target: code
+risk_surface: internal

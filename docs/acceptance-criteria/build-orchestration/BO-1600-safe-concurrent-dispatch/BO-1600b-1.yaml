@@ -53,3 +53,5 @@ notes: |
   writes, a commit that dies mid-write must not leave debris for the next
   supervisor. Atomic-write-then-rename of loose objects is the canonical git
   mechanism; the AC states the WHAT (no truncated object survives) not the HOW.
+change_target: infrastructure
+risk_surface: safety

@@ -37,3 +37,5 @@ superseded_by: null
 covered_by: []
 implemented_by: []
 notes: "Edge case: config override of test_root must win over the built-in default."
+change_target: prompt
+risk_surface: internal

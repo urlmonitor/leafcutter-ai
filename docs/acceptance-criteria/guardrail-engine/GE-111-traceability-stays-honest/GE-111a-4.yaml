@@ -50,3 +50,5 @@ notes: |
   IT-PO enrichment (2026-06-22): architecture-diagram-author retained.
   it_requirements pin the diagram-naming / mermaid-complexity / parent-link
   commit-guardian conventions so the diagram itself passes the hook suite.
+change_target: docs
+risk_surface: internal

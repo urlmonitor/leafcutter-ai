@@ -35,3 +35,5 @@ notes: |
   broader than "file deleted" — the BA/IT-PO define at L2/L3 what counts as the
   code being gone (file absent, anchor absent, or path no longer present), but
   ACS-900d owns the legitimate-reconciliation cases.
+change_target: code
+risk_surface: contract_boundary

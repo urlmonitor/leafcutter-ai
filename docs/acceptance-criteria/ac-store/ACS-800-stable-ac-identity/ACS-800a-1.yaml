@@ -45,3 +45,5 @@ notes: |
   does not pin the textual form of the UID (bare integer vs. zero-padded vs.
   prefixed) — only that it is sequential and opaque; IT-PO/python-coder finalize
   the concrete representation and add the field to config/ac_store_schema.json.
+change_target: code
+risk_surface: internal

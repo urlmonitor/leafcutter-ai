@@ -60,3 +60,5 @@ notes: |
   ACS-900c-1-i), the multi-AC grouping, and the pure-function formatting constraint
   (keeps it testable and outside the fail-open wrapper). expects_from aligned to
   ACS-900b-1's refined block-decision record shape (carries status + superseded_by).
+change_target: code
+risk_surface: internal

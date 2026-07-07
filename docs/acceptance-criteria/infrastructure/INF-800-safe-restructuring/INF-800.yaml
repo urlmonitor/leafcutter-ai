@@ -30,3 +30,5 @@ covered_by:
   - INF-800e
   - INF-800f
 implemented_by: []
+change_target: infrastructure
+risk_surface: contract_boundary

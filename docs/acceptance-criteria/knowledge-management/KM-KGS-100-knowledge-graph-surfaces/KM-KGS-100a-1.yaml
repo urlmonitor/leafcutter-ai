@@ -46,3 +46,5 @@ superseded_by: null
 covered_by: []
 implemented_by:
 - tickets/00_inbox/epics/EPIC-ACCodeTraceabilityGraph/01_TICKET-20260622-KM-KGS-100a-1.md
+change_target: config
+risk_surface: contract_boundary

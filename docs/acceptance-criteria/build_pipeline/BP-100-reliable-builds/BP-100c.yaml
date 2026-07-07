@@ -26,3 +26,5 @@ covered_by:
   - BP-100c-4
   - BP-100c-5
 implemented_by: []
+change_target: config
+risk_surface: contract_boundary

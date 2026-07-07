@@ -48,3 +48,5 @@ notes: |
   Default-enforce is the no-mass-migration property: existing untagged tests keep
   blocking exactly as today. Only tagged tests with a not-done AC become
   informational; everything else stays enforced.
+change_target: code
+risk_surface: contract_boundary

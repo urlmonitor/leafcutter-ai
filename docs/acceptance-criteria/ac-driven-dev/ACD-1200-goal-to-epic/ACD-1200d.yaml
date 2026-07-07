@@ -27,3 +27,5 @@ covered_by: [ACD-1200d-1, ACD-1200d-2]
 implemented_by: []
 documentation_triggers: []
 documentation_rationale: "Tagging is automatic and follows ACD-1000a conventions — no new user-facing workflow to document."
+change_target: schema
+risk_surface: contract_boundary

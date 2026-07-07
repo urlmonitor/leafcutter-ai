@@ -58,3 +58,5 @@ notes: |
   IT-PO enrichment (2026-06-22): documentation-expert retained (docs/**/*.md
   surface). it_requirements pin doc-frontmatter compliance and consistency with
   the GE-111d-2 confirm mechanism and GE-111a-2 config key.
+change_target: docs
+risk_surface: internal

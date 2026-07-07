@@ -44,3 +44,5 @@ notes: |
   message contains all four load-bearing fields plus the change kind and (at
   symbol tier) the symbol name and located new location. No documentation AC
   (rationale set; the user-facing how-to lives on GE-111a / GE-111d).
+change_target: code
+risk_surface: contract_boundary

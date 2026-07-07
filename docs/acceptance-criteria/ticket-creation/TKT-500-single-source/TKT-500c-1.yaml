@@ -29,3 +29,5 @@ implemented_by: []
 it_requirements:
   - "YAML write must use targeted field replacement, not full dump"
   - "Atomic update: no partial-write states observable"
+change_target: code
+risk_surface: contract_boundary

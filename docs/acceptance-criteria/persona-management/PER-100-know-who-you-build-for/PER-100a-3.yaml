@@ -43,3 +43,5 @@ superseded_by: null
 covered_by:
   - PER-100a-3-i
 implemented_by: []
+change_target: code
+risk_surface: internal

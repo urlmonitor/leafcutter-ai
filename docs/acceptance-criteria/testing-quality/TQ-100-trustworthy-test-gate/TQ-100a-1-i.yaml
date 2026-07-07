@@ -47,3 +47,5 @@ notes: |
   This is the exact symptom that motivated TQ-100a: a single test written for a
   not-yet-built feature imports its (absent) module and, without isolation,
   aborts the whole run.
+change_target: code
+risk_surface: internal

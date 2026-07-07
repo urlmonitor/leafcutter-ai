@@ -35,3 +35,5 @@ covered_by:
   - tests/test_build_artifact_parity.py::TestShimMapCoversAllUserFacingCategories
 implemented_by:
   - scripts/build_helpers.py
+change_target: pipeline
+risk_surface: internal

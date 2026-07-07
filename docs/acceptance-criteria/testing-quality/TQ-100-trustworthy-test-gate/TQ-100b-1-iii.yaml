@@ -50,3 +50,5 @@ notes: |
   same enforced set under pytest-randomly. Routed to test-runner because the
   behavior is "run the suite N times across seeds and compare the partition",
   i.e. execution/verification, not source authoring.
+change_target: code
+risk_surface: internal

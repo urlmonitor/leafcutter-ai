@@ -55,3 +55,5 @@ amended_by: [it-po-v3]
 superseded_by: null
 covered_by: [BO-400c-3-i, BO-400c-3-ii]
 implemented_by: []
+change_target: code
+risk_surface: internal

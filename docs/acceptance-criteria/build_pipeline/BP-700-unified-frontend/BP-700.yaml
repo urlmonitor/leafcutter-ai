@@ -28,3 +28,5 @@ covered_by:
   - BP-700c
   - BP-700d
 implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary

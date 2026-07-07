@@ -47,3 +47,5 @@ notes: |
   Negative-guarantee AC: prevents the relaxation from becoming a blanket
   acceptance that masks a real typo or a reference to a deleted agent. Keeps the
   original INF-600g validation strength intact for true unknown agents.
+change_target: code
+risk_surface: internal

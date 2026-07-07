@@ -62,3 +62,5 @@ notes: |
   is that the script's source is missing or untracked (the feedback case after
   commit 83737a44 git-untracked scripts/feedback/). The truthful action points
   the author at committing the source under templates/scripts/.
+change_target: pipeline
+risk_surface: internal

@@ -27,3 +27,5 @@ covered_by: [ACS-500b-1, ACS-500b-2]
 implemented_by: []
 assigned_agent: null
 estimated_complexity: null
+change_target: schema
+risk_surface: contract_boundary

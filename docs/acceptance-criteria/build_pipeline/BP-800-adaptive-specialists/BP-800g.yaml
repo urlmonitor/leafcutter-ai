@@ -31,3 +31,5 @@ documentation_triggers:
   - how-to
   - sequence-diagram
   - component-diagram
+change_target: docs
+risk_surface: internal

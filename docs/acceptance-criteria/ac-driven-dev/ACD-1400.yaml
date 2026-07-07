@@ -11,3 +11,5 @@ criteria: |
   And no v3-suffixed agent names (product-owner-v3, business-analyst-v3, it-po-v3) appear
   And the bug symptom "workflow dispatches non-existent v3 agent names" must not occur
 notes: "Authored by /quick-fix. Root cause: create-ac-to-plan-feature rename updated the file/skill name but missed the agent dispatch references inside the script."
+change_target: pipeline
+risk_surface: internal

@@ -43,3 +43,7 @@ superseded_by:
 covered_by:
   - PER-100d-2-i
 implemented_by: []
+change_target:
+  - prompt
+  - code
+risk_surface: contract_boundary

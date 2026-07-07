@@ -50,3 +50,5 @@ superseded_by: null
 covered_by: []
 implemented_by:
 - tickets/00_inbox/TICKET-20260608-BP-700c-1.md
+change_target: prompt
+risk_surface: contract_boundary

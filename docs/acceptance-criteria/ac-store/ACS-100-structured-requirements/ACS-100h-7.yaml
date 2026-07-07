@@ -80,3 +80,5 @@ notes: |
   prevents at scaffold time. Per the ac-store PROJECT_CONTEXT (ACS-800), this
   override is a TEMPORARY stopgap to be RETIRED once ACS-800e lands (tooling counts
   children from metadata, not ID strings) — do not let it become permanent.
+change_target: pipeline
+risk_surface: internal

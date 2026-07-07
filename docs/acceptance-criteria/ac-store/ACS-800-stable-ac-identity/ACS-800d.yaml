@@ -41,3 +41,5 @@ notes: |
   migration; and a verification that the migration leaves zero dangling references
   (relates to scan_ac_orphans.py / check_ac_parent_covered_by.py). This is the
   highest-risk L1 (estimated_complexity L) because it touches the whole store at once.
+change_target: code
+risk_surface: contract_boundary

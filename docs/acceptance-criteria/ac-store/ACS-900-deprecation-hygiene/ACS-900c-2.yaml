@@ -46,3 +46,5 @@ notes: |
   open-field note (re-pointing implemented_by is permitted by ACS-400b governance),
   and the frontmatter/coherence constraint shared with the other ac-store how-to
   ACs. Satisfies ACS-900c documentation_triggers [how-to] — S7b gate PASSES for ACS-900c.
+change_target: docs
+risk_surface: internal

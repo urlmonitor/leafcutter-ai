@@ -79,3 +79,5 @@ notes: |
   project-root resolution itself fails. priority intentionally left unset — the
   user sets priority at the final approval gate.
 priority: high
+change_target: code
+risk_surface: internal

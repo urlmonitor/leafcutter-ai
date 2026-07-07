@@ -35,3 +35,5 @@ amended_by: []
 superseded_by: null
 covered_by: [GE-102a, GE-102b, GE-102c, GE-102d, GE-102e]
 implemented_by: []
+change_target: code
+risk_surface: contract_boundary

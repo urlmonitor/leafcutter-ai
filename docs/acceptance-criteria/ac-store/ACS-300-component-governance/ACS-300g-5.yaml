@@ -52,3 +52,5 @@ covered_by: []
 implemented_by:
 - templates/scripts/commit_guardian/check_components_integrity.py
 - unit_tests/commit_guardian/test_check_components_integrity.py
+change_target: code
+risk_surface: contract_boundary

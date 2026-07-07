@@ -29,3 +29,5 @@ covered_by:
 implemented_by: []
 documentation_triggers: []
 documentation_rationale: "States the scope boundary that distinguishes spot-checking from existing test running; the behavior is documented as part of the on-demand review how-to in BO-1300a."
+change_target: prompt
+risk_surface: contract_boundary

@@ -60,3 +60,5 @@ notes: |
   insufficient (23 silent submit-failed events, impossible retrospective), so
   the gate is promoted to a hard block. The build-epic.js Step 0 worktree guard
   is the precedent shape for a blocking pre-dispatch gate.
+change_target: pipeline
+risk_surface: contract_boundary

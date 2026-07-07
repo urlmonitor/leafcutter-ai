@@ -83,3 +83,5 @@ notes: |
   tests via a shim. Source-of-truth (tracked, templates/scripts/feedback/) and
   deployed output (gitignored, scripts/feedback/) are different directories with
   different lifecycles; no contradiction with BP-1200a-1.
+change_target: pipeline
+risk_surface: contract_boundary

@@ -57,3 +57,5 @@ notes: |
   are satisfied — S7b documentation gate PASSES for ACS-900b. Flagged in
   it_requirements that the four ac-store how-to ACs (900a-3, 900b-3, 900c-2,
   900d-3) should compose one coherent guide, not four overlapping files.
+change_target: docs
+risk_surface: internal

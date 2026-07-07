@@ -63,3 +63,5 @@ covered_by:
   - ACS-300g-5
   - ACS-300g-6
 implemented_by: []
+change_target: config
+risk_surface: contract_boundary

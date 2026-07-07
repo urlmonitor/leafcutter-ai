@@ -39,3 +39,5 @@ notes: |
   that derives each existing requirement's parent UID from today's derive_parent_id()
   output mapped through the old-id->UID assignment. Cross-L1 deps: needs the UID
   allocation (ACS-800a-1) and the parent-pointer field (ACS-800b-1).
+change_target: code
+risk_surface: internal

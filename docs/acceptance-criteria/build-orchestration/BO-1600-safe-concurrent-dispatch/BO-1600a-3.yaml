@@ -53,3 +53,5 @@ notes: |
   KI-1 (zero-byte loose object + broken index from concurrent commits). It
   asserts the observable end-state invariant the serialization (BO-1600a-1)
   guarantees, rather than re-testing the lock mechanics.
+change_target: infrastructure
+risk_surface: safety
