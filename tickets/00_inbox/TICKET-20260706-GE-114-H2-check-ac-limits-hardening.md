@@ -1,5 +1,5 @@
 ---
-status: in_progress
+status: done
 priority: medium
 roadmap_phase: phase_1
 advances_current_outcome: true
@@ -11,7 +11,7 @@ agents:
   test-runner: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
   architect-review: not_needed
   adr: not_needed
   diagram: not_needed
@@ -198,6 +198,16 @@ completion_manifest:
   no_contract_shrinking: true
 All 8 ACs verified: 16/16 tests pass (independently confirmed by running pytest), ruff check clean on check_ac_limits.py, no bare except/blind exception/TRY violations, only stdlib used, no test deletions or skip/xfail added. One medium finding (M-1): the Gap 1 fallback could produce false-positive blocks for zero-AC v2 stub tickets — context-dependent edge case, tolerable given the documented goal of preventing cap evasion. No high-confidence issues found.
 
+### 2026-07-07 10:28 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_opened: true
+  pr_number: 216
+  pr_url: https://github.com/urlmonitor/leafcutter-ai/pull/216
+  pr_body_complete: true
+Merge conflict (add/add on ticket file) resolved by keeping branch version (signed-off); origin/main had the stub scaffold. PR #216 is MERGEABLE (BLOCKED on CI ruff gate — expected). All pre-existing 12 + 4 new tests green. Ruff clean.
+
 ### 2026-07-07 10:23 — commit (status: ok)
 feedback-id: (submit-failed)
 completion_manifest:
@@ -213,7 +223,7 @@ Committed SHA f03b787b — 3 files, 589 insertions(+), 34 deletions(-). Pre-comm
 - [x] test-runner — 2026-07-07 10:12
 - [x] pr-reviewer — 2026-07-07 10:19
 - [x] commit — 2026-07-07 10:23
-- [ ] pull-request
+- [x] pull-request — 2026-07-07 10:28
 
 ## AC Coverage
 
